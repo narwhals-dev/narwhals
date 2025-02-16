@@ -192,6 +192,8 @@ def extract_native(lhs: ArrowSeries, rhs: Any) -> tuple[pa.ChunkedArray, Any]:
         return NotImplemented  # type: ignore[no-any-return]
 
     if isinstance(rhs, ArrowSeries):
+        if rhs._broadcast:
+            return lhs._native_series, rhs._native_series[0]
         return lhs._native_series, rhs._native_series
     return lhs._native_series, rhs
 
@@ -208,10 +210,26 @@ def extract_dataframe_comparand(
     """
     import numpy as np  # ignore-banned-import
 
-    value = other._native_series[0]
-    if backend_version < (13,) and hasattr(value, "as_py"):
-        value = value.as_py()
-    return other._from_native_series(pa.array(np.full(shape=length, fill_value=value)))
+    from narwhals._arrow.dataframe import ArrowDataFrame  # pragma: no cover
+    from narwhals._arrow.series import ArrowSeries  # pragma: no cover
+
+    if isinstance(other, ArrowSeries):
+        len_other = len(other)
+        if len_other == 1 and length != 1:
+            import numpy as np  # ignore-banned-import
+
+            value = other._native_series[0]
+            if backend_version < (13,) and hasattr(value, "as_py"):
+                value = value.as_py()
+            return pa.array(np.full(shape=length, fill_value=value))
+
+        return other._native_series
+
+    if isinstance(other, ArrowDataFrame):  # pragma: no cover
+        return NotImplemented
+
+    msg = "Please report a bug"  # pragma: no cover
+    raise AssertionError(msg)
 
 
 def horizontal_concat(dfs: list[pa.Table]) -> pa.Table:

@@ -140,9 +140,7 @@ def align_and_extract_native(lhs: PandasLikeSeries, rhs: Any) -> tuple[pd.Series
     return lhs_native, rhs
 
 
-def extract_dataframe_comparand_full_broadcast(
-    index: Any, other: Any
-) -> Any:
+def extract_dataframe_comparand(index: Any, other: Any) -> Any:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the

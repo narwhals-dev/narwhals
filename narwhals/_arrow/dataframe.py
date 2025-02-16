@@ -12,6 +12,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.utils import convert_str_slice_to_int_slice
+from narwhals._arrow.utils import extract_dataframe_comparand
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import select_rows
 from narwhals._expression_parsing import ExprKind
@@ -359,20 +360,21 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         new_columns: list[ArrowSeries] = evaluate_into_exprs(self, *exprs)
         # need a `broadcast_series` here
 
+        length = len(self)
         columns = self.columns
 
         for col_value in new_columns:
             col_name = col_value.name
+
+            column = extract_dataframe_comparand(
+                length=length, other=col_value, backend_version=self._backend_version
+            )
             native_frame = (
                 native_frame.set_column(
-                    columns.index(col_name),
-                    field_=col_name,
-                    column=col_value._native_series,
+                    columns.index(col_name), field_=col_name, column=column
                 )
                 if col_name in columns
-                else native_frame.append_column(
-                    field_=col_name, column=col_value._native_series
-                )
+                else native_frame.append_column(field_=col_name, column=column)
             )
 
         return self._from_native_frame(native_frame, validate_column_names=False)

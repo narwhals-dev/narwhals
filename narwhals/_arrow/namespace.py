@@ -17,6 +17,7 @@ from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import diagonal_concat
+from narwhals._arrow.utils import extract_dataframe_comparand
 from narwhals._arrow.utils import horizontal_concat
 from narwhals._arrow.utils import vertical_concat
 from narwhals._expression_parsing import combine_alias_output_names
@@ -403,9 +404,10 @@ class ArrowWhen:
         condition = self._condition(df)[0]
 
         value_series = self._then_value(df)[0]
-        condition_native, value_series_native = (
-            condition._native_series,
-            value_series._native_series,
+
+        condition_native = condition._native_series
+        value_series_native = extract_dataframe_comparand(
+            len(df), value_series, self._backend_version
         )
 
         if self._otherwise_value is None:
@@ -418,10 +420,13 @@ class ArrowWhen:
                 )
             ]
         otherwise_expr = self._otherwise_value
-        otherwise_native = otherwise_expr(df)[0]._native_series
+        otherwise_series = otherwise_expr(df)[0]
+        otherwise_series_native = extract_dataframe_comparand(
+            len(df), otherwise_series, self._backend_version
+        )
         return [
             value_series._from_native_series(
-                pc.if_else(condition_native, value_series_native, otherwise_native)
+                pc.if_else(condition_native, value_series_native, otherwise_series_native)
             )
         ]
 
