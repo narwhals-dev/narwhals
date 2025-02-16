@@ -190,6 +190,9 @@ def extract_native(lhs: ArrowSeries, rhs: Any) -> tuple[pa.ChunkedArray, Any]:
 
     if isinstance(rhs, ArrowDataFrame):
         return NotImplemented  # type: ignore[no-any-return]
+    
+    if lhs._broadcast and not rhs._broadcast:
+        return lhs._native_series[0], rhs._native_series
 
     if isinstance(rhs, ArrowSeries):
         if rhs._broadcast:
