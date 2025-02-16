@@ -11,7 +11,7 @@ from typing import overload
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from narwhals._arrow.utils import broadcast_series_and_extract_native
+from narwhals._arrow.utils import broadcast_series
 from narwhals._arrow.utils import convert_str_slice_to_int_slice
 from narwhals._arrow.utils import extract_dataframe_comparand
 from narwhals._arrow.utils import native_to_narwhals_dtype
@@ -353,9 +353,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 self._native_frame.__class__.from_arrays([]), validate_column_names=False
             )
         names = [s.name for s in new_series]
-        df = pa.Table.from_arrays(
-            broadcast_series_and_extract_native(*new_series), names=names
-        )
+        df = pa.Table.from_arrays(broadcast_series(*new_series), names=names)
         return self._from_native_frame(df, validate_column_names=False)
 
     def with_columns(self: Self, *exprs: ArrowExpr) -> Self:

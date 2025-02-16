@@ -16,7 +16,7 @@ from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import broadcast_series_and_extract_native
+from narwhals._arrow.utils import broadcast_series
 from narwhals._arrow.utils import diagonal_concat
 from narwhals._arrow.utils import extract_dataframe_comparand
 from narwhals._arrow.utils import horizontal_concat
@@ -218,11 +218,12 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
 
     def sum_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            series = [s for _expr in exprs for s in _expr(df)]
-            native_series = [
-                pc.fill_null(s, 0) for s in broadcast_series_and_extract_native(*series)
+            series = [
+                s.fill_null(0, strategy=None, limit=None)
+                for _expr in exprs
+                for s in _expr(df)
             ]
-            return [series[0]._from_native_series(reduce(pc.add, native_series))]
+            return [reduce(operator.add, broadcast_series(*series))]
 
         return self._create_expr_from_callable(
             func=func,

@@ -201,13 +201,13 @@ def extract_native(lhs: ArrowSeries, rhs: Any) -> tuple[pa.ChunkedArray, Any]:
     return lhs._native_series, rhs
 
 
-def broadcast_series_and_extract_native(*series: ArrowSeries) -> list[Any]:
+def broadcast_series(*series: ArrowSeries) -> Sequence[ArrowSeries]:
     lengths = [len(s) for s in series]
     max_length = max(lengths)
     fast_path = all(_len == max_length for _len in lengths)
 
     if fast_path:
-        return [s._native_series for s in series]
+        return series
 
     is_max_length_gt_1 = max_length > 1
     reshaped = []
@@ -217,9 +217,11 @@ def broadcast_series_and_extract_native(*series: ArrowSeries) -> list[Any]:
             value = s_native[0]
             if s._backend_version < (13,) and hasattr(value, "as_py"):
                 value = value.as_py()
-            reshaped.append(pa.chunked_array([[value] * max_length], type=s_native.type))
+            reshaped.append(
+                s._from_native_series(pa.array([value] * max_length, type=s_native.type))
+            )
         else:
-            reshaped.append(s_native)
+            reshaped.append(s)
 
     return reshaped
 
