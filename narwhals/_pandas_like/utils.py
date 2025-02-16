@@ -117,12 +117,12 @@ def align_and_extract_native(lhs: PandasLikeSeries, rhs: Any) -> tuple[pd.Series
         return NotImplemented  # type: ignore[no-any-return]
 
     if lhs._broadcast and not rhs._broadcast:
-        return lhs._native_series[0], rhs._native_series
+        return lhs._native_series.item(), rhs._native_series
     lhs_native = lhs._native_series
 
     if isinstance(rhs, PandasLikeSeries):
         if rhs._broadcast:
-            return (lhs_native, rhs._native_series[0])
+            return (lhs_native, rhs._native_series.item())
         rhs_native = maybe_convert_dtypes_and_extract_native(lhs, rhs)
         if rhs_native.index is not lhs_index:
             return (
@@ -154,7 +154,7 @@ def maybe_convert_dtypes_and_extract_native(
     return rhs._native_series
 
 
-def extract_dataframe_comparand(index: Any, other: Any) -> Any:
+def extract_dataframe_comparand(index: Any, other: Any, *, allow_full_broadcast: bool = False) -> Any:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -166,8 +166,11 @@ def extract_dataframe_comparand(index: Any, other: Any) -> Any:
     if isinstance(other, PandasLikeDataFrame):
         return NotImplemented
     if isinstance(other, PandasLikeSeries):
-        if other._broadcast:
-            return other._native_series[0]
+        if other._broadcast and allow_full_broadcast:
+            s = other._native_series
+            return s.__class__(s.item(), index=index, dtype=s.dtype, name=s.name)
+        elif other._broadcast:
+            return other._native_series.item()
         if other._native_series.index is not index:
             return set_index(
                 other._native_series,
@@ -673,17 +676,49 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
 
 
 def align_and_extract_series(series: Sequence[PandasLikeSeries]) -> list[pd.Series[Any]]:
+    # lengths = [len(s) for s in series]
+    # max_length = max(lengths)
+
+    # idx = series[lengths.index(max_length)]._native_series.index
+    # reindexed = []
+    # for s in series:
+    #     if s._broadcast:
+    #         reindexed.append(s._native_series[0])
+    #         continue
+    #     s_native = s._native_series
+    #     if s_native.index is not idx:
+    #         reindexed.append(
+    #             set_index(
+    #                 s_native,
+    #                 idx,
+    #                 implementation=s._implementation,
+    #                 backend_version=s._backend_version,
+    #             )
+    #         )
+    #     else:
+    #         reindexed.append(s_native)
+    # return reindexed
+    native_namespace = series[0].__native_namespace__()
+
     lengths = [len(s) for s in series]
     max_length = max(lengths)
 
     idx = series[lengths.index(max_length)]._native_series.index
     reindexed = []
-    for s in series:
-        if s._broadcast:
-            reindexed.append(s._native_series[0])
-            continue
+    max_length_gt_1 = max_length > 1
+    for s, length in zip(series, lengths):
         s_native = s._native_series
-        if s_native.index is not idx:
+        if max_length_gt_1 and length == 1:
+            reindexed.append(
+                native_namespace.Series(
+                    [s_native.iloc[0]] * max_length,
+                    index=idx,
+                    name=s_native.name,
+                    dtype=s_native.dtype,
+                )
+            )
+
+        elif s_native.index is not idx:
             reindexed.append(
                 set_index(
                     s_native,

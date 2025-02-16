@@ -461,13 +461,13 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             if name in new_column_name_to_new_column_map:
                 to_concat.append(
                     extract_dataframe_comparand(
-                        index, new_column_name_to_new_column_map.pop(name)
+                        index, new_column_name_to_new_column_map.pop(name), allow_full_broadcast=True
                     )
                 )
             else:
                 to_concat.append(self._native_frame[name])
         to_concat.extend(
-            extract_dataframe_comparand(index, new_column_name_to_new_column_map[s])
+            extract_dataframe_comparand(index, new_column_name_to_new_column_map[s], allow_full_broadcast=True)
             for s in new_column_name_to_new_column_map
         )
 

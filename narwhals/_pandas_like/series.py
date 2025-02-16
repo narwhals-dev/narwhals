@@ -336,140 +336,140 @@ class PandasLikeSeries(CompliantSeries):
     def __eq__(self: Self, other: object) -> PandasLikeSeries:  # type: ignore[override]
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
-            ser.__eq__(other),
-        ).alias(ser.name)
+            ser == other
+        ).alias(self.name)
 
     def __ne__(self: Self, other: object) -> PandasLikeSeries:  # type: ignore[override]
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
-            ser.__ne__(other),
-        ).alias(ser.name)
+            ser != other
+        ).alias(self.name)
 
     def __ge__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
-            ser.__ge__(other),
-        ).alias(ser.name)
+            ser >= other
+        ).alias(self.name)
 
     def __gt__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
-            ser.__gt__(other),
-        ).alias(ser.name)
+            ser > other
+        ).alias(self.name)
 
     def __le__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
-            ser.__le__(other),
-        ).alias(ser.name)
+            ser <= other
+        ).alias(self.name)
 
     def __lt__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
-            ser.__lt__(other),
-        ).alias(ser.name)
+            ser < other
+        ).alias(self.name)
 
     def __and__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
-            ser.__and__(other),
-        ).alias(ser.name)
+            ser & other
+        ).alias(self.name)
 
     def __rand__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
             ser.__and__(other),
-        ).alias(ser.name)
+        ).alias(self.name)
 
     def __or__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
-            ser.__or__(other),
-        ).alias(ser.name)
+            ser | other
+        ).alias(self.name)
 
     def __ror__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
             ser.__or__(other),
-        ).alias(ser.name)
+        ).alias(self.name)
 
     def __add__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
-            ser.__add__(other),
+            ser+other
         ).alias(self.name)
 
     def __radd__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
             ser.__radd__(other),
-        ).alias(ser.name)
+        ).alias(self.name)
 
     def __sub__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
-            ser.__sub__(other),
+            ser - other
         ).alias(self.name)
 
     def __rsub__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
             ser.__rsub__(other),
-        ).alias(ser.name)
+        ).alias(self.name)
 
     def __mul__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
-            ser.__mul__(other),
-        ).alias(ser.name)
+            ser * other
+        ).alias(self.name)
 
     def __rmul__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
             ser.__rmul__(other),
-        ).alias(ser.name)
+        ).alias(self.name)
 
     def __truediv__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
-            ser.__truediv__(other),
-        ).alias(ser.name)
+            ser / other
+        ).alias(self.name)
 
     def __rtruediv__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
             ser.__rtruediv__(other),
-        ).alias(ser.name)
+        ).alias(self.name)
 
     def __floordiv__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
-            ser.__floordiv__(other),
-        ).alias(ser.name)
+            ser // other
+        ).alias(self.name)
 
     def __rfloordiv__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
             ser.__rfloordiv__(other),
-        ).alias(ser.name)
+        ).alias(self.name)
 
     def __pow__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
-            ser.__pow__(other),
-        ).alias(ser.name)
+            ser ** other
+        ).alias(self.name)
 
     def __rpow__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
             ser.__rpow__(other),
-        ).alias(ser.name)
+        ).alias(self.name)
 
     def __mod__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
         return self._from_native_series(
-            ser.__mod__(other),
-        ).alias(ser.name)
+            ser % other
+        ).alias(self.name)
 
     def __rmod__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
