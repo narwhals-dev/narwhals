@@ -590,6 +590,16 @@ class ExprStringNamespace(Generic[ExprT]):
             aggregates=self._expr._aggregates,
         )
 
+    def split(self: Self, by: str | None, *, inclusive: bool) -> ExprT:
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).str.split(
+                by=by, inclusive=inclusive
+            ),
+            self._expr._is_order_dependent,
+            changes_length=self._expr._changes_length,
+            aggregates=self._expr._aggregates,
+        )
+
     def head(self: Self, n: int = 5) -> ExprT:
         r"""Take the first n elements of each string.
 

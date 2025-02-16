@@ -73,6 +73,18 @@ class ArrowSeriesStringNamespace:
             ),
         )
 
+    def split(self: Self, by: str | None, *, inclusive: bool) -> ArrowSeries:
+        split_series = pc.split_pattern(self._compliant_series._native_series, pattern=by)
+        if inclusive:
+            string_list = [
+                sublist
+                if len(sublist) <= 1
+                else [item + by for item in sublist[:-1]] + [sublist[-1]]
+                for sublist in split_series.to_pylist()
+            ]
+            split_series = pc.cast(string_list, split_series.type)
+        return self._compliant_series._from_native_series(split_series)
+
     def to_datetime(self: Self, format: str | None) -> ArrowSeries:  # noqa: A002
         if format is None:
             format = parse_datetime_format(self._compliant_series._native_series)

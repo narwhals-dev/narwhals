@@ -61,6 +61,18 @@ class PandasLikeSeriesStringNamespace:
             self._compliant_series._native_series.str.slice(start=offset, stop=stop),
         )
 
+    def split(self: Self, by: str | None, *, inclusive: bool) -> PandasLikeSeries:
+        split_series = self._compliant_series._native_series.str.split(pat=by)
+        if inclusive:
+            return self._compliant_series._from_native_series(
+                split_series.apply(
+                    lambda x: [
+                        f"{x[i]}{by}" if i < len(x) - 1 else x[i] for i in range(len(x))
+                    ]
+                )
+            )
+        return self._compliant_series._from_native_series(split_series)
+
     def to_datetime(self: Self, format: str | None) -> PandasLikeSeries:  # noqa: A002
         return self._compliant_series._from_native_series(
             to_datetime(self._compliant_series._implementation)(
