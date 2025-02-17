@@ -462,7 +462,7 @@ jobs:
         run: |
           cd validoopsie
           uv sync --dev
-          uv pip install pytest-env
+          uv pip install pytest-env pytest
           which python
       - name: show-deps
         run: uv pip freeze
