@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+from typing import TYPE_CHECKING
 from typing import Any
 
 import hypothesis.strategies as st
@@ -15,6 +16,9 @@ from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
+
+if TYPE_CHECKING:
+    from narwhals.typing import Frame
 
 data = {"a": [1.0, 2.0, 1.0, 3.0, 1.0, 4.0, 1.0]}
 
@@ -122,7 +126,7 @@ def test_rolling_var_hypothesis(center: bool, values: list[float]) -> None:  # n
         .to_frame("a")
     )
 
-    result = nw.from_native(pa.Table.from_pandas(df)).select(
+    result: Frame = nw.from_native(pa.Table.from_pandas(df)).select(
         nw.col("a").rolling_var(
             window_size, center=center, min_samples=min_samples, ddof=ddof
         )

@@ -983,7 +983,9 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
     if is_cudf_series(native_series):  # pragma: no cover
         return native_series.cat.ordered  # type: ignore[no-any-return]
     if is_pyarrow_chunked_array(native_series):
-        return native_series.type.ordered  # type: ignore[no-any-return]
+        from narwhals._arrow.utils import is_dictionary
+
+        return is_dictionary(native_series.type) and native_series.type.ordered
     # If it doesn't match any of the above, let's just play it safe and return False.
     return False  # pragma: no cover
 

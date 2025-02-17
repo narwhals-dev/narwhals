@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
 
+    from narwhals._arrow.typing import ArrowChunkedArray
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
@@ -796,7 +797,7 @@ def get_native_namespace(
     | pl.LazyFrame
     | pl.Series
     | pa.Table
-    | pa.ChunkedArray,
+    | ArrowChunkedArray,
 ) -> Any:
     """Get native namespace from object.
 
