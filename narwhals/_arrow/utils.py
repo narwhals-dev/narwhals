@@ -279,34 +279,24 @@ def extract_dataframe_comparand(
     length: int,
     other: ArrowSeries,
     backend_version: tuple[int, ...],
-) -> Any:
-    """Validate RHS of binary operation.
+) -> ArrowChunkedArray:
+    """Extract native Series, broadcasting to the length if necessary.
 
     If the comparison isn't supported, return `NotImplemented` so that the
     "right-hand-side" operation (e.g. `__radd__`) can be tried.
     """
     import numpy as np  # ignore-banned-import
 
-    from narwhals._arrow.dataframe import ArrowDataFrame  # pragma: no cover
-    from narwhals._arrow.series import ArrowSeries  # pragma: no cover
+    len_other = len(other)
+    if len_other == 1 and length != 1:
+        import numpy as np  # ignore-banned-import
 
-    if isinstance(other, ArrowSeries):
-        len_other = len(other)
-        if len_other == 1 and length != 1:
-            import numpy as np  # ignore-banned-import
+        value = other._native_series[0]
+        if backend_version < (13,) and hasattr(value, "as_py"):
+            value = value.as_py()
+        return pa.chunked_array([np.full(shape=length, fill_value=value)])
 
-            value = other._native_series[0]
-            if backend_version < (13,) and hasattr(value, "as_py"):
-                value = value.as_py()
-            return pa.chunked_array([np.full(shape=length, fill_value=value)])
-
-        return other._native_series
-
-    if isinstance(other, ArrowDataFrame):  # pragma: no cover
-        return NotImplemented
-
-    msg = "Please report a bug"  # pragma: no cover
-    raise AssertionError(msg)
+    return other._native_series
 
 
 def horizontal_concat(dfs: list[pa.Table]) -> pa.Table:
