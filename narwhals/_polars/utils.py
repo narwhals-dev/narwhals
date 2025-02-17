@@ -194,9 +194,8 @@ def narwhals_to_native_dtype(
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         # [s] is not allowed for polars
         return pl.Datetime(dtype.time_unit, dtype.time_zone)  # type: ignore[arg-type]
-    if dtype == dtypes.Duration or isinstance(dtype, dtypes.Duration):
-        du_time_unit: TimeUnit = getattr(dtype, "time_unit", "us")
-        return pl.Duration(time_unit=du_time_unit)  # type: ignore[arg-type]
+    if isinstance_or_issubclass(dtype, dtypes.Duration):
+        return pl.Duration(dtype.time_unit)  # type: ignore[arg-type]
     if dtype == dtypes.List:
         return pl.List(narwhals_to_native_dtype(dtype.inner, version, backend_version))  # type: ignore[union-attr]
     if dtype == dtypes.Struct:
