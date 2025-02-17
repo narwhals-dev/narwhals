@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+from typing import Mapping
 
 import numpy as np
 import pandas as pd
@@ -12,7 +13,7 @@ import narwhals.stable.v1 as nw
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-data = {
+data: Mapping[str, Any] = {
     "a": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
     "b": [11, 12, 13, 14, 15, 16],
 }

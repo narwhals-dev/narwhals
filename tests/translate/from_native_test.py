@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Mapping
 
 import numpy as np
 import pandas as pd
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
 
     from narwhals.utils import Version
 
-data = {"a": [1, 2, 3]}
+data: Mapping[str, Any] = {"a": [1, 2, 3]}
 
 df_pd = pd.DataFrame(data)
 df_pl = pl.DataFrame(data)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Mapping
 
 import numpy as np
 import pandas as pd
@@ -16,7 +17,7 @@ if TYPE_CHECKING:
 
 
 class DictDataFrame:
-    def __init__(self: Self, data: dict[str, list[Any]]) -> None:
+    def __init__(self: Self, data: Mapping[str, Any]) -> None:
         self._data = data
 
     def __len__(self) -> int:  # pragma: no cover
@@ -27,7 +28,7 @@ class DictDataFrame:
 
 
 def test_is_into_dataframe() -> None:
-    data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+    data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4, 5, 6]}
     assert is_into_dataframe(pa.table(data))
     assert is_into_dataframe(pl.DataFrame(data))
     assert is_into_dataframe(pd.DataFrame(data))

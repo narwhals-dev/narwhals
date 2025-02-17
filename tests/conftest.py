@@ -132,7 +132,7 @@ def dask_lazy_p2_constructor(obj: dict[str, list[Any]]) -> IntoFrame:  # pragma:
     return dd.from_dict(obj, npartitions=2)  # type: ignore[no-any-return]
 
 
-def pyarrow_table_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+def pyarrow_table_constructor(obj: dict[str, Any]) -> IntoDataFrame:
     return pa.table(obj)  # type: ignore[no-any-return]
 
 

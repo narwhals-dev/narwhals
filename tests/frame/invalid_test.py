@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pandas as pd
 import polars as pl
 import pyarrow as pa
@@ -8,10 +10,13 @@ import pytest
 import narwhals.stable.v1 as nw
 from tests.utils import NUMPY_VERSION
 
+if TYPE_CHECKING:
+    from narwhals.typing import Frame
+
 
 def test_invalid() -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df = nw.from_native(pa.table({"a": [1, 2], "b": [3, 4]}))
+    df: Frame = nw.from_native(pa.table({"a": [1, 2], "b": [3, 4]}))
     with pytest.raises(ValueError, match="Multi-output"):
         df.select(nw.all() + nw.all())
     df = nw.from_native(pd.DataFrame(data))

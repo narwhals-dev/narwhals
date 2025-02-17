@@ -7,6 +7,7 @@ import warnings
 from typing import Any
 from typing import Callable
 from typing import Iterator
+from typing import Mapping
 from typing import Sequence
 
 import pandas as pd
@@ -70,7 +71,7 @@ def _to_comparable_list(column_values: Any) -> Any:
 
 
 def _sort_dict_by_key(
-    data_dict: dict[str, list[Any]], key: str
+    data_dict: Mapping[str, list[Any]], key: str
 ) -> dict[str, list[Any]]:  # pragma: no cover
     sort_list = data_dict[key]
     sorted_indices = sorted(
@@ -84,7 +85,7 @@ def _sort_dict_by_key(
     return {key: [value[i] for i in sorted_indices] for key, value in data_dict.items()}
 
 
-def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
+def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
     is_pyspark = (
         hasattr(result, "_compliant_frame")
         and result.implementation is Implementation.PYSPARK
