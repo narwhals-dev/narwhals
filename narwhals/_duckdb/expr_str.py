@@ -60,6 +60,26 @@ class DuckDBExprStringNamespace:
             func, "slice", expr_kind=self._compliant_expr._expr_kind
         )
 
+    def split(self: Self, by: str | None, *, inclusive: bool) -> DuckDBExpr:
+        def func(_input: duckdb.Expression) -> duckdb.Expression:
+            split_expr = FunctionExpression("str_split", _input, lit(by))
+            if inclusive:
+                array_to_string_expr = FunctionExpression(
+                    "array_to_string", split_expr, lit("|")
+                )
+                regexp_replace_expr = FunctionExpression(
+                    "regexp_replace",
+                    array_to_string_expr,
+                    lit(r"\|"),
+                    lit(f"{by}|"),
+                )
+                return FunctionExpression("str_split", regexp_replace_expr, lit("|"))
+            return split_expr
+
+        return self._compliant_expr._from_call(
+            func, "split", expr_kind=self._compliant_expr._expr_kind
+        )
+
     def len_chars(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("length", _input),

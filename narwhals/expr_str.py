@@ -574,6 +574,14 @@ class ExprStringNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
+    def split(self: Self, by: str | None = None, *, inclusive: bool) -> ExprT:
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).str.split(
+                by=by, inclusive=inclusive
+            ),
+            self._expr._metadata,
+        )
+
     def head(self: Self, n: int = 5) -> ExprT:
         r"""Take the first n elements of each string.
 
