@@ -250,6 +250,7 @@ pythonPlatform = "All"
 reportMissingImports = "none"
 reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
+reportUnusedExpression = "none"    # can enforce with `ruff`
 typeCheckingMode = "basic"
 include = ["narwhals", "tests"]
 ignore = [
