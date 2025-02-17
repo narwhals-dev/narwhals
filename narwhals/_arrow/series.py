@@ -258,7 +258,7 @@ class ArrowSeries(CompliantSeries):
 
     def __invert__(self: Self) -> Self:
         return self._from_native_series(
-            pc.invert(cast("pa.BooleanArray", self._native_series))
+            pc.invert(self._native_series)  # type: ignore[call-overload]
         )
 
     @property

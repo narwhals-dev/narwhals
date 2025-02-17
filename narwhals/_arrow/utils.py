@@ -283,7 +283,7 @@ def broadcast_and_extract_native(
 
 def broadcast_and_extract_dataframe_comparand(
     length: int, other: ArrowSeries, backend_version: tuple[int, ...]
-) -> pa.BooleanArray:
+) -> ArrowChunkedArray:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -299,9 +299,9 @@ def broadcast_and_extract_dataframe_comparand(
             value = other._native_series[0]
             if backend_version < (13,) and hasattr(value, "as_py"):
                 value = value.as_py()
-            return pa.array(np.full(shape=length, fill_value=value))
+            return pa.chunked_array(np.full(shape=length, fill_value=value))
 
-        return cast("pa.BooleanArray", other._native_series)
+        return other._native_series
 
     from narwhals._arrow.dataframe import ArrowDataFrame  # pragma: no cover
 
@@ -501,7 +501,7 @@ TIME_FORMATS = ((HMS_RE, "%H:%M:%S"), (HM_RE, "%H:%M"), (HMS_RE_NO_SEP, "%H%M%S"
 
 
 def _extract_regex_concat_arrays(
-    strings: pa.ChunkedArray[StringScalar],
+    strings: ArrowChunkedArray,
     /,
     pattern: str,
     *,
