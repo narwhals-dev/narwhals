@@ -519,7 +519,7 @@ class Datetime(TemporalType, metaclass=_DatetimeMeta):
 
     def __eq__(self: Self, other: object) -> bool:
         # allow comparing object instances to class
-        if type(other) is _DatetimeMeta and issubclass(other, self.__class__):
+        if type(other) is _DatetimeMeta:
             return True
         elif isinstance(other, self.__class__):
             return self.time_unit == other.time_unit and self.time_zone == other.time_zone
@@ -580,7 +580,7 @@ class Duration(TemporalType, metaclass=_DurationMeta):
 
     def __eq__(self: Self, other: object) -> bool:
         # allow comparing object instances to class
-        if type(other) is _DurationMeta and issubclass(other, self.__class__):
+        if type(other) is _DurationMeta:
             return True
         elif isinstance(other, self.__class__):
             return self.time_unit == other.time_unit
