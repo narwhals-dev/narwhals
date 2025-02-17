@@ -166,9 +166,9 @@ def test_floordiv(left: int, right: int) -> None:
     # test is a bit manual unfortunately
     assume(right != 0)
     expected = {"a": [left // right]}
-    result = nw.from_native(pd.DataFrame({"a": [left]}), eager_only=True).select(
-        nw.col("a") // right
-    )
+    result: nw.DataFrame[Any] = nw.from_native(
+        pd.DataFrame({"a": [left]}), eager_only=True
+    ).select(nw.col("a") // right)
     assert_equal_data(result, expected)
     if PANDAS_VERSION < (2, 2):  # pragma: no cover
         # Bug in old version of pandas
@@ -201,9 +201,9 @@ def test_mod(left: int, right: int) -> None:
     # test is a bit manual unfortunately
     assume(right != 0)
     expected = {"a": [left % right]}
-    result = nw.from_native(pd.DataFrame({"a": [left]}), eager_only=True).select(
-        nw.col("a") % right
-    )
+    result: nw.DataFrame[Any] = nw.from_native(
+        pd.DataFrame({"a": [left]}), eager_only=True
+    ).select(nw.col("a") % right)
     assert_equal_data(result, expected)
     result = nw.from_native(
         pd.DataFrame({"a": [left]}).convert_dtypes(), eager_only=True

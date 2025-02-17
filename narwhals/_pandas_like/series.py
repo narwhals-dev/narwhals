@@ -35,9 +35,9 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
-    import pyarrow as pa
     from typing_extensions import Self
 
+    from narwhals._arrow.typing import ArrowArray
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals.dtypes import DType
     from narwhals.typing import _1DArray
@@ -300,10 +300,6 @@ class PandasLikeSeries(CompliantSeries):
 
     def is_in(self: Self, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        if isinstance(other, list) and isinstance(other[0], self.__class__):
-            # We can't use `broadcast_and_align` because we don't want to align here.
-            # `other` is just a sequence that all rows from `self` are checked against.
-            other = other[0]._native_series
         res = ser.isin(other)
         return self._from_native_series(res)
 
@@ -865,7 +861,7 @@ class PandasLikeSeries(CompliantSeries):
             self._native_series.clip(lower_bound, upper_bound, **kwargs)
         )
 
-    def to_arrow(self: Self) -> pa.Array:
+    def to_arrow(self: Self) -> ArrowArray:
         if self._implementation is Implementation.CUDF:
             return self._native_series.to_arrow()
 

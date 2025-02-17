@@ -28,9 +28,9 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
-    import pyarrow as pa
     from typing_extensions import Self
 
+    from narwhals._arrow.typing import ArrowArray
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
     from narwhals.typing import _1DArray
@@ -186,7 +186,9 @@ class Series(Generic[IntoSeriesT]):
         if parse_version(pa) < (16, 0):  # pragma: no cover
             msg = f"PyArrow>=16.0.0 is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
             raise ModuleNotFoundError(msg)
-        ca = pa.chunked_array([self.to_arrow()])  # type: ignore[call-overload, unused-ignore]
+        from narwhals._arrow.utils import chunked_array
+
+        ca = chunked_array(self.to_arrow())
         return ca.__arrow_c_stream__(requested_schema=requested_schema)
 
     def to_native(self: Self) -> IntoSeriesT:
@@ -803,7 +805,7 @@ class Series(Generic[IntoSeriesT]):
             ]
         """
         return self._from_compliant_series(
-            self._compliant_series.is_in(self._extract_native(other))
+            self._compliant_series.is_in(to_native(other, pass_through=True))
         )
 
     def arg_true(self: Self) -> Self:
@@ -2047,7 +2049,7 @@ class Series(Generic[IntoSeriesT]):
             self._compliant_series.gather_every(n=n, offset=offset)
         )
 
-    def to_arrow(self: Self) -> pa.Array:
+    def to_arrow(self: Self) -> ArrowArray:
         r"""Convert to arrow.
 
         Returns:

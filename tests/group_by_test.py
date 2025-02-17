@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from contextlib import nullcontext
+from typing import Any
+from typing import Mapping
 
 import pandas as pd
 import polars as pl
@@ -14,7 +16,7 @@ from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-data = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
+data: Mapping[str, Any] = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
 
 df_pandas = pd.DataFrame(data)
 df_lazy = pl.LazyFrame(data)
@@ -25,14 +27,14 @@ def test_group_by_complex() -> None:
 
     df = nw.from_native(df_pandas)
     with pytest.warns(UserWarning, match="complex group-by"):
-        result = nw.to_native(
+        result_pd = nw.to_native(
             df.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
         )
-    assert_equal_data(result, expected)
+    assert_equal_data(result_pd, expected)
 
     lf = nw.from_native(df_lazy).lazy()
-    result = lf.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
-    assert_equal_data(result, expected)
+    result_pl = lf.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
+    assert_equal_data(result_pl, expected)
 
 
 def test_invalid_group_by_dask() -> None:

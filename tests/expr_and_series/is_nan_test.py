@@ -104,9 +104,11 @@ def test_nan_non_float(constructor: Constructor, request: pytest.FixtureRequest)
     data = {"a": ["x", "y"]}
     df = nw.from_native(constructor(data))
 
-    exc = InvalidOperationError
-    if "pyarrow_table" in str(constructor):
-        exc = ArrowNotImplementedError
+    exc = (
+        ArrowNotImplementedError
+        if "pyarrow_table" in str(constructor)
+        else InvalidOperationError
+    )
 
     with pytest.raises(exc):
         df.select(nw.col("a").is_nan()).lazy().collect()
@@ -120,9 +122,11 @@ def test_nan_non_float_series(constructor_eager: ConstructorEager) -> None:
     data = {"a": ["x", "y"]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
-    exc = InvalidOperationError
-    if "pyarrow_table" in str(constructor_eager):
-        exc = ArrowNotImplementedError
+    exc = (
+        ArrowNotImplementedError
+        if "pyarrow_table" in str(constructor_eager)
+        else InvalidOperationError
+    )
 
     with pytest.raises(exc):
         df["a"].is_nan()
