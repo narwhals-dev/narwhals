@@ -1,18 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
+from typing import Any
 
-import narwhals.stable.v1 as nw
 import pandas as pd
 import polars as pl
 import pyarrow as pa
 import pytest
 
+import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoSeries
-
     from tests.utils import ConstructorEager
 
 
