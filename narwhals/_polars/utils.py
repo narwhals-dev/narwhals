@@ -192,7 +192,6 @@ def narwhals_to_native_dtype(
         msg = "Casting to Decimal is not supported yet."
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        # [s] is not allowed for polars
         return pl.Datetime(dtype.time_unit, dtype.time_zone)  # type: ignore[arg-type]
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         return pl.Duration(dtype.time_unit)  # type: ignore[arg-type]
