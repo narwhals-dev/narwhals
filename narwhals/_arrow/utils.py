@@ -26,11 +26,8 @@ if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import ArrowArray
     from narwhals._arrow.typing import ArrowChunkedArray
-    from narwhals._arrow.typing import ArrowScalarT_co
     from narwhals._arrow.typing import Incomplete
     from narwhals._arrow.typing import StringArray
-    from narwhals._arrow.typing import StringScalar
-    from narwhals._arrow.typing import StringScalarT
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
     from narwhals.typing import _AnyDArray
@@ -51,7 +48,7 @@ if TYPE_CHECKING:
         t: Any,
     ) -> TypeIs[pa.DictionaryType[Any, Any, Any]]: ...
     def extract_regex(
-        strings: pa.ChunkedArray[StringScalarT],
+        strings: ArrowChunkedArray,
         /,
         pattern: str,
         *,
@@ -72,14 +69,14 @@ lit = pa.scalar
 
 
 def chunked_array(
-    arr: ArrowArray | list[Iterable[ArrowScalarT_co]] | ArrowChunkedArray,
+    arr: ArrowArray | list[Iterable[pa.Scalar[Any]]] | ArrowChunkedArray,
 ) -> ArrowChunkedArray:
     if isinstance(arr, pa.ChunkedArray):
         return arr
     if isinstance(arr, list):
         return pa.chunked_array(cast("Any", arr))
     else:
-        return cast("ArrowChunkedArray", pa.chunked_array([arr], arr.type))
+        return pa.chunked_array([arr], arr.type)
 
 
 def nulls_like(n: int, series: ArrowSeries) -> ArrowArray:
@@ -214,7 +211,7 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
 @overload
 def broadcast_and_extract_native(
     lhs: ArrowSeries, rhs: None, backend_version: tuple[int, ...]
-) -> tuple[ArrowChunkedArray, ArrowScalarT_co]: ...
+) -> tuple[ArrowChunkedArray, pa.Scalar[Any]]: ...
 
 
 @overload
@@ -222,7 +219,7 @@ def broadcast_and_extract_native(
     lhs: ArrowSeries,
     rhs: ArrowSeries | list[ArrowSeries] | Any,
     backend_version: tuple[int, ...],
-) -> tuple[ArrowChunkedArray, ArrowScalarT_co | ArrowChunkedArray]: ...
+) -> tuple[ArrowChunkedArray, pa.Scalar[Any] | ArrowChunkedArray]: ...
 
 
 def broadcast_and_extract_native(
@@ -511,7 +508,7 @@ def _extract_regex_concat_arrays(
     return cast("pa.StructArray", r)
 
 
-def parse_datetime_format(arr: pa.ChunkedArray[StringScalar]) -> str:
+def parse_datetime_format(arr: ArrowChunkedArray) -> str:
     """Try to infer datetime format from StringArray."""
     matches = _extract_regex_concat_arrays(arr.drop_null().slice(0, 10), pattern=FULL_RE)
     if not pc.all(matches.is_valid()).as_py():

@@ -33,7 +33,6 @@ if TYPE_CHECKING:
     TieBreaker: TypeAlias = Literal["min", "max", "first", "dense"]
     NullPlacement: TypeAlias = Literal["at_start", "at_end"]
 
-    StringScalar: TypeAlias = "pc.StringScalar"
     StringArray: TypeAlias = "pc.StringArray"
     ArrowChunkedArray: TypeAlias = pa.ChunkedArray[Any]
     ArrowArray: TypeAlias = pa.Array[Any]
@@ -54,8 +53,3 @@ Common issues:
 - Inconsistent use of generic/concrete types
 - `_clone_signature` used on signatures that are not identical
 """
-
-ArrowScalarT_co = TypeVar(
-    "ArrowScalarT_co", bound="pa.Scalar", covariant=True
-)  # pragma: no cover
-StringScalarT = TypeVar("StringScalarT", bound="StringScalar")  # pragma: no cover
