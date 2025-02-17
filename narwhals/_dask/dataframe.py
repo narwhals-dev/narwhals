@@ -320,7 +320,7 @@ class DaskLazyFrame(CompliantLazyFrame):
             df = self._native_frame.merge(
                 other_native,
                 how="outer",
-                indicator=indicator_token,
+                indicator=indicator_token,  # pyright: ignore[reportArgumentType]
                 left_on=left_on,
                 right_on=left_on,
             )
