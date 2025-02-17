@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from contextlib import nullcontext
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -111,11 +110,5 @@ def test_collect_with_kwargs(constructor: Constructor) -> None:
 def test_collect_empty_pyspark(constructor: Constructor) -> None:
     df = nw_v1.from_native(constructor({"a": [1, 2, 3]}))
     df = df.filter(nw.col("a").is_null()).with_columns(b=nw.lit(None)).lazy()
-    context = (
-        pytest.warns(UserWarning, match="Could not convert dtype")
-        if "pyspark" in str(constructor)
-        else nullcontext()
-    )
-    with context:
-        result = df.collect()
+    result = df.collect()
     assert_equal_data(result, {"a": [], "b": []})
