@@ -132,7 +132,7 @@ def dask_lazy_p2_constructor(obj: dict[str, list[Any]]) -> IntoFrame:  # pragma:
     return dd.from_dict(obj, npartitions=2)  # type: ignore[no-any-return]
 
 
-def pyarrow_table_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+def pyarrow_table_constructor(obj: dict[str, Any]) -> IntoDataFrame:
     return pa.table(obj)  # type: ignore[no-any-return]
 
 
@@ -227,7 +227,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             if x not in GPU_CONSTRUCTORS and x != "modin"  # too slow
         ]
     else:  # pragma: no cover
-        selected_constructors = metafunc.config.getoption("constructors").split(",")
+        selected_constructors = metafunc.config.getoption("constructors").split(",")  # pyright: ignore[reportAttributeAccessIssue]
 
     eager_constructors: list[Callable[[Any], IntoDataFrame]] = []
     eager_constructors_ids: list[str] = []

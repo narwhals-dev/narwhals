@@ -397,9 +397,8 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             return self._from_native_frame(
                 self._native_frame.__class__(), validate_column_names=False
             )
-        new_series = align_and_extract_native_full_broadcast(*new_series)
         df = horizontal_concat(
-            new_series,
+            align_and_extract_native_full_broadcast(*new_series),
             implementation=self._implementation,
             backend_version=self._backend_version,
         )

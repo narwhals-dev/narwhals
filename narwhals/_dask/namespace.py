@@ -228,8 +228,9 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
 
     def mean_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            series = (s.fillna(0) for _expr in exprs for s in _expr(df))
-            non_na = (1 - s.isna() for _expr in exprs for s in _expr(df))
+            expr_results = [s for _expr in exprs for s in _expr(df)]
+            series = (s.fillna(0) for s in expr_results)
+            non_na = (1 - s.isna() for s in expr_results)
             return [
                 name_preserving_div(
                     reduce(name_preserving_sum, series),

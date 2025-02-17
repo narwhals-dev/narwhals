@@ -20,6 +20,7 @@ from narwhals._arrow.utils import align_series_full_broadcast
 from narwhals._arrow.utils import diagonal_concat
 from narwhals._arrow.utils import extract_dataframe_comparand
 from narwhals._arrow.utils import horizontal_concat
+from narwhals._arrow.utils import nulls_like
 from narwhals._arrow.utils import vertical_concat
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
@@ -32,6 +33,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from narwhals._arrow.typing import Incomplete
     from narwhals._arrow.typing import IntoArrowExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
@@ -238,14 +240,9 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         dtypes = import_dtypes_module(self._version)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            series = (
-                s.fill_null(0, strategy=None, limit=None)
-                for _expr in exprs
-                for s in _expr(df)
-            )
-            non_na = (
-                1 - s.is_null().cast(dtypes.Int64()) for _expr in exprs for s in _expr(df)
-            )
+            expr_results = [s for _expr in exprs for s in _expr(df)]
+            series = (s.fill_null(0, strategy=None, limit=None) for s in expr_results)
+            non_na = (1 - s.is_null().cast(dtypes.Int64()) for s in expr_results)
             return [reduce(operator.add, series) / reduce(operator.add, non_na)]
 
         return self._create_expr_from_callable(
@@ -260,13 +257,16 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
     def min_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             init_series, *series = [s for _expr in exprs for s in _expr(df)]
+            # NOTE: Stubs copy the wrong signature https://github.com/zen-xu/pyarrow-stubs/blob/d97063876720e6a5edda7eb15f4efe07c31b8296/pyarrow-stubs/compute.pyi#L963
+            min_element_wise: Incomplete = pc.min_element_wise
+            native_series = reduce(
+                min_element_wise,
+                [s._native_series for s in series],
+                init_series._native_series,
+            )
             return [
                 ArrowSeries(
-                    native_series=reduce(
-                        pc.min_element_wise,
-                        [s._native_series for s in series],
-                        init_series._native_series,
-                    ),
+                    native_series,
                     name=init_series.name,
                     backend_version=self._backend_version,
                     version=self._version,
@@ -285,13 +285,17 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
     def max_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             init_series, *series = [s for _expr in exprs for s in _expr(df)]
+            # NOTE: stubs are missing `ChunkedArray` support
+            # https://github.com/zen-xu/pyarrow-stubs/blob/d97063876720e6a5edda7eb15f4efe07c31b8296/pyarrow-stubs/compute.pyi#L948-L954
+            max_element_wise: Incomplete = pc.max_element_wise
+            native_series = reduce(
+                max_element_wise,
+                [s._native_series for s in series],
+                init_series._native_series,
+            )
             return [
                 ArrowSeries(
-                    native_series=reduce(
-                        pc.max_element_wise,
-                        [s._native_series for s in series],
-                        init_series._native_series,
-                    ),
+                    native_series,
                     name=init_series.name,
                     backend_version=self._backend_version,
                     version=self._version,
@@ -353,18 +357,19 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         dtypes = import_dtypes_module(self._version)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            compliant_series_list = [
+            compliant_series_list: list[ArrowSeries] = [
                 s for _expr in exprs for s in _expr.cast(dtypes.String())(df)
             ]
-            null_handling = "skip" if ignore_nulls else "emit_null"
-            result_series = pc.binary_join_element_wise(
-                *(s._native_series for s in compliant_series_list),
-                separator,
-                null_handling=null_handling,
+            null_handling: Literal["skip", "emit_null"] = (
+                "skip" if ignore_nulls else "emit_null"
             )
+            it = (s._native_series for s in compliant_series_list)
+            # NOTE: stubs indicate `separator` must also be a `ChunkedArray`
+            # Reality: `str` is fine
+            concat_str: Incomplete = pc.binary_join_element_wise
             return [
                 ArrowSeries(
-                    native_series=result_series,
+                    native_series=concat_str(*it, separator, null_handling=null_handling),
                     name=compliant_series_list[0].name,
                     backend_version=self._backend_version,
                     version=self._version,
@@ -410,14 +415,11 @@ class ArrowWhen:
         value_series_native = extract_dataframe_comparand(
             len(df), value_series, self._backend_version
         )
-
         if self._otherwise_value is None:
-            otherwise_native = pa.repeat(
-                pa.scalar(None, type=value_series_native.type), len(condition_native)
-            )
+            otherwise_null = nulls_like(len(condition_native), value_series)
             return [
                 value_series._from_native_series(
-                    pc.if_else(condition_native, value_series_native, otherwise_native)
+                    pc.if_else(condition_native, value_series_native, otherwise_null)
                 )
             ]
         otherwise_expr = self._otherwise_value
@@ -466,7 +468,7 @@ class ArrowThen(ArrowExpr):
         self._call = call
         self._depth = depth
         self._function_name = function_name
-        self._evaluate_output_names = evaluate_output_names
+        self._evaluate_output_names = evaluate_output_names  # pyright: ignore[reportAttributeAccessIssue]
         self._alias_output_names = alias_output_names
         self._kwargs = kwargs
 

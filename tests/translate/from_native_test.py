@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
     from narwhals.utils import Version
 
-data = {"a": [1, 2, 3]}
+data: dict[str, Any] = {"a": [1, 2, 3]}
 
 df_pd = pd.DataFrame(data)
 df_pl = pl.DataFrame(data)

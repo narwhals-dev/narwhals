@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
@@ -12,6 +13,7 @@ from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
+from narwhals.utils import find_stacklevel
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -123,13 +125,27 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                     from narwhals._arrow.utils import narwhals_to_native_dtype
 
                     data: dict[str, list[Any]] = {}
-                    schema = []
+                    schema: list[tuple[str, pa.DataType]] = []
                     current_schema = self.collect_schema()
                     for key, value in current_schema.items():
                         data[key] = []
-                        schema.append(
-                            (key, narwhals_to_native_dtype(value, self._version))
-                        )
+                        try:
+                            native_dtype = narwhals_to_native_dtype(value, self._version)
+                        except Exception as exc:  # noqa: BLE001
+                            native_spark_dtype = self._native_frame.schema[key].dataType
+                            # If we can't convert the type, just set it to `pa.null`, and warn.
+                            # Avoid the warning if we're starting from PySpark's void type.
+                            # We can avoid the check when we introduce `nw.Null` dtype.
+                            if not isinstance(
+                                native_spark_dtype, self._native_dtypes.NullType
+                            ):
+                                warnings.warn(
+                                    f"Could not convert dtype {native_spark_dtype} to PyArrow dtype, {exc!r}",
+                                    stacklevel=find_stacklevel(),
+                                )
+                            schema.append((key, pa.null()))
+                        else:
+                            schema.append((key, native_dtype))
                     native_pyarrow_frame = pa.Table.from_pydict(
                         data, schema=pa.schema(schema)
                     )
