@@ -86,7 +86,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
 
     def __narwhals_expr__(self) -> None: ...
 
-    def broadcast(self, _kind: Any) -> Self:
+    def broadcast(self, kind: Any) -> Self:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             results = []
             for result in self(df):
