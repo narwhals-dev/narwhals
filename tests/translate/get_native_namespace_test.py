@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import narwhals.stable.v1 as nw
 import pandas as pd
 import polars as pl
 import pyarrow as pa
 import pytest
+
+import narwhals.stable.v1 as nw
 
 if TYPE_CHECKING:
     from narwhals.typing import Frame
