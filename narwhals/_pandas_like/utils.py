@@ -143,13 +143,14 @@ def align_and_extract_native(
     return lhs_native, rhs
 
 
-def align_and_extract_native_no_left_broadcast(
+def align_and_extract_native_no_broadcast(
     lhs: PandasLikeSeries, rhs: Any
 ) -> pd.Series[Any] | object:
     """More restricted version of `align_and_extract_native`.
 
-    Can only be used to extract and align a comparand, in cases where
-    the left-hand-side is not allowed to broadcast.
+    Can only be used to extract and align a comparand, in cases
+    where we know no broadcasting is allowed to happen.
+    Note that we still need this to align the indexes.
     """
     from narwhals._pandas_like.series import PandasLikeSeries
 
@@ -157,7 +158,7 @@ def align_and_extract_native_no_left_broadcast(
     # a list of Series. So, we verify that that list is of length-1,
     # and take the first (and only) element.
     if isinstance(rhs, list):
-        if len(rhs) > 1:
+        if len(rhs) > 1:  # pragma: no cover
             if hasattr(rhs[0], "__narwhals_expr__") or hasattr(
                 rhs[0], "__narwhals_series__"
             ):
@@ -170,8 +171,6 @@ def align_and_extract_native_no_left_broadcast(
 
     lhs_index = lhs._native_series.index
     if isinstance(rhs, PandasLikeSeries):
-        if rhs._broadcast:
-            return rhs._native_series.item()
         rhs_native = rhs._native_series
         if rhs_native.index is not lhs_index:
             return set_index(
