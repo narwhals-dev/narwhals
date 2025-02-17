@@ -481,5 +481,7 @@ jobs:
         run: |
           cd validoopsie
           . .venv/bin/activate
+          touch tests/__init__.py
+          touch tests/utils/__init__.py
           pytest tests
         timeout-minutes: 15
