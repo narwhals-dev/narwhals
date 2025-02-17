@@ -6,6 +6,7 @@ from typing import TypeVar  # pragma: no cover
 
 if TYPE_CHECKING:
     import sys
+    from typing import Generic
     from typing import Literal
 
     if sys.version_info >= (3, 10):
@@ -15,9 +16,6 @@ if TYPE_CHECKING:
 
     import pyarrow as pa
     import pyarrow.compute as pc
-    from pyarrow.__lib_pxi.types import (  # pyright: ignore[reportMissingModuleSource]
-        _BasicDataType,  # noqa: F401
-    )
     from pyarrow._stubs_typing import (  # pyright: ignore[reportMissingModuleSource]
         Indices,  # noqa: F401
     )
@@ -40,6 +38,10 @@ if TYPE_CHECKING:
     StringArrayT = TypeVar("StringArrayT", bound=StringArray)
     DataTypeT_co = TypeVar("DataTypeT_co", bound="pa.DataType", covariant=True)
     ArrowScalarT_co = TypeVar("ArrowScalarT_co", bound="pa.Scalar", covariant=True)
+    _AsPyType = TypeVar("_AsPyType")
+
+    class _BasicDataType(pa.DataType, Generic[_AsPyType]): ...
+
 
 Incomplete: TypeAlias = Any  # pragma: no cover
 """
