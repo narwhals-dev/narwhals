@@ -251,6 +251,7 @@ reportMissingImports = "none"
 reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
 typeCheckingMode = "basic"
+include = ["narwhals", "tests"]
 ignore = [
   "../.venv/",
   "../../../**/Lib",      # stdlib
