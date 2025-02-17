@@ -25,7 +25,7 @@ from tests.utils import get_module_version_as_tuple
 
 if TYPE_CHECKING:
     from narwhals.series import Series
-    from narwhals.typing import IntoSeriesT
+    from narwhals.typing import IntoSeries
     from narwhals.utils import _SupportsVersion
 
 
@@ -125,7 +125,7 @@ def test_maybe_set_index_polars_column_names(
     ],
 )
 def test_maybe_set_index_pandas_direct_index(
-    narwhals_index: Series[IntoSeriesT] | list[Series[IntoSeriesT]],
+    narwhals_index: Series[IntoSeries] | list[Series[IntoSeries]],
     pandas_index: pd.Series | list[pd.Series],
     native_df_or_series: pd.DataFrame | pd.Series,
 ) -> None:
@@ -150,7 +150,7 @@ def test_maybe_set_index_pandas_direct_index(
     ],
 )
 def test_maybe_set_index_polars_direct_index(
-    index: Series[IntoSeriesT] | list[Series[IntoSeriesT]] | None,
+    index: Series[IntoSeries] | list[Series[IntoSeries]] | None,
 ) -> None:
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = nw.maybe_set_index(df, index=index)
