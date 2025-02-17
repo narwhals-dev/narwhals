@@ -210,19 +210,21 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
 
 def extract_native(
     lhs: ArrowSeries, rhs: Any
-) -> tuple[ArrowChunkedArray | pa.Scalar, ArrowChunkedArray | pa.Scalar | object]:
-    """Validate RHS of binary operation.
+) -> tuple[
+    ArrowChunkedArray | pa.Scalar[Any], ArrowChunkedArray | pa.Scalar[Any] | object
+]:
+    """Extract native objects in binary  operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
     "right-hand-side" operation (e.g. `__radd__`) can be tried.
 
-    If RHS is length 1, return the scalar value, so that the underlying
-    library can broadcast it.
+    If one of the two sides has a `_broadcast` flag, then extract the scalar
+    underneath it so that PyArrow can do its own broadcasting.
     """
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
 
-    if rhs is None:  # DONE
+    if rhs is None:
         return lhs._native_series, lit(None, type=lhs._native_series.type)
 
     # If `rhs` is the output of an expression evaluation, then it is
@@ -251,6 +253,7 @@ def extract_native(
 
 
 def align_series_full_broadcast(*series: ArrowSeries) -> Sequence[ArrowSeries]:
+    # Ensure all of `series` are of the same length.
     lengths = [len(s) for s in series]
     max_length = max(lengths)
     fast_path = all(_len == max_length for _len in lengths)
@@ -280,15 +283,10 @@ def extract_dataframe_comparand(
     other: ArrowSeries,
     backend_version: tuple[int, ...],
 ) -> ArrowChunkedArray:
-    """Extract native Series, broadcasting to the length if necessary.
-
-    If the comparison isn't supported, return `NotImplemented` so that the
-    "right-hand-side" operation (e.g. `__radd__`) can be tried.
-    """
+    """Extract native Series, broadcasting to `length` if necessary."""
     import numpy as np  # ignore-banned-import
 
-    len_other = len(other)
-    if len_other == 1 and length != 1:
+    if other._broadcast:
         import numpy as np  # ignore-banned-import
 
         value = other._native_series[0]
