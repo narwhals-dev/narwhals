@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
@@ -44,10 +43,10 @@ if TYPE_CHECKING:
     from typing_extensions import Self
     from typing_extensions import TypeAlias
 
+    from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.group_by import ArrowGroupBy
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.series import ArrowSeries
-    from narwhals._arrow.typing import IntoArrowExpr
     from narwhals.dtypes import DType
     from narwhals.typing import SizeUnit
     from narwhals.typing import _1DArray
@@ -128,7 +127,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     @property
     def shape(self: Self) -> tuple[int, int]:
-        return self._native_frame.shape  # type: ignore[no-any-return]
+        return self._native_frame.shape
 
     def __len__(self: Self) -> int:
         return len(self._native_frame)
@@ -150,7 +149,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
     def rows(self: Self, *, named: bool) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         if not named:
             return list(self.iter_rows(named=False, buffer_size=512))  # type: ignore[return-value]
-        return self._native_frame.to_pylist()  # type: ignore[no-any-return]
+        return self._native_frame.to_pylist()
 
     def iter_rows(
         self: Self, *, named: bool, buffer_size: int
@@ -335,15 +334,18 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     @property
     def columns(self: Self) -> list[str]:
-        return self._native_frame.schema.names  # type: ignore[no-any-return]
+        return self._native_frame.schema.names
 
     def simple_select(self, *column_names: str) -> Self:
         return self._from_native_frame(
             self._native_frame.select(list(column_names)), validate_column_names=False
         )
 
-    def select(self: Self, *exprs: IntoArrowExpr, **named_exprs: IntoArrowExpr) -> Self:
-        new_series: list[ArrowSeries] = evaluate_into_exprs(self, *exprs, **named_exprs)
+    def aggregate(self: Self, *exprs: ArrowExpr) -> Self:
+        return self.select(*exprs)
+
+    def select(self: Self, *exprs: ArrowExpr) -> Self:
+        new_series: list[ArrowSeries] = evaluate_into_exprs(self, *exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_frame(
@@ -353,11 +355,9 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         df = pa.Table.from_arrays(broadcast_series(new_series), names=names)
         return self._from_native_frame(df, validate_column_names=False)
 
-    def with_columns(
-        self: Self, *exprs: IntoArrowExpr, **named_exprs: IntoArrowExpr
-    ) -> Self:
+    def with_columns(self: Self, *exprs: ArrowExpr) -> Self:
         native_frame = self._native_frame
-        new_columns: list[ArrowSeries] = evaluate_into_exprs(self, *exprs, **named_exprs)
+        new_columns: list[ArrowSeries] = evaluate_into_exprs(self, *exprs)
 
         length = len(self)
         columns = self.columns
@@ -407,9 +407,9 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             )
 
             return self._from_native_frame(
-                self.with_columns(**{key_token: plx.lit(0, None)})
+                self.with_columns(plx.lit(0, None).alias(key_token))
                 ._native_frame.join(
-                    other.with_columns(**{key_token: plx.lit(0, None)})._native_frame,
+                    other.with_columns(plx.lit(0, None).alias(key_token))._native_frame,
                     keys=key_token,
                     right_keys=key_token,
                     join_type="inner",
@@ -532,23 +532,12 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             df.append_column(name, row_indices).select([name, *cols])
         )
 
-    def filter(self: Self, *predicates: IntoArrowExpr, **constraints: Any) -> Self:
-        if (
-            len(predicates) == 1
-            and isinstance(predicates[0], list)
-            and all(isinstance(x, bool) for x in predicates[0])
-            and not constraints
-        ):
-            mask_native = predicates[0]
+    def filter(self: Self, predicate: ArrowExpr | list[bool]) -> Self:
+        if isinstance(predicate, list):
+            mask_native = predicate
         else:
-            plx = self.__narwhals_namespace__()
-            expr = plx.all_horizontal(
-                *chain(
-                    predicates, (plx.col(name) == v for name, v in constraints.items())
-                )
-            )
-            # `[0]` is safe as all_horizontal's expression only returns a single column
-            mask = expr._call(self)[0]
+            # `[0]` is safe as the predicate's expression only returns a single column
+            mask = evaluate_into_exprs(self, predicate)[0]
             mask_native = broadcast_and_extract_dataframe_comparand(
                 length=len(self), other=mask, backend_version=self._backend_version
             )
@@ -710,8 +699,9 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         if file is None:
             csv_buffer = pa.BufferOutputStream()
             pa_csv.write_csv(pa_table, csv_buffer)
-            return csv_buffer.getvalue().to_pybytes().decode()  # type: ignore[no-any-return]
-        return pa_csv.write_csv(pa_table, file)  # type: ignore[no-any-return]
+            return csv_buffer.getvalue().to_pybytes().decode()
+        pa_csv.write_csv(pa_table, file)
+        return None
 
     def is_unique(self: Self) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
@@ -768,7 +758,8 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             )
 
         keep_idx = self.simple_select(*subset).is_unique()
-        return self.filter(keep_idx)
+        plx = self.__narwhals_namespace__()
+        return self.filter(plx._create_expr_from_series(keep_idx))
 
     def gather_every(self: Self, n: int, offset: int) -> Self:
         return self._from_native_frame(

@@ -37,9 +37,8 @@ polars = ["polars>=0.20.3"]
 dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.0"]
 ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
-dev = [
+tests = [
   "covdefaults",
-  "pre-commit",
   "pytest",
   "pytest-cov",
   "pytest-randomly",
@@ -47,12 +46,22 @@ dev = [
   "hypothesis",
   "typing_extensions",
 ]
+typing = [
+  "typing_extensions",
+  "mypy~=1.15.0",
+]
+dev = [
+  "pre-commit",
+  "narwhals[tests]",
+  "narwhals[typing]",
+]
 core = [
   "duckdb",
   "pandas",
   "polars",
   "pyarrow",
-  "pyarrow-stubs",
+  #TODO: reintroduce when fixing #1961
+  # "pyarrow-stubs",
 ]
 extra = [  # heavier dependencies we don't necessarily need in every testing job
   "scikit-learn",
@@ -156,6 +165,7 @@ required-imports = ["from __future__ import annotations"]
 docstring-code-format = true
 
 [tool.pytest.ini_options]
+norecursedirs =  ['*.egg', '.*', '_darcs', 'build', 'CVS', 'dist', 'node_modules', 'venv', '{arch}', 'narwhals/_*']
 testpaths = ["tests"]
 filterwarnings = [
   "error",
@@ -209,13 +219,28 @@ exclude_also = [
 ]
 
 [tool.mypy]
-strict = true
+files = ["narwhals", "tests"]
+pretty = true
+# TODO: reenable strict mode
+# strict = true
 
 [[tool.mypy.overrides]]
-# the pandas API is just too inconsistent for type hinting to be useful.
 module = [
-  "pandas.*",
+  # TODO: enable step by step when it makes sense
+  # e.g. the pandas API is just too inconsistent for type hinting to be useful.
   "cudf.*",
+  "dask.*",
+  "dask_expr.*",
+  "duckdb.*",
+  "ibis.*",
   "modin.*",
+  "numpy.*",
+  "pandas.*",
+  "pyarrow.*",
+  "pyspark.*",
+  "sklearn.*",
+  "sqlframe.*",
 ]
+# TODO: remove follow_imports
+follow_imports = "skip"
 ignore_missing_imports = true

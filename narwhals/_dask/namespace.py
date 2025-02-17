@@ -237,8 +237,9 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
 
     def mean_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            series = (s.fillna(0) for _expr in exprs for s in _expr(df))
-            non_na = (1 - s.isna() for _expr in exprs for s in _expr(df))
+            expr_results = [s for _expr in exprs for s in _expr(df)]
+            series = (s.fillna(0) for s in expr_results)
+            non_na = (1 - s.isna() for s in expr_results)
             return [
                 name_preserving_div(
                     reduce(name_preserving_sum, series),
@@ -294,14 +295,9 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             kwargs={"exprs": exprs},
         )
 
-    def when(
-        self: Self,
-        *predicates: DaskExpr,
-    ) -> DaskWhen:
-        plx = self.__class__(backend_version=self._backend_version, version=self._version)
-        condition = plx.all_horizontal(*predicates)
+    def when(self: Self, predicate: DaskExpr) -> DaskWhen:
         return DaskWhen(
-            condition, self._backend_version, returns_scalar=False, version=self._version
+            predicate, self._backend_version, returns_scalar=False, version=self._version
         )
 
     def concat_str(

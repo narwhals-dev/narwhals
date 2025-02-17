@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals.dtypes import DType
     from narwhals.typing import _1DArray
+    from narwhals.typing import _2DArray
     from narwhals.utils import Version
 
 
@@ -326,21 +327,23 @@ class ArrowSeries(CompliantSeries):
     def __getitem__(self: Self, idx: int) -> Any: ...
 
     @overload
-    def __getitem__(self: Self, idx: slice | Sequence[int]) -> Self: ...
+    def __getitem__(self: Self, idx: slice | Sequence[int] | pa.ChunkedArray) -> Self: ...
 
-    def __getitem__(self: Self, idx: int | slice | Sequence[int]) -> Any | Self:
+    def __getitem__(
+        self: Self, idx: int | slice | Sequence[int] | pa.ChunkedArray
+    ) -> Any | Self:
         if isinstance(idx, int):
             return maybe_extract_py_scalar(
                 self._native_series[idx], return_py_scalar=True
             )
-        if isinstance(idx, Sequence):
+        if isinstance(idx, (Sequence, pa.ChunkedArray)):
             return self._from_native_series(self._native_series.take(idx))
         return self._from_native_series(self._native_series[idx])
 
     def scatter(self: Self, indices: int | Sequence[int], values: Any) -> Self:
         import numpy as np  # ignore-banned-import
 
-        mask = np.zeros(self.len(), dtype=bool)
+        mask: _1DArray = np.zeros(self.len(), dtype=bool)
         mask[indices] = True
         if isinstance(values, self.__class__):
             ser, values = broadcast_and_extract_native(
@@ -356,7 +359,7 @@ class ArrowSeries(CompliantSeries):
         return self._from_native_series(result)
 
     def to_list(self: Self) -> list[Any]:
-        return self._native_series.to_pylist()  # type: ignore[no-any-return]
+        return self._native_series.to_pylist()
 
     def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> _1DArray:
         return self._native_series.__array__(dtype=dtype, copy=copy)
@@ -473,7 +476,12 @@ class ArrowSeries(CompliantSeries):
             return self._from_native_series(ser.slice(abs(n)))
 
     def is_in(self: Self, other: Any) -> Self:
-        value_set = pa.array(other)
+        if isinstance(other, list) and isinstance(other[0], self.__class__):
+            # We can't use `broadcast_and_align` because we don't want to align here.
+            # `other` is just a sequence that all rows from `self` are checked against.
+            value_set = other[0]._native_series
+        else:
+            value_set = pa.array(other)
         ser = self._native_series
         return self._from_native_series(pc.is_in(ser, value_set=value_set))
 
@@ -724,7 +732,7 @@ class ArrowSeries(CompliantSeries):
         name = self._name
         da = series.dictionary_encode(null_encoding="encode").combine_chunks()
 
-        columns = np.zeros((len(da.dictionary), len(da)), np.int8)
+        columns: _2DArray = np.zeros((len(da.dictionary), len(da)), np.int8)
         columns[da.indices, np.arange(len(da))] = 1
         null_col_pa, null_col_pl = f"{name}{separator}None", f"{name}{separator}null"
         cols = [

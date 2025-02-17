@@ -99,7 +99,7 @@ def test_rolling_var_series(
     assert_equal_data(result, {name: expected})
 
 
-@given(  # type: ignore[misc]
+@given(
     center=st.booleans(),
     values=st.lists(st.floats(-10, 10), min_size=5, max_size=10),
 )

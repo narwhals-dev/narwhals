@@ -790,16 +790,9 @@ class Array(NestedType):
     shape: tuple[int, ...]
 
     def __init__(
-        self: Self,
-        inner: DType | type[DType],
-        shape: int | tuple[int, ...] | None = None,
+        self: Self, inner: DType | type[DType], shape: int | tuple[int, ...]
     ) -> None:
         inner_shape: tuple[int, ...] = inner.shape if isinstance(inner, Array) else ()
-
-        if shape is None:  # pragma: no cover
-            msg = "Array constructor is missing the required argument `shape`"
-            raise TypeError(msg)
-
         if isinstance(shape, int):
             self.inner = inner
             self.size = shape
