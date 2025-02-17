@@ -546,7 +546,7 @@ class ArrowSeries(CompliantSeries):
 
     def is_in(self: Self, other: Any) -> Self:
         if isinstance(other, pa.ChunkedArray):
-            value_set: pa.ChunkedArray | pa.Array = other
+            value_set: ArrowChunkedArray | ArrowArray = other
         else:
             value_set = pa.array(other)
         ser = self._native_series
