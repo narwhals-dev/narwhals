@@ -15,8 +15,10 @@ import pytest
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
+from tests.utils import PYARROW_VERSION
 
 if TYPE_CHECKING:
+    from narwhals.typing import IntoSeries
     from tests.utils import Constructor
 
 
@@ -135,6 +137,8 @@ def test_struct_hashes() -> None:
 def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if any(x in str(constructor) for x in ("dask", "modin", "cudf", "pyspark")):
         request.applymarker(pytest.mark.xfail)
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14,):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [[[1, 2], [3, 4], [5, 6]]]}
     df = nw.from_native(constructor(data)).with_columns(
         a=nw.col("a").cast(nw.Array(nw.Int64(), (3, 2)))
@@ -144,13 +148,15 @@ def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> N
 
 
 def test_second_time_unit() -> None:
-    s = pd.Series(np.array([np.datetime64("2020-01-01", "s")]))
+    s: IntoSeries = pd.Series(np.array([np.datetime64("2020-01-01", "s")]))
     result = nw.from_native(s, series_only=True)
     if PANDAS_VERSION < (2,):  # pragma: no cover
         assert result.dtype == nw.Datetime("ns")
     else:
         assert result.dtype == nw.Datetime("s")
-    s = pa.chunked_array([pa.array([datetime(2020, 1, 1)], type=pa.timestamp("s"))])
+    ts_sec = pa.timestamp("s")
+    dur_sec = pa.duration("s")
+    s = pa.chunked_array([pa.array([datetime(2020, 1, 1)], type=ts_sec)], type=ts_sec)
     result = nw.from_native(s, series_only=True)
     assert result.dtype == nw.Datetime("s")
     s = pd.Series(np.array([np.timedelta64(1, "s")]))
@@ -159,7 +165,7 @@ def test_second_time_unit() -> None:
         assert result.dtype == nw.Duration("ns")
     else:
         assert result.dtype == nw.Duration("s")
-    s = pa.chunked_array([pa.array([timedelta(1)], type=pa.duration("s"))])
+    s = pa.chunked_array([pa.array([timedelta(1)], type=dur_sec)], type=dur_sec)
     result = nw.from_native(s, series_only=True)
     assert result.dtype == nw.Duration("s")
 

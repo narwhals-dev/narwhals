@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Mapping
 
 import polars as pl
 import pytest
@@ -11,7 +12,7 @@ import narwhals.stable.v1 as nw
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-data = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.1], "z": ["x", "y", "z"]}
+data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.1], "z": ["x", "y", "z"]}
 
 
 class InterchangeDataFrame:

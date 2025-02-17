@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from typing import Any
+from typing import Mapping
+
 import polars as pl
 import pytest
 
@@ -8,7 +11,7 @@ from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
-data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.0]}
+data: Mapping[str, Any] = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.0]}
 
 
 @pytest.mark.parametrize(

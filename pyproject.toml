@@ -47,6 +47,7 @@ tests = [
   "typing_extensions",
 ]
 typing = [
+  "pandas-stubs",
   "typing_extensions",
   "mypy~=1.15.0",
 ]
@@ -226,8 +227,6 @@ pretty = true
 
 [[tool.mypy.overrides]]
 module = [
-  # TODO: enable step by step when it makes sense
-  # e.g. the pandas API is just too inconsistent for type hinting to be useful.
   "cudf.*",
   "dask.*",
   "dask_expr.*",
@@ -235,7 +234,6 @@ module = [
   "ibis.*",
   "modin.*",
   "numpy.*",
-  "pandas.*",
   "pyspark.*",
   "sklearn.*",
   "sqlframe.*",

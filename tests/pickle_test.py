@@ -17,7 +17,7 @@ def test_dataclass() -> None:
         a: Sequence[int]
 
     # dry-run to check that none of these error
-    asdict(Foo(pd.Series([1, 2, 3])))
+    asdict(Foo(pd.Series([1, 2, 3])))  # type: ignore[arg-type]
     asdict(Foo(pl.Series([1, 2, 3])))  # type: ignore[arg-type]
     asdict(Foo(nw.from_native(pl.Series([1, 2, 3]), series_only=True)))  # type: ignore[arg-type]
     asdict(Foo(nw.from_native(pd.Series([1, 2, 3]), series_only=True)))  # type: ignore[arg-type]
