@@ -50,6 +50,7 @@ typing = [
   "pandas-stubs",
   "typing_extensions",
   "mypy~=1.15.0",
+  "pyright"
 ]
 dev = [
   "pre-commit",
