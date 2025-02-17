@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeGuard
     from typing_extensions import TypeIs
 
-    from narwhals._arrow.typing import ArrowScalarT_co
+    from narwhals._arrow.typing import ArrowChunkedArray
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
@@ -212,8 +212,8 @@ def is_polars_series(ser: Any) -> TypeIs[pl.Series]:
 
 
 def is_pyarrow_chunked_array(
-    ser: Any | pa.ChunkedArray[ArrowScalarT_co],
-) -> TypeIs[pa.ChunkedArray[ArrowScalarT_co]]:
+    ser: Any | ArrowChunkedArray,
+) -> TypeIs[ArrowChunkedArray]:
     """Check whether `ser` is a PyArrow ChunkedArray without importing PyArrow."""
     return (pa := get_pyarrow()) is not None and isinstance(ser, pa.ChunkedArray)
 

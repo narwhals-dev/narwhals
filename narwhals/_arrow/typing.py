@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.series import ArrowSeries
 
-    IntoArrowExpr: TypeAlias = "ArrowExpr | ArrowSeries[Any]"
+    IntoArrowExpr: TypeAlias = "ArrowExpr | ArrowSeries"
     TieBreaker: TypeAlias = Literal["min", "max", "first", "dense"]
     NullPlacement: TypeAlias = Literal["at_start", "at_end"]
 
@@ -37,6 +37,8 @@ if TYPE_CHECKING:
     StringArray: TypeAlias = "pc.StringArray"
     StringArrayT = TypeVar("StringArrayT", bound=StringArray)
     DataTypeT_co = TypeVar("DataTypeT_co", bound="pa.DataType", covariant=True)
+    ArrowChunkedArray: TypeAlias = pa.ChunkedArray[Any]
+    ArrowArray: TypeAlias = pa.Array[Any]
     _AsPyType = TypeVar("_AsPyType")
 
     class _BasicDataType(pa.DataType, Generic[_AsPyType]): ...

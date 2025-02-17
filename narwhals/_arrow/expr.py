@@ -29,12 +29,12 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class ArrowExpr(CompliantExpr[ArrowSeries[Any]]):
+class ArrowExpr(CompliantExpr[ArrowSeries]):
     _implementation: Implementation = Implementation.PYARROW
 
     def __init__(
         self: Self,
-        call: Callable[[ArrowDataFrame], Sequence[ArrowSeries[Any]]],
+        call: Callable[[ArrowDataFrame], Sequence[ArrowSeries]],
         *,
         depth: int,
         function_name: str,
@@ -57,7 +57,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries[Any]]):
     def __repr__(self: Self) -> str:  # pragma: no cover
         return f"ArrowExpr(depth={self._depth}, function_name={self._function_name}, "
 
-    def __call__(self: Self, df: ArrowDataFrame) -> Sequence[ArrowSeries[Any]]:
+    def __call__(self: Self, df: ArrowDataFrame) -> Sequence[ArrowSeries]:
         return self._call(df)
 
     @classmethod
@@ -69,7 +69,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries[Any]]):
     ) -> Self:
         from narwhals._arrow.series import ArrowSeries
 
-        def func(df: ArrowDataFrame) -> list[ArrowSeries[Any]]:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             try:
                 return [
                     ArrowSeries(
@@ -106,7 +106,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries[Any]]):
     ) -> Self:
         from narwhals._arrow.series import ArrowSeries
 
-        def func(df: ArrowDataFrame) -> list[ArrowSeries[Any]]:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             return [
                 ArrowSeries(
                     df._native_frame[column_index],
@@ -370,7 +370,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries[Any]]):
         )
 
     def over(self: Self, keys: list[str]) -> Self:
-        def func(df: ArrowDataFrame) -> list[ArrowSeries[Any]]:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
             if overlap := set(output_names).intersection(keys):
                 # E.g. `df.select(nw.all().sum().over('a'))`. This is well-defined,
@@ -406,7 +406,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries[Any]]):
         function: Callable[[Any], Any],
         return_dtype: DType | None,
     ) -> Self:
-        def func(df: ArrowDataFrame) -> list[ArrowSeries[Any]]:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             input_series_list = self._call(df)
             output_names = [input_series.name for input_series in input_series_list]
             result = [function(series) for series in input_series_list]

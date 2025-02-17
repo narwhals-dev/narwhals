@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.group_by import ArrowGroupBy
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.series import ArrowSeries
+    from narwhals._arrow.typing import ArrowChunkedArray
     from narwhals._arrow.typing import Indices
     from narwhals._arrow.typing import Mask
     from narwhals._arrow.typing import Order
@@ -165,7 +166,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             for i in range(0, num_rows, buffer_size):
                 yield from df[i : i + buffer_size].to_pylist()
 
-    def get_column(self: Self, name: str) -> ArrowSeries[Any]:
+    def get_column(self: Self, name: str) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
 
         if not isinstance(name, str):
@@ -185,7 +186,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
     @overload
     def __getitem__(  # type: ignore[overload-overlap, unused-ignore]
         self: Self, item: str | tuple[slice | Sequence[int] | _1DArray, int | str]
-    ) -> ArrowSeries[Any]: ...
+    ) -> ArrowSeries: ...
     @overload
     def __getitem__(
         self: Self,
@@ -214,7 +215,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
             ]
         ),
-    ) -> ArrowSeries[Any] | Self:
+    ) -> ArrowSeries | Self:
         if isinstance(item, tuple):
             item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)  # pyright: ignore[reportAssignmentType]
 
@@ -345,7 +346,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return self.select(*exprs)
 
     def select(self: Self, *exprs: ArrowExpr) -> Self:
-        new_series: list[ArrowSeries[Any]] = evaluate_into_exprs(self, *exprs)
+        new_series: list[ArrowSeries] = evaluate_into_exprs(self, *exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_frame(
@@ -357,7 +358,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     def with_columns(self: Self, *exprs: ArrowExpr) -> Self:
         native_frame = self._native_frame
-        new_columns: list[ArrowSeries[Any]] = evaluate_into_exprs(self, *exprs)
+        new_columns: list[ArrowSeries] = evaluate_into_exprs(self, *exprs)
 
         length = len(self)
         columns = self.columns
@@ -497,16 +498,14 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return arr
 
     @overload
-    def to_dict(
-        self: Self, *, as_series: Literal[True]
-    ) -> dict[str, ArrowSeries[Any]]: ...
+    def to_dict(self: Self, *, as_series: Literal[True]) -> dict[str, ArrowSeries]: ...
 
     @overload
     def to_dict(self: Self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
 
     def to_dict(
         self: Self, *, as_series: bool
-    ) -> dict[str, ArrowSeries[Any]] | dict[str, list[Any]]:
+    ) -> dict[str, ArrowSeries] | dict[str, list[Any]]:
         df = self._native_frame
 
         names_and_values = zip(df.column_names, df.columns)
@@ -705,7 +704,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         pa_csv.write_csv(pa_table, file)
         return None
 
-    def is_unique(self: Self) -> ArrowSeries[Any]:
+    def is_unique(self: Self) -> ArrowSeries:
         from narwhals._arrow.series import ArrowSeries
 
         col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
@@ -816,7 +815,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                         [
                             *(native_frame.column(idx_col) for idx_col in index_),
                             cast(
-                                "pa.ChunkedArray[Any]",
+                                "ArrowChunkedArray",
                                 pa.array([on_col] * n_rows, pa.string()),
                             ),
                             native_frame.column(on_col),
