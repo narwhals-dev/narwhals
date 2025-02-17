@@ -203,7 +203,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
 
     def __rsub__(self: Self, other: Any) -> Self:
         return self._from_call(
-            lambda _input, other: _input.__rsub__(other),
+            lambda _input, other: other - _input,
             "__rsub__",
             other=other,
             returns_scalar=binary_operation_returns_scalar(self, other),
@@ -227,7 +227,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
 
     def __rtruediv__(self: Self, other: Any) -> Self:
         return self._from_call(
-            lambda _input, other: other.__truediv__(_input),
+            lambda _input, other: other / _input,
             "__rtruediv__",
             other=other,
             returns_scalar=binary_operation_returns_scalar(self, other),
@@ -243,7 +243,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
 
     def __rfloordiv__(self: Self, other: Any) -> Self:
         return self._from_call(
-            lambda _input, other: other.__floordiv__(_input),
+            lambda _input, other: other // _input,
             "__rfloordiv__",
             other=other,
             returns_scalar=binary_operation_returns_scalar(self, other),
@@ -259,7 +259,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
 
     def __rpow__(self: Self, other: Any) -> Self:
         return self._from_call(
-            lambda _input, other: other.__pow__(_input),
+            lambda _input, other: other**_input,
             "__rpow__",
             other=other,
             returns_scalar=binary_operation_returns_scalar(self, other),
@@ -275,7 +275,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
 
     def __rmod__(self: Self, other: Any) -> Self:
         return self._from_call(
-            lambda _input, other: other.__mod__(_input),
+            lambda _input, other: other % _input,
             "__rmod__",
             other=other,
             returns_scalar=binary_operation_returns_scalar(self, other),
