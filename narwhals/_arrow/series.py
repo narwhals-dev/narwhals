@@ -164,39 +164,39 @@ class ArrowSeries(CompliantSeries):
 
     def __ge__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
-        return self._from_native_series(pc.greater_equal(ser, other))
+        return self._from_native_series(pc.greater_equal(ser, other))  # type: ignore[arg-type]
 
     def __gt__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
-        return self._from_native_series(pc.greater(ser, other))
+        return self._from_native_series(pc.greater(ser, other))  # type: ignore[arg-type]
 
     def __le__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
-        return self._from_native_series(pc.less_equal(ser, other))
+        return self._from_native_series(pc.less_equal(ser, other))  # type: ignore[arg-type]
 
     def __lt__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
-        return self._from_native_series(pc.less(ser, other))
+        return self._from_native_series(pc.less(ser, other))  # type: ignore[arg-type]
 
     def __and__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
-        return self._from_native_series(pc.and_kleene(ser, other))
+        return self._from_native_series(pc.and_kleene(ser, other))  # type: ignore[arg-type]
 
     def __rand__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
-        return self._from_native_series(pc.and_kleene(other, ser))
+        return self._from_native_series(pc.and_kleene(other, ser))  # type: ignore[arg-type]
 
     def __or__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
-        return self._from_native_series(pc.or_kleene(ser, other))
+        return self._from_native_series(pc.or_kleene(ser, other))  # type: ignore[arg-type]
 
     def __ror__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
-        return self._from_native_series(pc.or_kleene(other, ser))
+        return self._from_native_series(pc.or_kleene(other, ser))  # type: ignore[arg-type]
 
     def __add__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
-        return self._from_native_series(pc.add(ser, other))
+        return self._from_native_series(pc.add(ser, other))  # type: ignore[arg-type]
 
     def __radd__(self: Self, other: Any) -> Self:
         return self + other  # type: ignore[no-any-return]
@@ -274,6 +274,7 @@ class ArrowSeries(CompliantSeries):
             ser, other = extract_native(self, other)
         else:
             ser = self._native_series
+        ser = cast("ArrowChunkedArray", ser)
         return self._from_native_series(ser.filter(other))
 
     def mean(self: Self, *, _return_py_scalar: bool = True) -> float:
