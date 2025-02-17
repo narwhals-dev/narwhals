@@ -977,7 +977,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
     if is_polars_series(native_series):
         return native_series.dtype.ordering == "physical"  # type: ignore[attr-defined, no-any-return]
     if is_pandas_series(native_series):
-        return bool(native_series.cat.ordered)  # type: ignore[no-any-return]
+        return bool(native_series.cat.ordered)
     if is_modin_series(native_series):  # pragma: no cover
         return native_series.cat.ordered  # type: ignore[no-any-return]
     if is_cudf_series(native_series):  # pragma: no cover
