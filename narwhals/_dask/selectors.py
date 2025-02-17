@@ -55,7 +55,6 @@ class DaskSelectorNamespace:
             evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
-            returns_scalar=False,
             version=self._version,
             kwargs={},
         )
@@ -76,7 +75,6 @@ class DaskSelectorNamespace:
             evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
-            returns_scalar=False,
             version=self._version,
             kwargs={},
         )
@@ -123,7 +121,6 @@ class DaskSelectorNamespace:
             evaluate_output_names=lambda df: df.columns,
             alias_output_names=None,
             backend_version=self._backend_version,
-            returns_scalar=False,
             version=self._version,
             kwargs={},
         )
@@ -169,7 +166,6 @@ class DaskSelectorNamespace:
             evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
-            returns_scalar=False,
             version=self._version,
             kwargs={},
         )
@@ -187,7 +183,6 @@ class DaskSelector(DaskExpr):
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
-            returns_scalar=self._returns_scalar,
             version=self._version,
             kwargs={},
         )
@@ -213,7 +208,6 @@ class DaskSelector(DaskExpr):
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
                 backend_version=self._backend_version,
-                returns_scalar=self._returns_scalar,
                 version=self._version,
                 kwargs={},
             )
@@ -245,7 +239,6 @@ class DaskSelector(DaskExpr):
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
                 backend_version=self._backend_version,
-                returns_scalar=self._returns_scalar,
                 version=self._version,
                 kwargs={},
             )
@@ -273,7 +266,6 @@ class DaskSelector(DaskExpr):
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
                 backend_version=self._backend_version,
-                returns_scalar=self._returns_scalar,
                 version=self._version,
                 kwargs={},
             )

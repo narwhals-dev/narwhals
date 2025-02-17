@@ -34,13 +34,7 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
         if len(results) != 1:  # pragma: no cover
             msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
             raise NotImplementedError(msg)
-        result = results[0]
-        if not obj._returns_scalar:
-            validate_comparand(df._native_frame, result)
-        if obj._returns_scalar:
-            # Return scalar, let Dask do its broadcasting
-            return result[0]
-        return result
+        return results[0]
     return obj
 
 
@@ -48,13 +42,12 @@ def parse_exprs(df: DaskLazyFrame, /, *exprs: DaskExpr) -> dict[str, dx.Series]:
     native_results: dict[str, dx.Series] = {}
     for expr in exprs:
         native_series_list = expr._call(df)
-        return_scalar = getattr(expr, "_returns_scalar", False)
         _, aliases = evaluate_output_names_and_aliases(expr, df, [])
         if len(aliases) != len(native_series_list):  # pragma: no cover
             msg = f"Internal error: got aliases {aliases}, but only got {len(native_series_list)} results"
             raise AssertionError(msg)
         for native_series, alias in zip(native_series_list, aliases):
-            native_results[alias] = native_series[0] if return_scalar else native_series
+            native_results[alias] = native_series  # noqa: PERF403
     return native_results
 
 
@@ -153,10 +146,3 @@ def name_preserving_sum(s1: dx.Series, s2: dx.Series) -> dx.Series:
 
 def name_preserving_div(s1: dx.Series, s2: dx.Series) -> dx.Series:
     return (s1 / s2).rename(s1.name)
-
-
-def binary_operation_returns_scalar(lhs: DaskExpr, rhs: DaskExpr | Any) -> bool:
-    # If `rhs` is a DaskExpr, we look at `_returns_scalar`. If it isn't,
-    # it means that it was a scalar (e.g. nw.col('a') + 1), and so we default
-    # to `True`.
-    return lhs._returns_scalar and getattr(rhs, "_returns_scalar", True)

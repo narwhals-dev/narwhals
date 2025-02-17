@@ -15,6 +15,7 @@ from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
+from narwhals._pandas_like.utils import align_and_extract_native_full_broadcast
 from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import diagonal_concat
 from narwhals._pandas_like.utils import horizontal_concat
@@ -194,12 +195,15 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
     # --- horizontal ---
     def sum_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = (
-                s.fill_null(0, strategy=None, limit=None)
-                for _expr in exprs
-                for s in _expr(df)
+            series = [s for _expr in exprs for s in _expr(df)]
+            native_series = (
+                s.fillna(0) for s in align_and_extract_native_full_broadcast(*series)
             )
-            return [reduce(operator.add, series)]
+            return [
+                series[0]
+                ._from_native_series(reduce(operator.add, native_series))
+                .alias(series[0].name)
+            ]
 
         return self._create_expr_from_callable(
             func=func,
@@ -425,20 +429,10 @@ class PandasWhen:
         self._version = version
 
     def __call__(self: Self, df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
-        from narwhals._pandas_like.utils import broadcast_align_and_extract_native
-
-        plx = df.__narwhals_namespace__()
         condition = self._condition(df)[0]
 
-        if isinstance(self._then_value, PandasLikeExpr):
-            value_series = self._then_value(df)[0]
-        else:
-            # `self._then_value` is a scalar
-            value_series = plx._create_series_from_scalar(
-                self._then_value, reference_series=condition.alias("literal")
-            )
-
-        condition_native, value_series_native = broadcast_align_and_extract_native(
+        value_series = self._then_value(df)[0]
+        condition_native, value_series_native = align_and_extract_native_full_broadcast(
             condition, value_series
         )
         if self._otherwise_value is None:
@@ -447,17 +441,9 @@ class PandasWhen:
                     value_series_native.where(condition_native)
                 )
             ]
-        if isinstance(self._otherwise_value, PandasLikeExpr):
-            otherwise_expr = self._otherwise_value
-        else:
-            # `self._otherwise_value` is a scalar
-            return [
-                value_series._from_native_series(
-                    value_series_native.where(condition_native, self._otherwise_value)
-                )
-            ]
+        otherwise_expr = self._otherwise_value
         otherwise_series = otherwise_expr(df)[0]
-        _, otherwise_native = broadcast_align_and_extract_native(
+        _, otherwise_native = align_and_extract_native_full_broadcast(
             condition, otherwise_series
         )
         return [

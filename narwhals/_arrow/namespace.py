@@ -16,8 +16,9 @@ from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import broadcast_series
+from narwhals._arrow.utils import align_series_full_broadcast
 from narwhals._arrow.utils import diagonal_concat
+from narwhals._arrow.utils import extract_dataframe_comparand
 from narwhals._arrow.utils import horizontal_concat
 from narwhals._arrow.utils import nulls_like
 from narwhals._arrow.utils import vertical_concat
@@ -219,12 +220,12 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
 
     def sum_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            series = (
+            series = [
                 s.fill_null(0, strategy=None, limit=None)
                 for _expr in exprs
                 for s in _expr(df)
-            )
-            return [reduce(operator.add, series)]
+            ]
+            return [reduce(operator.add, align_series_full_broadcast(*series))]
 
         return self._create_expr_from_callable(
             func=func,
@@ -406,19 +407,13 @@ class ArrowWhen:
         self._version = version
 
     def __call__(self: Self, df: ArrowDataFrame) -> Sequence[ArrowSeries]:
-        plx = df.__narwhals_namespace__()
         condition = self._condition(df)[0]
 
-        if isinstance(self._then_value, ArrowExpr):
-            value_series = self._then_value(df)[0]
-        else:
-            # `self._then_value` is a scalar
-            value_series = plx._create_series_from_scalar(
-                self._then_value, reference_series=condition.alias("literal")
-            )
+        value_series = self._then_value(df)[0]
 
-        condition_native, value_series_native = broadcast_series(
-            [condition, value_series]
+        condition_native = condition._native_series
+        value_series_native = extract_dataframe_comparand(
+            len(df), value_series, self._backend_version
         )
         if self._otherwise_value is None:
             otherwise_null = nulls_like(len(condition_native), value_series)
@@ -427,22 +422,14 @@ class ArrowWhen:
                     pc.if_else(condition_native, value_series_native, otherwise_null)
                 )
             ]
-        if isinstance(self._otherwise_value, ArrowExpr):
-            otherwise_expr = self._otherwise_value
-        else:
-            # `self._otherwise_value` is a scalar
-            return [
-                value_series._from_native_series(
-                    pc.if_else(
-                        condition_native, value_series_native, self._otherwise_value
-                    )
-                )
-            ]
+        otherwise_expr = self._otherwise_value
         otherwise_series = otherwise_expr(df)[0]
-        _, otherwise_native = broadcast_series([condition, otherwise_series])
+        otherwise_series_native = extract_dataframe_comparand(
+            len(df), otherwise_series, self._backend_version
+        )
         return [
             value_series._from_native_series(
-                pc.if_else(condition_native, value_series_native, otherwise_native)
+                pc.if_else(condition_native, value_series_native, otherwise_series_native)
             )
         ]
 

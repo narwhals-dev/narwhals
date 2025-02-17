@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+from datetime import date
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
@@ -25,15 +26,15 @@ from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.typing import CompliantNamespace
 
 if TYPE_CHECKING:
-    try:
-        import dask.dataframe.dask_expr as dx
-    except ModuleNotFoundError:
-        import dask_expr as dx
-
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+
+    try:
+        import dask.dataframe.dask_expr as dx
+    except ModuleNotFoundError:  # pragma: no cover
+        import dask_expr as dx
 
 
 class DaskNamespace(CompliantNamespace["dx.Series"]):
@@ -59,7 +60,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             function_name="all",
             evaluate_output_names=lambda df: df.columns,
             alias_output_names=None,
-            returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={},
@@ -79,10 +79,17 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             if dtype is not None:
                 native_dtype = narwhals_to_native_dtype(dtype, self._version)
-                s = pd.Series([value], dtype=native_dtype)
+                native_pd_series = pd.Series([value], dtype=native_dtype, name="literal")
+            elif isinstance(value, date):
+                # PyArrow is a required a dependency of dask[dataframe] so we can do this.
+                native_pd_series = pd.Series(
+                    [value], name="literal", dtype="date32[pyarrow]"
+                )
             else:
-                s = pd.Series([value])
-            return [dd.from_pandas(s, npartitions=df._native_frame.npartitions)]
+                native_pd_series = pd.Series([value], name="literal")
+            npartitions = df._native_frame.npartitions
+            dask_series = dd.from_pandas(native_pd_series, npartitions=npartitions)
+            return [dask_series[0].to_series()]
 
         return DaskExpr(
             func,
@@ -90,7 +97,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             function_name="lit",
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
-            returns_scalar=True,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={},
@@ -114,7 +120,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             function_name="len",
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
-            returns_scalar=True,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={},
@@ -131,7 +136,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             function_name="all_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={"exprs": exprs},
@@ -148,7 +152,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             function_name="any_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={"exprs": exprs},
@@ -156,8 +159,9 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
 
     def sum_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            series = [s.fillna(0) for _expr in exprs for s in _expr(df)]
-            return [reduce(operator.add, series)]
+            series = [s for _expr in exprs for s in _expr(df)]
+
+            return [dd.concat(series, axis=1).sum(axis=1)]
 
         return DaskExpr(
             call=func,
@@ -165,7 +169,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             function_name="sum_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={"exprs": exprs},
@@ -247,7 +250,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             function_name="mean_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={"exprs": exprs},
@@ -265,7 +267,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             function_name="min_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={"exprs": exprs},
@@ -283,16 +284,13 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             function_name="max_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={"exprs": exprs},
         )
 
     def when(self: Self, predicate: DaskExpr) -> DaskWhen:
-        return DaskWhen(
-            predicate, self._backend_version, returns_scalar=False, version=self._version
-        )
+        return DaskWhen(predicate, self._backend_version, version=self._version)
 
     def concat_str(
         self: Self,
@@ -334,7 +332,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
                 exprs[0], "_evaluate_output_names", lambda _df: ["literal"]
             ),
             alias_output_names=getattr(exprs[0], "_alias_output_names", None),
-            returns_scalar=False,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={
@@ -353,49 +350,32 @@ class DaskWhen:
         then_value: Any = None,
         otherwise_value: Any = None,
         *,
-        returns_scalar: bool,
         version: Version,
     ) -> None:
         self._backend_version = backend_version
         self._condition = condition
         self._then_value = then_value
         self._otherwise_value = otherwise_value
-        self._returns_scalar = returns_scalar
         self._version = version
 
     def __call__(self: Self, df: DaskLazyFrame) -> Sequence[dx.Series]:
         condition = self._condition(df)[0]
         condition = cast("dx.Series", condition)
 
-        if isinstance(self._then_value, DaskExpr):
-            is_scalar = self._then_value._returns_scalar
-            value_sequence: Sequence[Any] = self._then_value(df)[0]
-        else:
-            # `self._then_value` is a scalar
-            value_sequence = [self._then_value]
-            is_scalar = True
+        value_sequence: Sequence[Any] = self._then_value(df)[0]
 
-        if is_scalar:
-            _df = condition.to_frame("a")
-            _df["literal"] = value_sequence[0]
-            value_series = _df["literal"]
-        else:
-            value_series = value_sequence
+        _df = condition.to_frame("a")
+        _df["literal"] = value_sequence
+        value_series = _df["literal"]
 
         value_series = cast("dx.Series", value_series)
         validate_comparand(condition, value_series)
 
         if self._otherwise_value is None:
             return [value_series.where(condition)]
-        if not isinstance(self._otherwise_value, DaskExpr):
-            # `self._otherwise_value` is a scalar
-            return [value_series.where(condition, self._otherwise_value)]
 
         otherwise_expr = self._otherwise_value
         otherwise_series = otherwise_expr(df)[0]
-
-        if otherwise_expr._returns_scalar:
-            return [value_series.where(condition, otherwise_series[0])]
 
         validate_comparand(condition, otherwise_series)
         return [value_series.where(condition, otherwise_series)]
@@ -411,7 +391,6 @@ class DaskWhen:
                 value, "_evaluate_output_names", lambda _df: ["literal"]
             ),
             alias_output_names=getattr(value, "_alias_output_names", None),
-            returns_scalar=self._returns_scalar,
             backend_version=self._backend_version,
             version=self._version,
             kwargs={"value": value},
@@ -427,7 +406,6 @@ class DaskThen(DaskExpr):
         function_name: str,
         evaluate_output_names: Callable[[DaskLazyFrame], Sequence[str]],
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
-        returns_scalar: bool,
         backend_version: tuple[int, ...],
         version: Version,
         kwargs: dict[str, Any],
@@ -439,7 +417,6 @@ class DaskThen(DaskExpr):
         self._function_name = function_name
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
-        self._returns_scalar = returns_scalar
         self._kwargs = kwargs
 
     def otherwise(self: Self, value: DaskExpr | Any) -> DaskExpr:

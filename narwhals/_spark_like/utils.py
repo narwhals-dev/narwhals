@@ -164,12 +164,9 @@ def narwhals_to_native_dtype(
     raise AssertionError(msg)
 
 
-def parse_exprs(
-    df: SparkLikeLazyFrame, /, *exprs: SparkLikeExpr
-) -> tuple[dict[str, Column], list[ExprKind]]:
+def parse_exprs(df: SparkLikeLazyFrame, /, *exprs: SparkLikeExpr) -> dict[str, Column]:
     native_results: dict[str, list[Column]] = {}
 
-    expr_kinds: list[ExprKind] = []
     for expr in exprs:
         native_series_list = expr._call(df)
         output_names = expr._evaluate_output_names(df)
@@ -179,12 +176,11 @@ def parse_exprs(
             msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
             raise AssertionError(msg)
         native_results.update(zip(output_names, native_series_list))
-        expr_kinds.extend([expr._expr_kind] * len(output_names))
 
-    return native_results, expr_kinds
+    return native_results
 
 
-def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any, *, expr_kind: ExprKind) -> Column:
+def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any) -> Column:
     from narwhals._spark_like.expr import SparkLikeExpr
 
     if isinstance(obj, SparkLikeExpr):
@@ -192,12 +188,7 @@ def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any, *, expr_kind: ExprKind) -> 
         if len(column_results) != 1:  # pragma: no cover
             msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
             raise NotImplementedError(msg)
-        column_result = column_results[0]
-        if obj._expr_kind is ExprKind.AGGREGATION and expr_kind is ExprKind.TRANSFORM:
-            # Returns scalar, but overall expression doesn't.
-            # Let PySpark do its broadcasting
-            return column_result.over(df._Window().partitionBy(df._F.lit(1)))
-        return column_result
+        return column_results[0]
     return df._F.lit(obj)
 
 
@@ -233,15 +224,3 @@ def _var(
 
     input_col = functions.col(_input) if isinstance(_input, str) else _input
     return var(input_col, ddof=ddof)
-
-
-def n_ary_operation_expr_kind(*args: SparkLikeExpr | Any) -> ExprKind:
-    if all(
-        getattr(arg, "_expr_kind", ExprKind.LITERAL) is ExprKind.LITERAL for arg in args
-    ):
-        return ExprKind.LITERAL
-    if any(
-        getattr(arg, "_expr_kind", ExprKind.LITERAL) is ExprKind.TRANSFORM for arg in args
-    ):
-        return ExprKind.TRANSFORM
-    return ExprKind.AGGREGATION

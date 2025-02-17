@@ -23,6 +23,7 @@ from narwhals.utils import is_compliant_expr
 if TYPE_CHECKING:
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._pandas_like.expr import PandasLikeExpr
+    from narwhals.expr import Expr
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantExpr
     from narwhals.typing import CompliantLazyFrame
@@ -267,7 +268,7 @@ def extract_compliant(
     other: Any,
     *,
     strings_are_column_names: bool,
-) -> CompliantExpr[CompliantSeriesT_co] | CompliantSeriesT_co | Any:
+) -> CompliantExpr[CompliantSeriesT_co]:
     from narwhals.expr import Expr
     from narwhals.series import Series
 
@@ -280,7 +281,7 @@ def extract_compliant(
     if is_numpy_array(other):
         series = plx._create_compliant_series(other)  # type: ignore[attr-defined]
         return plx._create_expr_from_series(series)  # type: ignore[attr-defined]
-    return other
+    return plx.lit(other, dtype=None)
 
 
 def evaluate_output_names_and_aliases(
@@ -371,8 +372,8 @@ def combine_metadata(*args: IntoExpr, strings_are_column_names: bool) -> ExprMet
     elif n_changes_length > 1:
         msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
         raise LengthChangingExprError(msg)
-    elif n_changes_length and has_transforms:
-        msg = "Cannot combine length-changing expressions with length-preserving ones"
+    elif n_changes_length and (has_transforms or has_aggregations):
+        msg = "Cannot combine length-changing expressions with length-preserving ones or aggregations"
         raise ShapeError(msg)
     elif n_changes_length:
         result_kind = ExprKind.CHANGES_LENGTH
@@ -414,4 +415,56 @@ def all_exprs_are_aggs_or_literals(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
         isinstance(x, Expr)
         and x._metadata["kind"] in (ExprKind.AGGREGATION, ExprKind.LITERAL)
         for x in kwargs.values()
+    )
+
+
+def infer_expr_kind(into_expr: IntoExpr, *, strings_are_column_names: bool) -> ExprKind:
+    from narwhals.expr import Expr
+    from narwhals.series import Series
+
+    if isinstance(into_expr, Expr):
+        return into_expr._metadata["kind"]
+    if isinstance(into_expr, Series) or is_numpy_array(into_expr):
+        return ExprKind.TRANSFORM
+    if isinstance(into_expr, str) and strings_are_column_names:
+        return ExprKind.TRANSFORM
+    return ExprKind.LITERAL
+
+
+def apply_n_ary_operation(
+    plx: CompliantNamespace,
+    function: Any,
+    *comparands: IntoExpr,
+    strings_are_column_names: bool,
+) -> CompliantExpr[Any]:
+    compliant_exprs = (
+        extract_compliant(
+            plx, comparand, strings_are_column_names=strings_are_column_names
+        )
+        for comparand in comparands
+    )
+    kinds = [
+        infer_expr_kind(comparand, strings_are_column_names=strings_are_column_names)
+        for comparand in comparands
+    ]
+
+    broadcast = any(kind is ExprKind.TRANSFORM for kind in kinds)
+    compliant_exprs = (
+        compliant_expr.broadcast(kind)
+        if broadcast and kind in (ExprKind.AGGREGATION, ExprKind.LITERAL)
+        else compliant_expr
+        for compliant_expr, kind in zip(compliant_exprs, kinds)
+    )
+    return function(*compliant_exprs)
+
+
+def apply_rhs_arithmetic_operation(
+    plx: CompliantNamespace[Any], expr: Expr, other: Any, attr: str
+) -> CompliantExpr[Any]:
+    return apply_n_ary_operation(
+        plx,
+        lambda *args: getattr(args[1], attr)(args[0]),
+        expr,
+        other,
+        strings_are_column_names=False,
     )
