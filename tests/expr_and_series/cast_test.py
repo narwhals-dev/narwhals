@@ -236,9 +236,7 @@ def test_cast_datetime_tz_aware(
 
 
 def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(
-        backend in str(constructor) for backend in ("dask", "modin", "cudf", "pyspark")
-    ):
+    if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
@@ -251,10 +249,24 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
         ]
     }
 
+    native_df = constructor(data)
+
+    if "spark" in str(constructor):  # pragma: no cover
+        # Special handling for pyspark as it natively maps the input to
+        # a column of type MAP<STRING, STRING>
+        import pyspark.sql.functions as F  # noqa: N812
+        import pyspark.sql.types as T  # noqa: N812
+
+        native_df = native_df.withColumn(  # type: ignore[union-attr]
+            "a",
+            F.struct(
+                F.col("a.movie ").alias("movie ").cast(T.StringType()),
+                F.col("a.rating").alias("rating").cast(T.DoubleType()),
+            ),
+        )
+
     dtype = nw.Struct([nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float64())])
-    result = (
-        nw.from_native(constructor(data)).select(nw.col("a").cast(dtype)).lazy().collect()
-    )
+    result = nw.from_native(native_df).select(nw.col("a").cast(dtype)).lazy().collect()
 
     assert result.schema == {"a": dtype}
 

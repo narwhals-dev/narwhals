@@ -125,7 +125,9 @@ class InterchangeFrame:
             raise NotImplementedError(msg)
 
     def to_arrow(self: Self) -> pa.Table:
-        from pyarrow.interchange import from_dataframe  # ignore-banned-import()
+        from pyarrow.interchange.from_dataframe import (  # ignore-banned-import()
+            from_dataframe,
+        )
 
         return from_dataframe(self._interchange_frame)
 
