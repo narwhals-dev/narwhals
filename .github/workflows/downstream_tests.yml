@@ -474,7 +474,6 @@ jobs:
       - name: install-narwhals-dev
         run: |
           cd validoopsie
-          uv venv
           . .venv/bin/activate
           uv pip uninstall narwhals
           uv pip install -e ./..
