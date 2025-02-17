@@ -35,8 +35,6 @@ if TYPE_CHECKING:
 
     StringScalar: TypeAlias = "pc.StringScalar"
     StringArray: TypeAlias = "pc.StringArray"
-    StringArrayT = TypeVar("StringArrayT", bound=StringArray)
-    DataTypeT_co = TypeVar("DataTypeT_co", bound="pa.DataType", covariant=True)
     ArrowChunkedArray: TypeAlias = pa.ChunkedArray[Any]
     ArrowArray: TypeAlias = pa.Array[Any]
     _AsPyType = TypeVar("_AsPyType")

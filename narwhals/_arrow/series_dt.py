@@ -151,9 +151,7 @@ class ArrowSeriesDateTimeNamespace:
             pc.multiply(self.microsecond()._native_series, lit(1000)),
             pc.nanosecond(ser._native_series),
         )
-        return self._compliant_series._from_native_series(
-            cast("pa.ChunkedArray[pa.Int64Scalar]", result)
-        )
+        return self._compliant_series._from_native_series(result)
 
     def ordinal_day(self: Self) -> ArrowSeries:
         return self._compliant_series._from_native_series(
