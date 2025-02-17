@@ -225,6 +225,14 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
+    def __rtruediv__(self: Self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: other.__truediv__(_input),
+            "__rtruediv__",
+            other=other,
+            returns_scalar=binary_operation_returns_scalar(self, other),
+        ).alias("literal")
+
     def __floordiv__(self: Self, other: Any) -> Self:
         return self._from_call(
             lambda _input, other: _input.__floordiv__(other),
@@ -232,6 +240,14 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             other=other,
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
+
+    def __rfloordiv__(self: Self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: other.__floordiv__(_input),
+            "__rfloordiv__",
+            other=other,
+            returns_scalar=binary_operation_returns_scalar(self, other),
+        ).alias("literal")
 
     def __pow__(self: Self, other: Any) -> Self:
         return self._from_call(
@@ -241,6 +257,14 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
+    def __rpow__(self: Self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: other.__pow__(_input),
+            "__rpow__",
+            other=other,
+            returns_scalar=binary_operation_returns_scalar(self, other),
+        ).alias("literal")
+
     def __mod__(self: Self, other: Any) -> Self:
         return self._from_call(
             lambda _input, other: _input.__mod__(other),
@@ -248,6 +272,14 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             other=other,
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
+
+    def __rmod__(self: Self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: other.__mod__(_input),
+            "__rmod__",
+            other=other,
+            returns_scalar=binary_operation_returns_scalar(self, other),
+        ).alias("literal")
 
     def __eq__(self: Self, other: DaskExpr) -> Self:  # type: ignore[override]
         return self._from_call(
