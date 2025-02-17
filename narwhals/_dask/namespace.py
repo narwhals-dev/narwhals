@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+from datetime import date
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
@@ -78,9 +79,18 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             if dtype is not None:
                 native_dtype = narwhals_to_native_dtype(dtype, self._version)
-                native_pd_series = pd.Series([value], dtype=native_dtype, name="literal")
+                native_pd_series = pd.Series(
+                    [value], dtype=native_dtype, name="literal"
+                ).convert_dtypes(dtype_backend="pyarrow")
+            elif isinstance(value, date):
+                # PyArrow is a required a dependency of dask[dataframe] so we can do this.
+                native_pd_series = pd.Series(
+                    [value], name="literal", dtype="date32[pyarrow]"
+                ).convert_dtypes(dtype_backend="pyarrow")
             else:
-                native_pd_series = pd.Series([value], name="literal")
+                native_pd_series = pd.Series([value], name="literal").convert_dtypes(
+                    dtype_backend="pyarrow"
+                )
             npartitions = df._native_frame.npartitions
             dask_series = dd.from_pandas(native_pd_series, npartitions=npartitions)
             return [dask_series[0].to_series()]
