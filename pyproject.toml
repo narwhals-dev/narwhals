@@ -241,3 +241,17 @@ module = [
 # TODO: remove follow_imports
 follow_imports = "skip"
 ignore_missing_imports = true
+
+[tool.pyright]
+pythonPlatform = "All"
+# NOTE (stubs do unsafe `TypeAlias` and `TypeVar` imports)
+# pythonVersion = "3.8"
+reportMissingImports = "none"
+reportMissingModuleSource = "none"
+reportPrivateImportUsage = "none"
+typeCheckingMode = "basic"
+ignore = [
+  "../.venv/",
+  "../../../**/Lib",      # stdlib
+  "../../../**/typeshed*" # typeshed-fallback
+]
