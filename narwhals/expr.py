@@ -182,9 +182,9 @@ class Expr:
 
     def __rand__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__and__(extract_compliant(plx, self, strings_are_column_names=False))
+            return extract_compliant(plx, other, strings_are_column_names=False).__and__(
+                extract_compliant(plx, self, strings_are_column_names=False)
+            )
 
         return self.__class__(
             func, combine_metadata(self, other, strings_are_column_names=False)
@@ -200,9 +200,9 @@ class Expr:
 
     def __ror__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__or__(extract_compliant(plx, self, strings_are_column_names=False))
+            return extract_compliant(plx, other, strings_are_column_names=False).__or__(
+                extract_compliant(plx, self, strings_are_column_names=False)
+            )
 
         return self.__class__(
             func, combine_metadata(self, other, strings_are_column_names=False)
@@ -218,9 +218,9 @@ class Expr:
 
     def __radd__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__add__(extract_compliant(plx, self, strings_are_column_names=False))
+            return extract_compliant(plx, other, strings_are_column_names=False).__add__(
+                extract_compliant(plx, self, strings_are_column_names=False)
+            )
 
         return self.__class__(
             func, combine_metadata(self, other, strings_are_column_names=False)
@@ -236,9 +236,9 @@ class Expr:
 
     def __rsub__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__sub__(extract_compliant(plx, self, strings_are_column_names=False))
+            return extract_compliant(plx, other, strings_are_column_names=False).__sub__(
+                extract_compliant(plx, self, strings_are_column_names=False)
+            )
 
         return self.__class__(
             func, combine_metadata(self, other, strings_are_column_names=False)
@@ -254,8 +254,8 @@ class Expr:
 
     def __rtruediv__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
+            return extract_compliant(
+                plx, other, strings_are_column_names=False
             ).__truediv__(extract_compliant(plx, self, strings_are_column_names=False))
 
         return self.__class__(
@@ -272,9 +272,9 @@ class Expr:
 
     def __rmul__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__mul__(extract_compliant(plx, self, strings_are_column_names=False))
+            return extract_compliant(plx, other, strings_are_column_names=False).__mul__(
+                extract_compliant(plx, self, strings_are_column_names=False)
+            )
 
         return self.__class__(
             func, combine_metadata(self, other, strings_are_column_names=False)
@@ -322,9 +322,9 @@ class Expr:
 
     def __rpow__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__pow__(extract_compliant(plx, self, strings_are_column_names=False))
+            return extract_compliant(plx, other, strings_are_column_names=False).__pow__(
+                extract_compliant(plx, self, strings_are_column_names=False)
+            )
 
         return self.__class__(
             func, combine_metadata(self, other, strings_are_column_names=False)
@@ -340,8 +340,8 @@ class Expr:
 
     def __rfloordiv__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
+            return extract_compliant(
+                plx, other, strings_are_column_names=False
             ).__floordiv__(extract_compliant(plx, self, strings_are_column_names=False))
 
         return self.__class__(
@@ -358,9 +358,9 @@ class Expr:
 
     def __rmod__(self: Self, other: Any) -> Self:
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__mod__(extract_compliant(plx, self, strings_are_column_names=False))
+            return extract_compliant(plx, other, strings_are_column_names=False).__mod__(
+                extract_compliant(plx, self, strings_are_column_names=False)
+            )
 
         return self.__class__(
             func, combine_metadata(self, other, strings_are_column_names=False)
@@ -1251,10 +1251,15 @@ class Expr:
             |   3  10  False   |
             └──────────────────┘
         """
+        from narwhals.series import Series
+
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
+            # In the eager case, `other` is allowed to be a Series. However,
+            # we don't allow expressiions. So, to avoid special-casing, we
+            # just call `to_native` here if `other` is a Series.
             return self.__class__(
                 lambda plx: self._to_compliant_expr(plx).is_in(
-                    extract_compliant(plx, other, strings_are_column_names=False)
+                    other.to_native() if isinstance(other, Series) else other
                 ),
                 self._metadata,
             )
@@ -1992,8 +1997,12 @@ class Expr:
         is_order_dependent = operation_is_order_dependent(self, lower_bound, upper_bound)
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).clip(
-                extract_compliant(plx, lower_bound, strings_are_column_names=True),
-                extract_compliant(plx, upper_bound, strings_are_column_names=True),
+                extract_compliant(plx, lower_bound, strings_are_column_names=True)
+                if lower_bound is not None
+                else None,
+                extract_compliant(plx, upper_bound, strings_are_column_names=True)
+                if upper_bound is not None
+                else None,
             ),
             ExprMetadata(
                 kind=self._metadata["kind"], is_order_dependent=is_order_dependent

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 
 import pytest
@@ -27,6 +28,29 @@ def test_is_between(
     data = {"a": [1, 4, 2, 5]}
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").is_between(1, 5, closed=closed))
+    expected_dict = {"a": expected}
+    assert_equal_data(result, expected_dict)
+
+
+@pytest.mark.parametrize(
+    ("closed", "expected"),
+    [
+        ("left", [False, False]),
+        ("right", [False, True]),
+        ("both", [False, True]),
+        ("none", [False, False]),
+    ],
+)
+def test_is_between_datetimes(
+    constructor: Constructor,
+    closed: Literal["left", "right", "none", "both"],
+    expected: list[bool],
+) -> None:
+    data = {"a": [datetime(2020, 1, 1), datetime(2020, 6, 1)]}
+    df = nw.from_native(constructor(data))
+    result = df.select(
+        nw.col("a").is_between(datetime(2020, 3, 1), datetime(2020, 6, 1), closed=closed)
+    )
     expected_dict = {"a": expected}
     assert_equal_data(result, expected_dict)
 

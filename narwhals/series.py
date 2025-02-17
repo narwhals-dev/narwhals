@@ -804,8 +804,13 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
+        # In the eager case, `other` is allowed to be a Series. However,
+        # we don't allow expressiions. So, to avoid special-casing, we
+        # just call `to_native` here if `other` is a Series.
         return self._from_compliant_series(
-            self._compliant_series.is_in(self._extract_native(other))
+            self._compliant_series.is_in(
+                other.to_native() if isinstance(other, self.__class__) else other
+            )
         )
 
     def arg_true(self: Self) -> Self:
