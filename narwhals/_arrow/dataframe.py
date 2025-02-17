@@ -545,7 +545,8 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 length=len(self), other=mask, backend_version=self._backend_version
             )
         return self._from_native_frame(
-            self._native_frame.filter(mask_native), validate_column_names=False
+            self._native_frame.filter(mask_native),  # pyright: ignore[reportArgumentType]
+            validate_column_names=False,
         )
 
     def head(self: Self, n: int) -> Self:
