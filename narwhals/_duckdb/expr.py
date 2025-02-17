@@ -175,6 +175,14 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
             expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
+    def __radd__(self: Self, other: DuckDBExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__radd__(other),
+            "__radd__",
+            other=other,
+            expr_kind=n_ary_operation_expr_kind(self, other),
+        ).alias("literal")
+
     def __truediv__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input / other,

@@ -218,13 +218,11 @@ class Expr:
         )
 
     def __radd__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__add__(extract_compliant(plx, self, strings_are_column_names=False))
-
         return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
+            lambda plx: self._to_compliant_expr(plx).__radd__(
+                extract_compliant(plx, other, strings_are_column_names=False)
+            ),
+            combine_metadata(self, other, strings_are_column_names=False),
         )
 
     def __sub__(self: Self, other: Any) -> Self:

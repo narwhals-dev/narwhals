@@ -185,6 +185,9 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
     def __add__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__add__", other=other)
 
+    def __radd__(self: Self, other: PandasLikeExpr | Any) -> Self:
+        return reuse_series_implementation(self.alias("literal"), "__radd__", other=other)
+
     def __sub__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__sub__", other=other)
 
