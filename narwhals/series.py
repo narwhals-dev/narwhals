@@ -805,7 +805,7 @@ class Series(Generic[IntoSeriesT]):
             ]
         """
         return self._from_compliant_series(
-            self._compliant_series.is_in(self._extract_native(other))
+            self._compliant_series.is_in(to_native(other, pass_through=True))
         )
 
     def arg_true(self: Self) -> Self:
