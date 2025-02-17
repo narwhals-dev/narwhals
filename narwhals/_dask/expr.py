@@ -193,14 +193,6 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
 
-    def __radd__(self: Self, other: Any) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.__radd__(other),
-            "__radd__",
-            other=other,
-            returns_scalar=binary_operation_returns_scalar(self, other),
-        ).alias("literal")
-
     def __sub__(self: Self, other: Any) -> Self:
         return self._from_call(
             lambda _input, other: _input.__sub__(other),
@@ -208,6 +200,14 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             other=other,
             returns_scalar=binary_operation_returns_scalar(self, other),
         )
+
+    def __rsub__(self: Self, other: Any) -> Self:
+        return self._from_call(
+            lambda _input, other: _input.__rsub__(other),
+            "__rsub__",
+            other=other,
+            returns_scalar=binary_operation_returns_scalar(self, other),
+        ).alias("literal")
 
     def __mul__(self: Self, other: Any) -> Self:
         return self._from_call(
