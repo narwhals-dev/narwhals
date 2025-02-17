@@ -494,7 +494,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
 
     def is_in(self: Self, other: Sequence[Any]) -> Self:
         return self._from_call(
-            lambda _input: _input.contains([], _input),
+            lambda _input: FunctionExpression("contains", lit(other), _input),
             "is_in",
             expr_kind=self._expr_kind,
         )
