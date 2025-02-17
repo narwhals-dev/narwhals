@@ -474,5 +474,5 @@ jobs:
       - name: Run tests
         run: |
           cd validoopsie
-          uv run pytest
+          uv run --no-sync pytest
         timeout-minutes: 15
