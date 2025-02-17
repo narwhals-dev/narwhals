@@ -186,32 +186,24 @@ def align_and_extract_native_no_broadcast(
 
 
 def extract_dataframe_comparand(
-    index: pd.Index[Any], other: pd.Series[Any] | object
+    index: pd.Index[Any], other: PandasLikeSeries
 ) -> pd.Series[Any] | object:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
     "right-hand-side" operation (e.g. `__radd__`) can be tried.
     """
-    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-    from narwhals._pandas_like.series import PandasLikeSeries
-
-    if isinstance(other, PandasLikeDataFrame):
-        return NotImplemented
-    if isinstance(other, PandasLikeSeries):
-        if other._broadcast:
-            s = other._native_series
-            return s.__class__(s.item(), index=index, dtype=s.dtype, name=s.name)
-        if other._native_series.index is not index:
-            return set_index(
-                other._native_series,
-                index,
-                implementation=other._implementation,
-                backend_version=other._backend_version,
-            )
-        return other._native_series
-    msg = "Please report a bug"  # pragma: no cover
-    raise AssertionError(msg)
+    if other._broadcast:
+        s = other._native_series
+        return s.__class__(s.item(), index=index, dtype=s.dtype, name=s.name)
+    if other._native_series.index is not index:
+        return set_index(
+            other._native_series,
+            index,
+            implementation=other._implementation,
+            backend_version=other._backend_version,
+        )
+    return other._native_series
 
 
 def create_compliant_series(
