@@ -83,6 +83,8 @@ jobs:
         run: |
           cd marimo
           . .venv/bin/activate
+          # temporary to get CI green
+          uv pip install "panel<1.6.1"
           uv pip install -e ".[dev]"
           which python
       - name: install-narwhals-dev
