@@ -537,7 +537,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     def filter(self: Self, predicate: ArrowExpr | list[bool | None]) -> Self:
         if isinstance(predicate, list):
-            mask_native: Mask = predicate
+            mask_native: Mask | ArrowChunkedArray = predicate
         else:
             # `[0]` is safe as the predicate's expression only returns a single column
             mask = evaluate_into_exprs(self, predicate)[0]
