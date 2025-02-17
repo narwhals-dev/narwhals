@@ -476,7 +476,10 @@ class ArrowSeries(CompliantSeries):
             return self._from_native_series(ser.slice(abs(n)))
 
     def is_in(self: Self, other: Any) -> Self:
-        value_set = pa.array(other)
+        if isinstance(other, pa.ChunkedArray):
+            value_set: pa.ChunkedArray | pa.Array = other
+        else:
+            value_set = pa.array(other)
         ser = self._native_series
         return self._from_native_series(pc.is_in(ser, value_set=value_set))
 
