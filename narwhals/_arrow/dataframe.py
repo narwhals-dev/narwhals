@@ -372,7 +372,9 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
             native_frame = (
                 native_frame.set_column(
-                    columns.index(col_name), field_=col_name, column=column
+                    columns.index(col_name),
+                    field_=col_name,
+                    column=column,  # type: ignore[arg-type]
                 )
                 if col_name in columns
                 else native_frame.append_column(field_=col_name, column=column)
