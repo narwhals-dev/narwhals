@@ -215,15 +215,6 @@ def extract_dataframe_comparand(
     raise AssertionError(msg)
 
 
-def broadcast_dataframe_comparand(
-    index: pd.Index, other: PandasLikeSeries
-) -> PandasLikeSeries:
-    s = other._native_series
-    return other._from_native_series(
-        s.__class__(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
-    )
-
-
 def create_compliant_series(
     iterable: Any,
     index: Any = None,
