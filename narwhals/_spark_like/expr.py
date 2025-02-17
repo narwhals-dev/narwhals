@@ -209,7 +209,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             "__rsub__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
-        )
+        ).alias("literal")
 
     def __mul__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
