@@ -37,7 +37,6 @@ if TYPE_CHECKING:
     StringArray: TypeAlias = "pc.StringArray"
     StringArrayT = TypeVar("StringArrayT", bound=StringArray)
     DataTypeT_co = TypeVar("DataTypeT_co", bound="pa.DataType", covariant=True)
-    ArrowScalarT_co = TypeVar("ArrowScalarT_co", bound="pa.Scalar", covariant=True)
     _AsPyType = TypeVar("_AsPyType")
 
     class _BasicDataType(pa.DataType, Generic[_AsPyType]): ...
@@ -56,5 +55,7 @@ Common issues:
 - `_clone_signature` used on signatures that are not identical
 """
 
-
+ArrowScalarT_co = TypeVar(
+    "ArrowScalarT_co", bound="pa.Scalar", covariant=True
+)  # pragma: no cover
 StringScalarT = TypeVar("StringScalarT", bound="StringScalar")  # pragma: no cover
