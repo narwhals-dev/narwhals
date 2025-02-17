@@ -151,8 +151,8 @@ def test_left_join(  # pragma: no cover
     right_key: list[str],
 ) -> None:
     assume(len(left_key) == len(right_key))
-    data_left: Mapping[str, Any] = {"a": a_left_data, "b": b_left_data, "c": c_left_data}
-    data_right: Mapping[str, Any] = {
+    data_left: dict[str, Any] = {"a": a_left_data, "b": b_left_data, "c": c_left_data}
+    data_right: dict[str, Any] = {
         "a": a_right_data,
         "b": b_right_data,
         "d": d_right_data,

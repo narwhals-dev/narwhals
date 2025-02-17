@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
-from typing import Mapping
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -13,7 +14,10 @@ import narwhals.stable.v1 as nw
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-data: Mapping[str, Any] = {
+if TYPE_CHECKING:
+    from narwhals.typing import _1DArray
+
+data: dict[str, Any] = {
     "a": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
     "b": [11, 12, 13, 14, 15, 16],
 }
@@ -75,7 +79,8 @@ def test_gather(constructor_eager: ConstructorEager) -> None:
         "b": [11, 14, 12],
     }
     assert_equal_data(result, expected)
-    result = df[np.array([0, 3, 1])]
+    arr = cast("_1DArray", np.array([0, 3, 1]))
+    result = df[arr]
     assert_equal_data(result, expected)
 
 
@@ -97,10 +102,10 @@ def test_gather_rows_cols(constructor_eager: ConstructorEager) -> None:
 
     expected = {"b": [11, 14, 12]}
 
-    result = {"b": df[[0, 3, 1], 1]}
+    result: Any = {"b": df[[0, 3, 1], 1]}
     assert_equal_data(result, expected)
-
-    result = {"b": df[np.array([0, 3, 1]), "b"]}
+    arr = cast("_1DArray", np.array([0, 3, 1]))
+    result = {"b": df[arr, "b"]}
     assert_equal_data(result, expected)
 
 

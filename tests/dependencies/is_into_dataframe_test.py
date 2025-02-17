@@ -28,7 +28,7 @@ class DictDataFrame:
 
 
 def test_is_into_dataframe() -> None:
-    data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4, 5, 6]}
+    data: dict[str, Any] = {"a": [1, 2, 3], "b": [4, 5, 6]}
     assert is_into_dataframe(pa.table(data))
     assert is_into_dataframe(pl.DataFrame(data))
     assert is_into_dataframe(pd.DataFrame(data))
