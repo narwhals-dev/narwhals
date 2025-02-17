@@ -293,7 +293,7 @@ def broadcast_and_extract_dataframe_comparand(
             value = other._native_series[0]
             if backend_version < (13,) and hasattr(value, "as_py"):
                 value = value.as_py()
-            return pa.chunked_array(np.full(shape=length, fill_value=value))
+            return pa.chunked_array([np.full(shape=length, fill_value=value)])
 
         return other._native_series
 
