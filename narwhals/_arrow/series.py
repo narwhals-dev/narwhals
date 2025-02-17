@@ -6,7 +6,6 @@ from typing import Iterable
 from typing import Iterator
 from typing import Literal
 from typing import Sequence
-from typing import TypeVar
 from typing import cast
 from typing import overload
 
@@ -49,13 +48,12 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import NullPlacement
     from narwhals._arrow.typing import Order
     from narwhals._arrow.typing import TieBreaker
+    from narwhals._arrow.typing import _AsPyType
     from narwhals._arrow.typing import _BasicDataType
     from narwhals.dtypes import DType
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
-
-    _AsPyType = TypeVar("_AsPyType")
 
 
 @overload

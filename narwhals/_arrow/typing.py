@@ -6,6 +6,7 @@ from typing import TypeVar  # pragma: no cover
 
 if TYPE_CHECKING:
     import sys
+    from typing import Generic
     from typing import Literal
 
     if sys.version_info >= (3, 10):
@@ -15,9 +16,6 @@ if TYPE_CHECKING:
 
     import pyarrow as pa
     import pyarrow.compute as pc
-    from pyarrow.__lib_pxi.types import (  # pyright: ignore[reportMissingModuleSource]
-        _BasicDataType,  # noqa: F401
-    )
     from pyarrow._stubs_typing import (  # pyright: ignore[reportMissingModuleSource]
         Indices,  # noqa: F401
     )
@@ -39,9 +37,12 @@ if TYPE_CHECKING:
     StringArray: TypeAlias = "pc.StringArray"
     StringArrayT = TypeVar("StringArrayT", bound=StringArray)
     DataTypeT_co = TypeVar("DataTypeT_co", bound="pa.DataType", covariant=True)
-    ArrowScalarT_co = TypeVar("ArrowScalarT_co", bound="pa.Scalar", covariant=True)
     ArrowChunkedArray: TypeAlias = pa.ChunkedArray[Any]
     ArrowArray: TypeAlias = pa.Array[Any]
+    _AsPyType = TypeVar("_AsPyType")
+
+    class _BasicDataType(pa.DataType, Generic[_AsPyType]): ...
+
 
 Incomplete: TypeAlias = Any  # pragma: no cover
 """
@@ -56,5 +57,7 @@ Common issues:
 - `_clone_signature` used on signatures that are not identical
 """
 
-
+ArrowScalarT_co = TypeVar(
+    "ArrowScalarT_co", bound="pa.Scalar", covariant=True
+)  # pragma: no cover
 StringScalarT = TypeVar("StringScalarT", bound="StringScalar")  # pragma: no cover
