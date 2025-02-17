@@ -27,9 +27,9 @@ if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
     from narwhals._arrow.series import ArrowSeries
+    from narwhals._arrow.typing import ArrowScalarT_co
     from narwhals._arrow.typing import DataTypeT_co
     from narwhals._arrow.typing import Incomplete
-    from narwhals._arrow.typing import ScalarT_co
     from narwhals._arrow.typing import StringArray
     from narwhals._arrow.typing import StringScalar
     from narwhals._arrow.typing import StringScalarT
@@ -74,14 +74,16 @@ lit = pa.scalar
 
 
 def chunked_array(
-    arr: pa.Array[ScalarT_co] | list[Iterable[ScalarT_co]] | pa.ChunkedArray[ScalarT_co],
-) -> pa.ChunkedArray[ScalarT_co]:
+    arr: pa.Array[ArrowScalarT_co]
+    | list[Iterable[ArrowScalarT_co]]
+    | pa.ChunkedArray[ArrowScalarT_co],
+) -> pa.ChunkedArray[ArrowScalarT_co]:
     if isinstance(arr, pa.ChunkedArray):
         return arr
     if isinstance(arr, list):
         return pa.chunked_array(cast("Any", arr))
     else:
-        return cast("pa.ChunkedArray[ScalarT_co]", pa.chunked_array([arr], arr.type))
+        return cast("pa.ChunkedArray[ArrowScalarT_co]", pa.chunked_array([arr], arr.type))
 
 
 def nulls_like(
@@ -217,20 +219,20 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
 
 @overload
 def broadcast_and_extract_native(
-    lhs: ArrowSeries[ScalarT_co], rhs: None, backend_version: tuple[int, ...]
-) -> tuple[pa.ChunkedArray[ScalarT_co], ScalarT_co]: ...
+    lhs: ArrowSeries[ArrowScalarT_co], rhs: None, backend_version: tuple[int, ...]
+) -> tuple[pa.ChunkedArray[ArrowScalarT_co], ArrowScalarT_co]: ...
 
 
 @overload
 def broadcast_and_extract_native(
-    lhs: ArrowSeries[ScalarT_co],
-    rhs: ArrowSeries[ScalarT_co] | list[ArrowSeries[ScalarT_co]] | Any,
+    lhs: ArrowSeries[ArrowScalarT_co],
+    rhs: ArrowSeries[ArrowScalarT_co] | list[ArrowSeries[ArrowScalarT_co]] | Any,
     backend_version: tuple[int, ...],
-) -> tuple[pa.ChunkedArray[Any], ScalarT_co | pa.ChunkedArray[ScalarT_co]]: ...
+) -> tuple[pa.ChunkedArray[Any], ArrowScalarT_co | pa.ChunkedArray[ArrowScalarT_co]]: ...
 
 
 def broadcast_and_extract_native(
-    lhs: ArrowSeries[ScalarT_co], rhs: Any, backend_version: tuple[int, ...]
+    lhs: ArrowSeries[ArrowScalarT_co], rhs: Any, backend_version: tuple[int, ...]
 ) -> tuple[pa.ChunkedArray[Any], Any]:
     """Validate RHS of binary operation.
 
@@ -413,8 +415,8 @@ def cast_for_truediv(
 
 
 def broadcast_series(
-    series: Sequence[ArrowSeries[ScalarT_co]],
-) -> Sequence[pa.ChunkedArray[ScalarT_co]]:
+    series: Sequence[ArrowSeries[ArrowScalarT_co]],
+) -> Sequence[pa.ChunkedArray[ArrowScalarT_co]]:
     lengths = [len(s) for s in series]
     max_length = max(lengths)
     fast_path = all(_len == max_length for _len in lengths)
@@ -431,7 +433,7 @@ def broadcast_series(
             if s._backend_version < (13,) and hasattr(value, "as_py"):
                 value = value.as_py()
             arr = cast(
-                "pa.ChunkedArray[ScalarT_co]",
+                "pa.ChunkedArray[ArrowScalarT_co]",
                 pa.array([value] * max_length, type=s_native.type),
             )
             reshaped.append(arr)

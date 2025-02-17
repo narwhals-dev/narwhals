@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     StringArray: TypeAlias = "pc.StringArray"
     StringArrayT = TypeVar("StringArrayT", bound=StringArray)
     DataTypeT_co = TypeVar("DataTypeT_co", bound="pa.DataType", covariant=True)
-    ScalarT_co = TypeVar("ScalarT_co", bound="pa.Scalar", covariant=True)
+    ArrowScalarT_co = TypeVar("ArrowScalarT_co", bound="pa.Scalar", covariant=True)
 
 Incomplete: TypeAlias = Any  # pragma: no cover
 """
