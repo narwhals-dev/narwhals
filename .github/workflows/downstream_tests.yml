@@ -461,18 +461,26 @@ jobs:
       - name: install-validoopsie-dev
         run: |
           cd validoopsie
+          uv venv
+          . .venv/bin/activate
           uv sync --dev
-          uv pip install pytest-env pytest
+          uv pip install pytest-env
           which python
       - name: show-deps
-        run: uv pip freeze
+        run: |
+          cd validoopsie
+          . .venv/bin/activate
+          uv pip freeze
       - name: install-narwhals-dev
         run: |
           cd validoopsie
+          uv venv
+          . .venv/bin/activate
           uv pip uninstall narwhals
           uv pip install -e ./..
       - name: Run tests
         run: |
           cd validoopsie
+          . .venv/bin/activate
           pytest tests
         timeout-minutes: 15
