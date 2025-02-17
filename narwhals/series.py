@@ -28,9 +28,9 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
-    import pyarrow as pa
     from typing_extensions import Self
 
+    from narwhals._arrow.typing import ArrowArray
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
     from narwhals.typing import _1DArray
@@ -2049,7 +2049,7 @@ class Series(Generic[IntoSeriesT]):
             self._compliant_series.gather_every(n=n, offset=offset)
         )
 
-    def to_arrow(self: Self) -> pa.Array[Any]:
+    def to_arrow(self: Self) -> ArrowArray:
         r"""Convert to arrow.
 
         Returns:

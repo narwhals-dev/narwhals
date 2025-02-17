@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.series import ArrowSeries
 
-    IntoArrowExpr: TypeAlias = "ArrowExpr | ArrowSeries[Any]"
+    IntoArrowExpr: TypeAlias = "ArrowExpr | ArrowSeries"
     TieBreaker: TypeAlias = Literal["min", "max", "first", "dense"]
     NullPlacement: TypeAlias = Literal["at_start", "at_end"]
 
@@ -40,6 +40,8 @@ if TYPE_CHECKING:
     StringArrayT = TypeVar("StringArrayT", bound=StringArray)
     DataTypeT_co = TypeVar("DataTypeT_co", bound="pa.DataType", covariant=True)
     ArrowScalarT_co = TypeVar("ArrowScalarT_co", bound="pa.Scalar", covariant=True)
+    ArrowChunkedArray: TypeAlias = pa.ChunkedArray[Any]
+    ArrowArray: TypeAlias = pa.Array[Any]
 
 Incomplete: TypeAlias = Any  # pragma: no cover
 """
