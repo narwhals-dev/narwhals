@@ -134,7 +134,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                             native_dtype = narwhals_to_native_dtype(value, self._version)
                         except Exception as exc:  # noqa: BLE001
                             warnings.warn(
-                                f"Could not convert dtype {self._native_frame.schema[key]} to PyArrow dtype, {exc!r}",
+                                f"Could not convert dtype {self._native_frame.schema[key].dataType} to PyArrow dtype, {exc!r}",
                                 stacklevel=find_stacklevel(),
                             )
                             schema.append((key, pa.null()))
