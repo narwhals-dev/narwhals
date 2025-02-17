@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     import pyspark.sql as pyspark_sql
     from typing_extensions import TypeIs
 
+    from narwhals._arrow.typing import ScalarT_co
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
@@ -33,7 +34,6 @@ if TYPE_CHECKING:
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
     from narwhals.typing import _NDArray
-    from narwhals.typing import _ScalarT_co
     from narwhals.typing import _ShapeT
 
 # We silently allow these but - given that they claim
@@ -213,8 +213,8 @@ def is_polars_series(ser: Any) -> TypeGuard[pl.Series]:
 
 
 def is_pyarrow_chunked_array(
-    ser: Any | pa.ChunkedArray[_ScalarT_co],
-) -> TypeIs[pa.ChunkedArray[_ScalarT_co]]:
+    ser: Any | pa.ChunkedArray[ScalarT_co],
+) -> TypeIs[pa.ChunkedArray[ScalarT_co]]:
     """Check whether `ser` is a PyArrow ChunkedArray without importing PyArrow."""
     return (pa := get_pyarrow()) is not None and isinstance(ser, pa.ChunkedArray)
 

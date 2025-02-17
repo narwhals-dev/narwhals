@@ -14,7 +14,6 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     import numpy as np
-    import pyarrow as pa
     from typing_extensions import Self
     from typing_extensions import TypeAlias
 
@@ -272,8 +271,6 @@ _NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
 _1DArray: TypeAlias = "_NDArray[tuple[int]]"  # noqa: PYI042, PYI047
 _2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI042, PYI047
 _AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
-
-_ScalarT_co = TypeVar("_ScalarT_co", bound="pa.Scalar", covariant=True)  # noqa: PYI018
 
 
 class DTypes:
