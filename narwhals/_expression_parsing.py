@@ -268,7 +268,7 @@ def extract_compliant(
     other: Any,
     *,
     strings_are_column_names: bool,
-) -> CompliantExpr[CompliantSeriesT_co]:
+) -> CompliantExpr[CompliantSeriesT_co] | object:
     from narwhals.expr import Expr
     from narwhals.series import Series
 
@@ -281,7 +281,7 @@ def extract_compliant(
     if is_numpy_array(other):
         series = plx._create_compliant_series(other)  # type: ignore[attr-defined]
         return plx._create_expr_from_series(series)  # type: ignore[attr-defined]
-    return plx.lit(other, dtype=None)
+    return other
 
 
 def evaluate_output_names_and_aliases(
