@@ -108,13 +108,13 @@ def test_cast_to_enum() -> None:
     # we don't yet support metadata in dtypes, so for now disallow this
     # seems like a very niche use case anyway, and allowing it later wouldn't be
     # backwards-incompatible
-    df = pl.DataFrame({"a": ["a", "b"]}, schema={"a": pl.Categorical})
+    df_pl = pl.DataFrame({"a": ["a", "b"]}, schema={"a": pl.Categorical})
     with pytest.raises(
         NotImplementedError, match=r"Converting to Enum is not \(yet\) supported"
     ):
-        nw.from_native(df).select(nw.col("a").cast(nw.Enum))
-    df = pd.DataFrame({"a": ["a", "b"]}, dtype="category")
+        nw.from_native(df_pl).select(nw.col("a").cast(nw.Enum))
+    df_pd = pd.DataFrame({"a": ["a", "b"]}, dtype="category")
     with pytest.raises(
         NotImplementedError, match=r"Converting to Enum is not \(yet\) supported"
     ):
-        nw.from_native(df).select(nw.col("a").cast(nw.Enum))
+        nw.from_native(df_pd).select(nw.col("a").cast(nw.Enum))

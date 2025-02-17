@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import cast
 
 import hypothesis.strategies as st
 import numpy as np
@@ -233,7 +234,7 @@ def test_getitem(
         return
 
     df_other = nw.from_native(pandas_or_pyarrow_constructor(TEST_DATA))
-    result_other = df_other[selector]
+    result_other = df_other[cast("Any", selector)]
 
     if isinstance(result_polars, nw.Series):
         assert_equal_data({"a": result_other}, {"a": result_polars.to_list()})

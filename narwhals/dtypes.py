@@ -744,6 +744,8 @@ class List(NestedType):
        List(String)
     """
 
+    inner: DType | type[DType]
+
     def __init__(self: Self, inner: DType | type[DType]) -> None:
         self.inner = inner
 
@@ -800,22 +802,15 @@ class Array(NestedType):
     shape: tuple[int, ...]
 
     def __init__(
-        self: Self,
-        inner: DType | type[DType],
-        shape: int | tuple[int, ...] | None = None,
+        self: Self, inner: DType | type[DType], shape: int | tuple[int, ...]
     ) -> None:
         inner_shape: tuple[int, ...] = inner.shape if isinstance(inner, Array) else ()
-
-        if shape is None:  # pragma: no cover
-            msg = "Array constructor is missing the required argument `shape`"
-            raise TypeError(msg)
-
         if isinstance(shape, int):
             self.inner = inner
             self.size = shape
             self.shape = (shape, *inner_shape)
 
-        elif isinstance(shape, tuple) and isinstance(shape[0], int):
+        elif isinstance(shape, tuple) and len(shape) != 0 and isinstance(shape[0], int):
             if len(shape) > 1:
                 inner = Array(inner, shape[1:])
 
