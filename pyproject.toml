@@ -60,8 +60,7 @@ core = [
   "pandas",
   "polars",
   "pyarrow",
-  #TODO: reintroduce when fixing #1961
-  # "pyarrow-stubs",
+  "pyarrow-stubs",
 ]
 extra = [  # heavier dependencies we don't necessarily need in every testing job
   "scikit-learn",
@@ -201,6 +200,7 @@ omit = [
   'narwhals/typing.py',
   'narwhals/stable/v1/typing.py',
   'narwhals/this.py',
+  'narwhals/_arrow/typing.py',
   # we can't run this in every environment that we measure coverage on due to upper-bound constraits
   'narwhals/_ibis/*',
   # the latest pyspark (3.5) doesn't officially support Python 3.12 and 3.13
@@ -236,7 +236,6 @@ module = [
   "modin.*",
   "numpy.*",
   "pandas.*",
-  "pyarrow.*",
   "pyspark.*",
   "sklearn.*",
   "sqlframe.*",

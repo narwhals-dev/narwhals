@@ -504,7 +504,7 @@ class Datetime(TemporalType):
         if isinstance(time_zone, timezone):
             time_zone = str(time_zone)
 
-        self.time_unit = time_unit
+        self.time_unit: TimeUnit = time_unit
         self.time_zone = time_zone
 
     def __eq__(self: Self, other: object) -> bool:
@@ -734,6 +734,8 @@ class List(NestedType):
        List(String)
     """
 
+    inner: DType | type[DType]
+
     def __init__(self: Self, inner: DType | type[DType]) -> None:
         self.inner = inner
 
@@ -798,7 +800,7 @@ class Array(NestedType):
             self.size = shape
             self.shape = (shape, *inner_shape)
 
-        elif isinstance(shape, tuple) and isinstance(shape[0], int):
+        elif isinstance(shape, tuple) and len(shape) != 0 and isinstance(shape[0], int):
             if len(shape) > 1:
                 inner = Array(inner, shape[1:])
 
