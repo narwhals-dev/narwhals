@@ -512,7 +512,11 @@ def get_dtype_backend(dtype: Any, implementation: Implementation) -> DTypeBacken
     if hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype):
         return "pyarrow"
     with suppress(AttributeError):
-        if isinstance(dtype, pd.core.dtypes.dtypes.BaseMaskedDtype):
+        sentinel = object()
+        if (
+            isinstance(dtype, pd.api.extensions.ExtensionDtype)
+            and getattr(dtype, "base", sentinel) is None
+        ):
             return "numpy_nullable"
     return None
 
