@@ -269,13 +269,9 @@ class ArrowSeries(CompliantSeries):
     def len(self: Self, *, _return_py_scalar: bool = True) -> int:
         return maybe_extract_py_scalar(len(self._native_series), _return_py_scalar)
 
-    def filter(self: Self, other: Any) -> Self:
-        if not (isinstance(other, list) and all(isinstance(x, bool) for x in other)):
-            ser, other = extract_native(self, other)
-        else:
-            ser = self._native_series
-        ser = cast("ArrowChunkedArray", ser)
-        return self._from_native_series(ser.filter(other))
+    def filter(self: Self, other: ArrowSeries | list[bool | None]) -> Self:
+        other_native = other._native_series if isinstance(other, ArrowSeries) else other
+        return self._from_native_series(self._native_series.filter(other_native))
 
     def mean(self: Self, *, _return_py_scalar: bool = True) -> float:
         # NOTE: stub overly strict https://github.com/zen-xu/pyarrow-stubs/blob/d97063876720e6a5edda7eb15f4efe07c31b8296/pyarrow-stubs/compute.pyi#L274-L307
