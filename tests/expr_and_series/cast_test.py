@@ -242,8 +242,6 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
         request.applymarker(pytest.mark.xfail)
 
-    dtype = nw.Struct([nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float64())])
-
     data = {
         "a": [
             {"movie ": "Cars", "rating": 4.5},
@@ -266,9 +264,16 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
                 F.col("a.rating").cast(T.DoubleType()).alias("rating"),
             ),
         )
+        assert nw.from_native(native_df).schema == nw.Schema(
+            {
+                "a": nw.Struct(
+                    [nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float64())]
+                )
+            }
+        )
 
-        assert nw.from_native(native_df).schema == nw.Schema({"a": dtype})
-
+    # Cast
+    dtype = nw.Struct([nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float64())])
     result = nw.from_native(native_df).select(nw.col("a").cast(dtype)).lazy().collect()
     assert result.schema == {"a": dtype}
 
