@@ -17,6 +17,7 @@ import pandas as pd
 from narwhals._dask.dataframe import DaskLazyFrame
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
+from narwhals._dask.utils import align_series_full_broadcast
 from narwhals._dask.utils import name_preserving_div
 from narwhals._dask.utils import name_preserving_sum
 from narwhals._dask.utils import narwhals_to_native_dtype
@@ -161,8 +162,9 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
     def sum_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = [s for _expr in exprs for s in _expr(df)]
-
-            return [dd.concat(series, axis=1).sum(axis=1)]
+            return [
+                dd.concat(align_series_full_broadcast(df, *series), axis=1).sum(axis=1)
+            ]
 
         return DaskExpr(
             call=func,

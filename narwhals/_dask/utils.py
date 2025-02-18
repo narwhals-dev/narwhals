@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Sequence
 
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import select_columns_by_name
@@ -12,13 +13,13 @@ from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 from narwhals.utils import parse_version
 
+try:
+    import dask.dataframe.dask_expr as dx
+except ModuleNotFoundError:
+    import dask_expr as dx
+
 if TYPE_CHECKING:
     import dask.dataframe as dd
-
-    try:
-        import dask.dataframe.dask_expr as dx
-    except ModuleNotFoundError:
-        import dask_expr as dx
 
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.expr import DaskExpr
@@ -49,6 +50,18 @@ def evaluate_exprs(df: DaskLazyFrame, /, *exprs: DaskExpr) -> dict[str, dx.Serie
         for native_series, alias in zip(native_series_list, aliases):
             native_results[alias] = native_series  # noqa: PERF403
     return native_results
+
+
+def align_series_full_broadcast(
+    df: DaskLazyFrame, *series: dx.Series | object
+) -> Sequence[dx.Series]:
+    results = []
+    for s in series:
+        if isinstance(s, dx.Series):
+            results.append(s)
+        else:
+            results.append(df._native_frame.assign(_tmp=s)["_tmp"])
+    return results
 
 
 def add_row_index(

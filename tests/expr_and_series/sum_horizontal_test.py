@@ -61,9 +61,6 @@ def test_sumh_aggregations(constructor: Constructor) -> None:
 def test_sumh_transformations(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "dask" in str(constructor):
-        # We should be able to support this one, we just don't yet.
-        request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor):
         # We don't yet support broadcasting for DuckDB.
         request.applymarker(pytest.mark.xfail)
