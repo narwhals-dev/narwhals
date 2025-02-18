@@ -15,6 +15,7 @@ from typing import TypeVar
 from typing import Union
 from typing import overload
 
+from narwhals.dependencies import is_narwhals_series
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.exceptions import ShapeError
@@ -22,8 +23,11 @@ from narwhals.utils import Implementation
 from narwhals.utils import is_compliant_expr
 
 if TYPE_CHECKING:
+    from typing_extensions import TypeIs
+
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._pandas_like.expr import PandasLikeExpr
+    from narwhals.expr import Expr
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantExpr
     from narwhals.typing import CompliantLazyFrame
@@ -40,6 +44,13 @@ if TYPE_CHECKING:
     ArrowExprT = TypeVar("ArrowExprT", bound=ArrowExpr)
 
     T = TypeVar("T")
+
+
+def is_expr(obj: Any) -> TypeIs[Expr]:
+    """Check whether `obj` is a Narwhals Expr."""
+    from narwhals.expr import Expr
+
+    return isinstance(obj, Expr)
 
 
 def evaluate_into_expr(
@@ -277,14 +288,11 @@ def extract_compliant(
     *,
     str_as_lit: bool,
 ) -> CompliantExpr[CompliantSeriesT_co] | object:
-    from narwhals.expr import Expr
-    from narwhals.series import Series
-
-    if isinstance(other, Expr):
+    if is_expr(other):
         return other._to_compliant_expr(plx)
     if isinstance(other, str) and not str_as_lit:
         return plx.col(other)
-    if isinstance(other, Series):
+    if is_narwhals_series(other):
         return plx._create_expr_from_series(other._compliant_series)  # type: ignore[attr-defined]
     if is_numpy_array(other):
         series = plx._create_compliant_series(other)  # type: ignore[attr-defined]
@@ -315,9 +323,7 @@ def evaluate_output_names_and_aliases(
 
 
 def operation_is_order_dependent(*args: IntoExpr | Any) -> bool:
-    from narwhals.expr import Expr
-
-    return any(isinstance(x, Expr) and x._metadata["is_order_dependent"] for x in args)
+    return any(is_expr(x) and x._metadata["is_order_dependent"] for x in args)
 
 
 class ExprKind(Enum):
@@ -351,7 +357,6 @@ class ExprMetadata(TypedDict):
 
 def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
     # Combine metadata from `args`.
-    from narwhals.expr import Expr
 
     n_changes_length = 0
     has_transforms = False
@@ -362,7 +367,7 @@ def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
     for arg in args:
         if isinstance(arg, str) and not str_as_lit:
             has_transforms = True
-        elif isinstance(arg, Expr):
+        elif is_expr(arg):
             if arg._metadata["is_order_dependent"]:
                 result_is_order_dependent = True
             kind = arg._metadata["kind"]
@@ -404,11 +409,10 @@ def check_expressions_transform(*args: IntoExpr, function_name: str) -> None:
     # Raise if any argument in `args` isn't length-preserving.
     # For Series input, we don't raise (yet), we let such checks happen later,
     # as this function works lazily and so can't evaluate lengths.
-    from narwhals.expr import Expr
     from narwhals.series import Series
 
     if not all(
-        (isinstance(x, Expr) and x._metadata["kind"] is ExprKind.TRANSFORM)
+        (is_expr(x) and x._metadata["kind"] is ExprKind.TRANSFORM)
         or isinstance(x, (str, Series))
         for x in args
     ):
@@ -420,22 +424,19 @@ def all_exprs_are_aggs_or_literals(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
     # Raise if any argument in `args` isn't an aggregation or literal.
     # For Series input, we don't raise (yet), we let such checks happen later,
     # as this function works lazily and so can't evaluate lengths.
-    from narwhals import Expr
-
     exprs = chain(args, kwargs.values())
     agg_or_lit = {ExprKind.AGGREGATION, ExprKind.LITERAL}
-    return all(isinstance(x, Expr) and x._metadata["kind"] in agg_or_lit for x in exprs)
+    return all(is_expr(x) and x._metadata["kind"] in agg_or_lit for x in exprs)
 
 
 def infer_kind(obj: IntoExpr | _1DArray | object, *, str_as_lit: bool) -> ExprKind:
-    from narwhals.expr import Expr
-    from narwhals.series import Series
-
-    if isinstance(obj, Expr):
+    if is_expr(obj):
         return obj._metadata["kind"]
-    if isinstance(obj, Series) or is_numpy_array(obj):
-        return ExprKind.TRANSFORM
-    if isinstance(obj, str) and not str_as_lit:
+    if (
+        is_narwhals_series(obj)
+        or is_numpy_array(obj)
+        or (isinstance(obj, str) and not str_as_lit)
+    ):
         return ExprKind.TRANSFORM
     return ExprKind.LITERAL
 
