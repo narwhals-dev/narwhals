@@ -93,7 +93,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):  # type: ignore[
     ) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             cols = [s for _expr in exprs for s in _expr(df)]
-            null_mask = [s.isnull() for _expr in exprs for s in _expr(df)]
+            null_mask = [s.isnull() for s in cols]
 
             if not ignore_nulls:
                 null_mask_result = reduce(operator.or_, null_mask)
