@@ -112,6 +112,28 @@ class SparkLikeExprStringNamespace:
             expr_kind=self._compliant_expr._expr_kind,
         )
 
+    def split(self: Self, by: str | None, *, inclusive: bool) -> SparkLikeExpr:
+        def func(_input: Column) -> Column:
+            split_expr = self._compliant_expr._F.split(_input, by)
+            if inclusive:
+                length = self._compliant_expr._F.size(split_expr)
+                return self._compliant_expr._F.transform(
+                    split_expr,
+                    lambda x, i: self._compliant_expr._F.when(
+                        i < length - 1,
+                        self._compliant_expr._F.concat(
+                            x, self._compliant_expr._F.lit(by)
+                        ),
+                    ).otherwise(x),
+                )
+            return split_expr
+
+        return self._compliant_expr._from_call(
+            func,
+            "split",
+            expr_kind=self._compliant_expr._expr_kind,
+        )
+
     def to_uppercase(self: Self) -> SparkLikeExpr:
         return self._compliant_expr._from_call(
             self._compliant_expr._F.upper,
