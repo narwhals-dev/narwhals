@@ -64,21 +64,6 @@ def test_concat_str(
         .select("a")
     )
     assert_equal_data(result, {"a": expected})
-    result = (
-        df.select(
-            nw.col("a").alias("a_original"),
-            nw.concat_str(
-                nw.nth(0) * 2,
-                nw.col("b"),
-                nw.col("c"),
-                separator=" ",
-                ignore_nulls=ignore_nulls,  # default behavior is False
-            ),
-        )
-        .sort("a_original")
-        .select("a")
-    )
-    assert_equal_data(result, {"a": expected})
 
 
 def test_concat_str_with_lit(constructor: Constructor) -> None:

@@ -17,7 +17,6 @@ from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.stable.v1.typing import IntoFrame
-    from narwhals.typing import Frame
 
 
 @pytest.mark.parametrize(
@@ -44,16 +43,10 @@ def test_q1(library: str, request: pytest.FixtureRequest) -> None:
     else:
         df_raw = pa_csv.read_csv("tests/data/lineitem.csv")
     var_1 = datetime(1998, 9, 2)
-    df: Frame = nw.from_native(df_raw).lazy()
+    df = nw.from_native(df_raw).lazy()
     schema = df.collect_schema()
     if schema["l_shipdate"] != nw.Date and schema["l_shipdate"] != nw.Datetime:
         df = df.with_columns(nw.col("l_shipdate").str.to_datetime())
-        if df.implementation.is_dask():
-            # Avoid issues related to https://github.com/pandas-dev/pandas/issues/60937.
-            native = df.to_native()
-            native["l_shipdate"] = native["l_shipdate"].astype("timestamp[ns][pyarrow]")  # type: ignore[index, union-attr]
-            df = nw.from_native(native)
-
     query_result = (
         df.filter(nw.col("l_shipdate") <= var_1)
         .with_columns(
