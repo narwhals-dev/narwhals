@@ -72,7 +72,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
 
     def broadcast(self, kind: ExprKind) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            return [result[0] for result in self(df)]
+            return [df._native_frame.assign(tmp=result)["tmp"] for result in self(df)]
 
         return self.__class__(
             func,
@@ -532,9 +532,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         return self._from_call(func, "is_unique")
 
     def is_in(self: Self, other: Any) -> Self:
-        return self._from_call(
-            lambda _input, other: _input.isin(other), "is_in", other=other
-        )
+        return self._from_call(lambda _input: _input.isin(other), "is_in")
 
     def null_count(self: Self) -> Self:
         return self._from_call(
@@ -578,11 +576,11 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         )
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
-        def func(_input: dx.Series, dtype: DType | type[DType]) -> dx.Series:
-            dtype = narwhals_to_native_dtype(dtype, self._version)
-            return _input.astype(dtype)
+        def func(_input: dx.Series) -> dx.Series:
+            native_dtype = narwhals_to_native_dtype(dtype, self._version)
+            return _input.astype(native_dtype)
 
-        return self._from_call(func, "cast", dtype=dtype)
+        return self._from_call(func, "cast")
 
     def is_finite(self: Self) -> Self:
         import dask.array as da
