@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from functools import partial
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -43,22 +44,14 @@ def n_unique() -> dd.Aggregation:
     def agg(s0: PandasSeriesGroupBy) -> pd.Series[Any]:
         return s0.sum()
 
-    return dd.Aggregation(
-        name="nunique",
-        chunk=chunk,
-        agg=agg,
-    )
+    return dd.Aggregation(name="nunique", chunk=chunk, agg=agg)
 
 
 def var(ddof: int = 1) -> _AggFn:
-    from functools import partial
-
     return partial(_DaskGroupBy.var, ddof=ddof)
 
 
 def std(ddof: int = 1) -> _AggFn:
-    from functools import partial
-
     return partial(_DaskGroupBy.std, ddof=ddof)
 
 
