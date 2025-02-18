@@ -15,7 +15,7 @@ from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
-from narwhals._pandas_like.utils import align_and_extract_native_full_broadcast
+from narwhals._pandas_like.utils import align_series_full_broadcast
 from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import diagonal_concat
 from narwhals._pandas_like.utils import extract_dataframe_comparand
@@ -198,14 +198,9 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
     def sum_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = [s for _expr in exprs for s in _expr(df)]
-            native_series = (
-                s.fillna(0) for s in align_and_extract_native_full_broadcast(*series)
-            )
-            return [
-                series[0]
-                ._from_native_series(reduce(operator.add, native_series))
-                .alias(series[0].name)
-            ]
+            series = align_series_full_broadcast(*series)
+            native_series = (s.fill_null(0, None, None) for s in series)
+            return [reduce(operator.add, native_series)]
 
         return self._create_expr_from_callable(
             func=func,
@@ -218,7 +213,9 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
 
     def all_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = (s for _expr in exprs for s in _expr(df))
+            series = align_series_full_broadcast(
+                *(s for _expr in exprs for s in _expr(df))
+            )
             return [reduce(operator.and_, series)]
 
         return self._create_expr_from_callable(
@@ -232,7 +229,9 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
 
     def any_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = (s for _expr in exprs for s in _expr(df))
+            series = align_series_full_broadcast(
+                *(s for _expr in exprs for s in _expr(df))
+            )
             return [reduce(operator.or_, series)]
 
         return self._create_expr_from_callable(
@@ -247,8 +246,10 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
     def mean_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
-            series = (s.fill_null(0, strategy=None, limit=None) for s in expr_results)
-            non_na = (1 - s.is_null() for s in expr_results)
+            series = align_series_full_broadcast(
+                *(s.fill_null(0, strategy=None, limit=None) for s in expr_results)
+            )
+            non_na = align_series_full_broadcast(*(1 - s.is_null() for s in expr_results))
             return [reduce(operator.add, series) / reduce(operator.add, non_na)]
 
         return self._create_expr_from_callable(
@@ -263,6 +264,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
     def min_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = [s for _expr in exprs for s in _expr(df)]
+            series = align_series_full_broadcast(*series)
 
             return [
                 PandasLikeSeries(
@@ -287,6 +289,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
     def max_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = [s for _expr in exprs for s in _expr(df)]
+            series = align_series_full_broadcast(*series)
 
             return [
                 PandasLikeSeries(
@@ -368,8 +371,12 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
         dtypes = import_dtypes_module(self._version)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = (s for _expr in exprs for s in _expr.cast(dtypes.String())(df))
-            null_mask = [s for _expr in exprs for s in _expr.is_null()(df)]
+            series = align_series_full_broadcast(
+                *(s for _expr in exprs for s in _expr.cast(dtypes.String())(df))
+            )
+            null_mask = align_series_full_broadcast(
+                *(s for _expr in exprs for s in _expr.is_null()(df))
+            )
 
             if not ignore_nulls:
                 null_mask_result = reduce(operator.or_, null_mask)

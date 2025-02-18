@@ -13,7 +13,7 @@ import numpy as np
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
 from narwhals._pandas_like.series import PandasLikeSeries
-from narwhals._pandas_like.utils import align_and_extract_native_full_broadcast
+from narwhals._pandas_like.utils import align_series_full_broadcast
 from narwhals._pandas_like.utils import check_column_names_are_unique
 from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
 from narwhals._pandas_like.utils import create_compliant_series
@@ -397,8 +397,9 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             return self._from_native_frame(
                 self._native_frame.__class__(), validate_column_names=False
             )
+        new_series = align_series_full_broadcast(*new_series)
         df = horizontal_concat(
-            align_and_extract_native_full_broadcast(*new_series),
+            [s._native_series for s in new_series],
             implementation=self._implementation,
             backend_version=self._backend_version,
         )

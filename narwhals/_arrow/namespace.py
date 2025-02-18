@@ -194,7 +194,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
     def all_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = (s for _expr in exprs for s in _expr(df))
-            return [reduce(operator.and_, series)]
+            return [reduce(operator.and_, align_series_full_broadcast(*series))]
 
         return self._create_expr_from_callable(
             func=func,
@@ -208,7 +208,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
     def any_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = (s for _expr in exprs for s in _expr(df))
-            return [reduce(operator.or_, series)]
+            return [reduce(operator.or_, align_series_full_broadcast(*series))]
 
         return self._create_expr_from_callable(
             func=func,
@@ -242,8 +242,12 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
-            series = (s.fill_null(0, strategy=None, limit=None) for s in expr_results)
-            non_na = (1 - s.is_null().cast(dtypes.Int64()) for s in expr_results)
+            series = align_series_full_broadcast(
+                *(s.fill_null(0, strategy=None, limit=None) for s in expr_results)
+            )
+            non_na = align_series_full_broadcast(
+                *(1 - s.is_null().cast(dtypes.Int64()) for s in expr_results)
+            )
             return [reduce(operator.add, series) / reduce(operator.add, non_na)]
 
         return self._create_expr_from_callable(
@@ -258,6 +262,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
     def min_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             init_series, *series = [s for _expr in exprs for s in _expr(df)]
+            init_series, *series = align_series_full_broadcast(init_series, *series)
             # NOTE: Stubs copy the wrong signature https://github.com/zen-xu/pyarrow-stubs/blob/d97063876720e6a5edda7eb15f4efe07c31b8296/pyarrow-stubs/compute.pyi#L963
             min_element_wise: Incomplete = pc.min_element_wise
             native_series = reduce(
@@ -286,6 +291,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
     def max_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             init_series, *series = [s for _expr in exprs for s in _expr(df)]
+            init_series, *series = align_series_full_broadcast(init_series, *series)
             # NOTE: stubs are missing `ChunkedArray` support
             # https://github.com/zen-xu/pyarrow-stubs/blob/d97063876720e6a5edda7eb15f4efe07c31b8296/pyarrow-stubs/compute.pyi#L948-L954
             max_element_wise: Incomplete = pc.max_element_wise
@@ -358,9 +364,9 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         dtypes = import_dtypes_module(self._version)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            compliant_series_list: list[ArrowSeries] = [
-                s for _expr in exprs for s in _expr.cast(dtypes.String())(df)
-            ]
+            compliant_series_list = align_series_full_broadcast(
+                *(s for _expr in exprs for s in _expr.cast(dtypes.String())(df))
+            )
             null_handling: Literal["skip", "emit_null"] = (
                 "skip" if ignore_nulls else "emit_null"
             )

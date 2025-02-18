@@ -689,9 +689,9 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     raise AssertionError(msg)
 
 
-def align_and_extract_native_full_broadcast(
+def align_series_full_broadcast(
     *series: PandasLikeSeries,
-) -> list[pd.Series[Any]]:
+) -> list[PandasLikeSeries]:
     # Ensure all of `series` have the same length and index. Scalars get broadcasted to
     # the full length of the longest Series. This is useful when you need to construct a
     # full Series anyway (e.g. `DataFrame.select`). It should not be used in binary operations,
@@ -709,25 +709,29 @@ def align_and_extract_native_full_broadcast(
         s_native = s._native_series
         if max_length_gt_1 and length == 1:
             reindexed.append(
-                native_namespace.Series(
-                    [s_native.iloc[0]] * max_length,
-                    index=idx,
-                    name=s_native.name,
-                    dtype=s_native.dtype,
+                s._from_native_series(
+                    native_namespace.Series(
+                        [s_native.iloc[0]] * max_length,
+                        index=idx,
+                        name=s_native.name,
+                        dtype=s_native.dtype,
+                    )
                 )
             )
 
         elif s_native.index is not idx:
             reindexed.append(
-                set_index(
-                    s_native,
-                    idx,
-                    implementation=s._implementation,
-                    backend_version=s._backend_version,
+                s._from_native_series(
+                    set_index(
+                        s_native,
+                        idx,
+                        implementation=s._implementation,
+                        backend_version=s._backend_version,
+                    )
                 )
             )
         else:
-            reindexed.append(s_native)
+            reindexed.append(s)
     return reindexed
 
 
