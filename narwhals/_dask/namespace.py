@@ -363,9 +363,7 @@ class DaskWhen:
             then_value: dx.Series | object = self._then_value(df)[0]
         else:
             then_value = self._then_value
-        _df = condition.to_frame("a")
-        _df["literal"] = then_value
-        then_series = _df["literal"]
+        (then_series,) = align_series_full_broadcast(df, then_value)
         validate_comparand(condition, then_series)
 
         if self._otherwise_value is None:
@@ -375,10 +373,7 @@ class DaskWhen:
             otherwise_value: dx.Series | object = self._otherwise_value(df)[0]
         else:
             otherwise_value = self._otherwise_value
-        _df = condition.to_frame("a")
-        _df["literal"] = otherwise_value
-        otherwise_series = _df["literal"]
-
+        (otherwise_series,) = align_series_full_broadcast(df, otherwise_value)
         validate_comparand(condition, otherwise_series)
         return [then_series.where(condition, otherwise_series)]
 
