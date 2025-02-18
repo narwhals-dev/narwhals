@@ -12,8 +12,8 @@ if TYPE_CHECKING:
     import ibis
 
     from tests.utils import Constructor
-
-ibis = pytest.importorskip("ibis")
+else:
+    ibis = pytest.importorskip("ibis")
 
 
 @pytest.fixture
