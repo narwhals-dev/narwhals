@@ -9,8 +9,6 @@ from typing import TypeVar
 from typing import cast
 
 from narwhals._expression_parsing import all_exprs_are_aggs_or_literals
-from narwhals.dataframe import DataFrame
-from narwhals.dataframe import LazyFrame
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import flatten
 from narwhals.utils import tupleify
@@ -18,6 +16,8 @@ from narwhals.utils import tupleify
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
     from narwhals.expr import Expr
 
 DataFrameT = TypeVar("DataFrameT")
