@@ -284,7 +284,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             cols = [s for _expr in exprs for s in _expr(df)]
             cols_casted = [s.cast(df._native_dtypes.StringType()) for s in cols]
-            null_mask = [df._F.isnull(s) for _expr in exprs for s in _expr(df)]
+            null_mask = [df._F.isnull(s) for s in cols]
 
             if not ignore_nulls:
                 null_mask_result = reduce(operator.or_, null_mask)

@@ -215,6 +215,14 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
+    def __rsub__(self: Self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: other.__sub__(_input),
+            "__rsub__",
+            other=other,
+            expr_kind=n_ary_operation_expr_kind(self, other),
+        ).alias("literal")
+
     def __mul__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__mul__(other),
@@ -231,6 +239,14 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
+    def __rtruediv__(self: Self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: other.__truediv__(_input),
+            "__rtruediv__",
+            other=other,
+            expr_kind=n_ary_operation_expr_kind(self, other),
+        ).alias("literal")
+
     def __floordiv__(self: Self, other: SparkLikeExpr) -> Self:
         def _floordiv(_input: Column, other: Column) -> Column:
             return self._F.floor(_input / other)
@@ -242,6 +258,17 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
+    def __rfloordiv__(self: Self, other: SparkLikeExpr) -> Self:
+        def _rfloordiv(_input: Column, other: Column) -> Column:
+            return self._F.floor(other / _input)
+
+        return self._from_call(
+            _rfloordiv,
+            "__rfloordiv__",
+            other=other,
+            expr_kind=n_ary_operation_expr_kind(self, other),
+        ).alias("literal")
+
     def __pow__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__pow__(other),
@@ -250,6 +277,14 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
+    def __rpow__(self: Self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: other.__pow__(_input),
+            "__rpow__",
+            other=other,
+            expr_kind=n_ary_operation_expr_kind(self, other),
+        ).alias("literal")
+
     def __mod__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__mod__(other),
@@ -257,6 +292,14 @@ class SparkLikeExpr(CompliantExpr["Column"]):
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
         )
+
+    def __rmod__(self: Self, other: SparkLikeExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: other.__mod__(_input),
+            "__rmod__",
+            other=other,
+            expr_kind=n_ary_operation_expr_kind(self, other),
+        ).alias("literal")
 
     def __ge__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(

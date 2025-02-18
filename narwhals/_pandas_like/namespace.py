@@ -362,8 +362,9 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
         dtypes = import_dtypes_module(self._version)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = (s for _expr in exprs for s in _expr.cast(dtypes.String())(df))
-            null_mask = [s for _expr in exprs for s in _expr.is_null()(df)]
+            expr_results = [s for _expr in exprs for s in _expr(df)]
+            series = [s.cast(dtypes.String()) for s in expr_results]
+            null_mask = [s.is_null() for s in expr_results]
 
             if not ignore_nulls:
                 null_mask_result = reduce(operator.or_, null_mask)

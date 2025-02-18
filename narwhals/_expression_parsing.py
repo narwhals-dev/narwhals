@@ -237,12 +237,13 @@ def combine_evaluate_output_names(
 ) -> Callable[[CompliantDataFrame | CompliantLazyFrame], Sequence[str]]:
     # Follow left-hand-rule for naming. E.g. `nw.sum_horizontal(expr1, expr2)` takes the
     # first name of `expr1`.
+    if not is_compliant_expr(exprs[0]):  # pragma: no cover
+        msg = f"Safety assertion failed, expected expression, got: {type(exprs[0])}. Please report a bug."
+        raise AssertionError(msg)
+
     def evaluate_output_names(
         df: CompliantDataFrame | CompliantLazyFrame,
     ) -> Sequence[str]:
-        if not is_compliant_expr(exprs[0]):  # pragma: no cover
-            msg = f"Safety assertion failed, expected expression, got: {type(exprs[0])}. Please report a bug."
-            raise AssertionError(msg)
         return exprs[0]._evaluate_output_names(df)[:1]
 
     return evaluate_output_names
