@@ -10,7 +10,7 @@ from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
 from narwhals._spark_like.expr_name import SparkLikeExprNameNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
-from narwhals._spark_like.utils import maybe_evaluate
+from narwhals._spark_like.utils import maybe_evaluate_expr
 from narwhals._spark_like.utils import narwhals_to_native_dtype
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
@@ -165,7 +165,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             native_series_list = self._call(df)
             other_native_series = {
-                key: maybe_evaluate(df, value)
+                key: maybe_evaluate_expr(df, value)
                 for key, value in expressifiable_args.items()
             }
             return [

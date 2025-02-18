@@ -14,7 +14,7 @@ from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 from narwhals._spark_like.expr import SparkLikeExpr
 from narwhals._spark_like.selectors import SparkLikeSelectorNamespace
-from narwhals._spark_like.utils import maybe_evaluate
+from narwhals._spark_like.utils import maybe_evaluate_expr
 from narwhals._spark_like.utils import narwhals_to_native_dtype
 from narwhals.typing import CompliantNamespace
 
@@ -342,11 +342,11 @@ class SparkLikeWhen:
         self._implementation = implementation
 
     def __call__(self: Self, df: SparkLikeLazyFrame) -> list[Column]:
-        condition = maybe_evaluate(df, self._condition)
-        then_value = maybe_evaluate(df, self._then_value)
+        condition = maybe_evaluate_expr(df, self._condition)
+        then_value = maybe_evaluate_expr(df, self._then_value)
         if self._otherwise_value is None:
             return [df._F.when(condition=condition, value=then_value)]
-        otherwise_value = maybe_evaluate(df, self._otherwise_value)
+        otherwise_value = maybe_evaluate_expr(df, self._otherwise_value)
         return [
             df._F.when(condition=condition, value=then_value).otherwise(otherwise_value)
         ]

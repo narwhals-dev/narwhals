@@ -17,7 +17,7 @@ from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_name import DuckDBExprNameNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
 from narwhals._duckdb.utils import lit
-from narwhals._duckdb.utils import maybe_evaluate
+from narwhals._duckdb.utils import maybe_evaluate_expr
 from narwhals._duckdb.utils import narwhals_to_native_dtype
 from narwhals._expression_parsing import ExprKind
 from narwhals.typing import CompliantExpr
@@ -132,7 +132,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             native_series_list = self._call(df)
             other_native_series = {
-                key: maybe_evaluate(df, value)
+                key: maybe_evaluate_expr(df, value)
                 for key, value in expressifiable_args.items()
             }
             return [

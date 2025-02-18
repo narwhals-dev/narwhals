@@ -37,7 +37,9 @@ class ExprKind(Enum):
     TRANSFORM = auto()  # e.g. nw.col('a').round()
 
 
-def maybe_evaluate(df: DuckDBLazyFrame, obj: Any) -> Any:
+def maybe_evaluate_expr(
+    df: DuckDBLazyFrame, obj: DuckDBExpr | object
+) -> duckdb.Expression:
     from narwhals._duckdb.expr import DuckDBExpr
 
     if isinstance(obj, DuckDBExpr):

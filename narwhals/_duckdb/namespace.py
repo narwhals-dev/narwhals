@@ -19,7 +19,7 @@ from duckdb.typing import VARCHAR
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.selectors import DuckDBSelectorNamespace
 from narwhals._duckdb.utils import lit
-from narwhals._duckdb.utils import maybe_evaluate
+from narwhals._duckdb.utils import maybe_evaluate_expr
 from narwhals._duckdb.utils import narwhals_to_native_dtype
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
@@ -293,11 +293,11 @@ class DuckDBWhen:
         self._version = version
 
     def __call__(self: Self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
-        condition = maybe_evaluate(df, self._condition)
-        then_value = maybe_evaluate(df, self._then_value)
+        condition = maybe_evaluate_expr(df, self._condition)
+        then_value = maybe_evaluate_expr(df, self._then_value)
         if self._otherwise_value is None:
             return [CaseExpression(condition=condition, value=then_value)]
-        otherwise_value = maybe_evaluate(df, self._otherwise_value)
+        otherwise_value = maybe_evaluate_expr(df, self._otherwise_value)
         return [
             CaseExpression(condition=condition, value=then_value).otherwise(
                 otherwise_value

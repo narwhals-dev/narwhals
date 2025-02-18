@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
+def maybe_evaluate_expr(df: DaskLazyFrame, obj: DaskExpr | object) -> dx.Series | object:
     from narwhals._dask.expr import DaskExpr
 
     if isinstance(obj, DaskExpr):
@@ -38,7 +38,7 @@ def maybe_evaluate(df: DaskLazyFrame, obj: Any) -> Any:
     return obj
 
 
-def parse_exprs(df: DaskLazyFrame, /, *exprs: DaskExpr) -> dict[str, dx.Series]:
+def evaluate_exprs(df: DaskLazyFrame, /, *exprs: DaskExpr) -> dict[str, dx.Series]:
     native_results: dict[str, dx.Series] = {}
     for expr in exprs:
         native_series_list = expr._call(df)

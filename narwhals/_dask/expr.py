@@ -10,7 +10,7 @@ from narwhals._dask.expr_dt import DaskExprDateTimeNamespace
 from narwhals._dask.expr_name import DaskExprNameNamespace
 from narwhals._dask.expr_str import DaskExprStringNamespace
 from narwhals._dask.utils import add_row_index
-from narwhals._dask.utils import maybe_evaluate
+from narwhals._dask.utils import maybe_evaluate_expr
 from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
@@ -147,7 +147,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             native_results: list[dx.Series] = []
             native_series_list = self._call(df)
             other_native_series = {
-                key: maybe_evaluate(df, value)
+                key: maybe_evaluate_expr(df, value)
                 for key, value in expressifiable_args.items()
             }
             for native_series in native_series_list:

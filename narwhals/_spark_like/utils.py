@@ -180,7 +180,7 @@ def parse_exprs(df: SparkLikeLazyFrame, /, *exprs: SparkLikeExpr) -> dict[str, C
     return native_results
 
 
-def maybe_evaluate(df: SparkLikeLazyFrame, obj: Any) -> Column:
+def maybe_evaluate_expr(df: SparkLikeLazyFrame, obj: SparkLikeExpr | object) -> Column:
     from narwhals._spark_like.expr import SparkLikeExpr
 
     if isinstance(obj, SparkLikeExpr):
