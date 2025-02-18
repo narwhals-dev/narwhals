@@ -20,6 +20,7 @@ from narwhals.expr_dt import ExprDateTimeNamespace
 from narwhals.expr_list import ExprListNamespace
 from narwhals.expr_name import ExprNameNamespace
 from narwhals.expr_str import ExprStringNamespace
+from narwhals.translate import to_native
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import flatten
 from narwhals.utils import issue_deprecation_warning
@@ -1254,7 +1255,7 @@ class Expr:
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
             return self.__class__(
                 lambda plx: self._to_compliant_expr(plx).is_in(
-                    extract_compliant(plx, other, strings_are_column_names=False)
+                    to_native(other, pass_through=True)
                 ),
                 self._metadata,
             )

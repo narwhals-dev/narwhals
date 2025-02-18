@@ -236,39 +236,39 @@ def test_validate_not_duplicated_columns_duckdb() -> None:
 )
 def test_nested_dtypes() -> None:
     duckdb = pytest.importorskip("duckdb")
-    df = pl.DataFrame(
+    df_pd = pl.DataFrame(
         {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
         schema_overrides={"b": pl.Array(pl.Int64, 2)},
     ).to_pandas(use_pyarrow_extension_array=True)
-    nwdf = nw.from_native(df)
+    nwdf: nw.DataFrame[Any] | nw.LazyFrame[Any] = nw.from_native(df_pd)
     assert nwdf.schema == {
         "a": nw.List(nw.Int64),
         "b": nw.Array(nw.Int64, 2),
         "c": nw.Struct({"a": nw.Int64}),
     }
-    df = pl.DataFrame(
+    df_pl = pl.DataFrame(
         {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
         schema_overrides={"b": pl.Array(pl.Int64, 2)},
     )
-    nwdf = nw.from_native(df)
+    nwdf = nw.from_native(df_pl)
     assert nwdf.schema == {
         "a": nw.List(nw.Int64),
         "b": nw.Array(nw.Int64, 2),
         "c": nw.Struct({"a": nw.Int64}),
     }
 
-    df = pl.DataFrame(
+    df_pa = pl.DataFrame(
         {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1, "b": "x", "c": 1.1}]},
         schema_overrides={"b": pl.Array(pl.Int64, 2)},
     ).to_arrow()
-    nwdf = nw.from_native(df)
+    nwdf = nw.from_native(df_pa)
     assert nwdf.schema == {
         "a": nw.List(nw.Int64),
         "b": nw.Array(nw.Int64, 2),
         "c": nw.Struct({"a": nw.Int64, "b": nw.String, "c": nw.Float64}),
     }
-    df = duckdb.sql("select * from df")
-    nwdf = nw.from_native(df)
+    rel = duckdb.sql("select * from df_pa")
+    nwdf = nw.from_native(rel)
     assert nwdf.schema == {
         "a": nw.List(nw.Int64),
         "b": nw.Array(nw.Int64, 2),

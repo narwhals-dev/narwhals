@@ -236,7 +236,9 @@ def test_cast_datetime_tz_aware(
 
 
 def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
+    if any(
+        backend in str(constructor) for backend in ("dask", "modin", "cudf", "sqlframe")
+    ):
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
@@ -254,8 +256,9 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
     if "spark" in str(constructor):  # pragma: no cover
         # Special handling for pyspark as it natively maps the input to
         # a column of type MAP<STRING, STRING>
-        import pyspark.sql.functions as F  # noqa: N812
-        import pyspark.sql.types as T  # noqa: N812
+        _tmp_nw_compliant_frame = nw.from_native(native_df)._compliant_frame
+        F = _tmp_nw_compliant_frame._F  # noqa: N806
+        T = _tmp_nw_compliant_frame._native_dtypes  # noqa: N806
 
         native_df = native_df.withColumn(  # type: ignore[union-attr]
             "a",

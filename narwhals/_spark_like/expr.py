@@ -447,13 +447,9 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def is_in(self: Self, values: Sequence[Any]) -> Self:
         def _is_in(_input: Column) -> Column:
-            return _input.isin(values)
+            return _input.isin(values) if values else self._F.lit(False)  # noqa: FBT003
 
-        return self._from_call(
-            _is_in,
-            "is_in",
-            expr_kind=self._expr_kind,
-        )
+        return self._from_call(_is_in, "is_in", expr_kind=self._expr_kind)
 
     def is_unique(self: Self) -> Self:
         def _is_unique(_input: Column) -> Column:

@@ -4,6 +4,8 @@ import re
 import string
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
+from typing import Any
+from typing import cast
 
 import hypothesis.strategies as st
 import pandas as pd
@@ -23,7 +25,7 @@ from tests.utils import get_module_version_as_tuple
 
 if TYPE_CHECKING:
     from narwhals.series import Series
-    from narwhals.typing import IntoSeriesT
+    from narwhals.typing import IntoSeries
     from narwhals.utils import _SupportsVersion
 
 
@@ -123,17 +125,17 @@ def test_maybe_set_index_polars_column_names(
     ],
 )
 def test_maybe_set_index_pandas_direct_index(
-    narwhals_index: Series[IntoSeriesT] | list[Series[IntoSeriesT]] | None,
-    pandas_index: pd.Series | list[pd.Series] | None,
+    narwhals_index: Series[IntoSeries] | list[Series[IntoSeries]],
+    pandas_index: pd.Series | list[pd.Series],
     native_df_or_series: pd.DataFrame | pd.Series,
 ) -> None:
     df = nw.from_native(native_df_or_series, allow_series=True)
     result = nw.maybe_set_index(df, index=narwhals_index)
     if isinstance(native_df_or_series, pd.Series):
-        native_df_or_series.index = pandas_index
+        native_df_or_series.index = pandas_index  # type: ignore[assignment]
         assert_series_equal(nw.to_native(result), native_df_or_series)
     else:
-        expected = native_df_or_series.set_index(pandas_index)
+        expected = native_df_or_series.set_index(pandas_index)  # type: ignore[type-var]
         assert_frame_equal(nw.to_native(result), expected)
 
 
@@ -148,7 +150,7 @@ def test_maybe_set_index_pandas_direct_index(
     ],
 )
 def test_maybe_set_index_polars_direct_index(
-    index: Series[IntoSeriesT] | list[Series[IntoSeriesT]] | None,
+    index: Series[IntoSeries] | list[Series[IntoSeries]] | None,
 ) -> None:
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = nw.maybe_set_index(df, index=index)
@@ -179,10 +181,13 @@ def test_maybe_set_index_pandas_either_index_or_column_names() -> None:
 
 def test_maybe_get_index_pandas() -> None:
     pandas_df = pd.DataFrame({"a": [1, 2, 3]}, index=[1, 2, 0])
-    result = nw.maybe_get_index(nw.from_native(pandas_df))
+    result = cast("pd.Index[Any]", nw.maybe_get_index(nw.from_native(pandas_df)))
     assert_index_equal(result, pandas_df.index)
     pandas_series = pd.Series([1, 2, 3], index=[1, 2, 0])
-    result_s = nw.maybe_get_index(nw.from_native(pandas_series, series_only=True))
+    result_s = cast(
+        "pd.Index[Any]",
+        nw.maybe_get_index(nw.from_native(pandas_series, series_only=True)),
+    )
     assert_index_equal(result_s, pandas_series.index)
 
 
