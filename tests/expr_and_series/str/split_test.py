@@ -15,11 +15,11 @@ data = {"s": ["foo bar", "foo_bar", "foo_bar_baz", "foo,bar"]}
 @pytest.mark.parametrize(
     ("by", "inclusive", "expected"),
     [
-        ("_", False, {"s": ["foo bar", "foobar", "foobarbaz", "foo,bar"]}),
+        ("_", False, {"s": [["foo bar"], ["foobar"], ["foobarbaz"], ["foo,bar"]]}),
         (
             "_",
             True,
-            {"s": ["foo bar", "foo_bar", "foo_bar_baz", "foo,bar"]},
+            {"s": [["foo bar"], ["foo_bar"], ["foo_bar_baz"], ["foo,bar"]]},
         ),
     ],
 )
@@ -37,11 +37,11 @@ def test_str_split(
 @pytest.mark.parametrize(
     ("by", "inclusive", "expected"),
     [
-        ("_", False, {"s": ["foo bar", "foobar", "foobarbaz", "foo,bar"]}),
+        ("_", False, {"s": [["foo bar"], ["foobar"], ["foobarbaz"], ["foo,bar"]]}),
         (
             "_",
             True,
-            {"s": ["foo bar", "foo_bar", "foo_bar_baz", "foo,bar"]},
+            {"s": [["foo bar"], ["foo_bar"], ["foo_bar_baz"], ["foo,bar"]]},
         ),
     ],
 )
