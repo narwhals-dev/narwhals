@@ -307,8 +307,10 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
     ) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
-            series = (s.astype(str) for s in expr_results)
-            null_mask = [s.isnull() for s in expr_results]
+            series = (
+                s.astype(str) for s in align_series_full_broadcast(df, *expr_results)
+            )
+            null_mask = [s.isna() for s in align_series_full_broadcast(df, *expr_results)]
 
             if not ignore_nulls:
                 null_mask_result = reduce(operator.or_, null_mask)
