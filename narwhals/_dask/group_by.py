@@ -31,6 +31,10 @@ if TYPE_CHECKING:
     _AggFn: TypeAlias = Callable[..., Any]
     Aggregation: TypeAlias = "str | _AggFn"
 
+    from dask_expr._groupby import GroupBy as _DaskGroupBy
+else:
+    _DaskGroupBy = dx._groupby.GroupBy
+
 
 def n_unique() -> dd.Aggregation:
     def chunk(s: PandasSeriesGroupBy) -> pd.Series[Any]:
@@ -49,13 +53,13 @@ def n_unique() -> dd.Aggregation:
 def var(ddof: int = 1) -> _AggFn:
     from functools import partial
 
-    return partial(dx._groupby.GroupBy.var, ddof=ddof)  # pyright: ignore[reportAttributeAccessIssue]
+    return partial(_DaskGroupBy.var, ddof=ddof)
 
 
 def std(ddof: int = 1) -> _AggFn:
     from functools import partial
 
-    return partial(dx._groupby.GroupBy.std, ddof=ddof)  # pyright: ignore[reportAttributeAccessIssue]
+    return partial(_DaskGroupBy.std, ddof=ddof)
 
 
 POLARS_TO_DASK_AGGREGATIONS: Mapping[str, Aggregation] = {
