@@ -243,7 +243,7 @@ class ArrowSeries(CompliantSeries):
         if not isinstance(other, (pa.Array, pa.ChunkedArray)):
             # scalar
             other = lit(other) if not isinstance(other, pa.Scalar) else other
-        return self._from_native_series(pc.divide(*cast_for_truediv(other, ser)))
+        return self._from_native_series(pc.divide(*cast_for_truediv(other, ser)))  # pyright: ignore[reportArgumentType]
 
     def __mod__(self: Self, other: Any) -> Self:
         floor_div = (self // other)._native_series
@@ -274,7 +274,7 @@ class ArrowSeries(CompliantSeries):
             _, other_native = extract_native(self, other)
         else:
             other_native = other
-        return self._from_native_series(self._native_series.filter(other_native))
+        return self._from_native_series(self._native_series.filter(other_native))  # pyright: ignore[reportArgumentType]
 
     def mean(self: Self, *, _return_py_scalar: bool = True) -> float:
         # NOTE: stub overly strict https://github.com/zen-xu/pyarrow-stubs/blob/d97063876720e6a5edda7eb15f4efe07c31b8296/pyarrow-stubs/compute.pyi#L274-L307
