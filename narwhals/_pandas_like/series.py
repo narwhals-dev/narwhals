@@ -331,8 +331,12 @@ class PandasLikeSeries(CompliantSeries):
 
     def filter(self: Self, other: Any) -> PandasLikeSeries:
         if not (isinstance(other, list) and all(isinstance(x, bool) for x in other)):
-            other = align_and_extract_native_no_broadcast(self, other)
-        return self._from_native_series(self._native_series.loc[other]).alias(self.name)
+            _, other_native = align_and_extract_native(self, other)
+        else:
+            other_native = other
+        return self._from_native_series(self._native_series.loc[other_native]).alias(
+            self.name
+        )
 
     def __eq__(self: Self, other: object) -> PandasLikeSeries:  # type: ignore[override]
         ser, other = align_and_extract_native(self, other)
