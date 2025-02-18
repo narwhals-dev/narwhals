@@ -1322,9 +1322,9 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: apply_n_ary_operation(
-            plx, plx.sum_horizontal, *flat_exprs, str_as_lit=True
+            plx, plx.sum_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=True),
+        combine_metadata(*flat_exprs, str_as_lit=False),
     )
 
 
@@ -1366,9 +1366,9 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: apply_n_ary_operation(
-            plx, plx.min_horizontal, *flat_exprs, str_as_lit=True
+            plx, plx.min_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=True),
+        combine_metadata(*flat_exprs, str_as_lit=False),
     )
 
 
@@ -1412,9 +1412,9 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: apply_n_ary_operation(
-            plx, plx.max_horizontal, *flat_exprs, str_as_lit=True
+            plx, plx.max_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=True),
+        combine_metadata(*flat_exprs, str_as_lit=False),
     )
 
 
@@ -1430,26 +1430,26 @@ class When:
                 lambda *args: plx.when(args[0]).then(args[1]),
                 self._predicate,
                 value,
-                str_as_lit=True,
+                str_as_lit=False,
             ),
-            combine_metadata(self._predicate, value, str_as_lit=True),
+            combine_metadata(self._predicate, value, str_as_lit=False),
         )
 
 
 class Then(Expr):
     def otherwise(self: Self, value: IntoExpr | Any) -> Expr:
-        kind = infer_kind(value, str_as_lit=True)
+        kind = infer_kind(value, str_as_lit=False)
 
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
             compliant_expr = self._to_compliant_expr(plx)
-            compliant_value = extract_compliant(plx, value, str_as_lit=True)
+            compliant_value = extract_compliant(plx, value, str_as_lit=False)
             if kind is not ExprKind.TRANSFORM and is_compliant_expr(compliant_value):
                 compliant_value = compliant_value.broadcast(kind)
             return compliant_expr.otherwise(compliant_value)
 
         return Expr(
             func,
-            combine_metadata(self, value, str_as_lit=True),
+            combine_metadata(self, value, str_as_lit=False),
         )
 
 
@@ -1535,9 +1535,9 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: apply_n_ary_operation(
-            plx, plx.all_horizontal, *flat_exprs, str_as_lit=True
+            plx, plx.all_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=True),
+        combine_metadata(*flat_exprs, str_as_lit=False),
     )
 
 
@@ -1627,9 +1627,9 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: apply_n_ary_operation(
-            plx, plx.any_horizontal, *flat_exprs, str_as_lit=True
+            plx, plx.any_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=True),
+        combine_metadata(*flat_exprs, str_as_lit=False),
     )
 
 
@@ -1673,9 +1673,9 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: apply_n_ary_operation(
-            plx, plx.mean_horizontal, *flat_exprs, str_as_lit=True
+            plx, plx.mean_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=True),
+        combine_metadata(*flat_exprs, str_as_lit=False),
     )
 
 
@@ -1740,7 +1740,7 @@ def concat_str(
                 *args, separator=separator, ignore_nulls=ignore_nulls
             ),
             *flat_exprs,
-            str_as_lit=True,
+            str_as_lit=False,
         ),
-        combine_metadata(*flat_exprs, str_as_lit=True),
+        combine_metadata(*flat_exprs, str_as_lit=False),
     )

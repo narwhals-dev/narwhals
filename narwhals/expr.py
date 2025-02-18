@@ -159,25 +159,25 @@ class Expr:
     def __eq__(self: Self, other: Self | Any) -> Self:  # type: ignore[override]
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x == y, self, other, str_as_lit=False
+                plx, lambda x, y: x == y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __ne__(self: Self, other: Self | Any) -> Self:  # type: ignore[override]
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x != y, self, other, str_as_lit=False
+                plx, lambda x, y: x != y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __and__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x & y, self, other, str_as_lit=False
+                plx, lambda x, y: x & y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __rand__(self: Self, other: Any) -> Self:
@@ -186,9 +186,9 @@ class Expr:
     def __or__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x | y, self, other, str_as_lit=False
+                plx, lambda x, y: x | y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __ror__(self: Self, other: Any) -> Self:
@@ -197,9 +197,9 @@ class Expr:
     def __add__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x + y, self, other, str_as_lit=False
+                plx, lambda x, y: x + y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __radd__(self: Self, other: Any) -> Self:
@@ -208,9 +208,9 @@ class Expr:
     def __sub__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x - y, self, other, str_as_lit=False
+                plx, lambda x, y: x - y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __rsub__(self: Self, other: Any) -> Self:
@@ -220,17 +220,17 @@ class Expr:
                 lambda x, y: x.__rsub__(y),
                 self,
                 other,
-                str_as_lit=False,
+                str_as_lit=True,
             ),
-            combine_metadata(self, other, str_as_lit=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __truediv__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x / y, self, other, str_as_lit=False
+                plx, lambda x, y: x / y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __rtruediv__(self: Self, other: Any) -> Self:
@@ -240,17 +240,17 @@ class Expr:
                 lambda x, y: x.__rtruediv__(y),
                 self,
                 other,
-                str_as_lit=False,
+                str_as_lit=True,
             ),
-            combine_metadata(self, other, str_as_lit=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __mul__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x * y, self, other, str_as_lit=False
+                plx, lambda x, y: x * y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __rmul__(self: Self, other: Any) -> Self:
@@ -259,41 +259,41 @@ class Expr:
     def __le__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x <= y, self, other, str_as_lit=False
+                plx, lambda x, y: x <= y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __lt__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x < y, self, other, str_as_lit=False
+                plx, lambda x, y: x < y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __gt__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x > y, self, other, str_as_lit=False
+                plx, lambda x, y: x > y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __ge__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x >= y, self, other, str_as_lit=False
+                plx, lambda x, y: x >= y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __pow__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x**y, self, other, str_as_lit=False
+                plx, lambda x, y: x**y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __rpow__(self: Self, other: Any) -> Self:
@@ -303,17 +303,17 @@ class Expr:
                 lambda x, y: x.__rpow__(y),
                 self,
                 other,
-                str_as_lit=False,
+                str_as_lit=True,
             ),
-            combine_metadata(self, other, str_as_lit=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __floordiv__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x // y, self, other, str_as_lit=False
+                plx, lambda x, y: x // y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __rfloordiv__(self: Self, other: Any) -> Self:
@@ -323,17 +323,17 @@ class Expr:
                 lambda x, y: x.__rfloordiv__(y),
                 self,
                 other,
-                str_as_lit=False,
+                str_as_lit=True,
             ),
-            combine_metadata(self, other, str_as_lit=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __mod__(self: Self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x % y, self, other, str_as_lit=False
+                plx, lambda x, y: x % y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __rmod__(self: Self, other: Any) -> Self:
@@ -343,9 +343,9 @@ class Expr:
                 lambda x, y: x.__rmod__(y),
                 self,
                 other,
-                str_as_lit=False,
+                str_as_lit=True,
             ),
-            combine_metadata(self, other, str_as_lit=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     # --- unary ---
@@ -1204,7 +1204,7 @@ class Expr:
         is_order_dependent = operation_is_order_dependent(self, lower_bound, upper_bound)
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx, func, self, lower_bound, upper_bound, str_as_lit=True
+                plx, func, self, lower_bound, upper_bound, str_as_lit=False
             ),
             ExprMetadata(
                 kind=self._metadata["kind"], is_order_dependent=is_order_dependent
@@ -1285,7 +1285,7 @@ class Expr:
                 lambda *exprs: exprs[0].filter(*exprs[1:]),
                 self,
                 *predicates,
-                str_as_lit=True,
+                str_as_lit=False,
             ),
             ExprMetadata(
                 kind=ExprKind.CHANGES_LENGTH, is_order_dependent=is_order_dependent
@@ -1991,7 +1991,7 @@ class Expr:
                 self,
                 lower_bound,  # type: ignore[arg-type]
                 upper_bound,  # type: ignore[arg-type]
-                str_as_lit=True,
+                str_as_lit=False,
             ),
             ExprMetadata(
                 kind=self._metadata["kind"], is_order_dependent=is_order_dependent
