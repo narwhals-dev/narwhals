@@ -14,6 +14,7 @@ from narwhals._spark_like.utils import ExprKind
 from narwhals._spark_like.utils import maybe_evaluate
 from narwhals._spark_like.utils import n_ary_operation_expr_kind
 from narwhals._spark_like.utils import narwhals_to_native_dtype
+from narwhals.dependencies import get_pyspark
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 from narwhals.utils import parse_version
@@ -359,9 +360,11 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def median(self: Self) -> Self:
         def _median(_input: Column) -> Column:
-            import pyspark  # ignore-banned-import
-
-            if parse_version(pyspark) < (3, 4):
+            if (
+                self._implementation.is_pyspark()
+                and (pyspark := get_pyspark()) is not None
+                and parse_version(pyspark) < (3, 4)
+            ):
                 # Use percentile_approx with default accuracy parameter (10000)
                 return self._F.percentile_approx(_input.cast("double"), 0.5)
 
