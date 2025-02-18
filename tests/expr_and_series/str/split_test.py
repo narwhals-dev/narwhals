@@ -62,4 +62,4 @@ def test_str_split_series(
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
     result_series = df["s"].str.split(by=by, inclusive=inclusive)
-    assert_equal_data(({"s": result_series}), expected.all())
+    assert_equal_data({"s": result_series}, expected)
