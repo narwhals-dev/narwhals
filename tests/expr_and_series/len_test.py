@@ -22,10 +22,10 @@ def test_len_no_filter(constructor: Constructor) -> None:
 def test_len_chaining(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    data = {"a": list("xyz"), "b": [1, 2, 1]}
-    expected = {"a1": [2], "a2": [1]}
     if "dask" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
+    data = {"a": list("xyz"), "b": [1, 2, 1]}
+    expected = {"a1": [2], "a2": [1]}
     df = nw.from_native(constructor_eager(data)).select(
         nw.col("a").filter(nw.col("b") == 1).len().alias("a1"),
         nw.col("a").filter(nw.col("b") == 2).len().alias("a2"),

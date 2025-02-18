@@ -86,6 +86,29 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
 
     def __narwhals_expr__(self) -> None: ...
 
+    def broadcast(self, kind: Any) -> Self:
+        # Make the resulting PandasLikeSeries with `_broadcast=True`. Then,
+        # when extracting native objects, `align_and_extract_native` will
+        # know what to do.
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            results = []
+            for result in self(df):
+                result._broadcast = True
+                results.append(result)
+            return results
+
+        return self.__class__(
+            func,
+            depth=self._depth,
+            function_name=self._function_name,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
+            kwargs=self._kwargs,
+        )
+
     @classmethod
     def from_column_names(
         cls: type[Self],

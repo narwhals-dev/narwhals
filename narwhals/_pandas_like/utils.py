@@ -88,16 +88,13 @@ $"""
 PATTERN_PA_DURATION = re.compile(PA_DURATION_RGX, re.VERBOSE)
 
 
-def broadcast_align_and_extract_native(
+def align_and_extract_native(
     lhs: PandasLikeSeries, rhs: Any
-) -> tuple[pd.Series, Any]:
+) -> tuple[pd.Series[Any] | object, pd.Series[Any] | object]:
     """Validate RHS of binary operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
     "right-hand-side" operation (e.g. `__radd__`) can be tried.
-
-    If RHS is length 1, return the scalar value, so that the underlying
-    library can broadcast it.
     """
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -122,67 +119,45 @@ def broadcast_align_and_extract_native(
     if isinstance(rhs, PandasLikeDataFrame):
         return NotImplemented  # type: ignore[no-any-return]
 
+    if lhs._broadcast and not rhs._broadcast:
+        return lhs._native_series.iloc[0], rhs._native_series
+    lhs_native = lhs._native_series
+
     if isinstance(rhs, PandasLikeSeries):
-        rhs_index = rhs._native_series.index
-        if rhs.len() == 1:
-            # broadcast
-            s = rhs._native_series
+        if rhs._broadcast:
+            return (lhs_native, rhs._native_series.iloc[0])
+        rhs_native = rhs._native_series
+        if rhs_native.index is not lhs_index:
             return (
-                lhs._native_series,
-                s.__class__(s.iloc[0], index=lhs_index, dtype=s.dtype, name=rhs.name),
-            )
-        if lhs.len() == 1:
-            # broadcast
-            s = lhs._native_series
-            return (
-                s.__class__(s.iloc[0], index=rhs_index, dtype=s.dtype, name=s.name),
-                rhs._native_series,
-            )
-        if rhs._native_series.index is not lhs_index:
-            return (
-                lhs._native_series,
+                lhs_native,
                 set_index(
-                    rhs._native_series,
+                    rhs_native,
                     lhs_index,
                     implementation=rhs._implementation,
                     backend_version=rhs._backend_version,
                 ),
             )
-        return (lhs._native_series, rhs._native_series)
+        return (lhs_native, rhs_native)
 
     # `rhs` must be scalar, so just leave it as-is
-    return lhs._native_series, rhs
+    return lhs_native, rhs
 
 
-def broadcast_and_extract_dataframe_comparand(index: Any, other: Any) -> Any:
-    """Validate RHS of binary operation.
-
-    If the comparison isn't supported, return `NotImplemented` so that the
-    "right-hand-side" operation (e.g. `__radd__`) can be tried.
-    """
-    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-    from narwhals._pandas_like.series import PandasLikeSeries
-
-    if isinstance(other, PandasLikeDataFrame):
-        return NotImplemented
-    if isinstance(other, PandasLikeSeries):
-        len_other = other.len()
-
-        if len_other == 1 and len(index) != 1:
-            # broadcast
-            s = other._native_series
-            return s.__class__(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
-
-        if other._native_series.index is not index:
-            return set_index(
-                other._native_series,
-                index,
-                implementation=other._implementation,
-                backend_version=other._backend_version,
-            )
-        return other._native_series
-    msg = "Please report a bug"  # pragma: no cover
-    raise AssertionError(msg)
+def extract_dataframe_comparand(
+    index: pd.Index[Any], other: PandasLikeSeries
+) -> pd.Series[Any]:
+    """Extract native Series, broadcasting to `length` if necessary."""
+    if other._broadcast:
+        s = other._native_series
+        return s.__class__(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
+    if other._native_series.index is not index:
+        return set_index(
+            other._native_series,
+            index,
+            implementation=other._implementation,
+            backend_version=other._backend_version,
+        )
+    return other._native_series
 
 
 def create_compliant_series(
@@ -672,7 +647,14 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     raise AssertionError(msg)
 
 
-def broadcast_series(series: Sequence[PandasLikeSeries]) -> list[Any]:
+def align_series_full_broadcast(
+    *series: PandasLikeSeries,
+) -> list[PandasLikeSeries]:
+    # Ensure all of `series` have the same length and index. Scalars get broadcasted to
+    # the full length of the longest Series. This is useful when you need to construct a
+    # full Series anyway (e.g. `DataFrame.select`). It should not be used in binary operations,
+    # such as `nw.col('a') - nw.col('a').mean()`, because then it's more efficient to extract
+    # the right-hand-side's single element as a scalar.
     native_namespace = series[0].__native_namespace__()
 
     lengths = [len(s) for s in series]
@@ -685,25 +667,29 @@ def broadcast_series(series: Sequence[PandasLikeSeries]) -> list[Any]:
         s_native = s._native_series
         if max_length_gt_1 and length == 1:
             reindexed.append(
-                native_namespace.Series(
-                    [s_native.iloc[0]] * max_length,
-                    index=idx,
-                    name=s_native.name,
-                    dtype=s_native.dtype,
+                s._from_native_series(
+                    native_namespace.Series(
+                        [s_native.iloc[0]] * max_length,
+                        index=idx,
+                        name=s_native.name,
+                        dtype=s_native.dtype,
+                    )
                 )
             )
 
         elif s_native.index is not idx:
             reindexed.append(
-                set_index(
-                    s_native,
-                    idx,
-                    implementation=s._implementation,
-                    backend_version=s._backend_version,
+                s._from_native_series(
+                    set_index(
+                        s_native,
+                        idx,
+                        implementation=s._implementation,
+                        backend_version=s._backend_version,
+                    )
                 )
             )
         else:
-            reindexed.append(s_native)
+            reindexed.append(s)
     return reindexed
 
 
