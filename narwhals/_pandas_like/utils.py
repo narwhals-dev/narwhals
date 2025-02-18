@@ -187,12 +187,8 @@ def align_and_extract_native_no_broadcast(
 
 def extract_dataframe_comparand(
     index: pd.Index[Any], other: PandasLikeSeries
-) -> pd.Series[Any] | object:
-    """Validate RHS of binary operation.
-
-    If the comparison isn't supported, return `NotImplemented` so that the
-    "right-hand-side" operation (e.g. `__radd__`) can be tried.
-    """
+) -> pd.Series[Any]:
+    """Extract native Series, broadcasting to `length` if necessary."""
     if other._broadcast:
         s = other._native_series
         return s.__class__(s.item(), index=index, dtype=s.dtype, name=s.name)

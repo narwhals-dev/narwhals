@@ -18,10 +18,12 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_and_extract_native_full_broadcast
 from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import diagonal_concat
+from narwhals._pandas_like.utils import extract_dataframe_comparand
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import vertical_concat
 from narwhals.typing import CompliantNamespace
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import is_compliant_expr
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -429,26 +431,43 @@ class PandasWhen:
         self._version = version
 
     def __call__(self: Self, df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
+        plx = df.__narwhals_namespace__()
         condition = self._condition(df)[0]
+        condition_native = condition._native_series
 
-        value_series = self._then_value(df)[0]
-        condition_native, value_series_native = align_and_extract_native_full_broadcast(
-            condition, value_series
+        if is_compliant_expr(self._then_value):
+            value_series: PandasLikeSeries = self._then_value(df)[0]
+        else:
+            # `self._then_value` is a scalar
+            value_series = plx._create_series_from_scalar(
+                self._then_value, reference_series=condition.alias("literal")
+            )
+            value_series._broadcast = True
+        value_series_native = extract_dataframe_comparand(
+            df._native_frame.index, value_series
         )
+
         if self._otherwise_value is None:
             return [
                 value_series._from_native_series(
                     value_series_native.where(condition_native)
                 )
             ]
-        otherwise_expr = self._otherwise_value
-        otherwise_series = otherwise_expr(df)[0]
-        _, otherwise_native = align_and_extract_native_full_broadcast(
-            condition, otherwise_series
+
+        if is_compliant_expr(self._otherwise_value):
+            otherwise_series: PandasLikeSeries = self._otherwise_value(df)[0]
+        else:
+            # `self._then_value` is a scalar
+            otherwise_series = plx._create_series_from_scalar(
+                self._otherwise_value, reference_series=condition.alias("literal")
+            )
+            otherwise_series._broadcast = True
+        otherwise_series_native = extract_dataframe_comparand(
+            df._native_frame.index, otherwise_series
         )
         return [
             value_series._from_native_series(
-                value_series_native.where(condition_native, otherwise_native)
+                value_series_native.where(condition_native, otherwise_series_native)
             )
         ]
 

@@ -23,7 +23,6 @@ from narwhals.utils import is_compliant_expr
 if TYPE_CHECKING:
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._pandas_like.expr import PandasLikeExpr
-    from narwhals.expr import Expr
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantExpr
     from narwhals.typing import CompliantLazyFrame
@@ -458,15 +457,3 @@ def apply_n_ary_operation(
         for compliant_expr, kind in zip(compliant_exprs, kinds)
     )
     return function(*compliant_exprs)
-
-
-def apply_rhs_arithmetic_operation(
-    plx: CompliantNamespace[Any], expr: Expr, other: Any, attr: str
-) -> CompliantExpr[Any]:
-    return apply_n_ary_operation(
-        plx,
-        lambda *args: getattr(args[1], attr)(args[0]),
-        expr,
-        other,
-        strings_are_column_names=False,
-    )

@@ -27,6 +27,7 @@ from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.typing import CompliantNamespace
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import is_compliant_expr
 
 if TYPE_CHECKING:
     from typing import Callable
@@ -407,14 +408,22 @@ class ArrowWhen:
         self._version = version
 
     def __call__(self: Self, df: ArrowDataFrame) -> Sequence[ArrowSeries]:
+        plx = df.__narwhals_namespace__()
         condition = self._condition(df)[0]
-
-        value_series = self._then_value(df)[0]
-
         condition_native = condition._native_series
+
+        if is_compliant_expr(self._then_value):
+            value_series: ArrowSeries = self._then_value(df)[0]
+        else:
+            # `self._then_value` is a scalar
+            value_series = plx._create_series_from_scalar(
+                self._then_value, reference_series=condition.alias("literal")
+            )
+            value_series._broadcast = True
         value_series_native = extract_dataframe_comparand(
             len(df), value_series, self._backend_version
         )
+
         if self._otherwise_value is None:
             otherwise_null = nulls_like(len(condition_native), value_series)
             return [
@@ -422,8 +431,15 @@ class ArrowWhen:
                     pc.if_else(condition_native, value_series_native, otherwise_null)
                 )
             ]
-        otherwise_expr = self._otherwise_value
-        otherwise_series = otherwise_expr(df)[0]
+        if is_compliant_expr(self._otherwise_value):
+            otherwise_series: ArrowSeries = self._otherwise_value(df)[0]
+        else:
+            # `self._otherwise_value` is a scalar
+            otherwise_series = plx._create_series_from_scalar(
+                self._otherwise_value, reference_series=condition.alias("literal")
+            )
+            otherwise_series._broadcast = True
+
         otherwise_series_native = extract_dataframe_comparand(
             len(df), otherwise_series, self._backend_version
         )

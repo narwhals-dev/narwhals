@@ -11,7 +11,6 @@ from typing import Sequence
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import apply_n_ary_operation
-from narwhals._expression_parsing import apply_rhs_arithmetic_operation
 from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import operation_is_order_dependent
 from narwhals.dtypes import _validate_dtype
@@ -182,10 +181,7 @@ class Expr:
         )
 
     def __rand__(self: Self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_rhs_arithmetic_operation(plx, self, other, "__and__"),
-            combine_metadata(self, other, strings_are_column_names=False),
-        )
+        return (self & other).alias("literal")
 
     def __or__(self: Self, other: Any) -> Self:
         return self.__class__(
@@ -196,10 +192,7 @@ class Expr:
         )
 
     def __ror__(self: Self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_rhs_arithmetic_operation(plx, self, other, "__or__"),
-            combine_metadata(self, other, strings_are_column_names=False),
-        )
+        return (self | other).alias("literal")
 
     def __add__(self: Self, other: Any) -> Self:
         return self.__class__(
