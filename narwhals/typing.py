@@ -268,9 +268,58 @@ TimeUnit: TypeAlias = Literal["ns", "us", "ms", "s"]
 
 _ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
 _NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
-_1DArray: TypeAlias = "_NDArray[tuple[int]]"  # noqa: PYI042, PYI047
+_1DArray: TypeAlias = "_NDArray[tuple[int]]"  # noqa: PYI042
 _2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI042, PYI047
 _AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
+
+
+# Annotations for `__getitem__` methods
+_Slice: TypeAlias = "slice[Any, Any, Any]"
+
+SingleIndexSelector: TypeAlias = int
+SingleNameSelector: TypeAlias = str
+
+MultiIndexSelector: TypeAlias = Union[
+    _Slice,
+    Sequence[int],
+    _1DArray,
+    # IntoSeriesT, Would need support like (#2013)
+]
+MultiNameSelector: TypeAlias = Union[
+    _Slice,
+    Sequence[str],
+    _1DArray,
+    # IntoSeriesT, Would need support like (#2013)
+]
+BooleanMask: TypeAlias = Union[
+    Sequence[bool],
+    _1DArray,
+    # IntoSeriesT, Would need support like (#2013)
+]
+
+
+SingleColSelector: TypeAlias = "SingleIndexSelector | SingleNameSelector"
+MultiColSelector: TypeAlias = "MultiIndexSelector | MultiNameSelector | BooleanMask"
+
+# NOTE: Not keeping, but using as a reference for each backend
+Overload1: TypeAlias = "tuple[SingleIndexSelector, SingleColSelector]"
+Overload2: TypeAlias = "str | tuple[MultiIndexSelector, SingleColSelector]"
+Overload3: TypeAlias = """
+    SingleIndexSelector
+    | MultiIndexSelector
+    | MultiColSelector
+    | tuple[SingleIndexSelector, MultiColSelector]
+    | tuple[MultiIndexSelector, MultiColSelector]"""
+
+OverloadUnion: TypeAlias = """
+    SingleIndexSelector
+    | SingleColSelector
+    | MultiColSelector
+    | MultiIndexSelector
+    | tuple[SingleIndexSelector, SingleColSelector]
+    | tuple[SingleIndexSelector, MultiColSelector]
+    | tuple[MultiIndexSelector, SingleColSelector]
+    | tuple[MultiIndexSelector, MultiColSelector]"""
 
 
 class DTypes:
