@@ -8,7 +8,6 @@ from typing import Any
 from typing import Callable
 from typing import Literal
 from typing import Sequence
-from typing import cast
 
 from duckdb import CaseExpression
 from duckdb import CoalesceOperator
@@ -20,6 +19,7 @@ from duckdb.typing import VARCHAR
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.selectors import DuckDBSelectorNamespace
 from narwhals._duckdb.utils import lit
+from narwhals._duckdb.utils import maybe_evaluate
 from narwhals._duckdb.utils import narwhals_to_native_dtype
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
@@ -293,16 +293,16 @@ class DuckDBWhen:
         self._version = version
 
     def __call__(self: Self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
-        condition = self._condition(df)[0]
-        condition = cast("duckdb.Expression", condition)
-
-        value = self._then_value(df)[0]
-        value = cast("duckdb.Expression", value)
-
+        condition = maybe_evaluate(df, self._condition)
+        then_value = maybe_evaluate(df, self._then_value)
         if self._otherwise_value is None:
-            return [CaseExpression(condition=condition, value=value)]
-        otherwise = self._otherwise_value(df)[0]
-        return [CaseExpression(condition=condition, value=value).otherwise(otherwise)]
+            return [CaseExpression(condition=condition, value=then_value)]
+        otherwise_value = maybe_evaluate(df, self._otherwise_value)
+        return [
+            CaseExpression(condition=condition, value=then_value).otherwise(
+                otherwise_value
+            )
+        ]
 
     def then(self: Self, value: DuckDBExpr | Any) -> DuckDBThen:
         self._then_value = value
