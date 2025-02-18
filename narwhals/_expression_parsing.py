@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from narwhals.typing import CompliantSeries
     from narwhals.typing import CompliantSeriesT_co
     from narwhals.typing import IntoExpr
+    from narwhals.typing import _1DArray
 
     ArrowOrPandasLikeExpr = TypeVar(
         "ArrowOrPandasLikeExpr", bound=Union[ArrowExpr, PandasLikeExpr]
@@ -424,15 +425,17 @@ def all_exprs_are_aggs_or_literals(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
     )
 
 
-def infer_expr_kind(into_expr: IntoExpr, *, strings_are_column_names: bool) -> ExprKind:
+def infer_kind(
+    obj: IntoExpr | _1DArray | object, *, strings_are_column_names: bool
+) -> ExprKind:
     from narwhals.expr import Expr
     from narwhals.series import Series
 
-    if isinstance(into_expr, Expr):
-        return into_expr._metadata["kind"]
-    if isinstance(into_expr, Series) or is_numpy_array(into_expr):
+    if isinstance(obj, Expr):
+        return obj._metadata["kind"]
+    if isinstance(obj, Series) or is_numpy_array(obj):
         return ExprKind.TRANSFORM
-    if isinstance(into_expr, str) and strings_are_column_names:
+    if isinstance(obj, str) and strings_are_column_names:
         return ExprKind.TRANSFORM
     return ExprKind.LITERAL
 
@@ -450,7 +453,7 @@ def apply_n_ary_operation(
         for comparand in comparands
     )
     kinds = [
-        infer_expr_kind(comparand, strings_are_column_names=strings_are_column_names)
+        infer_kind(comparand, strings_are_column_names=strings_are_column_names)
         for comparand in comparands
     ]
 

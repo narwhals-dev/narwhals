@@ -19,7 +19,7 @@ from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import check_expressions_transform
 from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import extract_compliant
-from narwhals._expression_parsing import infer_expr_kind
+from narwhals._expression_parsing import infer_kind
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dependencies import is_numpy_array
@@ -1438,7 +1438,7 @@ class When:
 
 class Then(Expr):
     def otherwise(self: Self, value: IntoExpr | Any) -> Expr:
-        kind = infer_expr_kind(value, strings_are_column_names=True)
+        kind = infer_kind(value, strings_are_column_names=True)
 
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
             compliant_expr = self._to_compliant_expr(plx)
