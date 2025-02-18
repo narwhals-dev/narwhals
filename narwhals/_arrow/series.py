@@ -18,8 +18,10 @@ from narwhals._arrow.series_list import ArrowSeriesListNamespace
 from narwhals._arrow.series_str import ArrowSeriesStringNamespace
 from narwhals._arrow.utils import cast_for_truediv
 from narwhals._arrow.utils import chunked_array
+from narwhals._arrow.utils import extract_dataframe_comparand
 from narwhals._arrow.utils import extract_native
 from narwhals._arrow.utils import floordiv_compat
+from narwhals._arrow.utils import is_compliant_series
 from narwhals._arrow.utils import lit
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._arrow.utils import native_to_narwhals_dtype
@@ -270,7 +272,12 @@ class ArrowSeries(CompliantSeries):
         return maybe_extract_py_scalar(len(self._native_series), _return_py_scalar)
 
     def filter(self: Self, other: ArrowSeries | list[bool | None]) -> Self:
-        other_native = other._native_series if isinstance(other, ArrowSeries) else other
+        if is_compliant_series(other):
+            other_native: ArrowChunkedArray | list[bool | None] = (
+                extract_dataframe_comparand(len(self), other, self._backend_version)
+            )
+        else:
+            other_native = other
         return self._from_native_series(self._native_series.filter(other_native))
 
     def mean(self: Self, *, _return_py_scalar: bool = True) -> float:
