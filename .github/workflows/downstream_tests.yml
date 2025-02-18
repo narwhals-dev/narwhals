@@ -116,7 +116,7 @@ jobs:
           # the local narwhals install is picked up
           sed -i '/^\[tool.hatch.envs.default\]/a path = ".venv"' pyproject.toml
           hatch run python -c "import narwhals; print(narwhals.__file__)"
-          hatch run test-optional:test-narwhals
+          hatch run +py=${{ matrix.python-version }} test-optional:test-narwhals
         timeout-minutes: 15
 
   scikit-lego:
