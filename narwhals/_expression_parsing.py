@@ -330,10 +330,17 @@ class ExprKind(Enum):
     - AGGREGATION vs (LITERAL | AGGREGATION) -> AGGREGATION
     """
 
-    LITERAL = auto()  # e.g. nw.lit(1)
-    AGGREGATION = auto()  # e.g. nw.col('a').mean()
-    TRANSFORM = auto()  # length-preserving, e.g. nw.col('a').round()
-    CHANGES_LENGTH = auto()  # e.g. nw.col('a').drop_nulls()
+    LITERAL = auto()
+    """e.g. `nw.lit(1)`"""
+
+    AGGREGATION = auto()
+    """e.g. `nw.col('a').mean()`"""
+
+    TRANSFORM = auto()
+    """length-preserving, e.g. `nw.col('a').round()`"""
+
+    CHANGES_LENGTH = auto()
+    """e.g. `nw.col('a').drop_nulls()`"""
 
 
 class ExprMetadata(TypedDict):
