@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from enum import Enum
 from enum import auto
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -421,15 +422,9 @@ def all_exprs_are_aggs_or_literals(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
     # as this function works lazily and so can't evaluate lengths.
     from narwhals import Expr
 
-    return all(
-        isinstance(x, Expr)
-        and x._metadata["kind"] in (ExprKind.AGGREGATION, ExprKind.LITERAL)
-        for x in args
-    ) and all(
-        isinstance(x, Expr)
-        and x._metadata["kind"] in (ExprKind.AGGREGATION, ExprKind.LITERAL)
-        for x in kwargs.values()
-    )
+    exprs = chain(args, kwargs.values())
+    agg_or_lit = {ExprKind.AGGREGATION, ExprKind.LITERAL}
+    return all(isinstance(x, Expr) and x._metadata["kind"] in agg_or_lit for x in exprs)
 
 
 def infer_kind(obj: IntoExpr | _1DArray | object, *, str_as_lit: bool) -> ExprKind:
