@@ -293,7 +293,7 @@ when to trigger a broadcast by tracking the `ExprKind` of each expression. `Expr
 
 Narwhals triggers a broadcast in these situations:
 
-- In `select` when come values are `ExprKind.TRANSFORM` and others aren't, e.g.
+- In `select` when some values are `ExprKind.TRANSFORM` and others aren't, e.g.
   `df.select('a', nw.col('b').mean())`.
 - In `with_columns`, all new columns get broadcasted to the length of the dataframe.
 - In n-ary operations between expressions, such as `nw.col('a') + nw.col('a').mean()`.
