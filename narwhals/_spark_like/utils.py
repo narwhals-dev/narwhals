@@ -81,12 +81,12 @@ def native_to_narwhals_dtype(
         return dtypes.Struct(
             fields=[
                 dtypes.Field(
-                    name=name,
+                    name=field.name,
                     dtype=native_to_narwhals_dtype(
-                        dtype[name], version=version, spark_types=spark_types
+                        field.dataType, version=version, spark_types=spark_types
                     ),
                 )
-                for name in dtype.fieldNames()
+                for field in dtype
             ]
         )
     return dtypes.Unknown()
