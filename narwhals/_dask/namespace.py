@@ -24,6 +24,7 @@ from narwhals._dask.utils import validate_comparand
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.typing import CompliantNamespace
+from narwhals.utils import is_compliant_expr
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -362,23 +363,28 @@ class DaskWhen:
         condition = self._condition(df)[0]
         condition = cast("dx.Series", condition)
 
-        value_sequence: Sequence[Any] = self._then_value(df)[0]
-
+        if is_compliant_expr(self._then_value):
+            then_value: dx.Series | object = self._then_value(df)[0]
+        else:
+            then_value = self._then_value
         _df = condition.to_frame("a")
-        _df["literal"] = value_sequence
-        value_series = _df["literal"]
-
-        value_series = cast("dx.Series", value_series)
-        validate_comparand(condition, value_series)
+        _df["literal"] = then_value
+        then_series = _df["literal"]
+        validate_comparand(condition, then_series)
 
         if self._otherwise_value is None:
-            return [value_series.where(condition)]
+            return [then_series.where(condition)]
 
-        otherwise_expr = self._otherwise_value
-        otherwise_series = otherwise_expr(df)[0]
+        if is_compliant_expr(self._otherwise_value):
+            otherwise_value: dx.Series | object = self._otherwise_value(df)[0]
+        else:
+            otherwise_value = self._otherwise_value
+        _df = condition.to_frame("a")
+        _df["literal"] = otherwise_value
+        otherwise_series = _df["literal"]
 
         validate_comparand(condition, otherwise_series)
-        return [value_series.where(condition, otherwise_series)]
+        return [then_series.where(condition, otherwise_series)]
 
     def then(self: Self, value: DaskExpr | Any) -> DaskThen:
         self._then_value = value
