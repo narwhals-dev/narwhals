@@ -983,7 +983,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         elif aggregate_function == "len":
             result = (
                 frame.groupby([*on, *index])
-                .agg({v: "size" for v in values})
+                .agg(dict.fromkeys(values, "size"))
                 .reset_index()
                 .pivot(columns=on, index=index, values=values)
             )

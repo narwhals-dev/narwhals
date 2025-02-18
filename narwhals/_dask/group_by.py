@@ -143,7 +143,7 @@ def agg_dask(
                     expr._function_name, expr._function_name
                 )
                 simple_aggregations.update(
-                    {alias: (keys[0], function_name) for alias in aliases}
+                    dict.fromkeys(aliases, (keys[0], function_name))
                 )
                 continue
 
