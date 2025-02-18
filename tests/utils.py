@@ -131,6 +131,8 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
                 are_equivalent_values = lhs is None or math.isnan(lhs)
             elif lhs is None:
                 are_equivalent_values = rhs is None
+            elif isinstance(lhs, list) and isinstance(rhs, list):
+                are_equivalent_values = all(l == r for l, r in zip(lhs, rhs))
             elif pd.isna(lhs):
                 are_equivalent_values = pd.isna(rhs)
             else:
