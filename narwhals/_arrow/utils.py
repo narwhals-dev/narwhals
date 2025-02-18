@@ -13,8 +13,6 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals.utils import import_dtypes_module
-from narwhals.utils import is_compliant_expr
-from narwhals.utils import is_compliant_series
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -209,7 +207,7 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
 
 
 def extract_native(
-    lhs: ArrowSeries, rhs: Any
+    lhs: ArrowSeries, rhs: ArrowSeries | object
 ) -> tuple[
     ArrowChunkedArray | pa.Scalar[Any], ArrowChunkedArray | pa.Scalar[Any] | object
 ]:
@@ -227,19 +225,6 @@ def extract_native(
     if rhs is None:
         return lhs._native_series, lit(None, type=lhs._native_series.type)
 
-    # If `rhs` is the output of an expression evaluation, then it is
-    # a list of Series. So, we verify that that list is of length-1,
-    # and take the first (and only) element.
-    if isinstance(rhs, list):
-        if len(rhs) > 1:
-            if is_compliant_expr(rhs[0]) or is_compliant_series(rhs[0]):
-                # e.g. `plx.all() + plx.all()`
-                msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) are not supported in this context"
-                raise ValueError(msg)
-            msg = f"Expected scalar value, Series, or Expr, got list of : {type(rhs[0])}"
-            raise ValueError(msg)
-        rhs = rhs[0]
-
     if isinstance(rhs, ArrowDataFrame):
         return NotImplemented  # type: ignore[no-any-return]
 
@@ -249,6 +234,10 @@ def extract_native(
         if rhs._broadcast:
             return lhs._native_series, rhs._native_series[0]
         return lhs._native_series, rhs._native_series
+
+    if isinstance(rhs, list):
+        msg = "Expected Series or scalar, got list."
+        raise TypeError(msg)
     return lhs._native_series, rhs
 
 

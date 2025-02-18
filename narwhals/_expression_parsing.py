@@ -75,7 +75,7 @@ def evaluate_into_exprs(
 @overload
 def maybe_evaluate_expr(
     df: CompliantDataFrame, expr: CompliantExpr[CompliantSeriesT_co]
-) -> Sequence[CompliantSeriesT_co]: ...
+) -> CompliantSeriesT_co: ...
 
 
 @overload
@@ -84,9 +84,15 @@ def maybe_evaluate_expr(df: CompliantDataFrame, expr: T) -> T: ...
 
 def maybe_evaluate_expr(
     df: CompliantDataFrame, expr: CompliantExpr[CompliantSeriesT_co] | T
-) -> Sequence[CompliantSeriesT_co] | T:
+) -> CompliantSeriesT_co | T:
     """Evaluate `expr` if it's an expression, otherwise return it as is."""
-    return expr(df) if is_compliant_expr(expr) else expr
+    if is_compliant_expr(expr):
+        result: Sequence[CompliantSeriesT_co] = expr(df)
+        if len(result) > 1:
+            msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) are not supported in this context"
+            raise ValueError(msg)
+        return result[0]
+    return expr
 
 
 @overload

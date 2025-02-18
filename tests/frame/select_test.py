@@ -66,10 +66,10 @@ def test_select_boolean_cols(request: pytest.FixtureRequest) -> None:
 
 
 def test_comparison_with_list_error_message() -> None:
-    msg = "Expected scalar value, Series, or Expr, got list of : <class 'int'>"
-    with pytest.raises(ValueError, match=msg):
+    msg = "Expected Series or scalar, got list."
+    with pytest.raises(TypeError, match=msg):
         nw.from_native(pa.chunked_array([[1, 2, 3]]), series_only=True) == [1, 2, 3]  # noqa: B015
-    with pytest.raises(ValueError, match=msg):
+    with pytest.raises(TypeError, match=msg):
         nw.from_native(pd.Series([[1, 2, 3]]), series_only=True) == [1, 2, 3]  # noqa: B015
 
 

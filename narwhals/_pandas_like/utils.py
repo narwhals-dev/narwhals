@@ -89,7 +89,7 @@ PATTERN_PA_DURATION = re.compile(PA_DURATION_RGX, re.VERBOSE)
 
 
 def align_and_extract_native(
-    lhs: PandasLikeSeries, rhs: Any
+    lhs: PandasLikeSeries, rhs: PandasLikeSeries | object
 ) -> tuple[pd.Series[Any] | object, pd.Series[Any] | object]:
     """Validate RHS of binary operation.
 
@@ -99,30 +99,15 @@ def align_and_extract_native(
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
 
-    # If `rhs` is the output of an expression evaluation, then it is
-    # a list of Series. So, we verify that that list is of length-1,
-    # and take the first (and only) element.
-    if isinstance(rhs, list):
-        if len(rhs) > 1:
-            if hasattr(rhs[0], "__narwhals_expr__") or hasattr(
-                rhs[0], "__narwhals_series__"
-            ):
-                # e.g. `plx.all() + plx.all()`
-                msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) are not supported in this context"
-                raise ValueError(msg)
-            msg = f"Expected scalar value, Series, or Expr, got list of : {type(rhs[0])}"
-            raise ValueError(msg)
-        rhs = rhs[0]
-
     lhs_index = lhs._native_series.index
 
     if isinstance(rhs, PandasLikeDataFrame):
         return NotImplemented  # type: ignore[no-any-return]
 
-    if lhs._broadcast and not rhs._broadcast:
+    if lhs._broadcast and isinstance(rhs, PandasLikeSeries) and not rhs._broadcast:
         return lhs._native_series.iloc[0], rhs._native_series
-    lhs_native = lhs._native_series
 
+    lhs_native = lhs._native_series
     if isinstance(rhs, PandasLikeSeries):
         if rhs._broadcast:
             return (lhs_native, rhs._native_series.iloc[0])
@@ -139,6 +124,9 @@ def align_and_extract_native(
             )
         return (lhs_native, rhs_native)
 
+    if isinstance(rhs, list):
+        msg = "Expected Series or scalar, got list."
+        raise TypeError(msg)
     # `rhs` must be scalar, so just leave it as-is
     return lhs_native, rhs
 
