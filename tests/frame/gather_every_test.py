@@ -14,7 +14,11 @@ data = {"a": list(range(10))}
 def test_gather_every(
     constructor: Constructor, n: int, offset: int, request: pytest.FixtureRequest
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if (
+        ("pyspark" in str(constructor))
+        or "duckdb" in str(constructor)
+        or "ibis" in str(constructor)
+    ):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.gather_every(n=n, offset=offset)
