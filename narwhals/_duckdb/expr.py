@@ -388,7 +388,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
         return self._from_call(lambda _input: FunctionExpression("count"), "len")
 
     def std(self: Self, ddof: int) -> Self:
-        def _std(_input: duckdb.Expression, ddof: int) -> duckdb.Expression:
+        def _std(_input: duckdb.Expression) -> duckdb.Expression:
             n_samples = FunctionExpression("count", _input)
             # NOTE: Not implemented Error: Unable to transform python value of type '<class 'duckdb.duckdb.Expression'>' to DuckDB LogicalType
             return (
@@ -397,15 +397,15 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
                 / (FunctionExpression("sqrt", (n_samples - ddof)))  # type: ignore[operator]
             )
 
-        return self._from_call(_std, "std", ddof=ddof)
+        return self._from_call(_std, "std")
 
     def var(self: Self, ddof: int) -> Self:
-        def _var(_input: duckdb.Expression, ddof: int) -> duckdb.Expression:
+        def _var(_input: duckdb.Expression) -> duckdb.Expression:
             n_samples = FunctionExpression("count", _input)
             # NOTE: Not implemented Error: Unable to transform python value of type '<class 'duckdb.duckdb.Expression'>' to DuckDB LogicalType
             return FunctionExpression("var_pop", _input) * n_samples / (n_samples - ddof)  # type: ignore[operator]
 
-        return self._from_call(_var, "var", ddof=ddof)
+        return self._from_call(_var, "var")
 
     def max(self: Self) -> Self:
         return self._from_call(lambda _input: FunctionExpression("max", _input), "max")

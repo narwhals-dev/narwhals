@@ -310,19 +310,19 @@ class DaskExpr(CompliantExpr["dx.Series"]):
 
     def std(self: Self, ddof: int) -> Self:
         return self._from_call(
-            lambda _input, ddof: _input.std(ddof=ddof).to_series(), "std", ddof=ddof
+            lambda _input, ddof: _input.std(ddof=ddof).to_series(), "std"
         )
 
     def var(self: Self, ddof: int) -> Self:
         return self._from_call(
-            lambda _input, ddof: _input.var(ddof=ddof).to_series(), "var", ddof=ddof
+            lambda _input, ddof: _input.var(ddof=ddof).to_series(), "var"
         )
 
     def skew(self: Self) -> Self:
         return self._from_call(lambda _input: _input.skew().to_series(), "skew")
 
     def shift(self: Self, n: int) -> Self:
-        return self._from_call(lambda _input, n: _input.shift(n), "shift", n=n)
+        return self._from_call(lambda _input: _input.shift(n), "shift")
 
     def cum_sum(self: Self, *, reverse: bool) -> Self:
         if reverse:  # pragma: no cover
@@ -368,9 +368,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         return self._from_call(lambda _input: _input.count().to_series(), "count")
 
     def round(self: Self, decimals: int) -> Self:
-        return self._from_call(
-            lambda _input, decimals: _input.round(decimals), "round", decimals=decimals
-        )
+        return self._from_call(lambda _input: _input.round(decimals), "round")
 
     def unique(self: Self) -> Self:
         return self._from_call(lambda _input: _input.unique(), "unique")
@@ -407,12 +405,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         strategy: Literal["forward", "backward"] | None,
         limit: int | None,
     ) -> DaskExpr:
-        def func(
-            _input: dx.Series,
-            value: Any | None,
-            strategy: str | None,
-            limit: int | None,
-        ) -> dx.Series:
+        def func(_input: dx.Series) -> dx.Series:
             if value is not None:
                 res_ser = _input.fillna(value)
             else:
@@ -423,9 +416,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
                 )
             return res_ser
 
-        return self._from_call(
-            func, "fillna", value=value, strategy=strategy, limit=limit
-        )
+        return self._from_call(func, "fillna")
 
     def clip(
         self: Self,
