@@ -5,7 +5,6 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -63,8 +62,6 @@ def test_sumh_transformations(
 ) -> None:
     if "duckdb" in str(constructor):
         # We don't yet support broadcasting for DuckDB.
-        request.applymarker(pytest.mark.xfail)
-    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (13,):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
     df = nw.from_native(constructor(data))
