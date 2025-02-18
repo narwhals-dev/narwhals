@@ -408,10 +408,10 @@ def all_exprs_are_aggs_or_literals(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
 
     return all(
         isinstance(x, Expr)
-        and x._metadata["kind"] in (ExprKind.AGGREGATION, ExprKind.LITERAL)
+        and x._metadata["kind"] in {ExprKind.AGGREGATION, ExprKind.LITERAL}
         for x in args
     ) and all(
         isinstance(x, Expr)
-        and x._metadata["kind"] in (ExprKind.AGGREGATION, ExprKind.LITERAL)
+        and x._metadata["kind"] in {ExprKind.AGGREGATION, ExprKind.LITERAL}
         for x in kwargs.values()
     )

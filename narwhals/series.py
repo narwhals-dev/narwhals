@@ -154,7 +154,7 @@ class Series(Generic[IntoSeriesT]):
             ]
         """
         if isinstance(idx, int) or (
-            is_numpy_scalar(idx) and idx.dtype.kind in ("i", "u")
+            is_numpy_scalar(idx) and idx.dtype.kind in {"i", "u"}
         ):
             return self._compliant_series[idx]
         return self._from_compliant_series(
