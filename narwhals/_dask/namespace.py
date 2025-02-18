@@ -124,7 +124,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
     def all_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = align_series_full_broadcast(
-                *(s for _expr in exprs for s in _expr(df))
+                df, *(s for _expr in exprs for s in _expr(df))
             )
             return [reduce(operator.and_, series)]
 
@@ -142,7 +142,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
     def any_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = align_series_full_broadcast(
-                *(s for _expr in exprs for s in _expr(df))
+                df, *(s for _expr in exprs for s in _expr(df))
             )
             return [reduce(operator.or_, series)]
 
@@ -160,7 +160,7 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
     def sum_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = align_series_full_broadcast(
-                *(s for _expr in exprs for s in _expr(df))
+                df, *(s for _expr in exprs for s in _expr(df))
             )
             return [dd.concat(series, axis=1).sum(axis=1)]
 
@@ -236,8 +236,10 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
     def mean_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
-            series = align_series_full_broadcast(*(s.fillna(0) for s in expr_results))
-            non_na = align_series_full_broadcast(*(1 - s.isna() for s in expr_results))
+            series = align_series_full_broadcast(df, *(s.fillna(0) for s in expr_results))
+            non_na = align_series_full_broadcast(
+                df, *(1 - s.isna() for s in expr_results)
+            )
             return [
                 name_preserving_div(
                     reduce(name_preserving_sum, series),
