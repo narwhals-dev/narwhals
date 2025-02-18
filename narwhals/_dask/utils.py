@@ -80,7 +80,7 @@ def validate_comparand(lhs: dx.Series, rhs: dx.Series) -> None:
     except ModuleNotFoundError:  # pragma: no cover
         import dask_expr as dx
 
-    if not dx._expr.are_co_aligned(lhs._expr, rhs._expr):  # pragma: no cover
+    if not dx.expr.are_co_aligned(lhs._expr, rhs._expr):  # pragma: no cover
         # are_co_aligned is a method which cheaply checks if two Dask expressions
         # have the same index, and therefore don't require index alignment.
         # If someone only operates on a Dask DataFrame via expressions, then this
