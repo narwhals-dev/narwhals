@@ -89,11 +89,11 @@ class BaseFrame(Generic[_FrameT]):
         for expr in flatten(exprs):
             compliant_expr = self._extract_compliant(expr)
             out_exprs.append(compliant_expr)
-            out_kinds.append(infer_kind(expr, strings_are_column_names=True))
+            out_kinds.append(infer_kind(expr, str_as_lit=True))
         for alias, expr in named_exprs.items():
             compliant_expr = self._extract_compliant(expr).alias(alias)
             out_exprs.append(compliant_expr)
-            out_kinds.append(infer_kind(expr, strings_are_column_names=True))
+            out_kinds.append(infer_kind(expr, str_as_lit=True))
         return out_exprs, out_kinds
 
     @abstractmethod

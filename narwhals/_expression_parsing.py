@@ -274,14 +274,14 @@ def extract_compliant(
     plx: CompliantNamespace[CompliantSeriesT_co],
     other: Any,
     *,
-    strings_are_column_names: bool,
+    str_as_lit: bool,
 ) -> CompliantExpr[CompliantSeriesT_co] | object:
     from narwhals.expr import Expr
     from narwhals.series import Series
 
     if isinstance(other, Expr):
         return other._to_compliant_expr(plx)
-    if strings_are_column_names and isinstance(other, str):
+    if isinstance(other, str) and not str_as_lit:
         return plx.col(other)
     if isinstance(other, Series):
         return plx._create_expr_from_series(other._compliant_series)  # type: ignore[attr-defined]
@@ -341,7 +341,7 @@ class ExprMetadata(TypedDict):
     is_order_dependent: bool
 
 
-def combine_metadata(*args: IntoExpr, strings_are_column_names: bool) -> ExprMetadata:
+def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
     # Combine metadata from `args`.
     from narwhals.expr import Expr
 
@@ -352,7 +352,7 @@ def combine_metadata(*args: IntoExpr, strings_are_column_names: bool) -> ExprMet
     result_is_order_dependent = False
 
     for arg in args:
-        if isinstance(arg, str) and strings_are_column_names:
+        if isinstance(arg, str) and not str_as_lit:
             has_transforms = True
         elif isinstance(arg, Expr):
             if arg._metadata["is_order_dependent"]:
@@ -425,9 +425,7 @@ def all_exprs_are_aggs_or_literals(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
     )
 
 
-def infer_kind(
-    obj: IntoExpr | _1DArray | object, *, strings_are_column_names: bool
-) -> ExprKind:
+def infer_kind(obj: IntoExpr | _1DArray | object, *, str_as_lit: bool) -> ExprKind:
     from narwhals.expr import Expr
     from narwhals.series import Series
 
@@ -435,7 +433,7 @@ def infer_kind(
         return obj._metadata["kind"]
     if isinstance(obj, Series) or is_numpy_array(obj):
         return ExprKind.TRANSFORM
-    if isinstance(obj, str) and strings_are_column_names:
+    if isinstance(obj, str) and not str_as_lit:
         return ExprKind.TRANSFORM
     return ExprKind.LITERAL
 
@@ -444,18 +442,13 @@ def apply_n_ary_operation(
     plx: CompliantNamespace,
     function: Any,
     *comparands: IntoExpr,
-    strings_are_column_names: bool,
+    str_as_lit: bool,
 ) -> CompliantExpr[Any]:
     compliant_exprs = (
-        extract_compliant(
-            plx, comparand, strings_are_column_names=strings_are_column_names
-        )
+        extract_compliant(plx, comparand, str_as_lit=str_as_lit)
         for comparand in comparands
     )
-    kinds = [
-        infer_kind(comparand, strings_are_column_names=strings_are_column_names)
-        for comparand in comparands
-    ]
+    kinds = [infer_kind(comparand, str_as_lit=str_as_lit) for comparand in comparands]
 
     broadcast = any(kind is ExprKind.TRANSFORM for kind in kinds)
     compliant_exprs = (
