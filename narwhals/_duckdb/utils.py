@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import re
-from enum import Enum
-from enum import auto
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
@@ -20,21 +18,6 @@ if TYPE_CHECKING:
 
 lit = duckdb.ConstantExpression
 """Alias for `duckdb.ConstantExpression`."""
-
-
-class ExprKind(Enum):
-    """Describe which kind of expression we are dealing with.
-
-    Composition rule is:
-    - LITERAL vs LITERAL -> LITERAL
-    - TRANSFORM vs anything -> TRANSFORM
-    - anything vs TRANSFORM -> TRANSFORM
-    - all remaining cases -> AGGREGATION
-    """
-
-    LITERAL = auto()  # e.g. nw.lit(1)
-    AGGREGATION = auto()  # e.g. nw.col('a').mean()
-    TRANSFORM = auto()  # e.g. nw.col('a').round()
 
 
 def maybe_evaluate_expr(
