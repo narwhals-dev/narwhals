@@ -210,10 +210,7 @@ class Expr:
         )
 
     def __radd__(self: Self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_rhs_arithmetic_operation(plx, self, other, "__add__"),
-            combine_metadata(self, other, strings_are_column_names=False),
-        )
+        return (self + other).alias("literal")
 
     def __sub__(self: Self, other: Any) -> Self:
         return self.__class__(
@@ -225,7 +222,13 @@ class Expr:
 
     def __rsub__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: apply_rhs_arithmetic_operation(plx, self, other, "__sub__"),
+            lambda plx: apply_n_ary_operation(
+                plx,
+                lambda x, y: x.__rsub__(y),
+                self,
+                other,
+                strings_are_column_names=False,
+            ),
             combine_metadata(self, other, strings_are_column_names=False),
         )
 
@@ -239,7 +242,13 @@ class Expr:
 
     def __rtruediv__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: apply_rhs_arithmetic_operation(plx, self, other, "__truediv__"),
+            lambda plx: apply_n_ary_operation(
+                plx,
+                lambda x, y: x.__rtruediv__(y),
+                self,
+                other,
+                strings_are_column_names=False,
+            ),
             combine_metadata(self, other, strings_are_column_names=False),
         )
 
@@ -252,10 +261,7 @@ class Expr:
         )
 
     def __rmul__(self: Self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_rhs_arithmetic_operation(plx, self, other, "__mul__"),
-            combine_metadata(self, other, strings_are_column_names=False),
-        )
+        return (self * other).alias("literal")
 
     def __le__(self: Self, other: Any) -> Self:
         return self.__class__(
@@ -299,7 +305,13 @@ class Expr:
 
     def __rpow__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: apply_rhs_arithmetic_operation(plx, self, other, "__pow__"),
+            lambda plx: apply_n_ary_operation(
+                plx,
+                lambda x, y: x.__rpow__(y),
+                self,
+                other,
+                strings_are_column_names=False,
+            ),
             combine_metadata(self, other, strings_are_column_names=False),
         )
 
@@ -313,7 +325,13 @@ class Expr:
 
     def __rfloordiv__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: apply_rhs_arithmetic_operation(plx, self, other, "__floordiv__"),
+            lambda plx: apply_n_ary_operation(
+                plx,
+                lambda x, y: x.__rfloordiv__(y),
+                self,
+                other,
+                strings_are_column_names=False,
+            ),
             combine_metadata(self, other, strings_are_column_names=False),
         )
 
@@ -327,7 +345,13 @@ class Expr:
 
     def __rmod__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: apply_rhs_arithmetic_operation(plx, self, other, "__mod__"),
+            lambda plx: apply_n_ary_operation(
+                plx,
+                lambda x, y: x.__rmod__(y),
+                self,
+                other,
+                strings_are_column_names=False,
+            ),
             combine_metadata(self, other, strings_are_column_names=False),
         )
 

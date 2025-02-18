@@ -177,12 +177,22 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
             other=other,
         )
 
+    def __rtruediv__(self: Self, other: DuckDBExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: other.__truediv__(_input), "__rtruediv__", other=other
+        ).alias("literal")
+
     def __floordiv__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input.__floordiv__(other),
             "__floordiv__",
             other=other,
         )
+
+    def __rfloordiv__(self: Self, other: DuckDBExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: other.__floordiv__(_input), "__rfloordiv__", other=other
+        ).alias("literal")
 
     def __mod__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
@@ -191,12 +201,22 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
             other=other,
         )
 
+    def __rmod__(self: Self, other: DuckDBExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: other.__mod__(_input), "__rmod__", other=other
+        ).alias("literal")
+
     def __sub__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
             lambda _input, other: _input - other,
             "__sub__",
             other=other,
         )
+
+    def __rsub__(self: Self, other: DuckDBExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: other.__sub__(_input), "__rsub__", other=other
+        ).alias("literal")
 
     def __mul__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
@@ -211,6 +231,11 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
             "__pow__",
             other=other,
         )
+
+    def __rpow__(self: Self, other: DuckDBExpr) -> Self:
+        return self._from_call(
+            lambda _input, other: other.__pow__(_input), "__rpow__", other=other
+        ).alias("literal")
 
     def __lt__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(

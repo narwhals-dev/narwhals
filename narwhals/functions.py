@@ -32,6 +32,7 @@ from narwhals.translate import to_native
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import flatten
+from narwhals.utils import is_compliant_expr
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_version
 from narwhals.utils import validate_laziness
@@ -1442,7 +1443,7 @@ class Then(Expr):
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
             compliant_expr = self._to_compliant_expr(plx)
             compliant_value = extract_compliant(plx, value, strings_are_column_names=True)
-            if kind is not ExprKind.TRANSFORM:
+            if kind is not ExprKind.TRANSFORM and is_compliant_expr(compliant_value):
                 compliant_value = compliant_value.broadcast(kind)
             return compliant_expr.otherwise(compliant_value)
 

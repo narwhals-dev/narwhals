@@ -238,12 +238,12 @@ class ArrowSeries(CompliantSeries):
             other = lit(other)
         return self._from_native_series(pc.divide(*cast_for_truediv(ser, other)))
 
-    def __rtruediv__(self: Self, right: Any) -> Self:
-        ser, right = extract_native(self, right)
-        if not isinstance(right, (pa.Array, pa.ChunkedArray)):
+    def __rtruediv__(self: Self, other: Any) -> Self:
+        ser, other = extract_native(self, other)
+        if not isinstance(other, (pa.Array, pa.ChunkedArray)):
             # scalar
-            right = lit(right) if not isinstance(right, pa.Scalar) else right
-        return self._from_native_series(pc.divide(*cast_for_truediv(right, ser)))
+            other = lit(other) if not isinstance(other, pa.Scalar) else other
+        return self._from_native_series(pc.divide(*cast_for_truediv(other, ser)))
 
     def __mod__(self: Self, other: Any) -> Self:
         floor_div = (self // other)._native_series
