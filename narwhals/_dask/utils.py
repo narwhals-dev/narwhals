@@ -32,9 +32,9 @@ def maybe_evaluate_expr(df: DaskLazyFrame, obj: DaskExpr | object) -> dx.Series 
 
     if isinstance(obj, DaskExpr):
         results = obj._call(df)
-        if len(results) != 1:  # pragma: no cover
+        if len(results) != 1:
             msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
-            raise NotImplementedError(msg)
+            raise ValueError(msg)
         return results[0]
     return obj
 

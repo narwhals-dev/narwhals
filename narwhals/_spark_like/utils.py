@@ -168,9 +168,9 @@ def maybe_evaluate_expr(df: SparkLikeLazyFrame, obj: SparkLikeExpr | object) -> 
 
     if isinstance(obj, SparkLikeExpr):
         column_results = obj._call(df)
-        if len(column_results) != 1:  # pragma: no cover
+        if len(column_results) != 1:
             msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
-            raise NotImplementedError(msg)
+            raise ValueError(msg)
         return column_results[0]
     return df._F.lit(obj)
 
