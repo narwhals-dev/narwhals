@@ -143,48 +143,6 @@ def align_and_extract_native(
     return lhs_native, rhs
 
 
-def align_and_extract_native_no_broadcast(
-    lhs: PandasLikeSeries, rhs: Any
-) -> pd.Series[Any] | object:
-    """More restricted version of `align_and_extract_native`.
-
-    Can only be used to extract and align a comparand, in cases
-    where we know no broadcasting is allowed to happen.
-    Note that we still need this to align the indexes.
-    """
-    from narwhals._pandas_like.series import PandasLikeSeries
-
-    # If `rhs` is the output of an expression evaluation, then it is
-    # a list of Series. So, we verify that that list is of length-1,
-    # and take the first (and only) element.
-    if isinstance(rhs, list):
-        if len(rhs) > 1:  # pragma: no cover
-            if hasattr(rhs[0], "__narwhals_expr__") or hasattr(
-                rhs[0], "__narwhals_series__"
-            ):
-                # e.g. `plx.all() + plx.all()`
-                msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) are not supported in this context"
-                raise ValueError(msg)
-            msg = f"Expected scalar value, Series, or Expr, got list of : {type(rhs[0])}"
-            raise ValueError(msg)
-        rhs = rhs[0]
-
-    lhs_index = lhs._native_series.index
-    if isinstance(rhs, PandasLikeSeries):
-        rhs_native = rhs._native_series
-        if rhs_native.index is not lhs_index:
-            return set_index(
-                rhs_native,
-                lhs_index,
-                implementation=rhs._implementation,
-                backend_version=rhs._backend_version,
-            )
-        return rhs_native
-
-    # `rhs` must be scalar, so just leave it as-is
-    return rhs
-
-
 def extract_dataframe_comparand(
     index: pd.Index[Any], other: PandasLikeSeries
 ) -> pd.Series[Any]:
