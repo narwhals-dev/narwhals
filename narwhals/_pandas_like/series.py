@@ -389,9 +389,9 @@ class PandasLikeSeries(CompliantSeries):
         return self._from_native_series(ser + other).alias(self.name)
 
     def __radd__(self: Self, other: Any) -> PandasLikeSeries:
-        other = align_and_extract_native_no_broadcast(self, other)
+        _, other_native = align_and_extract_native(self, other)
         return self._from_native_series(
-            self._native_series.__radd__(other),
+            self._native_series.__radd__(other_native),
         ).alias(self.name)
 
     def __sub__(self: Self, other: Any) -> PandasLikeSeries:
