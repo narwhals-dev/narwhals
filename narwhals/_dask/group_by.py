@@ -110,7 +110,7 @@ class DaskLazyGroupBy:
 def agg_dask(
     df: DaskLazyFrame,
     grouped: Any,
-    exprs: Sequence[CompliantExpr[dx.Series]],
+    exprs: Sequence[CompliantExpr[dx.Series, DaskLazyFrame]],
     keys: list[str],
     from_dataframe: Callable[[Any], DaskLazyFrame],
 ) -> DaskLazyFrame:

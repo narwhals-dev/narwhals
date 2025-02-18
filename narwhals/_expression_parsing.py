@@ -5,13 +5,13 @@ from __future__ import annotations
 
 from enum import Enum
 from enum import auto
+from operator import methodcaller
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Sequence
 from typing import TypedDict
 from typing import TypeVar
-from typing import Union
 from typing import overload
 
 from narwhals.dependencies import is_numpy_array
@@ -25,15 +25,13 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantExpr
+    from narwhals.typing import CompliantFrameT_contra
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import CompliantNamespace
     from narwhals.typing import CompliantSeries
     from narwhals.typing import CompliantSeriesT_co
     from narwhals.typing import IntoExpr
 
-    ArrowOrPandasLikeExpr = TypeVar(
-        "ArrowOrPandasLikeExpr", bound=Union[ArrowExpr, PandasLikeExpr]
-    )
     PandasLikeExprT = TypeVar("PandasLikeExprT", bound=PandasLikeExpr)
     ArrowExprT = TypeVar("ArrowExprT", bound=ArrowExpr)
 
@@ -41,8 +39,8 @@ if TYPE_CHECKING:
 
 
 def evaluate_into_expr(
-    df: CompliantDataFrame | CompliantLazyFrame,
-    expr: CompliantExpr[CompliantSeriesT_co],
+    df: CompliantFrameT_contra,
+    expr: CompliantExpr[CompliantSeriesT_co, CompliantFrameT_contra],
 ) -> Sequence[CompliantSeriesT_co]:
     """Return list of raw columns.
 
@@ -62,7 +60,9 @@ def evaluate_into_expr(
 
 
 def evaluate_into_exprs(
-    df: CompliantDataFrame, /, *exprs: CompliantExpr[CompliantSeriesT_co]
+    df: CompliantFrameT_contra,
+    /,
+    *exprs: CompliantExpr[CompliantSeriesT_co, CompliantFrameT_contra],
 ) -> list[CompliantSeriesT_co]:
     """Evaluate each expr into Series."""
     return [
@@ -74,7 +74,8 @@ def evaluate_into_exprs(
 
 @overload
 def maybe_evaluate_expr(
-    df: CompliantDataFrame, expr: CompliantExpr[CompliantSeriesT_co]
+    df: CompliantFrameT_contra,
+    expr: CompliantExpr[CompliantSeriesT_co, CompliantFrameT_contra],
 ) -> Sequence[CompliantSeriesT_co]: ...
 
 
@@ -83,7 +84,7 @@ def maybe_evaluate_expr(df: CompliantDataFrame, expr: T) -> T: ...
 
 
 def maybe_evaluate_expr(
-    df: CompliantDataFrame, expr: CompliantExpr[CompliantSeriesT_co] | T
+    df: Any, expr: CompliantExpr[CompliantSeriesT_co, Any] | T
 ) -> Sequence[CompliantSeriesT_co] | T:
     """Evaluate `expr` if it's an expression, otherwise return it as is."""
     return expr(df) if is_compliant_expr(expr) else expr
@@ -110,12 +111,12 @@ def reuse_series_implementation(
 
 
 def reuse_series_implementation(
-    expr: ArrowExprT | PandasLikeExprT,
+    expr: PandasLikeExprT | ArrowExprT,
     attr: str,
     *,
     returns_scalar: bool = False,
     **expressifiable_args: Any,
-) -> ArrowExprT | PandasLikeExprT:
+) -> PandasLikeExprT | ArrowExprT:
     """Reuse Series implementation for expression.
 
     If Series.foo is already defined, and we'd like Expr.foo to be the same, we can
@@ -131,6 +132,8 @@ def reuse_series_implementation(
             be expressifiable (e.g. `nw.col('a').is_between(3, nw.col('b')))`).
     """
     plx = expr.__narwhals_namespace__()
+    series_from_scalar = plx._create_series_from_scalar
+    expr_from_callable = plx._create_expr_from_callable
 
     def func(df: CompliantDataFrame) -> Sequence[CompliantSeries]:
         _kwargs = {
@@ -145,14 +148,16 @@ def reuse_series_implementation(
             if returns_scalar and expr._implementation is Implementation.PYARROW
             else {}
         )
-
-        out: list[CompliantSeries] = [
-            plx._create_series_from_scalar(
-                getattr(series, attr)(**extra_kwargs, **_kwargs),
-                reference_series=series,  # type: ignore[arg-type]
-            )
+        method = (
+            methodcaller(attr, **extra_kwargs, **_kwargs)
             if returns_scalar
-            else getattr(series, attr)(**_kwargs)
+            else methodcaller(attr, **_kwargs)
+        )
+
+        out = [
+            series_from_scalar(method(series), reference_series=series)  # type: ignore[arg-type]
+            if returns_scalar
+            else method(series)
             for series in expr(df)  # type: ignore[arg-type]
         ]
         _, aliases = evaluate_output_names_and_aliases(expr, df, [])
@@ -165,7 +170,7 @@ def reuse_series_implementation(
             raise AssertionError(msg)
         return out
 
-    return plx._create_expr_from_callable(  # type: ignore[return-value]
+    return expr_from_callable(  # type: ignore[return-value]
         func,  # type: ignore[arg-type]
         depth=expr._depth + 1,
         function_name=f"{expr._function_name}->{attr}",
@@ -215,7 +220,7 @@ def reuse_series_namespace_implementation(
     )
 
 
-def is_simple_aggregation(expr: CompliantExpr[Any]) -> bool:
+def is_simple_aggregation(expr: CompliantExpr[Any, Any]) -> bool:
     """Check if expr is a very simple one.
 
     Examples:
@@ -233,23 +238,22 @@ def is_simple_aggregation(expr: CompliantExpr[Any]) -> bool:
 
 
 def combine_evaluate_output_names(
-    *exprs: CompliantExpr[Any],
-) -> Callable[[CompliantDataFrame | CompliantLazyFrame], Sequence[str]]:
+    *exprs: CompliantExpr[Any, CompliantFrameT_contra],
+) -> Callable[[CompliantFrameT_contra], Sequence[str]]:
     # Follow left-hand-rule for naming. E.g. `nw.sum_horizontal(expr1, expr2)` takes the
     # first name of `expr1`.
-    def evaluate_output_names(
-        df: CompliantDataFrame | CompliantLazyFrame,
-    ) -> Sequence[str]:
-        if not is_compliant_expr(exprs[0]):  # pragma: no cover
-            msg = f"Safety assertion failed, expected expression, got: {type(exprs[0])}. Please report a bug."
-            raise AssertionError(msg)
+    if not is_compliant_expr(exprs[0]):  # pragma: no cover
+        msg = f"Safety assertion failed, expected expression, got: {type(exprs[0])}. Please report a bug."
+        raise AssertionError(msg)
+
+    def evaluate_output_names(df: CompliantFrameT_contra) -> Sequence[str]:
         return exprs[0]._evaluate_output_names(df)[:1]
 
     return evaluate_output_names
 
 
 def combine_alias_output_names(
-    *exprs: CompliantExpr[Any],
+    *exprs: CompliantExpr[Any, Any],
 ) -> Callable[[Sequence[str]], Sequence[str]] | None:
     # Follow left-hand-rule for naming. E.g. `nw.sum_horizontal(expr1.alias(alias), expr2)` takes the
     # aliasing function of `expr1` and apply it to the first output name of `expr1`.
@@ -263,11 +267,13 @@ def combine_alias_output_names(
 
 
 def extract_compliant(
-    plx: CompliantNamespace[CompliantSeriesT_co],
+    plx: CompliantNamespace[CompliantSeriesT_co, CompliantFrameT_contra],
     other: Any,
     *,
     strings_are_column_names: bool,
-) -> CompliantExpr[CompliantSeriesT_co] | CompliantSeriesT_co | Any:
+) -> (
+    CompliantExpr[CompliantSeriesT_co, CompliantFrameT_contra] | CompliantSeriesT_co | Any
+):
     from narwhals.expr import Expr
     from narwhals.series import Series
 
@@ -284,7 +290,7 @@ def extract_compliant(
 
 
 def evaluate_output_names_and_aliases(
-    expr: CompliantExpr[Any],
+    expr: CompliantExpr[Any, Any],
     df: CompliantDataFrame | CompliantLazyFrame,
     exclude: Sequence[str],
 ) -> tuple[Sequence[str], Sequence[str]]:

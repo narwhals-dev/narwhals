@@ -81,7 +81,7 @@ class BaseFrame(Generic[_FrameT]):
 
     def _flatten_and_extract(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> tuple[IntoCompliantExpr[Any]]:
+    ) -> tuple[IntoCompliantExpr[Any, Any]]:
         """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
         compliant_exprs = (self._extract_compliant(expr) for expr in flatten(exprs))
         compliant_named_exprs = (

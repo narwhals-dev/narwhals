@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class DaskNamespace(CompliantNamespace["dx.Series"]):
+class DaskNamespace(CompliantNamespace["dx.Series", DaskLazyFrame]):
     @property
     def selectors(self: Self) -> DaskSelectorNamespace:
         return DaskSelectorNamespace(

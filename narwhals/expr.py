@@ -182,7 +182,7 @@ class Expr:
         )
 
     def __rand__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
+        def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
             return plx.lit(
                 extract_compliant(plx, other, strings_are_column_names=False), dtype=None
             ).__and__(extract_compliant(plx, self, strings_are_column_names=False))
@@ -200,7 +200,7 @@ class Expr:
         )
 
     def __ror__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
+        def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
             return plx.lit(
                 extract_compliant(plx, other, strings_are_column_names=False), dtype=None
             ).__or__(extract_compliant(plx, self, strings_are_column_names=False))
@@ -1183,7 +1183,7 @@ class Expr:
             └──────────────────┘
         """
 
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
+        def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
             lb = extract_compliant(plx, lower_bound, strings_are_column_names=True)
             ub = extract_compliant(plx, upper_bound, strings_are_column_names=True)
             expr = self._to_compliant_expr(plx)
