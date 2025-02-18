@@ -273,7 +273,7 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
         )
 
     # Cast
-    dtype = nw.Struct([nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float64())])
+    dtype = nw.Struct([nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float32())])
     result = nw.from_native(native_df).select(nw.col("a").cast(dtype)).lazy().collect()
     assert result.schema == {"a": dtype}
 
