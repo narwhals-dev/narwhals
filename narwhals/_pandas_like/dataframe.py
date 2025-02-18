@@ -442,11 +442,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         else:
             # `[0]` is safe as the predicate's expression only returns a single column
             mask = evaluate_into_exprs(self, predicate)[0]
-            # cast, as the mask isn't allowed to broadcast
-            mask_native = cast(
-                "pd.Series[Any]",
-                extract_dataframe_comparand(self._native_frame.index, mask),
-            )
+            mask_native = extract_dataframe_comparand(self._native_frame.index, mask)
 
         return self._from_native_frame(
             self._native_frame.loc[mask_native], validate_column_names=False
