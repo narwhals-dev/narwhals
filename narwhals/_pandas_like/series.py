@@ -14,7 +14,6 @@ from narwhals._pandas_like.series_dt import PandasLikeSeriesDateTimeNamespace
 from narwhals._pandas_like.series_list import PandasLikeSeriesListNamespace
 from narwhals._pandas_like.series_str import PandasLikeSeriesStringNamespace
 from narwhals._pandas_like.utils import align_and_extract_native
-from narwhals._pandas_like.utils import align_and_extract_native_no_broadcast
 from narwhals._pandas_like.utils import get_dtype_backend
 from narwhals._pandas_like.utils import narwhals_to_native_dtype
 from narwhals._pandas_like.utils import native_series_from_iterable
@@ -399,9 +398,9 @@ class PandasLikeSeries(CompliantSeries):
         return self._from_native_series(ser - other).alias(self.name)
 
     def __rsub__(self: Self, other: Any) -> PandasLikeSeries:
-        other = align_and_extract_native_no_broadcast(self, other)
+        _, other_native = align_and_extract_native(self, other)
         return self._from_native_series(
-            self._native_series.__rsub__(other),
+            self._native_series.__rsub__(other_native),
         ).alias(self.name)
 
     def __mul__(self: Self, other: Any) -> PandasLikeSeries:
@@ -409,9 +408,9 @@ class PandasLikeSeries(CompliantSeries):
         return self._from_native_series(ser * other).alias(self.name)
 
     def __rmul__(self: Self, other: Any) -> PandasLikeSeries:
-        other = align_and_extract_native_no_broadcast(self, other)
+        _, other_native = align_and_extract_native(self, other)
         return self._from_native_series(
-            self._native_series.__rmul__(other),
+            self._native_series.__rmul__(other_native),
         ).alias(self.name)
 
     def __truediv__(self: Self, other: Any) -> PandasLikeSeries:
@@ -419,9 +418,9 @@ class PandasLikeSeries(CompliantSeries):
         return self._from_native_series(ser / other).alias(self.name)
 
     def __rtruediv__(self: Self, other: Any) -> PandasLikeSeries:
-        other = align_and_extract_native_no_broadcast(self, other)
+        _, other_native = align_and_extract_native(self, other)
         return self._from_native_series(
-            self._native_series.__rtruediv__(other),
+            self._native_series.__rtruediv__(other_native),
         ).alias(self.name)
 
     def __floordiv__(self: Self, other: Any) -> PandasLikeSeries:
@@ -429,9 +428,9 @@ class PandasLikeSeries(CompliantSeries):
         return self._from_native_series(ser // other).alias(self.name)
 
     def __rfloordiv__(self: Self, other: Any) -> PandasLikeSeries:
-        other = align_and_extract_native_no_broadcast(self, other)
+        _, other_native = align_and_extract_native(self, other)
         return self._from_native_series(
-            self._native_series.__rfloordiv__(other),
+            self._native_series.__rfloordiv__(other_native),
         ).alias(self.name)
 
     def __pow__(self: Self, other: Any) -> PandasLikeSeries:
@@ -439,9 +438,9 @@ class PandasLikeSeries(CompliantSeries):
         return self._from_native_series(ser**other).alias(self.name)
 
     def __rpow__(self: Self, other: Any) -> PandasLikeSeries:
-        other = align_and_extract_native_no_broadcast(self, other)
+        _, other_native = align_and_extract_native(self, other)
         return self._from_native_series(
-            self._native_series.__rpow__(other),
+            self._native_series.__rpow__(other_native),
         ).alias(self.name)
 
     def __mod__(self: Self, other: Any) -> PandasLikeSeries:
@@ -449,9 +448,9 @@ class PandasLikeSeries(CompliantSeries):
         return self._from_native_series(ser % other).alias(self.name)
 
     def __rmod__(self: Self, other: Any) -> PandasLikeSeries:
-        other = align_and_extract_native_no_broadcast(self, other)
+        _, other_native = align_and_extract_native(self, other)
         return self._from_native_series(
-            self._native_series.__rmod__(other),
+            self._native_series.__rmod__(other_native),
         ).alias(self.name)
 
     # Unary
@@ -775,8 +774,8 @@ class PandasLikeSeries(CompliantSeries):
 
     def zip_with(self: Self, mask: Any, other: Any) -> PandasLikeSeries:
         ser = self._native_series
-        mask = align_and_extract_native_no_broadcast(self, mask)
-        other = align_and_extract_native_no_broadcast(self, other)
+        _, mask = align_and_extract_native(self, mask)
+        _, other = align_and_extract_native(self, other)
         res = ser.where(mask, other)
         return self._from_native_series(res)
 
