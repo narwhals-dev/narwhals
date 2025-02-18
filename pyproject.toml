@@ -37,6 +37,7 @@ polars = ["polars>=0.20.3"]
 dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.0"]
 ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
+sqlframe = ["sqlframe>=3.22.0"]
 tests = [
   "covdefaults",
   "pytest",

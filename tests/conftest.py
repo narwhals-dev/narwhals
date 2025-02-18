@@ -184,7 +184,7 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
 
 def sqlframe_pyspark_lazy_constructor(
     obj: dict[str, Any],
-) -> Callable[[Any], IntoFrame]:  # pragma: no cover
+) -> IntoFrame:  # pragma: no cover
     from sqlframe.duckdb import DuckDBSession
 
     session = DuckDBSession()

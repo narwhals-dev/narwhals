@@ -679,7 +679,7 @@ def test_join_duplicate_column_names(
     elif "modin" in str(constructor):
         exception = NotImplementedError
     else:
-        exception = nw.exceptions.DuplicateError
+        exception = nw.exceptions.DuplicateError  # type: ignore[assignment]
     df = constructor({"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]})
     dfn = nw.from_native(df)
     with pytest.raises(exception):

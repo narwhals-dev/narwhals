@@ -237,7 +237,12 @@ def test_cast_datetime_tz_aware(
 
 def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(
-        backend in str(constructor) for backend in ("dask", "modin", "cudf", "sqlframe")
+        backend in str(constructor)
+        for backend in (
+            "dask",
+            "modin",
+            "cudf",
+        )
     ):
         request.applymarker(pytest.mark.xfail)
 
