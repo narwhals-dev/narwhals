@@ -25,7 +25,7 @@ data = {"s": ["foo bar", "foo_bar", "foo_bar_baz", "foo,bar"]}
 )
 def test_str_split(
     constructor: Constructor,
-    by: str | None,
+    by: str,
     inclusive: bool,  # noqa: FBT001
     expected: Any,
 ) -> None:
