@@ -15,7 +15,7 @@ from narwhals.utils import parse_version
 
 try:
     import dask.dataframe.dask_expr as dx
-except ModuleNotFoundError:
+except ModuleNotFoundError:  # pragma: no cover
     import dask_expr as dx
 
 if TYPE_CHECKING:
