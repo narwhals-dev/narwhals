@@ -23,7 +23,7 @@ data = {"s": ["foo bar", "foo_bar", "foo_bar_baz", "foo,bar"]}
         (
             "_",
             True,
-            {"s": [["foo bar"], ["foo_", "bar"], ["foo_bar_baz"], ["foo,bar"]]},
+            {"s": [["foo bar"], ["foo_", "bar"], ["foo_", "bar_", "baz"], ["foo,bar"]]},
         ),
     ],
 )
@@ -49,7 +49,7 @@ def test_str_split(
         (
             "_",
             True,
-            {"s": [["foo bar"], ["foo_", "bar"], ["foo_bar_baz"], ["foo,bar"]]},
+            {"s": [["foo bar"], ["foo_", "bar"], ["foo_", "bar_", "baz"], ["foo,bar"]]},
         ),
     ],
 )
