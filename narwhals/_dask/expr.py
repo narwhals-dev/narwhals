@@ -72,7 +72,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
 
     def broadcast(self, kind: ExprKind) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            return [df._native_frame.assign(tmp=result)["tmp"] for result in self(df)]
+            return [result[0] for result in self(df)]
 
         return self.__class__(
             func,
@@ -310,12 +310,12 @@ class DaskExpr(CompliantExpr["dx.Series"]):
 
     def std(self: Self, ddof: int) -> Self:
         return self._from_call(
-            lambda _input, ddof: _input.std(ddof=ddof).to_series(), "std"
+            lambda _input, ddof: _input.std(ddof=ddof).to_series(), "std", ddof=ddof
         )
 
     def var(self: Self, ddof: int) -> Self:
         return self._from_call(
-            lambda _input, ddof: _input.var(ddof=ddof).to_series(), "var"
+            lambda _input, ddof: _input.var(ddof=ddof).to_series(), "var", ddof=ddof
         )
 
     def skew(self: Self) -> Self:
