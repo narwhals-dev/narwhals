@@ -55,13 +55,10 @@ def evaluate_exprs(df: DaskLazyFrame, /, *exprs: DaskExpr) -> dict[str, dx.Serie
 def align_series_full_broadcast(
     df: DaskLazyFrame, *series: dx.Series | object
 ) -> Sequence[dx.Series]:
-    results = []
-    for s in series:
-        if isinstance(s, dx.Series):
-            results.append(s)
-        else:
-            results.append(df._native_frame.assign(_tmp=s)["_tmp"])
-    return results
+    return [
+        s if isinstance(s, dx.Series) else df._native_frame.assign(_tmp=s)["_tmp"]
+        for s in series
+    ]
 
 
 def add_row_index(

@@ -120,12 +120,12 @@ def align_and_extract_native(
         return NotImplemented  # type: ignore[no-any-return]
 
     if lhs._broadcast and not rhs._broadcast:
-        return lhs._native_series.item(), rhs._native_series
+        return lhs._native_series.iloc[0], rhs._native_series
     lhs_native = lhs._native_series
 
     if isinstance(rhs, PandasLikeSeries):
         if rhs._broadcast:
-            return (lhs_native, rhs._native_series.item())
+            return (lhs_native, rhs._native_series.iloc[0])
         rhs_native = rhs._native_series
         if rhs_native.index is not lhs_index:
             return (
@@ -191,7 +191,7 @@ def extract_dataframe_comparand(
     """Extract native Series, broadcasting to `length` if necessary."""
     if other._broadcast:
         s = other._native_series
-        return s.__class__(s.item(), index=index, dtype=s.dtype, name=s.name)
+        return s.__class__(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
     if other._native_series.index is not index:
         return set_index(
             other._native_series,
