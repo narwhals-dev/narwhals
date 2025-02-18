@@ -585,8 +585,8 @@ def maybe_align_index(
             msg = "given index doesn't have a unique index"
             raise ValueError(msg)
 
-    lhs_any = cast(Any, lhs)
-    rhs_any = cast(Any, rhs)
+    lhs_any = cast("Any", lhs)
+    rhs_any = cast("Any", rhs)
     if isinstance(
         getattr(lhs_any, "_compliant_frame", None), PandasLikeDataFrame
     ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasLikeDataFrame):
@@ -670,7 +670,7 @@ def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series[Any]) -> Any |
         >>> nw.maybe_get_index(series)
         RangeIndex(start=0, stop=2, step=1)
     """
-    obj_any = cast(Any, obj)
+    obj_any = cast("Any", obj)
     native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj) or is_pandas_like_series(native_obj):
         return native_obj.index
@@ -726,7 +726,7 @@ def maybe_set_index(
     """
     from narwhals.translate import to_native
 
-    df_any = cast(Any, obj)
+    df_any = cast("Any", obj)
     native_obj = df_any.to_native()
 
     if column_names is not None and index is not None:
@@ -801,7 +801,7 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
         >>> nw.maybe_get_index(series)
         RangeIndex(start=0, stop=2, step=1)
     """
-    obj_any = cast(Any, obj)
+    obj_any = cast("Any", obj)
     native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj):
         native_namespace = obj_any.__native_namespace__()
@@ -874,7 +874,7 @@ def maybe_convert_dtypes(
         b           boolean
         dtype: object
     """
-    obj_any = cast(Any, obj)
+    obj_any = cast("Any", obj)
     native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj):
         return obj_any._from_compliant_dataframe(  # type: ignore[no-any-return]

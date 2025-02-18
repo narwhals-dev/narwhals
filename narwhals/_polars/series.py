@@ -513,8 +513,8 @@ class PolarsSeries:
             and (bin_count is not None)
             and (self._native_series.count() > 0)
         ):  # pragma: no cover
-            lower = cast(Union[int, float], self._native_series.min())
-            upper = cast(Union[int, float], self._native_series.max())
+            lower = cast("Union[int, float]", self._native_series.min())
+            upper = cast("Union[int, float]", self._native_series.max())
             pad_lowest_bin = False
             if lower == upper:
                 width = 1 / bin_count
