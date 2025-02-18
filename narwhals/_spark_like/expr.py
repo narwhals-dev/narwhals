@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import operator
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Sequence
+from typing import cast
 
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
@@ -173,7 +175,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def __eq__(self: Self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
         return self._from_call(
-            lambda _input, other: _input.__eq__(other),
+            operator.eq,
             "__eq__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -181,7 +183,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def __ne__(self: Self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
         return self._from_call(
-            lambda _input, other: _input.__ne__(other),
+            operator.ne,
             "__ne__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -189,7 +191,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def __add__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input.__add__(other),
+            operator.add,
             "__add__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -197,7 +199,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def __sub__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input.__sub__(other),
+            operator.sub,
             "__sub__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -213,7 +215,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def __mul__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input.__mul__(other),
+            operator.mul,
             "__mul__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -221,7 +223,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def __truediv__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input.__truediv__(other),
+            operator.truediv,
             "__truediv__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -259,7 +261,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def __pow__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input.__pow__(other),
+            operator.pow,
             "__pow__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -275,7 +277,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def __mod__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input.__mod__(other),
+            operator.mod,
             "__mod__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -291,7 +293,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def __ge__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input.__ge__(other),
+            operator.ge,
             "__ge__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -299,7 +301,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def __gt__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input > other,
+            operator.gt,
             "__gt__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -307,7 +309,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def __le__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input.__le__(other),
+            operator.le,
             "__le__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -315,7 +317,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def __lt__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input.__lt__(other),
+            operator.lt,
             "__lt__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -323,7 +325,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def __and__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input.__and__(other),
+            operator.and_,
             "__and__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -331,18 +333,15 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
     def __or__(self: Self, other: SparkLikeExpr) -> Self:
         return self._from_call(
-            lambda _input, other: _input.__or__(other),
+            operator.or_,
             "__or__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
         )
 
     def __invert__(self: Self) -> Self:
-        return self._from_call(
-            lambda _input: _input.__invert__(),
-            "__invert__",
-            expr_kind=self._expr_kind,
-        )
+        invert = cast("Callable[..., SparkLikeExpr]", operator.invert)
+        return self._from_call(invert, "__invert__", expr_kind=self._expr_kind)
 
     def abs(self: Self) -> Self:
         return self._from_call(self._F.abs, "abs", expr_kind=self._expr_kind)
