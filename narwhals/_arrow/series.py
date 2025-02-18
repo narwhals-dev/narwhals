@@ -1004,7 +1004,7 @@ class ArrowSeries(CompliantSeries):
         )
 
         cum_sum_sq = (
-            padded_series.__pow__(2)
+            pow(padded_series, 2)
             .cum_sum(reverse=False)
             .fill_null(value=None, strategy="forward", limit=None)
         )
