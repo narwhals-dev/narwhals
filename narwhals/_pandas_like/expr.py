@@ -7,6 +7,7 @@ from typing import Callable
 from typing import Literal
 from typing import Sequence
 
+from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import reuse_series_implementation
@@ -86,7 +87,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
 
     def __narwhals_expr__(self) -> None: ...
 
-    def broadcast(self, kind: Any) -> Self:
+    def broadcast(self, kind: ExprKind) -> Self:
         # Make the resulting PandasLikeSeries with `_broadcast=True`. Then,
         # when extracting native objects, `align_and_extract_native` will
         # know what to do.

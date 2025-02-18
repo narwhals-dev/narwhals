@@ -5,7 +5,7 @@ from typing import Any
 from typing import Callable
 from typing import Sequence
 
-from narwhals._expression_parsing import ExprKind as NwExprKind
+from narwhals._expression_parsing import ExprKind
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
 from narwhals._spark_like.expr_name import SparkLikeExprNameNamespace
@@ -51,9 +51,9 @@ class SparkLikeExpr(CompliantExpr["Column"]):
     def __call__(self: Self, df: SparkLikeLazyFrame) -> Sequence[Column]:
         return self._call(df)
 
-    def broadcast(self, kind: NwExprKind) -> Self:
+    def broadcast(self, kind: ExprKind) -> Self:
         def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
-            if kind is NwExprKind.AGGREGATION:
+            if kind is ExprKind.AGGREGATION:
                 return [
                     result.over(df._Window().partitionBy(df._F.lit(1)))
                     for result in self(df)
