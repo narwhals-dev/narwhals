@@ -381,3 +381,25 @@ def test_datetime_generic() -> None:
     reveal_type(dt_6)
     reveal_type(dt_3.time_unit)
     assert dt_3.time_unit
+
+    # ruff: noqa: F841
+
+    dtype = unstable_nw.Datetime("s")
+    bad = unstable_nw.Datetime("us", "USA")
+
+    matches_2 = dtype == unstable_nw.Datetime
+    matches_1 = dtype == unstable_nw.Datetime("s", None)
+    matches_3 = dtype == bad
+    matches_none = dtype == unstable_nw.Duration
+
+    if dtype == unstable_nw.Duration:
+        what = dtype
+
+    if dtype != unstable_nw.Datetime:
+        what_again = dtype
+
+    # NOTE: These **not** matching is a positive outcome
+    # - Omitting the overload is one way to enforce it
+    # - `Literal[False]` makes sense, but
+    if dtype == bad:
+        what3 = dtype

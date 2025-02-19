@@ -4,6 +4,7 @@ from collections import OrderedDict
 from datetime import timezone
 from itertools import starmap
 from typing import TYPE_CHECKING
+from typing import Any
 from typing import Generic
 from typing import Mapping
 from typing import cast
@@ -24,11 +25,11 @@ if TYPE_CHECKING:
     from narwhals.typing import TimeUnit
 
     _DTypeT = TypeVar("_DTypeT", bound="DType")
-    UnitT = TypeVar("UnitT", bound=TimeUnit, default=Literal["us"])
-    _UnitT = TypeVar("_UnitT", bound=TimeUnit, default=Literal["us"])
+    UnitT = TypeVar("UnitT", bound=TimeUnit)
+    _UnitT = TypeVar("_UnitT", bound=TimeUnit)
     IntoZone: TypeAlias = "str | timezone | None"
-    ZoneT = TypeVar("ZoneT", str, None, default=None)
-    _ZoneT = TypeVar("_ZoneT", str, None, default=None)
+    ZoneT = TypeVar("ZoneT", str, None)
+    _ZoneT = TypeVar("_ZoneT", str, None)
 else:
     from typing import TypeVar
 
@@ -110,7 +111,7 @@ class DType:
     def is_nested(cls: type[Self]) -> bool:
         return issubclass(cls, NestedType)
 
-    def __eq__(self: Self, other: _DTypeT | type[_DTypeT]) -> TypeIs[_DTypeT]:  # type: ignore[override]
+    def __eq__(self: _DTypeT, other: object) -> TypeIs[_DTypeT | type[_DTypeT]]:  # type: ignore[override]
         from narwhals.utils import isinstance_or_issubclass
 
         return isinstance_or_issubclass(other, type(self))
@@ -589,7 +590,7 @@ class Datetime(TemporalType, Generic[UnitT, ZoneT], metaclass=_DatetimeMeta):
     ) -> None: ...
 
     def __init__(
-        self: Self, time_unit: _UnitT | Literal["us"] = "us", time_zone: IntoZone = None
+        self: Self, time_unit: TimeUnit | Literal["us"] = "us", time_zone: IntoZone = None
     ) -> None:
         if time_unit not in {"s", "ms", "us", "ns"}:
             msg = (
@@ -602,8 +603,22 @@ class Datetime(TemporalType, Generic[UnitT, ZoneT], metaclass=_DatetimeMeta):
         self.time_unit = cast("UnitT", time_unit)
         self.time_zone = cast("ZoneT", zone)
 
-    # TODO @dangotbanned: convert to `TypeIs`
-    def __eq__(self: Self, other: object) -> bool:  # type: ignore[override]
+    @overload  # type: ignore[override]
+    def __eq__(
+        self: Datetime[UnitT, ZoneT], other: Datetime[UnitT, ZoneT]
+    ) -> TypeIs[Datetime[UnitT, ZoneT]]: ...
+
+    @overload
+    def __eq__(  # type: ignore[override]
+        self: Self, other: type[Datetime[Any, Any]]
+    ) -> TypeIs[type[Datetime[Any, Any]]]: ...
+
+    @overload
+    def __eq__(self: Self, other: Datetime) -> TypeIs[Datetime]: ...
+
+    def __eq__(  # type: ignore[override]
+        self: Datetime[UnitT, ZoneT], other: object
+    ) -> TypeIs[Datetime[UnitT, ZoneT] | type[Datetime[Any, Any]] | Datetime]:
         # allow comparing object instances to class
         if type(other) is _DatetimeMeta:
             return True
