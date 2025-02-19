@@ -11,10 +11,14 @@ from narwhals.utils import isinstance_or_issubclass
 if TYPE_CHECKING:
     from typing import Iterator
     from typing import Sequence
+    from typing import TypeVar
 
     from typing_extensions import Self
+    from typing_extensions import TypeIs
 
     from narwhals.typing import TimeUnit
+
+    _DTypeT = TypeVar("_DTypeT", bound="DType")
 
 
 def _validate_dtype(dtype: DType | type[DType]) -> None:
@@ -62,7 +66,7 @@ class DType:
     def is_nested(cls: type[Self]) -> bool:
         return issubclass(cls, NestedType)
 
-    def __eq__(self: Self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+    def __eq__(self: Self, other: _DTypeT | type[_DTypeT]) -> TypeIs[_DTypeT]:  # type: ignore[override]
         from narwhals.utils import isinstance_or_issubclass
 
         return isinstance_or_issubclass(other, type(self))
