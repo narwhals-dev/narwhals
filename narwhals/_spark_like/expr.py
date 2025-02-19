@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Literal
 from typing import Sequence
 
 from narwhals._expression_parsing import ExprKind
@@ -51,7 +52,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
     def __call__(self: Self, df: SparkLikeLazyFrame) -> Sequence[Column]:
         return self._call(df)
 
-    def broadcast(self, kind: ExprKind) -> Self:
+    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
             if kind is ExprKind.AGGREGATION:
                 return [

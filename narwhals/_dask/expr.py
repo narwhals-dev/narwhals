@@ -70,7 +70,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
 
         return DaskNamespace(backend_version=self._backend_version, version=self._version)
 
-    def broadcast(self, kind: ExprKind) -> Self:
+    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             return [result[0] for result in self(df)]
 

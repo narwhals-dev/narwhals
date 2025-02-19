@@ -1443,7 +1443,9 @@ class Then(Expr):
         def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
             compliant_expr = self._to_compliant_expr(plx)
             compliant_value = extract_compliant(plx, value, str_as_lit=False)
-            if kind is not ExprKind.TRANSFORM and is_compliant_expr(compliant_value):
+            if (
+                kind is ExprKind.AGGREGATION or kind is ExprKind.LITERAL
+            ) and is_compliant_expr(compliant_value):
                 compliant_value = compliant_value.broadcast(kind)
             return compliant_expr.otherwise(compliant_value)
 

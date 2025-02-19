@@ -67,7 +67,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
             backend_version=self._backend_version, version=self._version
         )
 
-    def broadcast(self, kind: ExprKind) -> Self:
+    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         if kind is ExprKind.AGGREGATION:
             msg = "Broadcasting aggregations is not yet supported for DuckDB."
             raise NotImplementedError(msg)

@@ -87,7 +87,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
 
     def __narwhals_expr__(self) -> None: ...
 
-    def broadcast(self, kind: ExprKind) -> Self:
+    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         # Make the resulting PandasLikeSeries with `_broadcast=True`. Then,
         # when extracting native objects, `align_and_extract_native` will
         # know what to do.

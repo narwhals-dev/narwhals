@@ -138,7 +138,7 @@ class BaseFrame(Generic[_FrameT]):
         compliant_exprs, kinds = self._flatten_and_extract(*exprs, **named_exprs)
         compliant_exprs = [
             compliant_expr.broadcast(kind)
-            if kind in (ExprKind.AGGREGATION, ExprKind.LITERAL)
+            if (kind is ExprKind.LITERAL or kind is ExprKind.AGGREGATION)
             else compliant_expr
             for compliant_expr, kind in zip(compliant_exprs, kinds)
         ]
@@ -172,7 +172,7 @@ class BaseFrame(Generic[_FrameT]):
             )
         compliant_exprs = [
             compliant_expr.broadcast(kind)
-            if kind in (ExprKind.AGGREGATION, ExprKind.LITERAL)
+            if (kind is ExprKind.LITERAL or kind is ExprKind.AGGREGATION)
             else compliant_expr
             for compliant_expr, kind in zip(compliant_exprs, kinds)
         ]

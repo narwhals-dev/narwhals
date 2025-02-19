@@ -61,7 +61,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
     def __call__(self: Self, df: ArrowDataFrame) -> Sequence[ArrowSeries]:
         return self._call(df)
 
-    def broadcast(self, kind: ExprKind) -> Self:
+    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         # Mark the resulting ArrowSeries with `_broadcast = True`.
         # Then, when extracting native objects, `extract_native` will
         # know what to do.

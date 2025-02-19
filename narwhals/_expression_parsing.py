@@ -457,7 +457,7 @@ def apply_n_ary_operation(
     compliant_exprs = (
         compliant_expr.broadcast(kind)
         if broadcast
-        and kind in (ExprKind.AGGREGATION, ExprKind.LITERAL)
+        and (kind is ExprKind.LITERAL or kind is ExprKind.AGGREGATION)
         and is_compliant_expr(compliant_expr)
         else compliant_expr
         for compliant_expr, kind in zip(compliant_exprs, kinds)
