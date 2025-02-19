@@ -24,7 +24,7 @@ def test_all_vs_all(constructor: Constructor) -> None:
     df: Frame = nw.from_native(constructor(data))
     with pytest.raises(
         (ValueError, AssertionError),
-        match=r"Multi-output|Expr: \*\' not allowed in this context",
+        match=r"Multi-output|Expr: \*\' not allowed in this context|wildcard.*not supported",
     ):
         # Polars raises AssertionError.
         df.lazy().select(nw.all() + nw.col("b", "a")).collect()
