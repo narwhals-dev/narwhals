@@ -5,6 +5,7 @@ from datetime import timedelta
 from datetime import timezone
 from typing import TYPE_CHECKING
 from typing import Literal
+from typing import reveal_type
 
 import numpy as np
 import pandas as pd
@@ -359,3 +360,24 @@ def test_cast_decimal_to_native() -> None:
                 .with_columns(a=nw.col("a").cast(nw.Decimal()))
                 .to_native()
             )
+
+
+def test_datetime_generic() -> None:
+    import narwhals as unstable_nw
+
+    dt_1 = unstable_nw.Datetime()
+    dt_21 = unstable_nw.Datetime("ns")
+    dt_22 = unstable_nw.Datetime(time_unit="ns")
+    dt_3 = unstable_nw.Datetime("s", time_zone="zone")
+    dt_4 = unstable_nw.Datetime("ns", timezone.utc)
+    dt_5 = unstable_nw.Datetime(time_zone="Asia/Kathmandu")
+    dt_6 = unstable_nw.Datetime(time_zone=timezone.utc)
+    reveal_type(dt_1)
+    reveal_type(dt_21)
+    reveal_type(dt_22)
+    reveal_type(dt_3)
+    reveal_type(dt_4)
+    reveal_type(dt_5)
+    reveal_type(dt_6)
+    reveal_type(dt_3.time_unit)
+    assert dt_3.time_unit
