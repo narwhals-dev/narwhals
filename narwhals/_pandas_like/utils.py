@@ -613,28 +613,27 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
         # convert to it?
         return "category"
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        dt_time_unit = getattr(dtype, "time_unit", "us")
-        dt_time_zone = getattr(dtype, "time_zone", None)
-
         # Pandas does not support "ms" or "us" time units before version 2.0
-        # Let's overwrite with "ns"
         if implementation is Implementation.PANDAS and backend_version < (
             2,
         ):  # pragma: no cover
             dt_time_unit = "ns"
+        else:
+            dt_time_unit = dtype.time_unit
 
         if dtype_backend == "pyarrow":
-            tz_part = f", tz={dt_time_zone}" if dt_time_zone else ""
+            tz_part = f", tz={tz}" if (tz := dtype.time_zone) else ""
             return f"timestamp[{dt_time_unit}{tz_part}][pyarrow]"
         else:
-            tz_part = f", {dt_time_zone}" if dt_time_zone else ""
+            tz_part = f", {tz}" if (tz := dtype.time_zone) else ""
             return f"datetime64[{dt_time_unit}{tz_part}]"
     if isinstance_or_issubclass(dtype, dtypes.Duration):
-        du_time_unit = getattr(dtype, "time_unit", "us")
         if implementation is Implementation.PANDAS and backend_version < (
             2,
         ):  # pragma: no cover
-            dt_time_unit = "ns"
+            du_time_unit = "ns"
+        else:
+            du_time_unit = dtype.time_unit
         return (
             f"duration[{du_time_unit}][pyarrow]"
             if dtype_backend == "pyarrow"
