@@ -9,7 +9,6 @@ from typing import Sequence
 from duckdb import ColumnExpression
 
 from narwhals._duckdb.expr import DuckDBExpr
-from narwhals._duckdb.utils import ExprKind
 from narwhals.utils import _parse_time_unit_and_time_zone
 from narwhals.utils import dtype_matches_time_unit_and_time_zone
 from narwhals.utils import import_dtypes_module
@@ -48,7 +47,6 @@ class DuckDBSelectorNamespace:
             evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
-            expr_kind=ExprKind.TRANSFORM,
             version=self._version,
         )
 
@@ -67,7 +65,6 @@ class DuckDBSelectorNamespace:
             evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
-            expr_kind=ExprKind.TRANSFORM,
             version=self._version,
         )
 
@@ -112,7 +109,6 @@ class DuckDBSelectorNamespace:
             evaluate_output_names=lambda df: df.columns,
             alias_output_names=None,
             backend_version=self._backend_version,
-            expr_kind=ExprKind.TRANSFORM,
             version=self._version,
         )
 
@@ -156,7 +152,6 @@ class DuckDBSelectorNamespace:
             evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
-            expr_kind=ExprKind.TRANSFORM,
             version=self._version,
         )
 
@@ -172,7 +167,6 @@ class DuckDBSelector(DuckDBExpr):
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
-            expr_kind=self._expr_kind,
             version=self._version,
         )
 
@@ -196,7 +190,6 @@ class DuckDBSelector(DuckDBExpr):
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
                 backend_version=self._backend_version,
-                expr_kind=self._expr_kind,
                 version=self._version,
             )
         else:
@@ -226,7 +219,6 @@ class DuckDBSelector(DuckDBExpr):
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
                 backend_version=self._backend_version,
-                expr_kind=self._expr_kind,
                 version=self._version,
             )
         else:
@@ -252,7 +244,6 @@ class DuckDBSelector(DuckDBExpr):
                 evaluate_output_names=evaluate_output_names,
                 alias_output_names=None,
                 backend_version=self._backend_version,
-                expr_kind=self._expr_kind,
                 version=self._version,
             )
         else:
