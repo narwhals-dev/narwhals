@@ -42,7 +42,7 @@ def test_datetime_valid(
 @pytest.mark.parametrize("time_unit", ["abc"])
 def test_datetime_invalid(time_unit: str) -> None:
     with pytest.raises(ValueError, match="invalid `time_unit`"):
-        nw.Datetime(time_unit=time_unit)  # type: ignore[arg-type]
+        nw.Datetime(time_unit=time_unit)  # type: ignore[call-overload]
 
 
 @pytest.mark.parametrize("time_unit", ["us", "ns", "ms"])
