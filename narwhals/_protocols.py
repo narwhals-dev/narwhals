@@ -10,6 +10,7 @@ Notes:
 
 from __future__ import annotations
 
+from operator import methodcaller
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -82,11 +83,43 @@ class ReuseExpr(CompliantExpr[ReuseSeriesT], Generic[ReuseSeriesT], Protocol):
         returns_scalar: bool = False,
         **expressifiable_args: Any,
     ) -> ReuseExpr[ReuseSeriesT]:
-        plx = self.__narwhals_namespace__()
+        from narwhals._expression_parsing import evaluate_output_names_and_aliases
+        from narwhals._expression_parsing import maybe_evaluate_expr
 
-        # TODO @dangotbanned: implement
+        plx = self.__narwhals_namespace__()
+        from_scalar = plx._create_series_from_scalar
+
+        # NOTE: Ideally this would be implemented differently for `pandas` and `pyarrow`
+        # - It wouldnt make sense to check the implementation for each call
+        # - Just copying over from the function
         def func(df: CompliantDataFrame, /) -> Sequence[ReuseSeriesT]:
-            raise NotImplementedError
+            _kwargs = {
+                arg_name: maybe_evaluate_expr(df, arg_value)
+                for arg_name, arg_value in expressifiable_args.items()
+            }
+            # For PyArrow.Series, we return Python Scalars (like Polars does) instead of PyArrow Scalars.
+            # However, when working with expressions, we keep everything PyArrow-native.
+            extra_kwargs = (
+                {"_return_py_scalar": False}
+                if returns_scalar and self._implementation.is_pyarrow()
+                else {}
+            )
+            method = methodcaller(attr, **extra_kwargs, **_kwargs)
+            out: Sequence[ReuseSeriesT] = [
+                from_scalar(method(series), reference_series=series)
+                if returns_scalar
+                else method(series)
+                for series in self(df)
+            ]
+            _, aliases = evaluate_output_names_and_aliases(self, df, [])
+            if [s.name for s in out] != list(aliases):  # pragma: no cover
+                msg = (
+                    f"Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues\n"
+                    f"Expression aliases: {aliases}\n"
+                    f"Series names: {[s.name for s in out]}"
+                )
+                raise AssertionError(msg)
+            return out
 
         return plx._create_expr_from_callable(
             func,
