@@ -73,7 +73,7 @@ class ReuseExpr(CompliantExpr[ReuseSeriesT_co], Generic[ReuseSeriesT_co], Protoc
         return self._call(df)
 
 
-class ReuseSeries(CompliantSeries, Generic["NativeSeriesT_co"], Protocol):
+class ReuseSeries(CompliantSeries, Generic["NativeSeriesT_co"], Protocol):  # type: ignore[misc]
     _name: Any
     _native_series: NativeSeriesT_co
     _implementation: Implementation
