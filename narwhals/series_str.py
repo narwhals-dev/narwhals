@@ -547,6 +547,11 @@ class SeriesStringNamespace(Generic[SeriesT]):
             )
         )
 
+    def split(self: Self, by: str | None = None, *, inclusive: bool = False) -> SeriesT:
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.split(by=by, inclusive=inclusive)
+        )
+
     def head(self: Self, n: int = 5) -> SeriesT:
         r"""Take the first n elements of each string.
 

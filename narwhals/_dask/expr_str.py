@@ -94,6 +94,25 @@ class DaskExprStringNamespace:
             returns_scalar=self._compliant_expr._returns_scalar,
         )
 
+    def split(self: Self, by: str | None, *, inclusive: bool) -> DaskExpr:
+        if inclusive:
+            return self._compliant_expr._from_call(
+                lambda _input, by: _input.str.split(pat=by).apply(
+                    lambda x: [
+                        f"{x[i]}{by}" if i < len(x) - 1 else x[i] for i in range(len(x))
+                    ]
+                ),
+                "split",
+                by=by,
+                returns_scalar=self._compliant_expr._returns_scalar,
+            )
+        return self._compliant_expr._from_call(
+            lambda _input, by: _input.str.split(pat=by),
+            "split",
+            by=by,
+            returns_scalar=self._compliant_expr._returns_scalar,
+        )
+
     def to_datetime(self: Self, format: str | None) -> DaskExpr:  # noqa: A002
         return self._compliant_expr._from_call(
             lambda _input, format: dd.to_datetime(_input, format=format),  # noqa: A006
