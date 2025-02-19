@@ -38,15 +38,14 @@ if TYPE_CHECKING:
 
 NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=True)
 ReuseSeriesT = TypeVar("ReuseSeriesT", bound="ReuseSeries")
-ReuseSeriesT_co = TypeVar("ReuseSeriesT_co", bound="ReuseSeries", covariant=True)
 
-# NOTE: Haven't needed a `Reuse` so far
+# NOTE: Haven't needed a `ReuseDataFrame` so far
 CompliantDataFrameT_co = TypeVar(
     "CompliantDataFrameT_co", bound="CompliantDataFrame", covariant=True
 )
 
 
-class ReuseExpr(CompliantExpr[ReuseSeriesT_co], Generic[ReuseSeriesT_co], Protocol):
+class ReuseExpr(CompliantExpr[ReuseSeriesT], Generic[ReuseSeriesT], Protocol):
     _call: Any
     _depth: int
     _function_name: str
@@ -59,7 +58,7 @@ class ReuseExpr(CompliantExpr[ReuseSeriesT_co], Generic[ReuseSeriesT_co], Protoc
 
     def __init__(
         self: Self,
-        call: Callable[[CompliantDataFrameT_co], Sequence[ReuseSeriesT_co]],
+        call: Callable[[CompliantDataFrameT_co], Sequence[ReuseSeriesT]],
         *,
         depth: int,
         function_name: str,
@@ -71,8 +70,51 @@ class ReuseExpr(CompliantExpr[ReuseSeriesT_co], Generic[ReuseSeriesT_co], Protoc
         kwargs: dict[str, Any],
     ) -> None: ...
 
-    def __call__(self, df: Any) -> Sequence[ReuseSeriesT_co]:
+    def __call__(self, df: Any) -> Sequence[ReuseSeriesT]:
         return self._call(df)
+
+    def __narwhals_namespace__(self) -> ReuseNamespace[ReuseSeriesT]: ...
+
+    def _reuse_series_implementation(
+        self: ReuseExpr[ReuseSeriesT],
+        attr: str,
+        *,
+        returns_scalar: bool = False,
+        **expressifiable_args: Any,
+    ) -> ReuseExpr[ReuseSeriesT]:
+        plx = self.__narwhals_namespace__()
+
+        # TODO @dangotbanned: implement
+        def func(df: CompliantDataFrame, /) -> Sequence[ReuseSeriesT]:
+            raise NotImplementedError
+
+        return plx._create_expr_from_callable(
+            func,
+            depth=self._depth + 1,
+            function_name=f"{self._function_name}->{attr}",
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            kwargs={**self._kwargs, **expressifiable_args},
+        )
+
+    def _reuse_series_namespace_implementation(
+        self: ReuseExpr[ReuseSeriesT],
+        series_namespace: str,
+        attr: str,
+        **kwargs: Any,
+    ) -> ReuseExpr[ReuseSeriesT]:
+        plx = self.__narwhals_namespace__()
+        return plx._create_expr_from_callable(
+            lambda df: [
+                getattr(getattr(series, series_namespace), attr)(**kwargs)
+                for series in self(df)
+            ],
+            depth=self._depth + 1,
+            function_name=f"{self._function_name}->{series_namespace}.{attr}",
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            kwargs={**self._kwargs, **kwargs},
+        )
 
 
 class ReuseSeries(CompliantSeries, Generic["NativeSeriesT_co"], Protocol):  # type: ignore[misc]
@@ -155,7 +197,7 @@ class ReuseNamespace(CompliantNamespace[ReuseSeriesT], Protocol):
         evaluate_output_names: Callable[[CompliantDataFrameT_co], Sequence[str]],
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         kwargs: dict[str, Any],
-    ) -> CompliantExpr[ReuseSeriesT]:
+    ) -> ReuseExpr[ReuseSeriesT]:
         return self.__narwhals_expr__()(
             func,
             depth=depth,
