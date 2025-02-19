@@ -39,6 +39,7 @@ def test_replace_time_zone(
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").dt.replace_time_zone("Asia/Kathmandu"))
     result_dtype = result.collect_schema()["a"]
+    assert result_dtype == nw.Datetime
     assert isinstance(result_dtype, nw.Datetime)
     assert result_dtype.time_zone == "Asia/Kathmandu"
     result_str = result.select(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M%z"))
@@ -67,6 +68,7 @@ def test_replace_time_zone_none(
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").dt.replace_time_zone(None))
     result_dtype = result.collect_schema()["a"]
+    assert result_dtype == nw.Datetime
     assert isinstance(result_dtype, nw.Datetime)
     assert result_dtype.time_zone is None
     result_str = result.select(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M"))
@@ -94,6 +96,7 @@ def test_replace_time_zone_series(
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(df["a"].dt.replace_time_zone("Asia/Kathmandu"))
     result_dtype = result.collect_schema()["a"]
+    assert result_dtype == nw.Datetime
     assert isinstance(result_dtype, nw.Datetime)
     assert result_dtype.time_zone == "Asia/Kathmandu"
     result_str = result.select(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M%z"))
@@ -120,6 +123,7 @@ def test_replace_time_zone_none_series(
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(df["a"].dt.replace_time_zone(None))
     result_dtype = result.collect_schema()["a"]
+    assert result_dtype == nw.Datetime
     assert isinstance(result_dtype, nw.Datetime)
     assert result_dtype.time_zone is None
     result_str = result.select(df["a"].dt.to_string("%Y-%m-%dT%H:%M"))
