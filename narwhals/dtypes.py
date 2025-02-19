@@ -568,7 +568,8 @@ class Datetime(TemporalType, Generic["UnitT", "ZoneT"], metaclass=_DatetimeMeta)
         self.time_unit = cast("UnitT", time_unit)
         self.time_zone = cast("ZoneT", zone)
 
-    def __eq__(self: Self, other: object) -> bool:
+    # TODO @dangotbanned: convert to `TypeIs`
+    def __eq__(self: Self, other: object) -> bool:  # type: ignore[override]
         # allow comparing object instances to class
         if type(other) is _DatetimeMeta:
             return True
@@ -629,7 +630,8 @@ class Duration(TemporalType, metaclass=_DurationMeta):
 
         self.time_unit: TimeUnit = time_unit
 
-    def __eq__(self: Self, other: object) -> bool:
+    # TODO @dangotbanned: convert to `TypeIs`
+    def __eq__(self: Self, other: object) -> bool:  # type: ignore[override]
         # allow comparing object instances to class
         if type(other) is _DurationMeta:
             return True
