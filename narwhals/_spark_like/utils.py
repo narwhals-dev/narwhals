@@ -116,7 +116,7 @@ def narwhals_to_native_dtype(
     if isinstance_or_issubclass(dtype, dtypes.Date):
         return spark_types.DateType()
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        dt_time_zone = getattr(dtype, "time_zone", None)
+        dt_time_zone = dtype.time_zone
         if dt_time_zone is None:
             return spark_types.TimestampNTZType()
         if dt_time_zone != "UTC":  # pragma: no cover
