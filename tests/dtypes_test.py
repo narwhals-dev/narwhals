@@ -5,13 +5,13 @@ from datetime import timedelta
 from datetime import timezone
 from typing import TYPE_CHECKING
 from typing import Literal
-from typing import reveal_type
 
 import numpy as np
 import pandas as pd
 import polars as pl
 import pyarrow as pa
 import pytest
+from typing_extensions import reveal_type
 
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
