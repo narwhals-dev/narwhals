@@ -27,7 +27,6 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import Incomplete
     from narwhals._arrow.typing import StringArray
     from narwhals.dtypes import DType
-    from narwhals.typing import TimeUnit
     from narwhals.typing import _AnyDArray
     from narwhals.utils import Version
 
@@ -180,12 +179,9 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
         return pa.dictionary(pa.uint32(), pa.string())
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        time_unit: TimeUnit = getattr(dtype, "time_unit", "us")
-        time_zone = getattr(dtype, "time_zone", None)
-        return pa.timestamp(time_unit, tz=time_zone)
+        return pa.timestamp(dtype.time_unit, tz=dtype.time_zone)  # type: ignore[arg-type]
     if isinstance_or_issubclass(dtype, dtypes.Duration):
-        time_unit = getattr(dtype, "time_unit", "us")
-        return pa.duration(time_unit)
+        return pa.duration(dtype.time_unit)
     if isinstance_or_issubclass(dtype, dtypes.Date):
         return pa.date32()
     if isinstance_or_issubclass(dtype, dtypes.List):

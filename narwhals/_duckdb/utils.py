@@ -150,12 +150,12 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
         msg = "Categorical not supported by DuckDB"
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        _time_unit = getattr(dtype, "time_unit", "us")
-        _time_zone = getattr(dtype, "time_zone", None)
+        _time_unit = dtype.time_unit
+        _time_zone = dtype.time_zone
         msg = "todo"
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Duration):  # pragma: no cover
-        _time_unit = getattr(dtype, "time_unit", "us")
+        _time_unit = dtype.time_unit
         msg = "todo"
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Date):  # pragma: no cover
