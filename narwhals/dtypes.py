@@ -29,6 +29,11 @@ if TYPE_CHECKING:
     IntoZone: TypeAlias = "str | timezone | None"
     ZoneT = TypeVar("ZoneT", str, None, default=None)
     _ZoneT = TypeVar("_ZoneT", str, None, default=None)
+else:
+    from typing import TypeVar
+
+    UnitT = TypeVar("UnitT", bound="TimeUnit")
+    ZoneT = TypeVar("ZoneT", str, None)
 
 
 def _validate_dtype(dtype: DType | type[DType]) -> None:
@@ -472,7 +477,7 @@ class _DatetimeMeta(type):
         return None
 
 
-class Datetime(TemporalType, Generic["UnitT", "ZoneT"], metaclass=_DatetimeMeta):
+class Datetime(TemporalType, Generic[UnitT, ZoneT], metaclass=_DatetimeMeta):
     """Data type representing a calendar date and time of day.
 
     Arguments:
