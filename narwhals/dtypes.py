@@ -35,6 +35,35 @@ else:
     UnitT = TypeVar("UnitT", bound="TimeUnit")
     ZoneT = TypeVar("ZoneT", str, None)
 
+__all__ = [
+    "Array",
+    "Boolean",
+    "Categorical",
+    "Date",
+    "Datetime",
+    "Decimal",
+    "Duration",
+    "Enum",
+    "Field",
+    "Float32",
+    "Float64",
+    "Int8",
+    "Int16",
+    "Int32",
+    "Int64",
+    "Int128",
+    "List",
+    "Object",
+    "String",
+    "Struct",
+    "UInt8",
+    "UInt16",
+    "UInt32",
+    "UInt64",
+    "UInt128",
+    "Unknown",
+]
+
 
 def _validate_dtype(dtype: DType | type[DType]) -> None:
     if not isinstance_or_issubclass(dtype, DType):
