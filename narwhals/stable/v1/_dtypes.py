@@ -33,14 +33,16 @@ from narwhals.dtypes import UInt16
 from narwhals.dtypes import UInt32
 from narwhals.dtypes import UInt64
 from narwhals.dtypes import UInt128
+from narwhals.dtypes import UnitT
 from narwhals.dtypes import Unknown
 from narwhals.dtypes import UnsignedIntegerType
+from narwhals.dtypes import ZoneT
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
 
-class Datetime(NwDatetime):
+class Datetime(NwDatetime[UnitT, ZoneT]):
     """Data type representing a calendar date and time of day.
 
     Arguments:
