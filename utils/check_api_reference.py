@@ -215,7 +215,7 @@ for namespace in NAMESPACES:
 
 # DTypes
 dtypes = [
-    i for i in nw.dtypes.__dir__() if i[0].isupper() and not i.isupper() and i[0] != "_"
+    i for i in nw.dtypes.__all__ if i[0].isupper() and not i.isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/dtypes.md") as fd:
     content = fd.read()
