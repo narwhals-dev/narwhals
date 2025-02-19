@@ -392,7 +392,7 @@ def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
     elif n_changes_length > 1:
         msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
         raise LengthChangingExprError(msg)
-    elif n_changes_length and (has_transforms or has_aggregations):
+    elif n_changes_length and has_transforms:
         msg = "Cannot combine length-changing expressions with length-preserving ones or aggregations"
         raise ShapeError(msg)
     elif n_changes_length:
