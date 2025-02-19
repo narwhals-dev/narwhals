@@ -39,6 +39,8 @@ if TYPE_CHECKING:
 NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=True)
 ReuseSeriesT = TypeVar("ReuseSeriesT", bound="ReuseSeries")
 ReuseSeriesT_co = TypeVar("ReuseSeriesT_co", bound="ReuseSeries", covariant=True)
+
+# NOTE: Haven't needed a `Reuse` so far
 CompliantDataFrameT_co = TypeVar(
     "CompliantDataFrameT_co", bound="CompliantDataFrame", covariant=True
 )
@@ -98,7 +100,15 @@ class ReuseSeries(CompliantSeries, Generic["NativeSeriesT_co"], Protocol):  # ty
     def __narwhals_series__(self: Self) -> Self:
         return self
 
-    def __native_namespace__(self: Self) -> ModuleType: ...
+    # NOTE: Each side adds an `AssertionError` guard first
+    # Would probably make more sense to require a ClassVar, either:
+    # - defining the set of permitted impls
+    # - setting an unbound method, which also gives the error message
+    #   - E.g. `PandasLikeSeries._ensure = Implementation.ensure_pandas_like`
+    #   - That gets called w/ `ReuseSeries._ensure(ReuseSeries._implementation)`
+    def __native_namespace__(self: Self) -> ModuleType:
+        return self._implementation.to_native_namespace()
+
     @classmethod
     def _from_iterable(
         cls: type[Self],

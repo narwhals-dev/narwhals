@@ -383,6 +383,20 @@ class Implementation(Enum):
         """
         return self is Implementation.IBIS  # pragma: no cover
 
+    def ensure_pandas_like(self: Self) -> None:
+        if self.is_pandas_like():
+            return
+        pandas_like = {Implementation.PANDAS, Implementation.CUDF, Implementation.MODIN}
+        msg = f"Expected pandas-like implementation ({pandas_like}), found {self}"
+        raise TypeError(msg)
+
+    # NOTE: Not sure why this differs from `pandas_like`
+    def ensure_pyarrow(self: Self) -> None:
+        if self.is_pyarrow():
+            return
+        msg = f"Expected pyarrow, got: {type(self)}"  # pragma: no cover
+        raise AssertionError(msg)
+
 
 MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.PANDAS: (0, 25, 3),
