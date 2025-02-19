@@ -628,12 +628,12 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
             tz_part = f", {tz}" if (tz := dtype.time_zone) else ""
             return f"datetime64[{dt_time_unit}{tz_part}]"
     if isinstance_or_issubclass(dtype, dtypes.Duration):
-        du_time_unit = dtype.time_unit
         if implementation is Implementation.PANDAS and backend_version < (
             2,
         ):  # pragma: no cover
-            # NOTE: I think this assignment was a typo, it never gets used (should be du_)
-            dt_time_unit = "ns"
+            du_time_unit = "ns"
+        else:
+            du_time_unit = dtype.time_unit
         return (
             f"duration[{du_time_unit}][pyarrow]"
             if dtype_backend == "pyarrow"
