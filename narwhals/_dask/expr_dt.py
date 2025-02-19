@@ -7,6 +7,7 @@ from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     try:
@@ -157,8 +158,8 @@ class DaskExprDateTimeNamespace:
                 # Date is only supported in pandas dtypes if pyarrow-backed
                 s_cast = s.astype("Int32[pyarrow]")
                 result = calculate_timestamp_date(s_cast, time_unit)
-            elif dtype == dtypes.Datetime:
-                original_time_unit = dtype.time_unit  # type: ignore[attr-defined]
+            elif isinstance_or_issubclass(dtype, dtypes.Datetime):
+                original_time_unit = dtype.time_unit
                 s_cast = (
                     s.astype("Int64[pyarrow]") if is_pyarrow_dtype else s.astype("int64")
                 )

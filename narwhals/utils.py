@@ -1267,11 +1267,11 @@ def dtype_matches_time_unit_and_time_zone(
     dtype: DType, dtypes: DTypes, time_units: Set[TimeUnit], time_zones: Set[str | None]
 ) -> bool:
     return (
-        (dtype == dtypes.Datetime)
-        and (dtype.time_unit in time_units)  # type: ignore[attr-defined]
+        isinstance_or_issubclass(dtype, dtypes.Datetime)
+        and (dtype.time_unit in time_units)
         and (
-            dtype.time_zone in time_zones  # type: ignore[attr-defined]
-            or ("*" in time_zones and dtype.time_zone is not None)  # type: ignore[attr-defined]
+            dtype.time_zone in time_zones
+            or ("*" in time_zones and dtype.time_zone is not None)
         )
     )
 
