@@ -271,3 +271,32 @@ print((pn.col("a") + 1).mean())
 
 For simple aggregations, Narwhals can just look at `_depth` and `function_name` and figure out
 which (efficient) elementary operation this corresponds to in pandas.
+
+## Broadcasting
+
+When performing comparisons between columns and aggregations or scalars, we operate as if the
+aggregation or scalar was broadcasted to the length of the whole column. For example, if we
+have a dataframe with values `{'a': [1, 2, 3]}` and do `nw.col('a') - nw.col('a').mean()`,
+then each value from column `'a'` will have its mean subtracted from it, and we will end up
+with values `[-1, 0, 1]`.
+
+Different libraries do broadcasting differently. SQL-like libraries require an empty window
+function for expressions (e.g. `a - sum(a) over ()`), Polars does its own broadcasting of
+length-1 Series, and pandas does its own broadcasting of scalars. Narwhals keeps track of
+when to trigger a broadcast by tracking the `ExprKind` of each expression. `ExprKind` is an
+`Enum` with four variants:
+
+- `TRANSFORM`: expressions which don't change length (e.g. `nw.col('a').abs()`).
+- `AGGREGATION`: expressions which reduce a column to a single value (e.g. `nw.col('a').mean()`).
+- `CHANGE_LENGTH`: expressions which change length but don't necessarily aggregate (e.g. `nw.col('a').drop_nulls()`).
+- `LITERAL`: expressions which correspond to literal values, such as the `3` in `nw.col('a')+3`.
+
+Narwhals triggers a broadcast in these situations:
+
+- In `select` when some values are `ExprKind.TRANSFORM` and others aren't, e.g.
+  `df.select('a', nw.col('b').mean())`.
+- In `with_columns`, all new columns get broadcasted to the length of the dataframe.
+- In n-ary operations between expressions, such as `nw.col('a') + nw.col('a').mean()`.
+
+Each backend is then responsible for doing its own broadcasting, as defined in each
+`CompliantExpr.broadcast` method.
