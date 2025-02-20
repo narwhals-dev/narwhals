@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._pandas_like.utils import get_dtype_backend
 from narwhals._pandas_like.utils import to_datetime
 
 if TYPE_CHECKING:
@@ -59,6 +60,19 @@ class PandasLikeSeriesStringNamespace:
         stop = offset + length if length else None
         return self._compliant_series._from_native_series(
             self._compliant_series._native_series.str.slice(start=offset, stop=stop),
+        )
+
+    def split(self: Self, by: str) -> PandasLikeSeries:
+        dtype_backend = get_dtype_backend(
+            self._compliant_series._native_series.dtype,
+            self._compliant_series._implementation,
+        )
+        if dtype_backend != "pyarrow":
+            msg = "This operation requires a pyarrow-backed series. "
+            raise TypeError(msg)
+
+        return self._compliant_series._from_native_series(
+            self._compliant_series._native_series.str.split(pat=by),
         )
 
     def to_datetime(self: Self, format: str | None) -> PandasLikeSeries:  # noqa: A002

@@ -547,6 +547,78 @@ class SeriesStringNamespace(Generic[SeriesT]):
             )
         )
 
+    def split(self: Self, by: str) -> SeriesT:
+        r"""Split the string by a substring.
+
+        Arguments:
+            by: The delimiter string by which to split the values. If set to `None` (default),
+                each character in the string is split into a separate substring.
+
+        Returns:
+            A new Series containing lists of substrings.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoSeriesT
+
+            >>> data = ["foo bar", "foo_bar", "foo_bar_baz", "foo,bar"]
+            >>> s_pd = pd.Series(data, dtype=pd.ArrowDtype(pa.string()))
+            >>> s_pl = pl.Series(data)
+            >>> s_pa = pa.chunked_array([data])
+
+            We define a dataframe-agnostic function:
+
+            >>> def agnostic_split(s_native: IntoSeriesT) -> IntoSeriesT:
+            ...     s = nw.from_native(s_native, series_only=True)
+            ...     return s.str.split("_").to_native()
+
+            We can then pass any supported library such as pandas (pyarrow backed), Polars, or
+            PyArrow to `agnostic_split`:
+
+            >>> agnostic_split(s_pd)  # doctest: +NORMALIZE_WHITESPACE
+            0            ['foo bar']
+            1          ['foo' 'bar']
+            2    ['foo' 'bar' 'baz']
+            3            ['foo,bar']
+            dtype: list<item: string>[pyarrow]
+
+            >>> agnostic_split(s_pl)  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            list[str]
+            ["foo bar"]
+            ["foo", "bar"]
+            ["foo", "bar", "baz"]
+            ["foo,bar"]
+
+            >>> agnostic_split(s_pa)  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at 0x7efefc13c7c0>
+            [
+            [
+                [
+                "foo bar"
+                ],
+                [
+                "foo",
+                "bar"
+                ],
+                [
+                "foo",
+                "bar",
+                "baz"
+                ],
+                [
+                "foo,bar"
+                ]
+            ]
+            ]
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.split(by=by)
+        )
+
     def head(self: Self, n: int = 5) -> SeriesT:
         r"""Take the first n elements of each string.
 
