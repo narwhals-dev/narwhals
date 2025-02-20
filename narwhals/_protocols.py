@@ -214,7 +214,6 @@ class ReuseNamespace(CompliantNamespace[ReuseSeriesT], Protocol):
     ) -> None: ...
 
     def __narwhals_expr__(self) -> Callable[..., ReuseExpr[ReuseSeriesT]]: ...
-
     # Both do very similar things:
     # - `_pandas_like.utils.create_compliant_series`
     # - `_arrow.series.ArrowSeries(native_series=pa.chunked_array([value]))`
@@ -259,7 +258,6 @@ class ReuseNamespace(CompliantNamespace[ReuseSeriesT], Protocol):
             kwargs={},
         )
 
-    # TODO @dangotbanned: ReuseSeries (Protocol) needs to define _from_iterable
     def _create_series_from_scalar(
         self, value: Any, *, reference_series: ReuseSeriesT
     ) -> ReuseSeriesT: ...
