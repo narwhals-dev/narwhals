@@ -9,9 +9,25 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import NUMPY_VERSION
+from tests.utils import POLARS_VERSION
+from tests.utils import Constructor
 
 if TYPE_CHECKING:
     from narwhals.typing import Frame
+
+
+@pytest.mark.skipif(
+    POLARS_VERSION < (1,), reason="Polars would raise unrecoverable panic."
+)
+def test_all_vs_all(constructor: Constructor) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6]}
+    df: Frame = nw.from_native(constructor(data))
+    with pytest.raises(
+        (ValueError, AssertionError),
+        match=r"Multi-output|Expr: \*\' not allowed in this context|wildcard.*not supported",
+    ):
+        # Polars raises AssertionError.
+        df.lazy().select(nw.all() + nw.col("b", "a")).collect()
 
 
 def test_invalid() -> None:
