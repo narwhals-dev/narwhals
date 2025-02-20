@@ -53,7 +53,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         self._alias_output_names = alias_output_names
         self._backend_version = backend_version
         self._version = version
-        self._kwargs = {} if kwargs is None else kwargs
+        self._kwargs = kwargs or {}
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         return f"ArrowExpr(depth={self._depth}, function_name={self._function_name}, "

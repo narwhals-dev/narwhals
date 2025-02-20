@@ -479,7 +479,7 @@ class ArrowThen(ArrowExpr):
         self._function_name = function_name
         self._evaluate_output_names = evaluate_output_names  # pyright: ignore[reportAttributeAccessIssue]
         self._alias_output_names = alias_output_names
-        self._kwargs = {} if kwargs is None else kwargs
+        self._kwargs = kwargs or {}
 
     def otherwise(self: Self, value: ArrowExpr | ArrowSeries | Any) -> ArrowExpr:
         # type ignore because we are setting the `_call` attribute to a
