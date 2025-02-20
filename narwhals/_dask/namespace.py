@@ -61,7 +61,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
     def col(self: Self, *column_names: str) -> DaskExpr:
@@ -93,7 +92,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
     def len(self: Self) -> DaskExpr:
@@ -116,7 +114,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
     def all_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
@@ -134,7 +131,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             alias_output_names=combine_alias_output_names(*exprs),
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"exprs": exprs},
         )
 
     def any_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
@@ -152,7 +148,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             alias_output_names=combine_alias_output_names(*exprs),
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"exprs": exprs},
         )
 
     def sum_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
@@ -170,7 +165,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             alias_output_names=combine_alias_output_names(*exprs),
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"exprs": exprs},
         )
 
     def concat(
@@ -253,7 +247,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             alias_output_names=combine_alias_output_names(*exprs),
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"exprs": exprs},
         )
 
     def min_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
@@ -272,7 +265,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             alias_output_names=combine_alias_output_names(*exprs),
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"exprs": exprs},
         )
 
     def max_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
@@ -291,7 +283,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             alias_output_names=combine_alias_output_names(*exprs),
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"exprs": exprs},
         )
 
     def when(self: Self, predicate: DaskExpr) -> DaskWhen:
@@ -342,11 +333,6 @@ class DaskNamespace(CompliantNamespace["dx.Series"]):
             alias_output_names=getattr(exprs[0], "_alias_output_names", None),
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={
-                "exprs": exprs,
-                "separator": separator,
-                "ignore_nulls": ignore_nulls,
-            },
         )
 
 
@@ -401,7 +387,6 @@ class DaskWhen:
             alias_output_names=getattr(value, "_alias_output_names", None),
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"value": value},
         )
 
 
@@ -416,7 +401,7 @@ class DaskThen(DaskExpr):
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         backend_version: tuple[int, ...],
         version: Version,
-        kwargs: dict[str, Any],
+        kwargs: dict[str, Any] | None = None,
     ) -> None:
         self._backend_version = backend_version
         self._version = version
@@ -425,7 +410,7 @@ class DaskThen(DaskExpr):
         self._function_name = function_name
         self._evaluate_output_names = evaluate_output_names  # pyright: ignore[reportAttributeAccessIssue]
         self._alias_output_names = alias_output_names
-        self._kwargs = kwargs
+        self._kwargs = kwargs or {}
 
     def otherwise(self: Self, value: DaskExpr | Any) -> DaskExpr:
         # type ignore because we are setting the `_call` attribute to a
