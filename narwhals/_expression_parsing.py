@@ -6,7 +6,6 @@ from __future__ import annotations
 from enum import Enum
 from enum import auto
 from itertools import chain
-from operator import methodcaller
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -130,12 +129,12 @@ def reuse_series_implementation(
 
 
 def reuse_series_implementation(
-    expr: PandasLikeExprT | ArrowExprT,
+    expr: ArrowExprT | PandasLikeExprT,
     attr: str,
     *,
     returns_scalar: bool = False,
     **expressifiable_args: Any,
-) -> PandasLikeExprT | ArrowExprT:
+) -> ArrowExprT | PandasLikeExprT:
     """Reuse Series implementation for expression.
 
     If Series.foo is already defined, and we'd like Expr.foo to be the same, we can
@@ -151,8 +150,6 @@ def reuse_series_implementation(
             be expressifiable (e.g. `nw.col('a').is_between(3, nw.col('b')))`).
     """
     plx = expr.__narwhals_namespace__()
-    series_from_scalar = plx._create_series_from_scalar
-    expr_from_callable = plx._create_expr_from_callable
 
     def func(df: CompliantDataFrame) -> Sequence[CompliantSeries]:
         _kwargs = {
@@ -167,16 +164,14 @@ def reuse_series_implementation(
             if returns_scalar and expr._implementation is Implementation.PYARROW
             else {}
         )
-        method = (
-            methodcaller(attr, **extra_kwargs, **_kwargs)
-            if returns_scalar
-            else methodcaller(attr, **_kwargs)
-        )
 
-        out = [
-            series_from_scalar(method(series), reference_series=series)  # type: ignore[arg-type]
+        out: list[CompliantSeries] = [
+            plx._create_series_from_scalar(
+                getattr(series, attr)(**extra_kwargs, **_kwargs),
+                reference_series=series,  # type: ignore[arg-type]
+            )
             if returns_scalar
-            else method(series)
+            else getattr(series, attr)(**_kwargs)
             for series in expr(df)  # type: ignore[arg-type]
         ]
         _, aliases = evaluate_output_names_and_aliases(expr, df, [])
@@ -189,7 +184,7 @@ def reuse_series_implementation(
             raise AssertionError(msg)
         return out
 
-    return expr_from_callable(  # type: ignore[return-value]
+    return plx._create_expr_from_callable(  # type: ignore[return-value]
         func,  # type: ignore[arg-type]
         depth=expr._depth + 1,
         function_name=f"{expr._function_name}->{attr}",
