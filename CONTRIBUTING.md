@@ -157,7 +157,9 @@ If you add code that should be tested, please add tests.
 
 ### Test Failure Patterns
 
-We use three standard patterns for handling test failures:
+We aim to use three standard patterns for handling test failures:
+
+Note: While we're not currently totally consistent with these patterns, any efforts towards our aim are appreciated and welcome.
 
 1. `requests.applymarker(pytest.mark.xfail)`: Used for features that are planned but not yet supported. 
    ```python
