@@ -117,4 +117,3 @@ def test_unpivot_index_none(constructor: Constructor) -> None:
     result = df.unpivot(on=["b", "c"], index=None)
     assert result.collect_schema().names() == ["variable", "value"]
     assert_equal_data(result, expected_data)
-
