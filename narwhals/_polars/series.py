@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
-from typing import Union
 from typing import cast
 from typing import overload
 
@@ -513,8 +512,8 @@ class PolarsSeries:
             and (bin_count is not None)
             and (self._native_series.count() > 0)
         ):  # pragma: no cover
-            lower = cast("Union[int, float]", self._native_series.min())
-            upper = cast("Union[int, float]", self._native_series.max())
+            lower = cast("float", self._native_series.min())
+            upper = cast("float", self._native_series.max())
             pad_lowest_bin = False
             if lower == upper:
                 width = 1 / bin_count
