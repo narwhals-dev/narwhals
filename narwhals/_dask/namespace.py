@@ -41,9 +41,7 @@ if TYPE_CHECKING:
 class DaskNamespace(CompliantNamespace["dx.Series"]):
     @property
     def selectors(self: Self) -> DaskSelectorNamespace:
-        return DaskSelectorNamespace(
-            backend_version=self._backend_version, version=self._version
-        )
+        return DaskSelectorNamespace(self)
 
     def __init__(
         self: Self, *, backend_version: tuple[int, ...], version: Version

@@ -348,9 +348,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
 
     @property
     def selectors(self: Self) -> ArrowSelectorNamespace:
-        return ArrowSelectorNamespace(
-            backend_version=self._backend_version, version=self._version
-        )
+        return ArrowSelectorNamespace(self)
 
     def when(self: Self, predicate: ArrowExpr) -> ArrowWhen:
         return ArrowWhen(predicate, self._backend_version, version=self._version)
