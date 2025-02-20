@@ -37,7 +37,7 @@ class PandasSelectorNamespace:
         def evaluate_output_names(df: PandasLikeDataFrame) -> Sequence[str]:
             return [col for col in df.columns if df.schema[col] in dtypes]
 
-        return selector(self, func, evaluate_output_names, {"dtypes": dtypes})
+        return selector(self, func, evaluate_output_names)
 
     def matches(self: Self, pattern: str) -> PandasSelector:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
@@ -46,7 +46,7 @@ class PandasSelectorNamespace:
         def evaluate_output_names(df: PandasLikeDataFrame) -> Sequence[str]:
             return [col for col in df.columns if re.search(pattern, col)]
 
-        return selector(self, func, evaluate_output_names, {"pattern": pattern})
+        return selector(self, func, evaluate_output_names)
 
     def numeric(self: Self) -> PandasSelector:
         dtypes = import_dtypes_module(self._version)
@@ -83,7 +83,7 @@ class PandasSelectorNamespace:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             return [df[col] for col in df.columns]
 
-        return selector(self, func, lambda df: df.columns, {})
+        return selector(self, func, lambda df: df.columns)
 
     def datetime(
         self: Self,
@@ -119,7 +119,7 @@ class PandasSelectorNamespace:
                 )
             ]
 
-        return selector(self, func, evaluate_output_names, {})
+        return selector(self, func, evaluate_output_names)
 
 
 class PandasSelector(PandasLikeExpr):
@@ -155,9 +155,7 @@ class PandasSelector(PandasLikeExpr):
                 rhs_names = other._evaluate_output_names(df)
                 return [x for x in lhs_names if x not in rhs_names]
 
-            return selector(
-                self, call, evaluate_output_names, {**self._kwargs, "other": other}
-            )
+            return selector(self, call, evaluate_output_names)
         else:
             return self._to_expr() - other
 
@@ -179,9 +177,7 @@ class PandasSelector(PandasLikeExpr):
                 rhs_names = other._evaluate_output_names(df)
                 return [*(x for x in lhs_names if x not in rhs_names), *rhs_names]
 
-            return selector(
-                self, call, evaluate_output_names, {**self._kwargs, "other": other}
-            )
+            return selector(self, call, evaluate_output_names)
         else:
             return self._to_expr() | other
 
@@ -199,9 +195,7 @@ class PandasSelector(PandasLikeExpr):
                 rhs_names = other._evaluate_output_names(df)
                 return [x for x in lhs_names if x in rhs_names]
 
-            return selector(
-                self, call, evaluate_output_names, {**self._kwargs, "other": other}
-            )
+            return selector(self, call, evaluate_output_names)
         else:
             return self._to_expr() & other
 
@@ -213,7 +207,6 @@ def selector(
     context: _FullContext,
     call: Callable[[PandasLikeDataFrame], Sequence[PandasLikeSeries]],
     evaluate_output_names: Callable[[PandasLikeDataFrame], Sequence[str]],
-    kwargs: dict[str, Any],
     /,
 ) -> PandasSelector:
     return PandasSelector(
@@ -225,5 +218,5 @@ def selector(
         implementation=context._implementation,
         backend_version=context._backend_version,
         version=context._version,
-        kwargs=kwargs,
+        kwargs={},
     )
