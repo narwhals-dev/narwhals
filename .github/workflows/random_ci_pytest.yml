@@ -3,6 +3,9 @@ name: Random Versions
 on:
   pull_request:
 
+env:
+  PY_COLORS: 1
+
 jobs:
   tox:
     strategy:

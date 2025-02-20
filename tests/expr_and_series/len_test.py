@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -19,13 +17,9 @@ def test_len_no_filter(constructor: Constructor) -> None:
     assert_equal_data(df, expected)
 
 
-def test_len_chaining(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
+def test_len_chaining(constructor_eager: ConstructorEager) -> None:
     data = {"a": list("xyz"), "b": [1, 2, 1]}
     expected = {"a1": [2], "a2": [1]}
-    if "dask" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor_eager(data)).select(
         nw.col("a").filter(nw.col("b") == 1).len().alias("a1"),
         nw.col("a").filter(nw.col("b") == 2).len().alias("a2"),
