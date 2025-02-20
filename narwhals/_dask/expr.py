@@ -48,6 +48,8 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         backend_version: tuple[int, ...],
         version: Version,
+        # Kwargs with metadata which we may need in group-by agg
+        # (e.g. `ddof` for `std` and `var`).
         kwargs: dict[str, Any] | None = None,
     ) -> None:
         self._call = call
@@ -139,8 +141,6 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         # First argument to `call` should be `dx.Series`
         call: Callable[..., dx.Series],
         expr_name: str,
-        # Kwargs with metadata which we may need in group-by agg
-        # (e.g. `ddof` for `std` and `var`).
         kwargs: dict[str, Any] | None = None,
         **expressifiable_args: Self | Any,
     ) -> Self:
@@ -152,9 +152,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
                 for key, value in expressifiable_args.items()
             }
             for native_series in native_series_list:
-                result_native = call(
-                    native_series, **(kwargs or {}), **other_native_series
-                )
+                result_native = call(native_series, **other_native_series)
                 native_results.append(result_native)
             return native_results
 
