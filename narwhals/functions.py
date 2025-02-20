@@ -15,9 +15,11 @@ from typing import overload
 
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
+from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import check_expressions_transform
 from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import extract_compliant
+from narwhals._expression_parsing import infer_kind
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dependencies import is_numpy_array
@@ -30,6 +32,7 @@ from narwhals.translate import to_native
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import flatten
+from narwhals.utils import is_compliant_expr
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_version
 from narwhals.utils import validate_laziness
@@ -50,6 +53,8 @@ if TYPE_CHECKING:
 
     from narwhals.dtypes import DType
     from narwhals.series import Series
+    from narwhals.typing import CompliantExpr
+    from narwhals.typing import CompliantNamespace
     from narwhals.typing import DTypeBackend
     from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoExpr
@@ -389,7 +394,7 @@ def _from_dict_impl(
         schema_pl = Schema(schema).to_polars() if schema else None
         native_frame = native_namespace.from_dict(data, schema=schema_pl)
     elif eager_backend.is_pandas_like():
-        from narwhals._pandas_like.utils import broadcast_align_and_extract_native
+        from narwhals._pandas_like.utils import align_and_extract_native
 
         aligned_data = {}
         left_most_series = None
@@ -402,7 +407,7 @@ def _from_dict_impl(
                     left_most_series = compliant_series
                     aligned_data[key] = native_series
                 else:
-                    aligned_data[key] = broadcast_align_and_extract_native(
+                    aligned_data[key] = align_and_extract_native(
                         left_most_series, compliant_series
                     )[1]
             else:
@@ -1316,13 +1321,10 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         raise ValueError(msg)
     flat_exprs = flatten(exprs)
     return Expr(
-        lambda plx: plx.sum_horizontal(
-            *(
-                extract_compliant(plx, v, strings_are_column_names=True)
-                for v in flat_exprs
-            )
+        lambda plx: apply_n_ary_operation(
+            plx, plx.sum_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, strings_are_column_names=True),
+        combine_metadata(*flat_exprs, str_as_lit=False),
     )
 
 
@@ -1363,13 +1365,10 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         raise ValueError(msg)
     flat_exprs = flatten(exprs)
     return Expr(
-        lambda plx: plx.min_horizontal(
-            *(
-                extract_compliant(plx, v, strings_are_column_names=True)
-                for v in flat_exprs
-            )
+        lambda plx: apply_n_ary_operation(
+            plx, plx.min_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, strings_are_column_names=True),
+        combine_metadata(*flat_exprs, str_as_lit=False),
     )
 
 
@@ -1412,38 +1411,47 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         raise ValueError(msg)
     flat_exprs = flatten(exprs)
     return Expr(
-        lambda plx: plx.max_horizontal(
-            *(
-                extract_compliant(plx, v, strings_are_column_names=True)
-                for v in flat_exprs
-            )
+        lambda plx: apply_n_ary_operation(
+            plx, plx.max_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, strings_are_column_names=True),
+        combine_metadata(*flat_exprs, str_as_lit=False),
     )
 
 
 class When:
     def __init__(self: Self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
         self._predicate = all_horizontal(*flatten(predicates))
-        self._to_compliant_expr = self._predicate._to_compliant_expr
         check_expressions_transform(self._predicate, function_name="when")
 
     def then(self: Self, value: IntoExpr | Any) -> Then:
         return Then(
-            lambda plx: plx.when(self._to_compliant_expr(plx)).then(
-                extract_compliant(plx, value, strings_are_column_names=True)
+            lambda plx: apply_n_ary_operation(
+                plx,
+                lambda *args: plx.when(args[0]).then(args[1]),
+                self._predicate,
+                value,
+                str_as_lit=False,
             ),
-            combine_metadata(self._predicate, value, strings_are_column_names=True),
+            combine_metadata(self._predicate, value, str_as_lit=False),
         )
 
 
 class Then(Expr):
     def otherwise(self: Self, value: IntoExpr | Any) -> Expr:
+        kind = infer_kind(value, str_as_lit=False)
+
+        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
+            compliant_expr = self._to_compliant_expr(plx)
+            compliant_value = extract_compliant(plx, value, str_as_lit=False)
+            if (
+                kind is ExprKind.AGGREGATION or kind is ExprKind.LITERAL
+            ) and is_compliant_expr(compliant_value):
+                compliant_value = compliant_value.broadcast(kind)
+            return compliant_expr.otherwise(compliant_value)
+
         return Expr(
-            lambda plx: self._to_compliant_expr(plx).otherwise(
-                extract_compliant(plx, value, strings_are_column_names=True)
-            ),
-            combine_metadata(self, value, strings_are_column_names=True),
+            func,
+            combine_metadata(self, value, str_as_lit=False),
         )
 
 
@@ -1528,13 +1536,10 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         raise ValueError(msg)
     flat_exprs = flatten(exprs)
     return Expr(
-        lambda plx: plx.all_horizontal(
-            *(
-                extract_compliant(plx, v, strings_are_column_names=True)
-                for v in flat_exprs
-            )
+        lambda plx: apply_n_ary_operation(
+            plx, plx.all_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, strings_are_column_names=True),
+        combine_metadata(*flat_exprs, str_as_lit=False),
     )
 
 
@@ -1623,13 +1628,10 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         raise ValueError(msg)
     flat_exprs = flatten(exprs)
     return Expr(
-        lambda plx: plx.any_horizontal(
-            *(
-                extract_compliant(plx, v, strings_are_column_names=True)
-                for v in flat_exprs
-            )
+        lambda plx: apply_n_ary_operation(
+            plx, plx.any_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, strings_are_column_names=True),
+        combine_metadata(*flat_exprs, str_as_lit=False),
     )
 
 
@@ -1672,13 +1674,10 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         raise ValueError(msg)
     flat_exprs = flatten(exprs)
     return Expr(
-        lambda plx: plx.mean_horizontal(
-            *(
-                extract_compliant(plx, v, strings_are_column_names=True)
-                for v in flat_exprs
-            )
+        lambda plx: apply_n_ary_operation(
+            plx, plx.mean_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, strings_are_column_names=True),
+        combine_metadata(*flat_exprs, str_as_lit=False),
     )
 
 
@@ -1735,12 +1734,15 @@ def concat_str(
         | 2          None  |
         └──────────────────┘
     """
-    exprs = flatten([*flatten([exprs]), *more_exprs])
+    flat_exprs = flatten([*flatten([exprs]), *more_exprs])
     return Expr(
-        lambda plx: plx.concat_str(
-            *(extract_compliant(plx, v, strings_are_column_names=True) for v in exprs),
-            separator=separator,
-            ignore_nulls=ignore_nulls,
+        lambda plx: apply_n_ary_operation(
+            plx,
+            lambda *args: plx.concat_str(
+                *args, separator=separator, ignore_nulls=ignore_nulls
+            ),
+            *flat_exprs,
+            str_as_lit=False,
         ),
-        combine_metadata(*exprs, strings_are_column_names=True),
+        combine_metadata(*flat_exprs, str_as_lit=False),
     )
