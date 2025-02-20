@@ -7,6 +7,7 @@ from typing import Callable
 from typing import Literal
 from typing import Sequence
 
+from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import reuse_series_implementation
@@ -62,7 +63,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         self._call = call
         self._depth = depth
         self._function_name = function_name
-        self._evaluate_output_names = evaluate_output_names
+        self._evaluate_output_names = evaluate_output_names  # pyright: ignore[reportAttributeAccessIssue]
         self._alias_output_names = alias_output_names
         self._implementation = implementation
         self._backend_version = backend_version
@@ -85,6 +86,29 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         )
 
     def __narwhals_expr__(self) -> None: ...
+
+    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
+        # Make the resulting PandasLikeSeries with `_broadcast=True`. Then,
+        # when extracting native objects, `align_and_extract_native` will
+        # know what to do.
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            results = []
+            for result in self(df):
+                result._broadcast = True
+                results.append(result)
+            return results
+
+        return self.__class__(
+            func,
+            depth=self._depth,
+            function_name=self._function_name,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
+            kwargs=self._kwargs,
+        )
 
     @classmethod
     def from_column_names(
