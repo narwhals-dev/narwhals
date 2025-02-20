@@ -12,7 +12,7 @@ from duckdb import ColumnExpression
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals.utils import _parse_time_unit_and_time_zone
 from narwhals.utils import dtype_matches_time_unit_and_time_zone
-from narwhals.utils import get_columns
+from narwhals.utils import get_column_names
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
@@ -89,7 +89,7 @@ class DuckDBSelectorNamespace:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             return [ColumnExpression(col) for col in df.columns]
 
-        return selector(self, func, get_columns)
+        return selector(self, func, get_column_names)
 
     def datetime(
         self: Self,

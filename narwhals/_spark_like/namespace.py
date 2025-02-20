@@ -17,7 +17,7 @@ from narwhals._spark_like.selectors import SparkLikeSelectorNamespace
 from narwhals._spark_like.utils import maybe_evaluate_expr
 from narwhals._spark_like.utils import narwhals_to_native_dtype
 from narwhals.typing import CompliantNamespace
-from narwhals.utils import get_columns
+from narwhals.utils import get_column_names
 
 if TYPE_CHECKING:
     from pyspark.sql import Column
@@ -52,7 +52,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
         return SparkLikeExpr(
             call=_all,
             function_name="all",
-            evaluate_output_names=get_columns,
+            evaluate_output_names=get_column_names,
             alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,

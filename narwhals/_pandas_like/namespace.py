@@ -22,7 +22,7 @@ from narwhals._pandas_like.utils import extract_dataframe_comparand
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import vertical_concat
 from narwhals.typing import CompliantNamespace
-from narwhals.utils import get_columns
+from narwhals.utils import get_column_names
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_compliant_expr
 
@@ -135,7 +135,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             ],
             depth=0,
             function_name="all",
-            evaluate_output_names=get_columns,
+            evaluate_output_names=get_column_names,
             alias_output_names=None,
             implementation=self._implementation,
             backend_version=self._backend_version,

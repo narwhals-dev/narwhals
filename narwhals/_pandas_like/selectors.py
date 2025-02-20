@@ -10,7 +10,7 @@ from typing import Sequence
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals.utils import _parse_time_unit_and_time_zone
 from narwhals.utils import dtype_matches_time_unit_and_time_zone
-from narwhals.utils import get_columns
+from narwhals.utils import get_column_names
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
@@ -84,7 +84,7 @@ class PandasSelectorNamespace:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             return [df[col] for col in df.columns]
 
-        return selector(self, func, get_columns)
+        return selector(self, func, get_column_names)
 
     def datetime(
         self: Self,
