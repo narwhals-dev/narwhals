@@ -36,11 +36,7 @@ if TYPE_CHECKING:
 class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
     @property
     def selectors(self: Self) -> PandasSelectorNamespace:
-        return PandasSelectorNamespace(
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        return PandasSelectorNamespace(self)
 
     # --- not in spec ---
     def __init__(
