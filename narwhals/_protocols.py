@@ -190,6 +190,7 @@ class ReuseSeries(CompliantSeries, Generic["NativeSeriesT_co"], Protocol):  # ty
         data: Iterable[Any],
         name: str,
         *,
+        implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
     ) -> Self: ...
