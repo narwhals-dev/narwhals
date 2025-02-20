@@ -244,9 +244,7 @@ class ReuseNamespace(CompliantNamespace[ReuseSeriesT], Protocol):
         )
 
     # NOTE: Fully spec'd
-    def _create_expr_from_series(
-        self, series: ReuseSeriesT
-    ) -> CompliantExpr[ReuseSeriesT]:
+    def _create_expr_from_series(self, series: ReuseSeriesT) -> ReuseExpr[ReuseSeriesT]:
         return self.__narwhals_expr__()(
             lambda _df: [series],
             depth=0,
