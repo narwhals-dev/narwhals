@@ -155,7 +155,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
 
     def __and__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
-            operator.and_,
+            lambda _input, other: _input & other,
             "__and__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -163,7 +163,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
 
     def __or__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
-            operator.or_,
+            lambda _input, other: _input | other,
             "__or__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -171,7 +171,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
 
     def __add__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
-            operator.add,
+            lambda _input, other: _input + other,
             "__add__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -179,7 +179,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
 
     def __truediv__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
-            operator.truediv,
+            lambda _input, other: _input / other,
             "__truediv__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -195,7 +195,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
 
     def __floordiv__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
-            operator.floordiv,
+            lambda _input, other: _input.__floordiv__(other),
             "__floordiv__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -211,7 +211,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
 
     def __mod__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
-            operator.mod,
+            lambda _input, other: _input.__mod__(other),
             "__mod__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -227,7 +227,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
 
     def __sub__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
-            operator.sub,
+            lambda _input, other: _input - other,
             "__sub__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -243,7 +243,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
 
     def __mul__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
-            operator.mul,
+            lambda _input, other: _input * other,
             "__mul__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -251,7 +251,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
 
     def __pow__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
-            operator.pow,
+            lambda _input, other: _input**other,
             "__pow__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -267,7 +267,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
 
     def __lt__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
-            operator.lt,
+            lambda _input, other: _input < other,
             "__lt__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -275,7 +275,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
 
     def __gt__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
-            operator.gt,
+            lambda _input, other: _input > other,
             "__gt__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -283,7 +283,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
 
     def __le__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
-            operator.le,
+            lambda _input, other: _input <= other,
             "__le__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -291,7 +291,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
 
     def __ge__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
-            operator.ge,
+            lambda _input, other: _input >= other,
             "__ge__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -299,7 +299,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
 
     def __eq__(self: Self, other: DuckDBExpr) -> Self:  # type: ignore[override]
         return self._from_call(
-            operator.eq,
+            lambda _input, other: _input == other,
             "__eq__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
@@ -307,7 +307,7 @@ class DuckDBExpr(CompliantExpr["duckdb.Expression"]):  # type: ignore[type-var]
 
     def __ne__(self: Self, other: DuckDBExpr) -> Self:  # type: ignore[override]
         return self._from_call(
-            operator.ne,
+            lambda _input, other: _input != other,
             "__ne__",
             other=other,
             expr_kind=n_ary_operation_expr_kind(self, other),
