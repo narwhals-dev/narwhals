@@ -1267,7 +1267,7 @@ def dtype_matches_time_unit_and_time_zone(
     dtype: DType, dtypes: DTypes, time_units: Set[TimeUnit], time_zones: Set[str | None]
 ) -> bool:
     return (
-        isinstance_or_issubclass(dtype, dtypes.Datetime)
+        isinstance(dtype, dtypes.Datetime)
         and (dtype.time_unit in time_units)
         and (
             dtype.time_zone in time_zones

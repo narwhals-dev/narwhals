@@ -27,7 +27,6 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantSeries
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
-from narwhals.utils import isinstance_or_issubclass
 from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
@@ -657,10 +656,7 @@ class PandasLikeSeries(CompliantSeries):
         # https://numpy.org/doc/stable/reference/generated/numpy.ndarray.__array__.html
         copy = copy or self._implementation is Implementation.CUDF
         dtypes = import_dtypes_module(self._version)
-        if (
-            isinstance_or_issubclass(self.dtype, dtypes.Datetime)
-            and self.dtype.time_zone is not None
-        ):
+        if isinstance(self.dtype, dtypes.Datetime) and self.dtype.time_zone is not None:
             s = self.dt.convert_time_zone("UTC").dt.replace_time_zone(None)._native_series
         else:
             s = self._native_series
