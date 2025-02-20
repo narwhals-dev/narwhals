@@ -10,6 +10,7 @@ from secrets import token_hex
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Iterator
 from typing import Sequence
 from typing import TypeVar
 from typing import Union
@@ -59,6 +60,7 @@ if TYPE_CHECKING:
     from narwhals.typing import DataFrameLike
     from narwhals.typing import DTypes
     from narwhals.typing import IntoSeriesT
+    from narwhals.typing import NativeFrame
     from narwhals.typing import SizeUnit
     from narwhals.typing import SupportsNativeNamespace
     from narwhals.typing import TimeUnit
@@ -1301,6 +1303,14 @@ def dtype_matches_time_unit_and_time_zone(
             or ("*" in time_zones and dtype.time_zone is not None)  # type: ignore[attr-defined]
         )
     )
+
+
+def get_columns(df: NativeFrame) -> Sequence[str]:
+    return df.columns
+
+
+def iter_columns(df: NativeFrame) -> Iterator[str]:  # pragma: no cover
+    yield from df.columns
 
 
 def _hasattr_static(obj: Any, attr: str) -> bool:

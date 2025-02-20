@@ -10,6 +10,7 @@ from typing import Sequence
 from narwhals._dask.expr import DaskExpr
 from narwhals.utils import _parse_time_unit_and_time_zone
 from narwhals.utils import dtype_matches_time_unit_and_time_zone
+from narwhals.utils import get_columns
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
@@ -95,7 +96,7 @@ class DaskSelectorNamespace:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             return [df._native_frame[col] for col in df.columns]
 
-        return selector(self, func, lambda df: df.columns)
+        return selector(self, func, get_columns)
 
     def datetime(
         self: Self,

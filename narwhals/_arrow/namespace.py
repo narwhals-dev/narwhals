@@ -26,6 +26,7 @@ from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.typing import CompliantNamespace
 from narwhals.utils import Implementation
+from narwhals.utils import get_columns
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_compliant_expr
 
@@ -159,7 +160,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             ],
             depth=0,
             function_name="all",
-            evaluate_output_names=lambda df: df.columns,
+            evaluate_output_names=get_columns,
             alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
