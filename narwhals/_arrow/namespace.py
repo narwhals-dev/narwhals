@@ -490,7 +490,7 @@ class ArrowThen(ArrowExpr):
         self._call = call
         self._depth = depth
         self._function_name = function_name
-        self._evaluate_output_names = evaluate_output_names
+        self._evaluate_output_names = evaluate_output_names  # pyright: ignore[reportAttributeAccessIssue]
         self._alias_output_names = alias_output_names
         self._kwargs = kwargs
 
