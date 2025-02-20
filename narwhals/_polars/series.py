@@ -483,7 +483,7 @@ class PolarsSeries:
                 version=self._version,
             )
         elif (self._backend_version < (1, 15)) and self._native_series.count() < 1:
-            data_dict: dict[str, list[int | float] | pl.Series | pl.Expr]
+            data_dict: dict[str, Sequence[Any] | pl.Series]
             if bins is not None:
                 data_dict = {
                     "breakpoint": bins[1:],

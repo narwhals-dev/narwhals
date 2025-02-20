@@ -82,10 +82,10 @@ repos:
     - id: mypy
       name: mypy
       entry: make typing
-      files: ^(narwhals|tests)/
       language: system
       types: [python]
       require_serial: true
+      pass_filenames: false
 - repo: https://github.com/adamchainz/blacken-docs
   rev: "1.19.1"  # replace with latest tag on GitHub
   hooks:

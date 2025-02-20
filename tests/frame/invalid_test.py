@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pandas as pd
 import polars as pl
 import pyarrow as pa
@@ -7,11 +9,30 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import NUMPY_VERSION
+from tests.utils import POLARS_VERSION
+from tests.utils import Constructor
+
+if TYPE_CHECKING:
+    from narwhals.typing import Frame
+
+
+@pytest.mark.skipif(
+    POLARS_VERSION < (1,), reason="Polars would raise unrecoverable panic."
+)
+def test_all_vs_all(constructor: Constructor) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6]}
+    df: Frame = nw.from_native(constructor(data))
+    with pytest.raises(
+        (ValueError, AssertionError),
+        match=r"Multi-output|Expr: \*\' not allowed in this context|wildcard.*not supported",
+    ):
+        # Polars raises AssertionError.
+        df.lazy().select(nw.all() + nw.col("b", "a")).collect()
 
 
 def test_invalid() -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df = nw.from_native(pa.table({"a": [1, 2], "b": [3, 4]}))
+    df: Frame = nw.from_native(pa.table({"a": [1, 2], "b": [3, 4]}))
     with pytest.raises(ValueError, match="Multi-output"):
         df.select(nw.all() + nw.all())
     df = nw.from_native(pd.DataFrame(data))
@@ -24,14 +45,14 @@ def test_invalid() -> None:
 
 
 def test_native_vs_non_native() -> None:
-    s = pd.Series([1, 2, 3])
-    df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+    s_pd = pd.Series([1, 2, 3])
+    df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     with pytest.raises(TypeError, match="Perhaps you forgot"):
-        nw.from_native(df).filter(s > 1)
-    s = pl.Series([1, 2, 3])
-    df = pl.DataFrame({"a": [2, 2, 3], "b": [4, 5, 6]})
+        nw.from_native(df_pd).filter(s_pd > 1)  # type: ignore[arg-type]
+    s_pl = pl.Series([1, 2, 3])
+    df_pl = pl.DataFrame({"a": [2, 2, 3], "b": [4, 5, 6]})
     with pytest.raises(TypeError, match="Perhaps you\n- forgot"):
-        nw.from_native(df).filter(s > 1)
+        nw.from_native(df_pl).filter(s_pl > 1)
 
 
 def test_validate_laziness() -> None:

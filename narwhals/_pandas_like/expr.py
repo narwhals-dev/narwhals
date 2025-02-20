@@ -7,6 +7,7 @@ from typing import Callable
 from typing import Literal
 from typing import Sequence
 
+from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import reuse_series_implementation
@@ -85,6 +86,29 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         )
 
     def __narwhals_expr__(self) -> None: ...
+
+    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
+        # Make the resulting PandasLikeSeries with `_broadcast=True`. Then,
+        # when extracting native objects, `align_and_extract_native` will
+        # know what to do.
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            results = []
+            for result in self(df):
+                result._broadcast = True
+                results.append(result)
+            return results
+
+        return self.__class__(
+            func,
+            depth=self._depth,
+            function_name=self._function_name,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
+            kwargs=self._kwargs,
+        )
 
     @classmethod
     def from_column_names(
@@ -188,20 +212,39 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
     def __sub__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__sub__", other=other)
 
+    def __rsub__(self: Self, other: PandasLikeExpr | Any) -> Self:
+        return reuse_series_implementation(self.alias("literal"), "__rsub__", other=other)
+
     def __mul__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mul__", other=other)
 
     def __truediv__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__truediv__", other=other)
 
+    def __rtruediv__(self: Self, other: PandasLikeExpr | Any) -> Self:
+        return reuse_series_implementation(
+            self.alias("literal"), "__rtruediv__", other=other
+        )
+
     def __floordiv__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__floordiv__", other=other)
+
+    def __rfloordiv__(self: Self, other: PandasLikeExpr | Any) -> Self:
+        return reuse_series_implementation(
+            self.alias("literal"), "__rfloordiv__", other=other
+        )
 
     def __pow__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__pow__", other=other)
 
+    def __rpow__(self: Self, other: PandasLikeExpr | Any) -> Self:
+        return reuse_series_implementation(self.alias("literal"), "__rpow__", other=other)
+
     def __mod__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mod__", other=other)
+
+    def __rmod__(self: Self, other: PandasLikeExpr | Any) -> Self:
+        return reuse_series_implementation(self.alias("literal"), "__rmod__", other=other)
 
     # Unary
     def __invert__(self: Self) -> Self:
