@@ -41,3 +41,7 @@ jobs:
         run: |
           source .venv/bin/activate
           make typing
+      - name: Run pyright
+        run: |
+          source .venv/bin/activate
+          pyright
