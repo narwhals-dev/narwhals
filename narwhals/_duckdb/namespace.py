@@ -43,9 +43,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):  # type: ignore[
 
     @property
     def selectors(self: Self) -> DuckDBSelectorNamespace:
-        return DuckDBSelectorNamespace(
-            backend_version=self._backend_version, version=self._version
-        )
+        return DuckDBSelectorNamespace(self)
 
     def all(self: Self) -> DuckDBExpr:
         def _all(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
