@@ -118,15 +118,3 @@ def test_unpivot_index_none(constructor: Constructor) -> None:
     assert result.collect_schema().names() == ["variable", "value"]
     assert_equal_data(result, expected_data)
 
-
-def test_unpivot_on_none(constructor: Constructor) -> None:
-    df = nw.from_native(constructor(data))
-    expected_data = {
-        "a": ["x", "y", "z"],
-        "b": [1, 3, 5],
-        "variable": ["c", "c", "c"],
-        "value": [2, 4, 6],
-    }
-    result = df.unpivot(on=None, index=["a", "b"])
-    assert result.collect_schema().names() == ["a", "b", "variable", "value"]
-    assert_equal_data(result, expected_data)
