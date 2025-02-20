@@ -90,7 +90,7 @@ class ReuseExpr(CompliantExpr[ReuseSeriesT], Generic[ReuseSeriesT], Protocol):
         from_scalar = plx._create_series_from_scalar
 
         # NOTE: Ideally this would be implemented differently for `pandas` and `pyarrow`
-        # - It wouldnt make sense to check the implementation for each call
+        # - It wouldn't make sense to check the implementation for each call
         # - Just copying over from the function
         def func(df: CompliantDataFrame, /) -> Sequence[ReuseSeriesT]:
             _kwargs = {
