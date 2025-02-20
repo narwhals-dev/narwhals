@@ -8,7 +8,6 @@ from typing import Iterable
 from typing import Sequence
 
 from narwhals._spark_like.expr import SparkLikeExpr
-from narwhals.utils import _FullContext
 from narwhals.utils import _parse_time_unit_and_time_zone
 from narwhals.utils import dtype_matches_time_unit_and_time_zone
 from narwhals.utils import import_dtypes_module
@@ -22,6 +21,7 @@ if TYPE_CHECKING:
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
+    from narwhals.utils import _FullContext
 
 
 class SparkLikeSelectorNamespace:
