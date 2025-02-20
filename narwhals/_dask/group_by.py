@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from narwhals._dask.expr import DaskExpr
     from narwhals.typing import CompliantExpr
 
-    PandasSeriesGroupBy: TypeAlias = "_PandasSeriesGroupBy[Any, Any]"
+    PandasSeriesGroupBy: TypeAlias = _PandasSeriesGroupBy[Any, Any]
     _AggFn: TypeAlias = Callable[..., Any]
     Aggregation: TypeAlias = "str | _AggFn"
 
