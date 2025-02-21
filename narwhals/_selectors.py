@@ -156,7 +156,7 @@ class CompliantSelectorNamespace(Generic[DataFrameT, SeriesT], Protocol):
     # NOTE: Can't reuse for `<3.11`
     # - https://github.com/python/cpython/issues/88970
     # - https://github.com/python/cpython/pull/31628
-    def __init__(self: Self, context: _FullContext, /) -> None:
+    def __init__(self: Self, context: _FullContext, /) -> None:  # pragma: no cover
         self._implementation = context._implementation
         self._backend_version = context._backend_version
         self._version = context._version
