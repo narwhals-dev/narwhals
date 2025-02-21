@@ -2264,7 +2264,7 @@ def read_csv(
             For example, you could use
             `nw.read_csv('file.csv', native_namespace=pd, engine='pyarrow')`.
 
-            **Deprecated** (v1.26.0):
+            **Deprecated** (v1.27.2):
                 Please use `backend` instead. Note that `native_namespace` is still available
                 (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
                 see [perfect backwards compatibility policy](../backcompat.md/).
