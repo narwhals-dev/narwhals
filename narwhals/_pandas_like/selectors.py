@@ -84,5 +84,4 @@ class PandasSelector(  # type: ignore[misc]
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs=self._kwargs,
         )
