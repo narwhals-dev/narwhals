@@ -50,7 +50,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         version: Version,
         # Kwargs with metadata which we may need in group-by agg
         # (e.g. `ddof` for `std` and `var`).
-        kwargs: dict[str, Any] | None = None,
+        call_kwargs: dict[str, Any] | None = None,
     ) -> None:
         self._call = call
         self._depth = depth
@@ -59,7 +59,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         self._alias_output_names = alias_output_names
         self._backend_version = backend_version
         self._version = version
-        self._kwargs = kwargs or {}
+        self._call_kwargs = call_kwargs or {}
 
     def __call__(self: Self, df: DaskLazyFrame) -> Sequence[dx.Series]:
         return self._call(df)
@@ -84,7 +84,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs=self._kwargs,
+            call_kwargs=self._call_kwargs,
         )
 
     @classmethod
@@ -164,7 +164,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs=kwargs,
+            call_kwargs=kwargs,
         )
 
     def alias(self: Self, name: str) -> Self:
@@ -182,7 +182,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             alias_output_names=alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={**self._kwargs, "name": name},
+            call_kwargs=self._call_kwargs,
         )
 
     def __add__(self: Self, other: Any) -> Self:
@@ -313,14 +313,14 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         return self._from_call(
             lambda _input: _input.std(ddof=ddof).to_series(),
             "std",
-            kwargs={"ddof": ddof},
+            call_kwargs={"ddof": ddof},
         )
 
     def var(self: Self, ddof: int) -> Self:
         return self._from_call(
             lambda _input: _input.var(ddof=ddof).to_series(),
             "var",
-            kwargs={"ddof": ddof},
+            call_kwargs={"ddof": ddof},
         )
 
     def skew(self: Self) -> Self:
@@ -568,7 +568,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={**self._kwargs, "keys": keys},
+            call_kwargs=self._call_kwargs,
         )
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:

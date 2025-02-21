@@ -145,14 +145,12 @@ def agg_dask(
 
             # e.g. agg(nw.mean('a')) # noqa: ERA001
             function_name = re.sub(r"(\w+->)", "", expr._function_name)
-            kwargs: dict[str, Any] = (
-                {"ddof": expr._kwargs["ddof"]} if function_name in {"std", "var"} else {}  # type: ignore[attr-defined]
-            )
-
             agg_function = POLARS_TO_DASK_AGGREGATIONS.get(function_name, function_name)
             # deal with n_unique case in a "lazy" mode to not depend on dask globally
             agg_function = (
-                agg_function(**kwargs) if callable(agg_function) else agg_function
+                agg_function(**expr._call_kwargs)  # type: ignore[attr-defined]
+                if callable(agg_function)
+                else agg_function
             )
 
             simple_aggregations.update(

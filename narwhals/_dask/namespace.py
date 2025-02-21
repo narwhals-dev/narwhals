@@ -401,7 +401,7 @@ class DaskThen(DaskExpr):
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         backend_version: tuple[int, ...],
         version: Version,
-        kwargs: dict[str, Any] | None = None,
+        call_kwargs: dict[str, Any] | None = None,
     ) -> None:
         self._backend_version = backend_version
         self._version = version
@@ -410,7 +410,7 @@ class DaskThen(DaskExpr):
         self._function_name = function_name
         self._evaluate_output_names = evaluate_output_names  # pyright: ignore[reportAttributeAccessIssue]
         self._alias_output_names = alias_output_names
-        self._kwargs = kwargs or {}
+        self._call_kwargs = call_kwargs or {}
 
     def otherwise(self: Self, value: DaskExpr | Any) -> DaskExpr:
         # type ignore because we are setting the `_call` attribute to a
