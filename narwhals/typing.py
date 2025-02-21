@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from narwhals.expr import Expr
     from narwhals.series import Series
     from narwhals.utils import Implementation
+    from narwhals.utils import Version
 
     # All dataframes supported by Narwhals have a
     # `columns` property. Their similarities don't extend
@@ -79,6 +80,7 @@ CompliantSeriesT_co = TypeVar(
 class CompliantExpr(Protocol, Generic[CompliantSeriesT_co]):
     _implementation: Implementation
     _backend_version: tuple[int, ...]
+    _version: Version
     _evaluate_output_names: Callable[
         [CompliantDataFrame | CompliantLazyFrame], Sequence[str]
     ]
