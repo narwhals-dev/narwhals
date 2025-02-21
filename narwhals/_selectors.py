@@ -159,11 +159,7 @@ class CompliantSelectorNamespace(Generic[DataFrameT, SeriesT], Protocol):
         self._version = context._version
 
 
-# NOTE: CompliantExpr already provides `_implementation`, `_backend_version`
-# https://github.com/narwhals-dev/narwhals/pull/2060
 class CompliantSelector(CompliantExpr[SeriesT], Generic[DataFrameT, SeriesT], Protocol):
-    _version: Version
-
     @property
     def selectors(self) -> CompliantSelectorNamespace[DataFrameT, SeriesT]: ...
     def __repr__(self: Self) -> str: ...

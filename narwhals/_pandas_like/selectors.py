@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from functools import partial
 from typing import TYPE_CHECKING
-from typing import Any
 from typing import Iterator
 
 from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -18,7 +17,6 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._selectors import EvalNames
     from narwhals._selectors import EvalSeries
-    from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
 
@@ -63,11 +61,6 @@ class PandasSelectorNamespace(
 class PandasSelector(  # type: ignore[misc]
     CompliantSelector["PandasLikeDataFrame", "PandasLikeSeries"], PandasLikeExpr
 ):
-    # TODO @dangotbanned: Remove after merging (https://github.com/narwhals-dev/narwhals/pull/2060)
-    def __init__(self: Self, *args: Any, version: Version, **kwds: Any) -> None:
-        super().__init__(*args, version=version, **kwds)
-        self._version = version
-
     @property
     def selectors(self) -> PandasSelectorNamespace:
         return PandasSelectorNamespace(self)

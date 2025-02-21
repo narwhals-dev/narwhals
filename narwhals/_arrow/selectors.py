@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from typing import Any
 from typing import Iterator
 
 from narwhals._arrow.expr import ArrowExpr
@@ -15,7 +14,6 @@ if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
     from narwhals._selectors import EvalNames
     from narwhals._selectors import EvalSeries
-    from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
 
@@ -47,11 +45,6 @@ class ArrowSelectorNamespace(CompliantSelectorNamespace["ArrowDataFrame", "Arrow
 
 
 class ArrowSelector(CompliantSelector["ArrowDataFrame", "ArrowSeries"], ArrowExpr):  # type: ignore[misc]
-    # TODO @dangotbanned: Remove after merging (https://github.com/narwhals-dev/narwhals/pull/2060)
-    def __init__(self: Self, *args: Any, version: Version, **kwds: Any) -> None:
-        super().__init__(*args, version=version, **kwds)
-        self._version = version
-
     @property
     def selectors(self) -> ArrowSelectorNamespace:
         return ArrowSelectorNamespace(self)
