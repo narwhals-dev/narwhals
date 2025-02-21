@@ -15,7 +15,7 @@ data = {
 def test_with_columns(constructor_eager: ConstructorEager) -> None:
     result = (
         nw.from_native(constructor_eager(data))
-        .with_columns(d=np.array([4, 5]))
+        .with_columns(d=np.array([4, 5]))  # pyright: ignore[reportArgumentType]
         .with_columns(e=nw.col("d") + 1)
         .select("d", "e")
     )

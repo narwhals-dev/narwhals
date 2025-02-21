@@ -676,8 +676,12 @@ def test_join_duplicate_column_names(
         # need to investigate.
     ):
         request.applymarker(pytest.mark.xfail)
+    if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
+        from pyspark.errors import AnalysisException
+
+        exception = AnalysisException
     elif "modin" in str(constructor):
-        exception = NotImplementedError
+        exception = NotImplementedError  # type: ignore[assignment]
     else:
         exception = nw.exceptions.DuplicateError  # type: ignore[assignment]
     df = constructor({"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]})

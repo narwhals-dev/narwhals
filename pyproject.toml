@@ -51,6 +51,7 @@ typing = [
   "pandas-stubs",
   "typing_extensions",
   "mypy~=1.15.0",
+  "pyright"
 ]
 dev = [
   "pre-commit",
@@ -138,6 +139,7 @@ lint.ignore = [
   "RET505",
   "SLF001",
   "TD003",
+  "TD004",
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -242,3 +244,19 @@ module = [
 # TODO: remove follow_imports
 follow_imports = "skip"
 ignore_missing_imports = true
+
+[tool.pyright]
+pythonPlatform = "All"
+# NOTE (stubs do unsafe `TypeAlias` and `TypeVar` imports)
+# pythonVersion = "3.8"
+reportMissingImports = "none"
+reportMissingModuleSource = "none"
+reportPrivateImportUsage = "none"
+reportUnusedExpression = "none"    # can enforce with `ruff`
+typeCheckingMode = "basic"
+include = ["narwhals", "tests"]
+ignore = [
+  "../.venv/",
+  "../../../**/Lib",      # stdlib
+  "../../../**/typeshed*" # typeshed-fallback
+]
