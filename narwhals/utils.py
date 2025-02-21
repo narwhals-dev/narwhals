@@ -1305,7 +1305,7 @@ def dtype_matches_time_unit_and_time_zone(
     )
 
 
-def get_column_names(df: NativeFrame) -> Sequence[str]:
+def get_column_names(df: NativeFrame | CompliantDataFrame) -> Sequence[str]:
     return df.columns
 
 

@@ -49,7 +49,12 @@ class CompliantSeries(Protocol):
     def alias(self, name: str) -> Self: ...
 
 
-class CompliantDataFrame(Protocol):
+CompliantSeriesT_co = TypeVar(
+    "CompliantSeriesT_co", bound=CompliantSeries, covariant=True
+)
+
+
+class CompliantDataFrame(Generic[CompliantSeriesT_co], Protocol):
     def __narwhals_dataframe__(self) -> Self: ...
     def __narwhals_namespace__(self) -> Any: ...
     def simple_select(
@@ -58,6 +63,10 @@ class CompliantDataFrame(Protocol):
     def aggregate(self, *exprs: Any) -> Self:
         ...  # `select` where all args are aggregations or literals
         # (so, no broadcasting is necessary).
+
+    @property
+    def columns(self) -> Sequence[str]: ...
+    def get_column(self, name: str) -> CompliantSeriesT_co: ...
 
 
 class CompliantLazyFrame(Protocol):
@@ -69,11 +78,6 @@ class CompliantLazyFrame(Protocol):
     def aggregate(self, *exprs: Any) -> Self:
         ...  # `select` where all args are aggregations or literals
         # (so, no broadcasting is necessary).
-
-
-CompliantSeriesT_co = TypeVar(
-    "CompliantSeriesT_co", bound=CompliantSeries, covariant=True
-)
 
 
 class CompliantExpr(Protocol, Generic[CompliantSeriesT_co]):
