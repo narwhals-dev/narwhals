@@ -218,8 +218,8 @@ class PandasLikeSeriesDateTimeNamespace:
             # Date is only supported in pandas dtypes if pyarrow-backed
             s_cast = s.astype("Int32[pyarrow]")
             result = calculate_timestamp_date(s_cast, time_unit)
-        elif dtype == dtypes.Datetime:
-            original_time_unit = dtype.time_unit  # type: ignore[attr-defined]
+        elif isinstance(dtype, dtypes.Datetime):
+            original_time_unit = dtype.time_unit
             if (
                 self._compliant_series._implementation is Implementation.PANDAS
                 and self._compliant_series._backend_version < (2,)
