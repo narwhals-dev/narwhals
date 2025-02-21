@@ -1189,10 +1189,10 @@ class Expr:
         """
 
         def func(
-            compliant_expr: CompliantExpr[Any],
-            lb: CompliantExpr[Any],
-            ub: CompliantExpr[Any],
-        ) -> CompliantExpr[Any]:
+            compliant_expr: CompliantExpr[Any, Any],
+            lb: CompliantExpr[Any, Any],
+            ub: CompliantExpr[Any, Any],
+        ) -> CompliantExpr[Any, Any]:
             if closed == "left":
                 return (compliant_expr >= lb) & (compliant_expr < ub)  # type: ignore[no-any-return]
             elif closed == "right":

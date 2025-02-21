@@ -256,6 +256,8 @@ typeCheckingMode = "basic"
 include = ["narwhals", "tests"]
 ignore = [
   "../.venv/",
-  "../../../**/Lib",      # stdlib
-  "../../../**/typeshed*" # typeshed-fallback
+  "../../../**/Lib",       # stdlib
+  "../../../**/typeshed*", # typeshed-fallback
+  "tpch",
+  "utils",
 ]

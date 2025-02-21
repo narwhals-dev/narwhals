@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class ArrowNamespace(CompliantNamespace[ArrowSeries]):
+class ArrowNamespace(CompliantNamespace[ArrowSeries, ArrowDataFrame]):
     def _create_expr_from_callable(
         self: Self,
         func: Callable[[ArrowDataFrame], Sequence[ArrowSeries]],
@@ -477,7 +477,7 @@ class ArrowThen(ArrowExpr):
         self._call = call
         self._depth = depth
         self._function_name = function_name
-        self._evaluate_output_names = evaluate_output_names  # pyright: ignore[reportAttributeAccessIssue]
+        self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._kwargs = kwargs or {}
 
