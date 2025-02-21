@@ -57,6 +57,11 @@ class PandasSelectorNamespace(
             kwargs={},
         )
 
+    def __init__(self: Self, context: _FullContext, /) -> None:
+        self._implementation = context._implementation
+        self._backend_version = context._backend_version
+        self._version = context._version
+
 
 class PandasSelector(  # type: ignore[misc]
     CompliantSelector["PandasLikeDataFrame", "PandasLikeSeries"], PandasLikeExpr

@@ -43,6 +43,11 @@ class ArrowSelectorNamespace(CompliantSelectorNamespace["ArrowDataFrame", "Arrow
             version=context._version,
         )
 
+    def __init__(self: Self, context: _FullContext, /) -> None:
+        self._implementation = context._implementation
+        self._backend_version = context._backend_version
+        self._version = context._version
+
 
 class ArrowSelector(CompliantSelector["ArrowDataFrame", "ArrowSeries"], ArrowExpr):  # type: ignore[misc]
     @property
