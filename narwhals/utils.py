@@ -10,7 +10,6 @@ from secrets import token_hex
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
-from typing import Iterator
 from typing import Sequence
 from typing import TypeVar
 from typing import Union
@@ -1305,12 +1304,10 @@ def dtype_matches_time_unit_and_time_zone(
     )
 
 
-def get_column_names(df: NativeFrame | CompliantDataFrame) -> Sequence[str]:
+def get_column_names(
+    df: NativeFrame | CompliantDataFrame | CompliantLazyFrame,
+) -> Sequence[str]:
     return df.columns
-
-
-def iter_columns(df: NativeFrame) -> Iterator[str]:  # pragma: no cover
-    yield from df.columns
 
 
 def _hasattr_static(obj: Any, attr: str) -> bool:

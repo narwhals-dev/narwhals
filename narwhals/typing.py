@@ -80,6 +80,8 @@ class CompliantLazyFrame(Protocol):
         ...  # `select` where all args are aggregations or literals
         # (so, no broadcasting is necessary).
 
+    @property
+    def columns(self) -> Sequence[str]: ...
 
 class CompliantExpr(Protocol, Generic[CompliantSeriesT_co]):
     _implementation: Implementation
