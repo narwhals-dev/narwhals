@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._expression_parsing import ExprKind
+    from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
@@ -96,6 +97,9 @@ class PolarsExpr:
                 pl.when(self._native_expr.is_not_null()).then(self._native_expr.is_nan())
             )
         return self._from_native_expr(self._native_expr.is_nan())
+
+    def over(self: Self, keys: list[str], metadata: ExprMetadata) -> Self:
+        return self._from_native_expr(self._native_expr.over(keys))
 
     def rolling_var(
         self: Self,

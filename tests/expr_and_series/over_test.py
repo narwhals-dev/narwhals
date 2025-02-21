@@ -259,3 +259,9 @@ def test_over_raise_len_change(constructor: Constructor) -> None:
         match=re.escape("`.over()` can not be used for expressions which change length."),
     ):
         nw.from_native(df).select(nw.col("b").drop_nulls().over("a"))
+
+
+def test_non_elementary_pandas() -> None:
+    df = pd.DataFrame({"a": [1, 2, 3, 4, 5, 6], "b": ["x", "x", "x", "y", "y", "y"]})
+    with pytest.raises(NotImplementedError, match="elementary"):
+        nw.from_native(df).select(nw.col("a").shift(1).cum_sum().over("b"))
