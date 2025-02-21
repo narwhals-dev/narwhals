@@ -86,7 +86,6 @@ class DaskExprStringNamespace:
             lambda _input, by: _input.str.split(pat=by),
             "split",
             by=by,
-            returns_scalar=self._compliant_expr._returns_scalar,
         )
 
     def to_datetime(self: Self, format: str | None) -> DaskExpr:  # noqa: A002
