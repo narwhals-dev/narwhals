@@ -12,6 +12,7 @@ from typing import Union
 
 if TYPE_CHECKING:
     from types import ModuleType
+    from typing import Mapping
 
     import numpy as np
     from typing_extensions import Self
@@ -67,6 +68,8 @@ class CompliantDataFrame(Generic[CompliantSeriesT_co], Protocol):
 
     @property
     def columns(self) -> Sequence[str]: ...
+    @property
+    def schema(self) -> Mapping[str, DType]: ...
     def get_column(self, name: str) -> CompliantSeriesT_co: ...
 
 
@@ -82,6 +85,9 @@ class CompliantLazyFrame(Protocol):
 
     @property
     def columns(self) -> Sequence[str]: ...
+    @property
+    def schema(self) -> Mapping[str, DType]: ...
+
 
 class CompliantExpr(Protocol, Generic[CompliantSeriesT_co]):
     _implementation: Implementation
