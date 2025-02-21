@@ -64,6 +64,16 @@ class CompliantSelectorNamespace(Generic[DataFrameT, SeriesT], Protocol):
     # Only need internally, but it plugs so many holes that it must be useful beyond that
     # https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.iter_columns.html
     def _iter_columns(self, df: DataFrameT, /) -> Iterator[SeriesT]: ...
+    def _iter_schema(self, df: DataFrameT, /) -> Iterator[tuple[str, DType]]:
+        for ser in self._iter_columns(df):
+            yield ser.name, ser.dtype
+
+    def _iter_columns_dtypes(self, df: DataFrameT, /) -> Iterator[tuple[SeriesT, DType]]:
+        for ser in self._iter_columns(df):
+            yield ser, ser.dtype
+
+    def _iter_columns_names(self, df: DataFrameT, /) -> Iterator[tuple[SeriesT, str]]:
+        yield from zip(self._iter_columns(df), df.columns)
 
     def _selector(
         self,
@@ -73,6 +83,9 @@ class CompliantSelectorNamespace(Generic[DataFrameT, SeriesT], Protocol):
         /,
     ) -> CompliantSelector[DataFrameT, SeriesT]: ...
 
+    # NOTE: `.dtype` won't return a `nw.DType` (or maybe anything) for lazy backends
+    # - Their `SeriesT` is a native object
+    # - See (https://github.com/narwhals-dev/narwhals/issues/2044)
     def _is_dtype(
         self: CompliantSelectorNamespace[DataFrameT, SeriesT], dtype: type[DType], /
     ) -> CompliantSelector[DataFrameT, SeriesT]:
