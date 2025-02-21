@@ -31,6 +31,10 @@ def test_group_by_complex() -> None:
             df.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
         )
     assert_equal_data(result_pd, expected)
+    with pytest.raises(ValueError, match="complex aggregation"):
+        df.lazy().collect("pyarrow").group_by("a").agg(
+            (nw.col("b") - nw.col("c").mean()).mean()
+        )
 
     lf = nw.from_native(df_lazy).lazy()
     result_pl = lf.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
