@@ -71,7 +71,7 @@ from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 
 
-class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
+class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
     # --- not in the spec ---
     def __init__(
         self: Self,
