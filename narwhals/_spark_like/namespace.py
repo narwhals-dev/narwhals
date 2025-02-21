@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class SparkLikeNamespace(CompliantNamespace["Column"]):
+class SparkLikeNamespace(CompliantNamespace["Column"]):  # type: ignore[type-var]
     def __init__(
         self: Self,
         *,
