@@ -7,6 +7,7 @@ from typing import Literal
 from typing import Sequence
 
 from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import ExprMetadata
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
 from narwhals._spark_like.expr_name import SparkLikeExprNameNamespace
@@ -454,7 +455,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         return self._from_call(_n_unique, "n_unique")
 
-    def over(self: Self, keys: list[str]) -> Self:
+    def over(self: Self, keys: list[str], metadata: ExprMetadata) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             return [expr.over(self._Window.partitionBy(*keys)) for expr in self._call(df)]
 
