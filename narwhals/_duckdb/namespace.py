@@ -24,6 +24,7 @@ from narwhals._duckdb.utils import narwhals_to_native_dtype
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.typing import CompliantNamespace
+from narwhals.utils import Implementation
 from narwhals.utils import get_column_names
 
 if TYPE_CHECKING:
@@ -36,6 +37,8 @@ if TYPE_CHECKING:
 
 
 class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):  # type: ignore[type-var]
+    _implementation: Implementation = Implementation.DUCKDB
+
     def __init__(
         self: Self, *, backend_version: tuple[int, ...], version: Version
     ) -> None:
