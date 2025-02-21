@@ -24,6 +24,7 @@ from narwhals._dask.utils import validate_comparand
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.typing import CompliantNamespace
+from narwhals.utils import Implementation
 from narwhals.utils import get_column_names
 from narwhals.utils import is_compliant_expr
 
@@ -40,6 +41,8 @@ if TYPE_CHECKING:
 
 
 class DaskNamespace(CompliantNamespace["dx.Series"]):
+    _implementation: Implementation = Implementation.DASK
+
     @property
     def selectors(self: Self) -> DaskSelectorNamespace:
         return DaskSelectorNamespace(self)
