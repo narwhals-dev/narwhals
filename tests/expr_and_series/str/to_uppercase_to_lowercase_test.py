@@ -37,6 +37,7 @@ def test_str_to_uppercase(
             "pyarrow_table_constructor",
             "modin_pyarrow_constructor",
             "duckdb_lazy_constructor",
+            "ibis_lazy_constructor",
         )
         or ("dask" in str(constructor) and PYARROW_VERSION >= (12,))
     ):
