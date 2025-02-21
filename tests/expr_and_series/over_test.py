@@ -4,6 +4,7 @@ import re
 from contextlib import nullcontext as does_not_raise
 
 import pandas as pd
+import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -261,7 +262,11 @@ def test_over_raise_len_change(constructor: Constructor) -> None:
         nw.from_native(df).select(nw.col("b").drop_nulls().over("a"))
 
 
-def test_non_elementary_pandas() -> None:
-    df = pd.DataFrame({"a": [1, 2, 3, 4, 5, 6], "b": ["x", "x", "x", "y", "y", "y"]})
+def test_unsupported_over() -> None:
+    data = {"a": [1, 2, 3, 4, 5, 6], "b": ["x", "x", "x", "y", "y", "y"]}
+    df = pd.DataFrame(data)
     with pytest.raises(NotImplementedError, match="elementary"):
         nw.from_native(df).select(nw.col("a").shift(1).cum_sum().over("b"))
+    tbl = pa.table(data)  # type: ignore[arg-type]
+    with pytest.raises(NotImplementedError, match="Elementwise"):
+        nw.from_native(tbl).select(nw.col("a").shift(1).cum_sum().over("b"))
