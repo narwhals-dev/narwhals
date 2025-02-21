@@ -49,7 +49,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
         function_name: str,
         evaluate_output_names: Callable[[ArrowDataFrame], Sequence[str]],
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
-        kwargs: dict[str, Any],
+        kwargs: dict[str, Any] | None = None,
     ) -> ArrowExpr:
         from narwhals._arrow.expr import ArrowExpr
 
@@ -75,7 +75,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
     def _create_series_from_scalar(
@@ -142,7 +141,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
     def all(self: Self) -> ArrowExpr:
@@ -165,7 +163,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
     def lit(self: Self, value: Any, dtype: DType | None) -> ArrowExpr:
@@ -188,7 +185,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
     def all_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
@@ -202,7 +198,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             function_name="all_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            kwargs={"exprs": exprs},
         )
 
     def any_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
@@ -348,9 +343,7 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
 
     @property
     def selectors(self: Self) -> ArrowSelectorNamespace:
-        return ArrowSelectorNamespace(
-            backend_version=self._backend_version, version=self._version
-        )
+        return ArrowSelectorNamespace(self)
 
     def when(self: Self, predicate: ArrowExpr) -> ArrowWhen:
         return ArrowWhen(predicate, self._backend_version, version=self._version)
@@ -389,11 +382,6 @@ class ArrowNamespace(CompliantNamespace[ArrowSeries]):
             function_name="concat_str",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            kwargs={
-                "exprs": exprs,
-                "separator": separator,
-                "ignore_nulls": ignore_nulls,
-            },
         )
 
 
@@ -468,7 +456,6 @@ class ArrowWhen:
             alias_output_names=getattr(value, "_alias_output_names", None),
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={"value": value},
         )
 
 
@@ -483,7 +470,7 @@ class ArrowThen(ArrowExpr):
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         backend_version: tuple[int, ...],
         version: Version,
-        kwargs: dict[str, Any],
+        kwargs: dict[str, Any] | None = None,
     ) -> None:
         self._backend_version = backend_version
         self._version = version
@@ -492,7 +479,7 @@ class ArrowThen(ArrowExpr):
         self._function_name = function_name
         self._evaluate_output_names = evaluate_output_names  # pyright: ignore[reportAttributeAccessIssue]
         self._alias_output_names = alias_output_names
-        self._kwargs = kwargs
+        self._kwargs = kwargs or {}
 
     def otherwise(self: Self, value: ArrowExpr | ArrowSeries | Any) -> ArrowExpr:
         # type ignore because we are setting the `_call` attribute to a

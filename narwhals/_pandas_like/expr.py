@@ -431,22 +431,20 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
 
-                reverse = self._kwargs.get("reverse", False)
-                if reverse:
-                    msg = (
-                        "Cumulative operation with `reverse=True` is not supported in "
-                        "over context for pandas-like backend."
-                    )
-                    raise NotImplementedError(msg)
-
+                unsupported_reverse_msg = (
+                    "Cumulative operation with `reverse=True` is not supported in "
+                    "over context for pandas-like backend."
+                )
                 if function_name == "cum_count":
+                    if self._kwargs["reverse"]:
+                        raise NotImplementedError(unsupported_reverse_msg)
                     plx = self.__narwhals_namespace__()
                     df = df.with_columns(~plx.col(*output_names).is_null())
 
                 if function_name == "shift":
                     kwargs = {"periods": self._kwargs["n"]}
                 elif function_name == "rank":
-                    _method = self._kwargs.get("method", "average")
+                    _method = self._kwargs["method"]
                     kwargs = {
                         "method": "first" if _method == "ordinal" else _method,
                         "ascending": not self._kwargs["descending"],
@@ -454,6 +452,8 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                         "pct": False,
                     }
                 else:  # Cumulative operation
+                    if self._kwargs["reverse"]:
+                        raise NotImplementedError(unsupported_reverse_msg)
                     kwargs = {"skipna": True}
 
                 res_native = getattr(
