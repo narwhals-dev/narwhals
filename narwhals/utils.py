@@ -75,6 +75,33 @@ if TYPE_CHECKING:
     class _SupportsVersion(Protocol):
         __version__: str
 
+    class _StoresImplementation(Protocol):
+        _implementation: Implementation
+        """Implementation of native object (pandas, Polars, PyArrow, ...)."""
+
+    class _StoresBackendVersion(Protocol):
+        _backend_version: tuple[int, ...]
+        """Version tuple for a native package."""
+
+    class _StoresVersion(Protocol):
+        _version: Version
+        """Narwhals API version (V1 or MAIN)."""
+
+    class _LimitedContext(_StoresBackendVersion, _StoresVersion, Protocol):
+        """Provides 2 attributes.
+
+        - `_backend_version`
+        - `_version`
+        """
+
+    class _FullContext(_StoresImplementation, _LimitedContext, Protocol):  # noqa: PYI046
+        """Provides 3 attributes.
+
+        - `_implementation`
+        - `_backend_version`
+        - `_version`
+        """
+
 
 class Version(Enum):
     V1 = auto()

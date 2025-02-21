@@ -260,14 +260,20 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
         native_df = native_df.withColumn(  # type: ignore[union-attr]
             "a",
             F.struct(
-                F.col("a.movie ").alias("movie ").cast(T.StringType()),
-                F.col("a.rating").alias("rating").cast(T.DoubleType()),
+                F.col("a.movie ").cast(T.StringType()).alias("movie "),
+                F.col("a.rating").cast(T.DoubleType()).alias("rating"),
             ),
         )
+        assert nw.from_native(native_df).schema == nw.Schema(
+            {
+                "a": nw.Struct(
+                    [nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float64())]
+                )
+            }
+        )
 
-    dtype = nw.Struct([nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float64())])
+    dtype = nw.Struct([nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float32())])
     result = nw.from_native(native_df).select(nw.col("a").cast(dtype)).lazy().collect()
-
     assert result.schema == {"a": dtype}
 
 
