@@ -6,6 +6,7 @@ from typing import Mapping
 
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -32,7 +33,7 @@ def test_group_by_complex() -> None:
         )
     assert_equal_data(result_pd, expected)
     with pytest.raises(ValueError, match="complex aggregation"):
-        df.lazy().collect("pyarrow").group_by("a").agg(
+        nw.from_native(pa.table({"a": [1, 1, 2], "b": [4, 5, 6]})).group_by("a").agg(
             (nw.col("b") - nw.col("c").mean()).mean()
         )
 
