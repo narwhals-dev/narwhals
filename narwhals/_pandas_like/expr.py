@@ -58,7 +58,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
-        kwargs: dict[str, Any],
+        kwargs: dict[str, Any] | None = None,
     ) -> None:
         self._call = call
         self._depth = depth
@@ -68,7 +68,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         self._implementation = implementation
         self._backend_version = backend_version
         self._version = version
-        self._kwargs = kwargs
+        self._kwargs = kwargs or {}
 
     def __call__(self: Self, df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
         return self._call(df)
@@ -145,7 +145,6 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             implementation=implementation,
             backend_version=backend_version,
             version=version,
-            kwargs={},
         )
 
     @classmethod
@@ -176,7 +175,6 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             implementation=implementation,
             backend_version=backend_version,
             version=version,
-            kwargs={},
         )
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
