@@ -574,6 +574,66 @@ class ExprStringNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
+    def split(self: Self, by: str) -> ExprT:
+        r"""Split the string by a substring.
+
+        Arguments:
+            by: The delimiter string by which to split the values.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from narwhals.typing import IntoFrameT
+            >>>
+            >>> data = {"s": ["foo bar", "foo_bar", "foo_bar_baz", "foo,bar"]}
+            >>> df_pd = pd.DataFrame(data, dtype=pd.ArrowDtype(pa.string()))
+            >>> df_pl = pl.DataFrame(data)
+            >>> df_pa = pa.table(data)
+
+            We define a dataframe-agnostic function:
+
+            >>> def agnostic_str_split(df_native: IntoFrameT) -> IntoFrameT:
+            ...     df = nw.from_native(df_native)
+            ...     return df.with_columns(s_split=nw.col("s").str.split("_")).to_native()
+
+            We can then pass any supported library such as pandas(pyarrow backed), Polars, or
+            PyArrow to `agnostic_str_split`:
+
+            >>> agnostic_str_split(df_pd)  # doctest: +NORMALIZE_WHITESPACE
+                         s	s_split
+            0	foo bar	['foo bar']
+            1	foo_bar	['foo' 'bar']
+            2	foo_bar_baz	['foo' 'bar' 'baz']
+            3	foo,bar	['foo,bar']
+
+            >>> agnostic_str_split(df_pl)
+            shape: (4, 2)
+            s	s_split
+            str	list[str]
+            "foo bar"	["foo bar"]
+            "foo_bar"	["foo", "bar"]
+            "foo_bar_baz"	["foo", "bar", "baz"]
+            "foo,bar"	["foo,bar"]
+
+            >>> agnostic_str_split(df_pa)
+            pyarrow.Table
+            s: string
+            s_split: list<item: string>
+            child 0, item: string
+            ----
+            s: [["foo bar","foo_bar","foo_bar_baz","foo,bar"]]
+            s_split: [[["foo bar"],["foo","bar"],["foo","bar","baz"],["foo,bar"]]]
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).str.split(by=by),
+            self._expr._metadata,
+        )
+
     def head(self: Self, n: int = 5) -> ExprT:
         r"""Take the first n elements of each string.
 

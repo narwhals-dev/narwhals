@@ -54,6 +54,13 @@ class DuckDBExprStringNamespace:
 
         return self._compliant_expr._from_call(func, "slice")
 
+    def split(self: Self, by: str) -> DuckDBExpr:
+        return self._compliant_expr._from_call(
+            lambda _input: FunctionExpression("str_split", _input, lit(by)),
+            "split",
+            expr_kind=self._compliant_expr._expr_kind,
+        )
+
     def len_chars(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("length", _input), "len_chars"
