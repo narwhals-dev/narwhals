@@ -47,11 +47,11 @@ def n_unique() -> dd.Aggregation:
     return dd.Aggregation(name="nunique", chunk=chunk, agg=agg)
 
 
-def var(ddof: int = 1) -> _AggFn:
+def var(ddof: int) -> _AggFn:
     return partial(_DaskGroupBy.var, ddof=ddof)
 
 
-def std(ddof: int = 1) -> _AggFn:
+def std(ddof: int) -> _AggFn:
     return partial(_DaskGroupBy.std, ddof=ddof)
 
 

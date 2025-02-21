@@ -141,7 +141,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         # First argument to `call` should be `dx.Series`
         call: Callable[..., dx.Series],
         expr_name: str,
-        kwargs: dict[str, Any] | None = None,
+        call_kwargs: dict[str, Any] | None = None,
         **expressifiable_args: Self | Any,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
@@ -164,7 +164,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            call_kwargs=kwargs,
+            call_kwargs=call_kwargs,
         )
 
     def alias(self: Self, name: str) -> Self:
