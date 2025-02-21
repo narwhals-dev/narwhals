@@ -30,7 +30,7 @@ def test_select(constructor: Constructor) -> None:
 
 
 def test_empty_select(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "duckdb" in str(constructor):
+    if "duckdb" in str(constructor) or "sqlframe" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     result = nw.from_native(constructor({"a": [1, 2, 3]})).lazy().select()
     assert result.collect().shape == (0, 0)

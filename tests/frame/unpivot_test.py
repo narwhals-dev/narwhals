@@ -62,7 +62,15 @@ def test_unpivot_var_value_names(
 ) -> None:
     context = (
         pytest.raises(NotImplementedError)
-        if ("duckdb" in str(constructor) and any([variable_name == "", value_name == ""]))
+        if (
+            any([variable_name == "", value_name == ""])
+            and (
+                "duckdb" in str(constructor)
+                # This might depend from the dialect we use in sqlframe.
+                # Since for now we use only duckdb, we need to xfail it
+                or "sqlframe" in str(constructor)
+            )
+        )
         else does_not_raise()
     )
 
