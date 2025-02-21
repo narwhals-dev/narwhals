@@ -48,6 +48,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals.dtypes import DType
     from narwhals.typing import SizeUnit
     from narwhals.typing import _1DArray
@@ -519,7 +520,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         self: Self,
         backend: Implementation | None,
         **kwargs: Any,
-    ) -> CompliantDataFrame:
+    ) -> CompliantDataFrame[Any] | PolarsDataFrame:
         if backend is None:
             return PandasLikeDataFrame(
                 self._native_frame,
