@@ -93,7 +93,6 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
     def _create_compliant_series(self: Self, value: Any) -> PandasLikeSeries:
@@ -139,7 +138,6 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
     def lit(self: Self, value: Any, dtype: DType | None) -> PandasLikeExpr:
@@ -165,7 +163,6 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
     def len(self: Self) -> PandasLikeExpr:
@@ -187,7 +184,6 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries]):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
     # --- horizontal ---

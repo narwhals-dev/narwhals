@@ -218,5 +218,4 @@ def selector(
         implementation=context._implementation,
         backend_version=context._backend_version,
         version=context._version,
-        kwargs={},
     )

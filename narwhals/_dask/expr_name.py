@@ -64,5 +64,5 @@ class DaskExprNameNamespace:
             alias_output_names=alias_output_names,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs=self._compliant_expr._kwargs,
+            call_kwargs=self._compliant_expr._call_kwargs,
         )
