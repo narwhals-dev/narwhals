@@ -54,7 +54,6 @@ class PandasSelectorNamespace(
             implementation=context._implementation,
             backend_version=context._backend_version,
             version=context._version,
-            kwargs={},
         )
 
     def __init__(self: Self, context: _FullContext, /) -> None:

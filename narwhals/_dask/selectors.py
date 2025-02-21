@@ -148,7 +148,6 @@ class DaskSelector(DaskExpr):
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
     def __sub__(self: Self, other: DaskSelector | Any) -> DaskSelector | Any:
@@ -227,5 +226,4 @@ def selector(
         alias_output_names=None,
         backend_version=context._backend_version,
         version=context._version,
-        kwargs={},
     )
