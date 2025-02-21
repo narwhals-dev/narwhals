@@ -48,16 +48,14 @@ if TYPE_CHECKING:
 
 
 SeriesT = TypeVar("SeriesT", bound="CompliantSeriesWithDType")
-DataFrameT = TypeVar("DataFrameT", bound="CompliantDataFrame | CompliantLazyFrame")
-SelectorOrExpr: TypeAlias = (
-    "CompliantSelector[DataFrameT, SeriesT] | CompliantExpr[SeriesT]"
-)
-EvalSeries: TypeAlias = Callable[[DataFrameT], Sequence[SeriesT]]
-EvalNames: TypeAlias = Callable[[DataFrameT], Sequence[str]]
+FrameT = TypeVar("FrameT", bound="CompliantDataFrame | CompliantLazyFrame")
+SelectorOrExpr: TypeAlias = "CompliantSelector[FrameT, SeriesT] | CompliantExpr[SeriesT]"
+EvalSeries: TypeAlias = Callable[[FrameT], Sequence[SeriesT]]
+EvalNames: TypeAlias = Callable[[FrameT], Sequence[str]]
 
 
 # NOTE: Pretty much finished generic for eager backends
-class CompliantSelectorNamespace(Generic[DataFrameT, SeriesT], Protocol):
+class CompliantSelectorNamespace(Generic[FrameT, SeriesT], Protocol):
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
@@ -65,88 +63,88 @@ class CompliantSelectorNamespace(Generic[DataFrameT, SeriesT], Protocol):
     # TODO @dangotbanned: push for adding to public API for `DataFrame`
     # Only need internally, but it plugs so many holes that it must be useful beyond that
     # https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.iter_columns.html
-    def _iter_columns(self, df: DataFrameT, /) -> Iterator[SeriesT]: ...
-    def _iter_schema(self, df: DataFrameT, /) -> Iterator[tuple[str, DType]]:
+    def _iter_columns(self, df: FrameT, /) -> Iterator[SeriesT]: ...
+    def _iter_schema(self, df: FrameT, /) -> Iterator[tuple[str, DType]]:
         for ser in self._iter_columns(df):
             yield ser.name, ser.dtype
 
-    def _iter_columns_dtypes(self, df: DataFrameT, /) -> Iterator[tuple[SeriesT, DType]]:
+    def _iter_columns_dtypes(self, df: FrameT, /) -> Iterator[tuple[SeriesT, DType]]:
         for ser in self._iter_columns(df):
             yield ser, ser.dtype
 
-    def _iter_columns_names(self, df: DataFrameT, /) -> Iterator[tuple[SeriesT, str]]:
+    def _iter_columns_names(self, df: FrameT, /) -> Iterator[tuple[SeriesT, str]]:
         yield from zip(self._iter_columns(df), df.columns)
 
     def _selector(
         self,
         context: _FullContext,
-        call: EvalSeries[DataFrameT, SeriesT],
-        evaluate_output_names: EvalNames[DataFrameT],
+        call: EvalSeries[FrameT, SeriesT],
+        evaluate_output_names: EvalNames[FrameT],
         /,
-    ) -> CompliantSelector[DataFrameT, SeriesT]: ...
+    ) -> CompliantSelector[FrameT, SeriesT]: ...
 
     # NOTE: `.dtype` won't return a `nw.DType` (or maybe anything) for lazy backends
     # - Their `SeriesT` is a native object
     # - See (https://github.com/narwhals-dev/narwhals/issues/2044)
     def _is_dtype(
-        self: CompliantSelectorNamespace[DataFrameT, SeriesT], dtype: type[DType], /
-    ) -> CompliantSelector[DataFrameT, SeriesT]:
-        def series(df: DataFrameT) -> Sequence[SeriesT]:
+        self: CompliantSelectorNamespace[FrameT, SeriesT], dtype: type[DType], /
+    ) -> CompliantSelector[FrameT, SeriesT]:
+        def series(df: FrameT) -> Sequence[SeriesT]:
             return [
                 ser for ser, tp in self._iter_columns_dtypes(df) if isinstance(tp, dtype)
             ]
 
-        def names(df: DataFrameT) -> Sequence[str]:
+        def names(df: FrameT) -> Sequence[str]:
             return [name for name, tp in self._iter_schema(df) if isinstance(tp, dtype)]
 
         return self._selector(self, series, names)
 
     def by_dtype(
         self: Self, dtypes: Collection[DType | type[DType]]
-    ) -> CompliantSelector[DataFrameT, SeriesT]:
-        def series(df: DataFrameT) -> Sequence[SeriesT]:
+    ) -> CompliantSelector[FrameT, SeriesT]:
+        def series(df: FrameT) -> Sequence[SeriesT]:
             return [ser for ser, tp in self._iter_columns_dtypes(df) if tp in dtypes]
 
-        def names(df: DataFrameT) -> Sequence[str]:
+        def names(df: FrameT) -> Sequence[str]:
             return [name for name, tp in self._iter_schema(df) if tp in dtypes]
 
         return self._selector(self, series, names)
 
-    def matches(self: Self, pattern: str) -> CompliantSelector[DataFrameT, SeriesT]:
+    def matches(self: Self, pattern: str) -> CompliantSelector[FrameT, SeriesT]:
         p = re.compile(pattern)
 
-        def series(df: DataFrameT) -> Sequence[SeriesT]:
+        def series(df: FrameT) -> Sequence[SeriesT]:
             # NOTE: Possibly cheaper than lazyframe?
             if is_compliant_dataframe(df):
                 return [df.get_column(col) for col in df.columns if p.search(col)]
 
             return [ser for ser, name in self._iter_columns_names(df) if p.search(name)]
 
-        def names(df: DataFrameT) -> Sequence[str]:
+        def names(df: FrameT) -> Sequence[str]:
             return [col for col in df.columns if p.search(col)]
 
         return self._selector(self, series, names)
 
-    def numeric(self: Self) -> CompliantSelector[DataFrameT, SeriesT]:
-        def series(df: DataFrameT) -> Sequence[SeriesT]:
+    def numeric(self: Self) -> CompliantSelector[FrameT, SeriesT]:
+        def series(df: FrameT) -> Sequence[SeriesT]:
             return [ser for ser, tp in self._iter_columns_dtypes(df) if tp.is_numeric()]
 
-        def names(df: DataFrameT) -> Sequence[str]:
+        def names(df: FrameT) -> Sequence[str]:
             return [name for name, tp in self._iter_schema(df) if tp.is_numeric()]
 
         return self._selector(self, series, names)
 
-    def categorical(self: Self) -> CompliantSelector[DataFrameT, SeriesT]:
+    def categorical(self: Self) -> CompliantSelector[FrameT, SeriesT]:
         return self._is_dtype(import_dtypes_module(self._version).Categorical)
 
-    def string(self: Self) -> CompliantSelector[DataFrameT, SeriesT]:
+    def string(self: Self) -> CompliantSelector[FrameT, SeriesT]:
         return self._is_dtype(import_dtypes_module(self._version).String)
 
-    def boolean(self: Self) -> CompliantSelector[DataFrameT, SeriesT]:
+    def boolean(self: Self) -> CompliantSelector[FrameT, SeriesT]:
         return self._is_dtype(import_dtypes_module(self._version).Boolean)
 
-    def all(self: Self) -> CompliantSelector[DataFrameT, SeriesT]:
-        def series(df: DataFrameT) -> Sequence[SeriesT]:
+    def all(self: Self) -> CompliantSelector[FrameT, SeriesT]:
+        def series(df: FrameT) -> Sequence[SeriesT]:
             return list(self._iter_columns(df))
 
         return self._selector(self, series, get_column_names)
@@ -155,7 +153,7 @@ class CompliantSelectorNamespace(Generic[DataFrameT, SeriesT], Protocol):
         self: Self,
         time_unit: TimeUnit | Iterable[TimeUnit] | None,
         time_zone: str | timezone | Iterable[str | timezone | None] | None,
-    ) -> CompliantSelector[DataFrameT, SeriesT]:
+    ) -> CompliantSelector[FrameT, SeriesT]:
         time_units, time_zones = _parse_time_unit_and_time_zone(time_unit, time_zone)
         matches = partial(
             dtype_matches_time_unit_and_time_zone,
@@ -164,10 +162,10 @@ class CompliantSelectorNamespace(Generic[DataFrameT, SeriesT], Protocol):
             time_zones=time_zones,
         )
 
-        def series(df: DataFrameT) -> Sequence[SeriesT]:
+        def series(df: FrameT) -> Sequence[SeriesT]:
             return [ser for ser, tp in self._iter_columns_dtypes(df) if matches(tp)]
 
-        def names(df: DataFrameT) -> Sequence[str]:
+        def names(df: FrameT) -> Sequence[str]:
             return [name for name, tp in self._iter_schema(df) if matches(tp)]
 
         return self._selector(self, series, names)
@@ -182,27 +180,24 @@ class CompliantSelectorNamespace(Generic[DataFrameT, SeriesT], Protocol):
 
 
 class LazySelectorNamespace(
-    CompliantSelectorNamespace[DataFrameT, SeriesT],
-    Generic[DataFrameT, SeriesT],
-    Protocol,
+    CompliantSelectorNamespace[FrameT, SeriesT], Generic[FrameT, SeriesT], Protocol
 ):
-    def _iter_schema(self, df: DataFrameT) -> Iterator[tuple[str, DType]]:
+    def _iter_schema(self, df: FrameT) -> Iterator[tuple[str, DType]]:
         yield from df.schema.items()
 
-    def _iter_columns_dtypes(self, df: DataFrameT, /) -> Iterator[tuple[SeriesT, DType]]:
+    def _iter_columns_dtypes(self, df: FrameT, /) -> Iterator[tuple[SeriesT, DType]]:
         yield from zip(self._iter_columns(df), df.schema.values())
 
 
-class CompliantSelector(CompliantExpr[SeriesT], Generic[DataFrameT, SeriesT], Protocol):
+class CompliantSelector(CompliantExpr[SeriesT], Generic[FrameT, SeriesT], Protocol):
     @property
-    def selectors(self) -> CompliantSelectorNamespace[DataFrameT, SeriesT]: ...
+    def selectors(self) -> CompliantSelectorNamespace[FrameT, SeriesT]: ...
     def __repr__(self: Self) -> str: ...
     def _to_expr(self: Self) -> CompliantExpr[SeriesT]: ...
 
     def _is_selector(
-        self: Self,
-        other: Self | CompliantExpr[SeriesT],
-    ) -> TypeIs[CompliantSelector[DataFrameT, SeriesT]]:
+        self: Self, other: Self | CompliantExpr[SeriesT]
+    ) -> TypeIs[CompliantSelector[FrameT, SeriesT]]:
         return isinstance(other, type(self))
 
     @overload
@@ -210,17 +205,17 @@ class CompliantSelector(CompliantExpr[SeriesT], Generic[DataFrameT, SeriesT], Pr
     @overload
     def __sub__(self: Self, other: CompliantExpr[SeriesT]) -> CompliantExpr[SeriesT]: ...
     def __sub__(
-        self: Self, other: SelectorOrExpr[DataFrameT, SeriesT]
-    ) -> SelectorOrExpr[DataFrameT, SeriesT]:
+        self: Self, other: SelectorOrExpr[FrameT, SeriesT]
+    ) -> SelectorOrExpr[FrameT, SeriesT]:
         if self._is_selector(other):
 
-            def series(df: DataFrameT) -> Sequence[SeriesT]:
+            def series(df: FrameT) -> Sequence[SeriesT]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
                 return [
                     x for x, name in zip(self(df), lhs_names) if name not in rhs_names
                 ]
 
-            def names(df: DataFrameT) -> Sequence[str]:
+            def names(df: FrameT) -> Sequence[str]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
                 return [x for x in lhs_names if x not in rhs_names]
 
@@ -233,18 +228,18 @@ class CompliantSelector(CompliantExpr[SeriesT], Generic[DataFrameT, SeriesT], Pr
     @overload
     def __or__(self: Self, other: CompliantExpr[SeriesT]) -> CompliantExpr[SeriesT]: ...
     def __or__(
-        self: Self, other: SelectorOrExpr[DataFrameT, SeriesT]
-    ) -> SelectorOrExpr[DataFrameT, SeriesT]:
+        self: Self, other: SelectorOrExpr[FrameT, SeriesT]
+    ) -> SelectorOrExpr[FrameT, SeriesT]:
         if self._is_selector(other):
 
-            def names(df: DataFrameT) -> Sequence[SeriesT]:
+            def names(df: FrameT) -> Sequence[SeriesT]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
                 return [
                     *(x for x, name in zip(self(df), lhs_names) if name not in rhs_names),
                     *other(df),
                 ]
 
-            def series(df: DataFrameT) -> Sequence[str]:
+            def series(df: FrameT) -> Sequence[str]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
                 return [*(x for x in lhs_names if x not in rhs_names), *rhs_names]
 
@@ -257,15 +252,15 @@ class CompliantSelector(CompliantExpr[SeriesT], Generic[DataFrameT, SeriesT], Pr
     @overload
     def __and__(self: Self, other: CompliantExpr[SeriesT]) -> CompliantExpr[SeriesT]: ...
     def __and__(
-        self: Self, other: SelectorOrExpr[DataFrameT, SeriesT]
-    ) -> SelectorOrExpr[DataFrameT, SeriesT]:
+        self: Self, other: SelectorOrExpr[FrameT, SeriesT]
+    ) -> SelectorOrExpr[FrameT, SeriesT]:
         if self._is_selector(other):
 
-            def series(df: DataFrameT) -> Sequence[SeriesT]:
+            def series(df: FrameT) -> Sequence[SeriesT]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
                 return [x for x, name in zip(self(df), lhs_names) if name in rhs_names]
 
-            def names(df: DataFrameT) -> Sequence[str]:
+            def names(df: FrameT) -> Sequence[str]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
                 return [x for x in lhs_names if x in rhs_names]
 
@@ -273,9 +268,7 @@ class CompliantSelector(CompliantExpr[SeriesT], Generic[DataFrameT, SeriesT], Pr
         else:
             return self._to_expr() & other
 
-    def __invert__(
-        self: Self,
-    ) -> CompliantSelector[DataFrameT, SeriesT]:
+    def __invert__(self: Self) -> CompliantSelector[FrameT, SeriesT]:
         return self.selectors.all() - self
 
 
