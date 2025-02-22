@@ -461,3 +461,4 @@ def apply_n_ary_operation(
         for compliant_expr, kind in zip(compliant_exprs, kinds)
     )
     return function(*compliant_exprs)
+    return function(*compliant_exprs)
