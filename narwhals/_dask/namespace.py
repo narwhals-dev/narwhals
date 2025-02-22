@@ -38,7 +38,7 @@ if TYPE_CHECKING:
         import dask_expr as dx
 
 
-class DaskNamespace(CompliantNamespace["dx.Series", DaskLazyFrame]):
+class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):
     @property
     def selectors(self: Self) -> DaskSelectorNamespace:
         return DaskSelectorNamespace(self)

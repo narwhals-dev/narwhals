@@ -1322,8 +1322,8 @@ def is_compliant_series(obj: Any) -> TypeIs[CompliantSeries]:
 
 
 def is_compliant_expr(
-    obj: CompliantExpr[CompliantSeriesT_co, CompliantFrameT_contra] | Any,
-) -> TypeIs[CompliantExpr[CompliantSeriesT_co, CompliantFrameT_contra]]:
+    obj: CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co] | Any,
+) -> TypeIs[CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co]]:
     return hasattr(obj, "__narwhals_expr__")
 
 

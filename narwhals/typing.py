@@ -82,7 +82,7 @@ CompliantSeriesT_co = TypeVar(
 )
 
 
-class CompliantExpr(Protocol, Generic[CompliantSeriesT_co, CompliantFrameT_contra]):
+class CompliantExpr(Protocol, Generic[CompliantFrameT_contra, CompliantSeriesT_co]):
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
@@ -95,7 +95,7 @@ class CompliantExpr(Protocol, Generic[CompliantSeriesT_co, CompliantFrameT_contr
     def __narwhals_expr__(self) -> None: ...
     def __narwhals_namespace__(
         self,
-    ) -> CompliantNamespace[CompliantSeriesT_co, CompliantFrameT_contra]: ...
+    ) -> CompliantNamespace[CompliantFrameT_contra, CompliantSeriesT_co]: ...
     def is_null(self) -> Self: ...
     def alias(self, name: str) -> Self: ...
     def cast(self, dtype: DType) -> Self: ...
@@ -117,13 +117,13 @@ class CompliantExpr(Protocol, Generic[CompliantSeriesT_co, CompliantFrameT_contr
     ) -> Self: ...
 
 
-class CompliantNamespace(Protocol, Generic[CompliantSeriesT_co, CompliantFrameT_contra]):
+class CompliantNamespace(Protocol, Generic[CompliantFrameT_contra, CompliantSeriesT_co]):
     def col(
         self, *column_names: str
-    ) -> CompliantExpr[CompliantSeriesT_co, CompliantFrameT_contra]: ...
+    ) -> CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co]: ...
     def lit(
         self, value: Any, dtype: DType | None
-    ) -> CompliantExpr[CompliantSeriesT_co, CompliantFrameT_contra]: ...
+    ) -> CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co]: ...
 
 
 class SupportsNativeNamespace(Protocol):
@@ -323,7 +323,7 @@ if TYPE_CHECKING:
     # This one needs to be in TYPE_CHECKING to pass on 3.9,
     # and can only be defined after CompliantExpr has been defined
     IntoCompliantExpr: TypeAlias = (
-        CompliantExpr[CompliantSeriesT_co, CompliantFrameT_contra] | CompliantSeriesT_co
+        CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co] | CompliantSeriesT_co
     )
 
 

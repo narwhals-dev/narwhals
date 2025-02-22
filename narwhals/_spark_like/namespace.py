@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class SparkLikeNamespace(CompliantNamespace["Column", SparkLikeLazyFrame]):
+class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):
     def __init__(
         self: Self,
         *,

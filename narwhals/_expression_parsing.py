@@ -52,7 +52,7 @@ def is_expr(obj: Any) -> TypeIs[Expr]:
 
 def evaluate_into_expr(
     df: CompliantFrameT_contra,
-    expr: CompliantExpr[CompliantSeriesT_co, CompliantFrameT_contra],
+    expr: CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co],
 ) -> Sequence[CompliantSeriesT_co]:
     """Return list of raw columns.
 
@@ -74,7 +74,7 @@ def evaluate_into_expr(
 def evaluate_into_exprs(
     df: CompliantFrameT_contra,
     /,
-    *exprs: CompliantExpr[CompliantSeriesT_co, CompliantFrameT_contra],
+    *exprs: CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co],
 ) -> list[CompliantSeriesT_co]:
     """Evaluate each expr into Series."""
     return [
@@ -87,7 +87,7 @@ def evaluate_into_exprs(
 @overload
 def maybe_evaluate_expr(
     df: CompliantFrameT_contra,
-    expr: CompliantExpr[CompliantSeriesT_co, CompliantFrameT_contra],
+    expr: CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co],
 ) -> CompliantSeriesT_co: ...
 
 
@@ -96,7 +96,7 @@ def maybe_evaluate_expr(df: CompliantDataFrame, expr: T) -> T: ...
 
 
 def maybe_evaluate_expr(
-    df: Any, expr: CompliantExpr[CompliantSeriesT_co, Any] | T
+    df: Any, expr: CompliantExpr[Any, CompliantSeriesT_co] | T
 ) -> CompliantSeriesT_co | T:
     """Evaluate `expr` if it's an expression, otherwise return it as is."""
     if is_compliant_expr(expr):
@@ -252,7 +252,7 @@ def is_simple_aggregation(expr: CompliantExpr[Any, Any]) -> bool:
 
 
 def combine_evaluate_output_names(
-    *exprs: CompliantExpr[Any, CompliantFrameT_contra],
+    *exprs: CompliantExpr[CompliantFrameT_contra, Any],
 ) -> Callable[[CompliantFrameT_contra], Sequence[str]]:
     # Follow left-hand-rule for naming. E.g. `nw.sum_horizontal(expr1, expr2)` takes the
     # first name of `expr1`.
@@ -281,11 +281,11 @@ def combine_alias_output_names(
 
 
 def extract_compliant(
-    plx: CompliantNamespace[CompliantSeriesT_co, CompliantFrameT_contra],
+    plx: CompliantNamespace[CompliantFrameT_contra, CompliantSeriesT_co],
     other: Any,
     *,
     str_as_lit: bool,
-) -> CompliantExpr[CompliantSeriesT_co, CompliantFrameT_contra] | object:
+) -> CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co] | object:
     if is_expr(other):
         return other._to_compliant_expr(plx)
     if isinstance(other, str) and not str_as_lit:

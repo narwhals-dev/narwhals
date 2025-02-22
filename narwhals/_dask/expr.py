@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class DaskExpr(CompliantExpr["dx.Series", "DaskLazyFrame"]):
+class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):
     _implementation: Implementation = Implementation.DASK
 
     def __init__(

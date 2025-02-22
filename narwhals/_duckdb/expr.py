@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class DuckDBExpr(CompliantExpr["duckdb.Expression", "DuckDBLazyFrame"]):  # type: ignore[type-var]
+class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type: ignore[type-var]
     _implementation = Implementation.DUCKDB
     _depth = 0  # Unused, just for compatibility with CompliantExpr
 

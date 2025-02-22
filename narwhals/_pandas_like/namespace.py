@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class PandasLikeNamespace(CompliantNamespace[PandasLikeSeries, PandasLikeDataFrame]):
+class PandasLikeNamespace(CompliantNamespace[PandasLikeDataFrame, PandasLikeSeries]):
     @property
     def selectors(self: Self) -> PandasSelectorNamespace:
         return PandasSelectorNamespace(self)
