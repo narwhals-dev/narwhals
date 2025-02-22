@@ -1346,5 +1346,5 @@ def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
 
 
 def is_tracks_depth(obj: Implementation, /) -> TypeIs[_TracksDepth]:  # pragma: no cover
-    """Return `True` for implementations that utilize `CompliantExpr._depth`."""
+    """Return `True` for implementations that utilize `CompliantExpr._depth`."""  # flake8: noqa
     return obj.is_pandas_like() or obj in {Implementation.PYARROW, Implementation.DASK}
