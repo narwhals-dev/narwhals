@@ -154,4 +154,4 @@ def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:
 
 def is_windows() -> bool:
     """Check if the current platform is Windows."""
-    return sys.platform in ["win32", "cygwin"]
+    return sys.platform in {"win32", "cygwin"}
