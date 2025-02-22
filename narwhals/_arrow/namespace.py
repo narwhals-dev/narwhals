@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class ArrowNamespace(CompliantNamespace[ArrowSeries]):
+class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
     def _create_expr_from_callable(
         self: Self,
         func: Callable[[ArrowDataFrame], Sequence[ArrowSeries]],

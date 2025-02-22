@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class ArrowExpr(CompliantExpr[ArrowSeries]):
+class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
     _implementation: Implementation = Implementation.PYARROW
 
     def __init__(
