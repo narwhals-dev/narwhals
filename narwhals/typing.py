@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 
     from narwhals import dtypes
     from narwhals._expression_parsing import ExprKind
+    from narwhals._selectors import CompliantSelectorNamespace
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -129,6 +130,8 @@ class CompliantNamespace(Protocol, Generic[CompliantSeriesT_co]):
     def lit(
         self, value: Any, dtype: DType | None
     ) -> CompliantExpr[CompliantSeriesT_co]: ...
+    @property
+    def selectors(self) -> CompliantSelectorNamespace[Any, Any]: ...
 
 
 class SupportsNativeNamespace(Protocol):

@@ -55,10 +55,6 @@ class DaskSelectorNamespace(LazySelectorNamespace["DaskLazyFrame", "dx.Series"])
 
 
 class DaskSelector(CompliantSelector["DaskLazyFrame", "dx.Series"], DaskExpr):  # type: ignore[misc]
-    @property
-    def selectors(self) -> DaskSelectorNamespace:
-        return DaskSelectorNamespace(self)
-
     def _to_expr(self: Self) -> DaskExpr:
         return DaskExpr(
             self._call,

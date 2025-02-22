@@ -46,10 +46,6 @@ class SparkLikeSelectorNamespace(LazySelectorNamespace["SparkLikeLazyFrame", "Co
 
 
 class SparkLikeSelector(CompliantSelector["SparkLikeLazyFrame", "Column"], SparkLikeExpr):  # type: ignore[misc]
-    @property
-    def selectors(self: Self) -> SparkLikeSelectorNamespace:
-        return SparkLikeSelectorNamespace(self)
-
     def _to_expr(self: Self) -> SparkLikeExpr:
         return SparkLikeExpr(
             self._call,

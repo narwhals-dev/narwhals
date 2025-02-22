@@ -181,7 +181,9 @@ class LazySelectorNamespace(
 
 class CompliantSelector(CompliantExpr[SeriesT], Generic[FrameT, SeriesT], Protocol):
     @property
-    def selectors(self) -> CompliantSelectorNamespace[FrameT, SeriesT]: ...
+    def selectors(self) -> CompliantSelectorNamespace[FrameT, SeriesT]:
+        return self.__narwhals_namespace__().selectors
+
     def _to_expr(self: Self) -> CompliantExpr[SeriesT]: ...
 
     def _is_selector(

@@ -52,10 +52,6 @@ class DuckDBSelector(  # type: ignore[misc]
     CompliantSelector["DuckDBLazyFrame", "duckdb.Expression"],  # type: ignore[type-var]
     DuckDBExpr,
 ):
-    @property
-    def selectors(self) -> DuckDBSelectorNamespace:
-        return DuckDBSelectorNamespace(self)
-
     def _to_expr(self: Self) -> DuckDBExpr:
         return DuckDBExpr(
             self._call,

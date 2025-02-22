@@ -50,10 +50,6 @@ class ArrowSelectorNamespace(CompliantSelectorNamespace["ArrowDataFrame", "Arrow
 
 
 class ArrowSelector(CompliantSelector["ArrowDataFrame", "ArrowSeries"], ArrowExpr):  # type: ignore[misc]
-    @property
-    def selectors(self) -> ArrowSelectorNamespace:
-        return ArrowSelectorNamespace(self)
-
     def _to_expr(self: Self) -> ArrowExpr:
         return ArrowExpr(
             self._call,

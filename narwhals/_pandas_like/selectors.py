@@ -62,10 +62,6 @@ class PandasSelectorNamespace(
 class PandasSelector(  # type: ignore[misc]
     CompliantSelector["PandasLikeDataFrame", "PandasLikeSeries"], PandasLikeExpr
 ):
-    @property
-    def selectors(self) -> PandasSelectorNamespace:
-        return PandasSelectorNamespace(self)
-
     def _to_expr(self: Self) -> PandasLikeExpr:
         return PandasLikeExpr(
             self._call,
