@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class ArrowExpr(CompliantExpr[ArrowSeries]):
+class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
     _implementation: Implementation = Implementation.PYARROW
 
     def __init__(
@@ -409,7 +409,13 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             self, "clip", lower_bound=lower_bound, upper_bound=upper_bound
         )
 
-    def over(self: Self, keys: list[str]) -> Self:
+    def over(self: Self, keys: list[str], kind: ExprKind) -> Self:
+        if kind is ExprKind.TRANSFORM:
+            msg = (
+                "Elementwise operations in `over` context are not supported for PyArrow."
+            )
+            raise NotImplementedError(msg)
+
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
             if overlap := set(output_names).intersection(keys):

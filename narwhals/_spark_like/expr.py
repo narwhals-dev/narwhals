@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class SparkLikeExpr(CompliantExpr["Column"]):
+class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):
     _depth = 0  # Unused, just for compatibility with CompliantExpr
 
     def __init__(
@@ -457,7 +457,7 @@ class SparkLikeExpr(CompliantExpr["Column"]):
 
         return self._from_call(_n_unique, "n_unique")
 
-    def over(self: Self, keys: list[str]) -> Self:
+    def over(self: Self, keys: list[str], kind: ExprKind) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             return [expr.over(self._Window.partitionBy(*keys)) for expr in self._call(df)]
 

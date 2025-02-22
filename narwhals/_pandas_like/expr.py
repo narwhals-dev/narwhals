@@ -46,7 +46,7 @@ MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
 }
 
 
-class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
+class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
     def __init__(
         self: Self,
         call: Callable[[PandasLikeDataFrame], Sequence[PandasLikeSeries]],
@@ -419,7 +419,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             kwargs={**self._kwargs, "name": name},
         )
 
-    def over(self: Self, keys: list[str]) -> Self:
+    def over(self: Self, keys: list[str], kind: ExprKind) -> Self:
         if (
             is_simple_aggregation(self)
             and (function_name := re.sub(r"(\w+->)", "", self._function_name))
@@ -469,7 +469,13 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                     )
                 )
                 return [result_frame[name] for name in aliases]
-
+        elif kind is ExprKind.TRANSFORM:
+            msg = (
+                "Elementwise operations are only supported in `over` context "
+                "for pandas if they are elementary "
+                "(e.g. `nw.col('a').cum_sum().over('b'))`)."
+            )
+            raise NotImplementedError(msg)
         else:
 
             def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
