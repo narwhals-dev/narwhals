@@ -1089,7 +1089,6 @@ class ArrowSeries(CompliantSeries):
         def _hist_from_bin_count(bin_count: int):  # type: ignore[no-untyped-def] # noqa: ANN202
             d = pc.min_max(self._native_series)
             lower, upper = d["min"], d["max"]
-            pad_lowest_bin = False
             pa_float = pa.type_for_alias("float")
             if lower == upper:
                 range_ = lit(1.0)
@@ -1098,7 +1097,6 @@ class ArrowSeries(CompliantSeries):
                 lower = pc.subtract(lower, mid)
                 upper = pc.add(upper, mid)
             else:
-                pad_lowest_bin = True
                 range_ = pc.subtract(upper, lower)
                 width = pc.divide(pc.cast(range_, pa_float), lit(float(bin_count)))
 
@@ -1149,15 +1147,7 @@ class ArrowSeries(CompliantSeries):
             # extract left/right side of the intervals
             bin_left = pc.add(lower, pc.multiply(counts.column("values"), width))
             bin_right = pc.add(bin_left, width)
-            if pad_lowest_bin:
-                # pad lowest bin by 1% of range
-                lowest_padded = [
-                    pc.subtract(
-                        bin_left[0], pc.multiply(pc.cast(range_, pa_float), lit(0.001))
-                    )
-                ]
-                bin_left = chunked_array([lowest_padded, cast("Any", bin_left[1:])])
-            return counts.column("counts"), bin_left, bin_right
+            return counts.column("counts"), bin_right
 
         def _hist_from_bins(bins: Sequence[int | float]):  # type: ignore[no-untyped-def] # noqa: ANN202
             bin_indices = np.searchsorted(bins, self._native_series, side="left")
@@ -1167,20 +1157,19 @@ class ArrowSeries(CompliantSeries):
             counts[np.isin(obj_cats, obs_cats)] = obs_counts[np.isin(obs_cats, obj_cats)]
 
             bin_right = bins[1:]
-            bin_left = bins[:-1]
-            return counts, bin_left, bin_right
+            return counts, bin_right
 
         if bins is not None:
             if len(bins) < 2:
-                counts, bin_left, bin_right = [], [], []
+                counts, bin_right = [], []
             else:
-                counts, bin_left, bin_right = _hist_from_bins(bins)
+                counts, bin_right = _hist_from_bins(bins)
 
         elif bin_count is not None:
             if bin_count == 0:
-                counts, bin_left, bin_right = [], [], []
+                counts, bin_right = [], []
             else:
-                counts, bin_left, bin_right = _hist_from_bin_count(bin_count)
+                counts, bin_right = _hist_from_bin_count(bin_count)
 
         else:  # pragma: no cover
             # caller guarantees that either bins or bin_count is specified
