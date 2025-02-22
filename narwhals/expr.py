@@ -1602,7 +1602,9 @@ class Expr:
             msg = "`.over()` can not be used for expressions which change length."
             raise LengthChangingExprError(msg)
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).over(flatten(keys)),
+            lambda plx: self._to_compliant_expr(plx).over(
+                flatten(keys), kind=self._metadata["kind"]
+            ),
             ExprMetadata(
                 kind=ExprKind.TRANSFORM,
                 is_order_dependent=self._metadata["is_order_dependent"],
