@@ -37,7 +37,6 @@ class PandasSelectorNamespace(
 
     def _selector(
         self,
-        context: _FullContext,
         call: EvalSeries[PandasLikeDataFrame, PandasLikeSeries],
         evaluate_output_names: EvalNames[PandasLikeDataFrame],
         /,
@@ -48,9 +47,9 @@ class PandasSelectorNamespace(
             function_name="selector",
             evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
-            implementation=context._implementation,
-            backend_version=context._backend_version,
-            version=context._version,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+            version=self._version,
         )
 
     def __init__(self: Self, context: _FullContext, /) -> None:

@@ -33,7 +33,6 @@ class DaskSelectorNamespace(LazySelectorNamespace["DaskLazyFrame", "dx.Series"])
 
     def _selector(
         self,
-        context: _FullContext,
         call: EvalSeries[DaskLazyFrame, dx.Series],  # pyright: ignore[reportInvalidTypeForm]
         evaluate_output_names: EvalNames[DaskLazyFrame],
         /,
@@ -44,8 +43,8 @@ class DaskSelectorNamespace(LazySelectorNamespace["DaskLazyFrame", "dx.Series"])
             function_name="selector",
             evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
-            backend_version=context._backend_version,
-            version=context._version,
+            backend_version=self._backend_version,
+            version=self._version,
         )
 
     def __init__(self: Self, context: _FullContext, /) -> None:

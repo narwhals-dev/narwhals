@@ -28,7 +28,6 @@ class DuckDBSelectorNamespace(
 
     def _selector(
         self,
-        context: _FullContext,
         call: EvalSeries[DuckDBLazyFrame, duckdb.Expression],  # type: ignore[type-var]
         evaluate_output_names: EvalNames[DuckDBLazyFrame],
         /,
@@ -38,8 +37,8 @@ class DuckDBSelectorNamespace(
             function_name="selector",
             evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
-            backend_version=context._backend_version,
-            version=context._version,
+            backend_version=self._backend_version,
+            version=self._version,
         )
 
     def __init__(self: Self, context: _FullContext, /) -> None:

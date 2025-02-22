@@ -58,7 +58,6 @@ class CompliantSelectorNamespace(Generic[FrameT, SeriesT], Protocol):
 
     def _selector(
         self,
-        context: _FullContext,
         call: EvalSeries[FrameT, SeriesT],
         evaluate_output_names: EvalNames[FrameT],
         /,
@@ -88,7 +87,7 @@ class CompliantSelectorNamespace(Generic[FrameT, SeriesT], Protocol):
         def names(df: FrameT) -> Sequence[str]:
             return [name for name, tp in self._iter_schema(df) if isinstance(tp, dtype)]
 
-        return self._selector(self, series, names)
+        return self._selector(series, names)
 
     def by_dtype(
         self: Self, dtypes: Collection[DType | type[DType]]
@@ -99,7 +98,7 @@ class CompliantSelectorNamespace(Generic[FrameT, SeriesT], Protocol):
         def names(df: FrameT) -> Sequence[str]:
             return [name for name, tp in self._iter_schema(df) if tp in dtypes]
 
-        return self._selector(self, series, names)
+        return self._selector(series, names)
 
     def matches(self: Self, pattern: str) -> CompliantSelector[FrameT, SeriesT]:
         p = re.compile(pattern)
@@ -113,7 +112,7 @@ class CompliantSelectorNamespace(Generic[FrameT, SeriesT], Protocol):
         def names(df: FrameT) -> Sequence[str]:
             return [col for col in df.columns if p.search(col)]
 
-        return self._selector(self, series, names)
+        return self._selector(series, names)
 
     def numeric(self: Self) -> CompliantSelector[FrameT, SeriesT]:
         def series(df: FrameT) -> Sequence[SeriesT]:
@@ -122,7 +121,7 @@ class CompliantSelectorNamespace(Generic[FrameT, SeriesT], Protocol):
         def names(df: FrameT) -> Sequence[str]:
             return [name for name, tp in self._iter_schema(df) if tp.is_numeric()]
 
-        return self._selector(self, series, names)
+        return self._selector(series, names)
 
     def categorical(self: Self) -> CompliantSelector[FrameT, SeriesT]:
         return self._is_dtype(import_dtypes_module(self._version).Categorical)
@@ -137,7 +136,7 @@ class CompliantSelectorNamespace(Generic[FrameT, SeriesT], Protocol):
         def series(df: FrameT) -> Sequence[SeriesT]:
             return list(self._iter_columns(df))
 
-        return self._selector(self, series, get_column_names)
+        return self._selector(series, get_column_names)
 
     def datetime(
         self: Self,
@@ -158,7 +157,7 @@ class CompliantSelectorNamespace(Generic[FrameT, SeriesT], Protocol):
         def names(df: FrameT) -> Sequence[str]:
             return [name for name, tp in self._iter_schema(df) if matches(tp)]
 
-        return self._selector(self, series, names)
+        return self._selector(series, names)
 
     # NOTE: Can't reuse for `<3.11`
     # - https://github.com/python/cpython/issues/88970
@@ -210,7 +209,7 @@ class CompliantSelector(CompliantExpr[SeriesT], Generic[FrameT, SeriesT], Protoc
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
                 return [x for x in lhs_names if x not in rhs_names]
 
-            return self.selectors._selector(self, series, names)
+            return self.selectors._selector(series, names)
         else:
             return self._to_expr() - other
 
@@ -234,7 +233,7 @@ class CompliantSelector(CompliantExpr[SeriesT], Generic[FrameT, SeriesT], Protoc
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
                 return [*(x for x in lhs_names if x not in rhs_names), *rhs_names]
 
-            return self.selectors._selector(self, names, series)
+            return self.selectors._selector(names, series)
         else:
             return self._to_expr() | other
 
@@ -255,7 +254,7 @@ class CompliantSelector(CompliantExpr[SeriesT], Generic[FrameT, SeriesT], Protoc
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
                 return [x for x in lhs_names if x in rhs_names]
 
-            return self.selectors._selector(self, series, names)
+            return self.selectors._selector(series, names)
         else:
             return self._to_expr() & other
 
