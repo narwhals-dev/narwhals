@@ -587,32 +587,34 @@ class SeriesStringNamespace(Generic[SeriesT]):
 
             >>> agnostic_split(s_pl)  # doctest: +NORMALIZE_WHITESPACE
             shape: (4,)
-            list[str]
-            ["foo bar"]
-            ["foo", "bar"]
-            ["foo", "bar", "baz"]
-            ["foo,bar"]
-
-            >>> agnostic_split(s_pa)  # doctest: +ELLIPSIS
-            <pyarrow.lib.ChunkedArray object at 0x7efefc13c7c0>
+            Series: '' [list[str]]
             [
-            [
-                [
-                "foo bar"
-                ],
-                [
-                "foo",
-                "bar"
-                ],
-                [
-                "foo",
-                "bar",
-                "baz"
-                ],
-                [
-                "foo,bar"
-                ]
+                    ["foo bar"]
+                    ["foo", "bar"]
+                    ["foo", "bar", "baz"]
+                    ["foo,bar"]
             ]
+
+            >>> agnostic_split(s_pa)  # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                [
+                  "foo bar"
+                ],
+                [
+                  "foo",
+                  "bar"
+                ],
+                [
+                  "foo",
+                  "bar",
+                  "baz"
+                ],
+                [
+                  "foo,bar"
+                ]
+              ]
             ]
         """
         return self._narwhals_series._from_compliant_series(

@@ -68,7 +68,12 @@ class PandasLikeSeriesStringNamespace:
             self._compliant_series._implementation,
         )
         if dtype_backend != "pyarrow":
-            msg = "This operation requires a pyarrow-backed series. "
+            msg = (
+                "This operation requires a pyarrow-backed series. "
+                "Please refer to https://narwhals-dev.github.io/narwhals/api-reference/narwhals/#narwhals.maybe_convert_dtypes "
+                "and ensure you are using dtype_backend='pyarrow'. "
+                "Additionally, make sure you have pandas version 1.5+ and pyarrow installed. "
+            )
             raise TypeError(msg)
 
         return self._compliant_series._from_native_series(

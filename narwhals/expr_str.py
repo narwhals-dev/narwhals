@@ -605,26 +605,30 @@ class ExprStringNamespace(Generic[ExprT]):
             PyArrow to `agnostic_str_split`:
 
             >>> agnostic_str_split(df_pd)  # doctest: +NORMALIZE_WHITESPACE
-                         s	s_split
-            0	foo bar	['foo bar']
-            1	foo_bar	['foo' 'bar']
-            2	foo_bar_baz	['foo' 'bar' 'baz']
-            3	foo,bar	['foo,bar']
+                        s              s_split
+            0      foo bar          ['foo bar']
+            1      foo_bar        ['foo' 'bar']
+            2  foo_bar_baz  ['foo' 'bar' 'baz']
+            3      foo,bar          ['foo,bar']
 
             >>> agnostic_str_split(df_pl)
             shape: (4, 2)
-            s	s_split
-            str	list[str]
-            "foo bar"	["foo bar"]
-            "foo_bar"	["foo", "bar"]
-            "foo_bar_baz"	["foo", "bar", "baz"]
-            "foo,bar"	["foo,bar"]
+            ┌─────────────┬───────────────────────┐
+            │ s           ┆ s_split               │
+            │ ---         ┆ ---                   │
+            │ str         ┆ list[str]             │
+            ╞═════════════╪═══════════════════════╡
+            │ foo bar     ┆ ["foo bar"]           │
+            │ foo_bar     ┆ ["foo", "bar"]        │
+            │ foo_bar_baz ┆ ["foo", "bar", "baz"] │
+            │ foo,bar     ┆ ["foo,bar"]           │
+            └─────────────┴───────────────────────┘
 
             >>> agnostic_str_split(df_pa)
             pyarrow.Table
             s: string
             s_split: list<item: string>
-            child 0, item: string
+              child 0, item: string
             ----
             s: [["foo bar","foo_bar","foo_bar_baz","foo,bar"]]
             s_split: [[["foo bar"],["foo","bar"],["foo","bar","baz"],["foo,bar"]]]
