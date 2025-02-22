@@ -161,7 +161,9 @@ def test_timestamp_dates(
         "modin_constructor",
     )
     if any(x in str(constructor) for x in unsupported_backends):
-        request.applymarker(pytest.mark.xfail("Backend does not support date type"))
+        request.applymarker(
+            pytest.mark.xfail(reason="Backend does not support date type")
+        )
 
     dates = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
     if "dask" in str(constructor):
