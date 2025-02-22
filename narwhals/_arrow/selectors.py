@@ -54,9 +54,6 @@ class ArrowSelector(CompliantSelector["ArrowDataFrame", "ArrowSeries"], ArrowExp
     def selectors(self) -> ArrowSelectorNamespace:
         return ArrowSelectorNamespace(self)
 
-    def __repr__(self: Self) -> str:  # pragma: no cover
-        return f"ArrowSelector(depth={self._depth}, function_name={self._function_name})"
-
     def _to_expr(self: Self) -> ArrowExpr:
         return ArrowExpr(
             self._call,

@@ -59,9 +59,6 @@ class DaskSelector(CompliantSelector["DaskLazyFrame", "dx.Series"], DaskExpr):  
     def selectors(self) -> DaskSelectorNamespace:
         return DaskSelectorNamespace(self)
 
-    def __repr__(self: Self) -> str:  # pragma: no cover
-        return f"DaskSelector(depth={self._depth}, function_name={self._function_name})"
-
     def _to_expr(self: Self) -> DaskExpr:
         return DaskExpr(
             self._call,

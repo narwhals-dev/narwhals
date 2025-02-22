@@ -69,11 +69,6 @@ class PandasSelector(  # type: ignore[misc]
     def selectors(self) -> PandasSelectorNamespace:
         return PandasSelectorNamespace(self)
 
-    def __repr__(self) -> str:  # pragma: no cover
-        return (
-            f"PandasSelector(depth={self._depth}, function_name={self._function_name}, "
-        )
-
     def _to_expr(self: Self) -> PandasLikeExpr:
         return PandasLikeExpr(
             self._call,

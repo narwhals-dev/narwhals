@@ -24,6 +24,7 @@ from narwhals.utils import dtype_matches_time_unit_and_time_zone
 from narwhals.utils import get_column_names
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_compliant_dataframe
+from narwhals.utils import is_tracks_depth
 
 if TYPE_CHECKING:
     from datetime import timezone
@@ -192,7 +193,6 @@ class LazySelectorNamespace(
 class CompliantSelector(CompliantExpr[SeriesT], Generic[FrameT, SeriesT], Protocol):
     @property
     def selectors(self) -> CompliantSelectorNamespace[FrameT, SeriesT]: ...
-    def __repr__(self: Self) -> str: ...
     def _to_expr(self: Self) -> CompliantExpr[SeriesT]: ...
 
     def _is_selector(
@@ -270,6 +270,10 @@ class CompliantSelector(CompliantExpr[SeriesT], Generic[FrameT, SeriesT], Protoc
 
     def __invert__(self: Self) -> CompliantSelector[FrameT, SeriesT]:
         return self.selectors.all() - self
+
+    def __repr__(self: Self) -> str:  # pragma: no cover
+        s = f"depth={self._depth}, " if is_tracks_depth(self._implementation) else ""
+        return f"{type(self).__name__}({s}function_name={self._function_name})"
 
 
 # NOTE: Should probably be a `DataFrame` method

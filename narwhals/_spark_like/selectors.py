@@ -50,9 +50,6 @@ class SparkLikeSelector(CompliantSelector["SparkLikeLazyFrame", "Column"], Spark
     def selectors(self: Self) -> SparkLikeSelectorNamespace:
         return SparkLikeSelectorNamespace(self)
 
-    def __repr__(self: Self) -> str:  # pragma: no cover
-        return f"SparkLikeSelector(function_name={self._function_name})"
-
     def _to_expr(self: Self) -> SparkLikeExpr:
         return SparkLikeExpr(
             self._call,
