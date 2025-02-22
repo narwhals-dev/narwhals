@@ -2191,12 +2191,12 @@ def from_dict(
         backend: specifies which eager backend instantiate to. Only
             necessary if inputs are not Narwhals Series.
 
-                `backend` can be specified in various ways:
+            `backend` can be specified in various ways:
 
-                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                    `POLARS`, `MODIN` or `CUDF`.
-                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                `POLARS`, `MODIN` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
 
             **Deprecated** (v1.26.0):
@@ -2252,22 +2252,21 @@ def read_csv(
     Arguments:
         source: Path to a file.
         backend: The eager backend for DataFrame creation.
+            `backend` can be specified in various ways:
 
-                `backend` can be specified in various ways:
-
-                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                    `POLARS`, `MODIN` or `CUDF`.
-                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                `POLARS`, `MODIN` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
-        kwargs: Extra keyword arguments which are passed to the native CSV reader.
-            For example, you could use
-            `nw.read_csv('file.csv', native_namespace=pd, engine='pyarrow')`.
 
             **Deprecated** (v1.27.2):
                 Please use `backend` instead. Note that `native_namespace` is still available
                 (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
                 see [perfect backwards compatibility policy](../backcompat.md/).
+        kwargs: Extra keyword arguments which are passed to the native CSV reader.
+            For example, you could use
+            `nw.read_csv('file.csv', backend='pandas', engine='pyarrow')`.
 
     Returns:
         DataFrame.
