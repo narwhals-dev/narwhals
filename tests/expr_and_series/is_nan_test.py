@@ -57,7 +57,7 @@ def test_nan(constructor: Constructor) -> None:
             match="NAN is not supported in a Non-floating point type column",
         )
         if "polars_lazy" in str(constructor)
-        and os.environ.get("NARWHALS_POLARS_GPU", False)
+        and os.environ.get("NARWHALS_POLARS_GPU", None)
         else does_not_raise()
     )
     with context:

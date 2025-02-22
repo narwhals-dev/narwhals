@@ -99,9 +99,9 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
     if hasattr(result, "collect"):
         kwargs: dict[Implementation, dict[str, Any]] = {Implementation.POLARS: {}}
 
-        if os.environ.get("NARWHALS_POLARS_GPU", False):  # pragma: no cover
+        if os.environ.get("NARWHALS_POLARS_GPU", None):  # pragma: no cover
             kwargs[Implementation.POLARS].update({"engine": "gpu"})
-        if os.environ.get("NARWHALS_POLARS_NEW_STREAMING", False):  # pragma: no cover
+        if os.environ.get("NARWHALS_POLARS_NEW_STREAMING", None):  # pragma: no cover
             kwargs[Implementation.POLARS].update({"new_streaming": True})
 
         result = result.collect(**kwargs.get(result.implementation, {}))
