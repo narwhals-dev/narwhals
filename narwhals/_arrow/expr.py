@@ -13,7 +13,6 @@ from narwhals._arrow.expr_name import ArrowExprNameNamespace
 from narwhals._arrow.expr_str import ArrowExprStringNamespace
 from narwhals._arrow.series import ArrowSeries
 from narwhals._expression_parsing import ExprKind
-from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals.dependencies import get_numpy
@@ -410,8 +409,8 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             self, "clip", lower_bound=lower_bound, upper_bound=upper_bound
         )
 
-    def over(self: Self, keys: list[str], metadata: ExprMetadata) -> Self:
-        if metadata["kind"] is ExprKind.TRANSFORM:
+    def over(self: Self, keys: list[str], kind: ExprKind) -> Self:
+        if kind is ExprKind.TRANSFORM:
             msg = (
                 "Elementwise operations in `over` context are not supported for PyArrow."
             )

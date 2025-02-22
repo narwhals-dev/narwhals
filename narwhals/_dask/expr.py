@@ -13,7 +13,6 @@ from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import maybe_evaluate_expr
 from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals._expression_parsing import ExprKind
-from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
@@ -531,7 +530,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             lambda _input: _input.isna().sum().to_series(), "null_count"
         )
 
-    def over(self: Self, keys: list[str], metadata: ExprMetadata) -> Self:
+    def over(self: Self, keys: list[str], kind: ExprKind) -> Self:
         def func(df: DaskLazyFrame) -> list[Any]:
             output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
             if overlap := set(output_names).intersection(keys):

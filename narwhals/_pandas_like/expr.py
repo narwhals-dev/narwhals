@@ -8,7 +8,6 @@ from typing import Literal
 from typing import Sequence
 
 from narwhals._expression_parsing import ExprKind
-from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import reuse_series_implementation
@@ -422,7 +421,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             kwargs={**self._kwargs, "name": name},
         )
 
-    def over(self: Self, keys: list[str], metadata: ExprMetadata) -> Self:
+    def over(self: Self, keys: list[str], kind: ExprKind) -> Self:
         if (
             is_simple_aggregation(self)
             and (function_name := re.sub(r"(\w+->)", "", self._function_name))
@@ -472,7 +471,7 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                     )
                 )
                 return [result_frame[name] for name in aliases]
-        elif metadata["kind"] is ExprKind.TRANSFORM:
+        elif kind is ExprKind.TRANSFORM:
             msg = (
                 "Elementwise operations are only supported in `over` context "
                 "for pandas if they are elementary "

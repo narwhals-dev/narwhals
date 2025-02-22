@@ -1603,7 +1603,7 @@ class Expr:
             raise LengthChangingExprError(msg)
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).over(
-                flatten(keys), metadata=self._metadata
+                flatten(keys), kind=self._metadata["kind"]
             ),
             ExprMetadata(
                 kind=ExprKind.TRANSFORM,
