@@ -7,6 +7,7 @@ from typing import Callable
 from typing import Literal
 from typing import Sequence
 
+from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import reuse_series_implementation
@@ -45,7 +46,7 @@ MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
 }
 
 
-class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
+class PandasLikeExpr(CompliantExpr[PandasLikeSeries, "PandasLikeDataFrame"]):
     def __init__(
         self: Self,
         call: Callable[[PandasLikeDataFrame], Sequence[PandasLikeSeries]],
@@ -57,17 +58,17 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
-        kwargs: dict[str, Any],
+        kwargs: dict[str, Any] | None = None,
     ) -> None:
         self._call = call
         self._depth = depth
         self._function_name = function_name
-        self._evaluate_output_names = evaluate_output_names
+        self._evaluate_output_names = evaluate_output_names  # pyright: ignore[reportAttributeAccessIssue]
         self._alias_output_names = alias_output_names
         self._implementation = implementation
         self._backend_version = backend_version
         self._version = version
-        self._kwargs = kwargs
+        self._kwargs = kwargs or {}
 
     def __call__(self: Self, df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
         return self._call(df)
@@ -85,6 +86,29 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
         )
 
     def __narwhals_expr__(self) -> None: ...
+
+    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
+        # Make the resulting PandasLikeSeries with `_broadcast=True`. Then,
+        # when extracting native objects, `align_and_extract_native` will
+        # know what to do.
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            results = []
+            for result in self(df):
+                result._broadcast = True
+                results.append(result)
+            return results
+
+        return self.__class__(
+            func,
+            depth=self._depth,
+            function_name=self._function_name,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
+            kwargs=self._kwargs,
+        )
 
     @classmethod
     def from_column_names(
@@ -121,7 +145,6 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             implementation=implementation,
             backend_version=backend_version,
             version=version,
-            kwargs={},
         )
 
     @classmethod
@@ -152,7 +175,6 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             implementation=implementation,
             backend_version=backend_version,
             version=version,
-            kwargs={},
         )
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
@@ -188,20 +210,39 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
     def __sub__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__sub__", other=other)
 
+    def __rsub__(self: Self, other: PandasLikeExpr | Any) -> Self:
+        return reuse_series_implementation(self.alias("literal"), "__rsub__", other=other)
+
     def __mul__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mul__", other=other)
 
     def __truediv__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__truediv__", other=other)
 
+    def __rtruediv__(self: Self, other: PandasLikeExpr | Any) -> Self:
+        return reuse_series_implementation(
+            self.alias("literal"), "__rtruediv__", other=other
+        )
+
     def __floordiv__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__floordiv__", other=other)
+
+    def __rfloordiv__(self: Self, other: PandasLikeExpr | Any) -> Self:
+        return reuse_series_implementation(
+            self.alias("literal"), "__rfloordiv__", other=other
+        )
 
     def __pow__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__pow__", other=other)
 
+    def __rpow__(self: Self, other: PandasLikeExpr | Any) -> Self:
+        return reuse_series_implementation(self.alias("literal"), "__rpow__", other=other)
+
     def __mod__(self: Self, other: PandasLikeExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mod__", other=other)
+
+    def __rmod__(self: Self, other: PandasLikeExpr | Any) -> Self:
+        return reuse_series_implementation(self.alias("literal"), "__rmod__", other=other)
 
     # Unary
     def __invert__(self: Self) -> Self:
@@ -388,22 +429,20 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
             def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
 
-                reverse = self._kwargs.get("reverse", False)
-                if reverse:
-                    msg = (
-                        "Cumulative operation with `reverse=True` is not supported in "
-                        "over context for pandas-like backend."
-                    )
-                    raise NotImplementedError(msg)
-
+                unsupported_reverse_msg = (
+                    "Cumulative operation with `reverse=True` is not supported in "
+                    "over context for pandas-like backend."
+                )
                 if function_name == "cum_count":
+                    if self._kwargs["reverse"]:
+                        raise NotImplementedError(unsupported_reverse_msg)
                     plx = self.__narwhals_namespace__()
                     df = df.with_columns(~plx.col(*output_names).is_null())
 
                 if function_name == "shift":
                     kwargs = {"periods": self._kwargs["n"]}
                 elif function_name == "rank":
-                    _method = self._kwargs.get("method", "average")
+                    _method = self._kwargs["method"]
                     kwargs = {
                         "method": "first" if _method == "ordinal" else _method,
                         "ascending": not self._kwargs["descending"],
@@ -411,6 +450,8 @@ class PandasLikeExpr(CompliantExpr[PandasLikeSeries]):
                         "pct": False,
                     }
                 else:  # Cumulative operation
+                    if self._kwargs["reverse"]:
+                        raise NotImplementedError(unsupported_reverse_msg)
                     kwargs = {"skipna": True}
 
                 res_native = getattr(

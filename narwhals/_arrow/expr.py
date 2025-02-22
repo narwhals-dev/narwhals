@@ -12,6 +12,7 @@ from narwhals._arrow.expr_list import ArrowExprListNamespace
 from narwhals._arrow.expr_name import ArrowExprNameNamespace
 from narwhals._arrow.expr_str import ArrowExprStringNamespace
 from narwhals._arrow.series import ArrowSeries
+from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals.dependencies import get_numpy
@@ -29,7 +30,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class ArrowExpr(CompliantExpr[ArrowSeries]):
+class ArrowExpr(CompliantExpr[ArrowSeries, "ArrowDataFrame"]):
     _implementation: Implementation = Implementation.PYARROW
 
     def __init__(
@@ -42,23 +43,45 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         backend_version: tuple[int, ...],
         version: Version,
-        kwargs: dict[str, Any],
+        kwargs: dict[str, Any] | None = None,
     ) -> None:
         self._call = call
         self._depth = depth
         self._function_name = function_name
         self._depth = depth
-        self._evaluate_output_names = evaluate_output_names
+        self._evaluate_output_names = evaluate_output_names  # pyright: ignore[reportAttributeAccessIssue]
         self._alias_output_names = alias_output_names
         self._backend_version = backend_version
         self._version = version
-        self._kwargs = kwargs
+        self._kwargs = kwargs or {}
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         return f"ArrowExpr(depth={self._depth}, function_name={self._function_name}, "
 
     def __call__(self: Self, df: ArrowDataFrame) -> Sequence[ArrowSeries]:
         return self._call(df)
+
+    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
+        # Mark the resulting ArrowSeries with `_broadcast = True`.
+        # Then, when extracting native objects, `extract_native` will
+        # know what to do.
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            results = []
+            for result in self(df):
+                result._broadcast = True
+                results.append(result)
+            return results
+
+        return self.__class__(
+            func,
+            depth=self._depth,
+            function_name=self._function_name,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+            kwargs=self._kwargs,
+        )
 
     @classmethod
     def from_column_names(
@@ -94,7 +117,6 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             alias_output_names=None,
             backend_version=backend_version,
             version=version,
-            kwargs={},
         )
 
     @classmethod
@@ -125,7 +147,6 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             alias_output_names=None,
             backend_version=backend_version,
             version=version,
-            kwargs={},
         )
 
     def __narwhals_namespace__(self: Self) -> ArrowNamespace:
@@ -167,20 +188,39 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
     def __sub__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__sub__", other=other)
 
+    def __rsub__(self: Self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self.alias("literal"), "__rsub__", other=other)
+
     def __mul__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mul__", other=other)
 
     def __pow__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__pow__", other=other)
 
+    def __rpow__(self: Self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self.alias("literal"), "__rpow__", other=other)
+
     def __floordiv__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__floordiv__", other=other)
+
+    def __rfloordiv__(self: Self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(
+            self.alias("literal"), "__rfloordiv__", other=other
+        )
 
     def __truediv__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__truediv__", other=other)
 
+    def __rtruediv__(self: Self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(
+            self.alias("literal"), "__rtruediv__", other=other
+        )
+
     def __mod__(self: Self, other: ArrowExpr | Any) -> Self:
         return reuse_series_implementation(self, "__mod__", other=other)
+
+    def __rmod__(self: Self, other: ArrowExpr | Any) -> Self:
+        return reuse_series_implementation(self.alias("literal"), "__rmod__", other=other)
 
     def __invert__(self: Self) -> Self:
         return reuse_series_implementation(self, "__invert__")
@@ -273,7 +313,7 @@ class ArrowExpr(CompliantExpr[ArrowSeries]):
             alias_output_names=alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={**self._kwargs, "name": name},
+            kwargs=self._kwargs,
         )
 
     def null_count(self: Self) -> Self:

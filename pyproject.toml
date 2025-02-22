@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.26.0"
+version = "1.27.1"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
@@ -47,8 +47,10 @@ tests = [
   "typing_extensions",
 ]
 typing = [
+  "pandas-stubs",
   "typing_extensions",
   "mypy~=1.15.0",
+  "pyright"
 ]
 dev = [
   "pre-commit",
@@ -60,8 +62,7 @@ core = [
   "pandas",
   "polars",
   "pyarrow",
-  #TODO: reintroduce when fixing #1961
-  # "pyarrow-stubs",
+  "pyarrow-stubs",
 ]
 extra = [  # heavier dependencies we don't necessarily need in every testing job
   "scikit-learn",
@@ -137,6 +138,7 @@ lint.ignore = [
   "RET505",
   "SLF001",
   "TD003",
+  "TD004",
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -201,6 +203,7 @@ omit = [
   'narwhals/typing.py',
   'narwhals/stable/v1/typing.py',
   'narwhals/this.py',
+  'narwhals/_arrow/typing.py',
   # we can't run this in every environment that we measure coverage on due to upper-bound constraits
   'narwhals/_ibis/*',
   # the latest pyspark (3.5) doesn't officially support Python 3.12 and 3.13
@@ -226,8 +229,6 @@ pretty = true
 
 [[tool.mypy.overrides]]
 module = [
-  # TODO: enable step by step when it makes sense
-  # e.g. the pandas API is just too inconsistent for type hinting to be useful.
   "cudf.*",
   "dask.*",
   "dask_expr.*",
@@ -235,8 +236,6 @@ module = [
   "ibis.*",
   "modin.*",
   "numpy.*",
-  "pandas.*",
-  "pyarrow.*",
   "pyspark.*",
   "sklearn.*",
   "sqlframe.*",
@@ -244,3 +243,21 @@ module = [
 # TODO: remove follow_imports
 follow_imports = "skip"
 ignore_missing_imports = true
+
+[tool.pyright]
+pythonPlatform = "All"
+# NOTE (stubs do unsafe `TypeAlias` and `TypeVar` imports)
+# pythonVersion = "3.8"
+reportMissingImports = "none"
+reportMissingModuleSource = "none"
+reportPrivateImportUsage = "none"
+reportUnusedExpression = "none"    # can enforce with `ruff`
+typeCheckingMode = "basic"
+include = ["narwhals", "tests"]
+ignore = [
+  "../.venv/",
+  "../../../**/Lib",       # stdlib
+  "../../../**/typeshed*", # typeshed-fallback
+  "tpch",
+  "utils",
+]

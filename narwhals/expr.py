@@ -10,8 +10,8 @@ from typing import Sequence
 
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
+from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import combine_metadata
-from narwhals._expression_parsing import extract_compliant
 from narwhals._expression_parsing import operation_is_order_dependent
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import LengthChangingExprError
@@ -20,6 +20,7 @@ from narwhals.expr_dt import ExprDateTimeNamespace
 from narwhals.expr_list import ExprListNamespace
 from narwhals.expr_name import ExprNameNamespace
 from narwhals.expr_str import ExprStringNamespace
+from narwhals.translate import to_native
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import flatten
 from narwhals.utils import issue_deprecation_warning
@@ -33,7 +34,6 @@ if TYPE_CHECKING:
 
     from narwhals.dtypes import DType
     from narwhals.typing import CompliantExpr
-    from narwhals.typing import CompliantNamespace
     from narwhals.typing import IntoExpr
 
     PS = ParamSpec("PS")
@@ -158,212 +158,194 @@ class Expr:
     # --- binary ---
     def __eq__(self: Self, other: Self | Any) -> Self:  # type: ignore[override]
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__eq__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x == y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __ne__(self: Self, other: Self | Any) -> Self:  # type: ignore[override]
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__ne__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x != y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __and__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__and__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x & y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __rand__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__and__(extract_compliant(plx, self, strings_are_column_names=False))
-
-        return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
-        )
+        return (self & other).alias("literal")
 
     def __or__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__or__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x | y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __ror__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__or__(extract_compliant(plx, self, strings_are_column_names=False))
-
-        return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
-        )
+        return (self | other).alias("literal")
 
     def __add__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__add__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x + y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __radd__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__add__(extract_compliant(plx, self, strings_are_column_names=False))
-
-        return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
-        )
+        return (self + other).alias("literal")
 
     def __sub__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__sub__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x - y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __rsub__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__sub__(extract_compliant(plx, self, strings_are_column_names=False))
-
         return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx,
+                lambda x, y: x.__rsub__(y),
+                self,
+                other,
+                str_as_lit=True,
+            ),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __truediv__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__truediv__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x / y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __rtruediv__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__truediv__(extract_compliant(plx, self, strings_are_column_names=False))
-
         return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx,
+                lambda x, y: x.__rtruediv__(y),
+                self,
+                other,
+                str_as_lit=True,
+            ),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __mul__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__mul__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x * y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __rmul__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__mul__(extract_compliant(plx, self, strings_are_column_names=False))
-
-        return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
-        )
+        return (self * other).alias("literal")
 
     def __le__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__le__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x <= y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __lt__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__lt__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x < y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __gt__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__gt__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x > y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __ge__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__ge__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x >= y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __pow__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__pow__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x**y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __rpow__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__pow__(extract_compliant(plx, self, strings_are_column_names=False))
-
         return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx,
+                lambda x, y: x.__rpow__(y),
+                self,
+                other,
+                str_as_lit=True,
+            ),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __floordiv__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__floordiv__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x // y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __rfloordiv__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__floordiv__(extract_compliant(plx, self, strings_are_column_names=False))
-
         return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx,
+                lambda x, y: x.__rfloordiv__(y),
+                self,
+                other,
+                str_as_lit=True,
+            ),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __mod__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__mod__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x % y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __rmod__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__mod__(extract_compliant(plx, self, strings_are_column_names=False))
-
         return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx,
+                lambda x, y: x.__rmod__(y),
+                self,
+                other,
+                str_as_lit=True,
+            ),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     # --- unary ---
@@ -1206,21 +1188,24 @@ class Expr:
             └──────────────────┘
         """
 
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            lb = extract_compliant(plx, lower_bound, strings_are_column_names=True)
-            ub = extract_compliant(plx, upper_bound, strings_are_column_names=True)
-            expr = self._to_compliant_expr(plx)
+        def func(
+            compliant_expr: CompliantExpr[Any, Any],
+            lb: CompliantExpr[Any, Any],
+            ub: CompliantExpr[Any, Any],
+        ) -> CompliantExpr[Any, Any]:
             if closed == "left":
-                return (expr >= lb) & (expr < ub)  # type: ignore[no-any-return]
+                return (compliant_expr >= lb) & (compliant_expr < ub)  # type: ignore[no-any-return]
             elif closed == "right":
-                return (expr > lb) & (expr <= ub)  # type: ignore[no-any-return]
+                return (compliant_expr > lb) & (compliant_expr <= ub)  # type: ignore[no-any-return]
             elif closed == "none":
-                return (expr > lb) & (expr < ub)  # type: ignore[no-any-return]
-            return (expr >= lb) & (expr <= ub)  # type: ignore[no-any-return]
+                return (compliant_expr > lb) & (compliant_expr < ub)  # type: ignore[no-any-return]
+            return (compliant_expr >= lb) & (compliant_expr <= ub)  # type: ignore[no-any-return]
 
         is_order_dependent = operation_is_order_dependent(self, lower_bound, upper_bound)
         return self.__class__(
-            func,
+            lambda plx: apply_n_ary_operation(
+                plx, func, self, lower_bound, upper_bound, str_as_lit=False
+            ),
             ExprMetadata(
                 kind=self._metadata["kind"], is_order_dependent=is_order_dependent
             ),
@@ -1254,7 +1239,7 @@ class Expr:
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
             return self.__class__(
                 lambda plx: self._to_compliant_expr(plx).is_in(
-                    extract_compliant(plx, other, strings_are_column_names=False)
+                    to_native(other, pass_through=True)
                 ),
                 self._metadata,
             )
@@ -1293,12 +1278,14 @@ class Expr:
         """
         flat_predicates = flatten(predicates)
         is_order_dependent = operation_is_order_dependent(*flat_predicates)
+
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).filter(
-                *[
-                    extract_compliant(plx, pred, strings_are_column_names=True)
-                    for pred in flat_predicates
-                ],
+            lambda plx: apply_n_ary_operation(
+                plx,
+                lambda *exprs: exprs[0].filter(*exprs[1:]),
+                self,
+                *predicates,
+                str_as_lit=False,
             ),
             ExprMetadata(
                 kind=ExprKind.CHANGES_LENGTH, is_order_dependent=is_order_dependent
@@ -1615,7 +1602,11 @@ class Expr:
             msg = "`.over()` can not be used for expressions which change length."
             raise LengthChangingExprError(msg)
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).over(flatten(keys)), self._metadata
+            lambda plx: self._to_compliant_expr(plx).over(flatten(keys)),
+            ExprMetadata(
+                kind=ExprKind.TRANSFORM,
+                is_order_dependent=self._metadata["is_order_dependent"],
+            ),
         )
 
     def is_duplicated(self: Self) -> Self:
@@ -1991,9 +1982,16 @@ class Expr:
         """
         is_order_dependent = operation_is_order_dependent(self, lower_bound, upper_bound)
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).clip(
-                extract_compliant(plx, lower_bound, strings_are_column_names=True),
-                extract_compliant(plx, upper_bound, strings_are_column_names=True),
+            lambda plx: apply_n_ary_operation(
+                plx,
+                lambda *exprs: exprs[0].clip(
+                    exprs[1] if lower_bound is not None else None,
+                    exprs[2] if upper_bound is not None else None,
+                ),
+                self,
+                lower_bound,  # type: ignore[arg-type]
+                upper_bound,  # type: ignore[arg-type]
+                str_as_lit=False,
             ),
             ExprMetadata(
                 kind=self._metadata["kind"], is_order_dependent=is_order_dependent

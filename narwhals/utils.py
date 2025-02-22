@@ -53,6 +53,7 @@ if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantExpr
+    from narwhals.typing import CompliantFrameT_contra
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import CompliantSeries
     from narwhals.typing import CompliantSeriesT_co
@@ -73,6 +74,33 @@ if TYPE_CHECKING:
 
     class _SupportsVersion(Protocol):
         __version__: str
+
+    class _StoresImplementation(Protocol):
+        _implementation: Implementation
+        """Implementation of native object (pandas, Polars, PyArrow, ...)."""
+
+    class _StoresBackendVersion(Protocol):
+        _backend_version: tuple[int, ...]
+        """Version tuple for a native package."""
+
+    class _StoresVersion(Protocol):
+        _version: Version
+        """Narwhals API version (V1 or MAIN)."""
+
+    class _LimitedContext(_StoresBackendVersion, _StoresVersion, Protocol):
+        """Provides 2 attributes.
+
+        - `_backend_version`
+        - `_version`
+        """
+
+    class _FullContext(_StoresImplementation, _LimitedContext, Protocol):  # noqa: PYI046
+        """Provides 3 attributes.
+
+        - `_implementation`
+        - `_backend_version`
+        - `_version`
+        """
 
 
 class Version(Enum):
@@ -977,13 +1005,15 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
     if is_polars_series(native_series):
         return native_series.dtype.ordering == "physical"  # type: ignore[attr-defined, no-any-return]
     if is_pandas_series(native_series):
-        return native_series.cat.ordered  # type: ignore[no-any-return]
+        return bool(native_series.cat.ordered)
     if is_modin_series(native_series):  # pragma: no cover
         return native_series.cat.ordered  # type: ignore[no-any-return]
     if is_cudf_series(native_series):  # pragma: no cover
         return native_series.cat.ordered  # type: ignore[no-any-return]
     if is_pyarrow_chunked_array(native_series):
-        return native_series.type.ordered  # type: ignore[no-any-return]
+        from narwhals._arrow.utils import is_dictionary
+
+        return is_dictionary(native_series.type) and native_series.type.ordered
     # If it doesn't match any of the above, let's just play it safe and return False.
     return False  # pragma: no cover
 
@@ -1292,8 +1322,8 @@ def is_compliant_series(obj: Any) -> TypeIs[CompliantSeries]:
 
 
 def is_compliant_expr(
-    obj: CompliantExpr[CompliantSeriesT_co] | Any,
-) -> TypeIs[CompliantExpr[CompliantSeriesT_co]]:
+    obj: CompliantExpr[CompliantSeriesT_co, CompliantFrameT_contra] | Any,
+) -> TypeIs[CompliantExpr[CompliantSeriesT_co, CompliantFrameT_contra]]:
     return hasattr(obj, "__narwhals_expr__")
 
 

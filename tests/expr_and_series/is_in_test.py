@@ -18,6 +18,14 @@ def test_expr_is_in(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_expr_is_in_empty_list(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.col("a").is_in([]))
+    expected = {"a": [False, False, False, False]}
+
+    assert_equal_data(result, expected)
+
+
 def test_ser_is_in(constructor_eager: ConstructorEager) -> None:
     ser = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = {"a": ser.is_in([4, 5])}

@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
 
+env:
+  PY_COLORS: 1
+
 jobs:
   altair:
     strategy:
@@ -83,6 +86,8 @@ jobs:
         run: |
           cd marimo
           . .venv/bin/activate
+          # temporary to get CI green
+          uv pip install "panel<1.6.1"
           uv pip install -e ".[dev]"
           which python
       - name: install-narwhals-dev
@@ -111,7 +116,7 @@ jobs:
           # the local narwhals install is picked up
           sed -i '/^\[tool.hatch.envs.default\]/a path = ".venv"' pyproject.toml
           hatch run python -c "import narwhals; print(narwhals.__file__)"
-          hatch run test-optional:test-narwhals
+          hatch run +py=${{ matrix.python-version }} test-optional:test-narwhals
         timeout-minutes: 15
 
   scikit-lego:
@@ -459,18 +464,27 @@ jobs:
       - name: install-validoopsie-dev
         run: |
           cd validoopsie
+          uv venv
+          . .venv/bin/activate
           uv sync --dev
           uv pip install pytest-env
           which python
       - name: show-deps
-        run: uv pip freeze
+        run: |
+          cd validoopsie
+          . .venv/bin/activate
+          uv pip freeze
       - name: install-narwhals-dev
         run: |
           cd validoopsie
+          . .venv/bin/activate
           uv pip uninstall narwhals
           uv pip install -e ./..
       - name: Run tests
         run: |
           cd validoopsie
-          uv run pytest
+          . .venv/bin/activate
+          touch tests/__init__.py
+          touch tests/utils/__init__.py
+          pytest tests
         timeout-minutes: 15

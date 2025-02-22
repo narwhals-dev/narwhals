@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
 from typing import Sequence
 
-from narwhals._spark_like.utils import ExprKind
 from narwhals._spark_like.utils import native_to_narwhals_dtype
 from narwhals._spark_like.utils import parse_exprs
 from narwhals.exceptions import InvalidOperationError
@@ -13,6 +13,7 @@ from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
+from narwhals.utils import find_stacklevel
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -124,13 +125,27 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                     from narwhals._arrow.utils import narwhals_to_native_dtype
 
                     data: dict[str, list[Any]] = {}
-                    schema = []
+                    schema: list[tuple[str, pa.DataType]] = []
                     current_schema = self.collect_schema()
                     for key, value in current_schema.items():
                         data[key] = []
-                        schema.append(
-                            (key, narwhals_to_native_dtype(value, self._version))
-                        )
+                        try:
+                            native_dtype = narwhals_to_native_dtype(value, self._version)
+                        except Exception as exc:  # noqa: BLE001
+                            native_spark_dtype = self._native_frame.schema[key].dataType
+                            # If we can't convert the type, just set it to `pa.null`, and warn.
+                            # Avoid the warning if we're starting from PySpark's void type.
+                            # We can avoid the check when we introduce `nw.Null` dtype.
+                            if not isinstance(
+                                native_spark_dtype, self._native_dtypes.NullType
+                            ):
+                                warnings.warn(
+                                    f"Could not convert dtype {native_spark_dtype} to PyArrow dtype, {exc!r}",
+                                    stacklevel=find_stacklevel(),
+                                )
+                            schema.append((key, pa.null()))
+                        else:
+                            schema.append((key, native_dtype))
                     native_pyarrow_frame = pa.Table.from_pydict(
                         data, schema=pa.schema(schema)
                     )
@@ -196,7 +211,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         self: Self,
         *exprs: SparkLikeExpr,
     ) -> Self:
-        new_columns, expr_kinds = parse_exprs(self, *exprs)
+        new_columns = parse_exprs(self, *exprs)
 
         new_columns_list = [col.alias(col_name) for col_name, col in new_columns.items()]
         return self._from_native_frame(self._native_frame.agg(*new_columns_list))
@@ -205,7 +220,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         self: Self,
         *exprs: SparkLikeExpr,
     ) -> Self:
-        new_columns, expr_kinds = parse_exprs(self, *exprs)
+        new_columns = parse_exprs(self, *exprs)
 
         if not new_columns:
             # return empty dataframe, like Polars does
@@ -217,23 +232,13 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             return self._from_native_frame(spark_df)
 
         new_columns_list = [
-            col.over(self._Window().partitionBy(self._F.lit(1))).alias(col_name)
-            if expr_kind is ExprKind.AGGREGATION
-            else col.alias(col_name)
-            for (col_name, col), expr_kind in zip(new_columns.items(), expr_kinds)
+            col.alias(col_name) for (col_name, col) in new_columns.items()
         ]
         return self._from_native_frame(self._native_frame.select(*new_columns_list))
 
     def with_columns(self: Self, *exprs: SparkLikeExpr) -> Self:
-        new_columns, expr_kinds = parse_exprs(self, *exprs)
-
-        new_columns_map = {
-            col_name: col.over(self._Window().partitionBy(self._F.lit(1)))
-            if expr_kind is ExprKind.AGGREGATION
-            else col
-            for (col_name, col), expr_kind in zip(new_columns.items(), expr_kinds)
-        }
-        return self._from_native_frame(self._native_frame.withColumns(new_columns_map))
+        new_columns = parse_exprs(self, *exprs)
+        return self._from_native_frame(self._native_frame.withColumns(new_columns))
 
     def filter(self: Self, predicate: SparkLikeExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column

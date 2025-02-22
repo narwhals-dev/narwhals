@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
 
+env:
+  PY_COLORS: 1
+
 jobs:
   mypy:
     strategy:
@@ -38,3 +41,7 @@ jobs:
         run: |
           source .venv/bin/activate
           make typing
+      - name: Run pyright
+        run: |
+          source .venv/bin/activate
+          pyright
