@@ -56,7 +56,16 @@ class CompliantSelectorNamespace(Generic[FrameT, SeriesT], Protocol):
     _backend_version: tuple[int, ...]
     _version: Version
 
+    def _selector(
+        self,
+        context: _FullContext,
+        call: EvalSeries[FrameT, SeriesT],
+        evaluate_output_names: EvalNames[FrameT],
+        /,
+    ) -> CompliantSelector[FrameT, SeriesT]: ...
+
     def _iter_columns(self, df: FrameT, /) -> Iterator[SeriesT]: ...
+
     def _iter_schema(self, df: FrameT, /) -> Iterator[tuple[str, DType]]:
         for ser in self._iter_columns(df):
             yield ser.name, ser.dtype
@@ -67,14 +76,6 @@ class CompliantSelectorNamespace(Generic[FrameT, SeriesT], Protocol):
 
     def _iter_columns_names(self, df: FrameT, /) -> Iterator[tuple[SeriesT, str]]:
         yield from zip(self._iter_columns(df), df.columns)
-
-    def _selector(
-        self,
-        context: _FullContext,
-        call: EvalSeries[FrameT, SeriesT],
-        evaluate_output_names: EvalNames[FrameT],
-        /,
-    ) -> CompliantSelector[FrameT, SeriesT]: ...
 
     def _is_dtype(
         self: CompliantSelectorNamespace[FrameT, SeriesT], dtype: type[DType], /
