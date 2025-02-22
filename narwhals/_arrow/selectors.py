@@ -32,7 +32,7 @@ class ArrowSelectorNamespace(CompliantSelectorNamespace["ArrowDataFrame", "Arrow
         call: EvalSeries[ArrowDataFrame, ArrowSeries],
         evaluate_output_names: EvalNames[ArrowDataFrame],
         /,
-    ) -> CompliantSelector[ArrowDataFrame, ArrowSeries]:
+    ) -> ArrowSelector:
         return ArrowSelector(
             call,
             depth=0,

@@ -37,7 +37,7 @@ class DaskSelectorNamespace(LazySelectorNamespace["DaskLazyFrame", "dx.Series"])
         call: EvalSeries[DaskLazyFrame, dx.Series],  # pyright: ignore[reportInvalidTypeForm]
         evaluate_output_names: EvalNames[DaskLazyFrame],
         /,
-    ) -> CompliantSelector[DaskLazyFrame, dx.Series]:  # pyright: ignore[reportInvalidTypeArguments]
+    ) -> DaskSelector:
         return DaskSelector(
             call,
             depth=0,

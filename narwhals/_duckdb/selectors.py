@@ -32,7 +32,7 @@ class DuckDBSelectorNamespace(
         call: EvalSeries[DuckDBLazyFrame, duckdb.Expression],  # type: ignore[type-var]
         evaluate_output_names: EvalNames[DuckDBLazyFrame],
         /,
-    ) -> CompliantSelector[DuckDBLazyFrame, duckdb.Expression]:  # type: ignore[type-var]
+    ) -> DuckDBSelector:
         return DuckDBSelector(
             call,
             function_name="selector",

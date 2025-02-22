@@ -44,7 +44,7 @@ class PandasSelectorNamespace(
         call: EvalSeries[PandasLikeDataFrame, PandasLikeSeries],
         evaluate_output_names: EvalNames[PandasLikeDataFrame],
         /,
-    ) -> CompliantSelector[PandasLikeDataFrame, PandasLikeSeries]:
+    ) -> PandasSelector:
         return PandasSelector(
             call,
             depth=0,
