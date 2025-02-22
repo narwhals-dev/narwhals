@@ -92,9 +92,7 @@ class SparkLikeExprStringNamespace:
 
     def split(self: Self, by: str) -> SparkLikeExpr:
         return self._compliant_expr._from_call(
-            lambda _input: self._compliant_expr._F.split(
-                _input, self._compliant_expr._F.lit(by)
-            ),
+            lambda _input: self._compliant_expr._F.split(_input, by),
             "split",
         )
 
