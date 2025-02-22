@@ -1140,8 +1140,8 @@ def issue_deprecation_warning(message: str, _version: str) -> None:
 
 
 def validate_strict_and_pass_though(
-    strict: bool | None,
-    pass_through: bool | None,
+    strict: bool | None,  # noqa: FBT001
+    pass_through: bool | None,  # noqa: FBT001
     *,
     pass_through_default: bool,
     emit_deprecation_warning: bool,

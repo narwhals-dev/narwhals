@@ -157,7 +157,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             version=self._version,
         )
 
-    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> _2DArray:
+    def __array__(self: Self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
         return self.to_numpy(dtype=dtype, copy=copy)
 
     @overload
@@ -825,7 +825,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             }
         return self._native_frame.to_dict(orient="list")  # type: ignore[no-any-return]
 
-    def to_numpy(self: Self, dtype: Any = None, copy: bool | None = None) -> _2DArray:
+    def to_numpy(self: Self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
         native_dtypes = self._native_frame.dtypes
 
         if copy is None:

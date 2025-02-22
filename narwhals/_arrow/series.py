@@ -417,7 +417,7 @@ class ArrowSeries(CompliantSeries):
     def to_list(self: Self) -> list[Any]:
         return self._native_series.to_pylist()
 
-    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> _1DArray:
+    def __array__(self: Self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
         return self._native_series.__array__(dtype=dtype, copy=copy)
 
     def to_numpy(self: Self) -> _1DArray:

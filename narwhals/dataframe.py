@@ -499,7 +499,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def __len__(self: Self) -> int:
         return self._compliant_frame.__len__()  # type: ignore[no-any-return]
 
-    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> _2DArray:
+    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> _2DArray:  # noqa: FBT001
         return self._compliant_frame.__array__(dtype, copy=copy)
 
     def __repr__(self: Self) -> str:  # pragma: no cover

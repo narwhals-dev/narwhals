@@ -181,7 +181,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             version=self._version,
         )
 
-    def __array__(self: Self, dtype: Any, copy: bool | None) -> _2DArray:
+    def __array__(self: Self, dtype: Any, *, copy: bool | None) -> _2DArray:
         return self._native_frame.__array__(dtype, copy=copy)
 
     @overload

@@ -145,7 +145,7 @@ class PolarsSeries:
             raise NotImplementedError(msg)
         return self._from_native_series(ser.replace_strict(old, new, return_dtype=dtype))
 
-    def __array__(self: Self, dtype: Any, copy: bool | None) -> _1DArray:
+    def __array__(self: Self, dtype: Any, *, copy: bool | None) -> _1DArray:
         if self._backend_version < (0, 20, 29):
             return self._native_series.__array__(dtype=dtype)
         return self._native_series.__array__(dtype=dtype, copy=copy)
