@@ -57,7 +57,10 @@ def test_timestamp_datetimes(
     if original_time_unit == "s" and "polars" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="Second precision not supported"))
 
-    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 2):
+    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (
+        2,
+        2,
+    ):  # pragma: no cover
         pytest.skip("Requires pandas >= 2.2 for reliable pyarrow-backed timestamps")
     datetimes = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
     df = nw.from_native(constructor(datetimes))
@@ -120,7 +123,7 @@ def test_timestamp_datetimes_tz_aware(
 
     for condition, reason in version_conditions:
         if condition:
-            pytest.skip(reason)
+            pytest.skip(reason)  # pragma: no cover
 
     if original_time_unit == "s" and "polars" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="Second precision not supported"))
