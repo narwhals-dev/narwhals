@@ -26,7 +26,7 @@ if TYPE_CHECKING:
         import dask_expr as dx
 
 
-class DaskSelectorNamespace(LazySelectorNamespace["DaskLazyFrame", "dx.Series"]):
+class DaskSelectorNamespace(LazySelectorNamespace["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[reportInvalidTypeArguments]
     def _iter_columns(self, df: DaskLazyFrame) -> Iterator[dx.Series]:
         for _col, ser in df._native_frame.items():  # noqa: PERF102
             yield ser
@@ -34,10 +34,10 @@ class DaskSelectorNamespace(LazySelectorNamespace["DaskLazyFrame", "dx.Series"])
     def _selector(
         self,
         context: _FullContext,
-        call: EvalSeries[DaskLazyFrame, dx.Series],
+        call: EvalSeries[DaskLazyFrame, dx.Series],  # pyright: ignore[reportInvalidTypeForm]
         evaluate_output_names: EvalNames[DaskLazyFrame],
         /,
-    ) -> CompliantSelector[DaskLazyFrame, dx.Series]:
+    ) -> CompliantSelector[DaskLazyFrame, dx.Series]:  # pyright: ignore[reportInvalidTypeArguments]
         return DaskSelector(
             call,
             depth=0,
