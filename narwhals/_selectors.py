@@ -1,7 +1,4 @@
-"""Almost entirely complete, generic `selectors` implementation.
-
-- Focusing on eager-only for now
-"""
+"""Almost entirely complete, generic `selectors` implementation."""
 
 from __future__ import annotations
 
@@ -42,7 +39,6 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
-    # NOTE: Plugging the gap of this not being defined in `CompliantSeries`
     class CompliantSeriesWithDType(CompliantSeries, Protocol):
         @property
         def dtype(self) -> DType: ...
@@ -55,15 +51,11 @@ EvalSeries: TypeAlias = Callable[[FrameT], Sequence[SeriesT]]
 EvalNames: TypeAlias = Callable[[FrameT], Sequence[str]]
 
 
-# NOTE: Pretty much finished generic for eager backends
 class CompliantSelectorNamespace(Generic[FrameT, SeriesT], Protocol):
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
 
-    # TODO @dangotbanned: push for adding to public API for `DataFrame`
-    # Only need internally, but it plugs so many holes that it must be useful beyond that
-    # https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.iter_columns.html
     def _iter_columns(self, df: FrameT, /) -> Iterator[SeriesT]: ...
     def _iter_schema(self, df: FrameT, /) -> Iterator[tuple[str, DType]]:
         for ser in self._iter_columns(df):
@@ -84,9 +76,6 @@ class CompliantSelectorNamespace(Generic[FrameT, SeriesT], Protocol):
         /,
     ) -> CompliantSelector[FrameT, SeriesT]: ...
 
-    # NOTE: `.dtype` won't return a `nw.DType` (or maybe anything) for lazy backends
-    # - Their `SeriesT` is a native object
-    # - See (https://github.com/narwhals-dev/narwhals/issues/2044)
     def _is_dtype(
         self: CompliantSelectorNamespace[FrameT, SeriesT], dtype: type[DType], /
     ) -> CompliantSelector[FrameT, SeriesT]:
@@ -115,7 +104,6 @@ class CompliantSelectorNamespace(Generic[FrameT, SeriesT], Protocol):
         p = re.compile(pattern)
 
         def series(df: FrameT) -> Sequence[SeriesT]:
-            # NOTE: https://github.com/narwhals-dev/narwhals/actions/runs/13467042968/job/37634856612?pr=2064
             if is_compliant_dataframe(df) and not self._implementation.is_duckdb():
                 return [df.get_column(col) for col in df.columns if p.search(col)]
 
@@ -276,8 +264,6 @@ class CompliantSelector(CompliantExpr[SeriesT], Generic[FrameT, SeriesT], Protoc
         return f"{type(self).__name__}({s}function_name={self._function_name})"
 
 
-# NOTE: Should probably be a `DataFrame` method
-# Using `Expr` because this doesn't require `Selector` attrs/methods
 def _eval_lhs_rhs(
     df: CompliantDataFrame | CompliantLazyFrame, lhs: CompliantExpr, rhs: CompliantExpr
 ) -> tuple[Sequence[str], Sequence[str]]:

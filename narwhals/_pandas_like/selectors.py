@@ -32,9 +32,6 @@ class PandasSelectorNamespace(
             backend_version=df._backend_version,
             version=df._version,
         )
-        # NOTE: (PERF102) is a false-positive
-        # .items() -> (str, pd.Series)
-        # .values() -> np.ndarray
         for _col, ser in df._native_frame.items():  # noqa: PERF102
             yield series(ser)
 
