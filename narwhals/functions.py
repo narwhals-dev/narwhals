@@ -320,12 +320,12 @@ def from_dict(
         backend: specifies which eager backend instantiate to. Only
             necessary if inputs are not Narwhals Series.
 
-                `backend` can be specified in various ways:
+            `backend` can be specified in various ways:
 
-                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                    `POLARS`, `MODIN` or `CUDF`.
-                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                `POLARS`, `MODIN` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
 
             **Deprecated** (v1.26.0):
@@ -743,26 +743,37 @@ def get_level(
 def read_csv(
     source: str,
     *,
-    native_namespace: ModuleType,
+    backend: ModuleType | Implementation | str | None = None,
+    native_namespace: ModuleType | None = None,
     **kwargs: Any,
 ) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
 
     Arguments:
         source: Path to a file.
+        backend: The eager backend for DataFrame creation.
+            `backend` can be specified in various ways:
+
+            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                `POLARS`, `MODIN` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
+
+            **Deprecated** (v1.27.2):
+                Please use `backend` instead. Note that `native_namespace` is still available
+                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+                see [perfect backwards compatibility policy](../backcompat.md/).
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
-            `nw.read_csv('file.csv', native_namespace=pd, engine='pyarrow')`.
+            `nw.read_csv('file.csv', backend='pandas', engine='pyarrow')`.
 
     Returns:
         DataFrame.
 
     Examples:
-        >>> import pandas as pd
         >>> import narwhals as nw
-        >>>
-        >>> nw.read_csv("file.csv", native_namespace=pd)  # doctest:+SKIP
+        >>> nw.read_csv("file.csv", backend="pandas")  # doctest:+SKIP
         ┌──────────────────┐
         |Narwhals DataFrame|
         |------------------|
@@ -771,21 +782,28 @@ def read_csv(
         |     1  2   5     |
         └──────────────────┘
     """
-    return _read_csv_impl(source, native_namespace=native_namespace, **kwargs)
+    backend = validate_native_namespace_and_backend(
+        backend, native_namespace, emit_deprecation_warning=True
+    )
+    if backend is None:  # pragma: no cover
+        msg = "`backend` must be specified in `read_csv`."
+        raise ValueError(msg)
+    return _read_csv_impl(source, backend=backend, **kwargs)
 
 
 def _read_csv_impl(
-    source: str, *, native_namespace: ModuleType, **kwargs: Any
+    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
 ) -> DataFrame[Any]:
-    implementation = Implementation.from_native_namespace(native_namespace)
-    if implementation in (
+    eager_backend = Implementation.from_backend(backend)
+    native_namespace = eager_backend.to_native_namespace()
+    if eager_backend in (
         Implementation.POLARS,
         Implementation.PANDAS,
         Implementation.MODIN,
         Implementation.CUDF,
     ):
         native_frame = native_namespace.read_csv(source, **kwargs)
-    elif implementation is Implementation.PYARROW:
+    elif eager_backend is Implementation.PYARROW:
         from pyarrow import csv  # ignore-banned-import
 
         native_frame = csv.read_csv(source, **kwargs)
