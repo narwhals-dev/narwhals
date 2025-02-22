@@ -105,11 +105,26 @@ exclude = [
 line-length = 90
 fix = true
 target-version = "py38"
+extend-exclude = ["utils/bump_version.py", "**/this.py"]
 
-lint.select = [
+[tool.ruff.lint]
+preview = true
+explicit-preview-rules = true
+
+extend-safe-fixes = [
+  "C419",
+  "C420",
+  "PLR6201",
+  "TC",
+  "UP",
+]
+extend-select = [
+  "PLR6201",
+]
+select = [
   "ALL",
 ]
-lint.ignore = [
+ignore = [
   "A001",
   "A004",
   "A005",
