@@ -358,9 +358,22 @@ class ExprMetadata(TypedDict):
     is_order_dependent: bool
 
 
-def change_metadata_kind(md: ExprMetadata, kind: ExprKind) -> ExprMetadata:
+def change_kind(md: ExprMetadata, kind: ExprKind) -> ExprMetadata:
     # Change metadata kind, leaving all other attributes the same.
     return ExprMetadata(kind=kind, is_order_dependent=md["is_order_dependent"])
+
+
+def change_kind_and_make_order_dependent(
+    md: ExprMetadata,  # noqa: ARG001 (we will use this later)
+    kind: ExprKind,
+) -> ExprMetadata:
+    # Change metadata kind, leaving all other attributes the same.
+    return ExprMetadata(kind=kind, is_order_dependent=True)
+
+
+def make_order_dependent(md: ExprMetadata) -> ExprMetadata:
+    # Change metadata kind, leaving all other attributes the same.
+    return ExprMetadata(kind=md["kind"], is_order_dependent=True)
 
 
 def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
