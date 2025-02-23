@@ -199,21 +199,21 @@ class ArrowSeries(CompliantSeries):
         return self._from_native_series(pc.add(ser, other))
 
     def __radd__(self: Self, other: Any) -> Self:
-        return self + other  # type: ignore[no-any-return]
+        return self + other
 
     def __sub__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
         return self._from_native_series(pc.subtract(ser, other))
 
     def __rsub__(self: Self, other: Any) -> Self:
-        return (self - other) * (-1)  # type: ignore[no-any-return]
+        return (self - other) * (-1)
 
     def __mul__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
         return self._from_native_series(pc.multiply(ser, other))
 
     def __rmul__(self: Self, other: Any) -> Self:
-        return self * other  # type: ignore[no-any-return]
+        return self * other
 
     def __pow__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)

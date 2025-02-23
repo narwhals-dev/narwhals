@@ -102,7 +102,7 @@ def align_and_extract_native(
     lhs_index = lhs._native_series.index
 
     if isinstance(rhs, PandasLikeDataFrame):
-        return NotImplemented  # type: ignore[no-any-return]
+        return NotImplemented
 
     if lhs._broadcast and isinstance(rhs, PandasLikeSeries) and not rhs._broadcast:
         return lhs._native_series.iloc[0], rhs._native_series
@@ -309,7 +309,7 @@ def set_index(
         kwargs["copy"] = False
     else:  # pragma: no cover
         pass
-    return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[attr-defined, no-any-return]
+    return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[attr-defined]
 
 
 def set_columns(
@@ -339,7 +339,7 @@ def set_columns(
         kwargs["copy"] = False
     else:  # pragma: no cover
         pass
-    return obj.set_axis(columns, axis=1, **kwargs)  # type: ignore[attr-defined, no-any-return]
+    return obj.set_axis(columns, axis=1, **kwargs)  # type: ignore[attr-defined]
 
 
 def rename(
@@ -353,8 +353,8 @@ def rename(
     if implementation is Implementation.PANDAS and (
         backend_version >= (3,)
     ):  # pragma: no cover
-        return obj.rename(*args, **kwargs)  # type: ignore[attr-defined, no-any-return]
-    return obj.rename(*args, **kwargs, copy=False)  # type: ignore[attr-defined, no-any-return]
+        return obj.rename(*args, **kwargs)  # type: ignore[attr-defined]
+    return obj.rename(*args, **kwargs, copy=False)  # type: ignore[attr-defined]
 
 
 @lru_cache(maxsize=16)
@@ -787,9 +787,9 @@ def select_columns_by_name(
             raise ColumnNotFoundError.from_missing_and_available_column_names(
                 missing_columns, available_columns
             )
-        return df.loc[:, column_names]  # type: ignore[no-any-return, attr-defined]
+        return df.loc[:, column_names]  # type: ignore[attr-defined]
     try:
-        return df[column_names]  # type: ignore[no-any-return, index]
+        return df[column_names]  # type: ignore[index]
     except KeyError as e:
         available_columns = df.columns.tolist()  # type: ignore[attr-defined]
         missing_columns = [x for x in column_names if x not in available_columns]

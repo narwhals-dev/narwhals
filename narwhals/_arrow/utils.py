@@ -222,7 +222,7 @@ def extract_native(
         return lhs._native_series, lit(None, type=lhs._native_series.type)
 
     if isinstance(rhs, ArrowDataFrame):
-        return NotImplemented  # type: ignore[no-any-return]
+        return NotImplemented
 
     if isinstance(rhs, ArrowSeries):
         if lhs._broadcast and not rhs._broadcast:
