@@ -6,6 +6,7 @@ from typing import Mapping
 
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -31,6 +32,10 @@ def test_group_by_complex() -> None:
             df.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
         )
     assert_equal_data(result_pd, expected)
+    with pytest.raises(ValueError, match="complex aggregation"):
+        nw.from_native(pa.table({"a": [1, 1, 2], "b": [4, 5, 6]})).group_by("a").agg(
+            (nw.col("b") - nw.col("c").mean()).mean()
+        )
 
     lf = nw.from_native(df_lazy).lazy()
     result_pl = lf.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
@@ -422,3 +427,25 @@ def test_pandas_group_by_index_and_column_overlap() -> None:
     assert key == (1,)
     expected_native = pd.DataFrame({"a": [1, 1], "b": [4, 5]})
     pd.testing.assert_frame_equal(result.to_native(), expected_native)
+
+
+def test_fancy_functions(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    result = df.group_by("a").agg(nw.all().std(ddof=0)).sort("a")
+    expected = {"a": [1, 2], "b": [0.5, 0.0]}
+    assert_equal_data(result, expected)
+    result = df.group_by("a").agg(nw.selectors.numeric().std(ddof=0)).sort("a")
+    assert_equal_data(result, expected)
+    result = df.group_by("a").agg(nw.selectors.matches("b").std(ddof=0)).sort("a")
+    assert_equal_data(result, expected)
+    result = (
+        df.group_by("a").agg(nw.selectors.matches("b").std(ddof=0).alias("c")).sort("a")
+    )
+    expected = {"a": [1, 2], "c": [0.5, 0.0]}
+    assert_equal_data(result, expected)
+    result = (
+        df.group_by("a")
+        .agg(nw.selectors.matches("b").std(ddof=0).name.map(lambda _x: "c"))
+        .sort("a")
+    )
+    assert_equal_data(result, expected)

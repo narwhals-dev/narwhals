@@ -82,7 +82,7 @@ class BaseFrame(Generic[_FrameT]):
 
     def _flatten_and_extract(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> tuple[list[IntoCompliantExpr[Any]], list[ExprKind]]:
+    ) -> tuple[list[IntoCompliantExpr[Any, Any]], list[ExprKind]]:
         """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
         out_exprs = []
         out_kinds = []
@@ -2204,7 +2204,7 @@ class LazyFrame(BaseFrame[FrameT]):
             plx = self.__narwhals_namespace__()
             return plx.col(arg)
         if isinstance(arg, Expr):
-            if arg._metadata["is_order_dependent"]:
+            if arg._metadata.is_order_dependent():
                 msg = (
                     "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
                     "Hints:\n"
@@ -2215,7 +2215,7 @@ class LazyFrame(BaseFrame[FrameT]):
                     "  they will be supported."
                 )
                 raise OrderDependentExprError(msg)
-            if arg._metadata["kind"] is ExprKind.CHANGES_LENGTH:
+            if arg._metadata.is_changes_length():
                 msg = (
                     "Length-changing expressions are not supported for use in LazyFrame, unless\n"
                     "followed by an aggregation.\n\n"

@@ -54,6 +54,7 @@ if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantExpr
+    from narwhals.typing import CompliantFrameT_contra
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import CompliantSeries
     from narwhals.typing import CompliantSeriesT_co
@@ -1335,11 +1336,11 @@ def dtype_matches_time_unit_and_time_zone(
     dtype: DType, dtypes: DTypes, time_units: Set[TimeUnit], time_zones: Set[str | None]
 ) -> bool:
     return (
-        (dtype == dtypes.Datetime)
-        and (dtype.time_unit in time_units)  # type: ignore[attr-defined]
+        isinstance(dtype, dtypes.Datetime)
+        and (dtype.time_unit in time_units)
         and (
-            dtype.time_zone in time_zones  # type: ignore[attr-defined]
-            or ("*" in time_zones and dtype.time_zone is not None)  # type: ignore[attr-defined]
+            dtype.time_zone in time_zones
+            or ("*" in time_zones and dtype.time_zone is not None)
         )
     )
 
@@ -1362,8 +1363,8 @@ def is_compliant_series(obj: Any) -> TypeIs[CompliantSeries]:
 
 
 def is_compliant_expr(
-    obj: CompliantExpr[CompliantSeriesT_co] | Any,
-) -> TypeIs[CompliantExpr[CompliantSeriesT_co]]:
+    obj: CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co] | Any,
+) -> TypeIs[CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co]]:
     return hasattr(obj, "__narwhals_expr__")
 
 
