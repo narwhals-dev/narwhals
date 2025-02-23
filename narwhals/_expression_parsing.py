@@ -355,11 +355,13 @@ class ExprKind(Enum):
 
 class ExprMetadata(TypedDict):
     kind: ExprKind
-    """Which kind of expression this is (literal, aggregation, ...)"""
+    """Which kind of expression this is (literal, aggregation, ...)."""
     is_order_dependent: bool
     """Whether expression assumes physical order of rows."""
     has_open_windows: bool
     """Whether expression contains window functions not immediately followed by `over`."""
+    name: str
+    """Function name."""
 
 
 def change_metadata_kind(md: ExprMetadata, kind: ExprKind) -> ExprMetadata:
@@ -368,23 +370,33 @@ def change_metadata_kind(md: ExprMetadata, kind: ExprKind) -> ExprMetadata:
         kind=kind,
         is_order_dependent=md["is_order_dependent"],
         has_open_windows=md["has_open_windows"],
+        name=md['name'],
+    )
+
+def change_metadata_kind_and_make_order_dependent(md: ExprMetadata, kind: ExprKind, name: str) -> ExprMetadata:
+    return ExprMetadata(
+        kind=kind,
+        is_order_dependent=True,
+        has_open_windows=True,
+        name=name
     )
 
 
 def make_order_dependent(md: ExprMetadata) -> ExprMetadata:
     # Make order dependent, leaving other attributes the same.
     return ExprMetadata(
-        kind=md["kind"], is_order_dependent=True, has_open_windows=md["has_open_windows"]
+        kind=md["kind"], is_order_dependent=True, has_open_windows=True,
+        name=md['name'],
     )
 
 
-def default_metadata() -> ExprMetadata:
+def default_metadata(name: str) -> ExprMetadata:
     return ExprMetadata(
-        kind=ExprKind.TRANSFORM, is_order_dependent=False, has_open_windows=False
+        kind=ExprKind.TRANSFORM, is_order_dependent=False, has_open_windows=False, name=name,
     )
 
 
-def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
+def combine_metadata(*args: IntoExpr, str_as_lit: bool, name: str) -> ExprMetadata:
     # Combine metadata from `args`.
 
     n_changes_length = 0
@@ -438,6 +450,7 @@ def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
         kind=result_kind,
         is_order_dependent=result_is_order_dependent,
         has_open_windows=result_has_open_windows,
+        name=name,
     )
 
 

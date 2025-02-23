@@ -16,7 +16,7 @@ from narwhals import dependencies
 from narwhals import exceptions
 from narwhals import selectors
 from narwhals._expression_parsing import ExprKind
-from narwhals._expression_parsing import ExprMetadata
+from narwhals._expression_parsing import ExprMetadata, change_metadata_kind_and_make_order_dependent
 from narwhals._expression_parsing import change_metadata_kind
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame

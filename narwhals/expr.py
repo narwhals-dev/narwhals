@@ -1519,13 +1519,14 @@ class Expr:
             change_metadata_kind(self._metadata, ExprKind.CHANGES_LENGTH),
         )
 
-    def over(self: Self, *keys: str | Iterable[str]) -> Self:
+    def over(self: Self, *keys: str | Iterable[str], _order_by: str|None=None) -> Self:
         """Compute expressions over the given groups.
 
         Arguments:
             keys: Names of columns to compute window expression over.
                   Must be names of columns, as opposed to expressions -
                   so, this is a bit less flexible than Polars' `Expr.over`.
+            _order_by: Unused, but this is building up to something.
 
         Returns:
             A new expression.
@@ -1561,11 +1562,14 @@ class Expr:
         if self._metadata["kind"] is ExprKind.CHANGES_LENGTH:
             msg = "`.over()` can not be used for expressions which change length."
             raise LengthChangingExprError(msg)
+        metadata = change_metadata_kind(self._metadata, ExprKind.TRANSFORM)
+        if _order_by is not None:
+            metadata['has_open_windows'] = False
+            metadata['is_order_dependent'] = False
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).over(
                 flatten(keys), kind=self._metadata["kind"]
-            ),
-            change_metadata_kind(self._metadata, ExprKind.TRANSFORM),
+            ), metadata
         )
 
     def is_duplicated(self: Self) -> Self:
