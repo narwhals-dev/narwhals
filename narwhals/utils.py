@@ -854,15 +854,16 @@ def _is_range_index(obj: Any, native_namespace: Any) -> TypeIs[pd.RangeIndex]:
     return isinstance(obj, native_namespace.RangeIndex)
 
 
+# NOTE: Remove ignore(s) after release w/ (https://github.com/pandas-dev/pandas-stubs/pull/1115)
 def _has_default_index(
     native_frame_or_series: pd.Series[Any] | pd.DataFrame, native_namespace: Any
 ) -> bool:
     index = native_frame_or_series.index
     return (
         _is_range_index(index, native_namespace)
-        and index.start == 0
-        and index.stop == len(index)
-        and index.step == 1
+        and index.start == 0  # type: ignore[comparison-overlap]
+        and index.stop == len(index)  # type: ignore[comparison-overlap]
+        and index.step == 1  # type: ignore[comparison-overlap]
     )
 
 
