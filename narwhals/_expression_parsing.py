@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Sequence
-from typing import TypedDict
 from typing import TypeVar
 from typing import overload
 
@@ -22,6 +21,7 @@ from narwhals.utils import Implementation
 from narwhals.utils import is_compliant_expr
 
 if TYPE_CHECKING:
+    from typing_extensions import Never
     from typing_extensions import TypeIs
 
     from narwhals._arrow.expr import ArrowExpr
@@ -325,10 +325,6 @@ def evaluate_output_names_and_aliases(
     return output_names, aliases
 
 
-def operation_has_open_windows(*args: IntoExpr | Any) -> bool:
-    return any(is_expr(x) and x._metadata["n_open_windows"] > 0 for x in args)
-
-
 class ExprKind(Enum):
     """Describe which kind of expression we are dealing with.
 
@@ -356,48 +352,55 @@ class ExprKind(Enum):
     """e.g. `nw.col('a').drop_nulls()`"""
 
 
-class ExprMetadata(TypedDict):
-    kind: ExprKind
-    """Which kind of expression this is (literal, aggregation, ...)."""
-    n_open_windows: int
-    """Number of window functions (e.g. `cum_sum`) not immediately followed by `over`."""
+class ExprMetadata:
+    __slots__ = ("_kind", "_n_open_windows")
+
+    def __init__(self, kind: ExprKind, /, *, n_open_windows: int) -> None:
+        self._kind: ExprKind = kind
+        self._n_open_windows = n_open_windows
+
+    def __init_subclass__(cls, /, *args: Any, **kwds: Any) -> Never:  # pragma: no cover
+        msg = f"Cannot subclass {cls.__name__!r}"
+        raise TypeError(msg)
+
+    @property
+    def kind(self) -> ExprKind:
+        return self._kind
+
+    @property
+    def n_open_windows(self) -> int:
+        return self._n_open_windows
+
+    def is_transform(self) -> bool:
+        return self.kind is ExprKind.TRANSFORM
+
+    def is_window(self) -> bool:
+        return self.kind is ExprKind.WINDOW
+
+    def is_aggregation_or_literal(self) -> bool:
+        return self.kind in {ExprKind.AGGREGATION, ExprKind.LITERAL}
+
+    def is_changes_length(self) -> bool:
+        return self.kind is ExprKind.CHANGES_LENGTH
+
+    def with_kind(self, kind: ExprKind, /) -> ExprMetadata:
+        """Change metadata kind, leaving all other attributes the same."""
+        return ExprMetadata(kind, n_open_windows=self._n_open_windows)
+
+    def with_extra_open_window(self) -> ExprMetadata:
+        """Increment `n_open_windows` leaving other attributes the same."""
+        return ExprMetadata(self.kind, n_open_windows=self._n_open_windows + 1)
+
+    def with_kind_and_extra_open_window(self, kind: ExprKind, /) -> ExprMetadata:
+        """Change metadata kind and increment `n_open_windows`."""
+        return ExprMetadata(kind, n_open_windows=self._n_open_windows + 1)
+
+    @staticmethod
+    def selector() -> ExprMetadata:
+        return ExprMetadata(ExprKind.TRANSFORM, n_open_windows=0)
 
 
-def default_metadata() -> ExprMetadata:
-    return ExprMetadata(kind=ExprKind.TRANSFORM, n_open_windows=0)
-
-
-def change_kind(md: ExprMetadata, kind: ExprKind) -> ExprMetadata:
-    # Change metadata kind, leaving all other attributes the same.
-    return ExprMetadata(
-        kind=kind,
-        n_open_windows=md["n_open_windows"],
-    )
-
-
-def change_metadata_kind_and_make_order_dependent(
-    md: ExprMetadata, kind: ExprKind
-) -> ExprMetadata:
-    return ExprMetadata(
-        kind=kind,
-        n_open_windows=md["n_open_windows"] + 1,
-    )
-
-
-def change_kind_and_make_order_dependent(
-    md: ExprMetadata,
-    kind: ExprKind,
-) -> ExprMetadata:
-    # Change metadata kind, leaving all other attributes the same.
-    return ExprMetadata(kind=kind, n_open_windows=md["n_open_windows"])
-
-
-def make_order_dependent(md: ExprMetadata) -> ExprMetadata:
-    # Change metadata kind, leaving all other attributes the same.
-    return ExprMetadata(kind=ExprKind.WINDOW, n_open_windows=md["n_open_windows"] + 1)
-
-
-def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
+def combine_metadata(*args: IntoExpr | object | None, str_as_lit: bool) -> ExprMetadata:
     # Combine metadata from `args`.
 
     n_changes_length = 0
@@ -411,9 +414,9 @@ def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
         if isinstance(arg, str) and not str_as_lit:
             has_transforms = True
         elif is_expr(arg):
-            if arg._metadata["n_open_windows"]:
+            if arg._metadata.n_open_windows:
                 result_n_open_windows += 1
-            kind = arg._metadata["kind"]
+            kind = arg._metadata.kind
             if kind is ExprKind.AGGREGATION:
                 has_aggregations = True
             elif kind is ExprKind.LITERAL:
@@ -443,17 +446,12 @@ def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
         raise ShapeError(msg)
     elif n_changes_length:
         result_kind = ExprKind.CHANGES_LENGTH
-    elif has_transforms:
-        result_kind = ExprKind.TRANSFORM
-    elif has_windows:
+    elif has_transforms or has_windows:
         result_kind = ExprKind.TRANSFORM
     else:
         result_kind = ExprKind.AGGREGATION
 
-    return ExprMetadata(
-        kind=result_kind,
-        n_open_windows=result_n_open_windows,
-    )
+    return ExprMetadata(result_kind, n_open_windows=result_n_open_windows)
 
 
 def check_expressions_transform(*args: IntoExpr, function_name: str) -> None:
@@ -463,8 +461,7 @@ def check_expressions_transform(*args: IntoExpr, function_name: str) -> None:
     from narwhals.series import Series
 
     if not all(
-        (is_expr(x) and x._metadata["kind"] is ExprKind.TRANSFORM)
-        or isinstance(x, (str, Series))
+        (is_expr(x) and x._metadata.is_transform()) or isinstance(x, (str, Series))
         for x in args
     ):
         msg = f"Expressions which aggregate or change length cannot be passed to '{function_name}'."
@@ -476,13 +473,12 @@ def all_exprs_are_aggs_or_literals(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
     # For Series input, we don't raise (yet), we let such checks happen later,
     # as this function works lazily and so can't evaluate lengths.
     exprs = chain(args, kwargs.values())
-    agg_or_lit = {ExprKind.AGGREGATION, ExprKind.LITERAL}
-    return all(is_expr(x) and x._metadata["kind"] in agg_or_lit for x in exprs)
+    return all(is_expr(x) and x._metadata.is_aggregation_or_literal() for x in exprs)
 
 
 def infer_kind(obj: IntoExpr | _1DArray | object, *, str_as_lit: bool) -> ExprKind:
     if is_expr(obj):
-        return obj._metadata["kind"]
+        return obj._metadata.kind
     if (
         is_narwhals_series(obj)
         or is_numpy_array(obj)
