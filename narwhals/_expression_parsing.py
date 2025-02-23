@@ -22,6 +22,7 @@ from narwhals.utils import Implementation
 from narwhals.utils import is_compliant_expr
 
 if TYPE_CHECKING:
+    from typing_extensions import Never
     from typing_extensions import TypeIs
 
     from narwhals._arrow.expr import ArrowExpr
@@ -358,11 +359,40 @@ class ExprMetadata(TypedDict):
     is_order_dependent: bool
 
 
+# TODO @dangotbanned: replace `ExprMetadata` and rename
+class ExprMeta:
+    __slots__ = ("_kind", "_order_dependent")
+
+    def __init__(self, kind: ExprKind, /, *, order_dependent: bool) -> None:
+        self._kind: ExprKind = kind
+        self._order_dependent: bool = order_dependent
+
+    def __init_subclass__(cls, /, *args: Any, **kwds: Any) -> Never:
+        msg = f"Cannot subclass {cls.__name__!r}"
+        raise TypeError(msg)
+
+    @property
+    def kind(self) -> ExprKind:
+        return self._kind
+
+    def is_order_dependent(self) -> bool:
+        return self._order_dependent
+
+    def with_kind(self, kind: ExprKind, /) -> ExprMeta:
+        """Change metadata kind, leaving all other attributes the same."""
+        return ExprMeta(kind, order_dependent=self.is_order_dependent())
+
+    def with_dependence(self) -> ExprMeta:
+        """Change metadata order dependence, leaving all other attributes the same."""
+        return ExprMeta(self.kind, order_dependent=True)
+
+
 def change_kind(md: ExprMetadata, kind: ExprKind) -> ExprMetadata:
     # Change metadata kind, leaving all other attributes the same.
     return ExprMetadata(kind=kind, is_order_dependent=md["is_order_dependent"])
 
 
+# NOTE: Could just be `ExprMetadata(...)` or `expr_metadata(...)`?
 def change_kind_and_make_order_dependent(
     md: ExprMetadata,  # noqa: ARG001 (we will use this later)
     kind: ExprKind,
