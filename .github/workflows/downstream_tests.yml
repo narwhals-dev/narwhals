@@ -196,6 +196,9 @@ jobs:
       - name: Run `make narwhals-test-integration`
         run: |
           cd py-shiny
+          # Isort seems to behave slightly differently in CI
+          # so we ignore its output
+          make format -s
           make narwhals-test-integration
 
   tea-tasting:
