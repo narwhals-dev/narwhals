@@ -212,7 +212,7 @@ def reuse_series_namespace_implementation(
     expr: ArrowExprT | PandasLikeExprT,
     series_namespace: str,
     attr: str,
-    **call_kwargs: Any,
+    **kwargs: Any,
 ) -> ArrowExprT | PandasLikeExprT:
     """Reuse Series implementation for expression.
 
@@ -224,19 +224,18 @@ def reuse_series_namespace_implementation(
         series_namespace: The Series namespace (e.g. `dt`, `cat`, `str`, `list`, `name`)
         attr: name of method.
         args: arguments to pass to function.
-        call_kwargs: keyword arguments to pass to function.
+        kwargs: keyword arguments to pass to function.
     """
     plx = expr.__narwhals_namespace__()
     return plx._create_expr_from_callable(  # type: ignore[return-value]
         lambda df: [
-            getattr(getattr(series, series_namespace), attr)(**call_kwargs)
+            getattr(getattr(series, series_namespace), attr)(**kwargs)
             for series in expr(df)  # type: ignore[arg-type]
         ],
         depth=expr._depth + 1,
         function_name=f"{expr._function_name}->{series_namespace}.{attr}",
         evaluate_output_names=expr._evaluate_output_names,  # type: ignore[arg-type]
         alias_output_names=expr._alias_output_names,
-        call_kwargs=call_kwargs,
     )
 
 
