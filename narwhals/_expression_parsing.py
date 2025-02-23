@@ -133,10 +133,7 @@ def reuse_series_implementation(
     attr: str,
     *,
     returns_scalar: bool = False,
-    # non-expressifiable args which we may need to reuse in `agg` or `over`,
-    # such as `ddof` for `std` and `var`
     call_kwargs: dict[str, Any] | None = None,
-    # arguments which may be (but don't have to be) expressifiable
     **expressifiable_args: Any,
 ) -> ArrowExprT | PandasLikeExprT:
     """Reuse Series implementation for expression.
