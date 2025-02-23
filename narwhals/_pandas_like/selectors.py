@@ -138,7 +138,7 @@ class PandasSelector(PandasLikeExpr):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs=self._kwargs,
+            call_kwargs=self._call_kwargs,
         )
 
     def __sub__(self: Self, other: PandasSelector | Any) -> PandasSelector | Any:

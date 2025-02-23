@@ -17,6 +17,7 @@ from narwhals import exceptions
 from narwhals import selectors
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
+from narwhals._expression_parsing import change_metadata_kind
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
 from narwhals.dependencies import get_polars
@@ -1020,10 +1021,7 @@ class Expr(NwExpr):
             warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).unique(),
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            change_metadata_kind(self._metadata, ExprKind.CHANGES_LENGTH),
         )
 
     def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
