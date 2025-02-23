@@ -13,6 +13,7 @@ from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import change_metadata_kind
 from narwhals._expression_parsing import combine_metadata
+from narwhals._expression_parsing import make_order_dependent
 from narwhals._expression_parsing import operation_is_order_dependent
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import LengthChangingExprError
@@ -651,7 +652,11 @@ class Expr:
                 function=function, return_dtype=return_dtype
             ),
             # safest assumptions
-            ExprMetadata(kind=ExprKind.CHANGES_LENGTH, is_order_dependent=True),
+            ExprMetadata(
+                kind=ExprKind.CHANGES_LENGTH,
+                is_order_dependent=True,
+                has_open_windows=self._metadata["has_open_windows"],
+            ),
         )
 
     def skew(self: Self) -> Self:
@@ -775,7 +780,11 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_min(),
-            ExprMetadata(kind=ExprKind.AGGREGATION, is_order_dependent=True),
+            ExprMetadata(
+                kind=ExprKind.AGGREGATION,
+                is_order_dependent=True,
+                has_open_windows=self._metadata["has_open_windows"],
+            ),
         )
 
     def arg_max(self: Self) -> Self:
@@ -799,7 +808,11 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_max(),
-            ExprMetadata(kind=ExprKind.AGGREGATION, is_order_dependent=True),
+            ExprMetadata(
+                kind=ExprKind.AGGREGATION,
+                is_order_dependent=True,
+                has_open_windows=self._metadata["has_open_windows"],
+            ),
         )
 
     def count(self: Self) -> Self:
@@ -924,7 +937,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_sum(reverse=reverse),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            make_order_dependent(self._metadata),
         )
 
     def diff(self: Self) -> Self:
@@ -967,7 +980,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).diff(),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            make_order_dependent(self._metadata),
         )
 
     def shift(self: Self, n: int) -> Self:
@@ -1013,7 +1026,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).shift(n),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            make_order_dependent(self._metadata),
         )
 
     def replace_strict(
@@ -1103,7 +1116,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             ),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            make_order_dependent(self._metadata),
         )
 
     # --- transform ---
@@ -1159,9 +1172,9 @@ class Expr:
             lambda plx: apply_n_ary_operation(
                 plx, func, self, lower_bound, upper_bound, str_as_lit=False
             ),
-            ExprMetadata(
-                kind=self._metadata["kind"], is_order_dependent=is_order_dependent
-            ),
+            make_order_dependent(self._metadata)
+            if is_order_dependent
+            else self._metadata,
         )
 
     def is_in(self: Self, other: Any) -> Self:
@@ -1240,7 +1253,9 @@ class Expr:
                 str_as_lit=False,
             ),
             ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH, is_order_dependent=is_order_dependent
+                kind=ExprKind.CHANGES_LENGTH,
+                is_order_dependent=is_order_dependent,
+                has_open_windows=self._metadata["has_open_windows"],
             ),
         )
 
@@ -1328,7 +1343,11 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_true(),
-            ExprMetadata(kind=ExprKind.CHANGES_LENGTH, is_order_dependent=True),
+            ExprMetadata(
+                kind=ExprKind.CHANGES_LENGTH,
+                is_order_dependent=True,
+                has_open_windows=self._metadata["has_open_windows"],
+            ),
         )
 
     def fill_null(
@@ -1654,7 +1673,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_first_distinct(),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            make_order_dependent(self._metadata),
         )
 
     def is_last_distinct(self: Self) -> Self:
@@ -1683,7 +1702,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_last_distinct(),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            make_order_dependent(self._metadata),
         )
 
     def quantile(
@@ -1752,7 +1771,11 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).head(n),
-            ExprMetadata(kind=ExprKind.CHANGES_LENGTH, is_order_dependent=True),
+            ExprMetadata(
+                kind=ExprKind.CHANGES_LENGTH,
+                is_order_dependent=True,
+                has_open_windows=self._metadata["has_open_windows"],
+            ),
         )
 
     def tail(self: Self, n: int = 10) -> Self:
@@ -1780,7 +1803,11 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).tail(n),
-            ExprMetadata(kind=ExprKind.CHANGES_LENGTH, is_order_dependent=True),
+            ExprMetadata(
+                kind=ExprKind.CHANGES_LENGTH,
+                is_order_dependent=True,
+                has_open_windows=self._metadata["has_open_windows"],
+            ),
         )
 
     def round(self: Self, decimals: int = 0) -> Self:
@@ -1875,7 +1902,11 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
-            ExprMetadata(kind=ExprKind.CHANGES_LENGTH, is_order_dependent=True),
+            ExprMetadata(
+                kind=ExprKind.CHANGES_LENGTH,
+                is_order_dependent=True,
+                has_open_windows=self._metadata["has_open_windows"],
+            ),
         )
 
     # need to allow numeric typing
@@ -1922,9 +1953,9 @@ class Expr:
                 upper_bound,  # type: ignore[arg-type]
                 str_as_lit=False,
             ),
-            ExprMetadata(
-                kind=self._metadata["kind"], is_order_dependent=is_order_dependent
-            ),
+            make_order_dependent(self._metadata)
+            if is_order_dependent
+            else self._metadata,
         )
 
     def mode(self: Self) -> Self:
@@ -2021,7 +2052,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_count(reverse=reverse),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            make_order_dependent(self._metadata),
         )
 
     def cum_min(self: Self, *, reverse: bool = False) -> Self:
@@ -2054,7 +2085,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_min(reverse=reverse),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            make_order_dependent(self._metadata),
         )
 
     def cum_max(self: Self, *, reverse: bool = False) -> Self:
@@ -2087,7 +2118,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_max(reverse=reverse),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            make_order_dependent(self._metadata),
         )
 
     def cum_prod(self: Self, *, reverse: bool = False) -> Self:
@@ -2120,7 +2151,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_prod(reverse=reverse),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            make_order_dependent(self._metadata),
         )
 
     def rolling_sum(
@@ -2182,7 +2213,7 @@ class Expr:
                 min_samples=min_samples,
                 center=center,
             ),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            make_order_dependent(self._metadata),
         )
 
     def rolling_mean(
@@ -2244,7 +2275,7 @@ class Expr:
                 min_samples=min_samples,
                 center=center,
             ),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            make_order_dependent(self._metadata),
         )
 
     def rolling_var(
@@ -2306,7 +2337,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).rolling_var(
                 window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
             ),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            make_order_dependent(self._metadata),
         )
 
     def rolling_std(
@@ -2371,7 +2402,7 @@ class Expr:
                 center=center,
                 ddof=ddof,
             ),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            make_order_dependent(self._metadata),
         )
 
     def rank(
@@ -2437,7 +2468,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).rank(
                 method=method, descending=descending
             ),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            make_order_dependent(self._metadata),
         )
 
     @property

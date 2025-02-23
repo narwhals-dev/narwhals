@@ -14,10 +14,10 @@ from typing import Union
 from typing import overload
 
 from narwhals._expression_parsing import ExprKind
-from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import check_expressions_transform
 from narwhals._expression_parsing import combine_metadata
+from narwhals._expression_parsing import default_metadata
 from narwhals._expression_parsing import extract_compliant
 from narwhals._expression_parsing import infer_kind
 from narwhals.dataframe import DataFrame
@@ -1044,7 +1044,7 @@ def col(*names: str | Iterable[str]) -> Expr:
     def func(plx: Any) -> Any:
         return plx.col(*flatten(names))
 
-    return Expr(func, ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False))
+    return Expr(func, default_metadata())
 
 
 def nth(*indices: int | Sequence[int]) -> Expr:
@@ -1081,7 +1081,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
     def func(plx: Any) -> Any:
         return plx.nth(*flatten(indices))
 
-    return Expr(func, ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False))
+    return Expr(func, default_metadata())
 
 
 # Add underscore so it doesn't conflict with builtin `all`
@@ -1105,10 +1105,7 @@ def all_() -> Expr:
         |   1  4  0.246    |
         └──────────────────┘
     """
-    return Expr(
-        lambda plx: plx.all(),
-        ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False),
-    )
+    return Expr(lambda plx: plx.all(), default_metadata())
 
 
 # Add underscore so it doesn't conflict with builtin `len`
@@ -1141,7 +1138,7 @@ def len_() -> Expr:
     def func(plx: Any) -> Any:
         return plx.len()
 
-    return Expr(func, ExprMetadata(kind=ExprKind.AGGREGATION, is_order_dependent=False))
+    return Expr(func, default_metadata())
 
 
 def sum(*columns: str) -> Expr:
@@ -1597,10 +1594,7 @@ def lit(value: Any, dtype: DType | type[DType] | None = None) -> Expr:
         msg = f"Nested datatypes are not supported yet. Got {value}"
         raise NotImplementedError(msg)
 
-    return Expr(
-        lambda plx: plx.lit(value, dtype),
-        ExprMetadata(kind=ExprKind.LITERAL, is_order_dependent=False),
-    )
+    return Expr(lambda plx: plx.lit(value, dtype), default_metadata())
 
 
 def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:

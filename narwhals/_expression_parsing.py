@@ -355,12 +355,33 @@ class ExprKind(Enum):
 
 class ExprMetadata(TypedDict):
     kind: ExprKind
+    """Which kind of expression this is (literal, aggregation, ...)"""
     is_order_dependent: bool
+    """Whether expression assumes physical order of rows."""
+    has_open_windows: bool
+    """Whether expression contains window functions not immediately followed by `over`."""
 
 
 def change_metadata_kind(md: ExprMetadata, kind: ExprKind) -> ExprMetadata:
     # Change metadata kind, leaving all other attributes the same.
-    return ExprMetadata(kind=kind, is_order_dependent=md["is_order_dependent"])
+    return ExprMetadata(
+        kind=kind,
+        is_order_dependent=md["is_order_dependent"],
+        has_open_windows=md["has_open_windows"],
+    )
+
+
+def make_order_dependent(md: ExprMetadata) -> ExprMetadata:
+    # Make order dependent, leaving other attributes the same.
+    return ExprMetadata(
+        kind=md["kind"], is_order_dependent=True, has_open_windows=md["has_open_windows"]
+    )
+
+
+def default_metadata() -> ExprMetadata:
+    return ExprMetadata(
+        kind=ExprKind.TRANSFORM, is_order_dependent=False, has_open_windows=False
+    )
 
 
 def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
@@ -371,6 +392,7 @@ def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
     has_aggregations = False
     has_literals = False
     result_is_order_dependent = False
+    result_has_open_windows = False
 
     for arg in args:
         if isinstance(arg, str) and not str_as_lit:
@@ -378,6 +400,8 @@ def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
         elif is_expr(arg):
             if arg._metadata["is_order_dependent"]:
                 result_is_order_dependent = True
+            if arg._metadata["has_open_windows"]:
+                result_has_open_windows = True
             kind = arg._metadata["kind"]
             if kind is ExprKind.AGGREGATION:
                 has_aggregations = True
@@ -410,7 +434,11 @@ def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
     else:
         result_kind = ExprKind.AGGREGATION
 
-    return ExprMetadata(kind=result_kind, is_order_dependent=result_is_order_dependent)
+    return ExprMetadata(
+        kind=result_kind,
+        is_order_dependent=result_is_order_dependent,
+        has_open_windows=result_has_open_windows,
+    )
 
 
 def check_expressions_transform(*args: IntoExpr, function_name: str) -> None:

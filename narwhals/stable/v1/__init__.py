@@ -970,7 +970,11 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).head(n),
-            ExprMetadata(kind=ExprKind.CHANGES_LENGTH, is_order_dependent=True),
+            ExprMetadata(
+                kind=ExprKind.CHANGES_LENGTH,
+                is_order_dependent=True,
+                has_open_windows=self._metadata["has_open_windows"],
+            ),
         )
 
     def tail(self: Self, n: int = 10) -> Self:
@@ -984,7 +988,11 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).tail(n),
-            ExprMetadata(kind=ExprKind.CHANGES_LENGTH, is_order_dependent=True),
+            ExprMetadata(
+                kind=ExprKind.CHANGES_LENGTH,
+                is_order_dependent=True,
+                has_open_windows=self._metadata["has_open_windows"],
+            ),
         )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
@@ -999,7 +1007,11 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
-            ExprMetadata(kind=ExprKind.CHANGES_LENGTH, is_order_dependent=True),
+            ExprMetadata(
+                kind=ExprKind.CHANGES_LENGTH,
+                is_order_dependent=True,
+                has_open_windows=self._metadata["has_open_windows"],
+            ),
         )
 
     def unique(self: Self, *, maintain_order: bool | None = None) -> Self:
@@ -1038,7 +1050,11 @@ class Expr(NwExpr):
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             ),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            ExprMetadata(
+                kind=self._metadata["kind"],
+                is_order_dependent=True,
+                has_open_windows=self._metadata["has_open_windows"],
+            ),
         )
 
     def arg_true(self: Self) -> Self:
@@ -1049,7 +1065,11 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_true(),
-            ExprMetadata(kind=ExprKind.CHANGES_LENGTH, is_order_dependent=True),
+            ExprMetadata(
+                kind=ExprKind.CHANGES_LENGTH,
+                is_order_dependent=True,
+                has_open_windows=self._metadata["has_open_windows"],
+            ),
         )
 
     def sample(
@@ -1083,7 +1103,11 @@ class Expr(NwExpr):
             lambda plx: self._to_compliant_expr(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
             ),
-            ExprMetadata(kind=ExprKind.CHANGES_LENGTH, is_order_dependent=True),
+            ExprMetadata(
+                kind=ExprKind.CHANGES_LENGTH,
+                is_order_dependent=True,
+                has_open_windows=self._metadata["has_open_windows"],
+            ),
         )
 
 
