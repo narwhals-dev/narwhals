@@ -381,10 +381,12 @@ class ArrowSeries(CompliantSeries):
     def __getitem__(self: Self, idx: int) -> Any: ...
 
     @overload
-    def __getitem__(self: Self, idx: slice | Sequence[int] | pa.ChunkedArray) -> Self: ...
+    def __getitem__(
+        self: Self, idx: slice | Sequence[int] | ArrowChunkedArray
+    ) -> Self: ...
 
     def __getitem__(
-        self: Self, idx: int | slice | Sequence[int] | pa.ChunkedArray
+        self: Self, idx: int | slice | Sequence[int] | ArrowChunkedArray
     ) -> Any | Self:
         if isinstance(idx, int):
             return maybe_extract_py_scalar(
@@ -690,7 +692,7 @@ class ArrowSeries(CompliantSeries):
             validate_column_names=False,
         )
 
-    def to_pandas(self: Self) -> pd.Series:
+    def to_pandas(self: Self) -> pd.Series[Any]:
         import pandas as pd  # ignore-banned-import()
 
         return pd.Series(self._native_series, name=self.name)  # pyright: ignore[reportArgumentType, reportCallIssue]

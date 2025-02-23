@@ -698,7 +698,7 @@ def int_dtype_mapper(dtype: Any) -> str:
 
 
 def convert_str_slice_to_int_slice(
-    str_slice: slice, columns: pd.Index
+    str_slice: slice, columns: pd.Index[str]
 ) -> tuple[int | None, int | None, int | None]:
     # We can safely cast to int because we know that `columns` doesn't contain duplicates.
     start = (
@@ -716,8 +716,8 @@ def convert_str_slice_to_int_slice(
 
 
 def calculate_timestamp_datetime(
-    s: pd.Series, original_time_unit: str, time_unit: str
-) -> pd.Series:
+    s: pd.Series[int], original_time_unit: str, time_unit: str
+) -> pd.Series[int]:
     if original_time_unit == "ns":
         if time_unit == "ns":
             result = s
@@ -752,7 +752,7 @@ def calculate_timestamp_datetime(
     return result
 
 
-def calculate_timestamp_date(s: pd.Series, time_unit: str) -> pd.Series:
+def calculate_timestamp_date(s: pd.Series[int], time_unit: str) -> pd.Series[int]:
     s = s * 86_400  # number of seconds in a day
     if time_unit == "ns":
         result = s * 1_000_000_000
@@ -833,7 +833,7 @@ def pivot_table(
     return result
 
 
-def check_column_names_are_unique(columns: pd.Index) -> None:
+def check_column_names_are_unique(columns: pd.Index[str]) -> None:
     try:
         len_unique_columns = len(columns.drop_duplicates())
     except Exception:  # noqa: BLE001  # pragma: no cover

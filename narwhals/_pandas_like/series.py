@@ -681,7 +681,7 @@ class PandasLikeSeries(CompliantSeries):
             )
         return s.to_numpy(dtype=dtype, copy=copy)
 
-    def to_pandas(self: Self) -> pd.Series:
+    def to_pandas(self: Self) -> pd.Series[Any]:
         if self._implementation is Implementation.PANDAS:
             return self._native_series
         elif self._implementation is Implementation.CUDF:  # pragma: no cover

@@ -855,7 +855,7 @@ def _is_range_index(obj: Any, native_namespace: Any) -> TypeIs[pd.RangeIndex]:
 
 
 def _has_default_index(
-    native_frame_or_series: pd.Series | pd.DataFrame, native_namespace: Any
+    native_frame_or_series: pd.Series[Any] | pd.DataFrame, native_namespace: Any
 ) -> bool:
     index = native_frame_or_series.index
     return (

@@ -1409,7 +1409,7 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.to_numpy()
 
-    def to_pandas(self: Self) -> pd.Series:
+    def to_pandas(self: Self) -> pd.Series[Any]:
         """Convert to pandas Series.
 
         Returns:
