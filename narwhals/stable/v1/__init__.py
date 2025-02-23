@@ -1037,7 +1037,7 @@ class Expr(NwExpr):
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             ),
-            self._metadata.with_dependence(),
+            self._metadata.with_order_dependence(),
         )
 
     def arg_true(self: Self) -> Self:

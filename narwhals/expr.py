@@ -922,7 +922,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_sum(reverse=reverse),
-            self._metadata.with_dependence(),
+            self._metadata.with_order_dependence(),
         )
 
     def diff(self: Self) -> Self:
@@ -965,7 +965,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).diff(),
-            self._metadata.with_dependence(),
+            self._metadata.with_order_dependence(),
         )
 
     def shift(self: Self, n: int) -> Self:
@@ -1011,7 +1011,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).shift(n),
-            self._metadata.with_dependence(),
+            self._metadata.with_order_dependence(),
         )
 
     def replace_strict(
@@ -1101,7 +1101,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             ),
-            self._metadata.with_dependence(),
+            self._metadata.with_order_dependence(),
         )
 
     # --- transform ---
@@ -1647,7 +1647,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_first_distinct(),
-            self._metadata.with_dependence(),
+            self._metadata.with_order_dependence(),
         )
 
     def is_last_distinct(self: Self) -> Self:
@@ -1676,7 +1676,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_last_distinct(),
-            self._metadata.with_dependence(),
+            self._metadata.with_order_dependence(),
         )
 
     def quantile(
@@ -2011,7 +2011,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_count(reverse=reverse),
-            self._metadata.with_dependence(),
+            self._metadata.with_order_dependence(),
         )
 
     def cum_min(self: Self, *, reverse: bool = False) -> Self:
@@ -2044,7 +2044,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_min(reverse=reverse),
-            self._metadata.with_dependence(),
+            self._metadata.with_order_dependence(),
         )
 
     def cum_max(self: Self, *, reverse: bool = False) -> Self:
@@ -2077,7 +2077,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_max(reverse=reverse),
-            self._metadata.with_dependence(),
+            self._metadata.with_order_dependence(),
         )
 
     def cum_prod(self: Self, *, reverse: bool = False) -> Self:
@@ -2110,7 +2110,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_prod(reverse=reverse),
-            self._metadata.with_dependence(),
+            self._metadata.with_order_dependence(),
         )
 
     def rolling_sum(
@@ -2172,7 +2172,7 @@ class Expr:
                 min_samples=min_samples,
                 center=center,
             ),
-            self._metadata.with_dependence(),
+            self._metadata.with_order_dependence(),
         )
 
     def rolling_mean(
@@ -2234,7 +2234,7 @@ class Expr:
                 min_samples=min_samples,
                 center=center,
             ),
-            self._metadata.with_dependence(),
+            self._metadata.with_order_dependence(),
         )
 
     def rolling_var(
@@ -2296,7 +2296,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).rolling_var(
                 window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
             ),
-            self._metadata.with_dependence(),
+            self._metadata.with_order_dependence(),
         )
 
     def rolling_std(
@@ -2361,7 +2361,7 @@ class Expr:
                 center=center,
                 ddof=ddof,
             ),
-            self._metadata.with_dependence(),
+            self._metadata.with_order_dependence(),
         )
 
     def rank(
@@ -2427,7 +2427,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).rank(
                 method=method, descending=descending
             ),
-            self._metadata.with_dependence(),
+            self._metadata.with_order_dependence(),
         )
 
     @property

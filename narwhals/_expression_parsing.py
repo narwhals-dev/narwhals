@@ -384,9 +384,9 @@ class ExprMetadata:
         """Change metadata kind, leaving all other attributes the same."""
         return ExprMetadata(kind, order_dependent=self.is_order_dependent())
 
-    def with_dependence(self, order_dependent: bool = True, /) -> ExprMetadata:  # noqa: FBT001, FBT002
-        """Change metadata order dependence, leaving all other attributes the same."""
-        return ExprMetadata(self.kind, order_dependent=order_dependent)
+    def with_order_dependence(self) -> ExprMetadata:
+        """Set `order_dependent` to True, leaving all other attributes the same."""
+        return ExprMetadata(self.kind, order_dependent=True)
 
 
 def default_selector_metadata() -> ExprMetadata:
