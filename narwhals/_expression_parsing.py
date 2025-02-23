@@ -353,6 +353,11 @@ class ExprMetadata(TypedDict):
     is_order_dependent: bool
 
 
+def change_metadata_kind(md: ExprMetadata, kind: ExprKind) -> ExprMetadata:
+    # Change metadata kind, leaving all other attributes the same.
+    return ExprMetadata(kind=kind, is_order_dependent=md["is_order_dependent"])
+
+
 def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
     # Combine metadata from `args`.
 
@@ -460,5 +465,4 @@ def apply_n_ary_operation(
         else compliant_expr
         for compliant_expr, kind in zip(compliant_exprs, kinds)
     )
-    return function(*compliant_exprs)
     return function(*compliant_exprs)
