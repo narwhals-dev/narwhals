@@ -403,7 +403,7 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
         def _var(_input: duckdb.Expression) -> duckdb.Expression:
             n_samples = FunctionExpression("count", _input)
             # NOTE: Not implemented Error: Unable to transform python value of type '<class 'duckdb.duckdb.Expression'>' to DuckDB LogicalType
-            return FunctionExpression("var_pop", _input) * n_samples / (n_samples - ddof)  # type: ignore[operator]
+            return FunctionExpression("var_pop", _input) * n_samples / (n_samples - ddof)  # type: ignore[operator, no-any-return]
 
         return self._from_call(_var, "var")
 

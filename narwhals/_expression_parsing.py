@@ -296,10 +296,10 @@ def extract_compliant(
     if isinstance(other, str) and not str_as_lit:
         return plx.col(other)
     if is_narwhals_series(other):
-        return plx._create_expr_from_series(other._compliant_series)  # type: ignore[attr-defined]
+        return plx._create_expr_from_series(other._compliant_series)  # type: ignore[attr-defined, no-any-return]
     if is_numpy_array(other):
         series = plx._create_compliant_series(other)  # type: ignore[attr-defined]
-        return plx._create_expr_from_series(series)  # type: ignore[attr-defined]
+        return plx._create_expr_from_series(series)  # type: ignore[attr-defined, no-any-return]
     return other
 
 
