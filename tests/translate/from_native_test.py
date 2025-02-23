@@ -238,9 +238,7 @@ def test_series_only_sqlframe() -> None:  # pragma: no cover
     from sqlframe.duckdb import DuckDBSession
 
     session = DuckDBSession()
-    df = (  # type: ignore[no-any-return]
-        session.createDataFrame([*zip(*data.values())], schema=[*data.keys()])
-    )
+    df = session.createDataFrame([*zip(*data.values())], schema=[*data.keys()])
 
     with pytest.raises(TypeError, match="Cannot only use `series_only`"):
         nw.from_native(df, series_only=True)
@@ -258,9 +256,7 @@ def test_eager_only_sqlframe(eager_only: Any, context: Any) -> None:  # pragma: 
     from sqlframe.duckdb import DuckDBSession
 
     session = DuckDBSession()
-    df = (  # type: ignore[no-any-return]
-        session.createDataFrame([*zip(*data.values())], schema=[*data.keys()])
-    )
+    df = session.createDataFrame([*zip(*data.values())], schema=[*data.keys()])
 
     with context:
         res = nw.from_native(df, eager_only=eager_only)

@@ -1462,7 +1462,7 @@ class Then(Expr):
                 kind is ExprKind.AGGREGATION or kind is ExprKind.LITERAL
             ) and is_compliant_expr(compliant_value):
                 compliant_value = compliant_value.broadcast(kind)
-            return compliant_expr.otherwise(compliant_value)
+            return compliant_expr.otherwise(compliant_value)  # type: ignore[no-any-return]
 
         return Expr(
             func,
