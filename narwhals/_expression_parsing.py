@@ -363,6 +363,10 @@ class ExprMetadata(TypedDict):
     """Number of window functions (e.g. `cum_sum`) not immediately followed by `over`."""
 
 
+def default_metadata() -> ExprMetadata:
+    return ExprMetadata(kind=ExprKind.TRANSFORM, n_open_windows=0)
+
+
 def change_kind(md: ExprMetadata, kind: ExprKind) -> ExprMetadata:
     # Change metadata kind, leaving all other attributes the same.
     return ExprMetadata(

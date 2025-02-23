@@ -2204,15 +2204,15 @@ class LazyFrame(BaseFrame[FrameT]):
             plx = self.__narwhals_namespace__()
             return plx.col(arg)
         if isinstance(arg, Expr):
-            if arg._metadata["is_order_dependent"]:
+            if arg._metadata["n_open_windows"] > 0:
                 msg = (
                     "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
                     "Hints:\n"
                     "- Instead of `lf.select(nw.col('a').sort())`, use `lf.select('a').sort()\n"
                     "- Instead of `lf.select(nw.col('a').head())`, use `lf.select('a').head()\n"
                     "- `Expr.cum_sum`, and other such expressions, are not currently supported.\n"
-                    "  In a future version of Narwhals, a `order_by` argument will be added and \n"
-                    "  they will be supported."
+                    "  In a future version of Narwhals, a `order_by` argument will be added to\n"
+                    "  `over` and they will be supported."
                 )
                 raise OrderDependentExprError(msg)
             if arg._metadata["kind"] is ExprKind.CHANGES_LENGTH:

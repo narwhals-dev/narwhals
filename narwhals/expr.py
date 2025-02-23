@@ -1231,20 +1231,17 @@ class Expr:
             └──────────────────┘
         """
         flat_predicates = flatten(predicates)
-        is_order_dependent = operation_has_open_windows(*flat_predicates)
-
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx,
                 lambda *exprs: exprs[0].filter(*exprs[1:]),
                 self,
-                *predicates,
+                *flat_predicates,
                 str_as_lit=False,
             ),
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=is_order_dependent,
-                has_open_windows=self._metadata["has_open_windows"],
+            change_kind(
+                combine_metadata(self, *flat_predicates, str_as_lit=False),
+                ExprKind.CHANGES_LENGTH,
             ),
         )
 
@@ -1549,15 +1546,14 @@ class Expr:
         if self._metadata["kind"] is ExprKind.CHANGES_LENGTH:
             msg = "`.over()` can not be used for expressions which change length."
             raise LengthChangingExprError(msg)
-        metadata = change_kind(self._metadata, ExprKind.TRANSFORM)
-        if _order_by is not None:
-            metadata["has_open_windows"] = False
-            metadata["is_order_dependent"] = False
+        result_metadata = change_kind(self._metadata, ExprKind.TRANSFORM)
+        if _order_by is not None and self._metadata["kind"] is ExprKind.WINDOW:
+            result_metadata["n_open_windows"] -= 1
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).over(
                 flatten(keys), kind=self._metadata["kind"]
             ),
-            change_kind(self._metadata, ExprKind.TRANSFORM),
+            result_metadata,
         )
 
     def is_duplicated(self: Self) -> Self:
