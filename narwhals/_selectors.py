@@ -39,12 +39,8 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
-    class CompliantSeriesWithDType(CompliantSeries, Protocol):
-        @property
-        def dtype(self) -> DType: ...
 
-
-SeriesT = TypeVar("SeriesT", bound="CompliantSeriesWithDType")
+SeriesT = TypeVar("SeriesT", bound="CompliantSeries")
 FrameT = TypeVar("FrameT", bound="CompliantDataFrame | CompliantLazyFrame")
 SelectorOrExpr: TypeAlias = "CompliantSelector[FrameT, SeriesT] | CompliantExpr[SeriesT]"
 EvalSeries: TypeAlias = Callable[[FrameT], Sequence[SeriesT]]
