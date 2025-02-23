@@ -380,7 +380,7 @@ def make_order_dependent(md: ExprMetadata) -> ExprMetadata:
     return ExprMetadata(kind=md["kind"], is_order_dependent=True)
 
 
-def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
+def combine_metadata(*args: IntoExpr | object | None, str_as_lit: bool) -> ExprMetadata:
     # Combine metadata from `args`.
 
     n_changes_length = 0
