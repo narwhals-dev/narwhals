@@ -16,7 +16,6 @@ from narwhals import dependencies
 from narwhals import exceptions
 from narwhals import selectors
 from narwhals._expression_parsing import ExprKind
-from narwhals._expression_parsing import ExprMetadata
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
 from narwhals.dependencies import get_polars
@@ -969,7 +968,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).head(n),
-            ExprMetadata(ExprKind.CHANGES_LENGTH, order_dependent=True),
+            self._metadata.with_kind_and_order_dependence(ExprKind.CHANGES_LENGTH),
         )
 
     def tail(self: Self, n: int = 10) -> Self:
@@ -983,7 +982,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).tail(n),
-            ExprMetadata(ExprKind.CHANGES_LENGTH, order_dependent=True),
+            self._metadata.with_kind_and_order_dependence(ExprKind.CHANGES_LENGTH),
         )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
@@ -998,7 +997,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
-            ExprMetadata(ExprKind.CHANGES_LENGTH, order_dependent=True),
+            self._metadata.with_kind_and_order_dependence(ExprKind.CHANGES_LENGTH),
         )
 
     def unique(self: Self, *, maintain_order: bool | None = None) -> Self:
@@ -1048,7 +1047,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_true(),
-            ExprMetadata(ExprKind.CHANGES_LENGTH, order_dependent=True),
+            self._metadata.with_kind_and_order_dependence(ExprKind.CHANGES_LENGTH),
         )
 
     def sample(
@@ -1082,7 +1081,7 @@ class Expr(NwExpr):
             lambda plx: self._to_compliant_expr(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
             ),
-            ExprMetadata(ExprKind.CHANGES_LENGTH, order_dependent=True),
+            self._metadata.with_kind_and_order_dependence(ExprKind.CHANGES_LENGTH),
         )
 
 

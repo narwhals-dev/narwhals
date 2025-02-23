@@ -388,6 +388,10 @@ class ExprMetadata:
         """Set `order_dependent` to True, leaving all other attributes the same."""
         return ExprMetadata(self.kind, order_dependent=True)
 
+    def with_kind_and_order_dependence(self, kind: ExprKind, /) -> ExprMetadata:
+        """Change kind and set `order_dependent` to True."""
+        return ExprMetadata(kind, order_dependent=True)
+
 
 def default_selector_metadata() -> ExprMetadata:
     return ExprMetadata(ExprKind.TRANSFORM, order_dependent=False)

@@ -649,7 +649,7 @@ class Expr:
                 function=function, return_dtype=return_dtype
             ),
             # safest assumptions
-            ExprMetadata(ExprKind.CHANGES_LENGTH, order_dependent=True),
+            self._metadata.with_kind_and_order_dependence(ExprKind.CHANGES_LENGTH),
         )
 
     def skew(self: Self) -> Self:
@@ -1321,7 +1321,7 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_true(),
-            ExprMetadata(ExprKind.CHANGES_LENGTH, order_dependent=True),
+            self._metadata.with_kind_and_order_dependence(ExprKind.CHANGES_LENGTH),
         )
 
     def fill_null(
@@ -1745,7 +1745,7 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).head(n),
-            ExprMetadata(ExprKind.CHANGES_LENGTH, order_dependent=True),
+            self._metadata.with_kind_and_order_dependence(ExprKind.CHANGES_LENGTH),
         )
 
     def tail(self: Self, n: int = 10) -> Self:
@@ -1773,7 +1773,7 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).tail(n),
-            ExprMetadata(ExprKind.CHANGES_LENGTH, order_dependent=True),
+            self._metadata.with_kind_and_order_dependence(ExprKind.CHANGES_LENGTH),
         )
 
     def round(self: Self, decimals: int = 0) -> Self:
@@ -1868,7 +1868,7 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
-            ExprMetadata(ExprKind.CHANGES_LENGTH, order_dependent=True),
+            self._metadata.with_kind_and_order_dependence(ExprKind.CHANGES_LENGTH),
         )
 
     # need to allow numeric typing
