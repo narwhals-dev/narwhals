@@ -277,7 +277,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 return self._from_native_frame(
                     select_columns_by_name(
                         self._native_frame,
-                        cast("Sequence[str] | _1DArray", item),
+                        cast("list[str] | _1DArray", item),
                         self._backend_version,
                         self._implementation,
                     ),
@@ -380,7 +380,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return self._from_native_frame(
             select_columns_by_name(
                 self._native_frame,
-                column_names,
+                list(column_names),
                 self._backend_version,
                 self._implementation,
             ),
