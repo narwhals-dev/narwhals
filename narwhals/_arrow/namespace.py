@@ -49,7 +49,7 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
         function_name: str,
         evaluate_output_names: Callable[[ArrowDataFrame], Sequence[str]],
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
-        kwargs: dict[str, Any] | None = None,
+        call_kwargs: dict[str, Any] | None = None,
     ) -> ArrowExpr:
         from narwhals._arrow.expr import ArrowExpr
 
@@ -61,7 +61,7 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
             alias_output_names=alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs=kwargs,
+            call_kwargs=call_kwargs,
         )
 
     def _create_expr_from_series(self: Self, series: ArrowSeries) -> ArrowExpr:

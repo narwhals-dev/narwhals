@@ -57,7 +57,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeDataFrame, PandasLikeSeri
         function_name: str,
         evaluate_output_names: Callable[[PandasLikeDataFrame], Sequence[str]],
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
-        kwargs: dict[str, Any] | None = None,
+        call_kwargs: dict[str, Any] | None = None,
     ) -> PandasLikeExpr:
         return PandasLikeExpr(
             func,
@@ -68,7 +68,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeDataFrame, PandasLikeSeri
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs=kwargs,
+            call_kwargs=call_kwargs,
         )
 
     def _create_series_from_scalar(

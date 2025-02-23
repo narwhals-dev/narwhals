@@ -43,7 +43,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         backend_version: tuple[int, ...],
         version: Version,
-        kwargs: dict[str, Any] | None = None,
+        call_kwargs: dict[str, Any] | None = None,
     ) -> None:
         self._call = call
         self._depth = depth
@@ -53,7 +53,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
         self._alias_output_names = alias_output_names
         self._backend_version = backend_version
         self._version = version
-        self._kwargs = kwargs or {}
+        self._call_kwargs = call_kwargs or {}
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         return f"ArrowExpr(depth={self._depth}, function_name={self._function_name}, "
@@ -80,7 +80,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs=self._kwargs,
+            call_kwargs=self._call_kwargs,
         )
 
     @classmethod
@@ -317,7 +317,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
             alias_output_names=alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs=self._kwargs,
+            call_kwargs=self._call_kwargs,
         )
 
     def null_count(self: Self) -> Self:
