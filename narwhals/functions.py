@@ -1458,7 +1458,7 @@ class Then(Expr):
     def otherwise(self: Self, value: IntoExpr | Any) -> Expr:
         kind = infer_kind(value, str_as_lit=False)
 
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
+        def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
             compliant_expr = self._to_compliant_expr(plx)
             compliant_value = extract_compliant(plx, value, str_as_lit=False)
             if (
