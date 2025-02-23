@@ -109,9 +109,7 @@ def narwhals_to_native_dtype(
     if isinstance_or_issubclass(dtype, (dtypes.List, dtypes.Array)):
         return spark_types.ArrayType(
             elementType=narwhals_to_native_dtype(
-                dtype.inner,  # type: ignore[union-attr]
-                version=version,
-                spark_types=spark_types,
+                dtype.inner, version=version, spark_types=spark_types
             )
         )
     if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
@@ -125,7 +123,7 @@ def narwhals_to_native_dtype(
                         spark_types=spark_types,
                     ),
                 )
-                for field in dtype.fields  # type: ignore[union-attr]
+                for field in dtype.fields
             ]
         )
 

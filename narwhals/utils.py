@@ -214,7 +214,7 @@ class Implementation(Enum):
         if self is Implementation.PANDAS:
             import pandas as pd  # ignore-banned-import
 
-            return pd  # type: ignore[no-any-return]
+            return pd
         if self is Implementation.MODIN:
             import modin.pandas
 

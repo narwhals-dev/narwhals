@@ -1148,12 +1148,12 @@ class Expr:
             ub: CompliantExpr[Any, Any],
         ) -> CompliantExpr[Any, Any]:
             if closed == "left":
-                return (compliant_expr >= lb) & (compliant_expr < ub)  # type: ignore[no-any-return]
+                return (compliant_expr >= lb) & (compliant_expr < ub)
             elif closed == "right":
-                return (compliant_expr > lb) & (compliant_expr <= ub)  # type: ignore[no-any-return]
+                return (compliant_expr > lb) & (compliant_expr <= ub)
             elif closed == "none":
-                return (compliant_expr > lb) & (compliant_expr < ub)  # type: ignore[no-any-return]
-            return (compliant_expr >= lb) & (compliant_expr <= ub)  # type: ignore[no-any-return]
+                return (compliant_expr > lb) & (compliant_expr < ub)
+            return (compliant_expr >= lb) & (compliant_expr <= ub)
 
         return self.__class__(
             lambda plx: apply_n_ary_operation(

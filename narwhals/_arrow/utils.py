@@ -179,7 +179,7 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
         return pa.dictionary(pa.uint32(), pa.string())
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        return pa.timestamp(dtype.time_unit, tz=dtype.time_zone)  # type: ignore[arg-type]
+        return pa.timestamp(dtype.time_unit, tz=dtype.time_zone)  # pyright: ignore[reportArgumentType]
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         return pa.duration(dtype.time_unit)
     if isinstance_or_issubclass(dtype, dtypes.Date):

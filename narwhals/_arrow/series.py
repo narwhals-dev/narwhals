@@ -164,19 +164,19 @@ class ArrowSeries(CompliantSeries):
 
     def __ge__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
-        return self._from_native_series(pc.greater_equal(ser, other))  # type: ignore[arg-type]
+        return self._from_native_series(pc.greater_equal(ser, other))
 
     def __gt__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
-        return self._from_native_series(pc.greater(ser, other))  # type: ignore[arg-type]
+        return self._from_native_series(pc.greater(ser, other))
 
     def __le__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
-        return self._from_native_series(pc.less_equal(ser, other))  # type: ignore[arg-type]
+        return self._from_native_series(pc.less_equal(ser, other))
 
     def __lt__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
-        return self._from_native_series(pc.less(ser, other))  # type: ignore[arg-type]
+        return self._from_native_series(pc.less(ser, other))
 
     def __and__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
@@ -196,7 +196,7 @@ class ArrowSeries(CompliantSeries):
 
     def __add__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
-        return self._from_native_series(pc.add(ser, other))  # type: ignore[arg-type]
+        return self._from_native_series(pc.add(ser, other))
 
     def __radd__(self: Self, other: Any) -> Self:
         return self + other  # type: ignore[no-any-return]
@@ -630,7 +630,7 @@ class ArrowSeries(CompliantSeries):
         rng = np.random.default_rng(seed=seed)
         idx = np.arange(0, num_rows)
         mask = rng.choice(idx, size=n, replace=with_replacement)
-        return self._from_native_series(ser.take(mask))
+        return self._from_native_series(ser.take(mask))  # pyright: ignore[reportArgumentType]
 
     def fill_null(
         self: Self,
