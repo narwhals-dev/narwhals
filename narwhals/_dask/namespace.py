@@ -8,7 +8,6 @@ from typing import Callable
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
-from typing import cast
 
 import dask.dataframe as dd
 import pandas as pd
@@ -26,7 +25,6 @@ from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.typing import CompliantNamespace
 from narwhals.utils import Implementation
 from narwhals.utils import get_column_names
-from narwhals.utils import is_compliant_expr
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -351,17 +349,16 @@ class DaskWhen:
         version: Version,
     ) -> None:
         self._backend_version = backend_version
-        self._condition = condition
-        self._then_value = then_value
-        self._otherwise_value = otherwise_value
+        self._condition: DaskExpr = condition
+        self._then_value: DaskExpr | Any = then_value
+        self._otherwise_value: DaskExpr | Any = otherwise_value
         self._version = version
 
     def __call__(self: Self, df: DaskLazyFrame) -> Sequence[dx.Series]:
         condition = self._condition(df)[0]
-        condition = cast("dx.Series", condition)
 
-        if is_compliant_expr(self._then_value):
-            then_value: dx.Series | object = self._then_value(df)[0]
+        if isinstance(self._then_value, DaskExpr):
+            then_value = self._then_value(df)[0]
         else:
             then_value = self._then_value
         (then_series,) = align_series_full_broadcast(df, then_value)
@@ -370,13 +367,13 @@ class DaskWhen:
         if self._otherwise_value is None:
             return [then_series.where(condition)]
 
-        if is_compliant_expr(self._otherwise_value):
-            otherwise_value: dx.Series | object = self._otherwise_value(df)[0]
+        if isinstance(self._otherwise_value, DaskExpr):
+            otherwise_value = self._otherwise_value(df)[0]
         else:
             otherwise_value = self._otherwise_value
         (otherwise_series,) = align_series_full_broadcast(df, otherwise_value)
         validate_comparand(condition, otherwise_series)
-        return [then_series.where(condition, otherwise_series)]
+        return [then_series.where(condition, otherwise_series)]  # pyright: ignore[reportArgumentType]
 
     def then(self: Self, value: DaskExpr | Any) -> DaskThen:
         self._then_value = value

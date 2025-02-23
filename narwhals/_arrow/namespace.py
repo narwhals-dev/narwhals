@@ -28,7 +28,6 @@ from narwhals.typing import CompliantNamespace
 from narwhals.utils import Implementation
 from narwhals.utils import get_column_names
 from narwhals.utils import import_dtypes_module
-from narwhals.utils import is_compliant_expr
 
 if TYPE_CHECKING:
     from typing import Callable
@@ -392,9 +391,9 @@ class ArrowWhen:
         version: Version,
     ) -> None:
         self._backend_version = backend_version
-        self._condition = condition
-        self._then_value = then_value
-        self._otherwise_value = otherwise_value
+        self._condition: ArrowExpr = condition
+        self._then_value: ArrowExpr | Any = then_value
+        self._otherwise_value: ArrowExpr | Any = otherwise_value
         self._version = version
 
     def __call__(self: Self, df: ArrowDataFrame) -> Sequence[ArrowSeries]:
@@ -402,8 +401,8 @@ class ArrowWhen:
         condition = self._condition(df)[0]
         condition_native = condition._native_series
 
-        if is_compliant_expr(self._then_value):
-            value_series: ArrowSeries = self._then_value(df)[0]
+        if isinstance(self._then_value, ArrowExpr):
+            value_series = self._then_value(df)[0]
         else:
             # `self._then_value` is a scalar
             value_series = plx._create_series_from_scalar(
@@ -421,8 +420,8 @@ class ArrowWhen:
                     pc.if_else(condition_native, value_series_native, otherwise_null)
                 )
             ]
-        if is_compliant_expr(self._otherwise_value):
-            otherwise_series: ArrowSeries = self._otherwise_value(df)[0]
+        if isinstance(self._otherwise_value, ArrowExpr):
+            otherwise_series = self._otherwise_value(df)[0]
         else:
             # `self._otherwise_value` is a scalar
             otherwise_series = plx._create_series_from_scalar(

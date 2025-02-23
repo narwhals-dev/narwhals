@@ -24,7 +24,6 @@ from narwhals._pandas_like.utils import vertical_concat
 from narwhals.typing import CompliantNamespace
 from narwhals.utils import get_column_names
 from narwhals.utils import import_dtypes_module
-from narwhals.utils import is_compliant_expr
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -413,9 +412,9 @@ class PandasWhen:
     ) -> None:
         self._implementation = implementation
         self._backend_version = backend_version
-        self._condition = condition
-        self._then_value = then_value
-        self._otherwise_value = otherwise_value
+        self._condition: PandasLikeExpr = condition
+        self._then_value: PandasLikeExpr | Any = then_value
+        self._otherwise_value: PandasLikeExpr | Any = otherwise_value
         self._version = version
 
     def __call__(self: Self, df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
@@ -423,8 +422,8 @@ class PandasWhen:
         condition = self._condition(df)[0]
         condition_native = condition._native_series
 
-        if is_compliant_expr(self._then_value):
-            value_series: PandasLikeSeries = self._then_value(df)[0]
+        if isinstance(self._then_value, PandasLikeExpr):
+            value_series = self._then_value(df)[0]
         else:
             # `self._then_value` is a scalar
             value_series = plx._create_series_from_scalar(
@@ -442,8 +441,8 @@ class PandasWhen:
                 )
             ]
 
-        if is_compliant_expr(self._otherwise_value):
-            otherwise_series: PandasLikeSeries = self._otherwise_value(df)[0]
+        if isinstance(self._otherwise_value, PandasLikeExpr):
+            otherwise_series = self._otherwise_value(df)[0]
         else:
             # `self._then_value` is a scalar
             otherwise_series = plx._create_series_from_scalar(
