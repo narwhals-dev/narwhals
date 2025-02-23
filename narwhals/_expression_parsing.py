@@ -343,10 +343,19 @@ class ExprKind(Enum):
     """e.g. `nw.col('a').mean()`"""
 
     TRANSFORM = auto()
-    """elementwise, e.g. `nw.col('a').round()`"""
+    """preserves length, e.g. `nw.col('a').round()`"""
 
     WINDOW = auto()
-    """order-dependent, doesn't change length, e.g. `nw.col('a').cum_sum()`"""
+    """transform in which last node is order-dependent
+
+    examples:
+    - `nw.col('a').cum_sum()`
+    - `(nw.col('a')+1).cum_sum()`
+
+    non-examples:
+    - `nw.col('a').cum_sum()+1`
+    - `nw.col('a').cum_sum().mean()`
+    """
 
     CHANGES_LENGTH = auto()
     """e.g. `nw.col('a').drop_nulls()`"""
@@ -404,15 +413,14 @@ def combine_metadata(*args: IntoExpr | object | None, str_as_lit: bool) -> ExprM
     # Combine metadata from `args`.
 
     n_changes_length = 0
-    has_transforms = False
-    has_windows = False
+    has_transforms_or_windows = False
     has_aggregations = False
     has_literals = False
     result_n_open_windows = 0
 
     for arg in args:
         if isinstance(arg, str) and not str_as_lit:
-            has_transforms = True
+            has_transforms_or_windows = True
         elif is_expr(arg):
             if arg._metadata.n_open_windows:
                 result_n_open_windows += 1
@@ -423,30 +431,27 @@ def combine_metadata(*args: IntoExpr | object | None, str_as_lit: bool) -> ExprM
                 has_literals = True
             elif kind is ExprKind.CHANGES_LENGTH:
                 n_changes_length += 1
-            elif kind is ExprKind.TRANSFORM:
-                has_transforms = True
-            elif kind is ExprKind.WINDOW:
-                has_windows = True
+            elif kind in {ExprKind.TRANSFORM, ExprKind.WINDOW}:
+                has_transforms_or_windows = True
             else:  # pragma: no cover
                 msg = "unreachable code"
                 raise AssertionError(msg)
     if (
         has_literals
         and not has_aggregations
-        and not has_transforms
-        and not has_windows
+        and not has_transforms_or_windows
         and not n_changes_length
     ):
         result_kind = ExprKind.LITERAL
     elif n_changes_length > 1:
         msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
         raise LengthChangingExprError(msg)
-    elif n_changes_length and (has_transforms or has_windows):
+    elif n_changes_length and has_transforms_or_windows:
         msg = "Cannot combine length-changing expressions with length-preserving ones or aggregations"
         raise ShapeError(msg)
     elif n_changes_length:
         result_kind = ExprKind.CHANGES_LENGTH
-    elif has_transforms or has_windows:
+    elif has_transforms_or_windows:
         result_kind = ExprKind.TRANSFORM
     else:
         result_kind = ExprKind.AGGREGATION
