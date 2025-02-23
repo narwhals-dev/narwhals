@@ -243,6 +243,16 @@ module = [
 follow_imports = "skip"
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = [
+  "*._expression_parsing",
+  "*.utils",
+  "*._pandas_like.*",
+  "*._ibis.*",
+  "*._arrow.*",
+]
+warn_return_any = false
+
 [tool.pyright]
 pythonPlatform = "All"
 # NOTE (stubs do unsafe `TypeAlias` and `TypeVar` imports)
