@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):
+class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[reportInvalidTypeArguments] (#2044)
     _implementation: Implementation = Implementation.DASK
 
     def __init__(
@@ -454,7 +454,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):
                 _input.dtype, self._version, self._implementation
             )
             if dtype.is_numeric():
-                return _input != _input  # noqa: PLR0124
+                return _input != _input  # pyright: ignore[reportReturnType] # noqa: PLR0124
             msg = f"`.is_nan` only supported for numeric dtypes and not {dtype}, did you mean `.is_null`?"
             raise InvalidOperationError(msg)
 
@@ -487,7 +487,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):
         def func(_input: dx.Series) -> dx.Series:
             _name = _input.name
             col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
-            _input = add_row_index(
+            _input = add_row_index(  # pyright: ignore[reportAssignmentType]
                 _input.to_frame(),
                 col_token,
                 backend_version=self._backend_version,
@@ -504,7 +504,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):
         def func(_input: dx.Series) -> dx.Series:
             _name = _input.name
             col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
-            _input = add_row_index(
+            _input = add_row_index(  # pyright: ignore[reportAssignmentType]
                 _input.to_frame(),
                 col_token,
                 backend_version=self._backend_version,

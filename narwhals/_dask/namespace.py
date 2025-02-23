@@ -38,7 +38,7 @@ if TYPE_CHECKING:
         import dask_expr as dx
 
 
-class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):
+class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):  # pyright: ignore[reportInvalidTypeArguments]
     _implementation: Implementation = Implementation.DASK
 
     @property
