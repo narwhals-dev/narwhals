@@ -441,7 +441,6 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={**self._kwargs, "keys": keys},
         )
 
     def mode(self: Self) -> Self:
@@ -483,7 +482,6 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={**self._kwargs, "function": function, "return_dtype": return_dtype},
         )
 
     def is_finite(self: Self) -> Self:

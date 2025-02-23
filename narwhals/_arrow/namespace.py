@@ -211,7 +211,6 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
             function_name="any_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            kwargs={"exprs": exprs},
         )
 
     def sum_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
@@ -229,7 +228,6 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
             function_name="sum_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            kwargs={"exprs": exprs},
         )
 
     def mean_horizontal(self: Self, *exprs: ArrowExpr) -> IntoArrowExpr:
@@ -251,7 +249,6 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
             function_name="mean_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            kwargs={"exprs": exprs},
         )
 
     def min_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
@@ -280,7 +277,6 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
             function_name="min_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            kwargs={"exprs": exprs},
         )
 
     def max_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
@@ -310,7 +306,6 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
             function_name="max_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            kwargs={"exprs": exprs},
         )
 
     def concat(

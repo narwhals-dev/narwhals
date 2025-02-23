@@ -416,7 +416,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={**self._kwargs, "name": name},
+            kwargs=self._kwargs,
         )
 
     def over(self: Self, keys: list[str], kind: ExprKind) -> Self:
@@ -504,7 +504,6 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={**self._kwargs, "keys": keys},
         )
 
     def is_unique(self: Self) -> Self:
@@ -578,7 +577,6 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={**self._kwargs, "function": function, "return_dtype": return_dtype},
         )
 
     def is_finite(self: Self) -> Self:

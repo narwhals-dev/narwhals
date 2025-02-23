@@ -190,7 +190,7 @@ def reuse_series_implementation(
         function_name=f"{expr._function_name}->{attr}",
         evaluate_output_names=expr._evaluate_output_names,  # type: ignore[arg-type]
         alias_output_names=expr._alias_output_names,
-        kwargs={**expr._kwargs, **expressifiable_args},
+        kwargs=expressifiable_args,
     )
 
 
@@ -230,7 +230,7 @@ def reuse_series_namespace_implementation(
         function_name=f"{expr._function_name}->{series_namespace}.{attr}",
         evaluate_output_names=expr._evaluate_output_names,  # type: ignore[arg-type]
         alias_output_names=expr._alias_output_names,
-        kwargs={**expr._kwargs, **kwargs},
+        kwargs=kwargs,
     )
 
 
