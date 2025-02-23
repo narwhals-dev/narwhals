@@ -140,7 +140,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
             func,
             depth=0,
             function_name="col",
-            evaluate_output_names=lambda _df: list(column_names),
+            evaluate_output_names=lambda _df: column_names,
             alias_output_names=None,
             implementation=implementation,
             backend_version=backend_version,

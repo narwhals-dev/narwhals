@@ -128,7 +128,7 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):
         return cls(
             func,
             function_name="col",
-            evaluate_output_names=lambda _df: list(column_names),
+            evaluate_output_names=lambda _df: column_names,
             alias_output_names=None,
             backend_version=backend_version,
             version=version,

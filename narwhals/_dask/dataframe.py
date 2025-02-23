@@ -152,7 +152,7 @@ class DaskLazyFrame(CompliantLazyFrame):
         return self._from_native_frame(
             select_columns_by_name(
                 self._native_frame,
-                list(column_names),
+                column_names,
                 self._backend_version,
                 self._implementation,
             ),
