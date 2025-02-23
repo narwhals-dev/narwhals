@@ -414,7 +414,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
         )
 
     def over(self: Self, keys: list[str], kind: ExprKind) -> Self:
-        if kind is ExprKind.TRANSFORM:
+        if kind not in {ExprKind.AGGREGATION, ExprKind.LITERAL}:
             msg = (
                 "Elementwise operations in `over` context are not supported for PyArrow."
             )

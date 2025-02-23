@@ -475,7 +475,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     )
                 )
                 return [result_frame[name] for name in aliases]
-        elif kind is ExprKind.TRANSFORM:
+        elif kind not in {ExprKind.AGGREGATION, ExprKind.LITERAL}:
             msg = (
                 "Elementwise operations are only supported in `over` context "
                 "for pandas if they are elementary "
