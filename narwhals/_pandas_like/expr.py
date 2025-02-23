@@ -268,10 +268,14 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
         return reuse_series_implementation(self, "median", returns_scalar=True)
 
     def std(self: Self, *, ddof: int) -> Self:
-        return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
+        return reuse_series_implementation(
+            self, "std", returns_scalar=True, call_kwargs={"ddof": ddof}
+        )
 
     def var(self: Self, *, ddof: int) -> Self:
-        return reuse_series_implementation(self, "var", ddof=ddof, returns_scalar=True)
+        return reuse_series_implementation(
+            self, "var", returns_scalar=True, call_kwargs={"ddof": ddof}
+        )
 
     def skew(self: Self) -> Self:
         return reuse_series_implementation(self, "skew", returns_scalar=True)
@@ -370,7 +374,9 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
         return reuse_series_implementation(self, "abs")
 
     def cum_sum(self: Self, *, reverse: bool) -> Self:
-        return reuse_series_implementation(self, "cum_sum", reverse=reverse)
+        return reuse_series_implementation(
+            self, "cum_sum", call_kwargs={"reverse": reverse}
+        )
 
     def unique(self: Self) -> Self:
         return reuse_series_implementation(self, "unique", maintain_order=False)
@@ -379,7 +385,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
         return reuse_series_implementation(self, "diff")
 
     def shift(self: Self, n: int) -> Self:
-        return reuse_series_implementation(self, "shift", n=n)
+        return reuse_series_implementation(self, "shift", call_kwargs={"n": n})
 
     def sample(
         self: Self,
@@ -583,16 +589,24 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
         return reuse_series_implementation(self, "is_finite")
 
     def cum_count(self: Self, *, reverse: bool) -> Self:
-        return reuse_series_implementation(self, "cum_count", reverse=reverse)
+        return reuse_series_implementation(
+            self, "cum_count", call_kwargs={"reverse": reverse}
+        )
 
     def cum_min(self: Self, *, reverse: bool) -> Self:
-        return reuse_series_implementation(self, "cum_min", reverse=reverse)
+        return reuse_series_implementation(
+            self, "cum_min", call_kwargs={"reverse": reverse}
+        )
 
     def cum_max(self: Self, *, reverse: bool) -> Self:
-        return reuse_series_implementation(self, "cum_max", reverse=reverse)
+        return reuse_series_implementation(
+            self, "cum_max", call_kwargs={"reverse": reverse}
+        )
 
     def cum_prod(self: Self, *, reverse: bool) -> Self:
-        return reuse_series_implementation(self, "cum_prod", reverse=reverse)
+        return reuse_series_implementation(
+            self, "cum_prod", call_kwargs={"reverse": reverse}
+        )
 
     def rolling_sum(
         self: Self,
@@ -665,7 +679,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
         descending: bool,
     ) -> Self:
         return reuse_series_implementation(
-            self, "rank", method=method, descending=descending
+            self, "rank", call_kwargs={"method": method, "descending": descending}
         )
 
     @property

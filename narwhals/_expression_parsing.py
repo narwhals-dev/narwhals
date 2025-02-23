@@ -133,6 +133,10 @@ def reuse_series_implementation(
     attr: str,
     *,
     returns_scalar: bool = False,
+    # non-expressifiable args which we may need to reuse in `agg` or `over`,
+    # such as `ddof` for `std` and `var`
+    call_kwargs: dict[str, Any] | None = None,
+    # arguments which may be (but don't have to be) expressifiable
     **expressifiable_args: Any,
 ) -> ArrowExprT | PandasLikeExprT:
     """Reuse Series implementation for expression.
@@ -146,6 +150,8 @@ def reuse_series_implementation(
         returns_scalar: whether the Series version returns a scalar. In this case,
             the expression version should return a 1-row Series.
         args: arguments to pass to function.
+        call_kwargs: non-expressifiable args which we may need to reuse in `agg` or `over`,
+            such as `ddof` for `std` and `var`.
         expressifiable_args: keyword arguments to pass to function, which may
             be expressifiable (e.g. `nw.col('a').is_between(3, nw.col('b')))`).
     """
@@ -153,8 +159,11 @@ def reuse_series_implementation(
 
     def func(df: CompliantDataFrame) -> Sequence[CompliantSeries]:
         _kwargs = {
-            arg_name: maybe_evaluate_expr(df, arg_value)
-            for arg_name, arg_value in expressifiable_args.items()
+            **(call_kwargs or {}),
+            **{
+                arg_name: maybe_evaluate_expr(df, arg_value)
+                for arg_name, arg_value in expressifiable_args.items()
+            },
         }
 
         # For PyArrow.Series, we return Python Scalars (like Polars does) instead of PyArrow Scalars.
@@ -190,7 +199,7 @@ def reuse_series_implementation(
         function_name=f"{expr._function_name}->{attr}",
         evaluate_output_names=expr._evaluate_output_names,  # type: ignore[arg-type]
         alias_output_names=expr._alias_output_names,
-        kwargs=expressifiable_args,
+        kwargs=call_kwargs,
     )
 
 
