@@ -325,8 +325,8 @@ def evaluate_output_names_and_aliases(
     return output_names, aliases
 
 
-def operation_is_order_dependent(*args: IntoExpr | Any) -> bool:
-    return any(is_expr(x) and x._metadata["is_order_dependent"] for x in args)
+def operation_has_open_windows(*args: IntoExpr | Any) -> bool:
+    return any(is_expr(x) and x._metadata["n_open_windows"] > 0 for x in args)
 
 
 class ExprKind(Enum):
@@ -347,7 +347,10 @@ class ExprKind(Enum):
     """e.g. `nw.col('a').mean()`"""
 
     TRANSFORM = auto()
-    """length-preserving, e.g. `nw.col('a').round()`"""
+    """elementwise, e.g. `nw.col('a').round()`"""
+
+    WINDOW = auto()
+    """order-dependent, doesn't change length, e.g. `nw.col('a').cum_sum()`"""
 
     CHANGES_LENGTH = auto()
     """e.g. `nw.col('a').drop_nulls()`"""
@@ -356,8 +359,6 @@ class ExprKind(Enum):
 class ExprMetadata(TypedDict):
     kind: ExprKind
     """Which kind of expression this is (literal, aggregation, ...)."""
-    is_order_dependent: bool
-    """Whether expression assumes physical order of rows."""
     n_open_windows: int
     """Number of window functions (e.g. `cum_sum`) not immediately followed by `over`."""
 
@@ -366,15 +367,16 @@ def change_kind(md: ExprMetadata, kind: ExprKind) -> ExprMetadata:
     # Change metadata kind, leaving all other attributes the same.
     return ExprMetadata(
         kind=kind,
-        is_order_dependent=md["is_order_dependent"],
         n_open_windows=md["n_open_windows"],
     )
 
-def change_metadata_kind_and_make_order_dependent(md: ExprMetadata, kind: ExprKind) -> ExprMetadata:
+
+def change_metadata_kind_and_make_order_dependent(
+    md: ExprMetadata, kind: ExprKind
+) -> ExprMetadata:
     return ExprMetadata(
         kind=kind,
-        is_order_dependent=True,
-        n_open_windows=md["n_open_windows"]+1,
+        n_open_windows=md["n_open_windows"] + 1,
     )
 
 
@@ -383,12 +385,12 @@ def change_kind_and_make_order_dependent(
     kind: ExprKind,
 ) -> ExprMetadata:
     # Change metadata kind, leaving all other attributes the same.
-    return ExprMetadata(kind=kind, is_order_dependent=True, n_open_windows=md['n_open_windows'])
+    return ExprMetadata(kind=kind, n_open_windows=md["n_open_windows"])
 
 
 def make_order_dependent(md: ExprMetadata) -> ExprMetadata:
     # Change metadata kind, leaving all other attributes the same.
-    return ExprMetadata(kind=md["kind"], is_order_dependent=True, n_open_windows=md['n_open_windows'])
+    return ExprMetadata(kind=ExprKind.WINDOW, n_open_windows=md["n_open_windows"] + 1)
 
 
 def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
@@ -398,15 +400,12 @@ def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
     has_transforms = False
     has_aggregations = False
     has_literals = False
-    result_is_order_dependent = False
     result_n_open_windows = 0
 
     for arg in args:
         if isinstance(arg, str) and not str_as_lit:
             has_transforms = True
         elif is_expr(arg):
-            if arg._metadata["is_order_dependent"]:
-                result_is_order_dependent = True
             if arg._metadata["n_open_windows"]:
                 result_n_open_windows += 1
             kind = arg._metadata["kind"]
@@ -443,7 +442,6 @@ def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
 
     return ExprMetadata(
         kind=result_kind,
-        is_order_dependent=result_is_order_dependent,
         n_open_windows=result_n_open_windows,
     )
 

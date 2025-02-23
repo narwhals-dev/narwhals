@@ -15,7 +15,7 @@ from narwhals._expression_parsing import change_kind
 from narwhals._expression_parsing import change_kind_and_make_order_dependent
 from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import make_order_dependent
-from narwhals._expression_parsing import operation_is_order_dependent
+from narwhals._expression_parsing import operation_has_open_windows
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.expr_cat import ExprCatNamespace
@@ -777,15 +777,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_min(),
-<<<<<<< HEAD
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=True,
-                has_open_windows=self._metadata["has_open_windows"],
-            ),
-=======
             change_kind_and_make_order_dependent(self._metadata, ExprKind.AGGREGATION),
->>>>>>> upstream/main
         )
 
     def arg_max(self: Self) -> Self:
@@ -809,15 +801,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_max(),
-<<<<<<< HEAD
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=True,
-                has_open_windows=self._metadata["has_open_windows"],
-            ),
-=======
             change_kind_and_make_order_dependent(self._metadata, ExprKind.AGGREGATION),
->>>>>>> upstream/main
         )
 
     def count(self: Self) -> Self:
@@ -1172,7 +1156,7 @@ class Expr:
                 return (compliant_expr > lb) & (compliant_expr < ub)  # type: ignore[no-any-return]
             return (compliant_expr >= lb) & (compliant_expr <= ub)  # type: ignore[no-any-return]
 
-        is_order_dependent = operation_is_order_dependent(self, lower_bound, upper_bound)
+        is_order_dependent = operation_has_open_windows(self, lower_bound, upper_bound)
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx, func, self, lower_bound, upper_bound, str_as_lit=False
@@ -1247,7 +1231,7 @@ class Expr:
             └──────────────────┘
         """
         flat_predicates = flatten(predicates)
-        is_order_dependent = operation_is_order_dependent(*flat_predicates)
+        is_order_dependent = operation_has_open_windows(*flat_predicates)
 
         return self.__class__(
             lambda plx: apply_n_ary_operation(
@@ -1348,15 +1332,7 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_true(),
-<<<<<<< HEAD
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=True,
-                has_open_windows=self._metadata["has_open_windows"],
-            ),
-=======
             change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
->>>>>>> upstream/main
         )
 
     def fill_null(
@@ -1528,7 +1504,9 @@ class Expr:
             change_kind(self._metadata, ExprKind.CHANGES_LENGTH),
         )
 
-    def over(self: Self, *keys: str | Iterable[str], _order_by: str|None=None) -> Self:
+    def over(
+        self: Self, *keys: str | Iterable[str], _order_by: str | None = None
+    ) -> Self:
         """Compute expressions over the given groups.
 
         Arguments:
@@ -1571,19 +1549,15 @@ class Expr:
         if self._metadata["kind"] is ExprKind.CHANGES_LENGTH:
             msg = "`.over()` can not be used for expressions which change length."
             raise LengthChangingExprError(msg)
-        metadata = change_metadata_kind(self._metadata, ExprKind.TRANSFORM)
+        metadata = change_kind(self._metadata, ExprKind.TRANSFORM)
         if _order_by is not None:
-            metadata['has_open_windows'] = False
-            metadata['is_order_dependent'] = False
+            metadata["has_open_windows"] = False
+            metadata["is_order_dependent"] = False
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).over(
                 flatten(keys), kind=self._metadata["kind"]
-<<<<<<< HEAD
-            ), metadata
-=======
             ),
             change_kind(self._metadata, ExprKind.TRANSFORM),
->>>>>>> upstream/main
         )
 
     def is_duplicated(self: Self) -> Self:
@@ -1789,15 +1763,7 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).head(n),
-<<<<<<< HEAD
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=True,
-                has_open_windows=self._metadata["has_open_windows"],
-            ),
-=======
             change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
->>>>>>> upstream/main
         )
 
     def tail(self: Self, n: int = 10) -> Self:
@@ -1825,15 +1791,7 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).tail(n),
-<<<<<<< HEAD
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=True,
-                has_open_windows=self._metadata["has_open_windows"],
-            ),
-=======
             change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
->>>>>>> upstream/main
         )
 
     def round(self: Self, decimals: int = 0) -> Self:
@@ -1928,15 +1886,7 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
-<<<<<<< HEAD
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=True,
-                has_open_windows=self._metadata["has_open_windows"],
-            ),
-=======
             change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
->>>>>>> upstream/main
         )
 
     # need to allow numeric typing
@@ -1970,7 +1920,7 @@ class Expr:
             | 2  3          3  |
             └──────────────────┘
         """
-        is_order_dependent = operation_is_order_dependent(self, lower_bound, upper_bound)
+        is_order_dependent = operation_has_open_windows(self, lower_bound, upper_bound)
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx,

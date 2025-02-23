@@ -971,15 +971,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).head(n),
-<<<<<<< HEAD
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=True,
-                has_open_windows=self._metadata["has_open_windows"],
-            ),
-=======
             change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
->>>>>>> upstream/main
         )
 
     def tail(self: Self, n: int = 10) -> Self:
@@ -993,15 +985,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).tail(n),
-<<<<<<< HEAD
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=True,
-                has_open_windows=self._metadata["has_open_windows"],
-            ),
-=======
             change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
->>>>>>> upstream/main
         )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
@@ -1016,15 +1000,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
-<<<<<<< HEAD
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=True,
-                has_open_windows=self._metadata["has_open_windows"],
-            ),
-=======
             change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
->>>>>>> upstream/main
         )
 
     def unique(self: Self, *, maintain_order: bool | None = None) -> Self:
@@ -1063,15 +1039,7 @@ class Expr(NwExpr):
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             ),
-<<<<<<< HEAD
-            ExprMetadata(
-                kind=self._metadata["kind"],
-                is_order_dependent=True,
-                has_open_windows=self._metadata["has_open_windows"],
-            ),
-=======
             make_order_dependent(self._metadata),
->>>>>>> upstream/main
         )
 
     def arg_true(self: Self) -> Self:
@@ -1082,15 +1050,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_true(),
-<<<<<<< HEAD
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=True,
-                has_open_windows=self._metadata["has_open_windows"],
-            ),
-=======
             change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
->>>>>>> upstream/main
         )
 
     def sample(
@@ -1124,15 +1084,7 @@ class Expr(NwExpr):
             lambda plx: self._to_compliant_expr(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
             ),
-<<<<<<< HEAD
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=True,
-                has_open_windows=self._metadata["has_open_windows"],
-            ),
-=======
             change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
->>>>>>> upstream/main
         )
 
 
