@@ -653,15 +653,7 @@ class Expr:
                 function=function, return_dtype=return_dtype
             ),
             # safest assumptions
-<<<<<<< HEAD
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=True,
-                has_open_windows=self._metadata["has_open_windows"],
-            ),
-=======
             change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
->>>>>>> upstream/main
         )
 
     def skew(self: Self) -> Self:
