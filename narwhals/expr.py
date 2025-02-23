@@ -1918,7 +1918,7 @@ class Expr:
                 upper_bound,  # type: ignore[arg-type]
                 str_as_lit=False,
             ),
-            combine_metadata(self, lower_bound, upper_bound, str_as_lit=True),
+            combine_metadata(self, lower_bound, upper_bound, str_as_lit=False),
         )
 
     def mode(self: Self) -> Self:
