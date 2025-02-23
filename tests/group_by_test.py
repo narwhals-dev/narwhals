@@ -427,3 +427,25 @@ def test_pandas_group_by_index_and_column_overlap() -> None:
     assert key == (1,)
     expected_native = pd.DataFrame({"a": [1, 1], "b": [4, 5]})
     pd.testing.assert_frame_equal(result.to_native(), expected_native)
+
+
+def test_fancy_functions(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    result = df.group_by("a").agg(nw.all().std(ddof=0)).sort("a")
+    expected = {"a": [1, 2], "b": [0.5, 0.0]}
+    assert_equal_data(result, expected)
+    result = df.group_by("a").agg(nw.selectors.numeric().std(ddof=0)).sort("a")
+    assert_equal_data(result, expected)
+    result = df.group_by("a").agg(nw.selectors.matches("b").std(ddof=0)).sort("a")
+    assert_equal_data(result, expected)
+    result = (
+        df.group_by("a").agg(nw.selectors.matches("b").std(ddof=0).alias("c")).sort("a")
+    )
+    expected = {"a": [1, 2], "c": [0.5, 0.0]}
+    assert_equal_data(result, expected)
+    result = (
+        df.group_by("a")
+        .agg(nw.selectors.matches("b").std(ddof=0).name.map(lambda _x: "c"))
+        .sort("a")
+    )
+    assert_equal_data(result, expected)
