@@ -11,7 +11,8 @@ from typing import Sequence
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import apply_n_ary_operation
-from narwhals._expression_parsing import change_metadata_kind
+from narwhals._expression_parsing import change_kind
+from narwhals._expression_parsing import change_kind_and_make_order_dependent
 from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import make_order_dependent
 from narwhals._expression_parsing import operation_is_order_dependent
@@ -64,7 +65,7 @@ class Expr:
         # It's not intended to be used.
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).abs().sum(),
-            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
+            change_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     # --- convert ---
@@ -372,7 +373,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).any(),
-            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
+            change_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def all(self: Self) -> Self:
@@ -396,7 +397,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).all(),
-            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
+            change_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def ewm_mean(
@@ -522,7 +523,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).mean(),
-            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
+            change_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def median(self: Self) -> Self:
@@ -549,7 +550,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).median(),
-            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
+            change_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def std(self: Self, *, ddof: int = 1) -> Self:
@@ -577,7 +578,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).std(ddof=ddof),
-            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
+            change_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def var(self: Self, *, ddof: int = 1) -> Self:
@@ -605,7 +606,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).var(ddof=ddof),
-            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
+            change_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def map_batches(
@@ -652,11 +653,15 @@ class Expr:
                 function=function, return_dtype=return_dtype
             ),
             # safest assumptions
+<<<<<<< HEAD
             ExprMetadata(
                 kind=ExprKind.CHANGES_LENGTH,
                 is_order_dependent=True,
                 has_open_windows=self._metadata["has_open_windows"],
             ),
+=======
+            change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
+>>>>>>> upstream/main
         )
 
     def skew(self: Self) -> Self:
@@ -680,7 +685,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).skew(),
-            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
+            change_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def sum(self: Self) -> Expr:
@@ -708,7 +713,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).sum(),
-            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
+            change_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def min(self: Self) -> Self:
@@ -732,7 +737,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).min(),
-            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
+            change_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def max(self: Self) -> Self:
@@ -756,7 +761,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).max(),
-            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
+            change_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def arg_min(self: Self) -> Self:
@@ -780,11 +785,15 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_min(),
+<<<<<<< HEAD
             ExprMetadata(
                 kind=ExprKind.AGGREGATION,
                 is_order_dependent=True,
                 has_open_windows=self._metadata["has_open_windows"],
             ),
+=======
+            change_kind_and_make_order_dependent(self._metadata, ExprKind.AGGREGATION),
+>>>>>>> upstream/main
         )
 
     def arg_max(self: Self) -> Self:
@@ -808,11 +817,15 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_max(),
+<<<<<<< HEAD
             ExprMetadata(
                 kind=ExprKind.AGGREGATION,
                 is_order_dependent=True,
                 has_open_windows=self._metadata["has_open_windows"],
             ),
+=======
+            change_kind_and_make_order_dependent(self._metadata, ExprKind.AGGREGATION),
+>>>>>>> upstream/main
         )
 
     def count(self: Self) -> Self:
@@ -836,7 +849,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).count(),
-            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
+            change_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def n_unique(self: Self) -> Self:
@@ -860,7 +873,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).n_unique(),
-            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
+            change_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def unique(self: Self) -> Self:
@@ -884,7 +897,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).unique(),
-            change_metadata_kind(self._metadata, ExprKind.CHANGES_LENGTH),
+            change_kind(self._metadata, ExprKind.CHANGES_LENGTH),
         )
 
     def abs(self: Self) -> Self:
@@ -1343,11 +1356,15 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_true(),
+<<<<<<< HEAD
             ExprMetadata(
                 kind=ExprKind.CHANGES_LENGTH,
                 is_order_dependent=True,
                 has_open_windows=self._metadata["has_open_windows"],
             ),
+=======
+            change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
+>>>>>>> upstream/main
         )
 
     def fill_null(
@@ -1475,7 +1492,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).drop_nulls(),
-            change_metadata_kind(self._metadata, ExprKind.CHANGES_LENGTH),
+            change_kind(self._metadata, ExprKind.CHANGES_LENGTH),
         )
 
     def sample(
@@ -1516,7 +1533,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
             ),
-            change_metadata_kind(self._metadata, ExprKind.CHANGES_LENGTH),
+            change_kind(self._metadata, ExprKind.CHANGES_LENGTH),
         )
 
     def over(self: Self, *keys: str | Iterable[str], _order_by: str|None=None) -> Self:
@@ -1569,7 +1586,12 @@ class Expr:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).over(
                 flatten(keys), kind=self._metadata["kind"]
+<<<<<<< HEAD
             ), metadata
+=======
+            ),
+            change_kind(self._metadata, ExprKind.TRANSFORM),
+>>>>>>> upstream/main
         )
 
     def is_duplicated(self: Self) -> Self:
@@ -1648,7 +1670,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).null_count(),
-            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
+            change_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def is_first_distinct(self: Self) -> Self:
@@ -1747,7 +1769,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).quantile(quantile, interpolation),
-            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
+            change_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def head(self: Self, n: int = 10) -> Self:
@@ -1775,11 +1797,15 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).head(n),
+<<<<<<< HEAD
             ExprMetadata(
                 kind=ExprKind.CHANGES_LENGTH,
                 is_order_dependent=True,
                 has_open_windows=self._metadata["has_open_windows"],
             ),
+=======
+            change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
+>>>>>>> upstream/main
         )
 
     def tail(self: Self, n: int = 10) -> Self:
@@ -1807,11 +1833,15 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).tail(n),
+<<<<<<< HEAD
             ExprMetadata(
                 kind=ExprKind.CHANGES_LENGTH,
                 is_order_dependent=True,
                 has_open_windows=self._metadata["has_open_windows"],
             ),
+=======
+            change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
+>>>>>>> upstream/main
         )
 
     def round(self: Self, decimals: int = 0) -> Self:
@@ -1877,7 +1907,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).len(),
-            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
+            change_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
@@ -1906,11 +1936,15 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
+<<<<<<< HEAD
             ExprMetadata(
                 kind=ExprKind.CHANGES_LENGTH,
                 is_order_dependent=True,
                 has_open_windows=self._metadata["has_open_windows"],
             ),
+=======
+            change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
+>>>>>>> upstream/main
         )
 
     # need to allow numeric typing
@@ -1985,7 +2019,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).mode(),
-            change_metadata_kind(self._metadata, ExprKind.CHANGES_LENGTH),
+            change_kind(self._metadata, ExprKind.CHANGES_LENGTH),
         )
 
     def is_finite(self: Self) -> Self:

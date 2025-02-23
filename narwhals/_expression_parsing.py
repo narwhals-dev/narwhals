@@ -358,13 +358,13 @@ class ExprMetadata(TypedDict):
     """Which kind of expression this is (literal, aggregation, ...)."""
     is_order_dependent: bool
     """Whether expression assumes physical order of rows."""
-    has_open_windows: bool
-    """Whether expression contains window functions not immediately followed by `over`."""
+    n_open_windows: bool
+    """Number of window functions (e.g. `cum_sum`) not immediately followed by `over`."""
     name: str
     """Function name."""
 
 
-def change_metadata_kind(md: ExprMetadata, kind: ExprKind) -> ExprMetadata:
+def change_kind(md: ExprMetadata, kind: ExprKind) -> ExprMetadata:
     # Change metadata kind, leaving all other attributes the same.
     return ExprMetadata(
         kind=kind,
@@ -382,21 +382,21 @@ def change_metadata_kind_and_make_order_dependent(md: ExprMetadata, kind: ExprKi
     )
 
 
-def make_order_dependent(md: ExprMetadata) -> ExprMetadata:
-    # Make order dependent, leaving other attributes the same.
-    return ExprMetadata(
-        kind=md["kind"], is_order_dependent=True, has_open_windows=True,
-        name=md['name'],
-    )
+def change_kind_and_make_order_dependent(
+    md: ExprMetadata,
+    kind: ExprKind,
+    name: str
+) -> ExprMetadata:
+    # Change metadata kind, leaving all other attributes the same.
+    return ExprMetadata(kind=kind, is_order_dependent=True, n_open_windows=md['n_open_windows'], name=name)
 
 
-def default_metadata(name: str) -> ExprMetadata:
-    return ExprMetadata(
-        kind=ExprKind.TRANSFORM, is_order_dependent=False, has_open_windows=False, name=name,
-    )
+def make_order_dependent(md: ExprMetadata, name: str) -> ExprMetadata:
+    # Change metadata kind, leaving all other attributes the same.
+    return ExprMetadata(kind=md["kind"], is_order_dependent=True, n_open_windows=md['n_open_windows'], name=name)
 
 
-def combine_metadata(*args: IntoExpr, str_as_lit: bool, name: str) -> ExprMetadata:
+def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
     # Combine metadata from `args`.
 
     n_changes_length = 0
