@@ -181,6 +181,8 @@ def _std(
     if np_version > (2, 0):
         if ddof == 1:
             return functions.stddev_samp(_input)
+        if ddof == 0:
+            return functions.stddev_pop(_input)
 
         n_rows = functions.count(_input)
         return functions.stddev_samp(_input) * functions.sqrt(

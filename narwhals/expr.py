@@ -11,6 +11,7 @@ from typing import Sequence
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import apply_n_ary_operation
+from narwhals._expression_parsing import change_metadata_kind
 from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import operation_is_order_dependent
 from narwhals.dtypes import _validate_dtype
@@ -58,10 +59,7 @@ class Expr:
         # It's not intended to be used.
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).abs().sum(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     # --- convert ---
@@ -375,10 +373,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).any(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def all(self: Self) -> Self:
@@ -402,10 +397,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).all(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def ewm_mean(
@@ -532,10 +524,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).mean(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def median(self: Self) -> Self:
@@ -562,10 +551,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).median(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def std(self: Self, *, ddof: int = 1) -> Self:
@@ -593,10 +579,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).std(ddof=ddof),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def var(self: Self, *, ddof: int = 1) -> Self:
@@ -624,10 +607,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).var(ddof=ddof),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def map_batches(
@@ -698,10 +678,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).skew(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def sum(self: Self) -> Expr:
@@ -729,10 +706,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).sum(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def min(self: Self) -> Self:
@@ -756,10 +730,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).min(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def max(self: Self) -> Self:
@@ -783,10 +754,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).max(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def arg_min(self: Self) -> Self:
@@ -858,10 +826,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).count(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def n_unique(self: Self) -> Self:
@@ -885,10 +850,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).n_unique(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def unique(self: Self) -> Self:
@@ -912,10 +874,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).unique(),
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            change_metadata_kind(self._metadata, ExprKind.CHANGES_LENGTH),
         )
 
     def abs(self: Self) -> Self:
@@ -1189,10 +1148,10 @@ class Expr:
         """
 
         def func(
-            compliant_expr: CompliantExpr[Any],
-            lb: CompliantExpr[Any],
-            ub: CompliantExpr[Any],
-        ) -> CompliantExpr[Any]:
+            compliant_expr: CompliantExpr[Any, Any],
+            lb: CompliantExpr[Any, Any],
+            ub: CompliantExpr[Any, Any],
+        ) -> CompliantExpr[Any, Any]:
             if closed == "left":
                 return (compliant_expr >= lb) & (compliant_expr < ub)  # type: ignore[no-any-return]
             elif closed == "right":
@@ -1509,10 +1468,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).drop_nulls(),
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            change_metadata_kind(self._metadata, ExprKind.CHANGES_LENGTH),
         )
 
     def sample(
@@ -1553,10 +1509,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
             ),
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            change_metadata_kind(self._metadata, ExprKind.CHANGES_LENGTH),
         )
 
     def over(self: Self, *keys: str | Iterable[str]) -> Self:
@@ -1602,11 +1555,10 @@ class Expr:
             msg = "`.over()` can not be used for expressions which change length."
             raise LengthChangingExprError(msg)
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).over(flatten(keys)),
-            ExprMetadata(
-                kind=ExprKind.TRANSFORM,
-                is_order_dependent=self._metadata["is_order_dependent"],
+            lambda plx: self._to_compliant_expr(plx).over(
+                flatten(keys), kind=self._metadata["kind"]
             ),
+            change_metadata_kind(self._metadata, ExprKind.TRANSFORM),
         )
 
     def is_duplicated(self: Self) -> Self:
@@ -1687,10 +1639,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).null_count(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def is_first_distinct(self: Self) -> Self:
@@ -1789,10 +1738,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).quantile(quantile, interpolation),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def head(self: Self, n: int = 10) -> Self:
@@ -1914,10 +1860,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).len(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            change_metadata_kind(self._metadata, ExprKind.AGGREGATION),
         )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
@@ -2021,10 +1964,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).mode(),
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            change_metadata_kind(self._metadata, ExprKind.CHANGES_LENGTH),
         )
 
     def is_finite(self: Self) -> Self:

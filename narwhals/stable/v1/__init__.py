@@ -17,6 +17,7 @@ from narwhals import exceptions
 from narwhals import selectors
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
+from narwhals._expression_parsing import change_metadata_kind
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
 from narwhals.dependencies import get_polars
@@ -1020,10 +1021,7 @@ class Expr(NwExpr):
             warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).unique(),
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            change_metadata_kind(self._metadata, ExprKind.CHANGES_LENGTH),
         )
 
     def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
@@ -2191,12 +2189,12 @@ def from_dict(
         backend: specifies which eager backend instantiate to. Only
             necessary if inputs are not Narwhals Series.
 
-                `backend` can be specified in various ways:
+            `backend` can be specified in various ways:
 
-                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                    `POLARS`, `MODIN` or `CUDF`.
-                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                `POLARS`, `MODIN` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
 
             **Deprecated** (v1.26.0):
@@ -2241,22 +2239,43 @@ def from_numpy(
 
 
 def read_csv(
-    source: str, *, native_namespace: ModuleType, **kwargs: Any
+    source: str,
+    *,
+    backend: ModuleType | Implementation | str | None = None,
+    native_namespace: ModuleType | None = None,
+    **kwargs: Any,
 ) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
 
     Arguments:
         source: Path to a file.
+        backend: The eager backend for DataFrame creation.
+            `backend` can be specified in various ways:
+
+            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                `POLARS`, `MODIN` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
+
+            **Deprecated** (v1.27.2):
+                Please use `backend` instead. Note that `native_namespace` is still available
+                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+                see [perfect backwards compatibility policy](../backcompat.md/).
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
-            `nw.read_csv('file.csv', native_namespace=pd, engine='pyarrow')`.
+            `nw.read_csv('file.csv', backend='pandas', engine='pyarrow')`.
 
     Returns:
         DataFrame.
     """
+    backend = validate_native_namespace_and_backend(
+        backend, native_namespace, emit_deprecation_warning=True
+    )
+    if backend is None:  # pragma: no cover
+        raise AssertionError
     return _stableify(  # type: ignore[no-any-return]
-        _read_csv_impl(source, native_namespace=native_namespace, **kwargs)
+        _read_csv_impl(source, backend=backend, **kwargs)
     )
 
 

@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):  # type: ignore[type-var]
+class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "duckdb.Expression"]):  # type: ignore[type-var]
     _implementation: Implementation = Implementation.DUCKDB
 
     def __init__(
