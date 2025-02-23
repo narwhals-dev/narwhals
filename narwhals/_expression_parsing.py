@@ -388,9 +388,9 @@ class ExprMetadata:
         """Change kind and set `order_dependent` to True."""
         return ExprMetadata(kind, order_dependent=True)
 
-
-def default_selector_metadata() -> ExprMetadata:
-    return ExprMetadata(ExprKind.TRANSFORM, order_dependent=False)
+    @staticmethod
+    def selector() -> ExprMetadata:
+        return ExprMetadata(ExprKind.TRANSFORM, order_dependent=False)
 
 
 def combine_metadata(*args: IntoExpr | object | None, str_as_lit: bool) -> ExprMetadata:
