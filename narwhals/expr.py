@@ -12,7 +12,6 @@ from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import combine_metadata
-from narwhals._expression_parsing import operation_is_order_dependent
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.expr_cat import ExprCatNamespace
@@ -1153,12 +1152,11 @@ class Expr:
                 return (compliant_expr > lb) & (compliant_expr < ub)  # type: ignore[no-any-return]
             return (compliant_expr >= lb) & (compliant_expr <= ub)  # type: ignore[no-any-return]
 
-        is_order_dependent = operation_is_order_dependent(self, lower_bound, upper_bound)
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx, func, self, lower_bound, upper_bound, str_as_lit=False
             ),
-            self._metadata.with_dependence(is_order_dependent),
+            combine_metadata(self, lower_bound, upper_bound, str_as_lit=False),
         )
 
     def is_in(self: Self, other: Any) -> Self:
@@ -1226,17 +1224,17 @@ class Expr:
             └──────────────────┘
         """
         flat_predicates = flatten(predicates)
-        is_order_dependent = operation_is_order_dependent(*flat_predicates)
-
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx,
                 lambda *exprs: exprs[0].filter(*exprs[1:]),
                 self,
-                *predicates,
+                *flat_predicates,
                 str_as_lit=False,
             ),
-            ExprMetadata(ExprKind.CHANGES_LENGTH, order_dependent=is_order_dependent),
+            combine_metadata(self, *flat_predicates, str_as_lit=False).with_kind(
+                ExprKind.CHANGES_LENGTH
+            ),
         )
 
     def is_null(self: Self) -> Self:
@@ -1904,7 +1902,6 @@ class Expr:
             | 2  3          3  |
             └──────────────────┘
         """
-        is_order_dependent = operation_is_order_dependent(self, lower_bound, upper_bound)
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx,
@@ -1917,7 +1914,7 @@ class Expr:
                 upper_bound,  # type: ignore[arg-type]
                 str_as_lit=False,
             ),
-            self._metadata.with_dependence(is_order_dependent),
+            combine_metadata(self, lower_bound, upper_bound, str_as_lit=False),
         )
 
     def mode(self: Self) -> Self:

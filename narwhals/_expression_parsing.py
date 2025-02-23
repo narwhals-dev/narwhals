@@ -389,7 +389,11 @@ class ExprMetadata:
         return ExprMetadata(self.kind, order_dependent=order_dependent)
 
 
-def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
+def default_selector_metadata() -> ExprMetadata:
+    return ExprMetadata(ExprKind.TRANSFORM, order_dependent=False)
+
+
+def combine_metadata(*args: IntoExpr | object | None, str_as_lit: bool) -> ExprMetadata:
     # Combine metadata from `args`.
 
     n_changes_length = 0

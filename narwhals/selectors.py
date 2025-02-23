@@ -5,8 +5,7 @@ from typing import Any
 from typing import Iterable
 from typing import NoReturn
 
-from narwhals._expression_parsing import ExprKind
-from narwhals._expression_parsing import ExprMetadata
+from narwhals._expression_parsing import default_selector_metadata
 from narwhals.expr import Expr
 from narwhals.utils import flatten
 
@@ -96,8 +95,7 @@ def by_dtype(*dtypes: DType | type[DType] | Iterable[DType | type[DType]]) -> Se
         c: [[8.2,4.6]]
     """
     return Selector(
-        lambda plx: plx.selectors.by_dtype(flatten(dtypes)),
-        ExprMetadata(ExprKind.TRANSFORM, order_dependent=False),
+        lambda plx: plx.selectors.by_dtype(flatten(dtypes)), default_selector_metadata()
     )
 
 
@@ -163,8 +161,7 @@ def matches(pattern: str) -> Selector:
         baz: [[2,5.5]]
     """
     return Selector(
-        lambda plx: plx.selectors.matches(pattern),
-        ExprMetadata(ExprKind.TRANSFORM, order_dependent=False),
+        lambda plx: plx.selectors.matches(pattern), default_selector_metadata()
     )
 
 
@@ -221,10 +218,7 @@ def numeric() -> Selector:
         a: [[2,4]]
         c: [[8.2,4.6]]
     """
-    return Selector(
-        lambda plx: plx.selectors.numeric(),
-        ExprMetadata(ExprKind.TRANSFORM, order_dependent=False),
-    )
+    return Selector(lambda plx: plx.selectors.numeric(), default_selector_metadata())
 
 
 def boolean() -> Selector:
@@ -277,10 +271,7 @@ def boolean() -> Selector:
         ----
         c: [[false,true]]
     """
-    return Selector(
-        lambda plx: plx.selectors.boolean(),
-        ExprMetadata(ExprKind.TRANSFORM, order_dependent=False),
-    )
+    return Selector(lambda plx: plx.selectors.boolean(), default_selector_metadata())
 
 
 def string() -> Selector:
@@ -333,10 +324,7 @@ def string() -> Selector:
         ----
         b: [["x","y"]]
     """
-    return Selector(
-        lambda plx: plx.selectors.string(),
-        ExprMetadata(ExprKind.TRANSFORM, order_dependent=False),
-    )
+    return Selector(lambda plx: plx.selectors.string(), default_selector_metadata())
 
 
 def categorical() -> Selector:
@@ -394,10 +382,7 @@ def categorical() -> Selector:
         ["x","y"]  -- indices:
         [0,1]]
     """
-    return Selector(
-        lambda plx: plx.selectors.categorical(),
-        ExprMetadata(ExprKind.TRANSFORM, order_dependent=False),
-    )
+    return Selector(lambda plx: plx.selectors.categorical(), default_selector_metadata())
 
 
 def all() -> Selector:
@@ -454,10 +439,7 @@ def all() -> Selector:
         b: [["x","y"]]
         c: [[false,true]]
     """
-    return Selector(
-        lambda plx: plx.selectors.all(),
-        ExprMetadata(ExprKind.TRANSFORM, order_dependent=False),
-    )
+    return Selector(lambda plx: plx.selectors.all(), default_selector_metadata())
 
 
 def datetime(
@@ -517,7 +499,7 @@ def datetime(
     """
     return Selector(
         lambda plx: plx.selectors.datetime(time_unit=time_unit, time_zone=time_zone),
-        ExprMetadata(ExprKind.TRANSFORM, order_dependent=False),
+        default_selector_metadata(),
     )
 
 
