@@ -388,11 +388,11 @@ class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyF
             validate_column_names=False,
         )
 
-    def aggregate(self: Self, *exprs: PandasLikeExpr) -> Self:
+    def aggregate(self: Self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
         return self.select(*exprs)
 
-    def select(self: Self, *exprs: PandasLikeExpr) -> Self:
-        new_series: list[PandasLikeSeries] = evaluate_into_exprs(self, *exprs)
+    def select(self: PandasLikeDataFrame, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
+        new_series = evaluate_into_exprs(self, *exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_frame(
@@ -406,7 +406,7 @@ class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyF
         )
         return self._from_native_frame(df, validate_column_names=False)
 
-    def drop_nulls(self: Self, subset: list[str] | None) -> Self:
+    def drop_nulls(self: Self, subset: list[str] | None) -> PandasLikeDataFrame:
         if subset is None:
             return self._from_native_frame(
                 self._native_frame.dropna(axis=0), validate_column_names=False
@@ -437,7 +437,9 @@ class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyF
     def row(self: Self, row: int) -> tuple[Any, ...]:
         return tuple(x for x in self._native_frame.iloc[row])
 
-    def filter(self: Self, predicate: PandasLikeExpr | list[bool]) -> Self:
+    def filter(
+        self: PandasLikeDataFrame, predicate: PandasLikeExpr | list[bool]
+    ) -> PandasLikeDataFrame:
         if isinstance(predicate, list):
             mask_native: pd.Series[Any] | list[bool] = predicate
         else:
@@ -449,9 +451,11 @@ class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyF
             self._native_frame.loc[mask_native], validate_column_names=False
         )
 
-    def with_columns(self: Self, *exprs: PandasLikeExpr) -> Self:
+    def with_columns(
+        self: PandasLikeDataFrame, *exprs: PandasLikeExpr
+    ) -> PandasLikeDataFrame:
         index = self._native_frame.index
-        new_columns: list[PandasLikeSeries] = evaluate_into_exprs(self, *exprs)
+        new_columns = evaluate_into_exprs(self, *exprs)
         if not new_columns and len(self) == 0:
             return self
 
