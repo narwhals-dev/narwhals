@@ -7,7 +7,6 @@ from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
-from typing import Sequence
 from typing import TypeVar
 from typing import cast
 
@@ -765,7 +764,7 @@ def calculate_timestamp_date(s: pd.Series[int], time_unit: str) -> pd.Series[int
 
 def select_columns_by_name(
     df: T,
-    column_names: Sequence[str] | _1DArray,
+    column_names: list[str] | _1DArray,  # NOTE: Cannot be a tuple!
     backend_version: tuple[int, ...],
     implementation: Implementation,
 ) -> T:

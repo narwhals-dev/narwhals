@@ -1535,9 +1535,10 @@ class Expr:
         if self._metadata.is_changes_length():
             msg = "`.over()` can not be used for expressions which change length."
             raise LengthChangingExprError(msg)
+        flattened = flatten(keys)
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).over(
-                flatten(keys), kind=self._metadata.kind
+                flattened, kind=self._metadata.kind
             ),
             self._metadata.with_kind(ExprKind.TRANSFORM),
         )
