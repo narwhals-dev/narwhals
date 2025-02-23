@@ -16,9 +16,7 @@ from narwhals import dependencies
 from narwhals import exceptions
 from narwhals import selectors
 from narwhals._expression_parsing import ExprKind
-from narwhals._expression_parsing import change_kind
-from narwhals._expression_parsing import change_kind_and_make_order_dependent
-from narwhals._expression_parsing import make_order_dependent
+from narwhals._expression_parsing import ExprMetadata
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
 from narwhals.dependencies import get_polars
@@ -971,7 +969,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).head(n),
-            change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
+            ExprMetadata(ExprKind.CHANGES_LENGTH, order_dependent=True),
         )
 
     def tail(self: Self, n: int = 10) -> Self:
@@ -985,7 +983,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).tail(n),
-            change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
+            ExprMetadata(ExprKind.CHANGES_LENGTH, order_dependent=True),
         )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
@@ -1000,7 +998,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
-            change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
+            ExprMetadata(ExprKind.CHANGES_LENGTH, order_dependent=True),
         )
 
     def unique(self: Self, *, maintain_order: bool | None = None) -> Self:
@@ -1022,7 +1020,7 @@ class Expr(NwExpr):
             warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).unique(),
-            change_kind(self._metadata, ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind(ExprKind.CHANGES_LENGTH),
         )
 
     def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
@@ -1039,7 +1037,7 @@ class Expr(NwExpr):
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             ),
-            make_order_dependent(self._metadata),
+            self._metadata.with_dependence(),
         )
 
     def arg_true(self: Self) -> Self:
@@ -1050,7 +1048,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_true(),
-            change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
+            ExprMetadata(ExprKind.CHANGES_LENGTH, order_dependent=True),
         )
 
     def sample(
@@ -1084,7 +1082,7 @@ class Expr(NwExpr):
             lambda plx: self._to_compliant_expr(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
             ),
-            change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
+            ExprMetadata(ExprKind.CHANGES_LENGTH, order_dependent=True),
         )
 
 

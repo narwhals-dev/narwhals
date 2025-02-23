@@ -2204,7 +2204,7 @@ class LazyFrame(BaseFrame[FrameT]):
             plx = self.__narwhals_namespace__()
             return plx.col(arg)
         if isinstance(arg, Expr):
-            if arg._metadata["is_order_dependent"]:
+            if arg._metadata.is_order_dependent():
                 msg = (
                     "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
                     "Hints:\n"
@@ -2215,7 +2215,7 @@ class LazyFrame(BaseFrame[FrameT]):
                     "  they will be supported."
                 )
                 raise OrderDependentExprError(msg)
-            if arg._metadata["kind"] is ExprKind.CHANGES_LENGTH:
+            if arg._metadata.is_changes_length():
                 msg = (
                     "Length-changing expressions are not supported for use in LazyFrame, unless\n"
                     "followed by an aggregation.\n\n"

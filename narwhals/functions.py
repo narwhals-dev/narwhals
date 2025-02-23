@@ -1044,7 +1044,7 @@ def col(*names: str | Iterable[str]) -> Expr:
     def func(plx: Any) -> Any:
         return plx.col(*flatten(names))
 
-    return Expr(func, ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False))
+    return Expr(func, ExprMetadata(ExprKind.TRANSFORM, order_dependent=False))
 
 
 def nth(*indices: int | Sequence[int]) -> Expr:
@@ -1081,7 +1081,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
     def func(plx: Any) -> Any:
         return plx.nth(*flatten(indices))
 
-    return Expr(func, ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False))
+    return Expr(func, ExprMetadata(ExprKind.TRANSFORM, order_dependent=False))
 
 
 # Add underscore so it doesn't conflict with builtin `all`
@@ -1106,8 +1106,7 @@ def all_() -> Expr:
         └──────────────────┘
     """
     return Expr(
-        lambda plx: plx.all(),
-        ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False),
+        lambda plx: plx.all(), ExprMetadata(ExprKind.TRANSFORM, order_dependent=False)
     )
 
 
@@ -1141,7 +1140,7 @@ def len_() -> Expr:
     def func(plx: Any) -> Any:
         return plx.len()
 
-    return Expr(func, ExprMetadata(kind=ExprKind.AGGREGATION, is_order_dependent=False))
+    return Expr(func, ExprMetadata(ExprKind.AGGREGATION, order_dependent=False))
 
 
 def sum(*columns: str) -> Expr:
@@ -1599,7 +1598,7 @@ def lit(value: Any, dtype: DType | type[DType] | None = None) -> Expr:
 
     return Expr(
         lambda plx: plx.lit(value, dtype),
-        ExprMetadata(kind=ExprKind.LITERAL, is_order_dependent=False),
+        ExprMetadata(ExprKind.LITERAL, order_dependent=False),
     )
 
 

@@ -11,10 +11,7 @@ from typing import Sequence
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import apply_n_ary_operation
-from narwhals._expression_parsing import change_kind
-from narwhals._expression_parsing import change_kind_and_make_order_dependent
 from narwhals._expression_parsing import combine_metadata
-from narwhals._expression_parsing import make_order_dependent
 from narwhals._expression_parsing import operation_is_order_dependent
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import LengthChangingExprError
@@ -65,7 +62,7 @@ class Expr:
         # It's not intended to be used.
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).abs().sum(),
-            change_kind(self._metadata, ExprKind.AGGREGATION),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     # --- convert ---
@@ -373,7 +370,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).any(),
-            change_kind(self._metadata, ExprKind.AGGREGATION),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def all(self: Self) -> Self:
@@ -397,7 +394,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).all(),
-            change_kind(self._metadata, ExprKind.AGGREGATION),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def ewm_mean(
@@ -523,7 +520,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).mean(),
-            change_kind(self._metadata, ExprKind.AGGREGATION),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def median(self: Self) -> Self:
@@ -550,7 +547,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).median(),
-            change_kind(self._metadata, ExprKind.AGGREGATION),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def std(self: Self, *, ddof: int = 1) -> Self:
@@ -578,7 +575,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).std(ddof=ddof),
-            change_kind(self._metadata, ExprKind.AGGREGATION),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def var(self: Self, *, ddof: int = 1) -> Self:
@@ -606,7 +603,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).var(ddof=ddof),
-            change_kind(self._metadata, ExprKind.AGGREGATION),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def map_batches(
@@ -653,7 +650,7 @@ class Expr:
                 function=function, return_dtype=return_dtype
             ),
             # safest assumptions
-            change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
+            ExprMetadata(ExprKind.CHANGES_LENGTH, order_dependent=True),
         )
 
     def skew(self: Self) -> Self:
@@ -677,7 +674,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).skew(),
-            change_kind(self._metadata, ExprKind.AGGREGATION),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def sum(self: Self) -> Expr:
@@ -705,7 +702,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).sum(),
-            change_kind(self._metadata, ExprKind.AGGREGATION),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def min(self: Self) -> Self:
@@ -729,7 +726,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).min(),
-            change_kind(self._metadata, ExprKind.AGGREGATION),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def max(self: Self) -> Self:
@@ -753,7 +750,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).max(),
-            change_kind(self._metadata, ExprKind.AGGREGATION),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def arg_min(self: Self) -> Self:
@@ -777,7 +774,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_min(),
-            change_kind_and_make_order_dependent(self._metadata, ExprKind.AGGREGATION),
+            ExprMetadata(ExprKind.AGGREGATION, order_dependent=True),
         )
 
     def arg_max(self: Self) -> Self:
@@ -801,7 +798,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_max(),
-            change_kind_and_make_order_dependent(self._metadata, ExprKind.AGGREGATION),
+            ExprMetadata(ExprKind.AGGREGATION, order_dependent=True),
         )
 
     def count(self: Self) -> Self:
@@ -825,7 +822,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).count(),
-            change_kind(self._metadata, ExprKind.AGGREGATION),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def n_unique(self: Self) -> Self:
@@ -849,7 +846,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).n_unique(),
-            change_kind(self._metadata, ExprKind.AGGREGATION),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def unique(self: Self) -> Self:
@@ -873,7 +870,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).unique(),
-            change_kind(self._metadata, ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind(ExprKind.CHANGES_LENGTH),
         )
 
     def abs(self: Self) -> Self:
@@ -926,7 +923,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_sum(reverse=reverse),
-            make_order_dependent(self._metadata),
+            self._metadata.with_dependence(),
         )
 
     def diff(self: Self) -> Self:
@@ -969,7 +966,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).diff(),
-            make_order_dependent(self._metadata),
+            self._metadata.with_dependence(),
         )
 
     def shift(self: Self, n: int) -> Self:
@@ -1015,7 +1012,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).shift(n),
-            make_order_dependent(self._metadata),
+            self._metadata.with_dependence(),
         )
 
     def replace_strict(
@@ -1105,7 +1102,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             ),
-            make_order_dependent(self._metadata),
+            self._metadata.with_dependence(),
         )
 
     # --- transform ---
@@ -1161,9 +1158,7 @@ class Expr:
             lambda plx: apply_n_ary_operation(
                 plx, func, self, lower_bound, upper_bound, str_as_lit=False
             ),
-            ExprMetadata(
-                kind=self._metadata["kind"], is_order_dependent=is_order_dependent
-            ),
+            self._metadata.with_dependence(is_order_dependent),
         )
 
     def is_in(self: Self, other: Any) -> Self:
@@ -1241,9 +1236,7 @@ class Expr:
                 *predicates,
                 str_as_lit=False,
             ),
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH, is_order_dependent=is_order_dependent
-            ),
+            ExprMetadata(ExprKind.CHANGES_LENGTH, order_dependent=is_order_dependent),
         )
 
     def is_null(self: Self) -> Self:
@@ -1330,7 +1323,7 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_true(),
-            change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
+            ExprMetadata(ExprKind.CHANGES_LENGTH, order_dependent=True),
         )
 
     def fill_null(
@@ -1458,7 +1451,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).drop_nulls(),
-            change_kind(self._metadata, ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind(ExprKind.CHANGES_LENGTH),
         )
 
     def sample(
@@ -1499,7 +1492,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
             ),
-            change_kind(self._metadata, ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind(ExprKind.CHANGES_LENGTH),
         )
 
     def over(self: Self, *keys: str | Iterable[str]) -> Self:
@@ -1541,14 +1534,14 @@ class Expr:
             |2  4  y                    4|
             └────────────────────────────┘
         """
-        if self._metadata["kind"] is ExprKind.CHANGES_LENGTH:
+        if self._metadata.is_changes_length():
             msg = "`.over()` can not be used for expressions which change length."
             raise LengthChangingExprError(msg)
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).over(
-                flatten(keys), kind=self._metadata["kind"]
+                flatten(keys), kind=self._metadata.kind
             ),
-            change_kind(self._metadata, ExprKind.TRANSFORM),
+            self._metadata.with_kind(ExprKind.TRANSFORM),
         )
 
     def is_duplicated(self: Self) -> Self:
@@ -1627,7 +1620,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).null_count(),
-            change_kind(self._metadata, ExprKind.AGGREGATION),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def is_first_distinct(self: Self) -> Self:
@@ -1656,7 +1649,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_first_distinct(),
-            make_order_dependent(self._metadata),
+            self._metadata.with_dependence(),
         )
 
     def is_last_distinct(self: Self) -> Self:
@@ -1685,7 +1678,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_last_distinct(),
-            make_order_dependent(self._metadata),
+            self._metadata.with_dependence(),
         )
 
     def quantile(
@@ -1726,7 +1719,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).quantile(quantile, interpolation),
-            change_kind(self._metadata, ExprKind.AGGREGATION),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def head(self: Self, n: int = 10) -> Self:
@@ -1754,7 +1747,7 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).head(n),
-            change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
+            ExprMetadata(ExprKind.CHANGES_LENGTH, order_dependent=True),
         )
 
     def tail(self: Self, n: int = 10) -> Self:
@@ -1782,7 +1775,7 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).tail(n),
-            change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
+            ExprMetadata(ExprKind.CHANGES_LENGTH, order_dependent=True),
         )
 
     def round(self: Self, decimals: int = 0) -> Self:
@@ -1848,7 +1841,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).len(),
-            change_kind(self._metadata, ExprKind.AGGREGATION),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
@@ -1877,7 +1870,7 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
-            change_kind_and_make_order_dependent(self._metadata, ExprKind.CHANGES_LENGTH),
+            ExprMetadata(ExprKind.CHANGES_LENGTH, order_dependent=True),
         )
 
     # need to allow numeric typing
@@ -1924,9 +1917,7 @@ class Expr:
                 upper_bound,  # type: ignore[arg-type]
                 str_as_lit=False,
             ),
-            ExprMetadata(
-                kind=self._metadata["kind"], is_order_dependent=is_order_dependent
-            ),
+            self._metadata.with_dependence(is_order_dependent),
         )
 
     def mode(self: Self) -> Self:
@@ -1952,7 +1943,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).mode(),
-            change_kind(self._metadata, ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind(ExprKind.CHANGES_LENGTH),
         )
 
     def is_finite(self: Self) -> Self:
@@ -2023,7 +2014,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_count(reverse=reverse),
-            make_order_dependent(self._metadata),
+            self._metadata.with_dependence(),
         )
 
     def cum_min(self: Self, *, reverse: bool = False) -> Self:
@@ -2056,7 +2047,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_min(reverse=reverse),
-            make_order_dependent(self._metadata),
+            self._metadata.with_dependence(),
         )
 
     def cum_max(self: Self, *, reverse: bool = False) -> Self:
@@ -2089,7 +2080,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_max(reverse=reverse),
-            make_order_dependent(self._metadata),
+            self._metadata.with_dependence(),
         )
 
     def cum_prod(self: Self, *, reverse: bool = False) -> Self:
@@ -2122,7 +2113,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_prod(reverse=reverse),
-            make_order_dependent(self._metadata),
+            self._metadata.with_dependence(),
         )
 
     def rolling_sum(
@@ -2184,7 +2175,7 @@ class Expr:
                 min_samples=min_samples,
                 center=center,
             ),
-            make_order_dependent(self._metadata),
+            self._metadata.with_dependence(),
         )
 
     def rolling_mean(
@@ -2246,7 +2237,7 @@ class Expr:
                 min_samples=min_samples,
                 center=center,
             ),
-            make_order_dependent(self._metadata),
+            self._metadata.with_dependence(),
         )
 
     def rolling_var(
@@ -2308,7 +2299,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).rolling_var(
                 window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
             ),
-            make_order_dependent(self._metadata),
+            self._metadata.with_dependence(),
         )
 
     def rolling_std(
@@ -2373,7 +2364,7 @@ class Expr:
                 center=center,
                 ddof=ddof,
             ),
-            make_order_dependent(self._metadata),
+            self._metadata.with_dependence(),
         )
 
     def rank(
@@ -2439,7 +2430,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).rank(
                 method=method, descending=descending
             ),
-            make_order_dependent(self._metadata),
+            self._metadata.with_dependence(),
         )
 
     @property
