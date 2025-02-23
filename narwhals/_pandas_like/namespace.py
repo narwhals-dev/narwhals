@@ -487,7 +487,7 @@ class PandasThen(PandasLikeExpr):
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
-        kwargs: dict[str, Any] | None = None,
+        call_kwargs: dict[str, Any] | None = None,
     ) -> None:
         self._implementation = implementation
         self._backend_version = backend_version
@@ -497,7 +497,7 @@ class PandasThen(PandasLikeExpr):
         self._function_name = function_name
         self._evaluate_output_names = evaluate_output_names  # pyright: ignore[reportAttributeAccessIssue]
         self._alias_output_names = alias_output_names
-        self._kwargs = kwargs or {}
+        self._call_kwargs = call_kwargs or {}
 
     def otherwise(
         self: Self, value: PandasLikeExpr | PandasLikeSeries | Any
