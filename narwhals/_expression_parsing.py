@@ -358,6 +358,10 @@ class ExprMetadata(TypedDict):
     is_order_dependent: bool
 
 
+def default_metadata() -> ExprMetadata:
+    return ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False)
+
+
 def change_kind(md: ExprMetadata, kind: ExprKind) -> ExprMetadata:
     # Change metadata kind, leaving all other attributes the same.
     return ExprMetadata(kind=kind, is_order_dependent=md["is_order_dependent"])
