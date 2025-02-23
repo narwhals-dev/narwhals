@@ -18,6 +18,7 @@ from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import check_expressions_transform
 from narwhals._expression_parsing import combine_metadata
+from narwhals._expression_parsing import default_metadata
 from narwhals._expression_parsing import extract_compliant
 from narwhals._expression_parsing import infer_kind
 from narwhals.dataframe import DataFrame
@@ -1044,7 +1045,7 @@ def col(*names: str | Iterable[str]) -> Expr:
     def func(plx: Any) -> Any:
         return plx.col(*flatten(names))
 
-    return Expr(func, ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False))
+    return Expr(func, default_metadata())
 
 
 def nth(*indices: int | Sequence[int]) -> Expr:
@@ -1081,7 +1082,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
     def func(plx: Any) -> Any:
         return plx.nth(*flatten(indices))
 
-    return Expr(func, ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False))
+    return Expr(func, default_metadata())
 
 
 # Add underscore so it doesn't conflict with builtin `all`
@@ -1107,7 +1108,7 @@ def all_() -> Expr:
     """
     return Expr(
         lambda plx: plx.all(),
-        ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False),
+        default_metadata(),
     )
 
 

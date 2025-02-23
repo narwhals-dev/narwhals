@@ -5,8 +5,7 @@ from typing import Any
 from typing import Iterable
 from typing import NoReturn
 
-from narwhals._expression_parsing import ExprKind
-from narwhals._expression_parsing import ExprMetadata
+from narwhals._expression_parsing import default_metadata
 from narwhals.expr import Expr
 from narwhals.utils import flatten
 
@@ -97,7 +96,7 @@ def by_dtype(*dtypes: DType | type[DType] | Iterable[DType | type[DType]]) -> Se
     """
     return Selector(
         lambda plx: plx.selectors.by_dtype(flatten(dtypes)),
-        ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False),
+        default_metadata(),
     )
 
 
@@ -164,7 +163,7 @@ def matches(pattern: str) -> Selector:
     """
     return Selector(
         lambda plx: plx.selectors.matches(pattern),
-        ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False),
+        default_metadata(),
     )
 
 
@@ -223,7 +222,7 @@ def numeric() -> Selector:
     """
     return Selector(
         lambda plx: plx.selectors.numeric(),
-        ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False),
+        default_metadata(),
     )
 
 
@@ -279,7 +278,7 @@ def boolean() -> Selector:
     """
     return Selector(
         lambda plx: plx.selectors.boolean(),
-        ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False),
+        default_metadata(),
     )
 
 
@@ -335,7 +334,7 @@ def string() -> Selector:
     """
     return Selector(
         lambda plx: plx.selectors.string(),
-        ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False),
+        default_metadata(),
     )
 
 
@@ -396,7 +395,7 @@ def categorical() -> Selector:
     """
     return Selector(
         lambda plx: plx.selectors.categorical(),
-        ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False),
+        default_metadata(),
     )
 
 
@@ -456,7 +455,7 @@ def all() -> Selector:
     """
     return Selector(
         lambda plx: plx.selectors.all(),
-        ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False),
+        default_metadata(),
     )
 
 
@@ -517,7 +516,7 @@ def datetime(
     """
     return Selector(
         lambda plx: plx.selectors.datetime(time_unit=time_unit, time_zone=time_zone),
-        ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False),
+        default_metadata(),
     )
 
 
