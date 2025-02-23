@@ -42,7 +42,9 @@ if TYPE_CHECKING:
 
 SeriesT = TypeVar("SeriesT", bound="CompliantSeries")
 FrameT = TypeVar("FrameT", bound="CompliantDataFrame | CompliantLazyFrame")
-SelectorOrExpr: TypeAlias = "CompliantSelector[FrameT, SeriesT] | CompliantExpr[SeriesT]"
+SelectorOrExpr: TypeAlias = (
+    "CompliantSelector[FrameT, SeriesT] | CompliantExpr[FrameT, SeriesT]"
+)
 EvalSeries: TypeAlias = Callable[[FrameT], Sequence[SeriesT]]
 EvalNames: TypeAlias = Callable[[FrameT], Sequence[str]]
 
@@ -174,22 +176,26 @@ class LazySelectorNamespace(
         yield from zip(self._iter_columns(df), df.schema.values())
 
 
-class CompliantSelector(CompliantExpr[SeriesT], Generic[FrameT, SeriesT], Protocol):
+class CompliantSelector(
+    CompliantExpr[FrameT, SeriesT], Generic[FrameT, SeriesT], Protocol
+):
     @property
     def selectors(self) -> CompliantSelectorNamespace[FrameT, SeriesT]:
         return self.__narwhals_namespace__().selectors
 
-    def _to_expr(self: Self) -> CompliantExpr[SeriesT]: ...
+    def _to_expr(self: Self) -> CompliantExpr[FrameT, SeriesT]: ...
 
     def _is_selector(
-        self: Self, other: Self | CompliantExpr[SeriesT]
+        self: Self, other: Self | CompliantExpr[FrameT, SeriesT]
     ) -> TypeIs[CompliantSelector[FrameT, SeriesT]]:
         return isinstance(other, type(self))
 
     @overload
     def __sub__(self: Self, other: Self) -> Self: ...
     @overload
-    def __sub__(self: Self, other: CompliantExpr[SeriesT]) -> CompliantExpr[SeriesT]: ...
+    def __sub__(
+        self: Self, other: CompliantExpr[FrameT, SeriesT]
+    ) -> CompliantExpr[FrameT, SeriesT]: ...
     def __sub__(
         self: Self, other: SelectorOrExpr[FrameT, SeriesT]
     ) -> SelectorOrExpr[FrameT, SeriesT]:
@@ -212,7 +218,9 @@ class CompliantSelector(CompliantExpr[SeriesT], Generic[FrameT, SeriesT], Protoc
     @overload
     def __or__(self: Self, other: Self) -> Self: ...
     @overload
-    def __or__(self: Self, other: CompliantExpr[SeriesT]) -> CompliantExpr[SeriesT]: ...
+    def __or__(
+        self: Self, other: CompliantExpr[FrameT, SeriesT]
+    ) -> CompliantExpr[FrameT, SeriesT]: ...
     def __or__(
         self: Self, other: SelectorOrExpr[FrameT, SeriesT]
     ) -> SelectorOrExpr[FrameT, SeriesT]:
@@ -236,7 +244,9 @@ class CompliantSelector(CompliantExpr[SeriesT], Generic[FrameT, SeriesT], Protoc
     @overload
     def __and__(self: Self, other: Self) -> Self: ...
     @overload
-    def __and__(self: Self, other: CompliantExpr[SeriesT]) -> CompliantExpr[SeriesT]: ...
+    def __and__(
+        self: Self, other: CompliantExpr[FrameT, SeriesT]
+    ) -> CompliantExpr[FrameT, SeriesT]: ...
     def __and__(
         self: Self, other: SelectorOrExpr[FrameT, SeriesT]
     ) -> SelectorOrExpr[FrameT, SeriesT]:

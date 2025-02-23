@@ -92,30 +92,25 @@ class CompliantLazyFrame(Protocol):
     def schema(self) -> Mapping[str, DType]: ...
 
 
-CompliantFrameT_contra = TypeVar(
-    "CompliantFrameT_contra",
-    bound="CompliantDataFrame | CompliantLazyFrame",
-    contravariant=True,
-)
-CompliantSeriesT_co = TypeVar(
-    "CompliantSeriesT_co", bound=CompliantSeries, covariant=True
+CompliantFrameT = TypeVar(
+    "CompliantFrameT", bound="CompliantDataFrame | CompliantLazyFrame"
 )
 
 
-class CompliantExpr(Protocol, Generic[CompliantFrameT_contra, CompliantSeriesT_co]):
+class CompliantExpr(Protocol, Generic[CompliantFrameT, CompliantSeriesT_co]):
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
-    _evaluate_output_names: Callable[[CompliantFrameT_contra], Sequence[str]]
+    _evaluate_output_names: Callable[[CompliantFrameT], Sequence[str]]
     _alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None
     _depth: int
     _function_name: str
 
-    def __call__(self, df: Any) -> Sequence[CompliantSeriesT_co]: ...
+    def __call__(self, df: CompliantFrameT) -> Sequence[CompliantSeriesT_co]: ...
     def __narwhals_expr__(self) -> None: ...
     def __narwhals_namespace__(
         self,
-    ) -> CompliantNamespace[CompliantFrameT_contra, CompliantSeriesT_co]: ...
+    ) -> CompliantNamespace[CompliantFrameT, CompliantSeriesT_co]: ...
     def is_null(self) -> Self: ...
     def alias(self, name: str) -> Self: ...
     def cast(self, dtype: DType) -> Self: ...
@@ -137,13 +132,13 @@ class CompliantExpr(Protocol, Generic[CompliantFrameT_contra, CompliantSeriesT_c
     ) -> Self: ...
 
 
-class CompliantNamespace(Protocol, Generic[CompliantFrameT_contra, CompliantSeriesT_co]):
+class CompliantNamespace(Protocol, Generic[CompliantFrameT, CompliantSeriesT_co]):
     def col(
         self, *column_names: str
-    ) -> CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co]: ...
+    ) -> CompliantExpr[CompliantFrameT, CompliantSeriesT_co]: ...
     def lit(
         self, value: Any, dtype: DType | None
-    ) -> CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co]: ...
+    ) -> CompliantExpr[CompliantFrameT, CompliantSeriesT_co]: ...
     @property
     def selectors(self) -> CompliantSelectorNamespace[Any, Any]: ...
 
@@ -345,7 +340,7 @@ if TYPE_CHECKING:
     # This one needs to be in TYPE_CHECKING to pass on 3.9,
     # and can only be defined after CompliantExpr has been defined
     IntoCompliantExpr: TypeAlias = (
-        CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co] | CompliantSeriesT_co
+        CompliantExpr[CompliantFrameT, CompliantSeriesT_co] | CompliantSeriesT_co
     )
 
 
