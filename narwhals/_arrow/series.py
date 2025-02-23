@@ -44,9 +44,9 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import ArrowArray
     from narwhals._arrow.typing import ArrowChunkedArray
     from narwhals._arrow.typing import Incomplete
-    from narwhals._arrow.typing import Indices
+    from narwhals._arrow.typing import Indices  # type: ignore[attr-defined]
     from narwhals._arrow.typing import NullPlacement
-    from narwhals._arrow.typing import Order
+    from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
     from narwhals._arrow.typing import TieBreaker
     from narwhals._arrow.typing import _AsPyType
     from narwhals._arrow.typing import _BasicDataType
