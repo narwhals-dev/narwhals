@@ -1156,14 +1156,11 @@ class Expr:
                 return (compliant_expr > lb) & (compliant_expr < ub)  # type: ignore[no-any-return]
             return (compliant_expr >= lb) & (compliant_expr <= ub)  # type: ignore[no-any-return]
 
-        is_order_dependent = operation_has_open_windows(self, lower_bound, upper_bound)
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx, func, self, lower_bound, upper_bound, str_as_lit=False
             ),
-            make_order_dependent(self._metadata)
-            if is_order_dependent
-            else self._metadata,
+            combine_metadata(self, lower_bound, upper_bound, str_as_lit=True)
         )
 
     def is_in(self: Self, other: Any) -> Self:
@@ -1929,9 +1926,7 @@ class Expr:
                 upper_bound,  # type: ignore[arg-type]
                 str_as_lit=False,
             ),
-            make_order_dependent(self._metadata)
-            if is_order_dependent
-            else self._metadata,
+            combine_metadata(self, lower_bound, upper_bound, str_as_lit=True)
         )
 
     def mode(self: Self) -> Self:

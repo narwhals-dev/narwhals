@@ -402,6 +402,7 @@ def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
 
     n_changes_length = 0
     has_transforms = False
+    has_windows = False
     has_aggregations = False
     has_literals = False
     result_n_open_windows = 0
@@ -421,6 +422,8 @@ def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
                 n_changes_length += 1
             elif kind is ExprKind.TRANSFORM:
                 has_transforms = True
+            elif kind is ExprKind.WINDOW:
+                has_windows = True
             else:  # pragma: no cover
                 msg = "unreachable code"
                 raise AssertionError(msg)
@@ -428,18 +431,21 @@ def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
         has_literals
         and not has_aggregations
         and not has_transforms
+        and not has_windows
         and not n_changes_length
     ):
         result_kind = ExprKind.LITERAL
     elif n_changes_length > 1:
         msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
         raise LengthChangingExprError(msg)
-    elif n_changes_length and has_transforms:
+    elif n_changes_length and (has_transforms or has_windows):
         msg = "Cannot combine length-changing expressions with length-preserving ones or aggregations"
         raise ShapeError(msg)
     elif n_changes_length:
         result_kind = ExprKind.CHANGES_LENGTH
     elif has_transforms:
+        result_kind = ExprKind.TRANSFORM
+    elif has_windows:
         result_kind = ExprKind.TRANSFORM
     else:
         result_kind = ExprKind.AGGREGATION
