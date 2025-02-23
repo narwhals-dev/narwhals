@@ -177,7 +177,7 @@ class Expr:
         )
 
     def __rand__(self: Self, other: Any) -> Self:
-        return (self & other).alias("literal")
+        return (self & other).alias("literal")  # type: ignore[no-any-return]
 
     def __or__(self: Self, other: Any) -> Self:
         return self.__class__(
@@ -188,7 +188,7 @@ class Expr:
         )
 
     def __ror__(self: Self, other: Any) -> Self:
-        return (self | other).alias("literal")
+        return (self | other).alias("literal")  # type: ignore[no-any-return]
 
     def __add__(self: Self, other: Any) -> Self:
         return self.__class__(
@@ -199,7 +199,7 @@ class Expr:
         )
 
     def __radd__(self: Self, other: Any) -> Self:
-        return (self + other).alias("literal")
+        return (self + other).alias("literal")  # type: ignore[no-any-return]
 
     def __sub__(self: Self, other: Any) -> Self:
         return self.__class__(
@@ -250,7 +250,7 @@ class Expr:
         )
 
     def __rmul__(self: Self, other: Any) -> Self:
-        return (self * other).alias("literal")
+        return (self * other).alias("literal")  # type: ignore[no-any-return]
 
     def __le__(self: Self, other: Any) -> Self:
         return self.__class__(
@@ -1145,12 +1145,12 @@ class Expr:
             ub: CompliantExpr[Any, Any],
         ) -> CompliantExpr[Any, Any]:
             if closed == "left":
-                return (compliant_expr >= lb) & (compliant_expr < ub)  # type: ignore[no-any-return]
+                return (compliant_expr >= lb) & (compliant_expr < ub)
             elif closed == "right":
-                return (compliant_expr > lb) & (compliant_expr <= ub)  # type: ignore[no-any-return]
+                return (compliant_expr > lb) & (compliant_expr <= ub)
             elif closed == "none":
-                return (compliant_expr > lb) & (compliant_expr < ub)  # type: ignore[no-any-return]
-            return (compliant_expr >= lb) & (compliant_expr <= ub)  # type: ignore[no-any-return]
+                return (compliant_expr > lb) & (compliant_expr < ub)
+            return (compliant_expr >= lb) & (compliant_expr <= ub)
 
         return self.__class__(
             lambda plx: apply_n_ary_operation(
