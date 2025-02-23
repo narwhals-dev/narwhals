@@ -224,8 +224,7 @@ exclude_also = [
 [tool.mypy]
 files = ["narwhals", "tests"]
 pretty = true
-# TODO: reenable strict mode
-# strict = true
+strict = true
 
 [[tool.mypy.overrides]]
 module = [
