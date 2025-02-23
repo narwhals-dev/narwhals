@@ -325,10 +325,6 @@ def evaluate_output_names_and_aliases(
     return output_names, aliases
 
 
-def operation_is_order_dependent(*args: IntoExpr | Any) -> bool:
-    return any(is_expr(x) and x._metadata.is_order_dependent() for x in args)
-
-
 class ExprKind(Enum):
     """Describe which kind of expression we are dealing with.
 
@@ -360,7 +356,7 @@ class ExprMetadata:
         self._kind: ExprKind = kind
         self._order_dependent: bool = order_dependent
 
-    def __init_subclass__(cls, /, *args: Any, **kwds: Any) -> Never:
+    def __init_subclass__(cls, /, *args: Any, **kwds: Any) -> Never:  # pragma: no cover
         msg = f"Cannot subclass {cls.__name__!r}"
         raise TypeError(msg)
 
