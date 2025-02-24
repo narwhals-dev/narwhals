@@ -43,7 +43,7 @@ class DaskLazyFrame(CompliantLazyFrame):
         version: Version,
         validate_column_names: bool,
     ) -> None:
-        self._native_frame = native_dataframe
+        self._native_frame: dd.DataFrame = native_dataframe
         self._backend_version = backend_version
         self._implementation = Implementation.DASK
         self._version = version
