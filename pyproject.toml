@@ -157,6 +157,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
+"narwhals/expr_dt.py" = ["RUF002"]
 "tests/*" = ["S101"]
 "tpch/tests/*" = ["S101"]
 "utils/*" = ["S311", "PTH123"]

@@ -985,7 +985,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ duration[μs] ┆ i64                  │
             ╞══════════════╪══════════════════════╡
             │ 10ms         ┆ 10                   │
-            │ 20040μs      ┆ 20                   │
+            │ 20040µs      ┆ 20                   │
             └──────────────┴──────────────────────┘
 
             >>> agnostic_dt_total_milliseconds(df_pa)
@@ -1053,8 +1053,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ ---          ┆ ---                  │
             │ duration[μs] ┆ i64                  │
             ╞══════════════╪══════════════════════╡
-            │ 10μs         ┆ 10                   │
-            │ 1200μs       ┆ 1200                 │
+            │ 10µs         ┆ 10                   │
+            │ 1200µs       ┆ 1200                 │
             └──────────────┴──────────────────────┘
 
             >>> agnostic_dt_total_microseconds(df_pa)
