@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from narwhals.expr import Expr
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantExpr
-    from narwhals.typing import CompliantFrameT_contra
+    from narwhals.typing import CompliantFrameT
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import CompliantNamespace
     from narwhals.typing import CompliantSeries
@@ -51,8 +51,8 @@ def is_expr(obj: Any) -> TypeIs[Expr]:
 
 
 def evaluate_into_expr(
-    df: CompliantFrameT_contra,
-    expr: CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co],
+    df: CompliantFrameT,
+    expr: CompliantExpr[CompliantFrameT, CompliantSeriesT_co],
 ) -> Sequence[CompliantSeriesT_co]:
     """Return list of raw columns.
 
@@ -72,9 +72,9 @@ def evaluate_into_expr(
 
 
 def evaluate_into_exprs(
-    df: CompliantFrameT_contra,
+    df: CompliantFrameT,
     /,
-    *exprs: CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co],
+    *exprs: CompliantExpr[CompliantFrameT, CompliantSeriesT_co],
 ) -> list[CompliantSeriesT_co]:
     """Evaluate each expr into Series."""
     return [
@@ -86,8 +86,8 @@ def evaluate_into_exprs(
 
 @overload
 def maybe_evaluate_expr(
-    df: CompliantFrameT_contra,
-    expr: CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co],
+    df: CompliantFrameT,
+    expr: CompliantExpr[CompliantFrameT, CompliantSeriesT_co],
 ) -> CompliantSeriesT_co: ...
 
 
@@ -257,15 +257,15 @@ def is_simple_aggregation(expr: CompliantExpr[Any, Any]) -> bool:
 
 
 def combine_evaluate_output_names(
-    *exprs: CompliantExpr[CompliantFrameT_contra, Any],
-) -> Callable[[CompliantFrameT_contra], Sequence[str]]:
+    *exprs: CompliantExpr[CompliantFrameT, Any],
+) -> Callable[[CompliantFrameT], Sequence[str]]:
     # Follow left-hand-rule for naming. E.g. `nw.sum_horizontal(expr1, expr2)` takes the
     # first name of `expr1`.
     if not is_compliant_expr(exprs[0]):  # pragma: no cover
         msg = f"Safety assertion failed, expected expression, got: {type(exprs[0])}. Please report a bug."
         raise AssertionError(msg)
 
-    def evaluate_output_names(df: CompliantFrameT_contra) -> Sequence[str]:
+    def evaluate_output_names(df: CompliantFrameT) -> Sequence[str]:
         return exprs[0]._evaluate_output_names(df)[:1]
 
     return evaluate_output_names
@@ -286,11 +286,11 @@ def combine_alias_output_names(
 
 
 def extract_compliant(
-    plx: CompliantNamespace[CompliantFrameT_contra, CompliantSeriesT_co],
+    plx: CompliantNamespace[CompliantFrameT, CompliantSeriesT_co],
     other: Any,
     *,
     str_as_lit: bool,
-) -> CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co] | object:
+) -> CompliantExpr[CompliantFrameT, CompliantSeriesT_co] | object:
     if is_expr(other):
         return other._to_compliant_expr(plx)
     if isinstance(other, str) and not str_as_lit:

@@ -53,7 +53,7 @@ if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantExpr
-    from narwhals.typing import CompliantFrameT_contra
+    from narwhals.typing import CompliantFrameT
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import CompliantSeries
     from narwhals.typing import CompliantSeriesT_co
@@ -410,6 +410,20 @@ class Implementation(Enum):
             False
         """
         return self is Implementation.IBIS  # pragma: no cover
+
+    def ensure_pandas_like(self: Self) -> None:
+        if self.is_pandas_like():
+            return
+        pandas_like = {Implementation.PANDAS, Implementation.CUDF, Implementation.MODIN}
+        msg = f"Expected pandas-like implementation ({pandas_like}), found {self}"
+        raise TypeError(msg)
+
+    # NOTE: Not sure why this differs from `pandas_like`
+    def ensure_pyarrow(self: Self) -> None:
+        if self.is_pyarrow():
+            return
+        msg = f"Expected pyarrow, got: {type(self)}"  # pragma: no cover
+        raise AssertionError(msg)
 
 
 MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
@@ -1321,8 +1335,8 @@ def is_compliant_series(obj: Any) -> TypeIs[CompliantSeries]:
 
 
 def is_compliant_expr(
-    obj: CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co] | Any,
-) -> TypeIs[CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co]]:
+    obj: CompliantExpr[CompliantFrameT, CompliantSeriesT_co] | Any,
+) -> TypeIs[CompliantExpr[CompliantFrameT, CompliantSeriesT_co]]:
     return hasattr(obj, "__narwhals_expr__")
 
 

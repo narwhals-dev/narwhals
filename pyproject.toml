@@ -263,6 +263,7 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = [
   "*._expression_parsing",
+  "*._protocols",
   "*.utils",
   "*._pandas_like.*",
   "*._ibis.*",
