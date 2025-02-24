@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from functools import partial
 from typing import TYPE_CHECKING
+from typing import Any
 from typing import Callable
 from typing import Collection
 from typing import Generic
@@ -41,7 +42,7 @@ if TYPE_CHECKING:
 
 
 SeriesT = TypeVar("SeriesT", bound="CompliantSeries")
-FrameT = TypeVar("FrameT", bound="CompliantDataFrame | CompliantLazyFrame")
+FrameT = TypeVar("FrameT", bound="CompliantDataFrame[Any] | CompliantLazyFrame")
 SelectorOrExpr: TypeAlias = (
     "CompliantSelector[FrameT, SeriesT] | CompliantExpr[FrameT, SeriesT]"
 )
@@ -265,7 +266,7 @@ class CompliantSelector(
             return self._to_expr() & other
 
     def __invert__(self: Self) -> CompliantSelector[FrameT, SeriesT]:
-        return self.selectors.all() - self
+        return self.selectors.all() - self  # type: ignore[no-any-return]
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         s = f"depth={self._depth}, " if is_tracks_depth(self._implementation) else ""
@@ -273,6 +274,8 @@ class CompliantSelector(
 
 
 def _eval_lhs_rhs(
-    df: CompliantDataFrame | CompliantLazyFrame, lhs: CompliantExpr, rhs: CompliantExpr
+    df: CompliantDataFrame[Any] | CompliantLazyFrame,
+    lhs: CompliantExpr[Any, Any],
+    rhs: CompliantExpr[Any, Any],
 ) -> tuple[Sequence[str], Sequence[str]]:
     return lhs._evaluate_output_names(df), rhs._evaluate_output_names(df)

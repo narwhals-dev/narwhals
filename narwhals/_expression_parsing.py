@@ -90,7 +90,7 @@ def maybe_evaluate_expr(
 
 
 @overload
-def maybe_evaluate_expr(df: CompliantDataFrame, expr: T) -> T: ...
+def maybe_evaluate_expr(df: CompliantDataFrame[Any], expr: T) -> T: ...
 
 
 def maybe_evaluate_expr(
@@ -152,7 +152,7 @@ def reuse_series_implementation(
     """
     plx = expr.__narwhals_namespace__()
 
-    def func(df: CompliantDataFrame) -> Sequence[CompliantSeries]:
+    def func(df: CompliantDataFrame[Any]) -> Sequence[CompliantSeries]:
         _kwargs = {
             **(call_kwargs or {}),
             **{
@@ -303,7 +303,7 @@ def extract_compliant(
 
 def evaluate_output_names_and_aliases(
     expr: CompliantExpr[Any, Any],
-    df: CompliantDataFrame | CompliantLazyFrame,
+    df: CompliantDataFrame[Any] | CompliantLazyFrame,
     exclude: Sequence[str],
 ) -> tuple[Sequence[str], Sequence[str]]:
     output_names = expr._evaluate_output_names(df)

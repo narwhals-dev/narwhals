@@ -1309,7 +1309,7 @@ def dtype_matches_time_unit_and_time_zone(
 
 
 def get_column_names(
-    df: NativeFrame | CompliantDataFrame | CompliantLazyFrame,
+    df: NativeFrame | CompliantDataFrame[Any] | CompliantLazyFrame,
 ) -> Sequence[str]:
     return df.columns
 
@@ -1319,7 +1319,9 @@ def _hasattr_static(obj: Any, attr: str) -> bool:
     return getattr_static(obj, attr, sentinel) is not sentinel
 
 
-def is_compliant_dataframe(obj: Any) -> TypeIs[CompliantDataFrame]:
+def is_compliant_dataframe(
+    obj: Any | CompliantDataFrame[CompliantSeriesT_co],
+) -> TypeIs[CompliantDataFrame[CompliantSeriesT_co]]:
     return _hasattr_static(obj, "__narwhals_dataframe__")
 
 

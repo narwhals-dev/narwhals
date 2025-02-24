@@ -93,7 +93,7 @@ class CompliantLazyFrame(Protocol):
 
 
 CompliantFrameT = TypeVar(
-    "CompliantFrameT", bound="CompliantDataFrame | CompliantLazyFrame"
+    "CompliantFrameT", bound="CompliantDataFrame[Any] | CompliantLazyFrame"
 )
 
 
