@@ -57,7 +57,9 @@ def native_to_narwhals_dtype(
     if isinstance(dtype, spark_types.ArrayType):
         return dtypes.List(
             inner=native_to_narwhals_dtype(
-                dtype.elementType, version=version, spark_types=spark_types
+                dtype.elementType,  # pyright: ignore[reportAttributeAccessIssue]
+                version=version,
+                spark_types=spark_types,
             )
         )
     if isinstance(dtype, spark_types.StructType):
@@ -69,7 +71,7 @@ def native_to_narwhals_dtype(
                         field.dataType, version=version, spark_types=spark_types
                     ),
                 )
-                for field in dtype
+                for field in dtype  # pyright: ignore[reportGeneralTypeIssues]
             ]
         )
     return dtypes.Unknown()

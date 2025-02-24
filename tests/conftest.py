@@ -154,7 +154,7 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
         )
 
         session = (
-            SparkSession.builder.appName("unit-tests")
+            SparkSession.builder.appName("unit-tests")  # pyright: ignore[reportAttributeAccessIssue]
             .master("local[1]")
             .config("spark.ui.enabled", "false")
             # executing one task at a time makes the tests faster
