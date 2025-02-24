@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Sequence
-from typing import TypedDict
 from typing import TypeVar
 from typing import overload
 
@@ -22,6 +21,7 @@ from narwhals.utils import Implementation
 from narwhals.utils import is_compliant_expr
 
 if TYPE_CHECKING:
+    from typing_extensions import Never
     from typing_extensions import TypeIs
 
     from narwhals._arrow.expr import ArrowExpr
@@ -325,10 +325,6 @@ def evaluate_output_names_and_aliases(
     return output_names, aliases
 
 
-def operation_is_order_dependent(*args: IntoExpr | Any) -> bool:
-    return any(is_expr(x) and x._metadata["is_order_dependent"] for x in args)
-
-
 class ExprKind(Enum):
     """Describe which kind of expression we are dealing with.
 
@@ -353,17 +349,51 @@ class ExprKind(Enum):
     """e.g. `nw.col('a').drop_nulls()`"""
 
 
-class ExprMetadata(TypedDict):
-    kind: ExprKind
-    is_order_dependent: bool
+class ExprMetadata:
+    __slots__ = ("_kind", "_order_dependent")
+
+    def __init__(self, kind: ExprKind, /, *, order_dependent: bool) -> None:
+        self._kind: ExprKind = kind
+        self._order_dependent: bool = order_dependent
+
+    def __init_subclass__(cls, /, *args: Any, **kwds: Any) -> Never:  # pragma: no cover
+        msg = f"Cannot subclass {cls.__name__!r}"
+        raise TypeError(msg)
+
+    @property
+    def kind(self) -> ExprKind:
+        return self._kind
+
+    def is_order_dependent(self) -> bool:
+        return self._order_dependent
+
+    def is_transform(self) -> bool:
+        return self.kind is ExprKind.TRANSFORM
+
+    def is_aggregation_or_literal(self) -> bool:
+        return self.kind in {ExprKind.AGGREGATION, ExprKind.LITERAL}
+
+    def is_changes_length(self) -> bool:
+        return self.kind is ExprKind.CHANGES_LENGTH
+
+    def with_kind(self, kind: ExprKind, /) -> ExprMetadata:
+        """Change metadata kind, leaving all other attributes the same."""
+        return ExprMetadata(kind, order_dependent=self.is_order_dependent())
+
+    def with_order_dependence(self) -> ExprMetadata:
+        """Set `order_dependent` to True, leaving all other attributes the same."""
+        return ExprMetadata(self.kind, order_dependent=True)
+
+    def with_kind_and_order_dependence(self, kind: ExprKind, /) -> ExprMetadata:
+        """Change kind and set `order_dependent` to True."""
+        return ExprMetadata(kind, order_dependent=True)
+
+    @staticmethod
+    def selector() -> ExprMetadata:
+        return ExprMetadata(ExprKind.TRANSFORM, order_dependent=False)
 
 
-def change_metadata_kind(md: ExprMetadata, kind: ExprKind) -> ExprMetadata:
-    # Change metadata kind, leaving all other attributes the same.
-    return ExprMetadata(kind=kind, is_order_dependent=md["is_order_dependent"])
-
-
-def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
+def combine_metadata(*args: IntoExpr | object | None, str_as_lit: bool) -> ExprMetadata:
     # Combine metadata from `args`.
 
     n_changes_length = 0
@@ -376,9 +406,9 @@ def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
         if isinstance(arg, str) and not str_as_lit:
             has_transforms = True
         elif is_expr(arg):
-            if arg._metadata["is_order_dependent"]:
+            if arg._metadata.is_order_dependent():
                 result_is_order_dependent = True
-            kind = arg._metadata["kind"]
+            kind = arg._metadata.kind
             if kind is ExprKind.AGGREGATION:
                 has_aggregations = True
             elif kind is ExprKind.LITERAL:
@@ -410,7 +440,7 @@ def combine_metadata(*args: IntoExpr, str_as_lit: bool) -> ExprMetadata:
     else:
         result_kind = ExprKind.AGGREGATION
 
-    return ExprMetadata(kind=result_kind, is_order_dependent=result_is_order_dependent)
+    return ExprMetadata(result_kind, order_dependent=result_is_order_dependent)
 
 
 def check_expressions_transform(*args: IntoExpr, function_name: str) -> None:
@@ -420,8 +450,7 @@ def check_expressions_transform(*args: IntoExpr, function_name: str) -> None:
     from narwhals.series import Series
 
     if not all(
-        (is_expr(x) and x._metadata["kind"] is ExprKind.TRANSFORM)
-        or isinstance(x, (str, Series))
+        (is_expr(x) and x._metadata.is_transform()) or isinstance(x, (str, Series))
         for x in args
     ):
         msg = f"Expressions which aggregate or change length cannot be passed to '{function_name}'."
@@ -433,13 +462,12 @@ def all_exprs_are_aggs_or_literals(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
     # For Series input, we don't raise (yet), we let such checks happen later,
     # as this function works lazily and so can't evaluate lengths.
     exprs = chain(args, kwargs.values())
-    agg_or_lit = {ExprKind.AGGREGATION, ExprKind.LITERAL}
-    return all(is_expr(x) and x._metadata["kind"] in agg_or_lit for x in exprs)
+    return all(is_expr(x) and x._metadata.is_aggregation_or_literal() for x in exprs)
 
 
 def infer_kind(obj: IntoExpr | _1DArray | object, *, str_as_lit: bool) -> ExprKind:
     if is_expr(obj):
-        return obj._metadata["kind"]
+        return obj._metadata.kind
     if (
         is_narwhals_series(obj)
         or is_numpy_array(obj)
@@ -450,7 +478,7 @@ def infer_kind(obj: IntoExpr | _1DArray | object, *, str_as_lit: bool) -> ExprKi
 
 
 def apply_n_ary_operation(
-    plx: CompliantNamespace,
+    plx: CompliantNamespace[Any, Any],
     function: Any,
     *comparands: IntoExpr,
     str_as_lit: bool,

@@ -55,7 +55,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):
         self._call = call
         self._depth = depth
         self._function_name = function_name
-        self._evaluate_output_names = evaluate_output_names  # pyright: ignore[reportAttributeAccessIssue]
+        self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._backend_version = backend_version
         self._version = version
@@ -108,7 +108,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):
             func,
             depth=0,
             function_name="col",
-            evaluate_output_names=lambda _df: list(column_names),
+            evaluate_output_names=lambda _df: column_names,
             alias_output_names=None,
             backend_version=backend_version,
             version=version,

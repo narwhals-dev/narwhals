@@ -281,7 +281,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
                 raise NotImplementedError(msg)
             rel = self._native_frame.set_alias("lhs").cross(  # pragma: no cover
                 other._native_frame.set_alias("rhs")
-            )  # type: ignore[operator]
+            )
         else:
             # help mypy
             assert left_on is not None  # noqa: S101

@@ -111,15 +111,6 @@ If you want to run PySpark-related tests, you'll need to have Java installed. Re
    If you also want to test other libraries like Dask , PySpark, and Modin, you can install them too with
    `uv pip install -e ".[dev, core, docs, dask, pyspark, modin]"`.
 
-3. Install a fork of griffe:
-
-   ```terminal
-   uv pip install git+https://github.com/MarcoGorelli/griffe.git@no-overloads
-   ```
-
-   This is hopefully temporary until [mkdocstrings#716](https://github.com/mkdocstrings/mkdocstrings/issues/716)
-   is addressed.
-
 You should also install pre-commit:
 
 ```terminal

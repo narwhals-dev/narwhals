@@ -44,7 +44,7 @@ def test_from_numpy_schema_dict(
     result = nw_v1.from_numpy(
         arr,  # pyright: ignore[reportArgumentType]
         native_namespace=native_namespace,
-        schema=schema,  # type: ignore[arg-type]
+        schema=schema,
     )
     assert result.collect_schema() == schema
 
@@ -75,7 +75,7 @@ def test_from_numpy_schema_notvalid(
     with pytest.raises(
         TypeError, match="`schema` is expected to be one of the following types"
     ):
-        nw.from_numpy(arr, schema="a", native_namespace=native_namespace)  # type: ignore[arg-type]
+        nw.from_numpy(arr, schema="a", native_namespace=native_namespace)  # pyright: ignore[reportArgumentType]
 
 
 def test_from_numpy_v1(constructor: Constructor, request: pytest.FixtureRequest) -> None:

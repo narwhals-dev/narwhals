@@ -181,7 +181,7 @@ class PandasLikeSeries(CompliantSeries):
 
     @property
     def name(self: Self) -> str:
-        return self._name  # type: ignore[no-any-return]
+        return self._name
 
     @property
     def dtype(self: Self) -> DType:
@@ -280,8 +280,8 @@ class PandasLikeSeries(CompliantSeries):
 
     def to_list(self: Self) -> list[Any]:
         if self._implementation is Implementation.CUDF:
-            return self._native_series.to_arrow().to_pylist()  # type: ignore[no-any-return]
-        return self._native_series.to_list()  # type: ignore[no-any-return]
+            return self._native_series.to_arrow().to_pylist()
+        return self._native_series.to_list()
 
     def is_between(
         self: Self,
@@ -317,14 +317,14 @@ class PandasLikeSeries(CompliantSeries):
     def arg_min(self: Self) -> int:
         ser = self._native_series
         if self._implementation is Implementation.PANDAS and self._backend_version < (1,):
-            return ser.to_numpy().argmin()  # type: ignore[no-any-return]
-        return ser.argmin()  # type: ignore[no-any-return]
+            return ser.to_numpy().argmin()
+        return ser.argmin()
 
     def arg_max(self: Self) -> int:
         ser = self._native_series
         if self._implementation is Implementation.PANDAS and self._backend_version < (1,):
-            return ser.to_numpy().argmax()  # type: ignore[no-any-return]
-        return ser.argmax()  # type: ignore[no-any-return]
+            return ser.to_numpy().argmax()
+        return ser.argmax()
 
     # Binary comparisons
 
@@ -462,10 +462,10 @@ class PandasLikeSeries(CompliantSeries):
     # Reductions
 
     def any(self: Self) -> bool:
-        return self._native_series.any()  # type: ignore[no-any-return]
+        return self._native_series.any()
 
     def all(self: Self) -> bool:
-        return self._native_series.all()  # type: ignore[no-any-return]
+        return self._native_series.all()
 
     def min(self: Self) -> Any:
         return self._native_series.min()
@@ -474,25 +474,25 @@ class PandasLikeSeries(CompliantSeries):
         return self._native_series.max()
 
     def sum(self: Self) -> float:
-        return self._native_series.sum()  # type: ignore[no-any-return]
+        return self._native_series.sum()
 
     def count(self: Self) -> int:
-        return self._native_series.count()  # type: ignore[no-any-return]
+        return self._native_series.count()
 
     def mean(self: Self) -> float:
-        return self._native_series.mean()  # type: ignore[no-any-return]
+        return self._native_series.mean()
 
     def median(self: Self) -> float:
         if not self.dtype.is_numeric():
             msg = "`median` operation not supported for non-numeric input type."
             raise InvalidOperationError(msg)
-        return self._native_series.median()  # type: ignore[no-any-return]
+        return self._native_series.median()
 
     def std(self: Self, *, ddof: int) -> float:
-        return self._native_series.std(ddof=ddof)  # type: ignore[no-any-return]
+        return self._native_series.std(ddof=ddof)
 
     def var(self: Self, *, ddof: int) -> float:
-        return self._native_series.var(ddof=ddof)  # type: ignore[no-any-return]
+        return self._native_series.var(ddof=ddof)
 
     def skew(self: Self) -> float | None:
         ser_not_null = self._native_series.dropna()
@@ -545,7 +545,7 @@ class PandasLikeSeries(CompliantSeries):
         return self._from_native_series(self._native_series.dropna())
 
     def n_unique(self: Self) -> int:
-        return self._native_series.nunique(dropna=False)  # type: ignore[no-any-return]
+        return self._native_series.nunique(dropna=False)
 
     def sample(
         self: Self,
@@ -681,7 +681,7 @@ class PandasLikeSeries(CompliantSeries):
             )
         return s.to_numpy(dtype=dtype, copy=copy)
 
-    def to_pandas(self: Self) -> pd.Series:
+    def to_pandas(self: Self) -> pd.Series[Any]:
         if self._implementation is Implementation.PANDAS:
             return self._native_series
         elif self._implementation is Implementation.CUDF:  # pragma: no cover
@@ -710,7 +710,7 @@ class PandasLikeSeries(CompliantSeries):
         ).alias(self.name)
 
     def null_count(self: Self) -> int:
-        return self._native_series.isna().sum()  # type: ignore[no-any-return]
+        return self._native_series.isna().sum()
 
     def is_first_distinct(self: Self) -> Self:
         return self._from_native_series(
@@ -728,9 +728,9 @@ class PandasLikeSeries(CompliantSeries):
             raise TypeError(msg)
 
         if descending:
-            return self._native_series.is_monotonic_decreasing  # type: ignore[no-any-return]
+            return self._native_series.is_monotonic_decreasing
         else:
-            return self._native_series.is_monotonic_increasing  # type: ignore[no-any-return]
+            return self._native_series.is_monotonic_increasing
 
     def value_counts(
         self: Self,
@@ -770,7 +770,7 @@ class PandasLikeSeries(CompliantSeries):
         quantile: float,
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     ) -> float:
-        return self._native_series.quantile(q=quantile, interpolation=interpolation)  # type: ignore[no-any-return]
+        return self._native_series.quantile(q=quantile, interpolation=interpolation)
 
     def zip_with(self: Self, mask: Any, other: Any) -> PandasLikeSeries:
         ser = self._native_series
@@ -946,7 +946,7 @@ class PandasLikeSeries(CompliantSeries):
         yield from self._native_series.__iter__()
 
     def __contains__(self: Self, other: Any) -> bool:
-        return (  # type: ignore[no-any-return]
+        return (
             self._native_series.isna().any()
             if other is None
             else (self._native_series == other).any()

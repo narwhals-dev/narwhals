@@ -346,7 +346,7 @@ def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
         df["int"].hist(bins=[5, 2, 0])
 
 
-@given(  # type: ignore[misc]
+@given(
     data=st.lists(
         # Bug in Polars <= 1.21; computing histograms with NaN data and passed bins can be unreliable
         #   this leads to flaky hypothesis testing https://github.com/pola-rs/polars/issues/21082
@@ -407,7 +407,7 @@ def test_hist_bin_hypotheis(
     assert_equal_data(result, expected.to_dict(as_series=False))
 
 
-@given(  # type: ignore[misc]
+@given(
     data=st.lists(
         # min_value/max_value from PyArrows min/max boundaries
         st.floats(
