@@ -255,7 +255,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
             lambda _input, other: _input.__ne__(other), "__ne__", other=other
         )
 
-    def __ge__(self: Self, other: DaskExpr) -> Self:
+    def __ge__(self: Self, other: DaskExpr | Any) -> Self:
         return self._from_call(
             lambda _input, other: _input.__ge__(other), "__ge__", other=other
         )
@@ -275,7 +275,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
             lambda _input, other: _input.__lt__(other), "__lt__", other=other
         )
 
-    def __and__(self: Self, other: DaskExpr) -> Self:
+    def __and__(self: Self, other: DaskExpr | Any) -> Self:
         return self._from_call(
             lambda _input, other: _input.__and__(other), "__and__", other=other
         )

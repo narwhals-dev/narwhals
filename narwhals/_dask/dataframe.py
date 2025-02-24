@@ -426,7 +426,7 @@ class DaskLazyFrame(CompliantLazyFrame):
         return (
             self.with_row_index(row_index_token)
             .filter(
-                (plx.col(row_index_token) >= offset)  # type: ignore[operator]
+                (plx.col(row_index_token) >= offset)
                 & ((plx.col(row_index_token) - offset) % n == 0)
             )
             .drop([row_index_token], strict=False)
