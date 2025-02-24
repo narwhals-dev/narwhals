@@ -38,7 +38,6 @@ if TYPE_CHECKING:
     from narwhals.typing import TimeUnit
     from narwhals.utils import Implementation
     from narwhals.utils import Version
-    from narwhals.utils import _FullContext
 
 
 SeriesT = TypeVar("SeriesT", bound="CompliantSeries")
@@ -157,14 +156,6 @@ class CompliantSelectorNamespace(Generic[FrameT, SeriesT], Protocol):
             return [name for name, tp in self._iter_schema(df) if matches(tp)]
 
         return self._selector(series, names)
-
-    # NOTE: Can't reuse for `<3.11`
-    # - https://github.com/python/cpython/issues/88970
-    # - https://github.com/python/cpython/pull/31628
-    def __init__(self: Self, context: _FullContext, /) -> None:  # pragma: no cover
-        self._implementation = context._implementation
-        self._backend_version = context._backend_version
-        self._version = context._version
 
 
 class LazySelectorNamespace(
