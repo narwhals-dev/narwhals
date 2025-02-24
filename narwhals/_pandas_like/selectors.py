@@ -68,7 +68,7 @@ class PandasSelector(  # type: ignore[misc]
     if sys.version_info < (3, 9):
 
         def __init__(self, *args: Any, **kwds: Any) -> None:
-            super(PandasLikeExpr).__init__(*args, **kwds)
+            super(PandasLikeExpr, self).__init__(*args, **kwds)
 
     def _to_expr(self: Self) -> PandasLikeExpr:
         return PandasLikeExpr(
