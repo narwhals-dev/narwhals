@@ -236,7 +236,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
 
     for constructor in selected_constructors:
         if (
-            constructor in ("pandas[nullable]", "pandas[pyarrow]")
+            constructor in {"pandas[nullable]", "pandas[pyarrow]"}
             and MIN_PANDAS_NULLABLE_VERSION > PANDAS_VERSION
         ):  # pragma: no cover
             continue
@@ -247,10 +247,9 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             constructors_ids.append(constructor)
         elif constructor in LAZY_CONSTRUCTORS:
             if constructor == "pyspark":
-                if sys.version_info < (3, 12):  # pragma: no cover
-                    constructors.append(pyspark_lazy_constructor())
-                else:  # pragma: no cover
+                if sys.version_info >= (3, 12):  # pragma: no cover
                     continue
+                constructors.append(pyspark_lazy_constructor())  # pragma: no cover
             else:
                 constructors.append(LAZY_CONSTRUCTORS[constructor])
             constructors_ids.append(constructor)
