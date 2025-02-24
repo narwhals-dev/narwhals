@@ -1047,7 +1047,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_true(),
-            self._metadata.with_extra_open_window(),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.CHANGES_LENGTH),
         )
 
     def sample(
