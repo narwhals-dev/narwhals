@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import sys
 from functools import partial
 from typing import TYPE_CHECKING
+from typing import Any
 from typing import Iterator
 
 from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -47,7 +49,7 @@ class PandasSelectorNamespace(
             function_name="selector",
             evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
-            implementation=self._implementation,
+            implementation=self._implementation,  # AttributeError: 'PandasSelector' object has no attribute '_implementation'
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -58,17 +60,24 @@ class PandasSelectorNamespace(
         self._version = context._version
 
 
+# BUG: `3.8` Protocol?
+# https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965980715
 class PandasSelector(  # type: ignore[misc]
     CompliantSelector["PandasLikeDataFrame", "PandasLikeSeries"], PandasLikeExpr
 ):
+    if sys.version_info < (3, 9):
+
+        def __init__(self, *args: Any, **kwds: Any) -> None:
+            super(PandasLikeExpr).__init__(*args, **kwds)
+
     def _to_expr(self: Self) -> PandasLikeExpr:
         return PandasLikeExpr(
-            self._call,
+            self._call,  # AttributeError: 'PandasSelector' object has no attribute '_call'
             depth=self._depth,
             function_name=self._function_name,
-            evaluate_output_names=self._evaluate_output_names,
+            evaluate_output_names=self._evaluate_output_names,  # AttributeError: 'PandasSelector' object has no attribute '_evaluate_output_names'
             alias_output_names=self._alias_output_names,
-            implementation=self._implementation,
+            implementation=self._implementation,  # AttributeError: 'PandasSelector' object has no attribute '_implementation'
             backend_version=self._backend_version,
             version=self._version,
         )
