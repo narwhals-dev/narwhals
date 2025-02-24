@@ -9,6 +9,7 @@ from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Literal
 from typing import Sequence
 from typing import TypeVar
 from typing import overload
@@ -360,6 +361,15 @@ class ExprKind(Enum):
     CHANGES_LENGTH = auto()
     """e.g. `nw.col('a').drop_nulls()`"""
 
+    def preserves_length(self) -> bool:
+        return self in {ExprKind.TRANSFORM, ExprKind.WINDOW}
+
+
+def is_scalar_like(
+    kind: ExprKind,
+) -> TypeIs[Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]]:
+    return kind in {ExprKind.AGGREGATION, ExprKind.LITERAL}
+
 
 class ExprMetadata:
     __slots__ = ("_kind", "_n_open_windows")
@@ -380,14 +390,11 @@ class ExprMetadata:
     def n_open_windows(self) -> int:
         return self._n_open_windows
 
-    def is_transform(self) -> bool:
-        return self.kind is ExprKind.TRANSFORM
-
     def is_window(self) -> bool:
         return self.kind is ExprKind.WINDOW
 
-    def is_aggregation_or_literal(self) -> bool:
-        return self.kind in {ExprKind.AGGREGATION, ExprKind.LITERAL}
+    def is_scalar_like(self) -> bool:
+        return is_scalar_like(self.kind)
 
     def is_changes_length(self) -> bool:
         return self.kind is ExprKind.CHANGES_LENGTH
@@ -431,7 +438,7 @@ def combine_metadata(*args: IntoExpr | object | None, str_as_lit: bool) -> ExprM
                 has_literals = True
             elif kind is ExprKind.CHANGES_LENGTH:
                 n_changes_length += 1
-            elif kind in {ExprKind.TRANSFORM, ExprKind.WINDOW}:
+            elif kind.preserves_length():
                 has_transforms_or_windows = True
             else:  # pragma: no cover
                 msg = "unreachable code"
@@ -459,14 +466,15 @@ def combine_metadata(*args: IntoExpr | object | None, str_as_lit: bool) -> ExprM
     return ExprMetadata(result_kind, n_open_windows=result_n_open_windows)
 
 
-def check_expressions_transform(*args: IntoExpr, function_name: str) -> None:
+def check_expressions_preserve_length(*args: IntoExpr, function_name: str) -> None:
     # Raise if any argument in `args` isn't length-preserving.
     # For Series input, we don't raise (yet), we let such checks happen later,
     # as this function works lazily and so can't evaluate lengths.
     from narwhals.series import Series
 
     if not all(
-        (is_expr(x) and x._metadata.is_transform()) or isinstance(x, (str, Series))
+        (is_expr(x) and x._metadata.kind.preserves_length())
+        or isinstance(x, (str, Series))
         for x in args
     ):
         msg = f"Expressions which aggregate or change length cannot be passed to '{function_name}'."
@@ -478,7 +486,7 @@ def all_exprs_are_aggs_or_literals(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
     # For Series input, we don't raise (yet), we let such checks happen later,
     # as this function works lazily and so can't evaluate lengths.
     exprs = chain(args, kwargs.values())
-    return all(is_expr(x) and x._metadata.is_aggregation_or_literal() for x in exprs)
+    return all(is_expr(x) and x._metadata.is_scalar_like() for x in exprs)
 
 
 def infer_kind(obj: IntoExpr | _1DArray | object, *, str_as_lit: bool) -> ExprKind:
@@ -505,7 +513,7 @@ def apply_n_ary_operation(
     )
     kinds = [infer_kind(comparand, str_as_lit=str_as_lit) for comparand in comparands]
 
-    broadcast = any(kind in {ExprKind.TRANSFORM, ExprKind.WINDOW} for kind in kinds)
+    broadcast = any(kind.preserves_length() for kind in kinds)
     compliant_exprs = (
         compliant_expr.broadcast(kind)
         if broadcast

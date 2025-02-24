@@ -649,7 +649,7 @@ class Expr:
                 function=function, return_dtype=return_dtype
             ),
             # safest assumptions
-            self._metadata.with_kind(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.CHANGES_LENGTH),
         )
 
     def skew(self: Self) -> Self:

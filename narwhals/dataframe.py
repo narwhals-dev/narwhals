@@ -17,8 +17,9 @@ from warnings import warn
 
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import all_exprs_are_aggs_or_literals
-from narwhals._expression_parsing import check_expressions_transform
+from narwhals._expression_parsing import check_expressions_preserve_length
 from narwhals._expression_parsing import infer_kind
+from narwhals._expression_parsing import is_scalar_like
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
 from narwhals.dependencies import is_numpy_array_1d
@@ -137,9 +138,7 @@ class BaseFrame(Generic[_FrameT]):
     ) -> Self:
         compliant_exprs, kinds = self._flatten_and_extract(*exprs, **named_exprs)
         compliant_exprs = [
-            compliant_expr.broadcast(kind)
-            if (kind is ExprKind.LITERAL or kind is ExprKind.AGGREGATION)
-            else compliant_expr
+            compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
             for compliant_expr, kind in zip(compliant_exprs, kinds)
         ]
         return self._from_compliant_dataframe(
@@ -171,9 +170,7 @@ class BaseFrame(Generic[_FrameT]):
                 self._compliant_frame.aggregate(*compliant_exprs),
             )
         compliant_exprs = [
-            compliant_expr.broadcast(kind)
-            if (kind is ExprKind.LITERAL or kind is ExprKind.AGGREGATION)
-            else compliant_expr
+            compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
             for compliant_expr, kind in zip(compliant_exprs, kinds)
         ]
         return self._from_compliant_dataframe(
@@ -205,7 +202,7 @@ class BaseFrame(Generic[_FrameT]):
             and all(isinstance(x, bool) for x in predicates[0])
         ):
             flat_predicates = flatten(predicates)
-            check_expressions_transform(*flat_predicates, function_name="filter")
+            check_expressions_preserve_length(*flat_predicates, function_name="filter")
             compliant_predicates, _kinds = self._flatten_and_extract(*flat_predicates)
             plx = self.__narwhals_namespace__()
             predicate = plx.all_horizontal(
