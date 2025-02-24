@@ -172,7 +172,7 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
             index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
             _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
 
-            return (  # type: ignore[no-any-return]
+            return (
                 session.createDataFrame([*zip(*_obj.values())], schema=[*_obj.keys()])
                 .repartition(2)
                 .orderBy(index_col_name)

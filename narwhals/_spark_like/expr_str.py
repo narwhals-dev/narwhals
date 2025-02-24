@@ -26,7 +26,7 @@ class SparkLikeExprStringNamespace:
                 if literal
                 else self._compliant_expr._F.regexp_replace
             )
-            return replace_all_func(
+            return replace_all_func(  # type: ignore[no-any-return]
                 _input,
                 self._compliant_expr._F.lit(pattern),
                 self._compliant_expr._F.lit(value),
@@ -39,7 +39,7 @@ class SparkLikeExprStringNamespace:
 
         def func(_input: Column) -> Column:
             to_remove = characters if characters is not None else string.whitespace
-            return self._compliant_expr._F.btrim(
+            return self._compliant_expr._F.btrim(  # type: ignore[no-any-return]
                 _input, self._compliant_expr._F.lit(to_remove)
             )
 
@@ -68,7 +68,7 @@ class SparkLikeExprStringNamespace:
                 if literal
                 else self._compliant_expr._F.regexp
             )
-            return contains_func(_input, self._compliant_expr._F.lit(pattern))
+            return contains_func(_input, self._compliant_expr._F.lit(pattern))  # type: ignore[no-any-return]
 
         return self._compliant_expr._from_call(func, "contains")
 

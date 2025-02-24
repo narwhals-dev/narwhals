@@ -20,30 +20,52 @@ data = {
     "c": [2, 4, 6],
 }
 
-expected_b_only = {
+expected_on_b_idx_a = {
     "a": ["x", "y", "z"],
     "variable": ["b", "b", "b"],
     "value": [1, 3, 5],
 }
 
-expected_b_c = {
+expected_on_b_c_idx_a = {
     "a": ["x", "y", "z", "x", "y", "z"],
     "variable": ["b", "b", "b", "c", "c", "c"],
     "value": [1, 3, 5, 2, 4, 6],
 }
 
+expected_on_none_idx_a = {
+    "a": ["x", "y", "z", "x", "y", "z"],
+    "variable": ["b", "b", "b", "c", "c", "c"],
+    "value": [1, 3, 5, 2, 4, 6],
+}
+
+expected_on_none_idx_none = {
+    "variable": ["a", "a", "a", "b", "b", "b", "c", "c", "c"],
+    "value": ["x", "y", "z", "1", "3", "5", "2", "4", "6"],
+}
+
 
 @pytest.mark.parametrize(
-    ("on", "expected"),
-    [("b", expected_b_only), (["b", "c"], expected_b_c), (None, expected_b_c)],
+    ("on", "index", "expected"),
+    [
+        ("b", ["a"], expected_on_b_idx_a),
+        (["b", "c"], ["a"], expected_on_b_c_idx_a),
+        (None, ["a"], expected_on_none_idx_a),
+        (None, None, expected_on_none_idx_none),
+    ],
 )
-def test_unpivot_on(
+def test_unpivot(
     constructor: Constructor,
     on: str | list[str] | None,
+    index: list[str] | None,
     expected: dict[str, list[float]],
+    request: pytest.FixtureRequest,
 ) -> None:
+    if on is None and index is None and "polars" not in str(constructor):
+        # TODO(): add support in other backends
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
-    result = df.unpivot(on=on, index=["a"]).sort("variable", "a")
+    sort_columns = ["variable"] if index is None else ["variable", "a"]
+    result = df.unpivot(on=on, index=index).sort(by=sort_columns)
     assert_equal_data(result, expected)
 
 
@@ -106,14 +128,3 @@ def test_unpivot_mixed_types(
     result = df.unpivot(on=["a", "b"], index="idx")
 
     assert result.collect_schema().dtypes() == expected_dtypes
-
-
-def test_unpivot_index_none(constructor: Constructor) -> None:
-    df = nw.from_native(constructor(data))
-    expected_data = {
-        "variable": ["b", "b", "b", "c", "c", "c"],
-        "value": [1, 3, 5, 2, 4, 6],
-    }
-    result = df.unpivot(on=["b", "c"], index=None)
-    assert result.collect_schema().names() == ["variable", "value"]
-    assert_equal_data(result, expected_data)

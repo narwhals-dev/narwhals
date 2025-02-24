@@ -157,7 +157,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
 
     @property
     def columns(self: Self) -> list[str]:
-        return self._native_frame.columns  # type: ignore[no-any-return]
+        return self._native_frame.columns
 
     def collect(
         self: Self,
@@ -415,16 +415,21 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
 
     def unpivot(
         self: Self,
-        on: list[str] | None,
-        index: list[str] | None,
+        on: str | list[str] | None,
+        index: str | list[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:
-        return self._from_native_frame(
-            self._native_frame.unpivot(
-                ids=index,
-                values=on,
-                variableColumnName=variable_name,
-                valueColumnName=value_name,
-            )
+        ids = tuple(self.columns) if index is None else tuple(index)
+        values = (
+            tuple(set(self.columns).difference(set(ids))) if on is None else tuple(on)
         )
+        unpivoted_native_frame = self._native_frame.unpivot(
+            ids=ids,
+            values=values,
+            variableColumnName=variable_name,
+            valueColumnName=value_name,
+        )
+        if index is None:
+            unpivoted_native_frame = unpivoted_native_frame.drop(*ids)
+        return self._from_native_frame(unpivoted_native_frame)
