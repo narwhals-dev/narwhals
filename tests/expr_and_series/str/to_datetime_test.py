@@ -83,6 +83,7 @@ def test_to_datetime_infer_fmt(
         ("polars" in str(constructor) and str(data["a"][0]).isdigit())
         or "duckdb" in str(constructor)
         or ("pyspark" in str(constructor) and data["a"][0] == "20240101123456")
+        or "ibis" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -142,7 +143,7 @@ def test_to_datetime_series_infer_fmt(
 def test_to_datetime_infer_fmt_from_date(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor):
+    if "duckdb" in str(constructor) or "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"z": ["2020-01-01", "2020-01-02", None]}
     if "pyspark" in str(constructor):

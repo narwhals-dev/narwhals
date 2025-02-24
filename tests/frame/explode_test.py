@@ -88,7 +88,15 @@ def test_explode_multiple_cols(
 ) -> None:
     if any(
         backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "pyarrow_table", "duckdb", "pyspark")
+        for backend in (
+            "dask",
+            "modin",
+            "cudf",
+            "pyarrow_table",
+            "duckdb",
+            "pyspark",
+            "ibis",
+        )
     ):
         request.applymarker(pytest.mark.xfail)
 
