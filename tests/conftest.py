@@ -74,15 +74,15 @@ def pytest_collection_modifyitems(
 
 
 def pandas_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
-    return pd.DataFrame(obj)  # type: ignore[no-any-return]
+    return pd.DataFrame(obj)
 
 
 def pandas_nullable_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
-    return pd.DataFrame(obj).convert_dtypes(dtype_backend="numpy_nullable")  # type: ignore[no-any-return]
+    return pd.DataFrame(obj).convert_dtypes(dtype_backend="numpy_nullable")
 
 
 def pandas_pyarrow_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
-    return pd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
+    return pd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")
 
 
 def modin_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:  # pragma: no cover
@@ -133,7 +133,7 @@ def dask_lazy_p2_constructor(obj: dict[str, list[Any]]) -> IntoFrame:  # pragma:
 
 
 def pyarrow_table_constructor(obj: dict[str, Any]) -> IntoDataFrame:
-    return pa.table(obj)  # type: ignore[no-any-return]
+    return pa.table(obj)
 
 
 def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cover

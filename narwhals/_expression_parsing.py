@@ -494,7 +494,7 @@ def infer_kind(obj: IntoExpr | _1DArray | object, *, str_as_lit: bool) -> ExprKi
 
 
 def apply_n_ary_operation(
-    plx: CompliantNamespace,
+    plx: CompliantNamespace[Any, Any],
     function: Any,
     *comparands: IntoExpr,
     str_as_lit: bool,
