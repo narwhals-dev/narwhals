@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import sys
 from functools import partial
 from typing import TYPE_CHECKING
-from typing import Any
 from typing import Iterator
 
 from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -65,11 +63,6 @@ class PandasSelectorNamespace(
 class PandasSelector(  # type: ignore[misc]
     CompliantSelector["PandasLikeDataFrame", "PandasLikeSeries"], PandasLikeExpr
 ):
-    if sys.version_info < (3, 9):
-
-        def __init__(self, *args: Any, **kwds: Any) -> None:
-            super(PandasLikeExpr, self).__init__(*args, **kwds)
-
     def _to_expr(self: Self) -> PandasLikeExpr:
         return PandasLikeExpr(
             self._call,  # AttributeError: 'PandasSelector' object has no attribute '_call'
