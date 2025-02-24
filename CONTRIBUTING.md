@@ -111,15 +111,6 @@ If you want to run PySpark-related tests, you'll need to have Java installed. Re
    If you also want to test other libraries like Dask , PySpark, and Modin, you can install them too with
    `uv pip install -e ".[dev, core, docs, dask, pyspark, modin]"`.
 
-3. Install a fork of griffe:
-
-   ```terminal
-   uv pip install git+https://github.com/MarcoGorelli/griffe.git@no-overloads
-   ```
-
-   This is hopefully temporary until [mkdocstrings#716](https://github.com/mkdocstrings/mkdocstrings/issues/716)
-   is addressed.
-
 You should also install pre-commit:
 
 ```terminal
@@ -154,6 +145,35 @@ If you add code that should be tested, please add tests.
   - By default, tests run for pandas, pandas (PyArrow dtypes), PyArrow, and Polars.
   - To run tests using `cudf.pandas`, run `NARWHALS_DEFAULT_CONSTRUCTORS=pandas python -m cudf.pandas -m pytest`
   - To run tests using `polars[gpu]`, run `NARWHALS_POLARS_GPU=1 pytest --constructors=polars[lazy]`
+
+### Test Failure Patterns
+
+We aim to use three standard patterns for handling test failures:
+
+Note: While we're not currently totally consistent with these patterns, any efforts towards our aim are appreciated and welcome.
+
+1. `requests.applymarker(pytest.mark.xfail)`: Used for features that are planned but not yet supported. 
+   ```python
+   def test_future_feature(request):
+       request.applymarker(pytest.mark.xfail)
+       # Test implementation for planned feature
+   ```
+
+2. `pytest.mark.skipif`: Used when there's a condition under which the test cannot run (e.g., unsupported pandas versions).
+   ```python
+   @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="requires pandas 2.0+")
+   def test_version_dependent():
+       # Test implementation
+   ```
+
+3. `pytest.raises`: Used for testing that code raises expected exceptions.
+   ```python
+   def test_invalid_input():
+       with pytest.raises(ValueError, match="expected error message"):
+           # Code that should raise the error
+   ```
+
+Document clear reasons in test comments for any skip/xfail patterns to help maintain test clarity.
 
 If you want to have less surprises when opening a PR, you can take advantage of [nox](https://nox.thea.codes/en/stable/index.html) to run the entire CI/CD test suite locally in your operating system.
 

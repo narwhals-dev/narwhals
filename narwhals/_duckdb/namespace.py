@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):  # type: ignore[type-var]
+class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "duckdb.Expression"]):  # type: ignore[type-var]
     def __init__(
         self: Self, *, backend_version: tuple[int, ...], version: Version
     ) -> None:
@@ -43,9 +43,7 @@ class DuckDBNamespace(CompliantNamespace["duckdb.Expression"]):  # type: ignore[
 
     @property
     def selectors(self: Self) -> DuckDBSelectorNamespace:
-        return DuckDBSelectorNamespace(
-            backend_version=self._backend_version, version=self._version
-        )
+        return DuckDBSelectorNamespace(self)
 
     def all(self: Self) -> DuckDBExpr:
         def _all(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
@@ -334,7 +332,7 @@ class DuckDBThen(DuckDBExpr):
         self._version = version
         self._call = call
         self._function_name = function_name
-        self._evaluate_output_names = evaluate_output_names  # pyright: ignore[reportAttributeAccessIssue]
+        self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
 
     def otherwise(self: Self, value: DuckDBExpr | Any) -> DuckDBExpr:

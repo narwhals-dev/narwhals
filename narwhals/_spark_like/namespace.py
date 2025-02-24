@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class SparkLikeNamespace(CompliantNamespace["Column"]):
+class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):
     def __init__(
         self: Self,
         *,
@@ -42,11 +42,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):
 
     @property
     def selectors(self: Self) -> SparkLikeSelectorNamespace:
-        return SparkLikeSelectorNamespace(
-            backend_version=self._backend_version,
-            version=self._version,
-            implementation=self._implementation,
-        )
+        return SparkLikeSelectorNamespace(self)
 
     def all(self: Self) -> SparkLikeExpr:
         def _all(df: SparkLikeLazyFrame) -> list[Column]:
@@ -383,7 +379,7 @@ class SparkLikeThen(SparkLikeExpr):
         self._version = version
         self._call = call
         self._function_name = function_name
-        self._evaluate_output_names = evaluate_output_names  # pyright: ignore[reportAttributeAccessIssue]
+        self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._implementation = implementation
 

@@ -114,8 +114,8 @@ class DaskExprDateTimeNamespace:
                 # Date is only supported in pandas dtypes if pyarrow-backed
                 s_cast = s.astype("Int32[pyarrow]")
                 result = calculate_timestamp_date(s_cast, time_unit)
-            elif dtype == dtypes.Datetime:
-                original_time_unit = dtype.time_unit  # type: ignore[attr-defined]
+            elif isinstance(dtype, dtypes.Datetime):
+                original_time_unit = dtype.time_unit
                 s_cast = (
                     s.astype("Int64[pyarrow]") if is_pyarrow_dtype else s.astype("int64")
                 )

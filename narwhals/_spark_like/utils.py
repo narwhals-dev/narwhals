@@ -64,12 +64,12 @@ def native_to_narwhals_dtype(
         return dtypes.Struct(
             fields=[
                 dtypes.Field(
-                    name=name,
+                    name=field.name,
                     dtype=native_to_narwhals_dtype(
-                        dtype[name], version=version, spark_types=spark_types
+                        field.dataType, version=version, spark_types=spark_types
                     ),
                 )
-                for name in dtype.fieldNames()
+                for field in dtype
             ]
         )
     return dtypes.Unknown()
@@ -109,9 +109,7 @@ def narwhals_to_native_dtype(
     if isinstance_or_issubclass(dtype, (dtypes.List, dtypes.Array)):
         return spark_types.ArrayType(
             elementType=narwhals_to_native_dtype(
-                dtype.inner,  # type: ignore[union-attr]
-                version=version,
-                spark_types=spark_types,
+                dtype.inner, version=version, spark_types=spark_types
             )
         )
     if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
@@ -125,7 +123,7 @@ def narwhals_to_native_dtype(
                         spark_types=spark_types,
                     ),
                 )
-                for field in dtype.fields  # type: ignore[union-attr]
+                for field in dtype.fields
             ]
         )
 
@@ -181,6 +179,8 @@ def _std(
     if np_version > (2, 0):
         if ddof == 1:
             return functions.stddev_samp(_input)
+        if ddof == 0:
+            return functions.stddev_pop(_input)
 
         n_rows = functions.count(_input)
         return functions.stddev_samp(_input) * functions.sqrt(

@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class DaskExpr(CompliantExpr["dx.Series"]):
+class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):
     _implementation: Implementation = Implementation.DASK
 
     def __init__(
@@ -48,16 +48,18 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         backend_version: tuple[int, ...],
         version: Version,
-        kwargs: dict[str, Any],
+        # Kwargs with metadata which we may need in group-by agg
+        # (e.g. `ddof` for `std` and `var`).
+        call_kwargs: dict[str, Any] | None = None,
     ) -> None:
         self._call = call
         self._depth = depth
         self._function_name = function_name
-        self._evaluate_output_names = evaluate_output_names  # pyright: ignore[reportAttributeAccessIssue]
+        self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._backend_version = backend_version
         self._version = version
-        self._kwargs = kwargs
+        self._call_kwargs = call_kwargs or {}
 
     def __call__(self: Self, df: DaskLazyFrame) -> Sequence[dx.Series]:
         return self._call(df)
@@ -82,7 +84,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs=self._kwargs,
+            call_kwargs=self._call_kwargs,
         )
 
     @classmethod
@@ -106,11 +108,10 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             func,
             depth=0,
             function_name="col",
-            evaluate_output_names=lambda _df: list(column_names),
+            evaluate_output_names=lambda _df: column_names,
             alias_output_names=None,
             backend_version=backend_version,
             version=version,
-            kwargs={},
         )
 
     @classmethod
@@ -133,7 +134,6 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             alias_output_names=None,
             backend_version=backend_version,
             version=version,
-            kwargs={},
         )
 
     def _from_call(
@@ -141,6 +141,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
         # First argument to `call` should be `dx.Series`
         call: Callable[..., dx.Series],
         expr_name: str,
+        call_kwargs: dict[str, Any] | None = None,
         **expressifiable_args: Self | Any,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
@@ -163,7 +164,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={**self._kwargs, **expressifiable_args},
+            call_kwargs=call_kwargs,
         )
 
     def alias(self: Self, name: str) -> Self:
@@ -181,7 +182,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             alias_output_names=alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={**self._kwargs, "name": name},
+            call_kwargs=self._call_kwargs,
         )
 
     def __add__(self: Self, other: Any) -> Self:
@@ -310,12 +311,16 @@ class DaskExpr(CompliantExpr["dx.Series"]):
 
     def std(self: Self, ddof: int) -> Self:
         return self._from_call(
-            lambda _input, ddof: _input.std(ddof=ddof).to_series(), "std", ddof=ddof
+            lambda _input: _input.std(ddof=ddof).to_series(),
+            "std",
+            call_kwargs={"ddof": ddof},
         )
 
     def var(self: Self, ddof: int) -> Self:
         return self._from_call(
-            lambda _input, ddof: _input.var(ddof=ddof).to_series(), "var", ddof=ddof
+            lambda _input: _input.var(ddof=ddof).to_series(),
+            "var",
+            call_kwargs={"ddof": ddof},
         )
 
     def skew(self: Self) -> Self:
@@ -530,7 +535,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             lambda _input: _input.isna().sum().to_series(), "null_count"
         )
 
-    def over(self: Self, keys: list[str]) -> Self:
+    def over(self: Self, keys: list[str], kind: ExprKind) -> Self:
         def func(df: DaskLazyFrame) -> list[Any]:
             output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
             if overlap := set(output_names).intersection(keys):
@@ -563,7 +568,7 @@ class DaskExpr(CompliantExpr["dx.Series"]):
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={**self._kwargs, "keys": keys},
+            call_kwargs=self._call_kwargs,
         )
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
