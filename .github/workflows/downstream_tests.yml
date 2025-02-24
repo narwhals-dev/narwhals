@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
 
+env:
+  PY_COLORS: 1
+
 jobs:
   altair:
     strategy:
@@ -113,7 +116,7 @@ jobs:
           # the local narwhals install is picked up
           sed -i '/^\[tool.hatch.envs.default\]/a path = ".venv"' pyproject.toml
           hatch run python -c "import narwhals; print(narwhals.__file__)"
-          hatch run test-optional:test-narwhals
+          hatch run +py=${{ matrix.python-version }} test-optional:test-narwhals
         timeout-minutes: 15
 
   scikit-lego:
@@ -193,6 +196,9 @@ jobs:
       - name: Run `make narwhals-test-integration`
         run: |
           cd py-shiny
+          # Isort seems to behave slightly differently in CI
+          # so we ignore its output
+          make format -s
           make narwhals-test-integration
 
   tea-tasting:

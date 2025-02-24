@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.27.1"
+version = "1.28.0"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
@@ -50,6 +50,7 @@ typing = [
   "pandas-stubs",
   "typing_extensions",
   "mypy~=1.15.0",
+  "pyright"
 ]
 dev = [
   "pre-commit",
@@ -75,6 +76,7 @@ docs = [
   "mkdocs-autorefs",
   "mkdocs-material",
   "mkdocstrings[python]",
+  "mkdocstrings-python>=1.16",
   "pandas",
   "polars>=1.0.0",
   "pyarrow",
@@ -137,6 +139,7 @@ lint.ignore = [
   "RET505",
   "SLF001",
   "TD003",
+  "TD004",
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -222,8 +225,7 @@ exclude_also = [
 [tool.mypy]
 files = ["narwhals", "tests"]
 pretty = true
-# TODO: reenable strict mode
-# strict = true
+strict = true
 
 [[tool.mypy.overrides]]
 module = [
@@ -241,3 +243,29 @@ module = [
 # TODO: remove follow_imports
 follow_imports = "skip"
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+  "*._expression_parsing",
+  "*.utils",
+  "*._pandas_like.*",
+  "*._ibis.*",
+  "*._arrow.*",
+]
+warn_return_any = false
+
+[tool.pyright]
+pythonPlatform = "All"
+# NOTE (stubs do unsafe `TypeAlias` and `TypeVar` imports)
+# pythonVersion = "3.8"
+reportMissingImports = "none"
+reportMissingModuleSource = "none"
+reportPrivateImportUsage = "none"
+reportUnusedExpression = "none"    # can enforce with `ruff`
+typeCheckingMode = "basic"
+include = ["narwhals", "tests"]
+ignore = [
+  "../.venv/",
+  "../../../**/Lib",      # stdlib
+  "../../../**/typeshed*" # typeshed-fallback
+]
