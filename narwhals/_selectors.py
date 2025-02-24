@@ -10,7 +10,6 @@ from typing import Callable
 from typing import Collection
 from typing import Iterable
 from typing import Iterator
-from typing import Protocol
 from typing import Sequence
 from typing import TypeVar
 from typing import overload
@@ -22,6 +21,18 @@ from narwhals.utils import get_column_names
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_compliant_dataframe
 from narwhals.utils import is_tracks_depth
+
+if not TYPE_CHECKING:
+    import sys
+
+    if sys.version_info >= (3, 9):
+        from typing import Protocol
+    else:
+        from typing import Generic
+
+        Protocol = Generic
+else:
+    from typing import Protocol
 
 if TYPE_CHECKING:
     from datetime import timezone

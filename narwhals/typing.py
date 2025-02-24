@@ -5,10 +5,21 @@ from typing import Any
 from typing import Callable
 from typing import Generic
 from typing import Literal
-from typing import Protocol
 from typing import Sequence
 from typing import TypeVar
 from typing import Union
+
+if not TYPE_CHECKING:
+    import sys
+
+    if sys.version_info >= (3, 9):
+        from typing import Protocol
+    else:
+        from typing import Generic
+
+        Protocol = Generic
+else:
+    from typing import Protocol
 
 if TYPE_CHECKING:
     from types import ModuleType
