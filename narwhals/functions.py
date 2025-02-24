@@ -797,12 +797,12 @@ def _read_csv_impl(
 ) -> DataFrame[Any]:
     eager_backend = Implementation.from_backend(backend)
     native_namespace = eager_backend.to_native_namespace()
-    if eager_backend in (
+    if eager_backend in {
         Implementation.POLARS,
         Implementation.PANDAS,
         Implementation.MODIN,
         Implementation.CUDF,
-    ):
+    }:
         native_frame = native_namespace.read_csv(source, **kwargs)
     elif eager_backend is Implementation.PYARROW:
         from pyarrow import csv  # ignore-banned-import
@@ -860,13 +860,13 @@ def _scan_csv_impl(
     implementation = Implementation.from_native_namespace(native_namespace)
     if implementation is Implementation.POLARS:
         native_frame = native_namespace.scan_csv(source, **kwargs)
-    elif implementation in (
+    elif implementation in {
         Implementation.PANDAS,
         Implementation.MODIN,
         Implementation.CUDF,
         Implementation.DASK,
         Implementation.DUCKDB,
-    ):
+    }:
         native_frame = native_namespace.read_csv(source, **kwargs)
     elif implementation is Implementation.PYARROW:
         from pyarrow import csv  # ignore-banned-import
@@ -924,13 +924,13 @@ def _read_parquet_impl(
     source: str, *, native_namespace: ModuleType, **kwargs: Any
 ) -> DataFrame[Any]:
     implementation = Implementation.from_native_namespace(native_namespace)
-    if implementation in (
+    if implementation in {
         Implementation.POLARS,
         Implementation.PANDAS,
         Implementation.MODIN,
         Implementation.CUDF,
         Implementation.DUCKDB,
-    ):
+    }:
         native_frame = native_namespace.read_parquet(source, **kwargs)
     elif implementation is Implementation.PYARROW:
         import pyarrow.parquet as pq  # ignore-banned-import
@@ -989,13 +989,13 @@ def _scan_parquet_impl(
     implementation = Implementation.from_native_namespace(native_namespace)
     if implementation is Implementation.POLARS:
         native_frame = native_namespace.scan_parquet(source, **kwargs)
-    elif implementation in (
+    elif implementation in {
         Implementation.PANDAS,
         Implementation.MODIN,
         Implementation.CUDF,
         Implementation.DASK,
         Implementation.DUCKDB,
-    ):
+    }:
         native_frame = native_namespace.read_parquet(source, **kwargs)
     elif implementation is Implementation.PYARROW:
         import pyarrow.parquet as pq  # ignore-banned-import

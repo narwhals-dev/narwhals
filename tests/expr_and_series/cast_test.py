@@ -172,7 +172,7 @@ def test_cast_string() -> None:
     s = nw.from_native(s_pd, series_only=True)
     s = s.cast(nw.String)
     result = nw.to_native(s)
-    assert str(result.dtype) in ("string", "object", "dtype('O')")
+    assert str(result.dtype) in {"string", "object", "dtype('O')"}
 
 
 def test_cast_raises_for_unknown_dtype(
