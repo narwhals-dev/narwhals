@@ -138,7 +138,7 @@ class DaskLazyFrame(CompliantLazyFrame):
 
     @property
     def columns(self: Self) -> list[str]:
-        return self._native_frame.columns.tolist()  # type: ignore[no-any-return]
+        return self._native_frame.columns.tolist()
 
     def filter(self: Self, predicate: DaskExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
