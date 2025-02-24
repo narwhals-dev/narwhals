@@ -47,7 +47,7 @@ class PandasSelectorNamespace(
             function_name="selector",
             evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
-            implementation=self._implementation,  # AttributeError: 'PandasSelector' object has no attribute '_implementation'
+            implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -58,19 +58,17 @@ class PandasSelectorNamespace(
         self._version = context._version
 
 
-# BUG: `3.8` Protocol?
-# https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965980715
 class PandasSelector(  # type: ignore[misc]
     CompliantSelector["PandasLikeDataFrame", "PandasLikeSeries"], PandasLikeExpr
 ):
     def _to_expr(self: Self) -> PandasLikeExpr:
         return PandasLikeExpr(
-            self._call,  # AttributeError: 'PandasSelector' object has no attribute '_call'
+            self._call,
             depth=self._depth,
             function_name=self._function_name,
-            evaluate_output_names=self._evaluate_output_names,  # AttributeError: 'PandasSelector' object has no attribute '_evaluate_output_names'
+            evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            implementation=self._implementation,  # AttributeError: 'PandasSelector' object has no attribute '_implementation'
+            implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
         )

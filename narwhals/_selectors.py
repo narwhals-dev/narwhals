@@ -22,7 +22,7 @@ from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_compliant_dataframe
 from narwhals.utils import is_tracks_depth
 
-if not TYPE_CHECKING:
+if not TYPE_CHECKING:  # pragma: no cover
     import sys
 
     if sys.version_info >= (3, 9):
@@ -31,7 +31,7 @@ if not TYPE_CHECKING:
         from typing import Generic
 
         Protocol = Generic
-else:
+else:  # pragma: no cover
     from typing import Protocol
 
 if TYPE_CHECKING:
