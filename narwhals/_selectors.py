@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Collection
-from typing import Generic
 from typing import Iterable
 from typing import Iterator
 from typing import Protocol
@@ -49,7 +48,7 @@ EvalSeries: TypeAlias = Callable[[FrameT], Sequence[SeriesT]]
 EvalNames: TypeAlias = Callable[[FrameT], Sequence[str]]
 
 
-class CompliantSelectorNamespace(Generic[FrameT, SeriesT], Protocol):
+class CompliantSelectorNamespace(Protocol[FrameT, SeriesT]):
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
@@ -159,7 +158,7 @@ class CompliantSelectorNamespace(Generic[FrameT, SeriesT], Protocol):
 
 
 class LazySelectorNamespace(
-    CompliantSelectorNamespace[FrameT, SeriesT], Generic[FrameT, SeriesT], Protocol
+    CompliantSelectorNamespace[FrameT, SeriesT], Protocol[FrameT, SeriesT]
 ):
     def _iter_schema(self, df: FrameT) -> Iterator[tuple[str, DType]]:
         yield from df.schema.items()
@@ -168,9 +167,7 @@ class LazySelectorNamespace(
         yield from zip(self._iter_columns(df), df.schema.values())
 
 
-class CompliantSelector(
-    CompliantExpr[FrameT, SeriesT], Generic[FrameT, SeriesT], Protocol
-):
+class CompliantSelector(CompliantExpr[FrameT, SeriesT], Protocol[FrameT, SeriesT]):
     @property
     def selectors(self) -> CompliantSelectorNamespace[FrameT, SeriesT]:
         return self.__narwhals_namespace__().selectors
