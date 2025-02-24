@@ -218,7 +218,7 @@ def selector(
     /,
 ) -> DaskSelector:
     return DaskSelector(
-        call,
+        call,  # pyright: ignore[reportArgumentType] (DONT MERGE TO MAIN - USE (#2064))
         depth=0,
         function_name="selector",
         evaluate_output_names=evaluate_output_names,

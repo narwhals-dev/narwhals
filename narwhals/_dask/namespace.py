@@ -38,7 +38,7 @@ if TYPE_CHECKING:
         import dask_expr as dx
 
 
-class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):
+class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):  # pyright: ignore[reportInvalidTypeArguments] (#2044)
     @property
     def selectors(self: Self) -> DaskSelectorNamespace:
         return DaskSelectorNamespace(self)
@@ -372,7 +372,7 @@ class DaskWhen:
             otherwise_value = self._otherwise_value
         (otherwise_series,) = align_series_full_broadcast(df, otherwise_value)
         validate_comparand(condition, otherwise_series)
-        return [then_series.where(condition, otherwise_series)]
+        return [then_series.where(condition, otherwise_series)]  # pyright: ignore[reportArgumentType]
 
     def then(self: Self, value: DaskExpr | Any) -> DaskThen:
         self._then_value = value

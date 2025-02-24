@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):
+class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[reportInvalidTypeArguments] (#2044)
     _implementation: Implementation = Implementation.DASK
 
     def __init__(
@@ -454,7 +454,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):
                 _input.dtype, self._version, self._implementation
             )
             if dtype.is_numeric():
-                return _input != _input  # noqa: PLR0124
+                return _input != _input  # pyright: ignore[reportReturnType] # noqa: PLR0124
             msg = f"`.is_nan` only supported for numeric dtypes and not {dtype}, did you mean `.is_null`?"
             raise InvalidOperationError(msg)
 
@@ -492,7 +492,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):
                 col_token,
                 backend_version=self._backend_version,
                 implementation=self._implementation,
-            )
+            )  # pyright: ignore[reportAssignmentType]
             first_distinct_index = _input.groupby(_name).agg({col_token: "min"})[
                 col_token
             ]
@@ -509,7 +509,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):
                 col_token,
                 backend_version=self._backend_version,
                 implementation=self._implementation,
-            )
+            )  # pyright: ignore[reportAssignmentType]
             last_distinct_index = _input.groupby(_name).agg({col_token: "max"})[col_token]
             return _input[col_token].isin(last_distinct_index)
 
