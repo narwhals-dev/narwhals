@@ -1535,12 +1535,12 @@ class Expr:
             |2  4  y                    4|
             └────────────────────────────┘
         """
-        if self._metadata.is_changes_length():
+        if self._metadata.kind.is_changes_length():
             msg = "`.over()` can not be used for expressions which change length."
             raise LengthChangingExprError(msg)
         kind = ExprKind.TRANSFORM
         n_open_windows = self._metadata.n_open_windows
-        if _order_by is not None and self._metadata.is_window():
+        if _order_by is not None and self._metadata.kind.is_window():
             n_open_windows -= 1
         metadata = ExprMetadata(kind, n_open_windows=n_open_windows)
         flattened = flatten(keys)

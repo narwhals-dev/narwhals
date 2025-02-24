@@ -16,7 +16,7 @@ from typing import overload
 from warnings import warn
 
 from narwhals._expression_parsing import ExprKind
-from narwhals._expression_parsing import all_exprs_are_aggs_or_literals
+from narwhals._expression_parsing import all_exprs_are_scalar_like
 from narwhals._expression_parsing import check_expressions_preserve_length
 from narwhals._expression_parsing import infer_kind
 from narwhals._expression_parsing import is_scalar_like
@@ -165,7 +165,7 @@ class BaseFrame(Generic[_FrameT]):
                     missing_columns, available_columns
                 ) from e
         compliant_exprs, kinds = self._flatten_and_extract(*flat_exprs, **named_exprs)
-        if compliant_exprs and all_exprs_are_aggs_or_literals(*flat_exprs, **named_exprs):
+        if compliant_exprs and all_exprs_are_scalar_like(*flat_exprs, **named_exprs):
             return self._from_compliant_dataframe(
                 self._compliant_frame.aggregate(*compliant_exprs),
             )
@@ -2212,7 +2212,7 @@ class LazyFrame(BaseFrame[FrameT]):
                     "  `over` and they will be supported."
                 )
                 raise OrderDependentExprError(msg)
-            if arg._metadata.is_changes_length():
+            if arg._metadata.kind.is_changes_length():
                 msg = (
                     "Length-changing expressions are not supported for use in LazyFrame, unless\n"
                     "followed by an aggregation.\n\n"

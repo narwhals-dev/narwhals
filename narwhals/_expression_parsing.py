@@ -364,10 +364,23 @@ class ExprKind(Enum):
     def preserves_length(self) -> bool:
         return self in {ExprKind.TRANSFORM, ExprKind.WINDOW}
 
+    def changes_length(self) -> bool:
+        return self is ExprKind.CHANGES_LENGTH
+
+    def is_window(self) -> bool:
+        return self is ExprKind.WINDOW
+
+    def is_changes_length(self) -> bool:
+        return self is ExprKind.CHANGES_LENGTH
+
+    def is_scalar_like(self) -> bool:
+        return is_scalar_like(self)
+
 
 def is_scalar_like(
     kind: ExprKind,
 ) -> TypeIs[Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]]:
+    # Like ExprKind.is_scalar_like, but uses TypeIs for better type checking.
     return kind in {ExprKind.AGGREGATION, ExprKind.LITERAL}
 
 
@@ -389,15 +402,6 @@ class ExprMetadata:
     @property
     def n_open_windows(self) -> int:
         return self._n_open_windows
-
-    def is_window(self) -> bool:
-        return self.kind is ExprKind.WINDOW
-
-    def is_scalar_like(self) -> bool:
-        return is_scalar_like(self.kind)
-
-    def is_changes_length(self) -> bool:
-        return self.kind is ExprKind.CHANGES_LENGTH
 
     def with_kind(self, kind: ExprKind, /) -> ExprMetadata:
         """Change metadata kind, leaving all other attributes the same."""
@@ -481,12 +485,12 @@ def check_expressions_preserve_length(*args: IntoExpr, function_name: str) -> No
         raise ShapeError(msg)
 
 
-def all_exprs_are_aggs_or_literals(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
+def all_exprs_are_scalar_like(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
     # Raise if any argument in `args` isn't an aggregation or literal.
     # For Series input, we don't raise (yet), we let such checks happen later,
     # as this function works lazily and so can't evaluate lengths.
     exprs = chain(args, kwargs.values())
-    return all(is_expr(x) and x._metadata.is_scalar_like() for x in exprs)
+    return all(is_expr(x) and x._metadata.kind.is_scalar_like() for x in exprs)
 
 
 def infer_kind(obj: IntoExpr | _1DArray | object, *, str_as_lit: bool) -> ExprKind:
