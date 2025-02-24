@@ -10,6 +10,7 @@ Notes:
 
 from __future__ import annotations
 
+from itertools import chain
 from operator import methodcaller
 from typing import TYPE_CHECKING
 from typing import Any
@@ -18,6 +19,8 @@ from typing import Protocol
 from typing import Sequence
 from typing import TypeVar
 
+from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantExpr
 from narwhals.typing import CompliantNamespace
 from narwhals.typing import CompliantSeries
@@ -28,26 +31,67 @@ if TYPE_CHECKING:
     from typing import Iterator
 
     from typing_extensions import Self
+    from typing_extensions import TypeIs
 
     from narwhals.dtypes import DType
-    from narwhals.typing import CompliantDataFrame
     from narwhals.typing import NativeSeries
     from narwhals.typing import _1DArray
     from narwhals.utils import Implementation
     from narwhals.utils import Version
 
+    T = TypeVar("T")
+
 NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=True)
 ReuseSeriesT = TypeVar("ReuseSeriesT", bound="ReuseSeries[Any]")
 
-# NOTE: Haven't needed a `ReuseDataFrame` so far
-CompliantDataFrameT = TypeVar("CompliantDataFrameT", bound="CompliantDataFrame")
+ReuseDataFrameT = TypeVar("ReuseDataFrameT", bound="ReuseDataFrame[Any]")
+
+
+class ReuseDataFrame(CompliantDataFrame, Protocol[ReuseSeriesT]):
+    def _evaluate_into_expr(
+        self: ReuseDataFrameT, expr: ReuseExpr[ReuseDataFrameT, ReuseSeriesT], /
+    ) -> Sequence[ReuseSeriesT]:
+        _, aliases = evaluate_output_names_and_aliases(expr, self, [])
+        result = expr(self)
+        if list(aliases) != [s.name for s in result]:
+            msg = f"Safety assertion failed, expected {aliases}, got {result}"
+            raise AssertionError(msg)
+        return result
+
+    def _evaluate_into_exprs(
+        self, *exprs: ReuseExpr[Self, ReuseSeriesT]
+    ) -> Sequence[ReuseSeriesT]:
+        return list(chain.from_iterable(self._evaluate_into_expr(expr) for expr in exprs))
+
+    # NOTE: `mypy` is **very** fragile here in what is permitted
+    # DON'T CHANGE UNLESS IT SOLVES ANOTHER ISSUE
+    def _maybe_evaluate_expr(
+        self, expr: ReuseExpr[ReuseDataFrame[ReuseSeriesT], ReuseSeriesT] | T, /
+    ) -> ReuseSeriesT | T:
+        if is_reuse_expr(expr):
+            result: Sequence[ReuseSeriesT] = expr(self)
+            if len(result) > 1:
+                msg = (
+                    "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) "
+                    "are not supported in this context"
+                )
+                raise ValueError(msg)
+            return result[0]
+        return expr
+
+
+# NOTE: DON'T CHANGE THIS EITHER
+def is_reuse_expr(
+    obj: ReuseExpr[Any, ReuseSeriesT] | Any,
+) -> TypeIs[ReuseExpr[Any, ReuseSeriesT]]:
+    return hasattr(obj, "__narwhals_expr__")
 
 
 class ReuseExpr(
-    CompliantExpr[CompliantDataFrameT, ReuseSeriesT],
-    Protocol[CompliantDataFrameT, ReuseSeriesT],
+    CompliantExpr[ReuseDataFrameT, ReuseSeriesT],
+    Protocol[ReuseDataFrameT, ReuseSeriesT],
 ):
-    _call: Callable[[CompliantDataFrameT], Sequence[ReuseSeriesT]]
+    _call: Callable[[ReuseDataFrameT], Sequence[ReuseSeriesT]]
     _depth: int
     _function_name: str
     _evaluate_output_names: Any
@@ -59,11 +103,11 @@ class ReuseExpr(
 
     def __init__(
         self: Self,
-        call: Callable[[CompliantDataFrameT], Sequence[ReuseSeriesT]],
+        call: Callable[[ReuseDataFrameT], Sequence[ReuseSeriesT]],
         *,
         depth: int,
         function_name: str,
-        evaluate_output_names: Callable[[CompliantDataFrameT], Sequence[str]],
+        evaluate_output_names: Callable[[ReuseDataFrameT], Sequence[str]],
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         implementation: Implementation,
         backend_version: tuple[int, ...],
@@ -71,22 +115,19 @@ class ReuseExpr(
         kwargs: dict[str, Any],
     ) -> None: ...
 
-    def __call__(self, df: CompliantDataFrameT) -> Sequence[ReuseSeriesT]:
+    def __call__(self, df: ReuseDataFrameT) -> Sequence[ReuseSeriesT]:
         return self._call(df)
 
-    def __narwhals_namespace__(
-        self,
-    ) -> ReuseNamespace[CompliantDataFrameT, ReuseSeriesT]: ...
+    def __narwhals_namespace__(self) -> ReuseNamespace[ReuseDataFrameT, ReuseSeriesT]: ...
 
     def _reuse_series_implementation(
-        self: ReuseExpr[CompliantDataFrameT, ReuseSeriesT],
+        self: ReuseExpr[ReuseDataFrameT, ReuseSeriesT],
         attr: str,
         *,
         returns_scalar: bool = False,
         **expressifiable_args: Any,
-    ) -> ReuseExpr[CompliantDataFrameT, ReuseSeriesT]:
+    ) -> ReuseExpr[ReuseDataFrameT, ReuseSeriesT]:
         from narwhals._expression_parsing import evaluate_output_names_and_aliases
-        from narwhals._expression_parsing import maybe_evaluate_expr
 
         plx = self.__narwhals_namespace__()
         from_scalar = plx._create_series_from_scalar
@@ -94,9 +135,9 @@ class ReuseExpr(
         # NOTE: Ideally this would be implemented differently for `pandas` and `pyarrow`
         # - It wouldn't make sense to check the implementation for each call
         # - Just copying over from the function
-        def func(df: CompliantDataFrameT, /) -> Sequence[ReuseSeriesT]:
+        def func(df: ReuseDataFrameT, /) -> Sequence[ReuseSeriesT]:
             _kwargs = {
-                arg_name: maybe_evaluate_expr(df, arg_value)
+                arg_name: df._maybe_evaluate_expr(arg_value)
                 for arg_name, arg_value in expressifiable_args.items()
             }
             # For PyArrow.Series, we return Python Scalars (like Polars does) instead of PyArrow Scalars.
@@ -133,11 +174,11 @@ class ReuseExpr(
         )
 
     def _reuse_series_namespace_implementation(
-        self: ReuseExpr[CompliantDataFrameT, ReuseSeriesT],
+        self: ReuseExpr[ReuseDataFrameT, ReuseSeriesT],
         series_namespace: str,
         attr: str,
         **kwargs: Any,
-    ) -> ReuseExpr[CompliantDataFrameT, ReuseSeriesT]:
+    ) -> ReuseExpr[ReuseDataFrameT, ReuseSeriesT]:
         plx = self.__narwhals_namespace__()
         return plx._create_expr_from_callable(
             lambda df: [
@@ -205,8 +246,8 @@ class ReuseSeries(CompliantSeries, Protocol[NativeSeriesT_co]):  # type: ignore[
 
 
 class ReuseNamespace(
-    CompliantNamespace[CompliantDataFrameT, ReuseSeriesT],
-    Protocol[CompliantDataFrameT, ReuseSeriesT],
+    CompliantNamespace[ReuseDataFrameT, ReuseSeriesT],
+    Protocol[ReuseDataFrameT, ReuseSeriesT],
 ):
     _implementation: Implementation
     _backend_version: tuple[int, ...]
@@ -221,7 +262,7 @@ class ReuseNamespace(
 
     def __narwhals_expr__(
         self,
-    ) -> Callable[..., ReuseExpr[CompliantDataFrameT, ReuseSeriesT]]: ...
+    ) -> Callable[..., ReuseExpr[ReuseDataFrameT, ReuseSeriesT]]: ...
     # Both do very similar things:
     # - `_pandas_like.utils.create_compliant_series`
     # - `_arrow.series.ArrowSeries(native_series=pa.chunked_array([value]))`
@@ -230,14 +271,14 @@ class ReuseNamespace(
     # NOTE: Fully spec'd
     def _create_expr_from_callable(
         self,
-        func: Callable[[CompliantDataFrameT], Sequence[ReuseSeriesT]],
+        func: Callable[[ReuseDataFrameT], Sequence[ReuseSeriesT]],
         *,
         depth: int,
         function_name: str,
-        evaluate_output_names: Callable[[CompliantDataFrameT], Sequence[str]],
+        evaluate_output_names: Callable[[ReuseDataFrameT], Sequence[str]],
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         kwargs: dict[str, Any],
-    ) -> ReuseExpr[CompliantDataFrameT, ReuseSeriesT]:
+    ) -> ReuseExpr[ReuseDataFrameT, ReuseSeriesT]:
         return self.__narwhals_expr__()(
             func,
             depth=depth,
@@ -253,7 +294,7 @@ class ReuseNamespace(
     # NOTE: Fully spec'd
     def _create_expr_from_series(
         self, series: ReuseSeriesT
-    ) -> ReuseExpr[CompliantDataFrameT, ReuseSeriesT]:
+    ) -> ReuseExpr[ReuseDataFrameT, ReuseSeriesT]:
         return self.__narwhals_expr__()(
             lambda _df: [series],
             depth=0,
