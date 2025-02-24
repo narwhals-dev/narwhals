@@ -43,7 +43,7 @@ def test_to_py_scalar(
 ) -> None:
     output = nw.to_py_scalar(input_value)
     if expected == 1:
-        assert not isinstance(output, np.int64)
+        assert not isinstance(output, np.generic)
     assert output == expected
 
 

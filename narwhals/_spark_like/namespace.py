@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class SparkLikeNamespace(CompliantNamespace["Column"]):  # type: ignore[type-var]
+class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]): # type: ignore[type-arg]
     def __init__(
         self: Self,
         *,
@@ -42,11 +42,7 @@ class SparkLikeNamespace(CompliantNamespace["Column"]):  # type: ignore[type-var
 
     @property
     def selectors(self: Self) -> SparkLikeSelectorNamespace:
-        return SparkLikeSelectorNamespace(
-            backend_version=self._backend_version,
-            version=self._version,
-            implementation=self._implementation,
-        )
+        return SparkLikeSelectorNamespace(self)
 
     def all(self: Self) -> SparkLikeExpr:
         def _all(df: SparkLikeLazyFrame) -> list[Column]:

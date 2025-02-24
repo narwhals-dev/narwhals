@@ -161,12 +161,12 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
     if isinstance_or_issubclass(dtype, dtypes.Date):  # pragma: no cover
         return "DATE"
     if isinstance_or_issubclass(dtype, dtypes.List):
-        inner = narwhals_to_native_dtype(dtype.inner, version)  # type: ignore[union-attr]
+        inner = narwhals_to_native_dtype(dtype.inner, version)
         return f"{inner}[]"
     if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
         inner = ", ".join(
             f'"{field.name}" {narwhals_to_native_dtype(field.dtype, version)}'
-            for field in dtype.fields  # type: ignore[union-attr]
+            for field in dtype.fields
         )
         return f"STRUCT({inner})"
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover

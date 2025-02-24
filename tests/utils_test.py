@@ -126,8 +126,8 @@ def test_maybe_set_index_polars_column_names(
 )
 def test_maybe_set_index_pandas_direct_index(
     narwhals_index: Series[IntoSeries] | list[Series[IntoSeries]],
-    pandas_index: pd.Series | list[pd.Series],
-    native_df_or_series: pd.DataFrame | pd.Series,
+    pandas_index: pd.Series[Any] | list[pd.Series[Any]],
+    native_df_or_series: pd.DataFrame | pd.Series[Any],
 ) -> None:
     df = nw.from_native(native_df_or_series, allow_series=True)
     result = nw.maybe_set_index(df, index=narwhals_index)
