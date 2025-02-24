@@ -97,7 +97,7 @@ CompliantFrameT = TypeVar(
 )
 
 
-class CompliantExpr(Protocol, Generic[CompliantFrameT, CompliantSeriesT_co]):
+class CompliantExpr(Protocol[CompliantFrameT, CompliantSeriesT_co]):
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
