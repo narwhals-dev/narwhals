@@ -505,7 +505,7 @@ def apply_n_ary_operation(
     )
     kinds = [infer_kind(comparand, str_as_lit=str_as_lit) for comparand in comparands]
 
-    broadcast = any(kind is ExprKind.TRANSFORM for kind in kinds)
+    broadcast = any(kind in {ExprKind.TRANSFORM, ExprKind.WINDOW} for kind in kinds)
     compliant_exprs = (
         compliant_expr.broadcast(kind)
         if broadcast
