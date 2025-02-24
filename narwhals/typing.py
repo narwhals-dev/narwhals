@@ -5,6 +5,7 @@ from typing import Any
 from typing import Callable
 from typing import Generic
 from typing import Literal
+from typing import Protocol
 from typing import Sequence
 from typing import TypeVar
 from typing import Union
@@ -13,13 +14,11 @@ if not TYPE_CHECKING:
     import sys
 
     if sys.version_info >= (3, 9):
-        from typing import Protocol
+        from typing import Protocol as Protocol38
     else:
-        from typing import Generic
-
-        Protocol = Generic
+        from typing import Generic as Protocol38
 else:
-    from typing import Protocol
+    from typing import Protocol as Protocol38
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -108,7 +107,7 @@ CompliantFrameT = TypeVar(
 )
 
 
-class CompliantExpr(Protocol[CompliantFrameT, CompliantSeriesT_co]):
+class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesT_co]):
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
