@@ -14,7 +14,6 @@ from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
-from narwhals.utils import check_column_names_are_unique
 from narwhals.utils import find_stacklevel
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_columns_to_drop
@@ -44,10 +43,9 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         backend_version: tuple[int, ...],
         version: Version,
         implementation: Implementation,
-        validate_column_names: bool,
+        # Unused, just for compatibility. We only validate when collecting.
+        validate_column_names: bool = False,
     ) -> None:
-        if validate_column_names:
-            check_column_names_are_unique(native_dataframe.columns)
         self._native_frame = native_dataframe
         self._backend_version = backend_version
         self._implementation = implementation
@@ -122,18 +120,14 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             backend_version=self._backend_version,
             version=version,
             implementation=self._implementation,
-            validate_column_names=False,
         )
 
-    def _from_native_frame(
-        self: Self, df: DataFrame, *, validate_column_names: bool = True
-    ) -> Self:
+    def _from_native_frame(self: Self, df: DataFrame) -> Self:
         return self.__class__(
             df,
             backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
-            validate_column_names=validate_column_names,
         )
 
     def _collect_to_arrow(self) -> pa.Table:
@@ -232,9 +226,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         raise ValueError(msg)  # pragma: no cover
 
     def simple_select(self: Self, *column_names: str) -> Self:
-        return self._from_native_frame(
-            self._native_frame.select(*column_names), validate_column_names=False
-        )
+        return self._from_native_frame(self._native_frame.select(*column_names))
 
     def aggregate(
         self: Self,
@@ -243,9 +235,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         new_columns = evaluate_exprs(self, *exprs)
 
         new_columns_list = [col.alias(col_name) for col_name, col in new_columns]
-        return self._from_native_frame(
-            self._native_frame.agg(*new_columns_list), validate_column_names=False
-        )
+        return self._from_native_frame(self._native_frame.agg(*new_columns_list))
 
     def select(
         self: Self,
@@ -259,7 +249,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                 [], self._native_dtypes.StructType([])
             )
 
-            return self._from_native_frame(spark_df, validate_column_names=False)
+            return self._from_native_frame(spark_df)
 
         new_columns_list = [col.alias(col_name) for (col_name, col) in new_columns]
         return self._from_native_frame(self._native_frame.select(*new_columns_list))
@@ -272,7 +262,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         # `[0]` is safe as the predicate's expression only returns a single column
         condition = predicate._call(self)[0]
         spark_df = self._native_frame.where(condition)
-        return self._from_native_frame(spark_df, validate_column_names=False)
+        return self._from_native_frame(spark_df)
 
     @property
     def schema(self: Self) -> dict[str, DType]:
@@ -292,14 +282,10 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         columns_to_drop = parse_columns_to_drop(
             compliant_frame=self, columns=columns, strict=strict
         )
-        return self._from_native_frame(
-            self._native_frame.drop(*columns_to_drop), validate_column_names=False
-        )
+        return self._from_native_frame(self._native_frame.drop(*columns_to_drop))
 
     def head(self: Self, n: int) -> Self:
-        return self._from_native_frame(
-            self._native_frame.limit(num=n), validate_column_names=False
-        )
+        return self._from_native_frame(self._native_frame.limit(num=n))
 
     def group_by(self: Self, *keys: str, drop_null_keys: bool) -> SparkLikeLazyGroupBy:
         from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
@@ -329,14 +315,10 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             )
 
         sort_cols = [sort_f(col) for col, sort_f in zip(by, sort_funcs)]
-        return self._from_native_frame(
-            self._native_frame.sort(*sort_cols), validate_column_names=False
-        )
+        return self._from_native_frame(self._native_frame.sort(*sort_cols))
 
     def drop_nulls(self: Self, subset: list[str] | None) -> Self:
-        return self._from_native_frame(
-            self._native_frame.dropna(subset=subset), validate_column_names=False
-        )
+        return self._from_native_frame(self._native_frame.dropna(subset=subset))
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
         rename_mapping = {
@@ -358,9 +340,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             msg = "`LazyFrame.unique` with PySpark backend only supports `keep='any'`."
             raise ValueError(msg)
         check_column_exists(self.columns, subset)
-        return self._from_native_frame(
-            self._native_frame.dropDuplicates(subset=subset), validate_column_names=False
-        )
+        return self._from_native_frame(self._native_frame.dropDuplicates(subset=subset))
 
     def join(
         self: Self,
@@ -446,7 +426,6 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                         for col_name in column_names
                     ]
                 ),
-                validate_column_names=False,
             )
         elif self._implementation.is_sqlframe():
             # Not every sqlframe dialect supports `explode_outer` function
@@ -476,7 +455,6 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                         ]
                     )
                 ),
-                validate_column_names=False,
             )
         else:  # pragma: no cover
             msg = "Unreachable code, please report an issue at https://github.com/narwhals-dev/narwhals/issues"

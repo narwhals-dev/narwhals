@@ -175,7 +175,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         new_columns_map = dict(evaluate_exprs(self, *exprs))
         result = [
             new_columns_map.pop(col).alias(col)
-            if col in new_columns_map.items()
+            if col in new_columns_map
             else ColumnExpression(col)
             for col in self._native_frame.columns
         ]
