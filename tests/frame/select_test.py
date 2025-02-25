@@ -151,3 +151,9 @@ def test_changes_length_vs_aggregation(constructor_eager: ConstructorEager) -> N
     result = df.select(nw.sum_horizontal(nw.col("a").drop_nulls(), nw.col("a").mean()))
     expected = {"a": [3.0, 5.0]}
     assert_equal_data(result, expected)
+
+
+def test_select_duplicates(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2]})).lazy()
+    with pytest.raises(ValueError, match="Expected unique|duplicate"):
+        df.select("a", nw.col("a") + 1).collect()
