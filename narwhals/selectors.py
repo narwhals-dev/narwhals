@@ -94,8 +94,9 @@ def by_dtype(*dtypes: DType | type[DType] | Iterable[DType | type[DType]]) -> Se
         a: [[2,4]]
         c: [[8.2,4.6]]
     """
+    flattened = flatten(dtypes)
     return Selector(
-        lambda plx: plx.selectors.by_dtype(flatten(dtypes)), ExprMetadata.selector()
+        lambda plx: plx.selectors.by_dtype(flattened), ExprMetadata.selector()
     )
 
 

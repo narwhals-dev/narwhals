@@ -74,15 +74,15 @@ def pytest_collection_modifyitems(
 
 
 def pandas_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
-    return pd.DataFrame(obj)  # type: ignore[no-any-return]
+    return pd.DataFrame(obj)
 
 
 def pandas_nullable_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
-    return pd.DataFrame(obj).convert_dtypes(dtype_backend="numpy_nullable")  # type: ignore[no-any-return]
+    return pd.DataFrame(obj).convert_dtypes(dtype_backend="numpy_nullable")
 
 
 def pandas_pyarrow_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
-    return pd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
+    return pd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")
 
 
 def modin_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:  # pragma: no cover
@@ -133,7 +133,7 @@ def dask_lazy_p2_constructor(obj: dict[str, list[Any]]) -> IntoFrame:  # pragma:
 
 
 def pyarrow_table_constructor(obj: dict[str, Any]) -> IntoDataFrame:
-    return pa.table(obj)  # type: ignore[no-any-return]
+    return pa.table(obj)
 
 
 def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cover
@@ -236,7 +236,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
 
     for constructor in selected_constructors:
         if (
-            constructor in ("pandas[nullable]", "pandas[pyarrow]")
+            constructor in {"pandas[nullable]", "pandas[pyarrow]"}
             and MIN_PANDAS_NULLABLE_VERSION > PANDAS_VERSION
         ):  # pragma: no cover
             continue
@@ -247,10 +247,9 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             constructors_ids.append(constructor)
         elif constructor in LAZY_CONSTRUCTORS:
             if constructor == "pyspark":
-                if sys.version_info < (3, 12):  # pragma: no cover
-                    constructors.append(pyspark_lazy_constructor())
-                else:  # pragma: no cover
+                if sys.version_info >= (3, 12):  # pragma: no cover
                     continue
+                constructors.append(pyspark_lazy_constructor())  # pragma: no cover
             else:
                 constructors.append(LAZY_CONSTRUCTORS[constructor])
             constructors_ids.append(constructor)

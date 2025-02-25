@@ -46,9 +46,9 @@ if TYPE_CHECKING:
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import ArrowChunkedArray
-    from narwhals._arrow.typing import Indices
-    from narwhals._arrow.typing import Mask
-    from narwhals._arrow.typing import Order
+    from narwhals._arrow.typing import Indices  # type: ignore[attr-defined]
+    from narwhals._arrow.typing import Mask  # type: ignore[attr-defined]
+    from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
     from narwhals.dtypes import DType
     from narwhals.typing import SizeUnit
     from narwhals.typing import _1DArray
@@ -181,7 +181,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             version=self._version,
         )
 
-    def __array__(self: Self, dtype: Any, copy: bool | None) -> _2DArray:
+    def __array__(self: Self, dtype: Any, *, copy: bool | None) -> _2DArray:
         return self._native_frame.__array__(dtype, copy=copy)
 
     @overload

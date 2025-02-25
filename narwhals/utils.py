@@ -217,15 +217,15 @@ class Implementation(Enum):
         if self is Implementation.PANDAS:
             import pandas as pd  # ignore-banned-import
 
-            return pd  # type: ignore[no-any-return]
+            return pd
         if self is Implementation.MODIN:
             import modin.pandas
 
-            return modin.pandas  # type: ignore[no-any-return]
+            return modin.pandas
         if self is Implementation.CUDF:  # pragma: no cover
             import cudf  # ignore-banned-import
 
-            return cudf  # type: ignore[no-any-return]
+            return cudf
         if self is Implementation.PYARROW:
             import pyarrow as pa  # ignore-banned-import
 
@@ -233,7 +233,7 @@ class Implementation(Enum):
         if self is Implementation.PYSPARK:  # pragma: no cover
             import pyspark.sql
 
-            return pyspark.sql  # type: ignore[no-any-return]
+            return pyspark.sql
         if self is Implementation.POLARS:
             import polars as pl  # ignore-banned-import
 
@@ -654,14 +654,14 @@ def maybe_align_index(
             msg = "given index doesn't have a unique index"
             raise ValueError(msg)
 
-    lhs_any = cast(Any, lhs)
-    rhs_any = cast(Any, rhs)
+    lhs_any = cast("Any", lhs)
+    rhs_any = cast("Any", rhs)
     if isinstance(
         getattr(lhs_any, "_compliant_frame", None), PandasLikeDataFrame
     ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasLikeDataFrame):
         _validate_index(lhs_any._compliant_frame._native_frame.index)
         _validate_index(rhs_any._compliant_frame._native_frame.index)
-        return lhs_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+        return lhs_any._from_compliant_dataframe(
             lhs_any._compliant_frame._from_native_frame(
                 lhs_any._compliant_frame._native_frame.loc[
                     rhs_any._compliant_frame._native_frame.index
@@ -673,7 +673,7 @@ def maybe_align_index(
     ) and isinstance(getattr(rhs_any, "_compliant_series", None), PandasLikeSeries):
         _validate_index(lhs_any._compliant_frame._native_frame.index)
         _validate_index(rhs_any._compliant_series._native_series.index)
-        return lhs_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+        return lhs_any._from_compliant_dataframe(
             lhs_any._compliant_frame._from_native_frame(
                 lhs_any._compliant_frame._native_frame.loc[
                     rhs_any._compliant_series._native_series.index
@@ -685,7 +685,7 @@ def maybe_align_index(
     ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasLikeDataFrame):
         _validate_index(lhs_any._compliant_series._native_series.index)
         _validate_index(rhs_any._compliant_frame._native_frame.index)
-        return lhs_any._from_compliant_series(  # type: ignore[no-any-return]
+        return lhs_any._from_compliant_series(
             lhs_any._compliant_series._from_native_series(
                 lhs_any._compliant_series._native_series.loc[
                     rhs_any._compliant_frame._native_frame.index
@@ -697,7 +697,7 @@ def maybe_align_index(
     ) and isinstance(getattr(rhs_any, "_compliant_series", None), PandasLikeSeries):
         _validate_index(lhs_any._compliant_series._native_series.index)
         _validate_index(rhs_any._compliant_series._native_series.index)
-        return lhs_any._from_compliant_series(  # type: ignore[no-any-return]
+        return lhs_any._from_compliant_series(
             lhs_any._compliant_series._from_native_series(
                 lhs_any._compliant_series._native_series.loc[
                     rhs_any._compliant_series._native_series.index
@@ -739,7 +739,7 @@ def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series[Any]) -> Any |
         >>> nw.maybe_get_index(series)
         RangeIndex(start=0, stop=2, step=1)
     """
-    obj_any = cast(Any, obj)
+    obj_any = cast("Any", obj)
     native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj) or is_pandas_like_series(native_obj):
         return native_obj.index
@@ -795,7 +795,7 @@ def maybe_set_index(
     """
     from narwhals.translate import to_native
 
-    df_any = cast(Any, obj)
+    df_any = cast("Any", obj)
     native_obj = df_any.to_native()
 
     if column_names is not None and index is not None:
@@ -816,7 +816,7 @@ def maybe_set_index(
         keys = column_names
 
     if is_pandas_like_dataframe(native_obj):
-        return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+        return df_any._from_compliant_dataframe(
             df_any._compliant_frame._from_native_frame(native_obj.set_index(keys))
         )
     elif is_pandas_like_series(native_obj):
@@ -832,11 +832,11 @@ def maybe_set_index(
             implementation=obj._compliant_series._implementation,  # type: ignore[union-attr]
             backend_version=obj._compliant_series._backend_version,  # type: ignore[union-attr]
         )
-        return df_any._from_compliant_series(  # type: ignore[no-any-return]
+        return df_any._from_compliant_series(
             df_any._compliant_series._from_native_series(native_obj)
         )
     else:
-        return df_any  # type: ignore[no-any-return]
+        return df_any
 
 
 def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
@@ -870,40 +870,41 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
         >>> nw.maybe_get_index(series)
         RangeIndex(start=0, stop=2, step=1)
     """
-    obj_any = cast(Any, obj)
+    obj_any = cast("Any", obj)
     native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj):
         native_namespace = obj_any.__native_namespace__()
         if _has_default_index(native_obj, native_namespace):
-            return obj_any  # type: ignore[no-any-return]
-        return obj_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+            return obj_any
+        return obj_any._from_compliant_dataframe(
             obj_any._compliant_frame._from_native_frame(native_obj.reset_index(drop=True))
         )
     if is_pandas_like_series(native_obj):
         native_namespace = obj_any.__native_namespace__()
         if _has_default_index(native_obj, native_namespace):
-            return obj_any  # type: ignore[no-any-return]
-        return obj_any._from_compliant_series(  # type: ignore[no-any-return]
+            return obj_any
+        return obj_any._from_compliant_series(
             obj_any._compliant_series._from_native_series(
                 native_obj.reset_index(drop=True)
             )
         )
-    return obj_any  # type: ignore[no-any-return]
+    return obj_any
 
 
 def _is_range_index(obj: Any, native_namespace: Any) -> TypeIs[pd.RangeIndex]:
     return isinstance(obj, native_namespace.RangeIndex)
 
 
+# NOTE: Remove ignore(s) after release w/ (https://github.com/pandas-dev/pandas-stubs/pull/1115)
 def _has_default_index(
-    native_frame_or_series: pd.Series | pd.DataFrame, native_namespace: Any
+    native_frame_or_series: pd.Series[Any] | pd.DataFrame, native_namespace: Any
 ) -> bool:
     index = native_frame_or_series.index
     return (
         _is_range_index(index, native_namespace)
-        and index.start == 0
-        and index.stop == len(index)
-        and index.step == 1
+        and index.start == 0  # type: ignore[comparison-overlap]
+        and index.stop == len(index)  # type: ignore[comparison-overlap]
+        and index.step == 1  # type: ignore[comparison-overlap]
     )
 
 
@@ -943,21 +944,21 @@ def maybe_convert_dtypes(
         b           boolean
         dtype: object
     """
-    obj_any = cast(Any, obj)
+    obj_any = cast("Any", obj)
     native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj):
-        return obj_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+        return obj_any._from_compliant_dataframe(
             obj_any._compliant_frame._from_native_frame(
                 native_obj.convert_dtypes(*args, **kwargs)
             )
         )
     if is_pandas_like_series(native_obj):
-        return obj_any._from_compliant_series(  # type: ignore[no-any-return]
+        return obj_any._from_compliant_series(
             obj_any._compliant_series._from_native_series(
                 native_obj.convert_dtypes(*args, **kwargs)
             )
         )
-    return obj_any  # type: ignore[no-any-return]
+    return obj_any
 
 
 def scale_bytes(sz: int, unit: SizeUnit) -> int | float:
@@ -1035,22 +1036,20 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         isinstance(series._compliant_series, InterchangeSeries)
         and series.dtype == dtypes.Categorical
     ):
-        return series._compliant_series._native_series.describe_categorical[  # type: ignore[no-any-return]
-            "is_ordered"
-        ]
+        return series._compliant_series._native_series.describe_categorical["is_ordered"]
     if series.dtype == dtypes.Enum:
         return True
     if series.dtype != dtypes.Categorical:
         return False
     native_series = series.to_native()
     if is_polars_series(native_series):
-        return native_series.dtype.ordering == "physical"  # type: ignore[attr-defined, no-any-return]
+        return native_series.dtype.ordering == "physical"  # type: ignore[attr-defined]
     if is_pandas_series(native_series):
         return bool(native_series.cat.ordered)
     if is_modin_series(native_series):  # pragma: no cover
-        return native_series.cat.ordered  # type: ignore[no-any-return]
+        return native_series.cat.ordered
     if is_cudf_series(native_series):  # pragma: no cover
-        return native_series.cat.ordered  # type: ignore[no-any-return]
+        return native_series.cat.ordered
     if is_pyarrow_chunked_array(native_series):
         from narwhals._arrow.utils import is_dictionary
 
@@ -1181,8 +1180,8 @@ def issue_deprecation_warning(message: str, _version: str) -> None:
 
 
 def validate_strict_and_pass_though(
-    strict: bool | None,
-    pass_through: bool | None,
+    strict: bool | None,  # noqa: FBT001
+    pass_through: bool | None,  # noqa: FBT001
     *,
     pass_through_default: bool,
     emit_deprecation_warning: bool,

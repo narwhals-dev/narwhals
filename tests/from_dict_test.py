@@ -42,11 +42,7 @@ def test_from_dict_schema(
     backend: Implementation | str,
 ) -> None:
     schema = {"c": nw_v1.Int16(), "d": nw_v1.Float32()}
-    result = nw_v1.from_dict(
-        {"c": [1, 2], "d": [5, 6]},
-        backend=backend,
-        schema=schema,  # type: ignore[arg-type]
-    )
+    result = nw_v1.from_dict({"c": [1, 2], "d": [5, 6]}, backend=backend, schema=schema)
     assert result.collect_schema() == schema
 
 

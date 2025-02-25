@@ -281,7 +281,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
                 raise NotImplementedError(msg)
             rel = self._native_frame.set_alias("lhs").cross(  # pragma: no cover
                 other._native_frame.set_alias("rhs")
-            )  # type: ignore[operator]
+            )
         else:
             # help mypy
             assert left_on is not None  # noqa: S101
@@ -295,7 +295,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
                 other._native_frame.set_alias("rhs"), condition=condition, how=how
             )
 
-        if how in ("inner", "left", "cross"):
+        if how in {"inner", "left", "cross"}:
             select = [f'lhs."{x}"' for x in self._native_frame.columns]
             for col in other._native_frame.columns:
                 if col in self._native_frame.columns and (
@@ -341,10 +341,10 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         select = ["lhs.*"]
         for col in rhs.columns:
             if col in lhs.columns and (
-                right_on is None or col not in (right_on, *by_right)
+                right_on is None or col not in {right_on, *by_right}
             ):
                 select.append(f'rhs."{col}" as "{col}{suffix}"')
-            elif right_on is None or col not in (right_on, *by_right):
+            elif right_on is None or col not in {right_on, *by_right}:
                 select.append(col)
         query = f"""
             SELECT {",".join(select)}

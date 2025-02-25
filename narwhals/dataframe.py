@@ -499,8 +499,8 @@ class DataFrame(BaseFrame[DataFrameT]):
     def __len__(self: Self) -> int:
         return self._compliant_frame.__len__()  # type: ignore[no-any-return]
 
-    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> _2DArray:
-        return self._compliant_frame.__array__(dtype, copy=copy)
+    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> _2DArray:  # noqa: FBT001
+        return self._compliant_frame.__array__(dtype, copy=copy)  # type: ignore[no-any-return]
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         return generate_repr("Narwhals DataFrame", self.to_native().__repr__())
@@ -526,7 +526,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             msg = f"PyArrow>=14.0.0 is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
             raise ModuleNotFoundError(msg) from None
         pa_table = self.to_arrow()
-        return pa_table.__arrow_c_stream__(requested_schema=requested_schema)
+        return pa_table.__arrow_c_stream__(requested_schema=requested_schema)  # type: ignore[no-untyped-call]
 
     def lazy(
         self: Self,
@@ -698,7 +698,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             1    2  7.0   b
             2    3  8.0   c
         """
-        return self._compliant_frame.to_pandas()
+        return self._compliant_frame.to_pandas()  # type: ignore[no-any-return]
 
     def to_polars(self: Self) -> pl.DataFrame:
         """Convert this DataFrame to a polars DataFrame.
@@ -807,7 +807,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             array([[1. , 6.5],
                    [2. , 7. ]])
         """
-        return self._compliant_frame.to_numpy()
+        return self._compliant_frame.to_numpy()  # type: ignore[no-any-return]
 
     @property
     def shape(self: Self) -> tuple[int, int]:
@@ -2042,7 +2042,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             foo: [[1,null]]
             bar: [[2,3]]
         """
-        return self._compliant_frame.to_arrow()
+        return self._compliant_frame.to_arrow()  # type: ignore[no-any-return]
 
     def sample(
         self: Self,

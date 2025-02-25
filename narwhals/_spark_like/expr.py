@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import operator
 from importlib import import_module
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
 from typing import Sequence
+from typing import cast
 
 from narwhals._expression_parsing import ExprKind
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
@@ -45,7 +47,7 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):
     ) -> None:
         self._call = call
         self._function_name = function_name
-        self._evaluate_output_names = evaluate_output_names  # pyright: ignore[reportAttributeAccessIssue]
+        self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._backend_version = backend_version
         self._version = version
@@ -140,7 +142,7 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):
         return cls(
             func,
             function_name="col",
-            evaluate_output_names=lambda _df: list(column_names),
+            evaluate_output_names=lambda _df: column_names,
             alias_output_names=None,
             backend_version=backend_version,
             version=version,
@@ -299,7 +301,8 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):
         )
 
     def __invert__(self: Self) -> Self:
-        return self._from_call(lambda _input: _input.__invert__(), "__invert__")
+        invert = cast("Callable[..., SparkLikeExpr]", operator.invert)
+        return self._from_call(invert, "__invert__")
 
     def abs(self: Self) -> Self:
         return self._from_call(self._F.abs, "abs")
