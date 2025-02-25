@@ -25,12 +25,16 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from pyspark.sql import DataFrame
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
 
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+
+Incomplete: TypeAlias = Any  # pragma: no cover
+"""Marker for working code that fails type checking."""
 
 
 class SparkLikeLazyFrame(CompliantLazyFrame):
@@ -116,9 +120,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             import pyarrow as pa  # ignore-banned-import
 
             try:
-                native_pyarrow_frame = pa.Table.from_batches(
-                    self._native_frame._collect_as_arrow()
-                )
+                return pa.Table.from_batches(self._native_frame._collect_as_arrow())
             except ValueError as exc:
                 if "at least one RecordBatch" in str(exc):
                     # Empty dataframe
@@ -146,14 +148,13 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                             schema.append((key, pa.null()))
                         else:
                             schema.append((key, native_dtype))
-                    native_pyarrow_frame = pa.Table.from_pydict(
-                        data, schema=pa.schema(schema)
-                    )
+                    return pa.Table.from_pydict(data, schema=pa.schema(schema))
                 else:  # pragma: no cover
                     raise
         else:
-            native_pyarrow_frame = self._native_frame.toArrow()  # type: ignore[operator]
-        return native_pyarrow_frame
+            # NOTE: See https://github.com/narwhals-dev/narwhals/pull/2051#discussion_r1969224309
+            to_arrow: Incomplete = self._native_frame.toArrow
+            return to_arrow()
 
     @property
     def columns(self: Self) -> list[str]:
