@@ -1494,14 +1494,16 @@ class Expr:
         )
 
     def over(
-        self: Self, *keys: str | Iterable[str], _order_by: str | None = None
+        self: Self,
+        *partition_by: str | Iterable[str],
+        _order_by: str | None = None,
     ) -> Self:
         """Compute expressions over the given groups.
 
         Arguments:
-            keys: Names of columns to compute window expression over.
-                  Must be names of columns, as opposed to expressions -
-                  so, this is a bit less flexible than Polars' `Expr.over`.
+            partition_by: Names of columns to compute window expression over.
+                Must be names of columns, as opposed to expressions -
+                so, this is a bit less flexible than Polars' `Expr.over`.
             _order_by: Unused, but this is building up to something.
 
         Returns:
@@ -1543,10 +1545,10 @@ class Expr:
         if _order_by is not None and self._metadata.kind.is_window():
             n_open_windows -= 1
         metadata = ExprMetadata(kind, n_open_windows=n_open_windows)
-        flattened = flatten(keys)
+        flat_partition_by = flatten(partition_by)
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).over(
-                flattened, kind=self._metadata.kind
+                flat_partition_by, kind=self._metadata.kind
             ),
             metadata,
         )
