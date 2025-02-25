@@ -37,6 +37,7 @@ polars = ["polars>=0.20.3"]
 dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.0"]
 ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
+sqlframe = ["sqlframe>=3.22.0"]
 tests = [
   "covdefaults",
   "pytest",
@@ -106,11 +107,26 @@ exclude = [
 line-length = 90
 fix = true
 target-version = "py38"
+extend-exclude = ["utils/bump_version.py", "**/this.py"]
 
-lint.select = [
+[tool.ruff.lint]
+preview = true
+explicit-preview-rules = true
+
+extend-safe-fixes = [
+  "C419",
+  "C420",
+  "PLR6201",
+  "TC",
+  "UP",
+]
+extend-select = [
+  "PLR6201",
+]
+select = [
   "ALL",
 ]
-lint.ignore = [
+ignore = [
   "A001",
   "A004",
   "A005",
@@ -143,6 +159,7 @@ lint.ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
+"narwhals/expr_dt.py" = ["RUF002"]
 "tests/*" = ["S101"]
 "tpch/tests/*" = ["S101"]
 "utils/*" = ["S311", "PTH123"]
@@ -185,7 +202,8 @@ filterwarnings = [
   'ignore:.*is_datetime64tz_dtype is deprecated and will be removed in a future version.*:DeprecationWarning:pyspark',
   # Warning raised by PyArrow nightly just by importing pandas
   'ignore:.*Python binding for RankQuantileOptions not exposed:RuntimeWarning:pyarrow',
-  'ignore:.*pandas only supports SQLAlchemy:UserWarning'
+  'ignore:.*pandas only supports SQLAlchemy:UserWarning',
+  'ignore:.*numpy.core is deprecated and has been renamed to numpy._core.*:DeprecationWarning:sqlframe',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
@@ -261,7 +279,7 @@ pythonPlatform = "All"
 reportMissingImports = "none"
 reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
-reportUnusedExpression = "none"    # can enforce with `ruff`
+reportUnusedExpression = "none"    # handled by (https://docs.astral.sh/ruff/rules/unused-variable/)
 typeCheckingMode = "basic"
 include = ["narwhals", "tests"]
 ignore = [

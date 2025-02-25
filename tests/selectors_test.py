@@ -221,7 +221,7 @@ def test_set_ops(
     expected: list[str],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "duckdb" in str(constructor) and not expected:
+    if ("duckdb" in str(constructor) or "sqlframe" in str(constructor)) and not expected:
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(selector).collect_schema().names()

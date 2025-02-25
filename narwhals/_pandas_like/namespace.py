@@ -23,14 +23,16 @@ from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import vertical_concat
 from narwhals.typing import CompliantNamespace
 from narwhals.utils import import_dtypes_module
-from narwhals.utils import is_compliant_expr
 
 if TYPE_CHECKING:
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
 
     from narwhals.dtypes import DType
     from narwhals.utils import Implementation
     from narwhals.utils import Version
+
+    _Scalar: TypeAlias = Any
 
 
 class PandasLikeNamespace(CompliantNamespace[PandasLikeDataFrame, PandasLikeSeries]):
@@ -405,16 +407,16 @@ class PandasWhen:
         condition: PandasLikeExpr,
         implementation: Implementation,
         backend_version: tuple[int, ...],
-        then_value: Any = None,
-        otherwise_value: Any = None,
+        then_value: PandasLikeExpr | _Scalar = None,
+        otherwise_value: PandasLikeExpr | _Scalar = None,
         *,
         version: Version,
     ) -> None:
         self._implementation = implementation
         self._backend_version = backend_version
-        self._condition = condition
-        self._then_value = then_value
-        self._otherwise_value = otherwise_value
+        self._condition: PandasLikeExpr = condition
+        self._then_value: PandasLikeExpr | _Scalar = then_value
+        self._otherwise_value: PandasLikeExpr | _Scalar = otherwise_value
         self._version = version
 
     def __call__(self: Self, df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
@@ -422,10 +424,9 @@ class PandasWhen:
         condition = self._condition(df)[0]
         condition_native = condition._native_series
 
-        if is_compliant_expr(self._then_value):
-            value_series: PandasLikeSeries = self._then_value(df)[0]
+        if isinstance(self._then_value, PandasLikeExpr):
+            value_series = self._then_value(df)[0]
         else:
-            # `self._then_value` is a scalar
             value_series = plx._create_series_from_scalar(
                 self._then_value, reference_series=condition.alias("literal")
             )
@@ -441,10 +442,9 @@ class PandasWhen:
                 )
             ]
 
-        if is_compliant_expr(self._otherwise_value):
-            otherwise_series: PandasLikeSeries = self._otherwise_value(df)[0]
+        if isinstance(self._otherwise_value, PandasLikeExpr):
+            otherwise_series = self._otherwise_value(df)[0]
         else:
-            # `self._then_value` is a scalar
             otherwise_series = plx._create_series_from_scalar(
                 self._otherwise_value, reference_series=condition.alias("literal")
             )
@@ -458,7 +458,9 @@ class PandasWhen:
             )
         ]
 
-    def then(self: Self, value: PandasLikeExpr | PandasLikeSeries | Any) -> PandasThen:
+    def then(
+        self: Self, value: PandasLikeExpr | PandasLikeSeries | _Scalar
+    ) -> PandasThen:
         self._then_value = value
 
         return PandasThen(
@@ -492,7 +494,7 @@ class PandasThen(PandasLikeExpr):
         self._implementation = implementation
         self._backend_version = backend_version
         self._version = version
-        self._call = call
+        self._call: PandasWhen = call
         self._depth = depth
         self._function_name = function_name
         self._evaluate_output_names = evaluate_output_names
@@ -500,11 +502,8 @@ class PandasThen(PandasLikeExpr):
         self._call_kwargs = call_kwargs or {}
 
     def otherwise(
-        self: Self, value: PandasLikeExpr | PandasLikeSeries | Any
+        self: Self, value: PandasLikeExpr | PandasLikeSeries | _Scalar
     ) -> PandasLikeExpr:
-        # type ignore because we are setting the `_call` attribute to a
-        # callable object of type `PandasWhen`, base class has the attribute as
-        # only a `Callable`
-        self._call._otherwise_value = value  # type: ignore[attr-defined]
+        self._call._otherwise_value = value
         self._function_name = "whenotherwise"
         return self
