@@ -281,7 +281,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             field.name: native_to_narwhals_dtype(
                 dtype=field.dataType,
                 version=self._version,
-                spark_types=self._native_dtypes,
+                # NOTE: Unclear if this is an unsafe hash (https://github.com/narwhals-dev/narwhals/pull/2051#discussion_r1970074662)
+                spark_types=self._native_dtypes,  # pyright: ignore[reportArgumentType]
             )
             for field in self._native_frame.schema
         }
