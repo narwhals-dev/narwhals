@@ -32,12 +32,12 @@ def test_str_to_uppercase(
 ) -> None:
     if any("ß" in s for value in data.values() for s in value) & (
         constructor.__name__
-        in (
+        in {
             "pandas_pyarrow_constructor",
             "pyarrow_table_constructor",
             "modin_pyarrow_constructor",
             "duckdb_lazy_constructor",
-        )
+        }
         or ("dask" in str(constructor) and PYARROW_VERSION >= (12,))
     ):
         # We are marking it xfail for these conditions above
@@ -76,14 +76,14 @@ def test_str_to_uppercase_series(
 
     if any("ß" in s for value in data.values() for s in value) & (
         constructor_eager.__name__
-        not in (
+        not in {
             "pandas_constructor",
             "pandas_nullable_constructor",
             "polars_eager_constructor",
             "cudf_constructor",
             "duckdb_lazy_constructor",
             "modin_constructor",
-        )
+        }
     ):
         # We are marking it xfail for these conditions above
         # since the pyarrow backend will convert

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import operator
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
 from typing import Sequence
+from typing import cast
 
 from narwhals._expression_parsing import ExprKind
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
@@ -287,7 +289,8 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
         )
 
     def __invert__(self: Self) -> Self:
-        return self._from_call(lambda _input: _input.__invert__(), "__invert__")
+        invert = cast("Callable[..., SparkLikeExpr]", operator.invert)
+        return self._from_call(invert, "__invert__")
 
     def abs(self: Self) -> Self:
         return self._from_call(self._F.abs, "abs")
