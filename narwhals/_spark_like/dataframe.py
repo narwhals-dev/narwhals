@@ -185,7 +185,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
 
     @property
     def columns(self: Self) -> list[str]:
-        return list(self.schema.keys())
+        return list(self.schema)
 
     def collect(
         self: Self,

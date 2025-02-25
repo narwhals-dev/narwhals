@@ -221,7 +221,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
 
     @property
     def columns(self: Self) -> list[str]:
-        return list(self.schema.keys())
+        return list(self.schema)
 
     def to_pandas(self: Self) -> pd.DataFrame:
         # only if version is v1, keep around for backcompat

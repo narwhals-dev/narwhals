@@ -47,6 +47,7 @@ class DaskLazyFrame(CompliantLazyFrame):
         self._backend_version = backend_version
         self._implementation = Implementation.DASK
         self._version = version
+        self._cached_schema: dict[str, DType] | None = None
         validate_backend_version(self._implementation, self._backend_version)
         if validate_column_names:
             check_column_names_are_unique(native_dataframe.columns)
@@ -138,7 +139,7 @@ class DaskLazyFrame(CompliantLazyFrame):
 
     @property
     def columns(self: Self) -> list[str]:
-        return self._native_frame.columns.tolist()
+        return list(self.schema)
 
     def filter(self: Self, predicate: DaskExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
@@ -194,13 +195,15 @@ class DaskLazyFrame(CompliantLazyFrame):
 
     @property
     def schema(self: Self) -> dict[str, DType]:
-        native_dtypes = self._native_frame.dtypes
-        return {
-            col: native_to_narwhals_dtype(
-                native_dtypes[col], self._version, self._implementation
-            )
-            for col in self._native_frame.columns
-        }
+        if self._cached_schema is None:
+            native_dtypes = self._native_frame.dtypes
+            self._cached_schema = {
+                col: native_to_narwhals_dtype(
+                    native_dtypes[col], self._version, self._implementation
+                )
+                for col in self._native_frame.columns
+            }
+        return self._cached_schema
 
     def collect_schema(self: Self) -> dict[str, DType]:
         return self.schema
