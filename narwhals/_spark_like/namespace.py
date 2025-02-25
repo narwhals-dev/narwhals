@@ -8,6 +8,7 @@ from typing import Callable
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
+from typing import cast
 
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
@@ -221,7 +222,7 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):  #
         *,
         how: Literal["horizontal", "vertical", "diagonal"],
     ) -> SparkLikeLazyFrame:
-        dfs: list[DataFrame] = [item._native_frame for item in items]
+        dfs = cast("Sequence[DataFrame]", [item._native_frame for item in items])
         if how == "horizontal":
             msg = (
                 "Horizontal concatenation is not supported for LazyFrame backed by "

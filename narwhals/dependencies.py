@@ -18,11 +18,11 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
     import pyspark.sql as pyspark_sql
-    from sqlframe.base.dataframe import BaseDataFrame as SQLFrameDataFrame
     from typing_extensions import TypeGuard
     from typing_extensions import TypeIs
 
     from narwhals._arrow.typing import ArrowChunkedArray
+    from narwhals._spark_like.dataframe import SQLFrameDataFrame
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series

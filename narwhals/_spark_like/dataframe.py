@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from pyspark.sql import DataFrame
     from pyspark.sql import Window
     from pyspark.sql.session import SparkSession
+    from sqlframe.base.dataframe import BaseDataFrame as _SQLFrameDataFrame
     from typing_extensions import Self
     from typing_extensions import TypeAlias
 
@@ -38,6 +39,9 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
+    SQLFrameDataFrame: TypeAlias = _SQLFrameDataFrame[Any, Any, Any, Any, Any]
+    _NativeDataFrame: TypeAlias = "DataFrame | SQLFrameDataFrame"
+
 Incomplete: TypeAlias = Any  # pragma: no cover
 """Marker for working code that fails type checking."""
 
@@ -45,7 +49,7 @@ Incomplete: TypeAlias = Any  # pragma: no cover
 class SparkLikeLazyFrame(CompliantLazyFrame):
     def __init__(
         self: Self,
-        native_dataframe: DataFrame,
+        native_dataframe: _NativeDataFrame,
         *,
         backend_version: tuple[int, ...],
         version: Version,
@@ -112,9 +116,9 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
     @property
     def _session(self: Self) -> SparkSession:
         if self._implementation is Implementation.SQLFRAME:
-            return cast("SparkSession", self._native_frame.session)
+            return cast("SQLFrameDataFrame", self._native_frame).session
 
-        return self._native_frame.sparkSession
+        return cast("DataFrame", self._native_frame).sparkSession
 
     def __native_namespace__(self: Self) -> ModuleType:  # pragma: no cover
         return self._implementation.to_native_namespace()
@@ -153,8 +157,9 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         ):
             import pyarrow as pa  # ignore-banned-import
 
+            native_frame = cast("DataFrame", self._native_frame)
             try:
-                return pa.Table.from_batches(self._native_frame._collect_as_arrow())
+                return pa.Table.from_batches(native_frame._collect_as_arrow())
             except ValueError as exc:
                 if "at least one RecordBatch" in str(exc):
                     # Empty dataframe
@@ -168,7 +173,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                         try:
                             native_dtype = narwhals_to_native_dtype(value, self._version)
                         except Exception as exc:  # noqa: BLE001
-                            native_spark_dtype = self._native_frame.schema[key].dataType
+                            native_spark_dtype = native_frame.schema[key].dataType
                             # If we can't convert the type, just set it to `pa.null`, and warn.
                             # Avoid the warning if we're starting from PySpark's void type.
                             # We can avoid the check when we introduce `nw.Null` dtype.

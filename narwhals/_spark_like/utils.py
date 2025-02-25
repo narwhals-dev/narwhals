@@ -11,16 +11,20 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     import pyspark.sql.types as pyspark_types
+    import sqlframe.base.types as sqlframe_types
     from pyspark.sql import Column
+    from typing_extensions import TypeAlias
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
+    _NativeDType: TypeAlias = "pyspark_types.DataType | sqlframe_types.DataType"
+
 
 def native_to_narwhals_dtype(
-    dtype: pyspark_types.DataType, version: Version, spark_types: ModuleType
+    dtype: _NativeDType, version: Version, spark_types: ModuleType
 ) -> DType:  # pragma: no cover
     dtypes = import_dtypes_module(version=version)
     if TYPE_CHECKING:
