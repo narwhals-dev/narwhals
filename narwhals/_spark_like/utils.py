@@ -3,9 +3,6 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import cast
-
-import pyspark.sql.types as pyspark_types
 
 from narwhals.exceptions import UnsupportedDTypeError
 from narwhals.utils import import_dtypes_module
@@ -14,6 +11,7 @@ from narwhals.utils import isinstance_or_issubclass
 if TYPE_CHECKING:
     from types import ModuleType
 
+    import pyspark.sql.types as pyspark_types
     from pyspark.sql import Column
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
@@ -24,47 +22,45 @@ if TYPE_CHECKING:
 
 @lru_cache(maxsize=16)
 def native_to_narwhals_dtype(
-    dtype: pyspark_types.DataType,
-    version: Version,
-    spark_types: ModuleType,
+    dtype: pyspark_types.DataType, version: Version, spark_types: ModuleType
 ) -> DType:  # pragma: no cover
     dtypes = import_dtypes_module(version=version)
+    if TYPE_CHECKING:
+        native = pyspark_types
+    else:
+        native = spark_types
 
-    if isinstance(dtype, spark_types.DoubleType):
+    if isinstance(dtype, native.DoubleType):
         return dtypes.Float64()
-    if isinstance(dtype, spark_types.FloatType):
+    if isinstance(dtype, native.FloatType):
         return dtypes.Float32()
-    if isinstance(dtype, spark_types.LongType):
+    if isinstance(dtype, native.LongType):
         return dtypes.Int64()
-    if isinstance(dtype, spark_types.IntegerType):
+    if isinstance(dtype, native.IntegerType):
         return dtypes.Int32()
-    if isinstance(dtype, spark_types.ShortType):
+    if isinstance(dtype, native.ShortType):
         return dtypes.Int16()
-    if isinstance(dtype, spark_types.ByteType):
+    if isinstance(dtype, native.ByteType):
         return dtypes.Int8()
-    if isinstance(
-        dtype, (spark_types.StringType, spark_types.VarcharType, spark_types.CharType)
-    ):
+    if isinstance(dtype, (native.StringType, native.VarcharType, native.CharType)):
         return dtypes.String()
-    if isinstance(dtype, spark_types.BooleanType):
+    if isinstance(dtype, native.BooleanType):
         return dtypes.Boolean()
-    if isinstance(dtype, spark_types.DateType):
+    if isinstance(dtype, native.DateType):
         return dtypes.Date()
-    if isinstance(dtype, spark_types.TimestampNTZType):
+    if isinstance(dtype, native.TimestampNTZType):
         return dtypes.Datetime()
-    if isinstance(dtype, spark_types.TimestampType):
+    if isinstance(dtype, native.TimestampType):
         return dtypes.Datetime(time_zone="UTC")
-    if isinstance(dtype, spark_types.DecimalType):
+    if isinstance(dtype, native.DecimalType):
         return dtypes.Decimal()
-    if isinstance(dtype, spark_types.ArrayType):
-        dtype = cast(pyspark_types.ArrayType, dtype)
+    if isinstance(dtype, native.ArrayType):
         return dtypes.List(
             inner=native_to_narwhals_dtype(
                 dtype.elementType, version=version, spark_types=spark_types
             )
         )
-    if isinstance(dtype, spark_types.StructType):
-        dtype = cast(pyspark_types.StructType, dtype)
+    if isinstance(dtype, native.StructType):
         return dtypes.Struct(
             fields=[
                 dtypes.Field(
@@ -83,48 +79,50 @@ def narwhals_to_native_dtype(
     dtype: DType | type[DType], version: Version, spark_types: ModuleType
 ) -> pyspark_types.DataType:
     dtypes = import_dtypes_module(version)
+    if TYPE_CHECKING:
+        native = pyspark_types
+    else:
+        native = spark_types
 
     if isinstance_or_issubclass(dtype, dtypes.Float64):
-        return spark_types.DoubleType()
+        return native.DoubleType()
     if isinstance_or_issubclass(dtype, dtypes.Float32):
-        return spark_types.FloatType()
+        return native.FloatType()
     if isinstance_or_issubclass(dtype, dtypes.Int64):
-        return spark_types.LongType()
+        return native.LongType()
     if isinstance_or_issubclass(dtype, dtypes.Int32):
-        return spark_types.IntegerType()
+        return native.IntegerType()
     if isinstance_or_issubclass(dtype, dtypes.Int16):
-        return spark_types.ShortType()
+        return native.ShortType()
     if isinstance_or_issubclass(dtype, dtypes.Int8):
-        return spark_types.ByteType()
+        return native.ByteType()
     if isinstance_or_issubclass(dtype, dtypes.String):
-        return spark_types.StringType()
+        return native.StringType()
     if isinstance_or_issubclass(dtype, dtypes.Boolean):
-        return spark_types.BooleanType()
+        return native.BooleanType()
     if isinstance_or_issubclass(dtype, dtypes.Date):
-        return spark_types.DateType()
+        return native.DateType()
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         dt_time_zone = dtype.time_zone
         if dt_time_zone is None:
-            return spark_types.TimestampNTZType()
+            return native.TimestampNTZType()
         if dt_time_zone != "UTC":  # pragma: no cover
             msg = f"Only UTC time zone is supported for PySpark, got: {dt_time_zone}"
             raise ValueError(msg)
-        return spark_types.TimestampType()
+        return native.TimestampType()
     if isinstance_or_issubclass(dtype, (dtypes.List, dtypes.Array)):
-        return spark_types.ArrayType(
+        return native.ArrayType(
             elementType=narwhals_to_native_dtype(
-                dtype.inner, version=version, spark_types=spark_types
+                dtype.inner, version=version, spark_types=native
             )
         )
     if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
-        return spark_types.StructType(
+        return native.StructType(
             fields=[
-                spark_types.StructField(
+                native.StructField(
                     name=field.name,
                     dataType=narwhals_to_native_dtype(
-                        field.dtype,
-                        version=version,
-                        spark_types=spark_types,
+                        field.dtype, version=version, spark_types=native
                     ),
                 )
                 for field in dtype.fields

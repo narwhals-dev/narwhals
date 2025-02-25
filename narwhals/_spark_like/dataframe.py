@@ -72,7 +72,12 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         return functions
 
     @property
-    def _native_dtypes(self: Self) -> Any:
+    def _native_dtypes(self: Self):  # type: ignore[no-untyped-def] # noqa: ANN202
+        if TYPE_CHECKING:
+            from pyspark.sql import types
+
+            return types
+
         if self._implementation is Implementation.SQLFRAME:
             from sqlframe.base.session import _BaseSession
 
