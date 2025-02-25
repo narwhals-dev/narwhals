@@ -57,6 +57,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         self._backend_version = backend_version
         self._implementation = implementation
         self._version = version
+        self._cached_schema: dict[str, DType] | None = None
         validate_backend_version(self._implementation, self._backend_version)
 
     @property
@@ -191,7 +192,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
 
     @property
     def columns(self: Self) -> list[str]:
-        return self._native_frame.columns
+        return list(self.schema)
 
     def collect(
         self: Self,
@@ -277,15 +278,17 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
 
     @property
     def schema(self: Self) -> dict[str, DType]:
-        return {
-            field.name: native_to_narwhals_dtype(
-                dtype=field.dataType,
-                version=self._version,
-                # NOTE: Unclear if this is an unsafe hash (https://github.com/narwhals-dev/narwhals/pull/2051#discussion_r1970074662)
-                spark_types=self._native_dtypes,  # pyright: ignore[reportArgumentType]
-            )
-            for field in self._native_frame.schema
-        }
+        if self._cached_schema is None:
+            self._cached_schema = {
+                field.name: native_to_narwhals_dtype(
+                    dtype=field.dataType,
+                    version=self._version,
+                    # NOTE: Unclear if this is an unsafe hash (https://github.com/narwhals-dev/narwhals/pull/2051#discussion_r1970074662)
+                    spark_types=self._native_dtypes,  # pyright: ignore[reportArgumentType]
+                )
+                for field in self._native_frame.schema
+            }
+        return self._cached_schema
 
     def collect_schema(self: Self) -> dict[str, DType]:
         return self.schema
@@ -367,11 +370,6 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
 
         left_columns = self.columns
         right_columns = other.columns
-
-        if isinstance(left_on, str):
-            left_on = [left_on]
-        if isinstance(right_on, str):
-            right_on = [right_on]
 
         # create a mapping for columns on other
         # `right_on` columns will be renamed as `left_on`
