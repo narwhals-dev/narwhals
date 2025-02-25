@@ -194,7 +194,6 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):
                 dd.concat(dfs, axis=0, join="inner"),
                 backend_version=self._backend_version,
                 version=self._version,
-                validate_column_names=True,
             )
         if how == "horizontal":
             all_column_names: list[str] = [
@@ -213,14 +212,12 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):
                 dd.concat(dfs, axis=1, join="outer"),
                 backend_version=self._backend_version,
                 version=self._version,
-                validate_column_names=True,
             )
         if how == "diagonal":
             return DaskLazyFrame(
                 dd.concat(dfs, axis=0, join="outer"),
                 backend_version=self._backend_version,
                 version=self._version,
-                validate_column_names=True,
             )
 
         raise NotImplementedError
