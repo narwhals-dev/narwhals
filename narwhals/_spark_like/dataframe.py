@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from functools import cached_property
 from importlib import import_module
 from typing import TYPE_CHECKING
 from typing import Any
@@ -182,7 +183,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             native_pyarrow_frame = self._native_frame.toArrow()
         return native_pyarrow_frame
 
-    @property
+    @cached_property
     def columns(self: Self) -> list[str]:
         return self._native_frame.columns  # type: ignore[no-any-return]
 
@@ -278,7 +279,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         spark_df = self._native_frame.where(condition)
         return self._from_native_frame(spark_df, validate_column_names=False)
 
-    @property
+    @cached_property
     def schema(self: Self) -> dict[str, DType]:
         return {
             field.name: native_to_narwhals_dtype(

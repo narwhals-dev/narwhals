@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import cached_property
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
@@ -205,7 +206,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             self._native_frame.filter(mask), validate_column_names=False
         )
 
-    @property
+    @cached_property
     def schema(self: Self) -> dict[str, DType]:
         return {
             column_name: native_to_narwhals_dtype(str(duckdb_dtype), self._version)
@@ -214,7 +215,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             )
         }
 
-    @property
+    @cached_property
     def columns(self: Self) -> list[str]:
         return self._native_frame.columns
 
