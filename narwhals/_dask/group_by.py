@@ -99,7 +99,6 @@ class DaskLazyGroupBy:
             df,
             backend_version=self._df._backend_version,
             version=self._df._version,
-            validate_column_names=True,
         )
 
 
