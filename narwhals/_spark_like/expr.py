@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+from importlib import import_module
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -15,6 +16,7 @@ from narwhals._spark_like.expr_name import SparkLikeExprNameNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
 from narwhals._spark_like.utils import maybe_evaluate_expr
 from narwhals._spark_like.utils import narwhals_to_native_dtype
+from narwhals.dependencies import get_pyspark
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 from narwhals.utils import parse_version
@@ -75,31 +77,41 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
         )
 
     @property
-    def _F(self) -> Any:  # noqa: N802
+    def _F(self: Self) -> Any:  # noqa: N802
         if self._implementation is Implementation.SQLFRAME:
-            from sqlframe.duckdb import functions
+            from sqlframe.base.session import _BaseSession
 
-            return functions
+            return import_module(
+                f"sqlframe.{_BaseSession().execution_dialect_name}.functions"
+            )
+
         from pyspark.sql import functions
 
         return functions
 
     @property
-    def _native_types(self) -> Any:
+    def _native_dtypes(self: Self) -> Any:
         if self._implementation is Implementation.SQLFRAME:
-            from sqlframe.duckdb import types
+            from sqlframe.base.session import _BaseSession
 
-            return types
+            return import_module(
+                f"sqlframe.{_BaseSession().execution_dialect_name}.types"
+            )
+
         from pyspark.sql import types
 
         return types
 
     @property
-    def _Window(self) -> Any:  # noqa: N802
+    def _Window(self: Self) -> Any:  # noqa: N802
         if self._implementation is Implementation.SQLFRAME:
-            from sqlframe.duckdb import Window
+            from sqlframe.base.session import _BaseSession
 
-            return Window
+            _window = import_module(
+                f"sqlframe.{_BaseSession().execution_dialect_name}.window"
+            )
+            return _window.Window
+
         from pyspark.sql import Window
 
         return Window
@@ -321,7 +333,7 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
         def _cast(_input: Column) -> Column:
             spark_dtype = narwhals_to_native_dtype(
-                dtype, self._version, self._native_types
+                dtype, self._version, self._native_dtypes
             )
             return _input.cast(spark_dtype)
 
@@ -338,9 +350,11 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
 
     def median(self: Self) -> Self:
         def _median(_input: Column) -> Column:
-            import pyspark  # ignore-banned-import
-
-            if parse_version(pyspark) < (3, 4):
+            if (
+                self._implementation.is_pyspark()
+                and (pyspark := get_pyspark()) is not None
+                and parse_version(pyspark) < (3, 4)
+            ):
                 # Use percentile_approx with default accuracy parameter (10000)
                 return self._F.percentile_approx(_input.cast("double"), 0.5)
 
@@ -422,7 +436,7 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
 
     def is_in(self: Self, values: Sequence[Any]) -> Self:
         def _is_in(_input: Column) -> Column:
-            return _input.isin(values)
+            return _input.isin(values) if values else self._F.lit(False)  # noqa: FBT003
 
         return self._from_call(_is_in, "is_in")
 
@@ -452,7 +466,7 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
     def n_unique(self: Self) -> Self:
         def _n_unique(_input: Column) -> Column:
             return self._F.count_distinct(_input) + self._F.max(
-                self._F.isnull(_input).cast(self._native_types.IntegerType())
+                self._F.isnull(_input).cast(self._native_dtypes.IntegerType())
             )
 
         return self._from_call(_n_unique, "n_unique")

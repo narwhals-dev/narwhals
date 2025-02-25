@@ -184,7 +184,7 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
 
 def sqlframe_pyspark_lazy_constructor(
     obj: dict[str, Any],
-) -> Callable[[Any], IntoFrame]:  # pragma: no cover
+) -> IntoFrame:  # pragma: no cover
     from sqlframe.duckdb import DuckDBSession
 
     session = DuckDBSession()
@@ -208,9 +208,7 @@ LAZY_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {
     "polars[lazy]": polars_lazy_constructor,
     "duckdb": duckdb_lazy_constructor,
     "pyspark": pyspark_lazy_constructor,  # type: ignore[dict-item]
-    # We've reported several bugs to sqlframe - once they address
-    # them, we can start testing them as part of our CI.
-    # "sqlframe": sqlframe_pyspark_lazy_constructor,  # noqa: ERA001
+    "sqlframe": sqlframe_pyspark_lazy_constructor,
 }
 GPU_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {"cudf": cudf_constructor}
 
