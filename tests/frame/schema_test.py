@@ -227,7 +227,7 @@ def test_validate_not_duplicated_columns_duckdb() -> None:
     with pytest.raises(
         ValueError, match="Expected unique column names, got:\n- 'a' 2 times"
     ):
-        nw.from_native(rel, eager_only=False)
+        nw.from_native(rel, eager_only=False).lazy().collect()
 
 
 @pytest.mark.skipif(

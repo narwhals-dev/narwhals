@@ -157,6 +157,10 @@ class SupportsNativeNamespace(Protocol):
     def __native_namespace__(self) -> ModuleType: ...
 
 
+IntoCompliantExpr: TypeAlias = (
+    "CompliantExpr[CompliantFrameT, CompliantSeriesT_co] | CompliantSeriesT_co"
+)
+
 IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]
 """Anything which can be converted to an expression.
 
@@ -344,14 +348,6 @@ class DTypes:
     List: type[dtypes.List]
     Array: type[dtypes.Array]
     Unknown: type[dtypes.Unknown]
-
-
-if TYPE_CHECKING:
-    # This one needs to be in TYPE_CHECKING to pass on 3.9,
-    # and can only be defined after CompliantExpr has been defined
-    IntoCompliantExpr: TypeAlias = (
-        CompliantExpr[CompliantFrameT, CompliantSeriesT_co] | CompliantSeriesT_co
-    )
 
 
 __all__ = [

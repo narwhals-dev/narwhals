@@ -158,7 +158,7 @@ class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyF
             version=self._version,
         )
 
-    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> _2DArray:
+    def __array__(self: Self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
         return self.to_numpy(dtype=dtype, copy=copy)
 
     @overload
@@ -404,7 +404,7 @@ class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyF
             implementation=self._implementation,
             backend_version=self._backend_version,
         )
-        return self._from_native_frame(df, validate_column_names=False)
+        return self._from_native_frame(df, validate_column_names=True)
 
     def drop_nulls(self: Self, subset: list[str] | None) -> PandasLikeDataFrame:
         if subset is None:
@@ -830,7 +830,7 @@ class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyF
             }
         return self._native_frame.to_dict(orient="list")
 
-    def to_numpy(self: Self, dtype: Any = None, copy: bool | None = None) -> _2DArray:
+    def to_numpy(self: Self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
         native_dtypes = self._native_frame.dtypes
 
         if copy is None:
@@ -984,7 +984,7 @@ class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyF
         elif aggregate_function == "len":
             result = (
                 frame.groupby([*on, *index])
-                .agg({v: "size" for v in values})
+                .agg(dict.fromkeys(values, "size"))
                 .reset_index()
                 .pivot(columns=on, index=index, values=values)
             )

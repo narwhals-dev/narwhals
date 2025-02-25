@@ -38,7 +38,7 @@ if TYPE_CHECKING:
         import dask_expr as dx
 
 
-class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):  # pyright: ignore[reportInvalidTypeArguments]
+class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):  # pyright: ignore[reportInvalidTypeArguments] (#2044)
     _implementation: Implementation = Implementation.DASK
 
     @property
@@ -196,7 +196,6 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):  # pyright:
                 dd.concat(dfs, axis=0, join="inner"),
                 backend_version=self._backend_version,
                 version=self._version,
-                validate_column_names=True,
             )
         if how == "horizontal":
             all_column_names: list[str] = [
@@ -215,14 +214,12 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):  # pyright:
                 dd.concat(dfs, axis=1, join="outer"),
                 backend_version=self._backend_version,
                 version=self._version,
-                validate_column_names=True,
             )
         if how == "diagonal":
             return DaskLazyFrame(
                 dd.concat(dfs, axis=0, join="outer"),
                 backend_version=self._backend_version,
                 version=self._version,
-                validate_column_names=True,
             )
 
         raise NotImplementedError
@@ -406,7 +403,7 @@ class DaskThen(DaskExpr):
     ) -> None:
         self._backend_version = backend_version
         self._version = version
-        self._call = call
+        self._call: DaskWhen = call
         self._depth = depth
         self._function_name = function_name
         self._evaluate_output_names = evaluate_output_names
@@ -414,9 +411,6 @@ class DaskThen(DaskExpr):
         self._call_kwargs = call_kwargs or {}
 
     def otherwise(self: Self, value: DaskExpr | Any) -> DaskExpr:
-        # type ignore because we are setting the `_call` attribute to a
-        # callable object of type `DaskWhen`, base class has the attribute as
-        # only a `Callable`
-        self._call._otherwise_value = value  # type: ignore[attr-defined]
+        self._call._otherwise_value = value
         self._function_name = "whenotherwise"
         return self

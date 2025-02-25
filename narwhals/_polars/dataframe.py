@@ -128,7 +128,7 @@ class PolarsDataFrame:
         return func
 
     def __array__(
-        self: Self, dtype: Any | None = None, copy: bool | None = None
+        self: Self, dtype: Any | None = None, *, copy: bool | None = None
     ) -> _2DArray:
         if self._backend_version < (0, 20, 28) and copy is not None:
             msg = "`copy` in `__array__` is only supported for Polars>=0.20.28"

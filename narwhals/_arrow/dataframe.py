@@ -181,7 +181,7 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
             version=self._version,
         )
 
-    def __array__(self: Self, dtype: Any, copy: bool | None) -> _2DArray:
+    def __array__(self: Self, dtype: Any, *, copy: bool | None) -> _2DArray:
         return self._native_frame.__array__(dtype, copy=copy)
 
     @overload
@@ -356,7 +356,7 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
         names = [s.name for s in new_series]
         reshaped = align_series_full_broadcast(*new_series)
         df = pa.Table.from_arrays([s._native_series for s in reshaped], names=names)
-        return self._from_native_frame(df, validate_column_names=False)
+        return self._from_native_frame(df, validate_column_names=True)
 
     def with_columns(self: ArrowDataFrame, *exprs: ArrowExpr) -> ArrowDataFrame:
         native_frame = self._native_frame

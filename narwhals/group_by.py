@@ -8,7 +8,7 @@ from typing import Iterator
 from typing import TypeVar
 from typing import cast
 
-from narwhals._expression_parsing import all_exprs_are_aggs_or_literals
+from narwhals._expression_parsing import all_exprs_are_scalar_like
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.exceptions import InvalidOperationError
@@ -18,6 +18,8 @@ from narwhals.utils import tupleify
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
     from narwhals.expr import Expr
 
 DataFrameT = TypeVar("DataFrameT")
@@ -26,7 +28,7 @@ LazyFrameT = TypeVar("LazyFrameT")
 
 class GroupBy(Generic[DataFrameT]):
     def __init__(self: Self, df: DataFrameT, *keys: str, drop_null_keys: bool) -> None:
-        self._df = cast(DataFrame[Any], df)
+        self._df = cast("DataFrame[Any]", df)
         self._keys = keys
         self._grouped = self._df._compliant_frame.group_by(
             *self._keys, drop_null_keys=drop_null_keys
@@ -113,7 +115,7 @@ class GroupBy(Generic[DataFrameT]):
             └─────┴─────┴─────┘
         """
         flat_aggs = tuple(flatten(aggs))
-        if not all_exprs_are_aggs_or_literals(*flat_aggs, **named_aggs):
+        if not all_exprs_are_scalar_like(*flat_aggs, **named_aggs):
             msg = (
                 "Found expression which does not aggregate.\n\n"
                 "All expressions passed to GroupBy.agg must aggregate.\n"
@@ -142,7 +144,7 @@ class GroupBy(Generic[DataFrameT]):
 
 class LazyGroupBy(Generic[LazyFrameT]):
     def __init__(self: Self, df: LazyFrameT, *keys: str, drop_null_keys: bool) -> None:
-        self._df = cast(LazyFrame[Any], df)
+        self._df = cast("LazyFrame[Any]", df)
         self._keys = keys
         self._grouped = self._df._compliant_frame.group_by(
             *self._keys, drop_null_keys=drop_null_keys
@@ -213,7 +215,7 @@ class LazyGroupBy(Generic[LazyFrameT]):
             └─────┴─────┴─────┘
         """
         flat_aggs = tuple(flatten(aggs))
-        if not all_exprs_are_aggs_or_literals(*flat_aggs, **named_aggs):
+        if not all_exprs_are_scalar_like(*flat_aggs, **named_aggs):
             msg = (
                 "Found expression which does not aggregate.\n\n"
                 "All expressions passed to GroupBy.agg must aggregate.\n"

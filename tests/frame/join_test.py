@@ -669,14 +669,18 @@ def test_joinasof_by_exceptions(constructor: Constructor) -> None:
 def test_join_duplicate_column_names(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor):
-        # https://github.com/pola-rs/polars/issues/21048
-        request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor):
+    if (
+        "polars" in str(constructor)  # https://github.com/pola-rs/polars/issues/21048
+        or "cudf" in str(constructor)
         # TODO(unassigned): cudf doesn't raise here for some reason,
         # need to investigate.
+    ):
         request.applymarker(pytest.mark.xfail)
-    if "pyspark" in str(constructor):
+    if "sqlframe" in str(constructor):
+        import duckdb
+
+        exception: type[Exception] = duckdb.BinderException
+    elif "pyspark" in str(constructor):
         from pyspark.errors import AnalysisException
 
         exception = AnalysisException
@@ -687,4 +691,4 @@ def test_join_duplicate_column_names(
     df = constructor({"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]})
     dfn = nw.from_native(df)
     with pytest.raises(exception):
-        dfn.join(dfn, on=["a"]).join(dfn, on=["a"])  # type: ignore[arg-type]
+        dfn.join(dfn, on=["a"]).join(dfn, on=["a"]).lazy().collect()  # type: ignore[arg-type]

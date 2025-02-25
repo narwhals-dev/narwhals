@@ -255,7 +255,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
             lambda _input, other: _input.__ne__(other), "__ne__", other=other
         )
 
-    def __ge__(self: Self, other: DaskExpr) -> Self:
+    def __ge__(self: Self, other: DaskExpr | Any) -> Self:
         return self._from_call(
             lambda _input, other: _input.__ge__(other), "__ge__", other=other
         )
@@ -275,7 +275,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
             lambda _input, other: _input.__lt__(other), "__lt__", other=other
         )
 
-    def __and__(self: Self, other: DaskExpr) -> Self:
+    def __and__(self: Self, other: DaskExpr | Any) -> Self:
         return self._from_call(
             lambda _input, other: _input.__and__(other), "__and__", other=other
         )
@@ -487,16 +487,11 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
         def func(_input: dx.Series) -> dx.Series:
             _name = _input.name
             col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
-            _input = add_row_index(  # pyright: ignore[reportAssignmentType]
-                _input.to_frame(),
-                col_token,
-                backend_version=self._backend_version,
-                implementation=self._implementation,
+            frame = add_row_index(
+                _input.to_frame(), col_token, self._backend_version, self._implementation
             )
-            first_distinct_index = _input.groupby(_name).agg({col_token: "min"})[
-                col_token
-            ]
-            return _input[col_token].isin(first_distinct_index)
+            first_distinct_index = frame.groupby(_name).agg({col_token: "min"})[col_token]
+            return frame[col_token].isin(first_distinct_index)
 
         return self._from_call(func, "is_first_distinct")
 
@@ -504,14 +499,11 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
         def func(_input: dx.Series) -> dx.Series:
             _name = _input.name
             col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
-            _input = add_row_index(  # pyright: ignore[reportAssignmentType]
-                _input.to_frame(),
-                col_token,
-                backend_version=self._backend_version,
-                implementation=self._implementation,
+            frame = add_row_index(
+                _input.to_frame(), col_token, self._backend_version, self._implementation
             )
-            last_distinct_index = _input.groupby(_name).agg({col_token: "max"})[col_token]
-            return _input[col_token].isin(last_distinct_index)
+            last_distinct_index = frame.groupby(_name).agg({col_token: "max"})[col_token]
+            return frame[col_token].isin(last_distinct_index)
 
         return self._from_call(func, "is_last_distinct")
 

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import operator
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
 from typing import Sequence
+from typing import cast
 
 from duckdb import CaseExpression
 from duckdb import CoalesceOperator
@@ -280,7 +282,8 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
         )
 
     def __invert__(self: Self) -> Self:
-        return self._from_call(lambda _input: ~_input, "__invert__")
+        invert = cast("Callable[..., duckdb.Expression]", operator.invert)
+        return self._from_call(invert, "__invert__")
 
     def alias(self: Self, name: str) -> Self:
         def alias_output_names(names: Sequence[str]) -> Sequence[str]:

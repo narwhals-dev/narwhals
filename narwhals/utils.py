@@ -27,6 +27,7 @@ from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyspark_sql
+from narwhals.dependencies import get_sqlframe
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_modin_series
 from narwhals.dependencies import is_pandas_dataframe
@@ -162,6 +163,7 @@ class Implementation(Enum):
             get_dask_dataframe(): Implementation.DASK,
             get_duckdb(): Implementation.DUCKDB,
             get_ibis(): Implementation.IBIS,
+            get_sqlframe(): Implementation.SQLFRAME,
         }
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 
@@ -187,6 +189,7 @@ class Implementation(Enum):
             "dask": Implementation.DASK,
             "duckdb": Implementation.DUCKDB,
             "ibis": Implementation.IBIS,
+            "sqlframe": Implementation.SQLFRAME,
         }
         return mapping.get(backend_name, Implementation.UNKNOWN)
 
@@ -249,6 +252,12 @@ class Implementation(Enum):
             import duckdb  # ignore-banned-import
 
             return duckdb
+
+        if self is Implementation.SQLFRAME:
+            import sqlframe  # ignore-banned-import
+
+            return sqlframe
+
         msg = "Not supported Implementation"  # pragma: no cover
         raise AssertionError(msg)
 
@@ -287,6 +296,22 @@ class Implementation(Enum):
             Implementation.MODIN,
             Implementation.CUDF,
         }
+
+    def is_spark_like(self: Self) -> bool:
+        """Return whether implementation is pyspark or sqlframe.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_spark_like()
+            False
+        """
+        return self in {Implementation.PYSPARK, Implementation.SQLFRAME}
 
     def is_polars(self: Self) -> bool:
         """Return whether implementation is Polars.
@@ -416,6 +441,22 @@ class Implementation(Enum):
         """
         return self is Implementation.IBIS  # pragma: no cover
 
+    def is_sqlframe(self: Self) -> bool:
+        """Return whether implementation is SQLFrame.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_sqlframe()
+            False
+        """
+        return self is Implementation.SQLFRAME  # pragma: no cover
+
 
 MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.PANDAS: (0, 25, 3),
@@ -427,7 +468,7 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.DASK: (2024, 8),
     Implementation.DUCKDB: (1,),
     Implementation.IBIS: (6,),
-    Implementation.SQLFRAME: (3, 14, 2),
+    Implementation.SQLFRAME: (3, 22, 0),
 }
 
 
@@ -618,8 +659,8 @@ def maybe_align_index(
             msg = "given index doesn't have a unique index"
             raise ValueError(msg)
 
-    lhs_any = cast(Any, lhs)
-    rhs_any = cast(Any, rhs)
+    lhs_any = cast("Any", lhs)
+    rhs_any = cast("Any", rhs)
     if isinstance(
         getattr(lhs_any, "_compliant_frame", None), PandasLikeDataFrame
     ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasLikeDataFrame):
@@ -703,7 +744,7 @@ def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series[Any]) -> Any |
         >>> nw.maybe_get_index(series)
         RangeIndex(start=0, stop=2, step=1)
     """
-    obj_any = cast(Any, obj)
+    obj_any = cast("Any", obj)
     native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj) or is_pandas_like_series(native_obj):
         return native_obj.index
@@ -759,7 +800,7 @@ def maybe_set_index(
     """
     from narwhals.translate import to_native
 
-    df_any = cast(Any, obj)
+    df_any = cast("Any", obj)
     native_obj = df_any.to_native()
 
     if column_names is not None and index is not None:
@@ -834,7 +875,7 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
         >>> nw.maybe_get_index(series)
         RangeIndex(start=0, stop=2, step=1)
     """
-    obj_any = cast(Any, obj)
+    obj_any = cast("Any", obj)
     native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj):
         native_namespace = obj_any.__native_namespace__()
@@ -908,7 +949,7 @@ def maybe_convert_dtypes(
         b           boolean
         dtype: object
     """
-    obj_any = cast(Any, obj)
+    obj_any = cast("Any", obj)
     native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj):
         return obj_any._from_compliant_dataframe(
@@ -1144,8 +1185,8 @@ def issue_deprecation_warning(message: str, _version: str) -> None:
 
 
 def validate_strict_and_pass_though(
-    strict: bool | None,
-    pass_through: bool | None,
+    strict: bool | None,  # noqa: FBT001
+    pass_through: bool | None,  # noqa: FBT001
     *,
     pass_through_default: bool,
     emit_deprecation_warning: bool,
