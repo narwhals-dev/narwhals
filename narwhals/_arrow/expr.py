@@ -416,9 +416,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
 
     def over(self: Self, keys: list[str], kind: ExprKind) -> Self:
         if not is_scalar_like(kind):
-            msg = (
-                "Elementwise operations in `over` context are not supported for PyArrow."
-            )
+            msg = "Only aggregation or literal operations are supported in `over` context for PyArrow."
             raise NotImplementedError(msg)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:

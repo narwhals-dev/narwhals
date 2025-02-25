@@ -478,7 +478,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 return [result_frame[name] for name in aliases]
         elif not is_scalar_like(kind):
             msg = (
-                "Elementwise operations are only supported in `over` context "
+                "Length-preserving operations are only supported in `over` context "
                 "for pandas if they are elementary "
                 "(e.g. `nw.col('a').cum_sum().over('b'))`)."
             )
