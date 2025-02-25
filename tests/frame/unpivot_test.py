@@ -38,6 +38,11 @@ expected_on_none_idx_a = {
     "value": [1, 3, 5, 2, 4, 6],
 }
 
+expected_on_b_c_idx_none = {
+    "variable": ["b", "b", "b", "c", "c", "c"],
+    "value": [1, 3, 5, 2, 4, 6],
+}
+
 expected_on_none_idx_none = {
     "variable": ["a", "a", "a", "b", "b", "b", "c", "c", "c"],
     "value": ["x", "y", "z", "1", "3", "5", "2", "4", "6"],
@@ -50,6 +55,7 @@ expected_on_none_idx_none = {
         ("b", ["a"], expected_on_b_idx_a),
         (["b", "c"], ["a"], expected_on_b_c_idx_a),
         (None, ["a"], expected_on_none_idx_a),
+        (["b", "c"], None, expected_on_b_c_idx_none),
         (None, None, expected_on_none_idx_none),
     ],
 )
@@ -61,7 +67,7 @@ def test_unpivot(
     request: pytest.FixtureRequest,
 ) -> None:
     if on is None and index is None and "polars" not in str(constructor):
-        # TODO(): add support in other backends
+        # TODO(2082): add support in other backends
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     sort_columns = ["variable"] if index is None else ["variable", "a"]
