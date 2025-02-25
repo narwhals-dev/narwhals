@@ -18,12 +18,14 @@ data = {
     "a": ["a", "a", "b", "b", "b"],
     "b": [1, 2, 3, 5, 3],
     "c": [5, 4, 3, 2, 1],
+    "i": [0, 1, 2, 3, 4],
 }
 
 data_cum = {
     "a": ["a", "a", "b", "b", "b"],
     "b": [1, 2, None, 5, 3],
     "c": [5, 4, 3, 2, 1],
+    "i": [0, 1, 2, 3, 4],
 }
 
 
@@ -41,7 +43,7 @@ def test_over_single(request: pytest.FixtureRequest, constructor: Constructor) -
         "c_max": [5, 5, 3, 3, 3],
     }
 
-    result = df.with_columns(c_max=nw.col("c").max().over("a"))
+    result = df.with_columns(c_max=nw.col("c").max().over("a")).sort("i").drop("i")
     assert_equal_data(result, expected)
 
 
@@ -58,8 +60,13 @@ def test_over_multiple(request: pytest.FixtureRequest, constructor: Constructor)
         "c": [5, 4, 3, 1, 2],
         "c_min": [5, 4, 1, 1, 2],
     }
+    expected = {
+        "a": ["a", "a", "b", "b", "b"],
+        "b": [1, 2, 3, 5, 3],
+        "c": [5, 4, 3, 2, 1],
+    }
 
-    result = df.with_columns(c_min=nw.col("c").min().over("a", "b")).sort("a", "b")
+    result = df.with_columns(c_min=nw.col("c").min().over("a", "b")).sort("i").drop("i")
     assert_equal_data(result, expected)
 
 
@@ -80,7 +87,11 @@ def test_over_cumsum(
         "c_cumsum": [5, 9, 3, 5, 6],
     }
 
-    result = df.with_columns(nw.col("b", "c").cum_sum().over("a").name.suffix("_cumsum"))
+    result = (
+        df.with_columns(nw.col("b", "c").cum_sum().over("a").name.suffix("_cumsum"))
+        .sort("i")
+        .drop("i")
+    )
     assert_equal_data(result, expected)
 
 
@@ -99,8 +110,10 @@ def test_over_cumcount(
         "c_cumcount": [1, 2, 1, 2, 3],
     }
 
-    result = df.with_columns(
-        nw.col("b", "c").cum_count().over("a").name.suffix("_cumcount")
+    result = (
+        df.with_columns(nw.col("b", "c").cum_count().over("a").name.suffix("_cumcount"))
+        .sort("i")
+        .drop("i")
     )
     assert_equal_data(result, expected)
 
@@ -120,7 +133,11 @@ def test_over_cummax(
         "b_cummax": [1, 2, None, 5, 5],
         "c_cummax": [5, 5, 3, 3, 3],
     }
-    result = df.with_columns(nw.col("b", "c").cum_max().over("a").name.suffix("_cummax"))
+    result = (
+        df.with_columns(nw.col("b", "c").cum_max().over("a").name.suffix("_cummax"))
+        .sort("i")
+        .drop("i")
+    )
     assert_equal_data(result, expected)
 
 
@@ -141,7 +158,11 @@ def test_over_cummin(
         "c_cummin": [5, 4, 3, 2, 1],
     }
 
-    result = df.with_columns(nw.col("b", "c").cum_min().over("a").name.suffix("_cummin"))
+    result = (
+        df.with_columns(nw.col("b", "c").cum_min().over("a").name.suffix("_cummin"))
+        .sort("i")
+        .drop("i")
+    )
     assert_equal_data(result, expected)
 
 
@@ -162,8 +183,10 @@ def test_over_cumprod(
         "c_cumprod": [5, 20, 3, 6, 6],
     }
 
-    result = df.with_columns(
-        nw.col("b", "c").cum_prod().over("a").name.suffix("_cumprod")
+    result = (
+        df.with_columns(nw.col("b", "c").cum_prod().over("a").name.suffix("_cumprod"))
+        .sort("i")
+        .drop("i")
     )
     assert_equal_data(result, expected)
 
@@ -238,7 +261,7 @@ def test_over_shift(
         "c": [5, 4, 3, 2, 1],
         "b_shift": [None, None, None, None, 3],
     }
-    result = df.with_columns(b_shift=nw.col("b").shift(2).over("a"))
+    result = df.with_columns(b_shift=nw.col("b").shift(2).over("a")).sort("i").drop("i")
     assert_equal_data(result, expected)
 
 

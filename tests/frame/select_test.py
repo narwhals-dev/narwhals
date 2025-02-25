@@ -153,6 +153,12 @@ def test_filtration_vs_aggregation(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
+def test_select_duplicates(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2]})).lazy()
+    with pytest.raises(ValueError, match="Expected unique|duplicate|more than one"):
+        df.select("a", nw.col("a") + 1).collect()
+
+
 def test_binary_window_aggregation(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager({"a": [1, 1, 2]}))
     result = df.select(nw.col("a").cum_sum() + nw.col("a").sum())

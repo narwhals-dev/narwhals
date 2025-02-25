@@ -39,20 +39,15 @@ def maybe_evaluate_expr(df: DaskLazyFrame, obj: DaskExpr | object) -> dx.Series 
     return obj
 
 
-def evaluate_exprs(df: DaskLazyFrame, /, *exprs: DaskExpr) -> dict[str, dx.Series]:
-    native_results: dict[str, dx.Series] = {}
+def evaluate_exprs(df: DaskLazyFrame, /, *exprs: DaskExpr) -> list[tuple[str, dx.Series]]:
+    native_results: list[tuple[str, dx.Series]] = []
     for expr in exprs:
         native_series_list = expr._call(df)
         _, aliases = evaluate_output_names_and_aliases(expr, df, [])
         if len(aliases) != len(native_series_list):  # pragma: no cover
             msg = f"Internal error: got aliases {aliases}, but only got {len(native_series_list)} results"
             raise AssertionError(msg)
-        native_results.update(
-            {
-                alias: native_series
-                for native_series, alias in zip(native_series_list, aliases)
-            }
-        )
+        native_results.extend(zip(aliases, native_series_list))
     return native_results
 
 
