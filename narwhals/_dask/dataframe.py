@@ -81,7 +81,7 @@ class DaskLazyFrame(CompliantLazyFrame):
     def with_columns(self: Self, *exprs: DaskExpr) -> Self:
         df = self._native_frame
         new_series = evaluate_exprs(self, *exprs)
-        df = df.assign(**new_series)
+        df = df.assign(**dict(new_series))
         return self._from_native_frame(df)
 
     def collect(
@@ -152,7 +152,7 @@ class DaskLazyFrame(CompliantLazyFrame):
 
     def aggregate(self: Self, *exprs: DaskExpr) -> Self:
         new_series = evaluate_exprs(self, *exprs)
-        df = dd.concat([val.rename(name) for name, val in new_series.items()], axis=1)
+        df = dd.concat([val.rename(name) for name, val in new_series], axis=1)
         return self._from_native_frame(df)
 
     def select(self: Self, *exprs: DaskExpr) -> Self:
@@ -167,8 +167,8 @@ class DaskLazyFrame(CompliantLazyFrame):
             )
 
         df = select_columns_by_name(
-            self._native_frame.assign(**new_series),
-            list(new_series.keys()),
+            self._native_frame.assign(**dict(new_series)),
+            [s[0] for s in new_series],
             self._backend_version,
             self._implementation,
         )
