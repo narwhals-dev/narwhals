@@ -403,7 +403,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             implementation=self._implementation,
             backend_version=self._backend_version,
         )
-        return self._from_native_frame(df, validate_column_names=False)
+        return self._from_native_frame(df, validate_column_names=True)
 
     def drop_nulls(self: Self, subset: list[str] | None) -> Self:
         if subset is None:
