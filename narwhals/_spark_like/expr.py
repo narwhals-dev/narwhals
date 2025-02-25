@@ -289,7 +289,7 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
         )
 
     def __invert__(self: Self) -> Self:
-        invert = cast("Callable[..., SparkLikeExpr]", operator.invert)
+        invert = cast("Callable[..., Column]", operator.invert)
         return self._from_call(invert, "__invert__")
 
     def abs(self: Self) -> Self:
