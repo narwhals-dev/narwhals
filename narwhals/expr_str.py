@@ -318,13 +318,13 @@ class ExprStringNamespace(Generic[ExprT]):
             >>> import narwhals as nw
             >>> df_native = pa.table({"lyrics": ["taata", "taatatata", "zukkyun"]})
             >>> df = nw.from_native(df_native)
-            >>> df.with_columns(lyrics_head=nw.col("lyrics").str.tail()).to_native()
+            >>> df.with_columns(lyrics_tail=nw.col("lyrics").str.tail()).to_native()
             pyarrow.Table
             lyrics: string
-            lyrics_head: string
+            lyrics_tail: string
             ----
             lyrics: [["taata","taatatata","zukkyun"]]
-            lyrics_head: [["taata","atata","kkyun"]]
+            lyrics_tail: [["taata","atata","kkyun"]]
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).str.slice(
