@@ -2212,7 +2212,7 @@ class LazyFrame(BaseFrame[FrameT]):
                     "  `over` and they will be supported."
                 )
                 raise OrderDependentExprError(msg)
-            if arg._metadata.kind.is_changes_length():
+            if arg._metadata.kind.is_filtration():
                 msg = (
                     "Length-changing expressions are not supported for use in LazyFrame, unless\n"
                     "followed by an aggregation.\n\n"

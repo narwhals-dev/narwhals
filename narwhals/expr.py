@@ -649,7 +649,7 @@ class Expr:
                 function=function, return_dtype=return_dtype
             ),
             # safest assumptions
-            self._metadata.with_kind_and_extra_open_window(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
         )
 
     def skew(self: Self) -> Self:
@@ -869,7 +869,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).unique(),
-            self._metadata.with_kind(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind(ExprKind.FILTRATION),
         )
 
     def abs(self: Self) -> Self:
@@ -1233,7 +1233,7 @@ class Expr:
                 str_as_lit=False,
             ),
             combine_metadata(self, *flat_predicates, str_as_lit=False).with_kind(
-                ExprKind.CHANGES_LENGTH
+                ExprKind.FILTRATION
             ),
         )
 
@@ -1321,7 +1321,7 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_true(),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
         )
 
     def fill_null(
@@ -1449,7 +1449,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).drop_nulls(),
-            self._metadata.with_kind(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind(ExprKind.FILTRATION),
         )
 
     def sample(
@@ -1490,7 +1490,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
             ),
-            self._metadata.with_kind(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind(ExprKind.FILTRATION),
         )
 
     def over(
@@ -1535,7 +1535,7 @@ class Expr:
             |2  4  y                    4|
             └────────────────────────────┘
         """
-        if self._metadata.kind.is_changes_length():
+        if self._metadata.kind.is_filtration():
             msg = "`.over()` can not be used for expressions which change length."
             raise LengthChangingExprError(msg)
         kind = ExprKind.TRANSFORM
@@ -1754,7 +1754,7 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).head(n),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
         )
 
     def tail(self: Self, n: int = 10) -> Self:
@@ -1782,7 +1782,7 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).tail(n),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
         )
 
     def round(self: Self, decimals: int = 0) -> Self:
@@ -1877,7 +1877,7 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
         )
 
     # need to allow numeric typing
@@ -1949,7 +1949,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).mode(),
-            self._metadata.with_kind(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind(ExprKind.FILTRATION),
         )
 
     def is_finite(self: Self) -> Self:

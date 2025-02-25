@@ -143,7 +143,7 @@ def test_alias_invalid(constructor: Constructor) -> None:
         df.lazy().select(nw.all().alias("c")).collect()
 
 
-def test_changes_length_vs_aggregation(constructor_eager: ConstructorEager) -> None:
+def test_filtration_vs_aggregation(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager({"a": [1, None, 3]}))
     result = df.select(nw.col("a").drop_nulls(), b=nw.col("a").mean())
     expected: dict[str, Any] = {"a": [1, 3], "b": [2.0, 2.0]}
