@@ -364,9 +364,6 @@ class ExprKind(Enum):
     def preserves_length(self) -> bool:
         return self in {ExprKind.TRANSFORM, ExprKind.WINDOW}
 
-    def changes_length(self) -> bool:
-        return self is ExprKind.CHANGES_LENGTH
-
     def is_window(self) -> bool:
         return self is ExprKind.WINDOW
 
