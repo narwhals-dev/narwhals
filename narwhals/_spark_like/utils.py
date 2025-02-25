@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
+# note: don't lru_cache this as `ModuleType` isn't hashable
 def native_to_narwhals_dtype(
     dtype: pyspark_types.DataType,
     version: Version,

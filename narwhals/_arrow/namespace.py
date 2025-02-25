@@ -424,13 +424,10 @@ class ArrowWhen:
         if isinstance(self._otherwise_value, ArrowExpr):
             otherwise_series = self._otherwise_value(df)[0]
         else:
-            return [
-                value_series._from_native_series(
-                    pc.if_else(
-                        condition_native, value_series_native, self._otherwise_value
-                    )
-                )
-            ]
+            native_result = pc.if_else(
+                condition_native, value_series_native, self._otherwise_value
+            )
+            return [value_series._from_native_series(native_result)]
 
         otherwise_series_native = extract_dataframe_comparand(
             len(df), otherwise_series, self._backend_version
