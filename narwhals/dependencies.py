@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
     import pyspark.sql as pyspark_sql
-    import sqlframe
+    from sqlframe.base.dataframe import BaseDataFrame as SQLFrameDataFrame
     from typing_extensions import TypeGuard
     from typing_extensions import TypeIs
 
@@ -231,7 +231,7 @@ def is_pyspark_dataframe(df: Any) -> TypeIs[pyspark_sql.DataFrame]:
     )
 
 
-def is_sqlframe_dataframe(df: Any) -> TypeIs[sqlframe.base.dataframe.BaseDataFrame]:
+def is_sqlframe_dataframe(df: Any) -> TypeIs[SQLFrameDataFrame]:
     """Check whether `df` is a SQLFrame DataFrame without importing SQLFrame."""
     return bool(
         (sqlframe := get_sqlframe()) is not None
