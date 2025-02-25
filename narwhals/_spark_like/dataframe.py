@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
 from typing import Sequence
+from typing import cast
 
 from narwhals._spark_like.utils import native_to_narwhals_dtype
 from narwhals._spark_like.utils import parse_exprs
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
     from pyspark.sql import Column
     from pyspark.sql import DataFrame
     from pyspark.sql import Window
+    from pyspark.sql.session import SparkSession
     from typing_extensions import Self
     from typing_extensions import TypeAlias
 
@@ -109,9 +111,9 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         return Window
 
     @property
-    def _session(self: Self) -> Any:
+    def _session(self: Self) -> SparkSession:
         if self._implementation is Implementation.SQLFRAME:
-            return self._native_frame.session
+            return cast("SparkSession", self._native_frame.session)
 
         return self._native_frame.sparkSession
 
@@ -266,10 +268,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
 
         if not new_columns:
             # return empty dataframe, like Polars does
-            spark_df = self._session.createDataFrame(
-                [], self._native_dtypes.StructType([])
-            )
-
+            schema = self._native_dtypes.StructType([])
+            spark_df = self._session.createDataFrame([], schema)
             return self._from_native_frame(spark_df, validate_column_names=False)
 
         new_columns_list = [
