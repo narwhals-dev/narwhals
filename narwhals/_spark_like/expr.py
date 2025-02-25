@@ -228,13 +228,13 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
 
     def __floordiv__(self: Self, other: SparkLikeExpr) -> Self:
         def _floordiv(_input: Column, other: Column) -> Column:
-            return self._F.floor(_input / other)  # type: ignore[no-any-return]
+            return self._F.floor(_input / other)
 
         return self._from_call(_floordiv, "__floordiv__", other=other)
 
     def __rfloordiv__(self: Self, other: SparkLikeExpr) -> Self:
         def _rfloordiv(_input: Column, other: Column) -> Column:
-            return self._F.floor(other / _input)  # type: ignore[no-any-return]
+            return self._F.floor(other / _input)
 
         return self._from_call(_rfloordiv, "__rfloordiv__", other=other).alias("literal")
 
@@ -342,9 +342,9 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
 
             if parse_version(pyspark) < (3, 4):
                 # Use percentile_approx with default accuracy parameter (10000)
-                return self._F.percentile_approx(_input.cast("double"), 0.5)  # type: ignore[no-any-return]
+                return self._F.percentile_approx(_input.cast("double"), 0.5)
 
-            return self._F.median(_input)  # type: ignore[no-any-return]
+            return self._F.median(_input)
 
         return self._from_call(_median, "median")
 
@@ -353,7 +353,7 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
 
     def null_count(self: Self) -> Self:
         def _null_count(_input: Column) -> Column:
-            return self._F.count_if(self._F.isnull(_input))  # type: ignore[no-any-return]
+            return self._F.count_if(self._F.isnull(_input))
 
         return self._from_call(_null_count, "null_count")
 
@@ -414,7 +414,7 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
                 & (_input != self._F.lit(float("inf")))
                 & (_input != self._F.lit(float("-inf")))
             )
-            return self._F.when(~self._F.isnull(_input), is_finite_condition).otherwise(  # type: ignore[no-any-return]
+            return self._F.when(~self._F.isnull(_input), is_finite_condition).otherwise(
                 None
             )
 
@@ -429,20 +429,20 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
     def is_unique(self: Self) -> Self:
         def _is_unique(_input: Column) -> Column:
             # Create a window spec that treats each value separately
-            return self._F.count("*").over(self._Window.partitionBy(_input)) == 1  # type: ignore[no-any-return]
+            return self._F.count("*").over(self._Window.partitionBy(_input)) == 1
 
         return self._from_call(_is_unique, "is_unique")
 
     def len(self: Self) -> Self:
         def _len(_input: Column) -> Column:
             # Use count(*) to count all rows including nulls
-            return self._F.count("*")  # type: ignore[no-any-return]
+            return self._F.count("*")
 
         return self._from_call(_len, "len")
 
     def round(self: Self, decimals: int) -> Self:
         def _round(_input: Column) -> Column:
-            return self._F.round(_input, decimals)  # type: ignore[no-any-return]
+            return self._F.round(_input, decimals)
 
         return self._from_call(_round, "round")
 
@@ -451,7 +451,7 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
 
     def n_unique(self: Self) -> Self:
         def _n_unique(_input: Column) -> Column:
-            return self._F.count_distinct(_input) + self._F.max(  # type: ignore[no-any-return]
+            return self._F.count_distinct(_input) + self._F.max(
                 self._F.isnull(_input).cast(self._native_types.IntegerType())
             )
 
@@ -476,7 +476,7 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
 
     def is_nan(self: Self) -> Self:
         def _is_nan(_input: Column) -> Column:
-            return self._F.when(self._F.isnull(_input), None).otherwise(  # type: ignore[no-any-return]
+            return self._F.when(self._F.isnull(_input), None).otherwise(
                 self._F.isnan(_input)
             )
 

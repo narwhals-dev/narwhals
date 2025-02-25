@@ -36,7 +36,7 @@ class SparkLikeExprDateTimeNamespace:
 
     def millisecond(self: Self) -> SparkLikeExpr:
         def _millisecond(_input: Column) -> Column:
-            return self._compliant_expr._F.floor(  # type: ignore[no-any-return]
+            return self._compliant_expr._F.floor(
                 (self._compliant_expr._F.unix_micros(_input) % 1_000_000) / 1000
             )
 
@@ -44,13 +44,13 @@ class SparkLikeExprDateTimeNamespace:
 
     def microsecond(self: Self) -> SparkLikeExpr:
         def _microsecond(_input: Column) -> Column:
-            return self._compliant_expr._F.unix_micros(_input) % 1_000_000  # type: ignore[no-any-return]
+            return self._compliant_expr._F.unix_micros(_input) % 1_000_000
 
         return self._compliant_expr._from_call(_microsecond, "microsecond")
 
     def nanosecond(self: Self) -> SparkLikeExpr:
         def _nanosecond(_input: Column) -> Column:
-            return (self._compliant_expr._F.unix_micros(_input) % 1_000_000) * 1000  # type: ignore[no-any-return]
+            return (self._compliant_expr._F.unix_micros(_input) % 1_000_000) * 1000
 
         return self._compliant_expr._from_call(_nanosecond, "nanosecond")
 
@@ -62,6 +62,6 @@ class SparkLikeExprDateTimeNamespace:
     def weekday(self: Self) -> SparkLikeExpr:
         def _weekday(_input: Column) -> Column:
             # PySpark's dayofweek returns 1-7 for Sunday-Saturday
-            return (self._compliant_expr._F.dayofweek(_input) + 6) % 7  # type: ignore[no-any-return]
+            return (self._compliant_expr._F.dayofweek(_input) + 6) % 7
 
         return self._compliant_expr._from_call(_weekday, "weekday")
