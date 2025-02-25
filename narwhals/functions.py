@@ -16,10 +16,11 @@ from typing import overload
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import apply_n_ary_operation
-from narwhals._expression_parsing import check_expressions_transform
+from narwhals._expression_parsing import check_expressions_preserve_length
 from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import extract_compliant
 from narwhals._expression_parsing import infer_kind
+from narwhals._expression_parsing import is_scalar_like
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dependencies import is_numpy_array
@@ -1138,7 +1139,7 @@ def len_() -> Expr:
     def func(plx: Any) -> Any:
         return plx.len()
 
-    return Expr(func, ExprMetadata(ExprKind.AGGREGATION, order_dependent=False))
+    return Expr(func, ExprMetadata(ExprKind.AGGREGATION, n_open_windows=0))
 
 
 def sum(*columns: str) -> Expr:
@@ -1436,7 +1437,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 class When:
     def __init__(self: Self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
         self._predicate = all_horizontal(*flatten(predicates))
-        check_expressions_transform(self._predicate, function_name="when")
+        check_expressions_preserve_length(self._predicate, function_name="when")
 
     def then(self: Self, value: IntoExpr | Any) -> Then:
         return Then(
@@ -1458,9 +1459,7 @@ class Then(Expr):
         def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
             compliant_expr = self._to_compliant_expr(plx)
             compliant_value = extract_compliant(plx, value, str_as_lit=False)
-            if (
-                kind is ExprKind.AGGREGATION or kind is ExprKind.LITERAL
-            ) and is_compliant_expr(compliant_value):
+            if is_scalar_like(kind) and is_compliant_expr(compliant_value):
                 compliant_value = compliant_value.broadcast(kind)
             return compliant_expr.otherwise(compliant_value)  # type: ignore[no-any-return]
 
@@ -1596,7 +1595,7 @@ def lit(value: Any, dtype: DType | type[DType] | None = None) -> Expr:
 
     return Expr(
         lambda plx: plx.lit(value, dtype),
-        ExprMetadata(ExprKind.LITERAL, order_dependent=False),
+        ExprMetadata(ExprKind.LITERAL, n_open_windows=0),
     )
 
 

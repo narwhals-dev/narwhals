@@ -43,7 +43,7 @@ class DaskLazyFrame(CompliantLazyFrame):
         version: Version,
         validate_column_names: bool,
     ) -> None:
-        self._native_frame = native_dataframe
+        self._native_frame: dd.DataFrame = native_dataframe
         self._backend_version = backend_version
         self._implementation = Implementation.DASK
         self._version = version
@@ -138,7 +138,7 @@ class DaskLazyFrame(CompliantLazyFrame):
 
     @property
     def columns(self: Self) -> list[str]:
-        return self._native_frame.columns.tolist()  # type: ignore[no-any-return]
+        return self._native_frame.columns.tolist()
 
     def filter(self: Self, predicate: DaskExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
@@ -426,7 +426,7 @@ class DaskLazyFrame(CompliantLazyFrame):
         return (
             self.with_row_index(row_index_token)
             .filter(
-                (plx.col(row_index_token) >= offset)  # type: ignore[operator]
+                (plx.col(row_index_token) >= offset)
                 & ((plx.col(row_index_token) - offset) % n == 0)
             )
             .drop([row_index_token], strict=False)

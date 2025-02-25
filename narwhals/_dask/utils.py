@@ -62,7 +62,7 @@ def align_series_full_broadcast(
     return [
         s if isinstance(s, dx.Series) else df._native_frame.assign(_tmp=s)["_tmp"]
         for s in series
-    ]
+    ]  # pyright: ignore[reportReturnType]
 
 
 def add_row_index(
@@ -155,8 +155,8 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> An
 
 
 def name_preserving_sum(s1: dx.Series, s2: dx.Series) -> dx.Series:
-    return (s1 + s2).rename(s1.name)
+    return (s1 + s2).rename(s1.name)  # pyright: ignore[reportOperatorIssue]
 
 
 def name_preserving_div(s1: dx.Series, s2: dx.Series) -> dx.Series:
-    return (s1 / s2).rename(s1.name)
+    return (s1 / s2).rename(s1.name)  # pyright: ignore[reportOperatorIssue]
