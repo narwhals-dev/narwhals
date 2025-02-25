@@ -676,7 +676,11 @@ def test_join_duplicate_column_names(
         # need to investigate.
     ):
         request.applymarker(pytest.mark.xfail)
-    if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
+    if "sqlframe" in str(constructor):
+        import duckdb
+
+        exception: type[Exception] = duckdb.BinderException
+    elif "pyspark" in str(constructor):
         from pyspark.errors import AnalysisException
 
         exception = AnalysisException
