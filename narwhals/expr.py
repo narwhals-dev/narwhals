@@ -1546,7 +1546,7 @@ class Expr:
         flattened = flatten(keys)
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).over(
-                flattened, kind=self._metadata.kind
+                flattened, kind=self._metadata.kind, order_by=_order_by
             ),
             metadata,
         )
