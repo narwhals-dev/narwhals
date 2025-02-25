@@ -569,7 +569,7 @@ class Duration(TemporalType, metaclass=_DurationMeta):
     """
 
     def __init__(self: Self, time_unit: TimeUnit = "us") -> None:
-        if time_unit not in ("s", "ms", "us", "ns"):
+        if time_unit not in {"s", "ms", "us", "ns"}:
             msg = (
                 "invalid `time_unit`"
                 f"\n\nExpected one of {{'ns','us','ms', 's'}}, got {time_unit!r}."

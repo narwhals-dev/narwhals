@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.expr import DaskExpr
 
-    PandasSeriesGroupBy: TypeAlias = "_PandasSeriesGroupBy[Any, Any]"
+    PandasSeriesGroupBy: TypeAlias = _PandasSeriesGroupBy[Any, Any]
     _AggFn: TypeAlias = Callable[..., Any]
     Aggregation: TypeAlias = "str | _AggFn"
 
@@ -138,7 +138,7 @@ def agg_dask(
                     expr._function_name, expr._function_name
                 )
                 simple_aggregations.update(
-                    {alias: (keys[0], function_name) for alias in aliases}
+                    dict.fromkeys(aliases, (keys[0], function_name))
                 )
                 continue
 

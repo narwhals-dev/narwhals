@@ -106,11 +106,26 @@ exclude = [
 line-length = 90
 fix = true
 target-version = "py38"
+extend-exclude = ["utils/bump_version.py", "**/this.py"]
 
-lint.select = [
+[tool.ruff.lint]
+preview = true
+explicit-preview-rules = true
+
+extend-safe-fixes = [
+  "C419",
+  "C420",
+  "PLR6201",
+  "TC",
+  "UP",
+]
+extend-select = [
+  "PLR6201",
+]
+select = [
   "ALL",
 ]
-lint.ignore = [
+ignore = [
   "A001",
   "A004",
   "A005",
@@ -143,6 +158,7 @@ lint.ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
+"narwhals/expr_dt.py" = ["RUF002"]
 "tests/*" = ["S101"]
 "tpch/tests/*" = ["S101"]
 "utils/*" = ["S311", "PTH123"]
@@ -262,7 +278,7 @@ pythonPlatform = "All"
 reportMissingImports = "none"
 reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
-reportUnusedExpression = "none"    # can enforce with `ruff`
+reportUnusedExpression = "none"    # handled by (https://docs.astral.sh/ruff/rules/unused-variable/)
 typeCheckingMode = "basic"
 include = ["narwhals", "tests"]
 ignore = [
