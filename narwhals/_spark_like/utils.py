@@ -147,8 +147,10 @@ def narwhals_to_native_dtype(
     raise AssertionError(msg)
 
 
-def parse_exprs(df: SparkLikeLazyFrame, /, *exprs: SparkLikeExpr) -> dict[str, Column]:
-    native_results: dict[str, Column] = {}
+def evaluate_exprs(
+    df: SparkLikeLazyFrame, /, *exprs: SparkLikeExpr
+) -> list[tuple[str, Column]]:
+    native_results: list[tuple[str, Column]] = []
 
     for expr in exprs:
         native_series_list = expr._call(df)
@@ -158,7 +160,7 @@ def parse_exprs(df: SparkLikeLazyFrame, /, *exprs: SparkLikeExpr) -> dict[str, C
         if len(output_names) != len(native_series_list):  # pragma: no cover
             msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
             raise AssertionError(msg)
-        native_results.update(zip(output_names, native_series_list))
+        native_results.extend(zip(output_names, native_series_list))
 
     return native_results
 

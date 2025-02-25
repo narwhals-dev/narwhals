@@ -676,9 +676,11 @@ def test_join_duplicate_column_names(
         # need to investigate.
     ):
         request.applymarker(pytest.mark.xfail)
+    if "sqlframe" in str(constructor):
+        import duckdb
 
-    exception: type[Exception]
-    if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
+        exception: type[Exception] = duckdb.BinderException
+    elif "pyspark" in str(constructor):
         from pyspark.errors import AnalysisException
 
         exception = AnalysisException
@@ -689,4 +691,4 @@ def test_join_duplicate_column_names(
     df = constructor({"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]})
     dfn = nw.from_native(df)
     with pytest.raises(exception):
-        dfn.join(dfn, on=["a"]).join(dfn, on=["a"])  # type: ignore[arg-type]
+        dfn.join(dfn, on=["a"]).join(dfn, on=["a"]).lazy().collect()  # type: ignore[arg-type]

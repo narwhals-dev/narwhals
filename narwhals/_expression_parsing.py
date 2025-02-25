@@ -331,8 +331,8 @@ class ExprKind(Enum):
 
     Commutative composition rules are:
     - LITERAL vs LITERAL -> LITERAL
-    - CHANGES_LENGTH vs (LITERAL | AGGREGATION) -> CHANGES_LENGTH
-    - CHANGES_LENGTH vs (CHANGES_LENGTH | TRANSFORM | WINDOW) -> raise
+    - FILTRATION vs (LITERAL | AGGREGATION) -> FILTRATION
+    - FILTRATION vs (FILTRATION | TRANSFORM | WINDOW) -> raise
     - (TRANSFORM | WINDOW) vs (LITERAL | AGGREGATION) -> TRANSFORM
     - AGGREGATION vs (LITERAL | AGGREGATION) -> AGGREGATION
     """
@@ -358,7 +358,7 @@ class ExprKind(Enum):
     - `nw.col('a').cum_sum().mean()`
     """
 
-    CHANGES_LENGTH = auto()
+    FILTRATION = auto()
     """e.g. `nw.col('a').drop_nulls()`"""
 
     def preserves_length(self) -> bool:
@@ -367,8 +367,8 @@ class ExprKind(Enum):
     def is_window(self) -> bool:
         return self is ExprKind.WINDOW
 
-    def is_changes_length(self) -> bool:
-        return self is ExprKind.CHANGES_LENGTH
+    def is_filtration(self) -> bool:
+        return self is ExprKind.FILTRATION
 
     def is_scalar_like(self) -> bool:
         return is_scalar_like(self)
@@ -420,7 +420,7 @@ class ExprMetadata:
 def combine_metadata(*args: IntoExpr | object | None, str_as_lit: bool) -> ExprMetadata:
     # Combine metadata from `args`.
 
-    n_changes_length = 0
+    n_filtrations = 0
     has_transforms_or_windows = False
     has_aggregations = False
     has_literals = False
@@ -437,8 +437,8 @@ def combine_metadata(*args: IntoExpr | object | None, str_as_lit: bool) -> ExprM
                 has_aggregations = True
             elif kind is ExprKind.LITERAL:
                 has_literals = True
-            elif kind is ExprKind.CHANGES_LENGTH:
-                n_changes_length += 1
+            elif kind is ExprKind.FILTRATION:
+                n_filtrations += 1
             elif kind.preserves_length():
                 has_transforms_or_windows = True
             else:  # pragma: no cover
@@ -448,17 +448,17 @@ def combine_metadata(*args: IntoExpr | object | None, str_as_lit: bool) -> ExprM
         has_literals
         and not has_aggregations
         and not has_transforms_or_windows
-        and not n_changes_length
+        and not n_filtrations
     ):
         result_kind = ExprKind.LITERAL
-    elif n_changes_length > 1:
+    elif n_filtrations > 1:
         msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
         raise LengthChangingExprError(msg)
-    elif n_changes_length and has_transforms_or_windows:
+    elif n_filtrations and has_transforms_or_windows:
         msg = "Cannot combine length-changing expressions with length-preserving ones or aggregations"
         raise ShapeError(msg)
-    elif n_changes_length:
-        result_kind = ExprKind.CHANGES_LENGTH
+    elif n_filtrations:
+        result_kind = ExprKind.FILTRATION
     elif has_transforms_or_windows:
         result_kind = ExprKind.TRANSFORM
     else:

@@ -246,7 +246,6 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):  #
                 backend_version=self._backend_version,
                 version=self._version,
                 implementation=self._implementation,
-                validate_column_names=False,
             )
 
         if how == "diagonal":
@@ -257,7 +256,6 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):  #
                 backend_version=self._backend_version,
                 version=self._version,
                 implementation=self._implementation,
-                validate_column_names=False,
             )
         raise NotImplementedError
 

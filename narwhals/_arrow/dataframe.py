@@ -356,7 +356,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         names = [s.name for s in new_series]
         new_series = align_series_full_broadcast(*new_series)
         df = pa.Table.from_arrays([s._native_series for s in new_series], names=names)
-        return self._from_native_frame(df, validate_column_names=False)
+        return self._from_native_frame(df, validate_column_names=True)
 
     def with_columns(self: Self, *exprs: ArrowExpr) -> Self:
         native_frame = self._native_frame
