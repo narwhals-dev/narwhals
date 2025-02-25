@@ -55,6 +55,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         self._native_frame: duckdb.DuckDBPyRelation = df
         self._version = version
         self._backend_version = backend_version
+        self._cached_schema: dict[str, DType] | None = None
         validate_backend_version(self._implementation, self._backend_version)
 
     def __narwhals_dataframe__(self: Self) -> Self:  # pragma: no cover
@@ -189,16 +190,20 @@ class DuckDBLazyFrame(CompliantLazyFrame):
 
     @property
     def schema(self: Self) -> dict[str, DType]:
-        return {
-            column_name: native_to_narwhals_dtype(str(duckdb_dtype), self._version)
-            for column_name, duckdb_dtype in zip(
-                self._native_frame.columns, self._native_frame.types
-            )
-        }
+        if self._cached_schema is None:
+            # Note: prefer `self._cached_schema` over `functools.cached_property`
+            # due to Python3.13 failures.
+            self._cached_schema = {
+                column_name: native_to_narwhals_dtype(str(duckdb_dtype), self._version)
+                for column_name, duckdb_dtype in zip(
+                    self._native_frame.columns, self._native_frame.types
+                )
+            }
+        return self._cached_schema
 
     @property
     def columns(self: Self) -> list[str]:
-        return self._native_frame.columns
+        return list(self.schema)
 
     def to_pandas(self: Self) -> pd.DataFrame:
         # only if version is v1, keep around for backcompat
