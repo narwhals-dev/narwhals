@@ -22,7 +22,7 @@ class ExprStringNamespace(Generic[ExprT]):
         Returns:
             A new expression.
 
-        Example:
+        Examples:
             >>> import polars as pl
             >>> import narwhals as nw
             >>> df_native = pl.DataFrame({"words": ["foo", "345", None]})
@@ -96,7 +96,7 @@ class ExprStringNamespace(Generic[ExprT]):
         Returns:
             A new expression.
 
-        Example:
+        Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
             >>> df_native = pd.DataFrame({"foo": ["123abc", "abc abc123"]})
@@ -129,7 +129,7 @@ class ExprStringNamespace(Generic[ExprT]):
         Returns:
             A new expression.
 
-        Example:
+        Examples:
             >>> import polars as pl
             >>> import narwhals as nw
             >>> df_native = pl.DataFrame({"fruits": ["apple", "\nmango"]})
@@ -153,7 +153,7 @@ class ExprStringNamespace(Generic[ExprT]):
         Returns:
             A new expression.
 
-        Example:
+        Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
             >>> df_native = pd.DataFrame({"fruits": ["apple", "mango", None]})
@@ -182,7 +182,7 @@ class ExprStringNamespace(Generic[ExprT]):
         Returns:
             A new expression.
 
-        Example:
+        Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
             >>> df_native = pd.DataFrame({"fruits": ["apple", "mango", None]})
@@ -213,7 +213,7 @@ class ExprStringNamespace(Generic[ExprT]):
         Returns:
             A new expression.
 
-        Example:
+        Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_native = pa.table({"pets": ["cat", "dog", "rabbit and parrot"]})
@@ -249,7 +249,7 @@ class ExprStringNamespace(Generic[ExprT]):
         Returns:
             A new expression.
 
-        Example:
+        Examples:
            >>> import pandas as pd
             >>> import narwhals as nw
             >>> df_native = pd.DataFrame({"s": ["pear", None, "papaya"]})
@@ -283,7 +283,7 @@ class ExprStringNamespace(Generic[ExprT]):
         Notes:
             If the length of the string has fewer than `n` characters, the full string is returned.
 
-        Example:
+        Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_native = pa.table({"lyrics": ["taata", "taatatata", "zukkyun"]})
@@ -313,7 +313,7 @@ class ExprStringNamespace(Generic[ExprT]):
         Notes:
             If the length of the string has fewer than `n` characters, the full string is returned.
 
-        Example:
+        Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_native = pa.table({"lyrics": ["taata", "taatatata", "zukkyun"]})
@@ -353,7 +353,7 @@ class ExprStringNamespace(Generic[ExprT]):
             in pandas, with no ability to set any other one. The ability to
             set the time unit in pandas, if the version permits, will arrive.
 
-        Example:
+        Examples:
             >>> import polars as pl
             >>> import narwhals as nw
             >>> df_native = pl.DataFrame({"a": ["2020-01-01", "2020-01-02"]})
@@ -389,7 +389,7 @@ class ExprStringNamespace(Generic[ExprT]):
             For more info see [the related issue](https://github.com/apache/arrow/issues/34599).
             There may be other unicode-edge-case-related variations across implementations.
 
-        Example:
+        Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
             >>> df_native = pd.DataFrame({"fruits": ["apple", None]})
@@ -414,7 +414,7 @@ class ExprStringNamespace(Generic[ExprT]):
         Returns:
             A new expression.
 
-        Example:
+        Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
             >>> df_native = pd.DataFrame({"fruits": ["APPLE", None]})

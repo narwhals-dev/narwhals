@@ -23,7 +23,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Returns:
             A new Series containing the length of each string in characters.
 
-        Example:
+        Examples:
             >>> import polars as pl
             >>> import narwhals as nw
             >>> s_native = pl.Series(["foo", "345", None])
@@ -55,7 +55,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Returns:
             A new Series with the regex/literal pattern replaced with the specified value.
 
-        Example:
+        Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
             >>> s_native = pd.Series(["123abc", "abc abc123"])
@@ -84,7 +84,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Returns:
             A new Series with all occurrences of pattern replaced with the specified value.
 
-        Example:
+        Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
             >>> s_native = pd.Series(["123abc", "abc abc123"])
@@ -109,7 +109,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Returns:
             A new Series with leading and trailing characters removed.
 
-        Example:
+        Examples:
             >>> import polars as pl
             >>> import narwhals as nw
             >>> s_native = pl.Series(["apple", "\nmango"])
@@ -135,7 +135,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Returns:
             A new Series with boolean values indicating if each string starts with the prefix.
 
-        Example:
+        Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
             >>> s_native = pd.Series(["apple", "mango", None])
@@ -159,7 +159,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Returns:
             A new Series with boolean values indicating if each string ends with the suffix.
 
-        Example:
+        Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
             >>> s_native = pd.Series(["apple", "mango", None])
@@ -185,7 +185,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Returns:
             A new Series with boolean values indicating if each string contains the pattern.
 
-        Example:
+        Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> import pyarrow as pa
@@ -219,7 +219,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Returns:
             A new Series containing subslices of each string.
 
-        Example:
+        Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
             >>> s_native = pd.Series(["pear", None, "papaya"])
@@ -250,7 +250,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
                 For example, if `n = -3`, then all characters except the last three are returned.
             2. If the length of the string has fewer than `n` characters, the full string is returned.
 
-        Example:
+        Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> s_native = pa.chunked_array([["taata", "taatatata", "zukkyun"]])
@@ -283,7 +283,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
                 the string. For example, if `n = -3`, then all characters except the first three are returned.
             2. If the length of the string has fewer than `n` characters, the full string is returned.
 
-        Example:
+        Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> s_native = pa.chunked_array([["taata", "taatatata", "zukkyun"]])
@@ -313,7 +313,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             For more info see: https://github.com/apache/arrow/issues/34599
             There may be other unicode-edge-case-related variations across implementations.
 
-        Example:
+        Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
             >>> s_native = pd.Series(["apple", None])
@@ -333,7 +333,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Returns:
             A new Series with values converted to lowercase.
 
-        Example:
+        Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
             >>> s_native = pd.Series(["APPLE", None])
@@ -367,7 +367,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Returns:
             A new Series with datetime dtype.
 
-        Example:
+        Examples:
             >>> import polars as pl
             >>> import narwhals as nw
             >>> s_native = pl.Series(["2020-01-01", "2020-01-02"])
