@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from pyspark.sql import Column
     from pyspark.sql import DataFrame
+    from pyspark.sql import Window
     from typing_extensions import Self
     from typing_extensions import TypeAlias
 
@@ -90,7 +91,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         return types
 
     @property
-    def _Window(self: Self) -> Any:  # noqa: N802
+    def _Window(self: Self) -> type[Window]:  # noqa: N802
         if self._implementation is Implementation.SQLFRAME:
             from sqlframe.base.session import _BaseSession
 
