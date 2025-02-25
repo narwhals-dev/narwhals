@@ -268,5 +268,5 @@ def test_unsupported_over() -> None:
     with pytest.raises(NotImplementedError, match="elementary"):
         nw.from_native(df).select(nw.col("a").shift(1).cum_sum().over("b"))
     tbl = pa.table(data)  # type: ignore[arg-type]
-    with pytest.raises(NotImplementedError, match="Elementwise"):
+    with pytest.raises(NotImplementedError, match="aggregation or literal"):
         nw.from_native(tbl).select(nw.col("a").shift(1).cum_sum().over("b"))
