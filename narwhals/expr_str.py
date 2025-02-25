@@ -62,7 +62,7 @@ class ExprStringNamespace(Generic[ExprT]):
         Returns:
             A new expression.
 
-        Examplew:
+        Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
             >>> df_native = pd.DataFrame({"foo": ["123abc", "abc abc123"]})
