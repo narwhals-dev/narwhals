@@ -357,7 +357,7 @@ class DaskWhen:
             then_value = self._then_value(df)[0]
         else:
             then_value = self._then_value
-        then_series = align_series_full_broadcast(df, then_value)[0]
+        (then_series,) = align_series_full_broadcast(df, then_value)
         validate_comparand(condition, then_series)
 
         if self._otherwise_value is None:
@@ -367,7 +367,7 @@ class DaskWhen:
             otherwise_value = self._otherwise_value(df)[0]
         else:
             otherwise_value = self._otherwise_value
-        otherwise_series = align_series_full_broadcast(df, otherwise_value)[0]
+        (otherwise_series,) = align_series_full_broadcast(df, otherwise_value)
         validate_comparand(condition, otherwise_series)
         return [then_series.where(condition, otherwise_series)]  # pyright: ignore[reportArgumentType]
 
