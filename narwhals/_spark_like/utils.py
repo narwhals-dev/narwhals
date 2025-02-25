@@ -3,6 +3,9 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import cast
+
+import pyspark.sql.types as pyspark_types
 
 from narwhals.exceptions import UnsupportedDTypeError
 from narwhals.utils import import_dtypes_module
@@ -11,7 +14,6 @@ from narwhals.utils import isinstance_or_issubclass
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import pyspark.sql.types as pyspark_types
     from pyspark.sql import Column
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
@@ -55,14 +57,14 @@ def native_to_narwhals_dtype(
     if isinstance(dtype, spark_types.DecimalType):
         return dtypes.Decimal()
     if isinstance(dtype, spark_types.ArrayType):
+        dtype = cast(pyspark_types.ArrayType, dtype)
         return dtypes.List(
             inner=native_to_narwhals_dtype(
-                dtype.elementType,  # pyright: ignore[reportAttributeAccessIssue]
-                version=version,
-                spark_types=spark_types,
+                dtype.elementType, version=version, spark_types=spark_types
             )
         )
     if isinstance(dtype, spark_types.StructType):
+        dtype = cast(pyspark_types.StructType, dtype)
         return dtypes.Struct(
             fields=[
                 dtypes.Field(
@@ -71,7 +73,7 @@ def native_to_narwhals_dtype(
                         field.dataType, version=version, spark_types=spark_types
                     ),
                 )
-                for field in dtype  # pyright: ignore[reportGeneralTypeIssues]
+                for field in dtype
             ]
         )
     return dtypes.Unknown()
