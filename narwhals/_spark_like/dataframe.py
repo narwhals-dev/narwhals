@@ -60,7 +60,11 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         validate_backend_version(self._implementation, self._backend_version)
 
     @property
-    def _F(self: Self) -> Any:  # noqa: N802
+    def _F(self: Self):  # type: ignore[no-untyped-def] # noqa: ANN202, N802
+        if TYPE_CHECKING:
+            from pyspark.sql import functions
+
+            return functions
         if self._implementation is Implementation.SQLFRAME:
             from sqlframe.base.session import _BaseSession
 
