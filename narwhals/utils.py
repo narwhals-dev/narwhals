@@ -10,6 +10,7 @@ from secrets import token_hex
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Protocol
 from typing import Sequence
 from typing import TypeVar
 from typing import Union
@@ -42,7 +43,6 @@ from narwhals.exceptions import InvalidOperationError
 if TYPE_CHECKING:
     from types import ModuleType
     from typing import AbstractSet as Set
-    from typing import Protocol
 
     import pandas as pd
     from typing_extensions import Self
@@ -106,6 +106,16 @@ if TYPE_CHECKING:
     class _StoresColumns(Protocol):
         @property
         def columns(self) -> Sequence[str]: ...
+
+
+T_co = TypeVar("T_co", covariant=True)
+
+
+class _StoresNative(Protocol[T_co]):  # noqa: PYI046
+    @property
+    def native(self) -> T_co:
+        """Return the native object."""
+        ...
 
 
 class Version(Enum):
