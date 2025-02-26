@@ -12,12 +12,15 @@ from typing import overload
 import pyarrow as pa
 import pyarrow.compute as pc
 
+from narwhals.utils import _StoresCompliant
+from narwhals.utils import _StoresNative
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from typing import TypeVar
 
+    from typing_extensions import Self
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
@@ -546,3 +549,18 @@ def pad_series(
         offset = 0
 
     return padded_arr, offset
+
+
+class ArrowSeriesNamespace(
+    _StoresCompliant["ArrowSeries"], _StoresNative["ArrowChunkedArray"]
+):
+    def __init__(self: Self, series: ArrowSeries) -> None:
+        self._compliant_series: ArrowSeries = series
+
+    @property
+    def compliant(self) -> ArrowSeries:
+        return self._compliant_series
+
+    @property
+    def native(self) -> ArrowChunkedArray:
+        return self._compliant_series.native
