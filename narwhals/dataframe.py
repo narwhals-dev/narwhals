@@ -1236,6 +1236,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         return self._compliant_frame.rows(named=named)  # type: ignore[no-any-return]
 
     def iter_columns(self: Self) -> Iterator[Series[Any]]:
+        """Returns an iterator over the columns of this DataFrame.
+
+        Yields:
+            A Narwhals Series, backed by a native series.
+        """
         for series in self._compliant_frame.iter_columns():
             yield self._series(series, level=self._level)
 
