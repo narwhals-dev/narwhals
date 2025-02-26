@@ -49,6 +49,10 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import MultiColSelector
+    from narwhals.typing import MultiIndexSelector
+    from narwhals.typing import SingleColSelector
+    from narwhals.typing import SingleIndexSelector
     from narwhals.typing import SizeUnit
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
@@ -161,38 +165,38 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         return self.to_numpy(dtype=dtype, copy=copy)
 
     @overload
+    def __getitem__(
+        self: Self, item: tuple[SingleIndexSelector, SingleColSelector]
+    ) -> Any: ...
+
+    @overload
     def __getitem__(  # type: ignore[overload-overlap]
         self: Self,
-        item: str | tuple[slice | Sequence[int] | _1DArray, int | str],
+        item: str | tuple[MultiIndexSelector, SingleColSelector],
     ) -> PandasLikeSeries: ...
 
     @overload
     def __getitem__(
         self: Self,
         item: (
-            int
-            | slice
-            | Sequence[int]
-            | Sequence[str]
-            | _1DArray
-            | tuple[
-                slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
-            ]
+            SingleIndexSelector
+            | MultiIndexSelector
+            | MultiColSelector
+            | tuple[SingleIndexSelector, MultiColSelector]
+            | tuple[MultiIndexSelector, MultiColSelector]
         ),
     ) -> Self: ...
     def __getitem__(
         self: Self,
         item: (
-            str
-            | int
-            | slice
-            | Sequence[int]
-            | Sequence[str]
-            | _1DArray
-            | tuple[slice | Sequence[int] | _1DArray, int | str]
-            | tuple[
-                slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
-            ]
+            SingleIndexSelector
+            | SingleColSelector
+            | MultiColSelector
+            | MultiIndexSelector
+            | tuple[SingleIndexSelector, SingleColSelector]
+            | tuple[SingleIndexSelector, MultiColSelector]
+            | tuple[MultiIndexSelector, SingleColSelector]
+            | tuple[MultiIndexSelector, MultiColSelector]
         ),
     ) -> PandasLikeSeries | Self:
         if isinstance(item, tuple):
