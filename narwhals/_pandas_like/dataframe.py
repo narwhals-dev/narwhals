@@ -341,6 +341,15 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
         return self._native_frame.to_dict(orient="records")
 
+    def iter_columns(self) -> Iterator[PandasLikeSeries]:
+        for _name, series in self._native_frame.items():  # noqa: PERF102
+            yield PandasLikeSeries(
+                series,
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+                version=self._version,
+            )
+
     def iter_rows(
         self: Self,
         *,

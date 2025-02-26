@@ -153,6 +153,17 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             return list(self.iter_rows(named=False, buffer_size=512))  # type: ignore[return-value]
         return self._native_frame.to_pylist()
 
+    def iter_columns(self) -> Iterator[ArrowSeries]:
+        from narwhals._arrow.series import ArrowSeries
+
+        for name, series in zip(self.columns, self._native_frame.itercolumns()):
+            yield ArrowSeries(
+                series,
+                name=name,
+                backend_version=self._backend_version,
+                version=self._version,
+            )
+
     def iter_rows(
         self: Self, *, named: bool, buffer_size: int
     ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
