@@ -268,7 +268,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             msg = "Mixing Series with LazyFrame is not supported."
             raise TypeError(msg)
         if isinstance(arg, Expr):
-            # After stable.v1, we raise if arg._is_order_dependent or arg._changes_length
+            # After stable.v1, we raise for order-dependent exprs or filtrations
             return arg._to_compliant_expr(self.__narwhals_namespace__())
         if isinstance(arg, str):
             plx = self.__narwhals_namespace__()
@@ -968,7 +968,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).head(n),
-            self._metadata.with_kind_and_order_dependence(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
         )
 
     def tail(self: Self, n: int = 10) -> Self:
@@ -982,7 +982,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).tail(n),
-            self._metadata.with_kind_and_order_dependence(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
         )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
@@ -997,7 +997,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
-            self._metadata.with_kind_and_order_dependence(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
         )
 
     def unique(self: Self, *, maintain_order: bool | None = None) -> Self:
@@ -1019,7 +1019,7 @@ class Expr(NwExpr):
             warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).unique(),
-            self._metadata.with_kind(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind(ExprKind.FILTRATION),
         )
 
     def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
@@ -1036,7 +1036,7 @@ class Expr(NwExpr):
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             ),
-            self._metadata.with_order_dependence(),
+            self._metadata.with_extra_open_window(),
         )
 
     def arg_true(self: Self) -> Self:
@@ -1047,7 +1047,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_true(),
-            self._metadata.with_kind_and_order_dependence(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
         )
 
     def sample(
@@ -1081,7 +1081,7 @@ class Expr(NwExpr):
             lambda plx: self._to_compliant_expr(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
             ),
-            self._metadata.with_kind_and_order_dependence(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind(ExprKind.FILTRATION),
         )
 
 

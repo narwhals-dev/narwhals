@@ -269,6 +269,7 @@ module = [
   "*._pandas_like.*",
   "*._ibis.*",
   "*._arrow.*",
+  "*._dask.*",
 ]
 warn_return_any = false
 
