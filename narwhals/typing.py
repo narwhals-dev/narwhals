@@ -62,6 +62,9 @@ class CompliantDataFrame(Protocol):
         ...  # `select` where all args are aggregations or literals
         # (so, no broadcasting is necessary).
 
+    @property
+    def columns(self) -> Sequence[str]: ...
+
 
 class CompliantLazyFrame(Protocol):
     def __narwhals_lazyframe__(self) -> Self: ...
@@ -72,6 +75,9 @@ class CompliantLazyFrame(Protocol):
     def aggregate(self, *exprs: Any) -> Self:
         ...  # `select` where all args are aggregations or literals
         # (so, no broadcasting is necessary).
+
+    @property
+    def columns(self) -> Sequence[str]: ...
 
 
 CompliantFrameT_contra = TypeVar(
