@@ -64,7 +64,9 @@ class PandasLikeSeriesStringNamespace:
         )
 
     def split(self: Self, by: str) -> PandasLikeSeries:
-        if self._compliant_series._implementation is not Implementation.CUDF:
+        if (
+            self._compliant_series._implementation is not Implementation.CUDF
+        ):  # pragma: no cover
             dtype_backend = get_dtype_backend(
                 self._compliant_series._native_series.dtype,
                 self._compliant_series._implementation,
