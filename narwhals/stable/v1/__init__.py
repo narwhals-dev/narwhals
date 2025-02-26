@@ -340,6 +340,20 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         """
         return super().tail(n)
 
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        r"""Take every nth row in the DataFrame and return as a new DataFrame.
+
+        Arguments:
+            n: Gather every *n*-th row.
+            offset: Starting index.
+
+        Returns:
+            The LazyFrame containing only the selected rows.
+        """
+        return self._from_compliant_dataframe(
+            self._compliant_frame.gather_every(n=n, offset=offset)
+        )
+
 
 class Series(NwSeries[Any]):
     """Narwhals Series, backed by a native series.

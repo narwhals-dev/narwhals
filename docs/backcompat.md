@@ -113,6 +113,8 @@ before making any change.
 
 The following are differences between the main Narwhals namespace and `narwhals.stable.v1`:
 
+- Since Narwhals 1.29.0, `LazyFrame.gather_every` has been deprecated from the main namespace.
+
 - Since Narwhals 1.24.1, an empty or all-null object-dtype pandas Series is inferred to
   be of dtype `String`. Previously, it would have been inferred as `Object`.
 

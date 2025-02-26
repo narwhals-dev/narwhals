@@ -34,6 +34,7 @@ from narwhals.utils import find_stacklevel
 from narwhals.utils import flatten
 from narwhals.utils import generate_repr
 from narwhals.utils import is_sequence_but_not_str
+from narwhals.utils import issue_deprecation_warning
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -3109,6 +3110,11 @@ class LazyFrame(BaseFrame[FrameT]):
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         r"""Take every nth row in the DataFrame and return as a new DataFrame.
 
+        !!! warning
+            `LazyFrame.gather_every` is deprecated and will be removed in a future version.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
+
         Arguments:
             n: Gather every *n*-th row.
             offset: Starting index.
@@ -3116,6 +3122,13 @@ class LazyFrame(BaseFrame[FrameT]):
         Returns:
             The LazyFrame containing only the selected rows.
         """
+        msg = (
+            "`LazyFrane.gather_every` is deprecated and will be removed in a future version.\n\n"
+            "Note: this will remain available in `narwhals.stable.v1`.\n"
+            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+        )
+        issue_deprecation_warning(msg, _version="1.28.0")
+
         return super().gather_every(n=n, offset=offset)
 
     def unpivot(
