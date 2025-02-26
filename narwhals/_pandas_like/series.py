@@ -194,6 +194,10 @@ class PandasLikeSeries(CompliantSeries):
             )
         )
 
+    @property
+    def native(self) -> Any:
+        return self._native_series
+
     def ewm_mean(
         self: Self,
         *,

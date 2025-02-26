@@ -57,7 +57,6 @@ if TYPE_CHECKING:
     from narwhals.typing import CompliantFrameT_contra
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import CompliantSeries
-    from narwhals.typing import CompliantSeriesT_co
     from narwhals.typing import DataFrameLike
     from narwhals.typing import DTypes
     from narwhals.typing import IntoSeriesT
@@ -110,20 +109,52 @@ if TYPE_CHECKING:
 
 NativeT_co = TypeVar("NativeT_co", covariant=True)
 CompliantT_co = TypeVar("CompliantT_co", covariant=True)
+CompliantExprT_co = TypeVar(
+    "CompliantExprT_co", bound="CompliantExpr[Any, Any]", covariant=True
+)
+CompliantSeriesT_co = TypeVar(
+    "CompliantSeriesT_co", bound="CompliantSeries", covariant=True
+)
 
 
-class _StoresNative(Protocol[NativeT_co]):  # noqa: PYI046
+class _StoresNative(Protocol[NativeT_co]):
     @property
     def native(self) -> NativeT_co:
         """Return the native object."""
         ...
 
 
-class _StoresCompliant(Protocol[CompliantT_co]):  # noqa: PYI046
+class _StoresCompliant(Protocol[CompliantT_co]):
     @property
     def compliant(self) -> CompliantT_co:
         """Return the narwhals object."""
         ...
+
+
+class _SeriesNamespace(  # type: ignore[misc]  # noqa: PYI046
+    _StoresCompliant[CompliantSeriesT_co],
+    _StoresNative[NativeT_co],
+    Protocol[CompliantSeriesT_co, NativeT_co],
+):
+    _compliant_series: CompliantSeriesT_co
+
+    @property
+    def compliant(self) -> CompliantSeriesT_co:
+        return self._compliant_series
+
+    @property
+    def native(self) -> NativeT_co:
+        return self._compliant_series.native
+
+
+class _ExprNamespace(  # type: ignore[misc] # noqa: PYI046
+    _StoresCompliant[CompliantExprT_co], Protocol[CompliantExprT_co]
+):
+    _compliant_expr: CompliantExprT_co
+
+    @property
+    def compliant(self) -> CompliantExprT_co:
+        return self._compliant_expr
 
 
 class Version(Enum):
