@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
+    from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import ArrowArray
     from narwhals._arrow.typing import ArrowChunkedArray
@@ -554,7 +555,7 @@ def pad_series(
 class ArrowSeriesNamespace(
     _StoresCompliant["ArrowSeries"], _StoresNative["ArrowChunkedArray"]
 ):
-    def __init__(self: Self, series: ArrowSeries) -> None:
+    def __init__(self: Self, series: ArrowSeries, /) -> None:
         self._compliant_series: ArrowSeries = series
 
     @property
@@ -564,3 +565,12 @@ class ArrowSeriesNamespace(
     @property
     def native(self) -> ArrowChunkedArray:
         return self._compliant_series.native
+
+
+class ArrowExprNamespace(_StoresCompliant["ArrowExpr"]):
+    def __init__(self: Self, expr: ArrowExpr, /) -> None:
+        self._compliant_expr: ArrowExpr = expr
+
+    @property
+    def compliant(self) -> ArrowExpr:
+        return self._compliant_expr
