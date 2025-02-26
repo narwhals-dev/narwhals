@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     _NativeDType: TypeAlias = "pyspark_types.DataType | sqlframe_types.DataType"
 
 
+# NOTE: don't lru_cache this as `ModuleType` isn't hashable
 def native_to_narwhals_dtype(
     dtype: _NativeDType, version: Version, spark_types: ModuleType
 ) -> DType:  # pragma: no cover

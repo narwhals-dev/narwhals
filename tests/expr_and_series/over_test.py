@@ -45,6 +45,8 @@ def test_over_single(request: pytest.FixtureRequest, constructor: Constructor) -
 
     result = df.with_columns(c_max=nw.col("c").max().over("a")).sort("i").drop("i")
     assert_equal_data(result, expected)
+    result = df.with_columns(c_max=nw.col("c").max().over(["a"])).sort("i").drop("i")
+    assert_equal_data(result, expected)
 
 
 def test_over_multiple(request: pytest.FixtureRequest, constructor: Constructor) -> None:
