@@ -446,10 +446,10 @@ class PandasWhen:
         if isinstance(self._otherwise_value, PandasLikeExpr):
             otherwise_series = self._otherwise_value(df)[0]
         else:
-            otherwise_series = plx._create_series_from_scalar(
-                self._otherwise_value, reference_series=condition.alias("literal")
+            native_result = value_series_native.where(
+                condition_native, self._otherwise_value
             )
-            otherwise_series._broadcast = True
+            return [value_series._from_native_series(native_result)]
         otherwise_series_native = extract_dataframe_comparand(
             df._native_frame.index, otherwise_series
         )
