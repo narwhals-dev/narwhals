@@ -108,13 +108,21 @@ if TYPE_CHECKING:
         def columns(self) -> Sequence[str]: ...
 
 
-T_co = TypeVar("T_co", covariant=True)
+NativeT_co = TypeVar("NativeT_co", covariant=True)
+CompliantT_co = TypeVar("CompliantT_co", covariant=True)
 
 
-class _StoresNative(Protocol[T_co]):  # noqa: PYI046
+class _StoresNative(Protocol[NativeT_co]):  # noqa: PYI046
     @property
-    def native(self) -> T_co:
+    def native(self) -> NativeT_co:
         """Return the native object."""
+        ...
+
+
+class _StoresCompliant(Protocol[CompliantT_co]):  # noqa: PYI046
+    @property
+    def compliant(self) -> CompliantT_co:
+        """Return the narwhals object."""
         ...
 
 
