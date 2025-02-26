@@ -28,7 +28,7 @@ def test_str_split(
     by: str,
     expected: Any,
 ) -> None:
-    if (
+    if "cudf" not in str(constructor) and (
         constructor.__name__.startswith("pandas")
         and "pyarrow" not in constructor.__name__
     ):
@@ -57,7 +57,7 @@ def test_str_split_series(
     by: str,
     expected: Any,
 ) -> None:
-    if (
+    if "cudf" not in str(constructor_eager) and (
         constructor_eager.__name__.startswith("pandas")
         and "pyarrow" not in constructor_eager.__name__
     ):
