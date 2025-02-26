@@ -63,7 +63,6 @@ if TYPE_CHECKING:
     from narwhals.typing import DataFrameLike
     from narwhals.typing import DTypes
     from narwhals.typing import IntoSeriesT
-    from narwhals.typing import NativeFrame
     from narwhals.typing import SizeUnit
     from narwhals.typing import SupportsNativeNamespace
     from narwhals.typing import TimeUnit
@@ -107,6 +106,10 @@ if TYPE_CHECKING:
         - `_backend_version`
         - `_version`
         """
+
+    class _StoresColumns(Protocol):
+        @property
+        def columns(self) -> Sequence[str]: ...
 
 
 class Version(Enum):
@@ -1349,10 +1352,8 @@ def dtype_matches_time_unit_and_time_zone(
     )
 
 
-def get_column_names(
-    df: NativeFrame | CompliantDataFrame[Any] | CompliantLazyFrame,
-) -> Sequence[str]:
-    return df.columns
+def get_column_names(frame: _StoresColumns, /) -> Sequence[str]:
+    return frame.columns
 
 
 def _hasattr_static(obj: Any, attr: str) -> bool:
