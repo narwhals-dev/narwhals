@@ -47,11 +47,7 @@ def test_sumh_all(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_sumh_aggregations(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_sumh_aggregations(constructor: Constructor) -> None:
     data = {"a": [1, 2, 3], "b": [10, 20, 30]}
     df = nw.from_native(constructor(data))
     result = df.select(nw.sum_horizontal(nw.all().mean().name.suffix("_foo")))
@@ -64,10 +60,14 @@ def test_sumh_aggregations(
 def test_sumh_transformations(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("dask", "duckdb", "pyspark")):
+    if "duckdb" in str(constructor):
+        # We don't yet support broadcasting for DuckDB.
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
     df = nw.from_native(constructor(data))
     result = df.select(d=nw.sum_horizontal("a", nw.col("b").sum(), "c"))
-    expected = {"d": [23, 25, 27]}
+    expected: dict[str, Any] = {"d": [23, 25, 27]}
+    assert_equal_data(result, expected)
+    result = df.select(d=nw.sum_horizontal("a", nw.lit(None, dtype=nw.Float64), "c"))
+    expected = {"d": [8.0, 10.0, 12.0]}
     assert_equal_data(result, expected)

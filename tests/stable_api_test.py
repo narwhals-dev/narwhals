@@ -93,7 +93,7 @@ def test_stable_api_docstrings() -> None:
     for item in main_namespace_api:
         if getattr(nw, item).__doc__ is None:
             continue
-        if item in ("from_native", "narwhalify"):
+        if item in {"from_native", "narwhalify"}:
             # `eager_or_interchange` param was removed from main namespace,
             # but is still present in v1 docstring.
             continue
@@ -119,10 +119,10 @@ def test_lazyframe_docstrings() -> None:
     df = nw.from_native(pl.LazyFrame())
     api = [i for i in df.__dir__() if not i.startswith("_")]
     for item in api:
-        if item in ("schema", "columns"):
+        if item in {"schema", "columns"}:
             # to avoid performance warning
             continue
-        if item in ("tail",):
+        if item in {"tail"}:
             # deprecated
             continue
         assert remove_docstring_examples(
