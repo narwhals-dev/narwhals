@@ -3123,7 +3123,7 @@ class LazyFrame(BaseFrame[FrameT]):
             The LazyFrame containing only the selected rows.
         """
         msg = (
-            "`LazyFrane.gather_every` is deprecated and will be removed in a future version.\n\n"
+            "`LazyFrame.gather_every` is deprecated and will be removed in a future version.\n\n"
             "Note: this will remain available in `narwhals.stable.v1`.\n"
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
