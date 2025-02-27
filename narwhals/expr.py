@@ -12,6 +12,7 @@ from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import combine_metadata
+from narwhals._expression_parsing import extract_compliant
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.expr_cat import ExprCatNamespace
@@ -1408,7 +1409,9 @@ class Expr:
             raise ValueError(msg)
         return self._from_callable(
             lambda plx: self._to_compliant_expr(plx).fill_null(
-                value=value, strategy=strategy, limit=limit
+                value=extract_compliant(plx, value, str_as_lit=True),
+                strategy=strategy,
+                limit=limit,
             )
         )
 

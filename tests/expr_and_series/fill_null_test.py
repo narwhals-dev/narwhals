@@ -47,7 +47,7 @@ def test_fill_null_with_expression(
     expected = {
         "a": [0.0, 2, 2, 3, 4],
         "b": [1.0, 2, None, 5, 3],
-        "c": [5.0, 2, 3, 2, 1],
+        "c": [5.0, 2, None, 2, 1],
     }
     assert_equal_data(result, expected)
 
