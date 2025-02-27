@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import overload
@@ -231,6 +232,14 @@ class PolarsDataFrame:
             backend_version=self._backend_version,
             version=self._version,
         )
+
+    def iter_columns(self) -> Iterator[PolarsSeries]:
+        from narwhals._polars.series import PolarsSeries
+
+        for series in self._native_frame.iter_columns():
+            yield PolarsSeries(
+                series, backend_version=self._backend_version, version=self._version
+            )
 
     @property
     def columns(self: Self) -> list[str]:

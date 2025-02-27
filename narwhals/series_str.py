@@ -236,6 +236,32 @@ class SeriesStringNamespace(Generic[SeriesT]):
             )
         )
 
+    def split(self: Self, by: str) -> SeriesT:
+        r"""Split the string values of a Series by a substring.
+
+        Arguments:
+            by: Substring to split by.
+
+        Returns:
+            A new Series containing lists of strings.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_native = pl.Series(["foo bar", "foo_bar"])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.str.split("_").to_native()  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [list[str]]
+            [
+                    ["foo bar"]
+                    ["foo", "bar"]
+            ]
+        """
+        return self._narwhals_series._from_compliant_series(
+            self._narwhals_series._compliant_series.str.split(by=by)
+        )
+
     def head(self: Self, n: int = 5) -> SeriesT:
         r"""Take the first n elements of each string.
 
