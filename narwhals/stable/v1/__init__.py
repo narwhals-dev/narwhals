@@ -1297,7 +1297,7 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoSeriesT | Any,  # remain `Any` for downstream compatibility
+    native_object: IntoSeriesT,
     *,
     strict: Literal[True] = ...,
     eager_only: Literal[False] = ...,
