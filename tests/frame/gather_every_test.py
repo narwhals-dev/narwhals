@@ -28,7 +28,9 @@ def test_gather_every(
     df_main = nw_main.from_native(constructor(data))
 
     context = (
-        pytest.deprecated_call()
+        pytest.deprecated_call(
+            match="is deprecated and will be removed in a future version"
+        )
         if isinstance(df_main, nw_main.LazyFrame)
         else nullcontext()
     )

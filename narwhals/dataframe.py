@@ -3158,7 +3158,7 @@ class LazyFrame(BaseFrame[FrameT]):
             "Note: this will remain available in `narwhals.stable.v1`.\n"
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
-        issue_deprecation_warning(msg, _version="1.28.0")
+        issue_deprecation_warning(msg, _version="1.29.0")
 
         return super().gather_every(n=n, offset=offset)
 
