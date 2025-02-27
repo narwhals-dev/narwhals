@@ -19,6 +19,7 @@
         - group_by
         - head
         - implementation
+        - interpolate_by
         - is_duplicated
         - is_empty
         - is_unique
