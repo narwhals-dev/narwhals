@@ -103,6 +103,10 @@ if TYPE_CHECKING:
         - `_version`
         """
 
+    class _StoresColumns(Protocol):
+        @property
+        def columns(self) -> Sequence[str]: ...
+
 
 class Version(Enum):
     V1 = auto()
@@ -1342,6 +1346,10 @@ def dtype_matches_time_unit_and_time_zone(
             or ("*" in time_zones and dtype.time_zone is not None)
         )
     )
+
+
+def get_column_names(frame: _StoresColumns, /) -> Sequence[str]:
+    return frame.columns
 
 
 def _hasattr_static(obj: Any, attr: str) -> bool:
