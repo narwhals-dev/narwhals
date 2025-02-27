@@ -241,7 +241,7 @@ def test_series_only_sqlframe() -> None:  # pragma: no cover
     df = session.createDataFrame([*zip(*data.values())], schema=[*data.keys()])
 
     with pytest.raises(TypeError, match="Cannot only use `series_only`"):
-        nw.from_native(df, series_only=True)
+        nw.from_native(df, series_only=True)  # pyright: ignore[reportArgumentType, reportCallIssue]
 
 
 @pytest.mark.parametrize(

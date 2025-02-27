@@ -7,7 +7,6 @@ from typing import Callable
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
-from typing import TypeVar
 from typing import overload
 from warnings import warn
 
@@ -86,6 +85,7 @@ if TYPE_CHECKING:
     from typing import Mapping
 
     from typing_extensions import Self
+    from typing_extensions import TypeVar
 
     from narwhals.dtypes import DType
     from narwhals.functions import ArrowStreamExportable
@@ -95,8 +95,13 @@ if TYPE_CHECKING:
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
 
-T = TypeVar("T")
-IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries")
+    IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
+    T = TypeVar("T", default=Any)
+else:
+    from typing import TypeVar
+
+    IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries")
+    T = TypeVar("T")
 
 
 class DataFrame(NwDataFrame[IntoDataFrameT]):
