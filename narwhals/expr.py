@@ -649,7 +649,7 @@ class Expr:
                 function=function, return_dtype=return_dtype
             ),
             # safest assumptions
-            self._metadata.with_kind_and_order_dependence(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
         )
 
     def skew(self: Self) -> Self:
@@ -773,7 +773,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_min(),
-            ExprMetadata(ExprKind.AGGREGATION, order_dependent=True),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.AGGREGATION),
         )
 
     def arg_max(self: Self) -> Self:
@@ -797,7 +797,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_max(),
-            ExprMetadata(ExprKind.AGGREGATION, order_dependent=True),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.AGGREGATION),
         )
 
     def count(self: Self) -> Self:
@@ -869,7 +869,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).unique(),
-            self._metadata.with_kind(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind(ExprKind.FILTRATION),
         )
 
     def abs(self: Self) -> Self:
@@ -922,7 +922,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_sum(reverse=reverse),
-            self._metadata.with_order_dependence(),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def diff(self: Self) -> Self:
@@ -965,7 +965,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).diff(),
-            self._metadata.with_order_dependence(),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def shift(self: Self, n: int) -> Self:
@@ -1011,7 +1011,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).shift(n),
-            self._metadata.with_order_dependence(),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def replace_strict(
@@ -1101,7 +1101,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             ),
-            self._metadata.with_order_dependence(),
+            self._metadata.with_extra_open_window(),
         )
 
     # --- transform ---
@@ -1233,7 +1233,7 @@ class Expr:
                 str_as_lit=False,
             ),
             combine_metadata(self, *flat_predicates, str_as_lit=False).with_kind(
-                ExprKind.CHANGES_LENGTH
+                ExprKind.FILTRATION
             ),
         )
 
@@ -1321,7 +1321,7 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_true(),
-            self._metadata.with_kind_and_order_dependence(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
         )
 
     def fill_null(
@@ -1449,7 +1449,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).drop_nulls(),
-            self._metadata.with_kind(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind(ExprKind.FILTRATION),
         )
 
     def sample(
@@ -1490,16 +1490,21 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
             ),
-            self._metadata.with_kind(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind(ExprKind.FILTRATION),
         )
 
-    def over(self: Self, *keys: str | Iterable[str]) -> Self:
+    def over(
+        self: Self,
+        *partition_by: str | Iterable[str],
+        _order_by: str | None = None,
+    ) -> Self:
         """Compute expressions over the given groups.
 
         Arguments:
-            keys: Names of columns to compute window expression over.
-                  Must be names of columns, as opposed to expressions -
-                  so, this is a bit less flexible than Polars' `Expr.over`.
+            partition_by: Names of columns to compute window expression over.
+                Must be names of columns, as opposed to expressions -
+                so, this is a bit less flexible than Polars' `Expr.over`.
+            _order_by: Unused, but this is building up to something.
 
         Returns:
             A new expression.
@@ -1532,15 +1537,20 @@ class Expr:
             |2  4  y                    4|
             └────────────────────────────┘
         """
-        if self._metadata.is_changes_length():
+        if self._metadata.kind.is_filtration():
             msg = "`.over()` can not be used for expressions which change length."
             raise LengthChangingExprError(msg)
-        flattened = flatten(keys)
+        kind = ExprKind.TRANSFORM
+        n_open_windows = self._metadata.n_open_windows
+        if _order_by is not None and self._metadata.kind.is_window():
+            n_open_windows -= 1
+        metadata = ExprMetadata(kind, n_open_windows=n_open_windows)
+        flat_partition_by = flatten(partition_by)
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).over(
-                flattened, kind=self._metadata.kind
+                flat_partition_by, kind=self._metadata.kind
             ),
-            self._metadata.with_kind(ExprKind.TRANSFORM),
+            metadata,
         )
 
     def is_duplicated(self: Self) -> Self:
@@ -1648,7 +1658,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_first_distinct(),
-            self._metadata.with_order_dependence(),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def is_last_distinct(self: Self) -> Self:
@@ -1677,7 +1687,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_last_distinct(),
-            self._metadata.with_order_dependence(),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def quantile(
@@ -1746,7 +1756,7 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).head(n),
-            self._metadata.with_kind_and_order_dependence(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
         )
 
     def tail(self: Self, n: int = 10) -> Self:
@@ -1774,7 +1784,7 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).tail(n),
-            self._metadata.with_kind_and_order_dependence(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
         )
 
     def round(self: Self, decimals: int = 0) -> Self:
@@ -1869,7 +1879,7 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.22.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
-            self._metadata.with_kind_and_order_dependence(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
         )
 
     # need to allow numeric typing
@@ -1941,7 +1951,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).mode(),
-            self._metadata.with_kind(ExprKind.CHANGES_LENGTH),
+            self._metadata.with_kind(ExprKind.FILTRATION),
         )
 
     def is_finite(self: Self) -> Self:
@@ -2012,7 +2022,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_count(reverse=reverse),
-            self._metadata.with_order_dependence(),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def cum_min(self: Self, *, reverse: bool = False) -> Self:
@@ -2045,7 +2055,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_min(reverse=reverse),
-            self._metadata.with_order_dependence(),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def cum_max(self: Self, *, reverse: bool = False) -> Self:
@@ -2078,7 +2088,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_max(reverse=reverse),
-            self._metadata.with_order_dependence(),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def cum_prod(self: Self, *, reverse: bool = False) -> Self:
@@ -2111,7 +2121,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_prod(reverse=reverse),
-            self._metadata.with_order_dependence(),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def rolling_sum(
@@ -2173,7 +2183,7 @@ class Expr:
                 min_samples=min_samples,
                 center=center,
             ),
-            self._metadata.with_order_dependence(),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def rolling_mean(
@@ -2235,7 +2245,7 @@ class Expr:
                 min_samples=min_samples,
                 center=center,
             ),
-            self._metadata.with_order_dependence(),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def rolling_var(
@@ -2297,7 +2307,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).rolling_var(
                 window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
             ),
-            self._metadata.with_order_dependence(),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def rolling_std(
@@ -2362,7 +2372,7 @@ class Expr:
                 center=center,
                 ddof=ddof,
             ),
-            self._metadata.with_order_dependence(),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def rank(
@@ -2428,7 +2438,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).rank(
                 method=method, descending=descending
             ),
-            self._metadata.with_order_dependence(),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     @property

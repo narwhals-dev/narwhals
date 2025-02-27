@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -20,7 +19,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-@lru_cache(maxsize=16)
+# NOTE: don't lru_cache this as `ModuleType` isn't hashable
 def native_to_narwhals_dtype(
     dtype: pyspark_types.DataType,
     version: Version,
@@ -145,8 +144,10 @@ def narwhals_to_native_dtype(
     raise AssertionError(msg)
 
 
-def parse_exprs(df: SparkLikeLazyFrame, /, *exprs: SparkLikeExpr) -> dict[str, Column]:
-    native_results: dict[str, list[Column]] = {}
+def evaluate_exprs(
+    df: SparkLikeLazyFrame, /, *exprs: SparkLikeExpr
+) -> list[tuple[str, Column]]:
+    native_results: list[tuple[str, list[Column]]] = []
 
     for expr in exprs:
         native_series_list = expr._call(df)
@@ -156,7 +157,7 @@ def parse_exprs(df: SparkLikeLazyFrame, /, *exprs: SparkLikeExpr) -> dict[str, C
         if len(output_names) != len(native_series_list):  # pragma: no cover
             msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
             raise AssertionError(msg)
-        native_results.update(zip(output_names, native_series_list))
+        native_results.extend(zip(output_names, native_series_list))
 
     return native_results
 

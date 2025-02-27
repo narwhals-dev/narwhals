@@ -24,6 +24,7 @@ from narwhals._duckdb.utils import narwhals_to_native_dtype
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.typing import CompliantNamespace
+from narwhals.utils import get_column_names
 
 if TYPE_CHECKING:
     import duckdb
@@ -52,7 +53,7 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "duckdb.Expression"]
         return DuckDBExpr(
             call=_all,
             function_name="all",
-            evaluate_output_names=lambda df: df.columns,
+            evaluate_output_names=get_column_names,
             alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,

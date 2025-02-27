@@ -9,6 +9,7 @@ from typing import Sequence
 
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals._expression_parsing import is_scalar_like
 from narwhals._expression_parsing import is_simple_aggregation
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._pandas_like.expr_cat import PandasLikeExprCatNamespace
@@ -475,9 +476,9 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     )
                 )
                 return [result_frame[name] for name in aliases]
-        elif kind is ExprKind.TRANSFORM:
+        elif not is_scalar_like(kind):
             msg = (
-                "Elementwise operations are only supported in `over` context "
+                "Length-preserving operations are only supported in `over` context "
                 "for pandas if they are elementary "
                 "(e.g. `nw.col('a').cum_sum().over('b'))`)."
             )

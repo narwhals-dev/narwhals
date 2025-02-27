@@ -37,6 +37,7 @@ polars = ["polars>=0.20.3"]
 dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.0"]
 ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
+sqlframe = ["sqlframe>=3.22.0"]
 tests = [
   "covdefaults",
   "pytest",
@@ -201,7 +202,8 @@ filterwarnings = [
   'ignore:.*is_datetime64tz_dtype is deprecated and will be removed in a future version.*:DeprecationWarning:pyspark',
   # Warning raised by PyArrow nightly just by importing pandas
   'ignore:.*Python binding for RankQuantileOptions not exposed:RuntimeWarning:pyarrow',
-  'ignore:.*pandas only supports SQLAlchemy:UserWarning'
+  'ignore:.*pandas only supports SQLAlchemy:UserWarning',
+  'ignore:.*numpy.core is deprecated and has been renamed to numpy._core.*:DeprecationWarning:sqlframe',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
@@ -267,6 +269,7 @@ module = [
   "*._pandas_like.*",
   "*._ibis.*",
   "*._arrow.*",
+  "*._dask.*",
 ]
 warn_return_any = false
 
