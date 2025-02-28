@@ -432,8 +432,9 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
                 raise NotImplementedError(msg)
 
             tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
+            on = list(keys)
             tmp = df.simple_select(*keys).join(
-                tmp, how="left", left_on=keys, right_on=keys, suffix="_right"
+                tmp, how="left", left_on=on, right_on=on, suffix="_right"
             )
             return [tmp[alias] for alias in aliases]
 

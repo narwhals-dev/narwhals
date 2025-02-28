@@ -426,7 +426,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
             call_kwargs=self._call_kwargs,
         )
 
-    def over(self: Self, keys: list[str], kind: ExprKind) -> Self:
+    def over(self: Self, keys: Sequence[str], kind: ExprKind) -> Self:
         if (
             is_simple_aggregation(self)
             and (function_name := re.sub(r"(\w+->)", "", self._function_name))
@@ -497,8 +497,9 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     raise NotImplementedError(msg)
 
                 tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
+                on = list(keys)
                 tmp = df.simple_select(*keys).join(
-                    tmp, how="left", left_on=keys, right_on=keys, suffix="_right"
+                    tmp, how="left", left_on=on, right_on=on, suffix="_right"
                 )
                 return [tmp[name] for name in aliases]
 

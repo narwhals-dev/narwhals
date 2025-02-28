@@ -528,7 +528,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
             lambda _input: _input.isna().sum().to_series(), "null_count"
         )
 
-    def over(self: Self, keys: list[str], kind: ExprKind) -> Self:
+    def over(self: Self, keys: Sequence[str], kind: ExprKind) -> Self:
         def func(df: DaskLazyFrame) -> list[Any]:
             output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
             if overlap := set(output_names).intersection(keys):
@@ -541,9 +541,10 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
                 raise NotImplementedError(msg)
             if df._native_frame.npartitions == 1:  # pragma: no cover
                 tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
+                on = list(keys)
                 tmp_native = (
                     df.simple_select(*keys)
-                    .join(tmp, how="left", left_on=keys, right_on=keys, suffix="_right")
+                    .join(tmp, how="left", left_on=on, right_on=on, suffix="_right")
                     ._native_frame
                 )
                 return [tmp_native[name] for name in aliases]

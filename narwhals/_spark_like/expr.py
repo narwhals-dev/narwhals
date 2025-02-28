@@ -472,7 +472,7 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
 
         return self._from_call(_n_unique, "n_unique")
 
-    def over(self: Self, keys: list[str], kind: ExprKind) -> Self:
+    def over(self: Self, keys: Sequence[str], kind: ExprKind) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             return [expr.over(self._Window.partitionBy(*keys)) for expr in self._call(df)]
 
