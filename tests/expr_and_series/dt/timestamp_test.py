@@ -18,6 +18,7 @@ from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 from tests.utils import is_windows
+from tests.utils import windows_has_tzdata
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoSeriesT
@@ -59,7 +60,7 @@ def test_timestamp_datetimes(
             pytest.mark.xfail(reason="Backend timestamp conversion not yet implemented")
         )
     if original_time_unit == "s" and "polars" in str(constructor):
-        request.applymarker(pytest.mark.xfail(reason="Second precision not supported"))
+        pytest.skip("Second precision not supported in Polars")
 
     if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (
         2,
@@ -104,8 +105,12 @@ def test_timestamp_datetimes_tz_aware(
         )
     version_conditions = [
         (
-            (any(x in str(constructor) for x in ("pyarrow",)) and is_windows()),
-            "PyArrow timezone not supported on Windows",
+            (
+                any(x in str(constructor) for x in ("pyarrow",))
+                and is_windows()
+                and not windows_has_tzdata()
+            ),
+            "Timezone database is not installed on Windows",
         ),
         (
             "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2,),
@@ -168,9 +173,7 @@ def test_timestamp_dates(
         "modin_constructor",
     )
     if any(x in str(constructor) for x in unsupported_backends):
-        request.applymarker(
-            pytest.mark.xfail(reason="Backend does not support date type")
-        )
+        pytest.skip("Backend does not support date type")
 
     dates = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
     if "dask" in str(constructor):

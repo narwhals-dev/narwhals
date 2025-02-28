@@ -4,6 +4,7 @@ import math
 import os
 import sys
 import warnings
+from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import Iterator
@@ -159,3 +160,15 @@ def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:
 def is_windows() -> bool:
     """Check if the current platform is Windows."""
     return sys.platform in {"win32", "cygwin"}
+
+
+def windows_has_tzdata() -> bool:
+    """From PyArrow: python/pyarrow/tests/util.py.
+
+    This is the default location where tz.cpp will look for (until we make
+    this configurable at run-time)
+
+    Skip test on Windows when the tz database is not configured.
+
+    """
+    return (Path.home() / "Downloads" / "tzdata").exists()
