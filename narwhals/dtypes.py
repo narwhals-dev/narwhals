@@ -877,3 +877,18 @@ class Date(TemporalType):
        >>> nw.from_native(ser_pa, series_only=True).dtype
        Date
     """
+
+
+class Time(TemporalType):
+    """Data type representing the time of day.
+
+    Examples:
+       >>> import polars as pl
+       >>> import narwhals as nw
+       >>> from datetime import time
+       >>> data = [time(9, 0), time(9, 1, 10), time(9, 2)]
+       >>> ser_pl = pl.Series(data)
+
+       >>> nw.from_native(ser_pl, series_only=True).dtype
+       Time
+    """

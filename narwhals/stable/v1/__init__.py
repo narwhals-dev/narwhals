@@ -57,6 +57,7 @@ from narwhals.stable.v1.dtypes import List
 from narwhals.stable.v1.dtypes import Object
 from narwhals.stable.v1.dtypes import String
 from narwhals.stable.v1.dtypes import Struct
+from narwhals.stable.v1.dtypes import Time
 from narwhals.stable.v1.dtypes import UInt8
 from narwhals.stable.v1.dtypes import UInt16
 from narwhals.stable.v1.dtypes import UInt32
@@ -2370,6 +2371,7 @@ __all__ = [
     "Series",
     "String",
     "Struct",
+    "Time",
     "UInt8",
     "UInt16",
     "UInt32",

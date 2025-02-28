@@ -145,6 +145,8 @@ def native_to_narwhals_dtype(
         )
     if dtype == pl.Decimal:
         return dtypes.Decimal()
+    if dtype == pl.Time:
+        return dtypes.Time()
     return dtypes.Unknown()
 
 

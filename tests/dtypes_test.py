@@ -271,6 +271,7 @@ def test_dtype_is_x() -> None:
         nw.Object,
         nw.String,
         nw.Struct,
+        nw.Time,
         nw.UInt8,
         nw.UInt16,
         nw.UInt32,
@@ -283,7 +284,7 @@ def test_dtype_is_x() -> None:
     is_unsigned_integer = {nw.UInt8, nw.UInt16, nw.UInt32, nw.UInt64, nw.UInt128}
     is_float = {nw.Float32, nw.Float64}
     is_decimal = {nw.Decimal}
-    is_temporal = {nw.Datetime, nw.Date, nw.Duration}
+    is_temporal = {nw.Datetime, nw.Date, nw.Duration, nw.Time}
     is_nested = {nw.Array, nw.List, nw.Struct}
 
     for dtype in dtypes:

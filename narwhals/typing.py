@@ -329,6 +329,7 @@ class DTypes:
     List: type[dtypes.List]
     Array: type[dtypes.Array]
     Unknown: type[dtypes.Unknown]
+    Time: type[dtypes.Time]
 
 
 __all__ = [

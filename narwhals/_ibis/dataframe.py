@@ -69,6 +69,8 @@ def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
     if ibis_dtype.is_decimal():  # pragma: no cover
         # TODO(unassigned): cover this
         return dtypes.Decimal()
+    if ibis_dtype.is_time():
+        return dtypes.Time()
     return dtypes.Unknown()  # pragma: no cover
 
 
