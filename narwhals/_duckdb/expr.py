@@ -11,9 +11,7 @@ from typing import cast
 from duckdb import CaseExpression
 from duckdb import CoalesceOperator
 from duckdb import ColumnExpression
-from duckdb import Expression
 from duckdb import FunctionExpression
-from duckdb import InvalidInputException
 from duckdb.typing import DuckDBPyType
 
 from narwhals._duckdb.expr_dt import DuckDBExprDateTimeNamespace
@@ -452,11 +450,8 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
             msg = "todo"
             raise NotImplementedError(msg)
 
-        def func(_input: Expression, value: Any) -> Expression:
-            try:
-                return CoalesceOperator(_input, value)
-            except InvalidInputException:
-                return CoalesceOperator(_input, lit(value))
+        def func(_input: duckdb.Expression, value: Any) -> duckdb.Expression:
+            return CoalesceOperator(_input, value)
 
         return self._from_call(func, "fill_null", value=value)
 
