@@ -670,7 +670,8 @@ class ArrowSeries(CompliantSeries):
         dtype = ser.type
 
         if value is not None:
-            res_ser = self._from_native_series(pc.fill_null(ser, lit(value, dtype)))  # type: ignore[attr-defined]
+            _, value = extract_native(self, value)
+            res_ser = self._from_native_series(pc.fill_null(ser, value))  # type: ignore[attr-defined]
         elif limit is None:
             fill_func = (
                 pc.fill_null_forward if strategy == "forward" else pc.fill_null_backward
