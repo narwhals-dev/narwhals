@@ -46,6 +46,7 @@ if TYPE_CHECKING:
     from typing import Protocol
 
     import pandas as pd
+    from typing_extensions import Never
     from typing_extensions import Self
     from typing_extensions import TypeIs
 
@@ -1387,3 +1388,42 @@ def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
 
 def unstable(fn: _Fn, /) -> _Fn:
     return fn
+
+
+def not_implemented(name: str, /) -> Callable[..., Any]:
+    """Mark some functionality as unsupported.
+
+    Arguments:
+        name: Method or property name.
+
+    Examples:
+        >>> from narwhals.utils import not_implemented
+        >>> class Thing:
+        >>>     @classmethod
+        ...     def totally_ready(self) -> str:
+        ...         return "I'm ready!"
+        ...
+        ...     not_ready_yet = not_implemented("not_ready_yet")
+        >>>
+        >>> Thing.totally_ready()
+        'I'm ready!'
+        >>> Thing.not_ready_yet()
+        Traceback (most recent call last):
+            ...
+        NotImplementedError: 'not_ready_yet' is not implemented for: 'Thing'.
+        ...
+        >>> Thing.__narwhals_not_implemented__
+        True
+    """
+
+    def wrapper(self: Any, *args: Any, **kwds: Any) -> Never:  # noqa: ARG001
+        who = getattr(self, "_implementation", type(self).__name__)
+        msg = (
+            f"{name!r} is not implemented for: {who!r}.\n\n"
+            "If you would like to see this functionality in `narwhals`, "
+            "please open an issue at: https://github.com/narwhals-dev/narwhals/issues"
+        )
+        raise NotImplementedError(msg)
+
+    setattr(wrapper, "__narwhals_not_implemented__", True)  # noqa: B010
+    return wrapper

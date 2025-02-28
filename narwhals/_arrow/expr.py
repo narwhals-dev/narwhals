@@ -21,9 +21,9 @@ from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
+from narwhals.utils import not_implemented
 
 if TYPE_CHECKING:
-    from typing_extensions import Never
     from typing_extensions import Self
 
     from narwhals._arrow.dataframe import ArrowDataFrame
@@ -578,8 +578,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
             self, "rank", method=method, descending=descending
         )
 
-    def ewm_mean(self, *args: Any, **kwds: Any) -> Never:
-        raise NotImplementedError
+    ewm_mean = not_implemented("ewm_mean")
 
     @property
     def dt(self: Self) -> ArrowExprDateTimeNamespace:
