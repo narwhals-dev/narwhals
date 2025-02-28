@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     except ModuleNotFoundError:
         import dask_expr as dx
 
+    from typing_extensions import Never
     from typing_extensions import Self
 
     from narwhals._dask.dataframe import DaskLazyFrame
@@ -574,6 +575,12 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
         import dask.array as da
 
         return self._from_call(da.isfinite, "is_finite")
+
+    def arg_min(self, *args: Any, **kwds: Any) -> Never:
+        raise NotImplementedError
+
+    def arg_max(self, *args: Any, **kwds: Any) -> Never:
+        raise NotImplementedError
 
     @property
     def str(self: Self) -> DaskExprStringNamespace:

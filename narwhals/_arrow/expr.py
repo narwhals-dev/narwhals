@@ -23,6 +23,7 @@ from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
+    from typing_extensions import Never
     from typing_extensions import Self
 
     from narwhals._arrow.dataframe import ArrowDataFrame
@@ -575,6 +576,9 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
         return reuse_series_implementation(
             self, "rank", method=method, descending=descending
         )
+
+    def ewm_mean(self, *args: Any, **kwds: Any) -> Never:
+        raise NotImplementedError
 
     @property
     def dt(self: Self) -> ArrowExprDateTimeNamespace:
