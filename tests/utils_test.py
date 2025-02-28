@@ -10,12 +10,14 @@ from typing import cast
 import hypothesis.strategies as st
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
 from hypothesis import given
 from pandas.testing import assert_frame_equal
 from pandas.testing import assert_index_equal
 from pandas.testing import assert_series_equal
 
+import narwhals as unstable_nw
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import check_column_exists
@@ -312,3 +314,19 @@ def test_check_column_exists() -> None:
         match=re.escape("Column(s) ['d', 'f'] not found in ['a', 'b', 'c']"),
     ):
         check_column_exists(columns, subset)
+
+
+def test_not_implemented() -> None:
+    data: dict[str, Any] = {"foo": [1, 2], "bar": [6.0, 7.0]}
+    df = pa.table(data)
+    nw_df = unstable_nw.from_native(df)
+    ewm_mean = unstable_nw.col("foo").ewm_mean(com=1, ignore_nulls=False)
+    pattern = re.compile(
+        r".+ewm_mean.+ not implemented.+arrow", flags=re.DOTALL | re.IGNORECASE
+    )
+    with pytest.raises(NotImplementedError, match=pattern):
+        nw_df.with_columns(ewm_mean)
+
+    from narwhals._arrow.expr import ArrowExpr
+
+    assert ArrowExpr.ewm_mean.__narwhals_not_implemented__ is True  # type: ignore[attr-defined]
