@@ -9,6 +9,7 @@ from inspect import getattr_static
 from secrets import token_hex
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Iterable
 from typing import Sequence
 from typing import TypeVar
@@ -72,6 +73,7 @@ if TYPE_CHECKING:
     _T1 = TypeVar("_T1")
     _T2 = TypeVar("_T2")
     _T3 = TypeVar("_T3")
+    _Fn = TypeVar("_Fn", bound="Callable[..., Any]")
 
     class _SupportsVersion(Protocol):
         __version__: str
@@ -1381,3 +1383,7 @@ def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
 
 def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
     return hasattr(obj, "__dataframe__")
+
+
+def unstable(fn: _Fn, /) -> _Fn:
+    return fn
