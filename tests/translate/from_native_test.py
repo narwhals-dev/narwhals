@@ -3,6 +3,9 @@ from __future__ import annotations
 from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
+from typing import Literal
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -238,12 +241,10 @@ def test_series_only_sqlframe() -> None:  # pragma: no cover
     from sqlframe.duckdb import DuckDBSession
 
     session = DuckDBSession()
-    df = (  # type: ignore[no-any-return]
-        session.createDataFrame([*zip(*data.values())], schema=[*data.keys()])
-    )
+    df = session.createDataFrame([*zip(*data.values())], schema=[*data.keys()])
 
     with pytest.raises(TypeError, match="Cannot only use `series_only`"):
-        nw.from_native(df, series_only=True)
+        nw.from_native(df, series_only=True)  # pyright: ignore[reportArgumentType, reportCallIssue]
 
 
 @pytest.mark.parametrize(
@@ -258,9 +259,7 @@ def test_eager_only_sqlframe(eager_only: Any, context: Any) -> None:  # pragma: 
     from sqlframe.duckdb import DuckDBSession
 
     session = DuckDBSession()
-    df = (  # type: ignore[no-any-return]
-        session.createDataFrame([*zip(*data.values())], schema=[*data.keys()])
-    )
+    df = session.createDataFrame([*zip(*data.values())], schema=[*data.keys()])
 
     with context:
         res = nw.from_native(df, eager_only=eager_only)
@@ -291,3 +290,18 @@ def test_from_mock_interchange_protocol_non_strict() -> None:
     mockdf = MockDf()
     result = nw.from_native(mockdf, eager_only=True, strict=False)
     assert result is mockdf
+
+
+def test_from_native_altair_array_like() -> None:
+    obj: list[int] = [1, 2, 3, 4]
+    array_like = cast("Iterable[Any]", obj)
+    not_array_like: Literal[1] = 1
+
+    with pytest.raises(TypeError, match="got.+list"):
+        false_positive_native_series = nw.from_native(obj, series_only=True)  # noqa: F841
+
+    with pytest.raises(TypeError, match="got.+list"):
+        true_negative_iterable = nw.from_native(array_like, series_only=True)  # type: ignore[call-overload] # noqa: F841
+
+    with pytest.raises(TypeError, match="got.+int"):
+        true_negative_not_native_series = nw.from_native(not_array_like, series_only=True)  # type: ignore[call-overload] # noqa: F841

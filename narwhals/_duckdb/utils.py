@@ -34,10 +34,10 @@ def maybe_evaluate_expr(
     return duckdb.ConstantExpression(obj)
 
 
-def parse_exprs(
+def evaluate_exprs(
     df: DuckDBLazyFrame, /, *exprs: DuckDBExpr
-) -> dict[str, duckdb.Expression]:
-    native_results: dict[str, duckdb.Expression] = {}
+) -> list[tuple[str, duckdb.Expression]]:
+    native_results: list[tuple[str, duckdb.Expression]] = []
     for expr in exprs:
         native_series_list = expr._call(df)
         output_names = expr._evaluate_output_names(df)
@@ -46,7 +46,7 @@ def parse_exprs(
         if len(output_names) != len(native_series_list):  # pragma: no cover
             msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
             raise AssertionError(msg)
-        native_results.update(zip(output_names, native_series_list))
+        native_results.extend(zip(output_names, native_series_list))
     return native_results
 
 
@@ -161,12 +161,12 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
     if isinstance_or_issubclass(dtype, dtypes.Date):  # pragma: no cover
         return "DATE"
     if isinstance_or_issubclass(dtype, dtypes.List):
-        inner = narwhals_to_native_dtype(dtype.inner, version)  # type: ignore[union-attr]
+        inner = narwhals_to_native_dtype(dtype.inner, version)
         return f"{inner}[]"
     if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
         inner = ", ".join(
             f'"{field.name}" {narwhals_to_native_dtype(field.dtype, version)}'
-            for field in dtype.fields  # type: ignore[union-attr]
+            for field in dtype.fields
         )
         return f"STRUCT({inner})"
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover

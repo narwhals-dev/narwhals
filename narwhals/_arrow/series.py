@@ -44,9 +44,9 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import ArrowArray
     from narwhals._arrow.typing import ArrowChunkedArray
     from narwhals._arrow.typing import Incomplete
-    from narwhals._arrow.typing import Indices
+    from narwhals._arrow.typing import Indices  # type: ignore[attr-defined]
     from narwhals._arrow.typing import NullPlacement
-    from narwhals._arrow.typing import Order
+    from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
     from narwhals._arrow.typing import TieBreaker
     from narwhals._arrow.typing import _AsPyType
     from narwhals._arrow.typing import _BasicDataType
@@ -164,19 +164,19 @@ class ArrowSeries(CompliantSeries):
 
     def __ge__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
-        return self._from_native_series(pc.greater_equal(ser, other))  # type: ignore[arg-type]
+        return self._from_native_series(pc.greater_equal(ser, other))
 
     def __gt__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
-        return self._from_native_series(pc.greater(ser, other))  # type: ignore[arg-type]
+        return self._from_native_series(pc.greater(ser, other))
 
     def __le__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
-        return self._from_native_series(pc.less_equal(ser, other))  # type: ignore[arg-type]
+        return self._from_native_series(pc.less_equal(ser, other))
 
     def __lt__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
-        return self._from_native_series(pc.less(ser, other))  # type: ignore[arg-type]
+        return self._from_native_series(pc.less(ser, other))
 
     def __and__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
@@ -196,24 +196,24 @@ class ArrowSeries(CompliantSeries):
 
     def __add__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
-        return self._from_native_series(pc.add(ser, other))  # type: ignore[arg-type]
+        return self._from_native_series(pc.add(ser, other))
 
     def __radd__(self: Self, other: Any) -> Self:
-        return self + other  # type: ignore[no-any-return]
+        return self + other
 
     def __sub__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
         return self._from_native_series(pc.subtract(ser, other))
 
     def __rsub__(self: Self, other: Any) -> Self:
-        return (self - other) * (-1)  # type: ignore[no-any-return]
+        return (self - other) * (-1)
 
     def __mul__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
         return self._from_native_series(pc.multiply(ser, other))
 
     def __rmul__(self: Self, other: Any) -> Self:
-        return self * other  # type: ignore[no-any-return]
+        return self * other
 
     def __pow__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
@@ -381,10 +381,12 @@ class ArrowSeries(CompliantSeries):
     def __getitem__(self: Self, idx: int) -> Any: ...
 
     @overload
-    def __getitem__(self: Self, idx: slice | Sequence[int] | pa.ChunkedArray) -> Self: ...
+    def __getitem__(
+        self: Self, idx: slice | Sequence[int] | ArrowChunkedArray
+    ) -> Self: ...
 
     def __getitem__(
-        self: Self, idx: int | slice | Sequence[int] | pa.ChunkedArray
+        self: Self, idx: int | slice | Sequence[int] | ArrowChunkedArray
     ) -> Any | Self:
         if isinstance(idx, int):
             return maybe_extract_py_scalar(
@@ -417,7 +419,7 @@ class ArrowSeries(CompliantSeries):
     def to_list(self: Self) -> list[Any]:
         return self._native_series.to_pylist()
 
-    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> _1DArray:
+    def __array__(self: Self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
         return self._native_series.__array__(dtype=dtype, copy=copy)
 
     def to_numpy(self: Self) -> _1DArray:
@@ -630,7 +632,7 @@ class ArrowSeries(CompliantSeries):
         rng = np.random.default_rng(seed=seed)
         idx = np.arange(0, num_rows)
         mask = rng.choice(idx, size=n, replace=with_replacement)
-        return self._from_native_series(ser.take(mask))
+        return self._from_native_series(ser.take(mask))  # pyright: ignore[reportArgumentType]
 
     def fill_null(
         self: Self,
@@ -690,7 +692,7 @@ class ArrowSeries(CompliantSeries):
             validate_column_names=False,
         )
 
-    def to_pandas(self: Self) -> pd.Series:
+    def to_pandas(self: Self) -> pd.Series[Any]:
         import pandas as pd  # ignore-banned-import()
 
         return pd.Series(self._native_series, name=self.name)  # pyright: ignore[reportArgumentType, reportCallIssue]
@@ -995,7 +997,7 @@ class ArrowSeries(CompliantSeries):
         )
 
         cum_sum_sq = (
-            padded_series.__pow__(2)
+            pow(padded_series, 2)
             .cum_sum(reverse=False)
             .fill_null(value=None, strategy="forward", limit=None)
         )
@@ -1089,7 +1091,6 @@ class ArrowSeries(CompliantSeries):
         def _hist_from_bin_count(bin_count: int):  # type: ignore[no-untyped-def] # noqa: ANN202
             d = pc.min_max(self._native_series)
             lower, upper = d["min"], d["max"]
-            pad_lowest_bin = False
             pa_float = pa.type_for_alias("float")
             if lower == upper:
                 range_ = lit(1.0)
@@ -1098,7 +1099,6 @@ class ArrowSeries(CompliantSeries):
                 lower = pc.subtract(lower, mid)
                 upper = pc.add(upper, mid)
             else:
-                pad_lowest_bin = True
                 range_ = pc.subtract(upper, lower)
                 width = pc.divide(pc.cast(range_, pa_float), lit(float(bin_count)))
 
@@ -1149,15 +1149,7 @@ class ArrowSeries(CompliantSeries):
             # extract left/right side of the intervals
             bin_left = pc.add(lower, pc.multiply(counts.column("values"), width))
             bin_right = pc.add(bin_left, width)
-            if pad_lowest_bin:
-                # pad lowest bin by 1% of range
-                lowest_padded = [
-                    pc.subtract(
-                        bin_left[0], pc.multiply(pc.cast(range_, pa_float), lit(0.001))
-                    )
-                ]
-                bin_left = chunked_array([lowest_padded, cast("Any", bin_left[1:])])
-            return counts.column("counts"), bin_left, bin_right
+            return counts.column("counts"), bin_right
 
         def _hist_from_bins(bins: Sequence[int | float]):  # type: ignore[no-untyped-def] # noqa: ANN202
             bin_indices = np.searchsorted(bins, self._native_series, side="left")
@@ -1167,20 +1159,19 @@ class ArrowSeries(CompliantSeries):
             counts[np.isin(obj_cats, obs_cats)] = obs_counts[np.isin(obs_cats, obj_cats)]
 
             bin_right = bins[1:]
-            bin_left = bins[:-1]
-            return counts, bin_left, bin_right
+            return counts, bin_right
 
         if bins is not None:
             if len(bins) < 2:
-                counts, bin_left, bin_right = [], [], []
+                counts, bin_right = [], []
             else:
-                counts, bin_left, bin_right = _hist_from_bins(bins)
+                counts, bin_right = _hist_from_bins(bins)
 
         elif bin_count is not None:
             if bin_count == 0:
-                counts, bin_left, bin_right = [], [], []
+                counts, bin_right = [], []
             else:
-                counts, bin_left, bin_right = _hist_from_bin_count(bin_count)
+                counts, bin_right = _hist_from_bin_count(bin_count)
 
         else:  # pragma: no cover
             # caller guarantees that either bins or bin_count is specified

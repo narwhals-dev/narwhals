@@ -90,7 +90,7 @@ class PandasLikeSeriesDateTimeNamespace:
         )
 
     def nanosecond(self: Self) -> PandasLikeSeries:
-        return (  # type: ignore[no-any-return]
+        return (
             self.microsecond() * 1_000
             + self._compliant_series._native_series.dt.nanosecond
         )

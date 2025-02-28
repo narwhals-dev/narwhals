@@ -57,7 +57,7 @@ if TYPE_CHECKING:
 from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 
-CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype] = frozenset(
+CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
     [
         np.dtype("float64"),
         np.dtype("float32"),
@@ -157,7 +157,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             version=self._version,
         )
 
-    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> _2DArray:
+    def __array__(self: Self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
         return self.to_numpy(dtype=dtype, copy=copy)
 
     @overload
@@ -277,7 +277,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 return self._from_native_frame(
                     select_columns_by_name(
                         self._native_frame,
-                        cast("Sequence[str] | _1DArray", item),
+                        cast("list[str] | _1DArray", item),
                         self._backend_version,
                         self._implementation,
                     ),
@@ -307,7 +307,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
     # --- properties ---
     @property
     def columns(self: Self) -> list[str]:
-        return self._native_frame.columns.tolist()  # type: ignore[no-any-return]
+        return self._native_frame.columns.tolist()
 
     @overload
     def rows(
@@ -339,7 +339,16 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
             return list(self._native_frame.itertuples(index=False, name=None))
 
-        return self._native_frame.to_dict(orient="records")  # type: ignore[no-any-return]
+        return self._native_frame.to_dict(orient="records")
+
+    def iter_columns(self) -> Iterator[PandasLikeSeries]:
+        for _name, series in self._native_frame.items():  # noqa: PERF102
+            yield PandasLikeSeries(
+                series,
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+                version=self._version,
+            )
 
     def iter_rows(
         self: Self,
@@ -403,7 +412,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             implementation=self._implementation,
             backend_version=self._backend_version,
         )
-        return self._from_native_frame(df, validate_column_names=False)
+        return self._from_native_frame(df, validate_column_names=True)
 
     def drop_nulls(self: Self, subset: list[str] | None) -> Self:
         if subset is None:
@@ -810,7 +819,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
     @property
     def shape(self: Self) -> tuple[int, int]:
-        return self._native_frame.shape  # type: ignore[no-any-return]
+        return self._native_frame.shape
 
     def to_dict(self: Self, *, as_series: bool) -> dict[str, Any]:
         if as_series:
@@ -823,9 +832,9 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
                 )
                 for col in self.columns
             }
-        return self._native_frame.to_dict(orient="list")  # type: ignore[no-any-return]
+        return self._native_frame.to_dict(orient="list")
 
-    def to_numpy(self: Self, dtype: Any = None, copy: bool | None = None) -> _2DArray:
+    def to_numpy(self: Self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
         native_dtypes = self._native_frame.dtypes
 
         if copy is None:
@@ -907,7 +916,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
     def write_csv(self: Self, file: str | Path | BytesIO) -> None: ...
 
     def write_csv(self: Self, file: str | Path | BytesIO | None) -> str | None:
-        return self._native_frame.to_csv(file, index=False)  # type: ignore[no-any-return]
+        return self._native_frame.to_csv(file, index=False)
 
     # --- descriptive ---
     def is_unique(self: Self) -> PandasLikeSeries:
@@ -979,7 +988,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         elif aggregate_function == "len":
             result = (
                 frame.groupby([*on, *index])
-                .agg({v: "size" for v in values})
+                .agg(dict.fromkeys(values, "size"))
                 .reset_index()
                 .pivot(columns=on, index=index, values=values)
             )

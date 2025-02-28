@@ -8,7 +8,6 @@ from typing import Callable
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
-from typing import cast
 
 import dask.dataframe as dd
 import pandas as pd
@@ -24,7 +23,7 @@ from narwhals._dask.utils import validate_comparand
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.typing import CompliantNamespace
-from narwhals.utils import is_compliant_expr
+from narwhals.utils import get_column_names
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -38,7 +37,7 @@ if TYPE_CHECKING:
         import dask_expr as dx
 
 
-class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):
+class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):  # pyright: ignore[reportInvalidTypeArguments] (#2044)
     @property
     def selectors(self: Self) -> DaskSelectorNamespace:
         return DaskSelectorNamespace(self)
@@ -57,7 +56,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):
             func,
             depth=0,
             function_name="all",
-            evaluate_output_names=lambda df: df.columns,
+            evaluate_output_names=get_column_names,
             alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
@@ -194,7 +193,6 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):
                 dd.concat(dfs, axis=0, join="inner"),
                 backend_version=self._backend_version,
                 version=self._version,
-                validate_column_names=True,
             )
         if how == "horizontal":
             all_column_names: list[str] = [
@@ -213,14 +211,12 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):
                 dd.concat(dfs, axis=1, join="outer"),
                 backend_version=self._backend_version,
                 version=self._version,
-                validate_column_names=True,
             )
         if how == "diagonal":
             return DaskLazyFrame(
                 dd.concat(dfs, axis=0, join="outer"),
                 backend_version=self._backend_version,
                 version=self._version,
-                validate_column_names=True,
             )
 
         raise NotImplementedError
@@ -347,17 +343,16 @@ class DaskWhen:
         version: Version,
     ) -> None:
         self._backend_version = backend_version
-        self._condition = condition
-        self._then_value = then_value
-        self._otherwise_value = otherwise_value
+        self._condition: DaskExpr = condition
+        self._then_value: DaskExpr | Any = then_value
+        self._otherwise_value: DaskExpr | Any = otherwise_value
         self._version = version
 
     def __call__(self: Self, df: DaskLazyFrame) -> Sequence[dx.Series]:
         condition = self._condition(df)[0]
-        condition = cast("dx.Series", condition)
 
-        if is_compliant_expr(self._then_value):
-            then_value: dx.Series | object = self._then_value(df)[0]
+        if isinstance(self._then_value, DaskExpr):
+            then_value = self._then_value(df)[0]
         else:
             then_value = self._then_value
         (then_series,) = align_series_full_broadcast(df, then_value)
@@ -366,13 +361,13 @@ class DaskWhen:
         if self._otherwise_value is None:
             return [then_series.where(condition)]
 
-        if is_compliant_expr(self._otherwise_value):
-            otherwise_value: dx.Series | object = self._otherwise_value(df)[0]
+        if isinstance(self._otherwise_value, DaskExpr):
+            otherwise_value = self._otherwise_value(df)[0]
         else:
-            otherwise_value = self._otherwise_value
+            return [then_series.where(condition, self._otherwise_value)]
         (otherwise_series,) = align_series_full_broadcast(df, otherwise_value)
         validate_comparand(condition, otherwise_series)
-        return [then_series.where(condition, otherwise_series)]
+        return [then_series.where(condition, otherwise_series)]  # pyright: ignore[reportArgumentType]
 
     def then(self: Self, value: DaskExpr | Any) -> DaskThen:
         self._then_value = value
@@ -405,17 +400,14 @@ class DaskThen(DaskExpr):
     ) -> None:
         self._backend_version = backend_version
         self._version = version
-        self._call = call
+        self._call: DaskWhen = call
         self._depth = depth
         self._function_name = function_name
-        self._evaluate_output_names = evaluate_output_names  # pyright: ignore[reportAttributeAccessIssue]
+        self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._call_kwargs = call_kwargs or {}
 
     def otherwise(self: Self, value: DaskExpr | Any) -> DaskExpr:
-        # type ignore because we are setting the `_call` attribute to a
-        # callable object of type `DaskWhen`, base class has the attribute as
-        # only a `Callable`
-        self._call._otherwise_value = value  # type: ignore[attr-defined]
+        self._call._otherwise_value = value
         self._function_name = "whenotherwise"
         return self

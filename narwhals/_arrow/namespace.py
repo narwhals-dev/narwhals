@@ -26,18 +26,21 @@ from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.typing import CompliantNamespace
 from narwhals.utils import Implementation
+from narwhals.utils import get_column_names
 from narwhals.utils import import_dtypes_module
-from narwhals.utils import is_compliant_expr
 
 if TYPE_CHECKING:
     from typing import Callable
 
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
 
     from narwhals._arrow.typing import Incomplete
     from narwhals._arrow.typing import IntoArrowExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+
+    _Scalar: TypeAlias = Any
 
 
 class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
@@ -49,7 +52,7 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
         function_name: str,
         evaluate_output_names: Callable[[ArrowDataFrame], Sequence[str]],
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
-        kwargs: dict[str, Any] | None = None,
+        call_kwargs: dict[str, Any] | None = None,
     ) -> ArrowExpr:
         from narwhals._arrow.expr import ArrowExpr
 
@@ -61,7 +64,7 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
             alias_output_names=alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs=kwargs,
+            call_kwargs=call_kwargs,
         )
 
     def _create_expr_from_series(self: Self, series: ArrowSeries) -> ArrowExpr:
@@ -159,7 +162,7 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
             ],
             depth=0,
             function_name="all",
-            evaluate_output_names=lambda df: df.columns,
+            evaluate_output_names=get_column_names,
             alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
@@ -211,7 +214,6 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
             function_name="any_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            kwargs={"exprs": exprs},
         )
 
     def sum_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
@@ -229,7 +231,6 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
             function_name="sum_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            kwargs={"exprs": exprs},
         )
 
     def mean_horizontal(self: Self, *exprs: ArrowExpr) -> IntoArrowExpr:
@@ -251,7 +252,6 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
             function_name="mean_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            kwargs={"exprs": exprs},
         )
 
     def min_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
@@ -280,7 +280,6 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
             function_name="min_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            kwargs={"exprs": exprs},
         )
 
     def max_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
@@ -310,7 +309,6 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
             function_name="max_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            kwargs={"exprs": exprs},
         )
 
     def concat(
@@ -390,15 +388,15 @@ class ArrowWhen:
         self: Self,
         condition: ArrowExpr,
         backend_version: tuple[int, ...],
-        then_value: Any = None,
-        otherwise_value: Any = None,
+        then_value: ArrowExpr | _Scalar = None,
+        otherwise_value: ArrowExpr | _Scalar = None,
         *,
         version: Version,
     ) -> None:
         self._backend_version = backend_version
-        self._condition = condition
-        self._then_value = then_value
-        self._otherwise_value = otherwise_value
+        self._condition: ArrowExpr = condition
+        self._then_value: ArrowExpr | _Scalar = then_value
+        self._otherwise_value: ArrowExpr | _Scalar = otherwise_value
         self._version = version
 
     def __call__(self: Self, df: ArrowDataFrame) -> Sequence[ArrowSeries]:
@@ -406,10 +404,9 @@ class ArrowWhen:
         condition = self._condition(df)[0]
         condition_native = condition._native_series
 
-        if is_compliant_expr(self._then_value):
-            value_series: ArrowSeries = self._then_value(df)[0]
+        if isinstance(self._then_value, ArrowExpr):
+            value_series = self._then_value(df)[0]
         else:
-            # `self._then_value` is a scalar
             value_series = plx._create_series_from_scalar(
                 self._then_value, reference_series=condition.alias("literal")
             )
@@ -425,14 +422,13 @@ class ArrowWhen:
                     pc.if_else(condition_native, value_series_native, otherwise_null)
                 )
             ]
-        if is_compliant_expr(self._otherwise_value):
-            otherwise_series: ArrowSeries = self._otherwise_value(df)[0]
+        if isinstance(self._otherwise_value, ArrowExpr):
+            otherwise_series = self._otherwise_value(df)[0]
         else:
-            # `self._otherwise_value` is a scalar
-            otherwise_series = plx._create_series_from_scalar(
-                self._otherwise_value, reference_series=condition.alias("literal")
+            native_result = pc.if_else(
+                condition_native, value_series_native, self._otherwise_value
             )
-            otherwise_series._broadcast = True
+            return [value_series._from_native_series(native_result)]
 
         otherwise_series_native = extract_dataframe_comparand(
             len(df), otherwise_series, self._backend_version
@@ -443,7 +439,7 @@ class ArrowWhen:
             )
         ]
 
-    def then(self: Self, value: ArrowExpr | ArrowSeries | Any) -> ArrowThen:
+    def then(self: Self, value: ArrowExpr | ArrowSeries | _Scalar) -> ArrowThen:
         self._then_value = value
 
         return ArrowThen(
@@ -470,21 +466,18 @@ class ArrowThen(ArrowExpr):
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         backend_version: tuple[int, ...],
         version: Version,
-        kwargs: dict[str, Any] | None = None,
+        call_kwargs: dict[str, Any] | None = None,
     ) -> None:
         self._backend_version = backend_version
         self._version = version
-        self._call = call
+        self._call: ArrowWhen = call
         self._depth = depth
         self._function_name = function_name
-        self._evaluate_output_names = evaluate_output_names  # pyright: ignore[reportAttributeAccessIssue]
+        self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
-        self._kwargs = kwargs or {}
+        self._call_kwargs = call_kwargs or {}
 
-    def otherwise(self: Self, value: ArrowExpr | ArrowSeries | Any) -> ArrowExpr:
-        # type ignore because we are setting the `_call` attribute to a
-        # callable object of type `PandasWhen`, base class has the attribute as
-        # only a `Callable`
-        self._call._otherwise_value = value  # type: ignore[attr-defined]
+    def otherwise(self: Self, value: ArrowExpr | ArrowSeries | _Scalar) -> ArrowExpr:
+        self._call._otherwise_value = value
         self._function_name = "whenotherwise"
         return self

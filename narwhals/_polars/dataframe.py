@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import overload
@@ -128,7 +129,7 @@ class PolarsDataFrame:
         return func
 
     def __array__(
-        self: Self, dtype: Any | None = None, copy: bool | None = None
+        self: Self, dtype: Any | None = None, *, copy: bool | None = None
     ) -> _2DArray:
         if self._backend_version < (0, 20, 28) and copy is not None:
             msg = "`copy` in `__array__` is only supported for Polars>=0.20.28"
@@ -231,6 +232,14 @@ class PolarsDataFrame:
             backend_version=self._backend_version,
             version=self._version,
         )
+
+    def iter_columns(self) -> Iterator[PolarsSeries]:
+        from narwhals._polars.series import PolarsSeries
+
+        for series in self._native_frame.iter_columns():
+            yield PolarsSeries(
+                series, backend_version=self._backend_version, version=self._version
+            )
 
     @property
     def columns(self: Self) -> list[str]:

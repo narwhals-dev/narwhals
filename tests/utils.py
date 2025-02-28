@@ -99,9 +99,9 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
     if hasattr(result, "collect"):
         kwargs: dict[Implementation, dict[str, Any]] = {Implementation.POLARS: {}}
 
-        if os.environ.get("NARWHALS_POLARS_GPU", False):  # pragma: no cover
+        if os.environ.get("NARWHALS_POLARS_GPU", None):  # pragma: no cover
             kwargs[Implementation.POLARS].update({"engine": "gpu"})
-        if os.environ.get("NARWHALS_POLARS_NEW_STREAMING", False):  # pragma: no cover
+        if os.environ.get("NARWHALS_POLARS_NEW_STREAMING", None):  # pragma: no cover
             kwargs[Implementation.POLARS].update({"new_streaming": True})
 
         result = result.collect(**kwargs.get(result.implementation, {}))
@@ -131,6 +131,10 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
                 are_equivalent_values = lhs is None or math.isnan(lhs)
             elif lhs is None:
                 are_equivalent_values = rhs is None
+            elif isinstance(lhs, list) and isinstance(rhs, list):
+                are_equivalent_values = all(
+                    left_side == right_side for left_side, right_side in zip(lhs, rhs)
+                )
             elif pd.isna(lhs):
                 are_equivalent_values = pd.isna(rhs)
             else:
@@ -154,4 +158,4 @@ def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:
 
 def is_windows() -> bool:
     """Check if the current platform is Windows."""
-    return sys.platform in ["win32", "cygwin"]
+    return sys.platform in {"win32", "cygwin"}

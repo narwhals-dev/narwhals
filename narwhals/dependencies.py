@@ -18,11 +18,11 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
     import pyspark.sql as pyspark_sql
-    import sqlframe
     from typing_extensions import TypeGuard
     from typing_extensions import TypeIs
 
     from narwhals._arrow.typing import ArrowChunkedArray
+    from narwhals._spark_like.dataframe import SQLFrameDataFrame
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
@@ -136,7 +136,7 @@ def is_pandas_series(ser: Any) -> TypeIs[pd.Series[Any]]:
     )
 
 
-def is_pandas_index(index: Any) -> TypeIs[pd.Index]:
+def is_pandas_index(index: Any) -> TypeIs[pd.Index[Any]]:
     """Check whether `index` is a pandas Index without importing pandas."""
     return ((pd := get_pandas()) is not None and isinstance(index, pd.Index)) or any(
         (mod := sys.modules.get(module_name, None)) is not None
@@ -231,7 +231,7 @@ def is_pyspark_dataframe(df: Any) -> TypeIs[pyspark_sql.DataFrame]:
     )
 
 
-def is_sqlframe_dataframe(df: Any) -> TypeIs[sqlframe.base.dataframe.BaseDataFrame]:
+def is_sqlframe_dataframe(df: Any) -> TypeIs[SQLFrameDataFrame]:
     """Check whether `df` is a SQLFrame DataFrame without importing SQLFrame."""
     return bool(
         (sqlframe := get_sqlframe()) is not None

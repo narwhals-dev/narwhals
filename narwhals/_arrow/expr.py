@@ -14,6 +14,7 @@ from narwhals._arrow.expr_str import ArrowExprStringNamespace
 from narwhals._arrow.series import ArrowSeries
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals._expression_parsing import is_scalar_like
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
@@ -43,17 +44,17 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         backend_version: tuple[int, ...],
         version: Version,
-        kwargs: dict[str, Any] | None = None,
+        call_kwargs: dict[str, Any] | None = None,
     ) -> None:
         self._call = call
         self._depth = depth
         self._function_name = function_name
         self._depth = depth
-        self._evaluate_output_names = evaluate_output_names  # pyright: ignore[reportAttributeAccessIssue]
+        self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._backend_version = backend_version
         self._version = version
-        self._kwargs = kwargs or {}
+        self._call_kwargs = call_kwargs or {}
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         return f"ArrowExpr(depth={self._depth}, function_name={self._function_name}, "
@@ -80,7 +81,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs=self._kwargs,
+            call_kwargs=self._call_kwargs,
         )
 
     @classmethod
@@ -113,7 +114,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
             func,
             depth=0,
             function_name="col",
-            evaluate_output_names=lambda _df: list(column_names),
+            evaluate_output_names=lambda _df: column_names,
             alias_output_names=None,
             backend_version=backend_version,
             version=version,
@@ -246,10 +247,14 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
         return reuse_series_implementation(self, "n_unique", returns_scalar=True)
 
     def std(self: Self, ddof: int) -> Self:
-        return reuse_series_implementation(self, "std", ddof=ddof, returns_scalar=True)
+        return reuse_series_implementation(
+            self, "std", call_kwargs={"ddof": ddof}, returns_scalar=True
+        )
 
     def var(self: Self, ddof: int) -> Self:
-        return reuse_series_implementation(self, "var", ddof=ddof, returns_scalar=True)
+        return reuse_series_implementation(
+            self, "var", call_kwargs={"ddof": ddof}, returns_scalar=True
+        )
 
     def skew(self: Self) -> Self:
         return reuse_series_implementation(self, "skew", returns_scalar=True)
@@ -313,7 +318,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
             alias_output_names=alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs=self._kwargs,
+            call_kwargs=self._call_kwargs,
         )
 
     def null_count(self: Self) -> Self:
@@ -410,10 +415,8 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
         )
 
     def over(self: Self, keys: list[str], kind: ExprKind) -> Self:
-        if kind is ExprKind.TRANSFORM:
-            msg = (
-                "Elementwise operations in `over` context are not supported for PyArrow."
-            )
+        if not is_scalar_like(kind):
+            msg = "Only aggregation or literal operations are supported in `over` context for PyArrow."
             raise NotImplementedError(msg)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
@@ -441,7 +444,6 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={**self._kwargs, "keys": keys},
         )
 
     def mode(self: Self) -> Self:
@@ -483,7 +485,6 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={**self._kwargs, "function": function, "return_dtype": return_dtype},
         )
 
     def is_finite(self: Self) -> Self:

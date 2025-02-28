@@ -46,9 +46,9 @@ if TYPE_CHECKING:
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import ArrowChunkedArray
-    from narwhals._arrow.typing import Indices
-    from narwhals._arrow.typing import Mask
-    from narwhals._arrow.typing import Order
+    from narwhals._arrow.typing import Indices  # type: ignore[attr-defined]
+    from narwhals._arrow.typing import Mask  # type: ignore[attr-defined]
+    from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
     from narwhals.dtypes import DType
     from narwhals.typing import SizeUnit
     from narwhals.typing import _1DArray
@@ -153,6 +153,17 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             return list(self.iter_rows(named=False, buffer_size=512))  # type: ignore[return-value]
         return self._native_frame.to_pylist()
 
+    def iter_columns(self) -> Iterator[ArrowSeries]:
+        from narwhals._arrow.series import ArrowSeries
+
+        for name, series in zip(self.columns, self._native_frame.itercolumns()):
+            yield ArrowSeries(
+                series,
+                name=name,
+                backend_version=self._backend_version,
+                version=self._version,
+            )
+
     def iter_rows(
         self: Self, *, named: bool, buffer_size: int
     ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
@@ -181,7 +192,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
             version=self._version,
         )
 
-    def __array__(self: Self, dtype: Any, copy: bool | None) -> _2DArray:
+    def __array__(self: Self, dtype: Any, *, copy: bool | None) -> _2DArray:
         return self._native_frame.__array__(dtype, copy=copy)
 
     @overload
@@ -356,7 +367,7 @@ class ArrowDataFrame(CompliantDataFrame, CompliantLazyFrame):
         names = [s.name for s in new_series]
         new_series = align_series_full_broadcast(*new_series)
         df = pa.Table.from_arrays([s._native_series for s in new_series], names=names)
-        return self._from_native_frame(df, validate_column_names=False)
+        return self._from_native_frame(df, validate_column_names=True)
 
     def with_columns(self: Self, *exprs: ArrowExpr) -> Self:
         native_frame = self._native_frame
