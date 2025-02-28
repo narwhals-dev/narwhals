@@ -83,7 +83,7 @@ CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
 )
 
 
-class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
+class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyFrame):
     # --- not in the spec ---
     def __init__(
         self: Self,
