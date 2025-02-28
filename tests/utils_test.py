@@ -319,7 +319,6 @@ def test_check_column_exists() -> None:
 
 def test_not_implemented() -> None:
     from narwhals._arrow.expr import ArrowExpr
-    from narwhals._duckdb.expr import DuckDBExpr
 
     data: dict[str, Any] = {"foo": [1, 2], "bar": [6.0, 7.0]}
     df = pa.table(data)
@@ -332,6 +331,9 @@ def test_not_implemented() -> None:
         nw_df.with_columns(ewm_mean)
 
     assert ArrowExpr.ewm_mean.__narwhals_not_implemented__ is True  # type: ignore[attr-defined]
+
+    pytest.importorskip("duckdb")
+    from narwhals._duckdb.expr import DuckDBExpr
 
     duckdb_expr = DuckDBExpr(
         lambda df: [],  # noqa: ARG005
