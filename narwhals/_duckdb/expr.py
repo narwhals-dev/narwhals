@@ -24,10 +24,10 @@ from narwhals._duckdb.utils import narwhals_to_native_dtype
 from narwhals._expression_parsing import ExprKind
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
+from narwhals.utils import not_implemented
 
 if TYPE_CHECKING:
     import duckdb
-    from typing_extensions import Never
     from typing_extensions import Self
 
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
@@ -462,11 +462,8 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
 
         return self._from_call(func, "cast")
 
-    def arg_min(self, *args: Any, **kwds: Any) -> Never:
-        raise NotImplementedError
-
-    def arg_max(self, *args: Any, **kwds: Any) -> Never:
-        raise NotImplementedError
+    arg_min = not_implemented("arg_min")
+    arg_max = not_implemented("arg_max")
 
     @property
     def str(self: Self) -> DuckDBExprStringNamespace:

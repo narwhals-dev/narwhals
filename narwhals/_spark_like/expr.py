@@ -19,11 +19,11 @@ from narwhals._spark_like.utils import narwhals_to_native_dtype
 from narwhals.dependencies import get_pyspark
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
+from narwhals.utils import not_implemented
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from pyspark.sql import Column
-    from typing_extensions import Never
     from typing_extensions import Self
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
@@ -497,11 +497,8 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
 
         return self._from_call(_is_nan, "is_nan")
 
-    def arg_min(self, *args: Any, **kwds: Any) -> Never:
-        raise NotImplementedError
-
-    def arg_max(self, *args: Any, **kwds: Any) -> Never:
-        raise NotImplementedError
+    arg_min = not_implemented("arg_min")
+    arg_max = not_implemented("arg_max")
 
     @property
     def str(self: Self) -> SparkLikeExprStringNamespace:

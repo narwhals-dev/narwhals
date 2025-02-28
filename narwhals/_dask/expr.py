@@ -20,6 +20,7 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
+from narwhals.utils import not_implemented
 
 if TYPE_CHECKING:
     try:
@@ -27,7 +28,6 @@ if TYPE_CHECKING:
     except ModuleNotFoundError:
         import dask_expr as dx
 
-    from typing_extensions import Never
     from typing_extensions import Self
 
     from narwhals._dask.dataframe import DaskLazyFrame
@@ -577,11 +577,8 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
 
         return self._from_call(da.isfinite, "is_finite")
 
-    def arg_min(self, *args: Any, **kwds: Any) -> Never:
-        raise NotImplementedError
-
-    def arg_max(self, *args: Any, **kwds: Any) -> Never:
-        raise NotImplementedError
+    arg_min = not_implemented("arg_min")
+    arg_max = not_implemented("arg_max")
 
     @property
     def str(self: Self) -> DaskExprStringNamespace:
