@@ -169,17 +169,7 @@ class CompliantExpr(Protocol, Generic[CompliantFrameT_contra, CompliantSeriesT_c
     def cum_min(self, *, reverse: bool) -> Self: ...
     def cum_max(self, *, reverse: bool) -> Self: ...
     def cum_prod(self, *, reverse: bool) -> Self: ...
-    def ewm_mean(
-        self,
-        *,
-        com: float | None,
-        span: float | None,
-        half_life: float | None,
-        alpha: float | None,
-        adjust: bool,
-        min_samples: int,
-        ignore_nulls: bool,
-    ) -> Self: ...
+
     def is_in(self, other: Any) -> Self: ...
     def sort(self, *, descending: bool, nulls_last: bool) -> Self: ...
     def rank(
@@ -226,6 +216,19 @@ class CompliantExpr(Protocol, Generic[CompliantFrameT_contra, CompliantSeriesT_c
     def cat(self) -> Any: ...
     @property
     def list(self) -> Any: ...
+
+    @unstable
+    def ewm_mean(
+        self,
+        *,
+        com: float | None,
+        span: float | None,
+        half_life: float | None,
+        alpha: float | None,
+        adjust: bool,
+        min_samples: int,
+        ignore_nulls: bool,
+    ) -> Self: ...
 
     @unstable
     def rolling_sum(
