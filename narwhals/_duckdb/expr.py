@@ -462,9 +462,6 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
 
         return self._from_call(func, "cast")
 
-    arg_min = not_implemented("arg_min")
-    arg_max = not_implemented("arg_max")
-
     @property
     def str(self: Self) -> DuckDBExprStringNamespace:
         return DuckDBExprStringNamespace(self)
@@ -480,3 +477,37 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
     @property
     def list(self: Self) -> DuckDBExprListNamespace:
         return DuckDBExprListNamespace(self)
+
+    arg_min = not_implemented("arg_min")
+    arg_max = not_implemented("arg_max")
+    arg_true = not_implemented("arg_true")
+    head = not_implemented("head")
+    tail = not_implemented("tail")
+    mode = not_implemented("mode")
+    sort = not_implemented("sort")
+    rank = not_implemented("rank")
+    sample = not_implemented("sample")
+    map_batches = not_implemented("map_batches")
+    ewm_mean = not_implemented("ewm_mean")
+    rolling_sum = not_implemented("rolling_sum")
+    rolling_mean = not_implemented("rolling_mean")
+    rolling_var = not_implemented("rolling_var")
+    rolling_std = not_implemented("rolling_std")
+    gather_every = not_implemented("gather_every")
+
+    drop_nulls = not_implemented("drop_nulls")
+    diff = not_implemented("diff")
+    unique = not_implemented("unique")
+    shift = not_implemented("shift")
+    is_unique = not_implemented("is_unique")
+    is_first_distinct = not_implemented("is_first_distinct")
+    is_last_distinct = not_implemented("is_last_distinct")
+    cum_sum = not_implemented("cum_sum")
+    cum_count = not_implemented("cum_count")
+    cum_min = not_implemented("cum_min")
+    cum_max = not_implemented("cum_max")
+    cum_prod = not_implemented("cum_prod")
+    replace_strict = not_implemented("replace_strict")
+    over = not_implemented("over")
+
+    cat = not_implemented("cat")  # pyright: ignore[reportAssignmentType]
