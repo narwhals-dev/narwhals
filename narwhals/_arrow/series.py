@@ -667,7 +667,6 @@ class ArrowSeries(CompliantSeries):
             )
 
         ser = self._native_series
-        dtype = ser.type
 
         if value is not None:
             _, value = extract_native(self, value)
