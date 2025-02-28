@@ -1453,7 +1453,7 @@ class Then(Expr):
             compliant_value = extract_compliant(plx, value, str_as_lit=False)
             if is_scalar_like(kind) and is_compliant_expr(compliant_value):
                 compliant_value = compliant_value.broadcast(kind)
-            return compliant_expr.otherwise(compliant_value)  # type: ignore[no-any-return]
+            return compliant_expr.otherwise(compliant_value)  # type: ignore[attr-defined, no-any-return]
 
         return Expr(
             func,
