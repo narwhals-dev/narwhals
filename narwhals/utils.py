@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterable
+from typing import Literal
 from typing import Sequence
 from typing import TypeVar
 from typing import Union
@@ -1390,13 +1391,24 @@ def unstable(fn: _Fn, /) -> _Fn:
     return fn
 
 
-# TODO @dangotbanned: Figure out how to make assignable to `property`
-# `DaskExpr.(cat|list)`
-def not_implemented(name: str, /) -> Callable[..., Any]:
+@overload
+def not_implemented(
+    name: str, /, *, is_property: Literal[False] = ...
+) -> Callable[..., Any]: ...
+
+
+@overload
+def not_implemented(name: str, /, *, is_property: Literal[True]) -> property: ...
+
+
+def not_implemented(
+    name: str, /, *, is_property: bool = False
+) -> Callable[..., Any] | property:
     """Mark some functionality as unsupported.
 
     Arguments:
         name: Method or property name.
+        is_property: Return a descriptor, instead of a callable.
 
     Examples:
         >>> from narwhals.utils import not_implemented
@@ -1428,4 +1440,8 @@ def not_implemented(name: str, /) -> Callable[..., Any]:
         raise NotImplementedError(msg)
 
     setattr(wrapper, "__narwhals_not_implemented__", True)  # noqa: B010
+
+    if is_property:
+        return property(wrapper)
+
     return wrapper

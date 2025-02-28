@@ -510,4 +510,4 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
     replace_strict = not_implemented("replace_strict")
     over = not_implemented("over")
 
-    cat = not_implemented("cat")  # pyright: ignore[reportAssignmentType]
+    cat = not_implemented("cat", is_property=True)

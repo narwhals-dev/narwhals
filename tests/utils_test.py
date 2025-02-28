@@ -20,6 +20,7 @@ from pandas.testing import assert_series_equal
 import narwhals as unstable_nw
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.utils import Version
 from narwhals.utils import check_column_exists
 from narwhals.utils import parse_version
 from tests.utils import PANDAS_VERSION
@@ -317,6 +318,9 @@ def test_check_column_exists() -> None:
 
 
 def test_not_implemented() -> None:
+    from narwhals._arrow.expr import ArrowExpr
+    from narwhals._duckdb.expr import DuckDBExpr
+
     data: dict[str, Any] = {"foo": [1, 2], "bar": [6.0, 7.0]}
     df = pa.table(data)
     nw_df = unstable_nw.from_native(df)
@@ -327,6 +331,18 @@ def test_not_implemented() -> None:
     with pytest.raises(NotImplementedError, match=pattern):
         nw_df.with_columns(ewm_mean)
 
-    from narwhals._arrow.expr import ArrowExpr
-
     assert ArrowExpr.ewm_mean.__narwhals_not_implemented__ is True  # type: ignore[attr-defined]
+
+    duckdb_expr = DuckDBExpr(
+        lambda df: [],  # noqa: ARG005
+        function_name="",
+        evaluate_output_names=lambda df: ["names"],  # noqa: ARG005
+        alias_output_names=None,
+        backend_version=(0, 0, 0),
+        version=Version.MAIN,
+    )
+    pattern = re.compile(
+        r".+cat.+ not implemented.+duckdb", flags=re.DOTALL | re.IGNORECASE
+    )
+    with pytest.raises(NotImplementedError, match=pattern):
+        duckdb_expr.cat  # noqa: B018

@@ -545,4 +545,4 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
     fill_null = not_implemented("fill_null")
     quantile = not_implemented("quantile")
 
-    cat = not_implemented("cat")  # pyright: ignore[reportAssignmentType]
+    cat = not_implemented("cat", is_property=True)
