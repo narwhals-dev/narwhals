@@ -162,7 +162,7 @@ def is_windows() -> bool:
     return sys.platform in {"win32", "cygwin"}
 
 
-def windows_has_tzdata() -> bool:
+def windows_has_tzdata() -> bool:  # pragma: no cover
     """From PyArrow: python/pyarrow/tests/util.py.
 
     This is the default location where tz.cpp will look for (until we make
