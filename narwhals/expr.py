@@ -1379,10 +1379,11 @@ class Expr:
 
             Using a strategy:
 
-            >>> df.with_columns(
+            >>> df.select(
+            ...     nw.col("a", "b"),
             ...     nw.col("a", "b")
             ...     .fill_null(strategy="forward", limit=1)
-            ...     .name.suffix("_nulls_forward_filled")
+            ...     .name.suffix("_nulls_forward_filled"),
             ... )
             ┌────────────────────────────────────────────────────────────────┐
             |                       Narwhals DataFrame                       |
