@@ -1410,6 +1410,9 @@ def not_implemented(
         name: Method or property name.
         is_property: Return a descriptor, instead of a callable.
 
+    Returns:
+        An exception-raising wrapper.
+
     Examples:
         >>> from narwhals.utils import not_implemented
         >>> class Thing:
