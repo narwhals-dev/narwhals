@@ -1416,20 +1416,20 @@ def not_implemented(
     Examples:
         >>> from narwhals.utils import not_implemented
         >>> class Thing:
-        >>>     @classmethod
         ...     def totally_ready(self) -> str:
         ...         return "I'm ready!"
         ...
         ...     not_ready_yet = not_implemented("not_ready_yet")
         >>>
-        >>> Thing.totally_ready()
-        'I'm ready!'
-        >>> Thing.not_ready_yet()
+        >>> thing = Thing()
+        >>> thing.totally_ready()
+        "I'm ready!"
+        >>> thing.not_ready_yet()
         Traceback (most recent call last):
             ...
         NotImplementedError: 'not_ready_yet' is not implemented for: 'Thing'.
         ...
-        >>> Thing.__narwhals_not_implemented__
+        >>> thing.not_ready_yet.__narwhals_not_implemented__
         True
     """
 
