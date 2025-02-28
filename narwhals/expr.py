@@ -612,7 +612,7 @@ class Expr:
 
     def map_batches(
         self: Self,
-        function: Callable[[Any], CompliantExpr],
+        function: Callable[[Any], CompliantExpr[Any, Any]],
         return_dtype: DType | None = None,
     ) -> Self:
         """Apply a custom python function to a whole Series or sequence of Series.
