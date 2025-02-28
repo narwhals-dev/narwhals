@@ -1390,6 +1390,8 @@ def unstable(fn: _Fn, /) -> _Fn:
     return fn
 
 
+# TODO @dangotbanned: Figure out how to make assignable to `property`
+# `DaskExpr.(cat|list)`
 def not_implemented(name: str, /) -> Callable[..., Any]:
     """Mark some functionality as unsupported.
 

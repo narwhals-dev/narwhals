@@ -577,9 +577,6 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
 
         return self._from_call(da.isfinite, "is_finite")
 
-    arg_min = not_implemented("arg_min")
-    arg_max = not_implemented("arg_max")
-
     @property
     def str(self: Self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
@@ -591,3 +588,23 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
     @property
     def name(self: Self) -> DaskExprNameNamespace:
         return DaskExprNameNamespace(self)
+
+    arg_min = not_implemented("arg_min")
+    arg_max = not_implemented("arg_max")
+    arg_true = not_implemented("arg_true")
+    head = not_implemented("head")
+    tail = not_implemented("tail")
+    mode = not_implemented("mode")
+    sort = not_implemented("sort")
+    rank = not_implemented("rank")
+    sample = not_implemented("sample")
+    map_batches = not_implemented("map_batches")
+    ewm_mean = not_implemented("ewm_mean")
+    rolling_sum = not_implemented("rolling_sum")
+    rolling_mean = not_implemented("rolling_mean")
+    rolling_var = not_implemented("rolling_var")
+    rolling_std = not_implemented("rolling_std")
+    gather_every = not_implemented("gather_every")
+
+    cat = not_implemented("cat")  # pyright: ignore[reportAssignmentType]
+    list = not_implemented("list")  # pyright: ignore[reportAssignmentType]
