@@ -203,7 +203,7 @@ class CompliantExpr(Protocol, Generic[CompliantFrameT_contra, CompliantSeriesT_c
     def map_batches(
         self,
         function: Callable[[CompliantSeries], CompliantExpr[Any, Any]],
-        return_dtype: DType | type[DType] | None = None,
+        return_dtype: DType | type[DType] | None,
     ) -> Self: ...
 
     @property
@@ -235,8 +235,8 @@ class CompliantExpr(Protocol, Generic[CompliantFrameT_contra, CompliantSeriesT_c
         self,
         window_size: int,
         *,
-        min_samples: int | None = None,
-        center: bool = False,
+        min_samples: int | None,
+        center: bool,
     ) -> Self: ...
 
     @unstable
@@ -244,8 +244,8 @@ class CompliantExpr(Protocol, Generic[CompliantFrameT_contra, CompliantSeriesT_c
         self,
         window_size: int,
         *,
-        min_samples: int | None = None,
-        center: bool = False,
+        min_samples: int | None,
+        center: bool,
     ) -> Self: ...
 
     @unstable
@@ -253,9 +253,9 @@ class CompliantExpr(Protocol, Generic[CompliantFrameT_contra, CompliantSeriesT_c
         self,
         window_size: int,
         *,
-        min_samples: int | None = None,
-        center: bool = False,
-        ddof: int = 1,
+        min_samples: int | None,
+        center: bool,
+        ddof: int,
     ) -> Self: ...
 
     @unstable
@@ -263,13 +263,13 @@ class CompliantExpr(Protocol, Generic[CompliantFrameT_contra, CompliantSeriesT_c
         self,
         window_size: int,
         *,
-        min_samples: int | None = None,
-        center: bool = False,
-        ddof: int = 1,
+        min_samples: int | None,
+        center: bool,
+        ddof: int,
     ) -> Self: ...
 
     @deprecated("Since `1.22.0`")
-    def gather_every(self, n: int, offset: int = 0) -> Self: ...
+    def gather_every(self, n: int, offset: int) -> Self: ...
 
     def __and__(self, other: Any) -> Self: ...
     def __or__(self, other: Any) -> Self: ...
