@@ -527,4 +527,4 @@ jobs:
       - name: Run tests
         run: |
           cd darts
-          pytest tests/test_timeseries.py
+          pytest darts/tests/test_timeseries.py
