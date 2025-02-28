@@ -201,6 +201,8 @@ class BaseFrame(Generic[_FrameT]):
             and isinstance(predicates[0], list)
             and all(isinstance(x, bool) for x in predicates[0])
         ):
+            from narwhals.functions import col
+
             flat_predicates = flatten(predicates)
             check_expressions_preserve_length(*flat_predicates, function_name="filter")
             compliant_predicates, _kinds = self._flatten_and_extract(*flat_predicates)
@@ -208,7 +210,10 @@ class BaseFrame(Generic[_FrameT]):
             predicate = plx.all_horizontal(
                 *chain(
                     compliant_predicates,
-                    (plx.col(name) == v for name, v in constraints.items()),
+                    (
+                        (col(name) == v)._to_compliant_expr(plx)
+                        for name, v in constraints.items()
+                    ),
                 )
             )
         else:
