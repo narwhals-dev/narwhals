@@ -32,7 +32,7 @@ jobs:
         # TODO: add more dependencies/backends incrementally
         run: |
           source .venv/bin/activate
-          uv pip install -e ".[tests, typing, core]"
+          uv pip install -e ".[tests, typing, core, pyspark, sqlframe]"
       - name: show-deps
         run: |
           source .venv/bin/activate
