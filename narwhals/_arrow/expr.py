@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 
 from narwhals._arrow.expr_cat import ArrowExprCatNamespace
@@ -260,7 +261,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
     def skew(self: Self) -> Self:
         return reuse_series_implementation(self, "skew", returns_scalar=True)
 
-    def cast(self: Self, dtype: DType) -> Self:
+    def cast(self: Self, dtype: DType | type[DType]) -> Self:
         return reuse_series_implementation(self, "cast", dtype=dtype)
 
     def abs(self: Self) -> Self:
@@ -383,7 +384,11 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
         return reuse_series_implementation(self, "unique", maintain_order=False)
 
     def replace_strict(
-        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+        self: Self,
+        old: Sequence[Any] | Mapping[Any, Any],
+        new: Sequence[Any],
+        *,
+        return_dtype: DType | type[DType] | None,
     ) -> Self:
         return reuse_series_implementation(
             self, "replace_strict", old=old, new=new, return_dtype=return_dtype
@@ -415,7 +420,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
             self, "clip", lower_bound=lower_bound, upper_bound=upper_bound
         )
 
-    def over(self: Self, keys: list[str], kind: ExprKind) -> Self:
+    def over(self: Self, keys: Sequence[str], kind: ExprKind) -> Self:
         if not is_scalar_like(kind):
             msg = "Only aggregation or literal operations are supported in `over` context for PyArrow."
             raise NotImplementedError(msg)
@@ -454,7 +459,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
     def map_batches(
         self: Self,
         function: Callable[[Any], Any],
-        return_dtype: DType | None,
+        return_dtype: DType | type[DType] | None,
     ) -> Self:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             input_series_list = self._call(df)
