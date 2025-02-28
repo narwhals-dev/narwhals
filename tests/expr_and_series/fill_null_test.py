@@ -31,7 +31,7 @@ def test_fill_null(request: pytest.FixtureRequest, constructor: Constructor) -> 
     assert_equal_data(result, expected)
 
 
-def test_fill_null_with_expression(
+def test_fill_null_series_expression(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
     if "pyspark" in str(constructor):
