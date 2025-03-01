@@ -97,8 +97,10 @@ class PolarsExpr:
             )
         return self._from_native_expr(self._native_expr.is_nan())
 
-    def over(self: Self, keys: list[str], kind: ExprKind) -> Self:
-        return self._from_native_expr(self._native_expr.over(keys))
+    def over(
+        self: Self, keys: list[str], kind: ExprKind, order_by: Sequence[str]
+    ) -> Self:
+        return self._from_native_expr(self._native_expr.over(keys, order_by=order_by))
 
     def rolling_var(
         self: Self,

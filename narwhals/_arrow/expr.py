@@ -414,7 +414,9 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
             self, "clip", lower_bound=lower_bound, upper_bound=upper_bound
         )
 
-    def over(self: Self, keys: list[str], kind: ExprKind) -> Self:
+    def over(
+        self: Self, keys: list[str], kind: ExprKind, order_by: Sequence[str] | None
+    ) -> Self:
         if not is_scalar_like(kind):
             msg = "Only aggregation or literal operations are supported in `over` context for PyArrow."
             raise NotImplementedError(msg)

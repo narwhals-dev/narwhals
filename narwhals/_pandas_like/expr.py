@@ -474,10 +474,16 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         raise NotImplementedError(unsupported_reverse_msg)
                     kwargs = {"skipna": True}
 
-                res_native = getattr(
-                    native_frame.groupby(keys)[list(output_names)],
-                    MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT[function_name],
-                )(**kwargs)
+                if keys:
+                    res_native = getattr(
+                        native_frame.groupby(keys)[list(output_names)],
+                        MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT[function_name],
+                    )(**kwargs)
+                else:
+                    res_native = getattr(
+                        native_frame[list(output_names)],
+                        MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT[function_name],
+                    )(**kwargs)
                 result_frame = df._from_native_frame(
                     rename(
                         res_native,
@@ -490,15 +496,6 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     res_native = result_frame._native_frame.sort_index()
                     res_native.index = original_index
                     result_frame = result_frame._from_native_frame(res_native)
-                    # if len(result_frame) != len(df):
-                    #     msg = (
-                    #         "Output length does not match input length. This may\n"
-                    #         "be due to duplicate values in the Index.\n\n"
-                    #         "Hint: you may want to use `nw.maybe_reset_index` to\n"
-                    #         "ensure your index is free from duplicates before calling\n"
-                    #         "`.over` with `order_by`."
-                    #     )
-                    #     raise ComputeError(msg)
                 return [result_frame[name] for name in aliases]
         elif not is_scalar_like(kind):
             msg = (
