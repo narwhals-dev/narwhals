@@ -1069,9 +1069,10 @@ def exclude(*names: str | Iterable[str]) -> Expr:
         |  └─────┘         |
         └──────────────────┘
     """
+    exclude_names = frozenset(flatten(names))
 
     def func(plx: Any) -> Any:
-        return plx.exclude(frozenset(flatten(names)))
+        return plx.exclude(exclude_names)
 
     return Expr(func, ExprMetadata.selector())
 
