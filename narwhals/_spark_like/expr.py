@@ -201,7 +201,7 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
             implementation=self._implementation,
         )
 
-    def _from_window_function(
+    def _with_window_function(
         self: Self,
         window_function: Callable[..., Column],
     ) -> Self:
@@ -542,7 +542,7 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
             )
             return self._F.sum(_input).over(window)
 
-        return self._from_window_function(func)
+        return self._with_window_function(func)
 
     @property
     def str(self: Self) -> SparkLikeExprStringNamespace:

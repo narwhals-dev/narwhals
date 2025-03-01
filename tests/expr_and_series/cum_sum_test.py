@@ -30,8 +30,10 @@ def test_lazy_cum_sum(constructor: Constructor, request: pytest.FixtureRequest) 
         # no window function support yet in duckdb
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [1, 0, 2], "i": [0, 1, 2]}))
-    result = df.with_columns(nw.col("a").cum_sum().over(_order_by="b")).sort("i")
+    df = nw.from_native(
+        constructor({"a": [1, 2, 3], "b": [1, 0, 2], "i": [0, 1, 2], "g": [1, 1, 1]})
+    )
+    result = df.with_columns(nw.col("a").cum_sum().over("g", _order_by="b")).sort("i")
     expected = {"a": [3, 2, 6], "b": [1, 0, 2], "i": [0, 1, 2]}
     assert_equal_data(result, expected)
 

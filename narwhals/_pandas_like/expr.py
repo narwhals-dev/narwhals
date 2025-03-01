@@ -426,7 +426,9 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
             call_kwargs=self._call_kwargs,
         )
 
-    def over(self: Self, keys: list[str], kind: ExprKind) -> Self:
+    def over(
+        self: Self, keys: list[str], kind: ExprKind, order_by: str | None = None
+    ) -> Self:
         if (
             is_simple_aggregation(self)
             and (function_name := re.sub(r"(\w+->)", "", self._function_name))
@@ -434,6 +436,12 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
         ):
 
             def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+                if order_by is not None:
+                    native_frame = df.sort(
+                        *order_by, descending=False, nulls_last=False
+                    )._native_frame
+                else:
+                    native_frame = df._native_frame
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
 
                 unsupported_reverse_msg = (
@@ -462,7 +470,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     kwargs = {"skipna": True}
 
                 res_native = getattr(
-                    df._native_frame.groupby([df._native_frame[key] for key in keys])[
+                    native_frame.groupby([df._native_frame[key] for key in keys])[
                         list(output_names)
                     ],
                     MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT[function_name],
@@ -475,6 +483,10 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         backend_version=self._backend_version,
                     )
                 )
+                if order_by is not None:
+                    result_frame = result_frame._from_native_frame(
+                        result_frame._native_frame.loc[df._native_frame.index]
+                    )
                 return [result_frame[name] for name in aliases]
         elif not is_scalar_like(kind):
             msg = (
