@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.exceptions import ComputeError
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -36,6 +38,23 @@ def test_lazy_cum_sum(constructor: Constructor, request: pytest.FixtureRequest) 
     result = df.with_columns(nw.col("a").cum_sum().over("g", _order_by="b")).sort("i")
     expected = {"a": [3, 2, 6], "b": [1, 0, 2], "i": [0, 1, 2]}
     assert_equal_data(result, expected)
+
+
+def test_lazy_cum_sum_pandas_duplicate_index() -> None:
+    df = nw.from_native(
+        pd.DataFrame(
+            {
+                "a": [1, 2, 3],
+                "b": [1, 0, 2],
+                "i": [0, 1, 2],
+                "g": [1, 1, 1],
+                "idx": [0, 0, 1],
+            }
+        )
+    )
+    df = nw.maybe_set_index(df, "idx")
+    with pytest.raises(ComputeError):
+        df.with_columns(nw.col("a").cum_sum().over("g", _order_by="b"))
 
 
 def test_cum_sum_series(constructor_eager: ConstructorEager) -> None:

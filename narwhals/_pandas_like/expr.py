@@ -22,6 +22,7 @@ from narwhals._pandas_like.utils import rename
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import ComputeError
 from narwhals.typing import CompliantExpr
 
 if TYPE_CHECKING:
@@ -487,6 +488,15 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     result_frame = result_frame._from_native_frame(
                         result_frame._native_frame.loc[df._native_frame.index]
                     )
+                    if len(result_frame) != len(df):
+                        msg = (
+                            "Output length does not match input length. This may\n"
+                            "be due to duplicate values in the Index.\n\n"
+                            "Hint: you may want to use `nw.maybe_reset_index` to\n"
+                            "ensure your index is free from duplicates before calling\n"
+                            "`.over` with `order_by`."
+                        )
+                        raise ComputeError(msg)
                 return [result_frame[name] for name in aliases]
         elif not is_scalar_like(kind):
             msg = (
