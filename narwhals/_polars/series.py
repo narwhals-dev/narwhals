@@ -115,6 +115,9 @@ class PolarsSeries:
             self._native_series.dtype, self._version, self._backend_version
         )
 
+    def alias(self, name: str) -> Self:
+        return self._from_native_object(self._native_series.alias(name))
+
     @overload
     def __getitem__(self: Self, item: int) -> Any: ...
 
