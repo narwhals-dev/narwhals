@@ -22,8 +22,8 @@ from narwhals._pandas_like.utils import rename
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ColumnNotFoundError
-from narwhals.exceptions import ComputeError
 from narwhals.typing import CompliantExpr
+from narwhals.utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -438,9 +438,13 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
 
             def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
                 if order_by is not None:
-                    native_frame = df.sort(
-                        *order_by, descending=False, nulls_last=False
-                    )._native_frame
+                    original_index = df._native_frame.index
+                    token = generate_temporary_column_name(8, df.columns)
+                    native_frame = (
+                        df.with_row_index(token)
+                        .sort(*order_by, descending=False, nulls_last=False)
+                        ._native_frame.set_index(token)
+                    )
                 else:
                     native_frame = df._native_frame
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
@@ -471,7 +475,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     kwargs = {"skipna": True}
 
                 res_native = getattr(
-                    native_frame.groupby([df._native_frame[key] for key in keys])[
+                    native_frame.groupby([native_frame[key] for key in keys])[
                         list(output_names)
                     ],
                     MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT[function_name],
@@ -485,18 +489,18 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     )
                 )
                 if order_by is not None:
-                    result_frame = result_frame._from_native_frame(
-                        result_frame._native_frame.loc[df._native_frame.index]
-                    )
-                    if len(result_frame) != len(df):
-                        msg = (
-                            "Output length does not match input length. This may\n"
-                            "be due to duplicate values in the Index.\n\n"
-                            "Hint: you may want to use `nw.maybe_reset_index` to\n"
-                            "ensure your index is free from duplicates before calling\n"
-                            "`.over` with `order_by`."
-                        )
-                        raise ComputeError(msg)
+                    res_native = result_frame._native_frame.sort_index()
+                    res_native.index = original_index
+                    result_frame = result_frame._from_native_frame(res_native)
+                    # if len(result_frame) != len(df):
+                    #     msg = (
+                    #         "Output length does not match input length. This may\n"
+                    #         "be due to duplicate values in the Index.\n\n"
+                    #         "Hint: you may want to use `nw.maybe_reset_index` to\n"
+                    #         "ensure your index is free from duplicates before calling\n"
+                    #         "`.over` with `order_by`."
+                    #     )
+                    #     raise ComputeError(msg)
                 return [result_frame[name] for name in aliases]
         elif not is_scalar_like(kind):
             msg = (
