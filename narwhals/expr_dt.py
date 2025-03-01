@@ -31,7 +31,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import polars as pl
             >>> import narwhals as nw
             >>> df_native = pl.DataFrame(
-            ...     {"a": [datetime(2012, 1, 7, 10, 20), datetime(2023, 3, 10, 11, 32)]}
+            ...     {"a": [datetime(2012, 1, 7, 10), datetime(2027, 12, 13)]}
             ... )
             >>> df = nw.from_native(df_native)
             >>> df.select(nw.col("a").dt.date()).to_native()
@@ -42,7 +42,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ date       │
             ╞════════════╡
             │ 2012-01-07 │
-            │ 2023-03-10 │
+            │ 2027-12-13 │
             └────────────┘
         """
         return self._expr.__class__(
@@ -62,23 +62,16 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import pandas as pd
             >>> import narwhals as nw
             >>> df_native = pd.DataFrame(
-            ...     {
-            ...         "datetime": [
-            ...             datetime(1978, 6, 1),
-            ...             datetime(2024, 12, 13),
-            ...             datetime(2065, 1, 1),
-            ...         ]
-            ...     }
+            ...     {"a": [datetime(1978, 6, 1), datetime(2065, 1, 1)]}
             ... )
             >>> df = nw.from_native(df_native)
-            >>> df.with_columns(nw.col("datetime").dt.year().alias("year"))
+            >>> df.with_columns(nw.col("a").dt.year().alias("year"))
             ┌──────────────────┐
             |Narwhals DataFrame|
             |------------------|
-            |    datetime  year|
+            |           a  year|
             |0 1978-06-01  1978|
-            |1 2024-12-13  2024|
-            |2 2065-01-01  2065|
+            |1 2065-01-01  2065|
             └──────────────────┘
         """
         return self._expr.__class__(
@@ -97,23 +90,15 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> from datetime import datetime
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> df_native = pa.table(
-            ...     {
-            ...         "datetime": [
-            ...             datetime(1978, 6, 1),
-            ...             datetime(2024, 12, 13),
-            ...             datetime(2065, 1, 1),
-            ...         ]
-            ...     }
-            ... )
+            >>> df_native = pa.table({"a": [datetime(1978, 6, 1), datetime(2065, 1, 1)]})
             >>> df = nw.from_native(df_native)
-            >>> df.with_columns(nw.col("datetime").dt.month().alias("month")).to_native()
+            >>> df.with_columns(nw.col("a").dt.month().alias("month")).to_native()
             pyarrow.Table
-            datetime: timestamp[us]
+            a: timestamp[us]
             month: int64
             ----
-            datetime: [[1978-06-01 00:00:00.000000,2024-12-13 00:00:00.000000,2065-01-01 00:00:00.000000]]
-            month: [[6,12,1]]
+            a: [[1978-06-01 00:00:00.000000,2065-01-01 00:00:00.000000]]
+            month: [[6,1]]
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.month(),
@@ -132,23 +117,15 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> from datetime import datetime
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> df_native = pa.table(
-            ...     {
-            ...         "datetime": [
-            ...             datetime(1978, 6, 1),
-            ...             datetime(2024, 12, 13),
-            ...             datetime(2065, 1, 1),
-            ...         ]
-            ...     }
-            ... )
+            >>> df_native = pa.table({"a": [datetime(1978, 6, 1), datetime(2065, 1, 1)]})
             >>> df = nw.from_native(df_native)
-            >>> df.with_columns(nw.col("datetime").dt.day().alias("day")).to_native()
+            >>> df.with_columns(nw.col("a").dt.day().alias("day")).to_native()
             pyarrow.Table
-            datetime: timestamp[us]
+            a: timestamp[us]
             day: int64
             ----
-            datetime: [[1978-06-01 00:00:00.000000,2024-12-13 00:00:00.000000,2065-01-01 00:00:00.000000]]
-            day: [[1,13,1]]
+            a: [[1978-06-01 00:00:00.000000,2065-01-01 00:00:00.000000]]
+            day: [[1,1]]
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.day(), self._expr._metadata
@@ -167,27 +144,20 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import polars as pl
             >>> import narwhals as nw
             >>> df_native = pl.DataFrame(
-            ...     {
-            ...         "datetime": [
-            ...             datetime(1978, 1, 1, 1),
-            ...             datetime(2024, 10, 13, 5),
-            ...             datetime(2065, 1, 1, 10),
-            ...         ]
-            ...     }
+            ...     {"a": [datetime(1978, 1, 1, 1), datetime(2065, 1, 1, 10)]}
             ... )
             >>> df = nw.from_native(df_native)
-            >>> df.with_columns(nw.col("datetime").dt.hour().alias("hour"))
+            >>> df.with_columns(nw.col("a").dt.hour().alias("hour"))
             ┌──────────────────────────────┐
             |      Narwhals DataFrame      |
             |------------------------------|
-            |shape: (3, 2)                 |
+            |shape: (2, 2)                 |
             |┌─────────────────────┬──────┐|
-            |│ datetime            ┆ hour │|
+            |│ a                   ┆ hour │|
             |│ ---                 ┆ ---  │|
             |│ datetime[μs]        ┆ i8   │|
             |╞═════════════════════╪══════╡|
             |│ 1978-01-01 01:00:00 ┆ 1    │|
-            |│ 2024-10-13 05:00:00 ┆ 5    │|
             |│ 2065-01-01 10:00:00 ┆ 10   │|
             |└─────────────────────┴──────┘|
             └──────────────────────────────┘
@@ -209,22 +179,13 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import pandas as pd
             >>> import narwhals as nw
             >>> df_native = pd.DataFrame(
-            ...     {
-            ...         "datetime": [
-            ...             datetime(1978, 1, 1, 1, 1),
-            ...             datetime(2024, 10, 13, 5, 30),
-            ...             datetime(2065, 1, 1, 10, 20),
-            ...         ]
-            ...     }
+            ...     {"a": [datetime(1978, 1, 1, 1, 1), datetime(2065, 1, 1, 10, 20)]}
             ... )
             >>> df = nw.from_native(df_native)
-            >>> df.with_columns(
-            ...     nw.col("datetime").dt.minute().alias("minute")
-            ... ).to_native()
-                         datetime  minute
+            >>> df.with_columns(nw.col("a").dt.minute().alias("minute")).to_native()
+                                a  minute
             0 1978-01-01 01:01:00       1
-            1 2024-10-13 05:30:00      30
-            2 2065-01-01 10:20:00      20
+            1 2065-01-01 10:20:00      20
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.minute(),
@@ -243,23 +204,20 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import narwhals as nw
             >>> df_native = pa.table(
             ...     {
-            ...         "datetime": [
+            ...         "a": [
             ...             datetime(1978, 1, 1, 1, 1, 1),
-            ...             datetime(2024, 10, 13, 5, 30, 14),
             ...             datetime(2065, 1, 1, 10, 20, 30),
             ...         ]
             ...     }
             ... )
             >>> df = nw.from_native(df_native)
-            >>> df.with_columns(
-            ...     nw.col("datetime").dt.second().alias("second")
-            ... ).to_native()
+            >>> df.with_columns(nw.col("a").dt.second().alias("second")).to_native()
             pyarrow.Table
-            datetime: timestamp[us]
+            a: timestamp[us]
             second: int64
             ----
-            datetime: [[1978-01-01 01:01:01.000000,2024-10-13 05:30:14.000000,2065-01-01 10:20:30.000000]]
-            second: [[1,14,30]]
+            a: [[1978-01-01 01:01:01.000000,2065-01-01 10:20:30.000000]]
+            second: [[1,30]]
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.second(),
@@ -278,23 +236,22 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import narwhals as nw
             >>> df_native = pa.table(
             ...     {
-            ...         "datetime": [
+            ...         "a": [
             ...             datetime(1978, 1, 1, 1, 1, 1, 0),
-            ...             datetime(2024, 10, 13, 5, 30, 14, 505000),
             ...             datetime(2065, 1, 1, 10, 20, 30, 67000),
             ...         ]
             ...     }
             ... )
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(
-            ...     nw.col("datetime").dt.millisecond().alias("millisecond")
+            ...     nw.col("a").dt.millisecond().alias("millisecond")
             ... ).to_native()
             pyarrow.Table
-            datetime: timestamp[us]
+            a: timestamp[us]
             millisecond: int64
             ----
-            datetime: [[1978-01-01 01:01:01.000000,2024-10-13 05:30:14.505000,2065-01-01 10:20:30.067000]]
-            millisecond: [[0,505,67]]
+            a: [[1978-01-01 01:01:01.000000,2065-01-01 10:20:30.067000]]
+            millisecond: [[0,67]]
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.millisecond(),
@@ -313,23 +270,22 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import narwhals as nw
             >>> df_native = pa.table(
             ...     {
-            ...         "datetime": [
+            ...         "a": [
             ...             datetime(1978, 1, 1, 1, 1, 1, 0),
-            ...             datetime(2024, 10, 13, 5, 30, 14, 505000),
             ...             datetime(2065, 1, 1, 10, 20, 30, 67000),
             ...         ]
             ...     }
             ... )
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(
-            ...     nw.col("datetime").dt.microsecond().alias("microsecond")
+            ...     nw.col("a").dt.microsecond().alias("microsecond")
             ... ).to_native()
             pyarrow.Table
-            datetime: timestamp[us]
+            a: timestamp[us]
             microsecond: int64
             ----
-            datetime: [[1978-01-01 01:01:01.000000,2024-10-13 05:30:14.505000,2065-01-01 10:20:30.067000]]
-            microsecond: [[0,505000,67000]]
+            a: [[1978-01-01 01:01:01.000000,2065-01-01 10:20:30.067000]]
+            microsecond: [[0,67000]]
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.microsecond(),
@@ -348,23 +304,22 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import narwhals as nw
             >>> df_native = pa.table(
             ...     {
-            ...         "datetime": [
+            ...         "a": [
             ...             datetime(1978, 1, 1, 1, 1, 1, 0),
-            ...             datetime(2024, 10, 13, 5, 30, 14, 505000),
             ...             datetime(2065, 1, 1, 10, 20, 30, 67000),
             ...         ]
             ...     }
             ... )
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(
-            ...     nw.col("datetime").dt.nanosecond().alias("nanosecond")
+            ...     nw.col("a").dt.nanosecond().alias("nanosecond")
             ... ).to_native()
             pyarrow.Table
-            datetime: timestamp[us]
+            a: timestamp[us]
             nanosecond: int64
             ----
-            datetime: [[1978-01-01 01:01:01.000000,2024-10-13 05:30:14.505000,2065-01-01 10:20:30.067000]]
-            nanosecond: [[0,505000000,67000000]]
+            a: [[1978-01-01 01:01:01.000000,2065-01-01 10:20:30.067000]]
+            nanosecond: [[0,67000000]]
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.nanosecond(),
@@ -555,7 +510,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             consider using `fill_null()` and `cast` in this case.
 
         Examples:
-        Examples:
             >>> from datetime import timedelta
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -669,7 +623,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             ...     {
             ...         "a": [
             ...             datetime(2020, 3, 1),
-            ...             datetime(2020, 4, 1),
             ...             datetime(2020, 5, 1),
             ...         ]
             ...     }
@@ -679,14 +632,13 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             ┌───────────────────────┐
             |  Narwhals DataFrame   |
             |-----------------------|
-            |shape: (3, 1)          |
+            |shape: (2, 1)          |
             |┌─────────────────────┐|
             |│ a                   │|
             |│ ---                 │|
             |│ str                 │|
             |╞═════════════════════╡|
             |│ 2020/03/01 00:00:00 │|
-            |│ 2020/04/01 00:00:00 │|
             |│ 2020/05/01 00:00:00 │|
             |└─────────────────────┘|
             └───────────────────────┘
@@ -784,28 +736,22 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> from datetime import date
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_native = pl.DataFrame(
-            ...     {"date": [date(2001, 1, 1), None, date(2001, 1, 3)]}
-            ... )
+            >>> df_native = pl.DataFrame({"date": [date(2001, 1, 1), None]})
             >>> df = nw.from_native(df_native)
-            >>> df.with_columns(
-            ...     nw.col("date").dt.timestamp().alias("timestamp_us"),
-            ...     nw.col("date").dt.timestamp("ms").alias("timestamp_ms"),
-            ... )
-            ┌───────────────────────────────────────────────┐
-            |              Narwhals DataFrame               |
-            |-----------------------------------------------|
-            |shape: (3, 3)                                  |
-            |┌────────────┬─────────────────┬──────────────┐|
-            |│ date       ┆ timestamp_us    ┆ timestamp_ms │|
-            |│ ---        ┆ ---             ┆ ---          │|
-            |│ date       ┆ i64             ┆ i64          │|
-            |╞════════════╪═════════════════╪══════════════╡|
-            |│ 2001-01-01 ┆ 978307200000000 ┆ 978307200000 │|
-            |│ null       ┆ null            ┆ null         │|
-            |│ 2001-01-03 ┆ 978480000000000 ┆ 978480000000 │|
-            |└────────────┴─────────────────┴──────────────┘|
-            └───────────────────────────────────────────────┘
+            >>> df.with_columns(nw.col("date").dt.timestamp("ms").alias("timestamp_ms"))
+            ┌─────────────────────────────┐
+            |     Narwhals DataFrame      |
+            |-----------------------------|
+            |shape: (2, 2)                |
+            |┌────────────┬──────────────┐|
+            |│ date       ┆ timestamp_ms │|
+            |│ ---        ┆ ---          │|
+            |│ date       ┆ i64          │|
+            |╞════════════╪══════════════╡|
+            |│ 2001-01-01 ┆ 978307200000 │|
+            |│ null       ┆ null         │|
+            |└────────────┴──────────────┘|
+            └─────────────────────────────┘
         """
         if time_unit not in {"ns", "us", "ms"}:
             msg = (
