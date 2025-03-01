@@ -121,7 +121,6 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
         )
 
     def exclude(self: Self, *column_names: str) -> ArrowExpr:
-        from narwhals._arrow.expr import ArrowExpr
         from narwhals._arrow.series import ArrowSeries
 
         def evaluate_output_names(df: ArrowDataFrame) -> Sequence[str]:
@@ -143,14 +142,12 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
                 for column_name in evaluate_output_names(df)
             ]
 
-        return ArrowExpr(
+        return self._create_expr_from_callable(
             func,
             depth=0,
             function_name="exclude",
             evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
-            backend_version=self._backend_version,
-            version=self._version,
         )
 
     def nth(self: Self, *column_indices: int) -> ArrowExpr:

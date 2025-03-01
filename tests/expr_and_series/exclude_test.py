@@ -16,6 +16,8 @@ if TYPE_CHECKING:
     [
         (nw.exclude("a"), ["b", "z"]),
         (nw.exclude("b", "z"), ["a"]),
+        (nw.exclude(["a"]), ["b", "z"]),
+        (nw.exclude(["b", "z"]), ["a"]),
     ],
 )
 def test_exclude(

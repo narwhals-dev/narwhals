@@ -1054,7 +1054,7 @@ def exclude(*names: str | Iterable[str]) -> Expr:
         >>> import narwhals as nw
         >>>
         >>> df_native = pl.DataFrame({"a": [1, 2], "b": [3, 4], "c": ["x", "z"]})
-        >>> nw.from_native(df_native).select(nw.exclude("c"))
+        >>> nw.from_native(df_native).select(nw.exclude("c", "a"))
         ┌──────────────────┐
         |Narwhals DataFrame|
         |------------------|

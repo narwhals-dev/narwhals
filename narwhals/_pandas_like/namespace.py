@@ -135,15 +135,12 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeDataFrame, PandasLikeSeri
                 for column_name in evaluate_output_names(df)
             ]
 
-        return PandasLikeExpr(
+        return self._create_expr_from_callable(
             func,
             depth=0,
             evaluate_output_names=evaluate_output_names,
             function_name="exclude",
             alias_output_names=None,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
         )
 
     def nth(self: Self, *column_indices: int) -> PandasLikeExpr:
