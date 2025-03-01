@@ -1812,6 +1812,18 @@ def col(*names: str | Iterable[str]) -> Expr:
     return _stableify(nw.col(*names))
 
 
+def exclude(*names: str | Iterable[str]) -> Expr:
+    """Creates an expression that excludes columns by their name(s).
+
+    Arguments:
+        names: Name(s) of the columns to exclude.
+
+    Returns:
+        A new expression.
+    """
+    return _stableify(nw.exclude(*names))
+
+
 def nth(*indices: int | Sequence[int]) -> Expr:
     """Creates an expression that references one or more columns by their index(es).
 

@@ -237,6 +237,29 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "duckdb.Expression"]
             *column_names, backend_version=self._backend_version, version=self._version
         )
 
+    def exclude(self: Self, *column_names: str) -> DuckDBExpr:
+        def evaluate_output_names(df: DuckDBLazyFrame) -> Sequence[str]:
+            exclude_names = set(column_names)
+            return [
+                column_name
+                for column_name in df.columns
+                if column_name not in exclude_names
+            ]
+
+        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+            return [
+                ColumnExpression(column_name) for column_name in evaluate_output_names(df)
+            ]
+
+        return DuckDBExpr(
+            func,
+            function_name="exclude",
+            evaluate_output_names=evaluate_output_names,
+            alias_output_names=None,
+            backend_version=self._backend_version,
+            version=self._version,
+        )
+
     def nth(self: Self, *column_indices: int) -> DuckDBExpr:
         return DuckDBExpr.from_column_indices(
             *column_indices, backend_version=self._backend_version, version=self._version

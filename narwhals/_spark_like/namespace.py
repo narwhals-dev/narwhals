@@ -68,6 +68,28 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):  #
             implementation=self._implementation,
         )
 
+    def exclude(self: Self, *column_names: str) -> SparkLikeExpr:
+        def evaluate_output_names(df: SparkLikeLazyFrame) -> Sequence[str]:
+            exclude_names = set(column_names)
+            return [
+                column_name
+                for column_name in df.columns
+                if column_name not in exclude_names
+            ]
+
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            return [df._F.col(column_name) for column_name in evaluate_output_names(df)]
+
+        return SparkLikeExpr(
+            func,
+            function_name="exclude",
+            evaluate_output_names=evaluate_output_names,
+            alias_output_names=None,
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
+        )
+
     def nth(self: Self, *column_indices: int) -> SparkLikeExpr:
         return SparkLikeExpr.from_column_indices(
             *column_indices,

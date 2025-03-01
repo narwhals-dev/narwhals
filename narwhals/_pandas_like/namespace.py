@@ -115,6 +115,37 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeDataFrame, PandasLikeSeri
             version=self._version,
         )
 
+    def exclude(self: Self, *column_names: str) -> PandasLikeExpr:
+        def evaluate_output_names(df: PandasLikeDataFrame) -> Sequence[str]:
+            exclude_columns = set(column_names)
+            return [
+                column_name
+                for column_name in df.columns
+                if column_name not in exclude_columns
+            ]
+
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            return [
+                PandasLikeSeries(
+                    df._native_frame[column_name],
+                    implementation=df._implementation,
+                    backend_version=df._backend_version,
+                    version=df._version,
+                )
+                for column_name in evaluate_output_names(df)
+            ]
+
+        return PandasLikeExpr(
+            func,
+            depth=0,
+            evaluate_output_names=evaluate_output_names,
+            function_name="exclude",
+            alias_output_names=None,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+            version=self._version,
+        )
+
     def nth(self: Self, *column_indices: int) -> PandasLikeExpr:
         return PandasLikeExpr.from_column_indices(
             *column_indices,

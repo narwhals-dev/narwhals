@@ -1040,6 +1040,42 @@ def col(*names: str | Iterable[str]) -> Expr:
     return Expr(func, ExprMetadata.selector())
 
 
+def exclude(*names: str | Iterable[str]) -> Expr:
+    """Creates an expression that excludes columns by their name(s).
+
+    Arguments:
+        names: Name(s) of the columns to exclude.
+
+    Returns:
+        A new expression.
+
+    Examples:
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>>
+        >>> df_native = pl.DataFrame({"a": [1, 2], "b": [3, 4], "c": ["x", "z"]})
+        >>> nw.from_native(df_native).select(nw.exclude("c"))
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |  shape: (2, 1)   |
+        |  ┌─────┐         |
+        |  │ b   │         |
+        |  │ --- │         |
+        |  │ i64 │         |
+        |  ╞═════╡         |
+        |  │ 3   │         |
+        |  │ 4   │         |
+        |  └─────┘         |
+        └──────────────────┘
+    """
+
+    def func(plx: Any) -> Any:
+        return plx.exclude(*flatten(names))
+
+    return Expr(func, ExprMetadata.selector())
+
+
 def nth(*indices: int | Sequence[int]) -> Expr:
     """Creates an expression that references one or more columns by their index(es).
 

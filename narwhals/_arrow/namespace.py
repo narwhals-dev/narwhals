@@ -120,6 +120,39 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
             *column_names, backend_version=self._backend_version, version=self._version
         )
 
+    def exclude(self: Self, *column_names: str) -> ArrowExpr:
+        from narwhals._arrow.expr import ArrowExpr
+        from narwhals._arrow.series import ArrowSeries
+
+        def evaluate_output_names(df: ArrowDataFrame) -> Sequence[str]:
+            exclude_columns = set(column_names)
+            return [
+                column_name
+                for column_name in df.columns
+                if column_name not in exclude_columns
+            ]
+
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            return [
+                ArrowSeries(
+                    df._native_frame[column_name],
+                    name=column_name,
+                    backend_version=df._backend_version,
+                    version=df._version,
+                )
+                for column_name in evaluate_output_names(df)
+            ]
+
+        return ArrowExpr(
+            func,
+            depth=0,
+            function_name="exclude",
+            evaluate_output_names=evaluate_output_names,
+            alias_output_names=None,
+            backend_version=self._backend_version,
+            version=self._version,
+        )
+
     def nth(self: Self, *column_indices: int) -> ArrowExpr:
         from narwhals._arrow.expr import ArrowExpr
 
