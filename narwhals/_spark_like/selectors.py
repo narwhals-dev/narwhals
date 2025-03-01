@@ -17,14 +17,14 @@ if TYPE_CHECKING:
     from narwhals.utils import _FullContext
 
 
-class SparkLikeSelectorNamespace(LazySelectorNamespace["SparkLikeLazyFrame", "Column"]):
+class SparkLikeSelectorNamespace(LazySelectorNamespace["SparkLikeLazyFrame", "Column"]):  # type: ignore[type-var] (#2044)
     def _iter_columns(self, df: SparkLikeLazyFrame) -> Iterator[Column]:
         for col in df.columns:
             yield df._F.col(col)
 
     def _selector(
         self,
-        call: EvalSeries[SparkLikeLazyFrame, Column],
+        call: EvalSeries[SparkLikeLazyFrame, Column],  # type: ignore[type-var] (#2044)
         evaluate_output_names: EvalNames[SparkLikeLazyFrame],
         /,
     ) -> SparkLikeSelector:
@@ -44,7 +44,7 @@ class SparkLikeSelectorNamespace(LazySelectorNamespace["SparkLikeLazyFrame", "Co
         self._implementation = context._implementation
 
 
-class SparkLikeSelector(CompliantSelector["SparkLikeLazyFrame", "Column"], SparkLikeExpr):  # type: ignore[misc]
+class SparkLikeSelector(CompliantSelector["SparkLikeLazyFrame", "Column"], SparkLikeExpr):  # type: ignore[type-var, misc] (#2044)
     def _to_expr(self: Self) -> SparkLikeExpr:
         return SparkLikeExpr(
             self._call,
