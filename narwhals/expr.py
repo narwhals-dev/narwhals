@@ -1554,7 +1554,7 @@ class Expr:
         flat_partition_by = flatten(partition_by)
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).over(
-                flat_partition_by, kind=self._metadata.kind
+                flat_partition_by, order_by=_order_by, kind=self._metadata.kind
             ),
             metadata,
         )
