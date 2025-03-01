@@ -22,7 +22,9 @@ def test_gather_every_expr(
 
     assert_equal_data(result, expected)
 
-    with pytest.deprecated_call():
+    with pytest.deprecated_call(
+        match="is deprecated and will be removed in a future version"
+    ):
         df.select(nw_main.col("a").gather_every(n=n, offset=offset))
 
 

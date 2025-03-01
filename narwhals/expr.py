@@ -1097,7 +1097,7 @@ class Expr:
             "Note: this will remain available in `narwhals.stable.v1`.\n"
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
-        issue_deprecation_warning(msg, _version="1.22.0")
+        issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
@@ -1491,7 +1491,7 @@ class Expr:
             "Note: this will remain available in `narwhals.stable.v1`.\n"
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
-        issue_deprecation_warning(msg, _version="1.22.0")
+        issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
@@ -1759,7 +1759,7 @@ class Expr:
             "Note: this will remain available in `narwhals.stable.v1`.\n"
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
-        issue_deprecation_warning(msg, _version="1.22.0")
+        issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).head(n),
             self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
@@ -1787,7 +1787,7 @@ class Expr:
             "Note: this will remain available in `narwhals.stable.v1`.\n"
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
-        issue_deprecation_warning(msg, _version="1.22.0")
+        issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).tail(n),
             self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
@@ -1882,7 +1882,7 @@ class Expr:
             "Note: this will remain available in `narwhals.stable.v1`.\n"
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
-        issue_deprecation_warning(msg, _version="1.22.0")
+        issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
             self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),

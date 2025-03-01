@@ -21,7 +21,9 @@ def test_expr_sample(constructor_eager: ConstructorEager) -> None:
     expected_series = (2,)
     assert result_series == expected_series
 
-    with pytest.deprecated_call():
+    with pytest.deprecated_call(
+        match="is deprecated and will be removed in a future version"
+    ):
         df.select(nw_main.col("a").sample(n=2))
 
 
