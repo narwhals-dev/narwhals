@@ -12,6 +12,7 @@ from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import combine_metadata
+from narwhals._expression_parsing import extract_compliant
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.expr_cat import ExprCatNamespace
@@ -1096,7 +1097,7 @@ class Expr:
             "Note: this will remain available in `narwhals.stable.v1`.\n"
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
-        issue_deprecation_warning(msg, _version="1.22.0")
+        issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
@@ -1333,7 +1334,7 @@ class Expr:
         """Fill null values with given value.
 
         Arguments:
-            value: Value used to fill null values.
+            value: Value or expression used to fill null values.
             strategy: Strategy used to fill null values.
             limit: Number of consecutive null values to fill when using the 'forward' or 'backward' strategy.
 
@@ -1352,34 +1353,37 @@ class Expr:
             ...     {
             ...         "a": [2, None, None, 3],
             ...         "b": [2.0, float("nan"), float("nan"), 3.0],
+            ...         "c": [1, 2, 3, 4],
             ...     }
             ... )
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(
-            ...     nw.col("a", "b").fill_null(0).name.suffix("_nulls_filled")
+            ...     nw.col("a", "b").fill_null(0).name.suffix("_filled"),
+            ...     nw.col("a").fill_null(nw.col("c")).name.suffix("_filled_with_c"),
             ... )
-            ┌────────────────────────────────────────────────┐
-            |               Narwhals DataFrame               |
-            |------------------------------------------------|
-            |shape: (4, 4)                                   |
-            |┌──────┬─────┬────────────────┬────────────────┐|
-            |│ a    ┆ b   ┆ a_nulls_filled ┆ b_nulls_filled │|
-            |│ ---  ┆ --- ┆ ---            ┆ ---            │|
-            |│ i64  ┆ f64 ┆ i64            ┆ f64            │|
-            |╞══════╪═════╪════════════════╪════════════════╡|
-            |│ 2    ┆ 2.0 ┆ 2              ┆ 2.0            │|
-            |│ null ┆ NaN ┆ 0              ┆ NaN            │|
-            |│ null ┆ NaN ┆ 0              ┆ NaN            │|
-            |│ 3    ┆ 3.0 ┆ 3              ┆ 3.0            │|
-            |└──────┴─────┴────────────────┴────────────────┘|
-            └────────────────────────────────────────────────┘
+            ┌────────────────────────────────────────────────────────────┐
+            |                     Narwhals DataFrame                     |
+            |------------------------------------------------------------|
+            |shape: (4, 6)                                               |
+            |┌──────┬─────┬─────┬──────────┬──────────┬─────────────────┐|
+            |│ a    ┆ b   ┆ c   ┆ a_filled ┆ b_filled ┆ a_filled_with_c │|
+            |│ ---  ┆ --- ┆ --- ┆ ---      ┆ ---      ┆ ---             │|
+            |│ i64  ┆ f64 ┆ i64 ┆ i64      ┆ f64      ┆ i64             │|
+            |╞══════╪═════╪═════╪══════════╪══════════╪═════════════════╡|
+            |│ 2    ┆ 2.0 ┆ 1   ┆ 2        ┆ 2.0      ┆ 2               │|
+            |│ null ┆ NaN ┆ 2   ┆ 0        ┆ NaN      ┆ 2               │|
+            |│ null ┆ NaN ┆ 3   ┆ 0        ┆ NaN      ┆ 3               │|
+            |│ 3    ┆ 3.0 ┆ 4   ┆ 3        ┆ 3.0      ┆ 3               │|
+            |└──────┴─────┴─────┴──────────┴──────────┴─────────────────┘|
+            └────────────────────────────────────────────────────────────┘
 
             Using a strategy:
 
-            >>> df.with_columns(
+            >>> df.select(
+            ...     nw.col("a", "b"),
             ...     nw.col("a", "b")
             ...     .fill_null(strategy="forward", limit=1)
-            ...     .name.suffix("_nulls_forward_filled")
+            ...     .name.suffix("_nulls_forward_filled"),
             ... )
             ┌────────────────────────────────────────────────────────────────┐
             |                       Narwhals DataFrame                       |
@@ -1408,7 +1412,9 @@ class Expr:
             raise ValueError(msg)
         return self._from_callable(
             lambda plx: self._to_compliant_expr(plx).fill_null(
-                value=value, strategy=strategy, limit=limit
+                value=extract_compliant(plx, value, str_as_lit=True),
+                strategy=strategy,
+                limit=limit,
             )
         )
 
@@ -1485,7 +1491,7 @@ class Expr:
             "Note: this will remain available in `narwhals.stable.v1`.\n"
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
-        issue_deprecation_warning(msg, _version="1.22.0")
+        issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
@@ -1494,14 +1500,16 @@ class Expr:
         )
 
     def over(
-        self: Self, *keys: str | Iterable[str], _order_by: str | None = None
+        self: Self,
+        *partition_by: str | Iterable[str],
+        _order_by: str | None = None,
     ) -> Self:
         """Compute expressions over the given groups.
 
         Arguments:
-            keys: Names of columns to compute window expression over.
-                  Must be names of columns, as opposed to expressions -
-                  so, this is a bit less flexible than Polars' `Expr.over`.
+            partition_by: Names of columns to compute window expression over.
+                Must be names of columns, as opposed to expressions -
+                so, this is a bit less flexible than Polars' `Expr.over`.
             _order_by: Unused, but this is building up to something.
 
         Returns:
@@ -1543,10 +1551,10 @@ class Expr:
         if _order_by is not None and self._metadata.kind.is_window():
             n_open_windows -= 1
         metadata = ExprMetadata(kind, n_open_windows=n_open_windows)
-        flattened = flatten(keys)
+        flat_partition_by = flatten(partition_by)
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).over(
-                flattened, kind=self._metadata.kind, order_by=_order_by
+                flat_partition_by, kind=self._metadata.kind
             ),
             metadata,
         )
@@ -1751,7 +1759,7 @@ class Expr:
             "Note: this will remain available in `narwhals.stable.v1`.\n"
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
-        issue_deprecation_warning(msg, _version="1.22.0")
+        issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).head(n),
             self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
@@ -1779,7 +1787,7 @@ class Expr:
             "Note: this will remain available in `narwhals.stable.v1`.\n"
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
-        issue_deprecation_warning(msg, _version="1.22.0")
+        issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).tail(n),
             self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
@@ -1874,7 +1882,7 @@ class Expr:
             "Note: this will remain available in `narwhals.stable.v1`.\n"
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
-        issue_deprecation_warning(msg, _version="1.22.0")
+        issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
             self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),

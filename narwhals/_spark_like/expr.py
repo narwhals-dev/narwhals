@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):
+class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ignore[type-var] # (#2044)
     _depth = 0  # Unused, just for compatibility with CompliantExpr
 
     def __init__(
@@ -320,7 +320,7 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):
         )
 
     def __invert__(self: Self) -> Self:
-        invert = cast("Callable[..., SparkLikeExpr]", operator.invert)
+        invert = cast("Callable[..., Column]", operator.invert)
         return self._from_call(invert, "__invert__")
 
     def abs(self: Self) -> Self:

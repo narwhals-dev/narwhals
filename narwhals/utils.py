@@ -54,7 +54,7 @@ if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantExpr
-    from narwhals.typing import CompliantFrameT_contra
+    from narwhals.typing import CompliantFrameT
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import CompliantSeries
     from narwhals.typing import CompliantSeriesT_co
@@ -102,6 +102,10 @@ if TYPE_CHECKING:
         - `_backend_version`
         - `_version`
         """
+
+    class _StoresColumns(Protocol):
+        @property
+        def columns(self) -> Sequence[str]: ...
 
 
 class Version(Enum):
@@ -1344,12 +1348,18 @@ def dtype_matches_time_unit_and_time_zone(
     )
 
 
+def get_column_names(frame: _StoresColumns, /) -> Sequence[str]:
+    return frame.columns
+
+
 def _hasattr_static(obj: Any, attr: str) -> bool:
     sentinel = object()
     return getattr_static(obj, attr, sentinel) is not sentinel
 
 
-def is_compliant_dataframe(obj: Any) -> TypeIs[CompliantDataFrame]:
+def is_compliant_dataframe(
+    obj: CompliantDataFrame[CompliantSeriesT_co] | Any,
+) -> TypeIs[CompliantDataFrame[CompliantSeriesT_co]]:
     return _hasattr_static(obj, "__narwhals_dataframe__")
 
 
@@ -1362,8 +1372,8 @@ def is_compliant_series(obj: Any) -> TypeIs[CompliantSeries]:
 
 
 def is_compliant_expr(
-    obj: CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co] | Any,
-) -> TypeIs[CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co]]:
+    obj: CompliantExpr[CompliantFrameT, CompliantSeriesT_co] | Any,
+) -> TypeIs[CompliantExpr[CompliantFrameT, CompliantSeriesT_co]]:
     return hasattr(obj, "__narwhals_expr__")
 
 

@@ -89,7 +89,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         self: Self,
         backend: ModuleType | Implementation | str | None,
         **kwargs: Any,
-    ) -> CompliantDataFrame:
+    ) -> CompliantDataFrame[Any]:
         if backend is None or backend is Implementation.PYARROW:
             import pyarrow as pa  # ignore-banned-import
 

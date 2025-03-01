@@ -8,6 +8,7 @@ from typing import Callable
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
+from typing import cast
 
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
@@ -17,6 +18,7 @@ from narwhals._spark_like.selectors import SparkLikeSelectorNamespace
 from narwhals._spark_like.utils import maybe_evaluate_expr
 from narwhals._spark_like.utils import narwhals_to_native_dtype
 from narwhals.typing import CompliantNamespace
+from narwhals.utils import get_column_names
 
 if TYPE_CHECKING:
     from pyspark.sql import Column
@@ -28,7 +30,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):
+class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):  # type: ignore[type-var] # (#2044)
     def __init__(
         self: Self,
         *,
@@ -51,7 +53,7 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):
         return SparkLikeExpr(
             call=_all,
             function_name="all",
-            evaluate_output_names=lambda df: df.columns,
+            evaluate_output_names=get_column_names,
             alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
@@ -221,7 +223,7 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):
         *,
         how: Literal["horizontal", "vertical", "diagonal"],
     ) -> SparkLikeLazyFrame:
-        dfs: list[DataFrame] = [item._native_frame for item in items]
+        dfs = cast("Sequence[DataFrame]", [item._native_frame for item in items])
         if how == "horizontal":
             msg = (
                 "Horizontal concatenation is not supported for LazyFrame backed by "

@@ -9,8 +9,6 @@ from typing import Literal
 from typing import Mapping
 from typing import Protocol
 from typing import Sequence
-from typing import TypeVar
-from typing import Union
 from typing import overload
 
 from narwhals._expression_parsing import ExprKind
@@ -21,8 +19,6 @@ from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import extract_compliant
 from narwhals._expression_parsing import infer_kind
 from narwhals._expression_parsing import is_scalar_like
-from narwhals.dataframe import DataFrame
-from narwhals.dataframe import LazyFrame
 from narwhals.dependencies import is_numpy_array
 from narwhals.dependencies import is_numpy_array_2d
 from narwhals.expr import Expr
@@ -39,12 +35,6 @@ from narwhals.utils import parse_version
 from narwhals.utils import validate_laziness
 from narwhals.utils import validate_native_namespace_and_backend
 
-# Missing type parameters for generic type "DataFrame"
-# However, trying to provide one results in mypy still complaining...
-# The rest of the annotations seem to work fine with this anyway
-FrameT = TypeVar("FrameT", bound=Union[DataFrame, LazyFrame])  # type: ignore[type-arg]
-
-
 if TYPE_CHECKING:
     from types import ModuleType
 
@@ -52,6 +42,8 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
 
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.series import Series
     from narwhals.typing import CompliantExpr

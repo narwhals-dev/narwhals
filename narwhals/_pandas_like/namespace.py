@@ -22,6 +22,7 @@ from narwhals._pandas_like.utils import extract_dataframe_comparand
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import vertical_concat
 from narwhals.typing import CompliantNamespace
+from narwhals.utils import get_column_names
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
@@ -135,7 +136,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeDataFrame, PandasLikeSeri
             ],
             depth=0,
             function_name="all",
-            evaluate_output_names=lambda df: df.columns,
+            evaluate_output_names=get_column_names,
             alias_output_names=None,
             implementation=self._implementation,
             backend_version=self._backend_version,
@@ -445,10 +446,10 @@ class PandasWhen:
         if isinstance(self._otherwise_value, PandasLikeExpr):
             otherwise_series = self._otherwise_value(df)[0]
         else:
-            otherwise_series = plx._create_series_from_scalar(
-                self._otherwise_value, reference_series=condition.alias("literal")
+            native_result = value_series_native.where(
+                condition_native, self._otherwise_value
             )
-            otherwise_series._broadcast = True
+            return [value_series._from_native_series(native_result)]
         otherwise_series_native = extract_dataframe_comparand(
             df._native_frame.index, otherwise_series
         )
