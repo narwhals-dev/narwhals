@@ -6,6 +6,7 @@ from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Container
 from typing import Literal
 from typing import Sequence
 
@@ -237,13 +238,12 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "duckdb.Expression"]
             *column_names, backend_version=self._backend_version, version=self._version
         )
 
-    def exclude(self: Self, *column_names: str) -> DuckDBExpr:
+    def exclude(self: Self, column_names: Container[str]) -> DuckDBExpr:
         def evaluate_output_names(df: DuckDBLazyFrame) -> Sequence[str]:
-            exclude_names = set(column_names)
             return [
                 column_name
                 for column_name in df.columns
-                if column_name not in exclude_names
+                if column_name not in column_names
             ]
 
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:

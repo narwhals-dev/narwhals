@@ -5,6 +5,7 @@ from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Container
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
@@ -115,13 +116,12 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeDataFrame, PandasLikeSeri
             version=self._version,
         )
 
-    def exclude(self: Self, *column_names: str) -> PandasLikeExpr:
+    def exclude(self: Self, column_names: Container[str]) -> PandasLikeExpr:
         def evaluate_output_names(df: PandasLikeDataFrame) -> Sequence[str]:
-            exclude_columns = set(column_names)
             return [
                 column_name
                 for column_name in df.columns
-                if column_name not in exclude_columns
+                if column_name not in column_names
             ]
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:

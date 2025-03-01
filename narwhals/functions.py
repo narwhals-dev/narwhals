@@ -1071,7 +1071,7 @@ def exclude(*names: str | Iterable[str]) -> Expr:
     """
 
     def func(plx: Any) -> Any:
-        return plx.exclude(*flatten(names))
+        return plx.exclude(frozenset(flatten(names)))
 
     return Expr(func, ExprMetadata.selector())
 
