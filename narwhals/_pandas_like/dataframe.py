@@ -599,11 +599,14 @@ class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyF
         self: Self,
         other: Self,
         *,
-        how: Literal["left", "inner", "cross", "anti", "semi"],
+        how: Literal["left", "inner", "full", "outer", "cross", "anti", "semi"],
         left_on: list[str] | None,
         right_on: list[str] | None,
         suffix: str,
     ) -> Self:
+        if how == "full":
+            how = "outer"  # pandas calls full joins outer
+
         if how == "cross":
             if (
                 self._implementation is Implementation.MODIN

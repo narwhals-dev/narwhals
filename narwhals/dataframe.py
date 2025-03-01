@@ -235,7 +235,7 @@ class BaseFrame(Generic[_FrameT]):
         self: Self,
         other: Self,
         on: str | list[str] | None = None,
-        how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
+        how: Literal["inner", "left", "full", "cross", "semi", "anti"] = "inner",
         *,
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
@@ -245,7 +245,9 @@ class BaseFrame(Generic[_FrameT]):
         left_on = [left_on] if isinstance(left_on, str) else left_on
         right_on = [right_on] if isinstance(right_on, str) else right_on
 
-        if how not in (_supported_joins := ("inner", "left", "cross", "anti", "semi")):
+        if how not in (
+            _supported_joins := ("inner", "left", "full", "cross", "anti", "semi")
+        ):
             msg = f"Only the following join strategies are supported: {_supported_joins}; found '{how}'."
             raise NotImplementedError(msg)
 
@@ -1623,7 +1625,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         self: Self,
         other: Self,
         on: str | list[str] | None = None,
-        how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
+        how: Literal["inner", "left", "full", "cross", "semi", "anti"] = "inner",
         *,
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
@@ -2914,7 +2916,7 @@ class LazyFrame(BaseFrame[FrameT]):
         self: Self,
         other: Self,
         on: str | list[str] | None = None,
-        how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
+        how: Literal["inner", "left", "full", "cross", "semi", "anti"] = "inner",
         *,
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,

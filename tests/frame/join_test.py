@@ -17,6 +17,31 @@ from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
 
+def test_full_join(constructor: Constructor) -> None:
+    df1 = {"id": [1, 2, 3], "value1": ["A", "B", "C"]}
+    df2 = {"id": [2, 3, 4], "value2": ["X", "Y", "Z"]}
+    expected_coalesce = {
+        "id": [1, 2, 3, 4],
+        "value1": ["A", "B", "C", None],
+        "value2": [None, "X", "Y", "Z"],
+    }
+    expected_no_coalesce = {
+        "id": [None, 1, 2, 3],
+        "value1": [None, "A", "B", "C"],
+        "id_right": [4, None, 2, 3],
+        "value2": ["Z", None, "X", "Y"],
+    }
+
+    df_left = nw_main.from_native(constructor(df1))
+    df_right = nw_main.from_native(constructor(df2))
+    result = df_left.join(df_right, left_on="id", right_on="id", how="full")
+    result = result.sort("id")
+    try:
+        assert_equal_data(result, expected_coalesce)
+    except AssertionError:  # coealesce-join not implemented
+        assert_equal_data(result, expected_no_coalesce)
+
+
 def test_inner_join_two_keys(constructor: Constructor) -> None:
     data = {
         "antananarivo": [1, 3, 2],
@@ -215,7 +240,7 @@ def test_semi_join(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.parametrize("how", ["right", "full"])
+@pytest.mark.parametrize("how", ["right"])
 def test_join_not_implemented(constructor: Constructor, how: str) -> None:
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
@@ -223,7 +248,7 @@ def test_join_not_implemented(constructor: Constructor, how: str) -> None:
     with pytest.raises(
         NotImplementedError,
         match=re.escape(
-            f"Only the following join strategies are supported: ('inner', 'left', 'cross', 'anti', 'semi'); found '{how}'."
+            f"Only the following join strategies are supported: ('inner', 'left', 'full', 'cross', 'anti', 'semi'); found '{how}'."
         ),
     ):
         df.join(df, left_on="antananarivo", right_on="antananarivo", how=how)  # type: ignore[arg-type]

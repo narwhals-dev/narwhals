@@ -405,7 +405,7 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
         self: Self,
         other: Self,
         *,
-        how: Literal["left", "inner", "cross", "anti", "semi"],
+        how: Literal["left", "inner", "full", "cross", "anti", "semi"],
         left_on: list[str] | None,
         right_on: list[str] | None,
         suffix: str,
@@ -415,6 +415,7 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
             "semi": "left semi",
             "inner": "inner",
             "left": "left outer",
+            "full": "full outer",
         }
 
         if how == "cross":
