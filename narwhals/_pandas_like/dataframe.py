@@ -48,7 +48,6 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
-    from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals.dtypes import DType
     from narwhals.typing import SizeUnit
     from narwhals.typing import _1DArray
@@ -397,7 +396,9 @@ class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyF
             validate_column_names=False,
         )
 
-    def aggregate(self: Self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
+    def aggregate(
+        self: PandasLikeDataFrame, *exprs: PandasLikeExpr
+    ) -> PandasLikeDataFrame:
         return self.select(*exprs)
 
     def select(self: PandasLikeDataFrame, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
@@ -415,7 +416,9 @@ class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyF
         )
         return self._from_native_frame(df, validate_column_names=True)
 
-    def drop_nulls(self: Self, subset: list[str] | None) -> PandasLikeDataFrame:
+    def drop_nulls(
+        self: PandasLikeDataFrame, subset: list[str] | None
+    ) -> PandasLikeDataFrame:
         if subset is None:
             return self._from_native_frame(
                 self._native_frame.dropna(axis=0), validate_column_names=False
@@ -533,7 +536,7 @@ class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyF
         self: Self,
         backend: Implementation | None,
         **kwargs: Any,
-    ) -> CompliantDataFrame[Any] | PolarsDataFrame:
+    ) -> CompliantDataFrame[Any]:
         if backend is None:
             return PandasLikeDataFrame(
                 self._native_frame,

@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
-from typing import Generic
 from typing import Literal
 from typing import Protocol
 from typing import Sequence
@@ -69,7 +68,7 @@ CompliantSeriesT_co = TypeVar(
 )
 
 
-class CompliantDataFrame(Generic[CompliantSeriesT_co], Protocol):
+class CompliantDataFrame(Protocol[CompliantSeriesT_co]):
     def __narwhals_dataframe__(self) -> Self: ...
     def __narwhals_namespace__(self) -> Any: ...
     def simple_select(
@@ -142,7 +141,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesT_co]):
     ) -> Self: ...
 
 
-class CompliantNamespace(Protocol, Generic[CompliantFrameT, CompliantSeriesT_co]):
+class CompliantNamespace(Protocol[CompliantFrameT, CompliantSeriesT_co]):
     def col(
         self, *column_names: str
     ) -> CompliantExpr[CompliantFrameT, CompliantSeriesT_co]: ...

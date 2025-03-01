@@ -469,7 +469,7 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
             self._native_frame.drop(to_drop), validate_column_names=False
         )
 
-    def drop_nulls(self: Self, subset: list[str] | None) -> ArrowDataFrame:
+    def drop_nulls(self: ArrowDataFrame, subset: list[str] | None) -> ArrowDataFrame:
         if subset is None:
             return self._from_native_frame(
                 self._native_frame.drop_null(), validate_column_names=False
@@ -745,7 +745,7 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
         )
 
     def unique(
-        self: Self,
+        self: ArrowDataFrame,
         subset: list[str] | None,
         *,
         keep: Literal["any", "first", "last", "none"],

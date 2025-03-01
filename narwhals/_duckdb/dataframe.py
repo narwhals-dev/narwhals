@@ -35,7 +35,6 @@ if TYPE_CHECKING:
     from narwhals._duckdb.group_by import DuckDBGroupBy
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.series import DuckDBInterchangeSeries
-    from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals.dtypes import DType
 
 from narwhals.typing import CompliantLazyFrame
@@ -90,7 +89,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         self: Self,
         backend: ModuleType | Implementation | str | None,
         **kwargs: Any,
-    ) -> CompliantDataFrame[Any] | PolarsDataFrame:
+    ) -> CompliantDataFrame[Any]:
         if backend is None or backend is Implementation.PYARROW:
             import pyarrow as pa  # ignore-banned-import
 

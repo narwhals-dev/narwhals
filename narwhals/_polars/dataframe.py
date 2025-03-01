@@ -474,7 +474,7 @@ class PolarsLazyFrame:
         self: Self,
         backend: Implementation | None,
         **kwargs: Any,
-    ) -> PolarsDataFrame | CompliantDataFrame[Any]:
+    ) -> CompliantDataFrame[Any]:
         try:
             result = self._native_frame.collect(**kwargs)
         except Exception as e:  # noqa: BLE001

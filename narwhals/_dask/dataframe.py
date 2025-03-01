@@ -29,7 +29,6 @@ if TYPE_CHECKING:
     from narwhals._dask.expr import DaskExpr
     from narwhals._dask.group_by import DaskLazyGroupBy
     from narwhals._dask.namespace import DaskNamespace
-    from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
@@ -90,7 +89,7 @@ class DaskLazyFrame(CompliantLazyFrame):
         self: Self,
         backend: Implementation | None,
         **kwargs: Any,
-    ) -> CompliantDataFrame[Any] | PolarsDataFrame:
+    ) -> CompliantDataFrame[Any]:
         import pandas as pd
 
         result = self._native_frame.compute(**kwargs)
