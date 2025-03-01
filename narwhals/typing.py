@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Generic
 from typing import Literal
 from typing import Protocol
@@ -10,23 +11,21 @@ from typing import TypeVar
 from typing import Union
 
 if TYPE_CHECKING:
-    import sys
+    from types import ModuleType
 
-    from narwhals.dtypes import DType
-    from narwhals.utils import Implementation
-
-    if sys.version_info >= (3, 10):
-        from typing import TypeAlias
-    else:
-        from typing_extensions import TypeAlias
-
+    import numpy as np
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
 
     from narwhals import dtypes
+    from narwhals._expression_parsing import ExprKind
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
+    from narwhals.dtypes import DType
     from narwhals.expr import Expr
     from narwhals.series import Series
+    from narwhals.utils import Implementation
+    from narwhals.utils import Version
 
     # All dataframes supported by Narwhals have a
     # `columns` property. Their similarities don't extend
@@ -46,38 +45,65 @@ if TYPE_CHECKING:
 
 class CompliantSeries(Protocol):
     @property
+    def dtype(self) -> DType: ...
+    @property
     def name(self) -> str: ...
     def __narwhals_series__(self) -> CompliantSeries: ...
     def alias(self, name: str) -> Self: ...
 
 
 class CompliantDataFrame(Protocol):
-    def __narwhals_dataframe__(self) -> CompliantDataFrame: ...
+    def __narwhals_dataframe__(self) -> Self: ...
     def __narwhals_namespace__(self) -> Any: ...
+    def simple_select(
+        self, *column_names: str
+    ) -> Self: ...  # `select` where all args are column names.
+    def aggregate(self, *exprs: Any) -> Self:
+        ...  # `select` where all args are aggregations or literals
+        # (so, no broadcasting is necessary).
+
+    @property
+    def columns(self) -> Sequence[str]: ...
 
 
 class CompliantLazyFrame(Protocol):
-    def __narwhals_lazyframe__(self) -> CompliantLazyFrame: ...
+    def __narwhals_lazyframe__(self) -> Self: ...
     def __narwhals_namespace__(self) -> Any: ...
+    def simple_select(
+        self, *column_names: str
+    ) -> Self: ...  # `select` where all args are column names.
+    def aggregate(self, *exprs: Any) -> Self:
+        ...  # `select` where all args are aggregations or literals
+        # (so, no broadcasting is necessary).
+
+    @property
+    def columns(self) -> Sequence[str]: ...
 
 
+CompliantFrameT_contra = TypeVar(
+    "CompliantFrameT_contra",
+    bound="CompliantDataFrame | CompliantLazyFrame",
+    contravariant=True,
+)
 CompliantSeriesT_co = TypeVar(
     "CompliantSeriesT_co", bound=CompliantSeries, covariant=True
 )
 
 
-class CompliantExpr(Protocol, Generic[CompliantSeriesT_co]):
+class CompliantExpr(Protocol, Generic[CompliantFrameT_contra, CompliantSeriesT_co]):
     _implementation: Implementation
     _backend_version: tuple[int, ...]
-    _output_names: list[str] | None
-    _root_names: list[str] | None
+    _version: Version
+    _evaluate_output_names: Callable[[CompliantFrameT_contra], Sequence[str]]
+    _alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None
     _depth: int
     _function_name: str
-    _kwargs: dict[str, Any]
 
     def __call__(self, df: Any) -> Sequence[CompliantSeriesT_co]: ...
     def __narwhals_expr__(self) -> None: ...
-    def __narwhals_namespace__(self) -> CompliantNamespace[CompliantSeriesT_co]: ...
+    def __narwhals_namespace__(
+        self,
+    ) -> CompliantNamespace[CompliantFrameT_contra, CompliantSeriesT_co]: ...
     def is_null(self) -> Self: ...
     def alias(self, name: str) -> Self: ...
     def cast(self, dtype: DType) -> Self: ...
@@ -90,14 +116,31 @@ class CompliantExpr(Protocol, Generic[CompliantSeriesT_co]):
     def __truediv__(self, other: Any) -> Self: ...
     def __mod__(self, other: Any) -> Self: ...
     def __pow__(self, other: Any) -> Self: ...
+    def __gt__(self, other: Any) -> Self: ...
+    def __ge__(self, other: Any) -> Self: ...
+    def __lt__(self, other: Any) -> Self: ...
+    def __le__(self, other: Any) -> Self: ...
+    def broadcast(
+        self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]
+    ) -> Self: ...
 
 
-class CompliantNamespace(Protocol, Generic[CompliantSeriesT_co]):
-    def col(self, *column_names: str) -> CompliantExpr[CompliantSeriesT_co]: ...
+class CompliantNamespace(Protocol, Generic[CompliantFrameT_contra, CompliantSeriesT_co]):
+    def col(
+        self, *column_names: str
+    ) -> CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co]: ...
     def lit(
         self, value: Any, dtype: DType | None
-    ) -> CompliantExpr[CompliantSeriesT_co]: ...
+    ) -> CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co]: ...
 
+
+class SupportsNativeNamespace(Protocol):
+    def __native_namespace__(self) -> ModuleType: ...
+
+
+IntoCompliantExpr: TypeAlias = (
+    "CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co] | CompliantSeriesT_co"
+)
 
 IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]
 """Anything which can be converted to an expression.
@@ -236,6 +279,7 @@ Examples:
     ...     return s.abs().to_native()
 """
 
+DTypeBackend: TypeAlias = 'Literal["pyarrow", "numpy_nullable"] | None'
 SizeUnit: TypeAlias = Literal[
     "b",
     "kb",
@@ -248,6 +292,14 @@ SizeUnit: TypeAlias = Literal[
     "gigabytes",
     "terabytes",
 ]
+
+TimeUnit: TypeAlias = Literal["ns", "us", "ms", "s"]
+
+_ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
+_NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
+_1DArray: TypeAlias = "_NDArray[tuple[int]]"  # noqa: PYI042, PYI047
+_2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI042, PYI047
+_AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
 
 
 class DTypes:

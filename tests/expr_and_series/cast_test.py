@@ -54,7 +54,8 @@ SCHEMA = {
     "p": nw.Int64,
 }
 
-SPARK_INCOMPATIBLE_COLUMNS = {"e", "f", "g", "h", "l", "o", "p"}
+SPARK_LIKE_INCOMPATIBLE_COLUMNS = {"e", "f", "g", "h", "l", "o", "p"}
+DUCKDB_INCOMPATIBLE_COLUMNS = {"l", "o", "p"}
 
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
@@ -62,8 +63,6 @@ def test_cast(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
         15,
     ):  # pragma: no cover
@@ -73,7 +72,9 @@ def test_cast(
         request.applymarker(pytest.mark.xfail)
 
     if "pyspark" in str(constructor):
-        incompatible_columns = SPARK_INCOMPATIBLE_COLUMNS  # pragma: no cover
+        incompatible_columns = SPARK_LIKE_INCOMPATIBLE_COLUMNS  # pragma: no cover
+    elif "duckdb" in str(constructor):
+        incompatible_columns = DUCKDB_INCOMPATIBLE_COLUMNS  # pragma: no cover
     else:
         incompatible_columns = set()
 
@@ -171,7 +172,7 @@ def test_cast_string() -> None:
     s = nw.from_native(s_pd, series_only=True)
     s = s.cast(nw.String)
     result = nw.to_native(s)
-    assert str(result.dtype) in ("string", "object", "dtype('O')")
+    assert str(result.dtype) in {"string", "object", "dtype('O')"}
 
 
 def test_cast_raises_for_unknown_dtype(
@@ -184,7 +185,7 @@ def test_cast_raises_for_unknown_dtype(
         request.applymarker(pytest.mark.xfail)
 
     if "pyspark" in str(constructor):
-        incompatible_columns = SPARK_INCOMPATIBLE_COLUMNS  # pragma: no cover
+        incompatible_columns = SPARK_LIKE_INCOMPATIBLE_COLUMNS  # pragma: no cover
     else:
         incompatible_columns = set()
 
@@ -236,7 +237,7 @@ def test_cast_datetime_tz_aware(
 
 def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(
-        backend in str(constructor) for backend in ("dask", "modin", "cudf", "pyspark")
+        backend in str(constructor) for backend in ("dask", "modin", "cudf", "sqlframe")
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -250,11 +251,32 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
         ]
     }
 
-    dtype = nw.Struct([nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float64())])
-    result = (
-        nw.from_native(constructor(data)).select(nw.col("a").cast(dtype)).lazy().collect()
-    )
+    native_df = constructor(data)
 
+    if "spark" in str(constructor):  # pragma: no cover
+        # Special handling for pyspark as it natively maps the input to
+        # a column of type MAP<STRING, STRING>
+        _tmp_nw_compliant_frame = nw.from_native(native_df)._compliant_frame
+        F = _tmp_nw_compliant_frame._F  # noqa: N806
+        T = _tmp_nw_compliant_frame._native_dtypes  # noqa: N806
+
+        native_df = native_df.withColumn(  # type: ignore[union-attr]
+            "a",
+            F.struct(
+                F.col("a.movie ").cast(T.StringType()).alias("movie "),
+                F.col("a.rating").cast(T.DoubleType()).alias("rating"),
+            ),
+        )
+        assert nw.from_native(native_df).schema == nw.Schema(
+            {
+                "a": nw.Struct(
+                    [nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float64())]
+                )
+            }
+        )
+
+    dtype = nw.Struct([nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float32())])
+    result = nw.from_native(native_df).select(nw.col("a").cast(dtype)).lazy().collect()
     assert result.schema == {"a": dtype}
 
 

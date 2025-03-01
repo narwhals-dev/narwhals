@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from copy import copy
+import re
+from functools import partial
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Mapping
 from typing import Sequence
 
 import dask.dataframe as dd
 
+from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._expression_parsing import is_simple_aggregation
-from narwhals._expression_parsing import parse_into_exprs
-from narwhals.exceptions import AnonymousExprError
-from narwhals.utils import remove_prefix
 
 try:
     import dask.dataframe.dask_expr as dx
@@ -20,48 +20,41 @@ except ModuleNotFoundError:  # pragma: no cover
 
 if TYPE_CHECKING:
     import pandas as pd
+    from pandas.core.groupby import SeriesGroupBy as _PandasSeriesGroupBy
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
 
     from narwhals._dask.dataframe import DaskLazyFrame
-    from narwhals._dask.typing import IntoDaskExpr
-    from narwhals.typing import CompliantExpr
+    from narwhals._dask.expr import DaskExpr
+
+    PandasSeriesGroupBy: TypeAlias = _PandasSeriesGroupBy[Any, Any]
+    _AggFn: TypeAlias = Callable[..., Any]
+    Aggregation: TypeAlias = "str | _AggFn"
+
+    from dask_expr._groupby import GroupBy as _DaskGroupBy
+else:
+    _DaskGroupBy = dx._groupby.GroupBy
 
 
 def n_unique() -> dd.Aggregation:
-    def chunk(s: pd.core.groupby.generic.SeriesGroupBy) -> int:
-        return s.nunique(dropna=False)  # type: ignore[no-any-return]
+    def chunk(s: PandasSeriesGroupBy) -> pd.Series[Any]:
+        return s.nunique(dropna=False)
 
-    def agg(s0: pd.core.groupby.generic.SeriesGroupBy) -> int:
-        return s0.sum()  # type: ignore[no-any-return]
+    def agg(s0: PandasSeriesGroupBy) -> pd.Series[Any]:
+        return s0.sum()
 
-    return dd.Aggregation(
-        name="nunique",
-        chunk=chunk,
-        agg=agg,
-    )
+    return dd.Aggregation(name="nunique", chunk=chunk, agg=agg)
 
 
-def var(
-    ddof: int = 1,
-) -> Callable[
-    [pd.core.groupby.generic.SeriesGroupBy], pd.core.groupby.generic.SeriesGroupBy
-]:
-    from functools import partial
-
-    return partial(dx._groupby.GroupBy.var, ddof=ddof)
+def var(ddof: int) -> _AggFn:
+    return partial(_DaskGroupBy.var, ddof=ddof)
 
 
-def std(
-    ddof: int = 1,
-) -> Callable[
-    [pd.core.groupby.generic.SeriesGroupBy], pd.core.groupby.generic.SeriesGroupBy
-]:
-    from functools import partial
-
-    return partial(dx._groupby.GroupBy.std, ddof=ddof)
+def std(ddof: int) -> _AggFn:
+    return partial(_DaskGroupBy.std, ddof=ddof)
 
 
-POLARS_TO_DASK_AGGREGATIONS = {
+POLARS_TO_DASK_AGGREGATIONS: Mapping[str, Aggregation] = {
     "sum": "sum",
     "mean": "mean",
     "median": "median",
@@ -79,7 +72,7 @@ class DaskLazyGroupBy:
     def __init__(
         self: Self, df: DaskLazyFrame, keys: list[str], *, drop_null_keys: bool
     ) -> None:
-        self._df = df
+        self._df: DaskLazyFrame = df
         self._keys = keys
         self._grouped = self._df._native_frame.groupby(
             list(self._keys),
@@ -89,22 +82,8 @@ class DaskLazyGroupBy:
 
     def agg(
         self: Self,
-        *aggs: IntoDaskExpr,
-        **named_aggs: IntoDaskExpr,
+        *exprs: DaskExpr,
     ) -> DaskLazyFrame:
-        exprs = parse_into_exprs(
-            *aggs,
-            namespace=self._df.__narwhals_namespace__(),
-            **named_aggs,
-        )
-        output_names: list[str] = copy(self._keys)
-        for expr in exprs:
-            if expr._output_names is None:
-                msg = "group_by.agg"
-                raise AnonymousExprError.from_expr_name(msg)
-
-            output_names.extend(expr._output_names)
-
         return agg_dask(
             self._df,
             self._grouped,
@@ -113,18 +92,20 @@ class DaskLazyGroupBy:
             self._from_native_frame,
         )
 
-    def _from_native_frame(self: Self, df: DaskLazyFrame) -> DaskLazyFrame:
+    def _from_native_frame(self: Self, df: dd.DataFrame) -> DaskLazyFrame:
         from narwhals._dask.dataframe import DaskLazyFrame
 
         return DaskLazyFrame(
-            df, backend_version=self._df._backend_version, version=self._df._version
+            df,
+            backend_version=self._df._backend_version,
+            version=self._df._version,
         )
 
 
 def agg_dask(
     df: DaskLazyFrame,
     grouped: Any,
-    exprs: Sequence[CompliantExpr[dx.Series]],
+    exprs: Sequence[DaskExpr],
     keys: list[str],
     from_dataframe: Callable[[Any], DaskLazyFrame],
 ) -> DaskLazyFrame:
@@ -135,61 +116,45 @@ def agg_dask(
     """
     if not exprs:
         # No aggregation provided
-        return df.select(*keys).unique(subset=keys)
+        return df.simple_select(*keys).unique(subset=keys)
 
     all_simple_aggs = True
     for expr in exprs:
         if not (
             is_simple_aggregation(expr)
-            and remove_prefix(expr._function_name, "col->") in POLARS_TO_DASK_AGGREGATIONS
+            and re.sub(r"(\w+->)", "", expr._function_name) in POLARS_TO_DASK_AGGREGATIONS
         ):
             all_simple_aggs = False
             break
 
     if all_simple_aggs:
-        simple_aggregations: dict[str, tuple[str, str | dd.Aggregation]] = {}
+        simple_aggregations: dict[str, tuple[str, Aggregation]] = {}
         for expr in exprs:
+            output_names, aliases = evaluate_output_names_and_aliases(expr, df, keys)
             if expr._depth == 0:
                 # e.g. agg(nw.len()) # noqa: ERA001
-                if expr._output_names is None:  # pragma: no cover
-                    msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
-                    raise AssertionError(msg)
-
                 function_name = POLARS_TO_DASK_AGGREGATIONS.get(
                     expr._function_name, expr._function_name
                 )
                 simple_aggregations.update(
-                    {
-                        output_name: (keys[0], function_name)
-                        for output_name in expr._output_names
-                    }
+                    dict.fromkeys(aliases, (keys[0], function_name))
                 )
                 continue
 
             # e.g. agg(nw.mean('a')) # noqa: ERA001
-            if (
-                expr._depth != 1 or expr._root_names is None or expr._output_names is None
-            ):  # pragma: no cover
-                msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
-                raise AssertionError(msg)
-
-            function_name = remove_prefix(expr._function_name, "col->")
-            kwargs = (
-                {"ddof": expr._kwargs["ddof"]} if function_name in {"std", "var"} else {}
-            )
-
+            function_name = re.sub(r"(\w+->)", "", expr._function_name)
             agg_function = POLARS_TO_DASK_AGGREGATIONS.get(function_name, function_name)
             # deal with n_unique case in a "lazy" mode to not depend on dask globally
             agg_function = (
-                agg_function(**kwargs) if callable(agg_function) else agg_function
+                agg_function(**expr._call_kwargs)
+                if callable(agg_function)
+                else agg_function
             )
 
             simple_aggregations.update(
                 {
-                    output_name: (root_name, agg_function)
-                    for root_name, output_name in zip(
-                        expr._root_names, expr._output_names
-                    )
+                    alias: (output_name, agg_function)
+                    for alias, output_name in zip(aliases, output_names)
                 }
             )
         result_simple = grouped.agg(**simple_aggregations)

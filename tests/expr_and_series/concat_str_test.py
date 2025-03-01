@@ -38,7 +38,7 @@ def test_concat_str(
             nw.concat_str(
                 [
                     nw.col("a") * 2,
-                    nw.col("b"),
+                    "b",
                     nw.col("c"),
                 ],
                 separator=" ",
@@ -64,3 +64,10 @@ def test_concat_str(
         .select("a")
     )
     assert_equal_data(result, {"a": expected})
+
+
+def test_concat_str_with_lit(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": ["cat", "dog", "pig"]}))
+    result = df.with_columns(b=nw.concat_str("a", nw.lit("ab")))
+    expected = {"a": ["cat", "dog", "pig"], "b": ["catab", "dogab", "pigab"]}
+    assert_equal_data(result, expected)

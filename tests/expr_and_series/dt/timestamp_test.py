@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 from typing import Literal
 
 import hypothesis.strategies as st
@@ -17,6 +18,9 @@ from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 from tests.utils import is_windows
+
+if TYPE_CHECKING:
+    from narwhals.typing import IntoSeriesT
 
 data = {
     "a": [
@@ -204,7 +208,7 @@ def test_timestamp_invalid_unit_series(constructor_eager: ConstructorEager) -> N
         nw.from_native(constructor_eager(data))["a"].dt.timestamp(time_unit_invalid)  # type: ignore[arg-type]
 
 
-@given(  # type: ignore[misc]
+@given(
     inputs=st.datetimes(min_value=datetime(1960, 1, 1), max_value=datetime(1980, 1, 1)),
     time_unit=st.sampled_from(["ms", "us", "ns"]),
     # We keep 'ms' out for now due to an upstream bug: https://github.com/pola-rs/polars/issues/19309
@@ -221,7 +225,7 @@ def test_timestamp_hypothesis(
     import polars as pl
 
     @nw.narwhalify
-    def func(s: nw.Series) -> nw.Series:
+    def func(s: nw.Series[IntoSeriesT]) -> nw.Series[IntoSeriesT]:
         return s.dt.timestamp(time_unit)
 
     result_pl = func(pl.Series([inputs], dtype=pl.Datetime(starting_time_unit)))

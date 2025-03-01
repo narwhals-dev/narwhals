@@ -6,33 +6,31 @@ from typing import Generic
 from typing import Iterable
 from typing import Iterator
 from typing import TypeVar
-from typing import cast
 
-from narwhals.dataframe import DataFrame
-from narwhals.dataframe import LazyFrame
+from narwhals._expression_parsing import all_exprs_are_scalar_like
 from narwhals.exceptions import InvalidOperationError
+from narwhals.typing import DataFrameT
+from narwhals.utils import flatten
 from narwhals.utils import tupleify
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals.typing import IntoExpr
+    from narwhals.dataframe import LazyFrame
+    from narwhals.expr import Expr
 
-DataFrameT = TypeVar("DataFrameT")
-LazyFrameT = TypeVar("LazyFrameT")
+LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[Any]")
 
 
 class GroupBy(Generic[DataFrameT]):
     def __init__(self: Self, df: DataFrameT, *keys: str, drop_null_keys: bool) -> None:
-        self._df = cast(DataFrame[Any], df)
+        self._df: DataFrameT = df
         self._keys = keys
         self._grouped = self._df._compliant_frame.group_by(
             *self._keys, drop_null_keys=drop_null_keys
         )
 
-    def agg(
-        self: Self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
-    ) -> DataFrameT:
+    def agg(self: Self, *aggs: Expr | Iterable[Expr], **named_aggs: Expr) -> DataFrameT:
         """Compute aggregations for each group of a group by operation.
 
         Arguments:
@@ -112,9 +110,8 @@ class GroupBy(Generic[DataFrameT]):
             │ c   ┆ 3   ┆ 1   │
             └─────┴─────┴─────┘
         """
-        if not all(getattr(x, "_aggregates", True) for x in aggs) and all(
-            getattr(x, "_aggregates", True) for x in named_aggs.values()
-        ):
+        flat_aggs = tuple(flatten(aggs))
+        if not all_exprs_are_scalar_like(*flat_aggs, **named_aggs):
             msg = (
                 "Found expression which does not aggregate.\n\n"
                 "All expressions passed to GroupBy.agg must aggregate.\n"
@@ -122,13 +119,18 @@ class GroupBy(Generic[DataFrameT]):
                 "but `df.group_by('a').agg(nw.col('b'))` is not."
             )
             raise InvalidOperationError(msg)
-        aggs, named_aggs = self._df._flatten_and_extract(*aggs, **named_aggs)
-        return self._df._from_compliant_dataframe(  # type: ignore[return-value]
-            self._grouped.agg(*aggs, **named_aggs),
+        plx = self._df.__narwhals_namespace__()
+        compliant_aggs = (
+            *(x._to_compliant_expr(plx) for x in flat_aggs),
+            *(
+                value._to_compliant_expr(plx).alias(key)
+                for key, value in named_aggs.items()
+            ),
         )
+        return self._df._from_compliant_dataframe(self._grouped.agg(*compliant_aggs))
 
     def __iter__(self: Self) -> Iterator[tuple[Any, DataFrameT]]:
-        yield from (  # type: ignore[misc]
+        yield from (
             (tupleify(key), self._df._from_compliant_dataframe(df))
             for (key, df) in self._grouped.__iter__()
         )
@@ -136,18 +138,14 @@ class GroupBy(Generic[DataFrameT]):
 
 class LazyGroupBy(Generic[LazyFrameT]):
     def __init__(self: Self, df: LazyFrameT, *keys: str, drop_null_keys: bool) -> None:
-        self._df = cast(LazyFrame[Any], df)
+        self._df: LazyFrameT = df
         self._keys = keys
         self._grouped = self._df._compliant_frame.group_by(
             *self._keys, drop_null_keys=drop_null_keys
         )
 
-    def agg(
-        self: Self, *aggs: IntoExpr | Iterable[IntoExpr], **named_aggs: IntoExpr
-    ) -> LazyFrameT:
+    def agg(self: Self, *aggs: Expr | Iterable[Expr], **named_aggs: Expr) -> LazyFrameT:
         """Compute aggregations for each group of a group by operation.
-
-        If a library does not support lazy execution, then this is a no-op.
 
         Arguments:
             aggs: Aggregations to compute for each group of the group by operation,
@@ -180,7 +178,9 @@ class LazyGroupBy(Generic[LazyFrameT]):
 
             >>> def agnostic_func_mult_col(lf_native: IntoFrameT) -> IntoFrameT:
             ...     lf = nw.from_native(lf_native)
-            ...     return nw.to_native(lf.group_by("a", "b").agg(nw.sum("c")).sort("a", "b"))
+            ...     return nw.to_native(
+            ...         lf.group_by("a", "b").agg(nw.sum("c")).sort("a", "b")
+            ...     )
 
             We can then pass a lazy frame and materialise it with `collect`:
 
@@ -208,9 +208,8 @@ class LazyGroupBy(Generic[LazyFrameT]):
             │ c   ┆ 3   ┆ 1   │
             └─────┴─────┴─────┘
         """
-        if not all(getattr(x, "_aggregates", True) for x in aggs) and all(
-            getattr(x, "_aggregates", True) for x in named_aggs.values()
-        ):
+        flat_aggs = tuple(flatten(aggs))
+        if not all_exprs_are_scalar_like(*flat_aggs, **named_aggs):
             msg = (
                 "Found expression which does not aggregate.\n\n"
                 "All expressions passed to GroupBy.agg must aggregate.\n"
@@ -218,7 +217,12 @@ class LazyGroupBy(Generic[LazyFrameT]):
                 "but `df.group_by('a').agg(nw.col('b'))` is not."
             )
             raise InvalidOperationError(msg)
-        aggs, named_aggs = self._df._flatten_and_extract(*aggs, **named_aggs)
-        return self._df._from_compliant_dataframe(  # type: ignore[return-value]
-            self._grouped.agg(*aggs, **named_aggs),
+        plx = self._df.__narwhals_namespace__()
+        compliant_aggs = (
+            *(x._to_compliant_expr(plx) for x in flat_aggs),
+            *(
+                value._to_compliant_expr(plx).alias(key)
+                for key, value in named_aggs.items()
+            ),
         )
+        return self._df._from_compliant_dataframe(self._grouped.agg(*compliant_aggs))

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Literal
 
 from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
@@ -14,6 +13,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._pandas_like.series import PandasLikeSeries
+    from narwhals.typing import TimeUnit
 
 
 class PandasLikeSeriesDateTimeNamespace:
@@ -90,7 +90,7 @@ class PandasLikeSeriesDateTimeNamespace:
         )
 
     def nanosecond(self: Self) -> PandasLikeSeries:
-        return (  # type: ignore[no-any-return]
+        return (
             self.microsecond() * 1_000
             + self._compliant_series._native_series.dt.nanosecond
         )
@@ -208,7 +208,7 @@ class PandasLikeSeriesDateTimeNamespace:
             result = self._compliant_series._native_series.dt.tz_convert(time_zone)
         return self._compliant_series._from_native_series(result)
 
-    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"]) -> PandasLikeSeries:
+    def timestamp(self: Self, time_unit: TimeUnit) -> PandasLikeSeries:
         s = self._compliant_series._native_series
         dtype = self._compliant_series.dtype
         is_pyarrow_dtype = "pyarrow" in str(self._compliant_series._native_series.dtype)
@@ -218,8 +218,8 @@ class PandasLikeSeriesDateTimeNamespace:
             # Date is only supported in pandas dtypes if pyarrow-backed
             s_cast = s.astype("Int32[pyarrow]")
             result = calculate_timestamp_date(s_cast, time_unit)
-        elif dtype == dtypes.Datetime:
-            original_time_unit = dtype.time_unit  # type: ignore[attr-defined]
+        elif isinstance(dtype, dtypes.Datetime):
+            original_time_unit = dtype.time_unit
             if (
                 self._compliant_series._implementation is Implementation.PANDAS
                 and self._compliant_series._backend_version < (2,)

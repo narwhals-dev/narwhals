@@ -356,11 +356,44 @@ def test_join_keys_exceptions(constructor: Constructor, how: str) -> None:
         df.join(df, how=how, on="antananarivo", right_on="antananarivo")  # type: ignore[arg-type]
 
 
+@pytest.mark.parametrize(
+    ("strategy", "expected"),
+    [
+        (
+            "backward",
+            {
+                "antananarivo": [1, 5, 10],
+                "val": ["a", "b", "c"],
+                "val_right": [1, 3, 7],
+            },
+        ),
+        (
+            "forward",
+            {
+                "antananarivo": [1, 5, 10],
+                "val": ["a", "b", "c"],
+                "val_right": [1, 6, None],
+            },
+        ),
+        (
+            "nearest",
+            {
+                "antananarivo": [1, 5, 10],
+                "val": ["a", "b", "c"],
+                "val_right": [1, 6, 7],
+            },
+        ),
+    ],
+)
 def test_joinasof_numeric(
     constructor: Constructor,
     request: pytest.FixtureRequest,
+    strategy: Literal["backward", "forward", "nearest"],
+    expected: dict[str, list[Any]],
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "duckdb", "pyspark")):
+    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "pyspark")):
+        request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) and strategy == "nearest":
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and (
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
@@ -372,54 +405,67 @@ def test_joinasof_numeric(
     df_right = nw.from_native(
         constructor({"antananarivo": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]})
     ).sort("antananarivo")
-    result_backward = df.join_asof(
+    result = df.join_asof(
         df_right,  # type: ignore[arg-type]
         left_on="antananarivo",
         right_on="antananarivo",
+        strategy=strategy,
     )
-    result_forward = df.join_asof(
-        df_right,  # type: ignore[arg-type]
-        left_on="antananarivo",
-        right_on="antananarivo",
-        strategy="forward",
-    )
-    result_nearest = df.join_asof(
-        df_right,  # type: ignore[arg-type]
-        left_on="antananarivo",
-        right_on="antananarivo",
-        strategy="nearest",
-    )
-    result_backward_on = df.join_asof(df_right, on="antananarivo")  # type: ignore[arg-type]
-    result_forward_on = df.join_asof(df_right, on="antananarivo", strategy="forward")  # type: ignore[arg-type]
-    result_nearest_on = df.join_asof(df_right, on="antananarivo", strategy="nearest")  # type: ignore[arg-type]
-    expected_backward = {
-        "antananarivo": [1, 5, 10],
-        "val": ["a", "b", "c"],
-        "val_right": [1, 3, 7],
-    }
-    expected_forward = {
-        "antananarivo": [1, 5, 10],
-        "val": ["a", "b", "c"],
-        "val_right": [1, 6, None],
-    }
-    expected_nearest = {
-        "antananarivo": [1, 5, 10],
-        "val": ["a", "b", "c"],
-        "val_right": [1, 6, 7],
-    }
-    assert_equal_data(result_backward, expected_backward)
-    assert_equal_data(result_forward, expected_forward)
-    assert_equal_data(result_nearest, expected_nearest)
-    assert_equal_data(result_backward_on, expected_backward)
-    assert_equal_data(result_forward_on, expected_forward)
-    assert_equal_data(result_nearest_on, expected_nearest)
+    result_on = df.join_asof(df_right, on="antananarivo", strategy=strategy)  # type: ignore[arg-type]
+    assert_equal_data(result.sort(by="antananarivo"), expected)
+    assert_equal_data(result_on.sort(by="antananarivo"), expected)
 
 
+@pytest.mark.parametrize(
+    ("strategy", "expected"),
+    [
+        (
+            "backward",
+            {
+                "datetime": [
+                    datetime(2016, 3, 1),
+                    datetime(2018, 8, 1),
+                    datetime(2019, 1, 1),
+                ],
+                "population": [82.19, 82.66, 83.12],
+                "gdp": [4164, 4566, 4696],
+            },
+        ),
+        (
+            "forward",
+            {
+                "datetime": [
+                    datetime(2016, 3, 1),
+                    datetime(2018, 8, 1),
+                    datetime(2019, 1, 1),
+                ],
+                "population": [82.19, 82.66, 83.12],
+                "gdp": [4411, 4696, 4696],
+            },
+        ),
+        (
+            "nearest",
+            {
+                "datetime": [
+                    datetime(2016, 3, 1),
+                    datetime(2018, 8, 1),
+                    datetime(2019, 1, 1),
+                ],
+                "population": [82.19, 82.66, 83.12],
+                "gdp": [4164, 4696, 4696],
+            },
+        ),
+    ],
+)
 def test_joinasof_time(
     constructor: Constructor,
     request: pytest.FixtureRequest,
+    strategy: Literal["backward", "forward", "nearest"],
+    expected: dict[str, list[Any]],
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "duckdb", "pyspark")):
+    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "pyspark")):
+        request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) and strategy == "nearest":
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and ("pandas_pyarrow" in str(constructor)):
         request.applymarker(pytest.mark.xfail)
@@ -449,58 +495,22 @@ def test_joinasof_time(
             }
         )
     ).sort("datetime")
-    result_backward = df.join_asof(df_right, left_on="datetime", right_on="datetime")  # type: ignore[arg-type]
-    result_forward = df.join_asof(
+    result = df.join_asof(
         df_right,  # type: ignore[arg-type]
         left_on="datetime",
         right_on="datetime",
-        strategy="forward",
+        strategy=strategy,
     )
-    result_nearest = df.join_asof(
-        df_right,  # type: ignore[arg-type]
-        left_on="datetime",
-        right_on="datetime",
-        strategy="nearest",
-    )
-    result_backward_on = df.join_asof(df_right, on="datetime")  # type: ignore[arg-type]
-    result_forward_on = df.join_asof(
-        df_right,  # type: ignore[arg-type]
-        on="datetime",
-        strategy="forward",
-    )
-    result_nearest_on = df.join_asof(
-        df_right,  # type: ignore[arg-type]
-        on="datetime",
-        strategy="nearest",
-    )
-    expected_backward = {
-        "datetime": [datetime(2016, 3, 1), datetime(2018, 8, 1), datetime(2019, 1, 1)],
-        "population": [82.19, 82.66, 83.12],
-        "gdp": [4164, 4566, 4696],
-    }
-    expected_forward = {
-        "datetime": [datetime(2016, 3, 1), datetime(2018, 8, 1), datetime(2019, 1, 1)],
-        "population": [82.19, 82.66, 83.12],
-        "gdp": [4411, 4696, 4696],
-    }
-    expected_nearest = {
-        "datetime": [datetime(2016, 3, 1), datetime(2018, 8, 1), datetime(2019, 1, 1)],
-        "population": [82.19, 82.66, 83.12],
-        "gdp": [4164, 4696, 4696],
-    }
-    assert_equal_data(result_backward, expected_backward)
-    assert_equal_data(result_forward, expected_forward)
-    assert_equal_data(result_nearest, expected_nearest)
-    assert_equal_data(result_backward_on, expected_backward)
-    assert_equal_data(result_forward_on, expected_forward)
-    assert_equal_data(result_nearest_on, expected_nearest)
+    result_on = df.join_asof(df_right, on="datetime", strategy=strategy)  # type: ignore[arg-type]
+    assert_equal_data(result.sort(by="datetime"), expected)
+    assert_equal_data(result_on.sort(by="datetime"), expected)
 
 
 def test_joinasof_by(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "duckdb", "pyspark")):
+    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "pyspark")):
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and (
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
@@ -528,8 +538,38 @@ def test_joinasof_by(
         "c": [9, 2, 1, 1],
         "d": [1, 3, None, 4],
     }
-    assert_equal_data(result, expected)
-    assert_equal_data(result_by, expected)
+    assert_equal_data(result.sort(by="antananarivo"), expected)
+    assert_equal_data(result_by.sort(by="antananarivo"), expected)
+
+
+def test_joinasof_suffix(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+) -> None:
+    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "pyspark")):
+        request.applymarker(pytest.mark.xfail)
+    if PANDAS_VERSION < (2, 1) and (
+        ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
+    ):
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(
+        constructor({"antananarivo": [1, 5, 10], "val": ["a", "b", "c"]})
+    ).sort("antananarivo")
+    df_right = nw.from_native(
+        constructor({"antananarivo": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]})
+    ).sort("antananarivo")
+    result = df.join_asof(
+        df_right,  # type: ignore[arg-type]
+        left_on="antananarivo",
+        right_on="antananarivo",
+        suffix="_y",
+    )
+    expected = {
+        "antananarivo": [1, 5, 10],
+        "val": ["a", "b", "c"],
+        "val_y": [1, 3, 7],
+    }
+    assert_equal_data(result.sort(by="antananarivo"), expected)
 
 
 @pytest.mark.parametrize("strategy", ["back", "furthest"])
@@ -624,3 +664,31 @@ def test_joinasof_by_exceptions(constructor: Constructor) -> None:
         match="If `by` is specified, `by_left` and `by_right` should be None.",
     ):
         df.join_asof(df, on="antananarivo", by_right="bob", by="bob")  # type: ignore[arg-type]
+
+
+def test_join_duplicate_column_names(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if (
+        "polars" in str(constructor)  # https://github.com/pola-rs/polars/issues/21048
+        or "cudf" in str(constructor)
+        # TODO(unassigned): cudf doesn't raise here for some reason,
+        # need to investigate.
+    ):
+        request.applymarker(pytest.mark.xfail)
+    if "sqlframe" in str(constructor):
+        import duckdb
+
+        exception: type[Exception] = duckdb.BinderException
+    elif "pyspark" in str(constructor):
+        from pyspark.errors import AnalysisException
+
+        exception = AnalysisException
+    elif "modin" in str(constructor):
+        exception = NotImplementedError
+    else:
+        exception = nw.exceptions.DuplicateError
+    df = constructor({"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]})
+    dfn = nw.from_native(df)
+    with pytest.raises(exception):
+        dfn.join(dfn, on=["a"]).join(dfn, on=["a"]).lazy().collect()  # type: ignore[arg-type]

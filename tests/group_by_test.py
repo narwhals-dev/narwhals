@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from contextlib import nullcontext
+from typing import Any
+from typing import Mapping
 
 import pandas as pd
 import polars as pl
@@ -8,7 +10,6 @@ import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
-from narwhals.exceptions import AnonymousExprError
 from narwhals.exceptions import InvalidOperationError
 from tests.utils import PANDAS_VERSION
 from tests.utils import PYARROW_VERSION
@@ -16,7 +17,7 @@ from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-data = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
+data: Mapping[str, Any] = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
 
 df_pandas = pd.DataFrame(data)
 df_lazy = pl.LazyFrame(data)
@@ -27,14 +28,18 @@ def test_group_by_complex() -> None:
 
     df = nw.from_native(df_pandas)
     with pytest.warns(UserWarning, match="complex group-by"):
-        result = nw.to_native(
+        result_pd = nw.to_native(
             df.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
         )
-    assert_equal_data(result, expected)
+    assert_equal_data(result_pd, expected)
+    with pytest.raises(ValueError, match="complex aggregation"):
+        nw.from_native(pa.table({"a": [1, 1, 2], "b": [4, 5, 6]})).group_by("a").agg(
+            (nw.col("b") - nw.col("c").mean()).mean()
+        )
 
     lf = nw.from_native(df_lazy).lazy()
-    result = lf.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
-    assert_equal_data(result, expected)
+    result_pl = lf.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
+    assert_equal_data(result_pl, expected)
 
 
 def test_invalid_group_by_dask() -> None:
@@ -45,36 +50,6 @@ def test_invalid_group_by_dask() -> None:
 
     with pytest.raises(ValueError, match=r"Non-trivial complex aggregation found"):
         nw.from_native(df_dask).group_by("a").agg(nw.col("b").mean().min())
-
-    with pytest.raises(InvalidOperationError, match="does not aggregate"):
-        nw.from_native(df_dask).group_by("a").agg(nw.col("b"))
-
-    with pytest.raises(
-        AnonymousExprError,
-        match=r"Anonymous expressions are not supported in `group_by\.agg`",
-    ):
-        nw.from_native(df_dask).group_by("a").agg(nw.all().mean())
-
-
-@pytest.mark.filterwarnings("ignore:Found complex group-by expression:UserWarning")
-def test_invalid_group_by() -> None:
-    df = nw.from_native(df_pandas)
-    with pytest.raises(InvalidOperationError, match="does not aggregate"):
-        df.group_by("a").agg(nw.col("b"))
-    with pytest.raises(
-        AnonymousExprError,
-        match=r"Anonymous expressions are not supported in `group_by\.agg`",
-    ):
-        df.group_by("a").agg(nw.all().mean())
-    with pytest.raises(
-        AnonymousExprError,
-        match=r"Anonymous expressions are not supported in `group_by\.agg`",
-    ):
-        nw.from_native(pa.table({"a": [1, 2, 3]})).group_by("a").agg(nw.all().mean())
-    with pytest.raises(ValueError, match=r"Non-trivial complex aggregation found"):
-        nw.from_native(pa.table({"a": [1, 2, 3]})).group_by("a").agg(
-            nw.col("b").mean().min()
-        )
 
 
 def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
@@ -97,6 +72,16 @@ def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
     for key, _ in df.group_by(["a", "b"]):
         keys.append(key)
     assert sorted(keys) == sorted(expected_keys)
+
+
+def test_group_by_nw_all(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 8, 9]}))
+    result = df.group_by("a").agg(nw.all().sum()).sort("a")
+    expected = {"a": [1, 2], "b": [9, 6], "c": [15, 9]}
+    assert_equal_data(result, expected)
+    result = df.group_by("a").agg(nw.all().sum().name.suffix("_sum")).sort("a")
+    expected = {"a": [1, 2], "b_sum": [9, 6], "c_sum": [15, 9]}
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
@@ -137,11 +122,7 @@ def test_group_by_depth_1_agg(
         ("var", 2),
     ],
 )
-def test_group_by_depth_1_std_var(
-    constructor: Constructor, attr: str, ddof: int, request: pytest.FixtureRequest
-) -> None:
-    if "duckdb" in str(constructor) and ddof == 2:
-        request.applymarker(pytest.mark.xfail)
+def test_group_by_depth_1_std_var(constructor: Constructor, attr: str, ddof: int) -> None:
     data = {"a": [1, 1, 1, 2, 2, 2], "b": [4, 5, 6, 0, 5, 5]}
     _pow = 0.5 if attr == "std" else 1
     expected = {
@@ -348,8 +329,6 @@ def test_group_by_categorical(
         request.applymarker(pytest.mark.xfail)
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (
         15,
-        0,
-        0,
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
 
@@ -398,8 +377,6 @@ def test_all_kind_of_aggs(
         # and modin lol https://github.com/modin-project/modin/issues/7414
         # and cudf https://github.com/rapidsai/cudf/issues/17649
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor) and PANDAS_VERSION < (1, 4):
         # Bug in old pandas, can't do DataFrameGroupBy[['b', 'b']]
         request.applymarker(pytest.mark.xfail)
@@ -436,3 +413,39 @@ def test_group_by_expr(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 1, 3], "b": [4, 5, 6]}))
     with pytest.raises(NotImplementedError, match=r"not \(yet\?\) supported"):
         df.group_by(nw.col("a")).agg(nw.col("b").mean())  # type: ignore[arg-type]
+
+
+def test_pandas_group_by_index_and_column_overlap() -> None:
+    df = pd.DataFrame(
+        {"a": [1, 1, 2], "b": [4, 5, 6]}, index=pd.Index([0, 1, 2], name="a")
+    )
+    result = nw.from_native(df, eager_only=True).group_by("a").agg(nw.col("b").mean())
+    expected = {"a": [1, 2], "b": [4.5, 6.0]}
+    assert_equal_data(result, expected)
+
+    key, result = next(iter(nw.from_native(df, eager_only=True).group_by("a")))
+    assert key == (1,)
+    expected_native = pd.DataFrame({"a": [1, 1], "b": [4, 5]})
+    pd.testing.assert_frame_equal(result.to_native(), expected_native)
+
+
+def test_fancy_functions(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    result = df.group_by("a").agg(nw.all().std(ddof=0)).sort("a")
+    expected = {"a": [1, 2], "b": [0.5, 0.0]}
+    assert_equal_data(result, expected)
+    result = df.group_by("a").agg(nw.selectors.numeric().std(ddof=0)).sort("a")
+    assert_equal_data(result, expected)
+    result = df.group_by("a").agg(nw.selectors.matches("b").std(ddof=0)).sort("a")
+    assert_equal_data(result, expected)
+    result = (
+        df.group_by("a").agg(nw.selectors.matches("b").std(ddof=0).alias("c")).sort("a")
+    )
+    expected = {"a": [1, 2], "c": [0.5, 0.0]}
+    assert_equal_data(result, expected)
+    result = (
+        df.group_by("a")
+        .agg(nw.selectors.matches("b").std(ddof=0).name.map(lambda _x: "c"))
+        .sort("a")
+    )
+    assert_equal_data(result, expected)

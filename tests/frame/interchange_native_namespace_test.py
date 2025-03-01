@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from typing import Any
+from typing import Mapping
+
 import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
 
-data = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
+data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 
 
 def test_interchange() -> None:
@@ -28,9 +31,13 @@ def test_interchange() -> None:
 
 @pytest.mark.filterwarnings("ignore:.*The `ArrowDtype` class is not available in pandas")
 def test_ibis(
-    tmpdir: pytest.TempdirFactory,
+    tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover
     ibis = pytest.importorskip("ibis")
+    try:
+        ibis.set_backend("duckdb")
+    except ImportError:
+        request.applymarker(pytest.mark.xfail)
     df_pl = pl.DataFrame(data)
 
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]

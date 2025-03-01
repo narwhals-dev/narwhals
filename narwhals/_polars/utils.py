@@ -3,13 +3,18 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Literal
 from typing import TypeVar
 from typing import overload
 
 import polars as pl
 
+from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import ComputeError
+from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import NarwhalsError
+from narwhals.exceptions import ShapeError
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from narwhals._polars.dataframe import PolarsDataFrame
@@ -17,6 +22,7 @@ if TYPE_CHECKING:
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.series import PolarsSeries
     from narwhals.dtypes import DType
+    from narwhals.typing import TimeUnit
     from narwhals.utils import Version
 
     T = TypeVar("T")
@@ -111,11 +117,11 @@ def native_to_narwhals_dtype(
     if dtype == pl.Date:
         return dtypes.Date()
     if dtype == pl.Datetime:
-        dt_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
+        dt_time_unit: TimeUnit = getattr(dtype, "time_unit", "us")
         dt_time_zone = getattr(dtype, "time_zone", None)
         return dtypes.Datetime(time_unit=dt_time_unit, time_zone=dt_time_zone)
     if dtype == pl.Duration:
-        du_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
+        du_time_unit: TimeUnit = getattr(dtype, "time_unit", "us")
         return dtypes.Duration(time_unit=du_time_unit)
     if dtype == pl.Struct:
         return dtypes.Struct(
@@ -132,30 +138,27 @@ def native_to_narwhals_dtype(
             native_to_narwhals_dtype(dtype.inner, version, backend_version)  # type: ignore[attr-defined]
         )
     if dtype == pl.Array:
-        if backend_version < (0, 20, 30):  # pragma: no cover
-            return dtypes.Array(
-                native_to_narwhals_dtype(dtype.inner, version, backend_version),  # type: ignore[attr-defined]
-                dtype.width,  # type: ignore[attr-defined]
-            )
-        else:
-            return dtypes.Array(
-                native_to_narwhals_dtype(dtype.inner, version, backend_version),  # type: ignore[attr-defined]
-                dtype.size,  # type: ignore[attr-defined]
-            )
+        outer_shape = dtype.width if backend_version < (0, 20, 30) else dtype.size  # type: ignore[attr-defined]
+        return dtypes.Array(
+            inner=native_to_narwhals_dtype(dtype.inner, version, backend_version),  # type: ignore[attr-defined]
+            shape=outer_shape,
+        )
     if dtype == pl.Decimal:
         return dtypes.Decimal()
     return dtypes.Unknown()
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pl.DataType:
-    import polars as pl
-
+def narwhals_to_native_dtype(
+    dtype: DType | type[DType], version: Version, backend_version: tuple[int, ...]
+) -> pl.DataType:
     dtypes = import_dtypes_module(version)
-
     if dtype == dtypes.Float64:
         return pl.Float64()
     if dtype == dtypes.Float32:
         return pl.Float32()
+    if dtype == dtypes.Int128 and getattr(pl, "Int128", None) is not None:
+        # Not available for Polars pre 1.8.0
+        return pl.Int128()
     if dtype == dtypes.Int64:
         return pl.Int64()
     if dtype == dtypes.Int32:
@@ -185,28 +188,32 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pl
         raise NotImplementedError(msg)
     if dtype == dtypes.Date:
         return pl.Date()
-    if dtype == dtypes.Datetime or isinstance(dtype, dtypes.Datetime):
-        dt_time_unit: Literal["ms", "us", "ns"] = getattr(dtype, "time_unit", "us")
-        dt_time_zone = getattr(dtype, "time_zone", None)
-        return pl.Datetime(dt_time_unit, dt_time_zone)
-    if dtype == dtypes.Duration or isinstance(dtype, dtypes.Duration):
-        du_time_unit: Literal["us", "ns", "ms"] = getattr(dtype, "time_unit", "us")
-        return pl.Duration(time_unit=du_time_unit)
+    if dtype == dtypes.Decimal:
+        msg = "Casting to Decimal is not supported yet."
+        raise NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Datetime):
+        return pl.Datetime(dtype.time_unit, dtype.time_zone)  # type: ignore[arg-type]
+    if isinstance_or_issubclass(dtype, dtypes.Duration):
+        return pl.Duration(dtype.time_unit)  # type: ignore[arg-type]
     if dtype == dtypes.List:
-        return pl.List(narwhals_to_native_dtype(dtype.inner, version))  # type: ignore[union-attr]
+        return pl.List(narwhals_to_native_dtype(dtype.inner, version, backend_version))  # type: ignore[union-attr]
     if dtype == dtypes.Struct:
         return pl.Struct(
             fields=[
                 pl.Field(
                     name=field.name,
-                    dtype=narwhals_to_native_dtype(field.dtype, version),
+                    dtype=narwhals_to_native_dtype(field.dtype, version, backend_version),
                 )
                 for field in dtype.fields  # type: ignore[union-attr]
             ]
         )
     if dtype == dtypes.Array:  # pragma: no cover
-        msg = "Converting to Array dtype is not supported yet"
-        raise NotImplementedError(msg)
+        size = dtype.size  # type: ignore[union-attr]
+        kwargs = {"width": size} if backend_version < (0, 20, 30) else {"shape": size}
+        return pl.Array(
+            inner=narwhals_to_native_dtype(dtype.inner, version, backend_version),  # type: ignore[union-attr]
+            **kwargs,
+        )
     return pl.Unknown()  # pragma: no cover
 
 
@@ -217,3 +224,26 @@ def convert_str_slice_to_int_slice(
     stop = columns.index(str_slice.stop) + 1 if str_slice.stop is not None else None
     step = str_slice.step
     return (start, stop, step)
+
+
+def catch_polars_exception(
+    exception: Exception, backend_version: tuple[int, ...]
+) -> NarwhalsError | Exception:
+    if isinstance(exception, pl.exceptions.ColumnNotFoundError):
+        return ColumnNotFoundError(str(exception))
+    elif isinstance(exception, pl.exceptions.ShapeError):
+        return ShapeError(str(exception))
+    elif isinstance(exception, pl.exceptions.InvalidOperationError):
+        return InvalidOperationError(str(exception))
+    elif isinstance(exception, pl.exceptions.ComputeError):
+        return ComputeError(str(exception))
+    if backend_version >= (1,) and isinstance(exception, pl.exceptions.PolarsError):
+        # Old versions of Polars didn't have PolarsError.
+        return NarwhalsError(str(exception))
+    elif backend_version < (1,) and "polars.exceptions" in str(
+        type(exception)
+    ):  # pragma: no cover
+        # Last attempt, for old Polars versions.
+        return NarwhalsError(str(exception))
+    # Just return exception as-is.
+    return exception

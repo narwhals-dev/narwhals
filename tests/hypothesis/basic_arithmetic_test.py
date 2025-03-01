@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from typing import Any
+from typing import Mapping
+
 import pandas as pd
 import polars as pl
 import pytest
@@ -21,24 +24,14 @@ import narwhals.stable.v1 as nw
         min_size=3,
         max_size=3,
     ),
-)  # type: ignore[misc]
+)
 @pytest.mark.slow
 def test_mean(
-    integer: st.SearchStrategy[list[int]],
-    floats: st.SearchStrategy[float],
+    integer: st.SearchStrategy[list[int]], floats: st.SearchStrategy[float]
 ) -> None:
-    df_pandas = pd.DataFrame(
-        {
-            "integer": integer,
-            "floats": floats,
-        }
-    )
-    df_polars = pl.DataFrame(
-        {
-            "integer": integer,
-            "floats": floats,
-        },
-    )
+    data: Mapping[str, Any] = {"integer": integer, "floats": floats}
+    df_pandas = pd.DataFrame(data)
+    df_polars = pl.DataFrame(data)
     df_nw1 = nw.from_native(df_pandas, eager_only=True)
     df_nw2 = nw.from_native(df_polars, eager_only=True)
 

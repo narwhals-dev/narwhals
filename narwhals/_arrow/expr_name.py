@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Callable
-
-from narwhals.exceptions import AnonymousExprError
+from typing import Sequence
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -16,132 +15,69 @@ class ArrowExprNameNamespace:
         self._compliant_expr = expr
 
     def keep(self: Self) -> ArrowExpr:
-        root_names = self._compliant_expr._root_names
-
-        if root_names is None:
-            msg = ".name.keep"
-            raise AnonymousExprError.from_expr_name(msg)
-
-        return self._compliant_expr.__class__(
-            lambda df: [
-                series.alias(name)
-                for series, name in zip(self._compliant_expr._call(df), root_names)
-            ],
-            depth=self._compliant_expr._depth,
-            function_name=self._compliant_expr._function_name,
-            root_names=root_names,
-            output_names=root_names,
-            backend_version=self._compliant_expr._backend_version,
-            version=self._compliant_expr._version,
-            kwargs=self._compliant_expr._kwargs,
+        return self._from_colname_func_and_alias_output_names(
+            name_mapping_func=lambda name: name,
+            alias_output_names=None,
         )
 
     def map(self: Self, function: Callable[[str], str]) -> ArrowExpr:
-        root_names = self._compliant_expr._root_names
-
-        if root_names is None:
-            msg = ".name.map"
-            raise AnonymousExprError.from_expr_name(msg)
-
-        output_names = [function(str(name)) for name in root_names]
-
-        return self._compliant_expr.__class__(
-            lambda df: [
-                series.alias(name)
-                for series, name in zip(self._compliant_expr._call(df), output_names)
+        return self._from_colname_func_and_alias_output_names(
+            name_mapping_func=function,
+            alias_output_names=lambda output_names: [
+                function(name) for name in output_names
             ],
-            depth=self._compliant_expr._depth,
-            function_name=self._compliant_expr._function_name,
-            root_names=root_names,
-            output_names=output_names,
-            backend_version=self._compliant_expr._backend_version,
-            version=self._compliant_expr._version,
-            kwargs={**self._compliant_expr._kwargs, "function": function},
         )
 
     def prefix(self: Self, prefix: str) -> ArrowExpr:
-        root_names = self._compliant_expr._root_names
-        if root_names is None:
-            msg = ".name.prefix"
-            raise AnonymousExprError.from_expr_name(msg)
-
-        output_names = [prefix + str(name) for name in root_names]
-        return self._compliant_expr.__class__(
-            lambda df: [
-                series.alias(name)
-                for series, name in zip(self._compliant_expr._call(df), output_names)
+        return self._from_colname_func_and_alias_output_names(
+            name_mapping_func=lambda name: f"{prefix}{name}",
+            alias_output_names=lambda output_names: [
+                f"{prefix}{output_name}" for output_name in output_names
             ],
-            depth=self._compliant_expr._depth,
-            function_name=self._compliant_expr._function_name,
-            root_names=root_names,
-            output_names=output_names,
-            backend_version=self._compliant_expr._backend_version,
-            version=self._compliant_expr._version,
-            kwargs={**self._compliant_expr._kwargs, "prefix": prefix},
         )
 
     def suffix(self: Self, suffix: str) -> ArrowExpr:
-        root_names = self._compliant_expr._root_names
-        if root_names is None:
-            msg = ".name.suffix"
-            raise AnonymousExprError.from_expr_name(msg)
-
-        output_names = [str(name) + suffix for name in root_names]
-
-        return self._compliant_expr.__class__(
-            lambda df: [
-                series.alias(name)
-                for series, name in zip(self._compliant_expr._call(df), output_names)
+        return self._from_colname_func_and_alias_output_names(
+            name_mapping_func=lambda name: f"{name}{suffix}",
+            alias_output_names=lambda output_names: [
+                f"{output_name}{suffix}" for output_name in output_names
             ],
-            depth=self._compliant_expr._depth,
-            function_name=self._compliant_expr._function_name,
-            root_names=root_names,
-            output_names=output_names,
-            backend_version=self._compliant_expr._backend_version,
-            version=self._compliant_expr._version,
-            kwargs={**self._compliant_expr._kwargs, "suffix": suffix},
         )
 
     def to_lowercase(self: Self) -> ArrowExpr:
-        root_names = self._compliant_expr._root_names
-
-        if root_names is None:
-            msg = ".name.to_lowercase"
-            raise AnonymousExprError.from_expr_name(msg)
-        output_names = [str(name).lower() for name in root_names]
-
-        return self._compliant_expr.__class__(
-            lambda df: [
-                series.alias(name)
-                for series, name in zip(self._compliant_expr._call(df), output_names)
+        return self._from_colname_func_and_alias_output_names(
+            name_mapping_func=str.lower,
+            alias_output_names=lambda output_names: [
+                name.lower() for name in output_names
             ],
-            depth=self._compliant_expr._depth,
-            function_name=self._compliant_expr._function_name,
-            root_names=root_names,
-            output_names=output_names,
-            backend_version=self._compliant_expr._backend_version,
-            version=self._compliant_expr._version,
-            kwargs=self._compliant_expr._kwargs,
         )
 
     def to_uppercase(self: Self) -> ArrowExpr:
-        root_names = self._compliant_expr._root_names
+        return self._from_colname_func_and_alias_output_names(
+            name_mapping_func=str.upper,
+            alias_output_names=lambda output_names: [
+                name.upper() for name in output_names
+            ],
+        )
 
-        if root_names is None:
-            msg = ".name.to_uppercase"
-            raise AnonymousExprError.from_expr_name(msg)
-        output_names = [str(name).upper() for name in root_names]
-
+    def _from_colname_func_and_alias_output_names(
+        self: Self,
+        name_mapping_func: Callable[[str], str],
+        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
+    ) -> ArrowExpr:
         return self._compliant_expr.__class__(
-            lambda df: [
-                series.alias(name)
-                for series, name in zip(self._compliant_expr._call(df), output_names)
+            call=lambda df: [
+                series.alias(name_mapping_func(name))
+                for series, name in zip(
+                    self._compliant_expr._call(df),
+                    self._compliant_expr._evaluate_output_names(df),
+                )
             ],
             depth=self._compliant_expr._depth,
             function_name=self._compliant_expr._function_name,
-            root_names=root_names,
-            output_names=output_names,
+            evaluate_output_names=self._compliant_expr._evaluate_output_names,
+            alias_output_names=alias_output_names,
             backend_version=self._compliant_expr._backend_version,
             version=self._compliant_expr._version,
-            kwargs=self._compliant_expr._kwargs,
+            call_kwargs=self._compliant_expr._call_kwargs,
         )

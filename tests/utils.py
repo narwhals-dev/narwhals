@@ -7,10 +7,13 @@ import warnings
 from typing import Any
 from typing import Callable
 from typing import Iterator
+from typing import Mapping
 from typing import Sequence
 
 import pandas as pd
+import pyarrow as pa
 
+import narwhals as nw
 from narwhals.translate import from_native
 from narwhals.typing import IntoDataFrame
 from narwhals.typing import IntoFrame
@@ -51,6 +54,12 @@ def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
 
 
 def _to_comparable_list(column_values: Any) -> Any:
+    if isinstance(column_values, nw.Series) and isinstance(
+        column_values.to_native(), pa.Array
+    ):  # pragma: no cover
+        # Narwhals Series for PyArrow should be backed by ChunkedArray, not Array.
+        msg = "Did not expect to see Arrow Array here"
+        raise TypeError(msg)
     if (
         hasattr(column_values, "_compliant_series")
         and column_values._compliant_series._implementation is Implementation.CUDF
@@ -62,16 +71,21 @@ def _to_comparable_list(column_values: Any) -> Any:
 
 
 def _sort_dict_by_key(
-    data_dict: dict[str, list[Any]], key: str
+    data_dict: Mapping[str, list[Any]], key: str
 ) -> dict[str, list[Any]]:  # pragma: no cover
     sort_list = data_dict[key]
     sorted_indices = sorted(
-        range(len(sort_list)), key=lambda i: (sort_list[i] is None, sort_list[i])
+        range(len(sort_list)),
+        key=lambda i: (
+            (sort_list[i] is None)
+            or (isinstance(sort_list[i], float) and math.isnan(sort_list[i])),
+            sort_list[i],
+        ),
     )
     return {key: [value[i] for i in sorted_indices] for key, value in data_dict.items()}
 
 
-def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
+def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
     is_pyspark = (
         hasattr(result, "_compliant_frame")
         and result.implementation is Implementation.PYSPARK
@@ -83,24 +97,26 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
     if is_duckdb:
         result = from_native(result.to_native().arrow())
     if hasattr(result, "collect"):
-        if result.implementation is Implementation.POLARS and os.environ.get(
-            "NARWHALS_POLARS_GPU", False
-        ):  # pragma: no cover
-            result = result.to_native().collect(engine="gpu")
-        else:
-            result = result.collect()
+        kwargs: dict[Implementation, dict[str, Any]] = {Implementation.POLARS: {}}
+
+        if os.environ.get("NARWHALS_POLARS_GPU", None):  # pragma: no cover
+            kwargs[Implementation.POLARS].update({"engine": "gpu"})
+        if os.environ.get("NARWHALS_POLARS_NEW_STREAMING", None):  # pragma: no cover
+            kwargs[Implementation.POLARS].update({"new_streaming": True})
+
+        result = result.collect(**kwargs.get(result.implementation, {}))
 
     if hasattr(result, "columns"):
         for idx, (col, key) in enumerate(zip(result.columns, expected.keys())):
             assert col == key, f"Expected column name {key} at index {idx}, found {col}"
     result = {key: _to_comparable_list(result[key]) for key in expected}
-    if is_pyspark and expected:  # pragma: no cover
+    if (is_pyspark or is_duckdb) and expected:  # pragma: no cover
         sort_key = next(iter(expected.keys()))
         expected = _sort_dict_by_key(expected, sort_key)
         result = _sort_dict_by_key(result, sort_key)
-    assert list(result.keys()) == list(
-        expected.keys()
-    ), f"Result keys {result.keys()}, expected keys: {expected.keys()}"
+    assert list(result.keys()) == list(expected.keys()), (
+        f"Result keys {result.keys()}, expected keys: {expected.keys()}"
+    )
 
     for key, expected_value in expected.items():
         result_value = result[key]
@@ -115,11 +131,17 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
                 are_equivalent_values = lhs is None or math.isnan(lhs)
             elif lhs is None:
                 are_equivalent_values = rhs is None
+            elif isinstance(lhs, list) and isinstance(rhs, list):
+                are_equivalent_values = all(
+                    left_side == right_side for left_side, right_side in zip(lhs, rhs)
+                )
             elif pd.isna(lhs):
                 are_equivalent_values = pd.isna(rhs)
             else:
                 are_equivalent_values = lhs == rhs
-            assert are_equivalent_values, f"Mismatch at index {i}: {lhs} != {rhs}\nExpected: {expected}\nGot: {result}"
+            assert are_equivalent_values, (
+                f"Mismatch at index {i}: {lhs} != {rhs}\nExpected: {expected}\nGot: {result}"
+            )
 
 
 def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:
@@ -136,4 +158,4 @@ def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:
 
 def is_windows() -> bool:
     """Check if the current platform is Windows."""
-    return sys.platform in ["win32", "cygwin"]
+    return sys.platform in {"win32", "cygwin"}

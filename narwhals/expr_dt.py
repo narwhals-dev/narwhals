@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Generic
-from typing import Literal
 from typing import TypeVar
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.expr import Expr
+    from narwhals.typing import TimeUnit
 
 ExprT = TypeVar("ExprT", bound="Expr")
 
@@ -34,7 +34,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
             >>>
-            >>> data = {"a": [datetime(2012, 1, 7, 10, 20), datetime(2023, 3, 10, 11, 32)]}
+            >>> data = {
+            ...     "a": [datetime(2012, 1, 7, 10, 20), datetime(2023, 3, 10, 11, 32)]
+            ... }
             >>> df_pd = pd.DataFrame(data).convert_dtypes(dtype_backend="pyarrow")
             >>> df_pl = pl.DataFrame(data)
             >>> df_pa = pa.table(data)
@@ -71,10 +73,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[2012-01-07,2023-03-10]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.date(),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            lambda plx: self._expr._to_compliant_expr(plx).dt.date(), self._expr._metadata
         )
 
     def year(self: Self) -> ExprT:
@@ -142,10 +141,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             year: [[1978,2024,2065]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.year(),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            lambda plx: self._expr._to_compliant_expr(plx).dt.year(), self._expr._metadata
         )
 
     def month(self: Self) -> ExprT:
@@ -214,9 +210,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.month(),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def day(self: Self) -> ExprT:
@@ -284,10 +278,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             day: [[1,13,1]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.day(),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            lambda plx: self._expr._to_compliant_expr(plx).dt.day(), self._expr._metadata
         )
 
     def hour(self: Self) -> ExprT:
@@ -355,10 +346,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             hour: [[1,5,10]]
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.hour(),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            lambda plx: self._expr._to_compliant_expr(plx).dt.hour(), self._expr._metadata
         )
 
     def minute(self: Self) -> ExprT:
@@ -427,9 +415,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.minute(),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def second(self: Self) -> ExprT:
@@ -496,9 +482,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.second(),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def millisecond(self: Self) -> ExprT:
@@ -565,9 +549,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.millisecond(),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def microsecond(self: Self) -> ExprT:
@@ -634,9 +616,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.microsecond(),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def nanosecond(self: Self) -> ExprT:
@@ -703,9 +683,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.nanosecond(),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def ordinal_day(self: Self) -> ExprT:
@@ -764,9 +742,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.ordinal_day(),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def weekday(self: Self) -> ExprT:
@@ -823,9 +799,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.weekday(),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def total_minutes(self: Self) -> ExprT:
@@ -889,9 +863,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.total_minutes(),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def total_seconds(self: Self) -> ExprT:
@@ -913,7 +885,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
             >>>
-            >>> data = {"a": [timedelta(seconds=10), timedelta(seconds=20, milliseconds=40)]}
+            >>> data = {
+            ...     "a": [timedelta(seconds=10), timedelta(seconds=20, milliseconds=40)]
+            ... }
             >>> df_pd = pd.DataFrame(data)
             >>> df_pl = pl.DataFrame(data)
             >>> df_pa = pa.table(data)
@@ -955,9 +929,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.total_seconds(),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def total_milliseconds(self: Self) -> ExprT:
@@ -1026,9 +998,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.total_milliseconds(),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def total_microseconds(self: Self) -> ExprT:
@@ -1097,9 +1067,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.total_microseconds(),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def total_nanoseconds(self: Self) -> ExprT:
@@ -1155,9 +1123,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.total_nanoseconds(),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def to_string(self: Self, format: str) -> ExprT:  # noqa: A002
@@ -1256,9 +1222,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.to_string(format),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def replace_time_zone(self: Self, time_zone: str | None) -> ExprT:
@@ -1325,9 +1289,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             lambda plx: self._expr._to_compliant_expr(plx).dt.replace_time_zone(
                 time_zone
             ),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def convert_time_zone(self: Self, time_zone: str) -> ExprT:
@@ -1400,12 +1362,10 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             lambda plx: self._expr._to_compliant_expr(plx).dt.convert_time_zone(
                 time_zone
             ),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
-    def timestamp(self: Self, time_unit: Literal["ns", "us", "ms"] = "us") -> ExprT:
+    def timestamp(self: Self, time_unit: TimeUnit = "us") -> ExprT:
         """Return a timestamp in the given time unit.
 
         Arguments:
@@ -1476,7 +1436,5 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             raise ValueError(msg)
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.timestamp(time_unit),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )

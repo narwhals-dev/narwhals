@@ -22,7 +22,7 @@ def remove_docstring_examples(doc: str) -> str:
 def test_renamed_taxicab_norm(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     # Suppose we need to rename `_l1_norm` to `_taxicab_norm`.
     # We need `narwhals.stable.v1` to stay stable. So, we
@@ -52,15 +52,10 @@ def test_renamed_taxicab_norm(
     assert_equal_data(result_v1, expected)
 
 
-def test_renamed_taxicab_norm_dataframe(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
+def test_renamed_taxicab_norm_dataframe(constructor: Constructor) -> None:
     # Suppose we have `DataFrame._l1_norm` in `stable.v1`, but remove it
     # in the main namespace. Here, we check that it's still usable from
     # the stable api.
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
     def func(df_any: Any) -> Any:
         df = nw_v1.from_native(df_any)
         df = df._l1_norm()
@@ -71,16 +66,10 @@ def test_renamed_taxicab_norm_dataframe(
     assert_equal_data(result, expected)
 
 
-def test_renamed_taxicab_norm_dataframe_narwhalify(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
+def test_renamed_taxicab_norm_dataframe_narwhalify(constructor: Constructor) -> None:
     # Suppose we have `DataFrame._l1_norm` in `stable.v1`, but remove it
     # in the main namespace. Here, we check that it's still usable from
     # the stable api when using `narwhalify`.
-
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
     @nw_v1.narwhalify
     def func(df: Any) -> Any:
         return df._l1_norm()
@@ -104,7 +93,7 @@ def test_stable_api_docstrings() -> None:
     for item in main_namespace_api:
         if getattr(nw, item).__doc__ is None:
             continue
-        if item in ("from_native", "narwhalify"):
+        if item in {"from_native", "narwhalify"}:
             # `eager_or_interchange` param was removed from main namespace,
             # but is still present in v1 docstring.
             continue
@@ -130,10 +119,10 @@ def test_lazyframe_docstrings() -> None:
     df = nw.from_native(pl.LazyFrame())
     api = [i for i in df.__dir__() if not i.startswith("_")]
     for item in api:
-        if item in ("schema", "columns"):
+        if item in {"schema", "columns"}:
             # to avoid performance warning
             continue
-        if item in ("tail",):
+        if item in {"tail", "gather_every"}:
             # deprecated
             continue
         assert remove_docstring_examples(

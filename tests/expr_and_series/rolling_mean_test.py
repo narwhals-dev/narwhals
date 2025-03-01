@@ -19,19 +19,19 @@ data = {"a": [None, 1, 2, None, 4, 6, 11]}
 kwargs_and_expected: dict[str, dict[str, Any]] = {
     "x1": {"kwargs": {"window_size": 3}, "expected": [None] * 6 + [7.0]},
     "x2": {
-        "kwargs": {"window_size": 3, "min_periods": 1},
+        "kwargs": {"window_size": 3, "min_samples": 1},
         "expected": [None, 1.0, 1.5, 1.5, 3.0, 5.0, 7.0],
     },
     "x3": {
-        "kwargs": {"window_size": 2, "min_periods": 1},
+        "kwargs": {"window_size": 2, "min_samples": 1},
         "expected": [None, 1.0, 1.5, 2.0, 4.0, 5.0, 8.5],
     },
     "x4": {
-        "kwargs": {"window_size": 5, "min_periods": 1, "center": True},
+        "kwargs": {"window_size": 5, "min_samples": 1, "center": True},
         "expected": [1.5, 1.5, 7 / 3, 3.25, 5.75, 7.0, 7.0],
     },
     "x5": {
-        "kwargs": {"window_size": 4, "min_periods": 1, "center": True},
+        "kwargs": {"window_size": 4, "min_samples": 1, "center": True},
         "expected": [1.0, 1.5, 1.5, 7 / 3, 4.0, 7.0, 7.0],
     },
 }
@@ -69,7 +69,7 @@ def test_rolling_mean_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-@given(  # type: ignore[misc]
+@given(
     center=st.booleans(),
     values=st.lists(st.floats(-10, 10), min_size=3, max_size=10),
 )
@@ -81,17 +81,17 @@ def test_rolling_mean_hypothesis(center: bool, values: list[float]) -> None:  # 
     s = pd.Series(values)
     n_missing = random.randint(0, len(s) - 1)  # noqa: S311
     window_size = random.randint(1, len(s))  # noqa: S311
-    min_periods = random.randint(1, window_size)  # noqa: S311
+    min_samples = random.randint(1, window_size)  # noqa: S311
     mask = random.sample(range(len(s)), n_missing)
     s[mask] = None
     df = pd.DataFrame({"a": s})
     expected = (
-        s.rolling(window=window_size, center=center, min_periods=min_periods)
+        s.rolling(window=window_size, center=center, min_periods=min_samples)
         .mean()
         .to_frame("a")
     )
     result = nw.from_native(pa.Table.from_pandas(df)).select(
-        nw.col("a").rolling_mean(window_size, center=center, min_periods=min_periods)
+        nw.col("a").rolling_mean(window_size, center=center, min_samples=min_samples)
     )
     expected_dict = nw.from_native(expected, eager_only=True).to_dict(as_series=False)
     assert_equal_data(result, expected_dict)

@@ -1,0 +1,47 @@
+name: Type checking
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+env:
+  PY_COLORS: 1
+
+jobs:
+  mypy:
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: "true"
+          cache-suffix: ${{ matrix.python-version }}
+          cache-dependency-glob: "pyproject.toml"
+      - name: Create venv
+        run: uv venv .venv
+      - name: install-reqs
+        # TODO: add more dependencies/backends incrementally
+        run: |
+          source .venv/bin/activate
+          uv pip install -e ".[tests, typing, core, pyspark, sqlframe]"
+      - name: show-deps
+        run: |
+          source .venv/bin/activate
+          uv pip freeze
+      - name: Run mypy
+        run: |
+          source .venv/bin/activate
+          make typing
+      - name: Run pyright
+        run: |
+          source .venv/bin/activate
+          pyright

@@ -159,19 +159,16 @@ def test_truediv_same_dims(
 
 
 @pytest.mark.slow
-@given(  # type: ignore[misc]
-    left=st.integers(-100, 100),
-    right=st.integers(-100, 100),
-)
+@given(left=st.integers(-100, 100), right=st.integers(-100, 100))
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
 def test_floordiv(left: int, right: int) -> None:
     # hypothesis complains if we add `constructor` as an argument, so this
     # test is a bit manual unfortunately
     assume(right != 0)
     expected = {"a": [left // right]}
-    result = nw.from_native(pd.DataFrame({"a": [left]}), eager_only=True).select(
-        nw.col("a") // right
-    )
+    result: nw.DataFrame[Any] = nw.from_native(
+        pd.DataFrame({"a": [left]}), eager_only=True
+    ).select(nw.col("a") // right)
     assert_equal_data(result, expected)
     if PANDAS_VERSION < (2, 2):  # pragma: no cover
         # Bug in old version of pandas
@@ -197,19 +194,16 @@ def test_floordiv(left: int, right: int) -> None:
 
 
 @pytest.mark.slow
-@given(  # type: ignore[misc]
-    left=st.integers(-100, 100),
-    right=st.integers(-100, 100),
-)
+@given(left=st.integers(-100, 100), right=st.integers(-100, 100))
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
 def test_mod(left: int, right: int) -> None:
     # hypothesis complains if we add `constructor` as an argument, so this
     # test is a bit manual unfortunately
     assume(right != 0)
     expected = {"a": [left % right]}
-    result = nw.from_native(pd.DataFrame({"a": [left]}), eager_only=True).select(
-        nw.col("a") % right
-    )
+    result: nw.DataFrame[Any] = nw.from_native(
+        pd.DataFrame({"a": [left]}), eager_only=True
+    ).select(nw.col("a") % right)
     assert_equal_data(result, expected)
     result = nw.from_native(
         pd.DataFrame({"a": [left]}).convert_dtypes(), eager_only=True

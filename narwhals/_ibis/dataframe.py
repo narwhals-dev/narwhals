@@ -4,6 +4,8 @@ from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 
+import ibis.selectors as s
+
 from narwhals.dependencies import get_ibis
 from narwhals.utils import Implementation
 from narwhals.utils import Version
@@ -92,7 +94,7 @@ class IbisLazyFrame:
         return self
 
     def __native_namespace__(self: Self) -> ModuleType:
-        return get_ibis()  # type: ignore[no-any-return]
+        return get_ibis()
 
     def __getitem__(self, item: str) -> IbisInterchangeSeries:
         from narwhals._ibis.series import IbisInterchangeSeries
@@ -105,23 +107,23 @@ class IbisLazyFrame:
     def to_arrow(self: Self) -> pa.Table:
         return self._native_frame.to_pyarrow()
 
+    def simple_select(self, *column_names: str) -> Self:
+        return self._from_native_frame(self._native_frame.select(s.cols(*column_names)))
+
+    def aggregate(self: Self, *exprs: Any) -> Self:
+        raise NotImplementedError
+
     def select(
         self: Self,
         *exprs: Any,
-        **named_exprs: Any,
     ) -> Self:
-        if named_exprs or not all(isinstance(x, str) for x in exprs):  # pragma: no cover
-            msg = (
-                "`select`-ing not by name is not supported for Ibis backend.\n\n"
-                "If you would like to see this kind of object better supported in "
-                "Narwhals, please open a feature request "
-                "at https://github.com/narwhals-dev/narwhals/issues."
-            )
-            raise NotImplementedError(msg)
-
-        import ibis.selectors as s
-
-        return self._from_native_frame(self._native_frame.select(s.cols(*exprs)))
+        msg = (
+            "`select`-ing not by name is not supported for Ibis backend.\n\n"
+            "If you would like to see this kind of object better supported in "
+            "Narwhals, please open a feature request "
+            "at https://github.com/narwhals-dev/narwhals/issues."
+        )
+        raise NotImplementedError(msg)
 
     def __getattr__(self, attr: str) -> Any:
         if attr == "schema":
@@ -130,7 +132,7 @@ class IbisLazyFrame:
                 for column_name, ibis_dtype in self._native_frame.schema().items()
             }
         elif attr == "columns":
-            return self._native_frame.columns
+            return list(self._native_frame.columns)
         msg = (
             f"Attribute {attr} is not supported for metadata-only dataframes.\n\n"
             "If you would like to see this kind of object better supported in "

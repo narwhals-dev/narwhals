@@ -3,10 +3,10 @@ from __future__ import annotations
 from contextlib import nullcontext as does_not_raise
 from typing import Any
 
-import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.exceptions import NarwhalsError
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import ConstructorEager
@@ -147,7 +147,7 @@ def test_pivot(
     ("data_", "context"),
     [
         (data_no_dups, does_not_raise()),
-        (data, pytest.raises((ValueError, pl.exceptions.ComputeError))),
+        (data, pytest.raises((ValueError, NarwhalsError))),
     ],
 )
 def test_pivot_no_agg(

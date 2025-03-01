@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.23.0"
+version = "1.28.0"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
@@ -18,6 +18,7 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python",
   "Operating System :: OS Independent",
+  "Typing :: Typed",
 ]
 
 [project.optional-dependencies]
@@ -36,15 +37,26 @@ polars = ["polars>=0.20.3"]
 dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.0"]
 ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
-dev = [
+sqlframe = ["sqlframe>=3.22.0"]
+tests = [
   "covdefaults",
-  "pre-commit",
   "pytest",
   "pytest-cov",
   "pytest-randomly",
   "pytest-env",
   "hypothesis",
   "typing_extensions",
+]
+typing = [
+  "pandas-stubs",
+  "typing_extensions",
+  "mypy~=1.15.0",
+  "pyright"
+]
+dev = [
+  "pre-commit",
+  "narwhals[tests]",
+  "narwhals[typing]",
 ]
 core = [
   "duckdb",
@@ -65,6 +77,7 @@ docs = [
   "mkdocs-autorefs",
   "mkdocs-material",
   "mkdocstrings[python]",
+  "mkdocstrings-python>=1.16",
   "pandas",
   "polars>=1.0.0",
   "pyarrow",
@@ -94,13 +107,29 @@ exclude = [
 line-length = 90
 fix = true
 target-version = "py38"
+extend-exclude = ["utils/bump_version.py", "**/this.py"]
 
-lint.select = [
+[tool.ruff.lint]
+preview = true
+explicit-preview-rules = true
+
+extend-safe-fixes = [
+  "C419",
+  "C420",
+  "PLR6201",
+  "TC",
+  "UP",
+]
+extend-select = [
+  "PLR6201",
+]
+select = [
   "ALL",
 ]
-lint.ignore = [
+ignore = [
   "A001",
   "A004",
+  "A005",
   "ARG002",
   "ANN401",
   "C901",
@@ -126,9 +155,11 @@ lint.ignore = [
   "RET505",
   "SLF001",
   "TD003",
+  "TD004",
 ]
 
 [tool.ruff.lint.per-file-ignores]
+"narwhals/expr_dt.py" = ["RUF002"]
 "tests/*" = ["S101"]
 "tpch/tests/*" = ["S101"]
 "utils/*" = ["S311", "PTH123"]
@@ -154,6 +185,7 @@ required-imports = ["from __future__ import annotations"]
 docstring-code-format = true
 
 [tool.pytest.ini_options]
+norecursedirs =  ['*.egg', '.*', '_darcs', 'build', 'CVS', 'dist', 'node_modules', 'venv', '{arch}', 'narwhals/_*']
 testpaths = ["tests"]
 filterwarnings = [
   "error",
@@ -168,13 +200,17 @@ filterwarnings = [
   'ignore:.*The distutils package is deprecated and slated for removal in Python 3.12:DeprecationWarning:pyspark',
   'ignore:.*distutils Version classes are deprecated. Use packaging.version instead.*:DeprecationWarning:pyspark',
   'ignore:.*is_datetime64tz_dtype is deprecated and will be removed in a future version.*:DeprecationWarning:pyspark',
-
+  # Warning raised by PyArrow nightly just by importing pandas
+  'ignore:.*Python binding for RankQuantileOptions not exposed:RuntimeWarning:pyarrow',
+  'ignore:.*pandas only supports SQLAlchemy:UserWarning',
+  'ignore:.*numpy.core is deprecated and has been renamed to numpy._core.*:DeprecationWarning:sqlframe',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
 env = [
   "MODIN_ENGINE=python",
-  "PYARROW_IGNORE_TIMEZONE=1"
+  "PYARROW_IGNORE_TIMEZONE=1",
+  "TZ=UTC",
 ]
 
 [tool.coverage.run]
@@ -186,6 +222,7 @@ omit = [
   'narwhals/typing.py',
   'narwhals/stable/v1/typing.py',
   'narwhals/this.py',
+  'narwhals/_arrow/typing.py',
   # we can't run this in every environment that we measure coverage on due to upper-bound constraits
   'narwhals/_ibis/*',
   # the latest pyspark (3.5) doesn't officially support Python 3.12 and 3.13
@@ -199,17 +236,55 @@ exclude_also = [
   "if .*implementation.is_cudf",
   'request.applymarker\(pytest.mark.xfail',
   'backend_version <',
-  'if "cudf" in str\(constructor'
+  'if "cudf" in str\(constructor',
+  'if "pyspark" in str\(constructor'
 ]
 
 [tool.mypy]
+files = ["narwhals", "tests"]
+pretty = true
 strict = true
 
 [[tool.mypy.overrides]]
-# the pandas API is just too inconsistent for type hinting to be useful.
 module = [
-  "pandas.*",
   "cudf.*",
+  "dask.*",
+  "dask_expr.*",
+  "duckdb.*",
+  "ibis.*",
   "modin.*",
+  "numpy.*",
+  "sklearn.*",
+  "sqlframe.*",
 ]
+# TODO: remove follow_imports
+follow_imports = "skip"
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+  "*._expression_parsing",
+  "*.utils",
+  "*._pandas_like.*",
+  "*._ibis.*",
+  "*._arrow.*",
+  "*._dask.*",
+  "*._spark_like.*",
+]
+warn_return_any = false
+
+[tool.pyright]
+pythonPlatform = "All"
+# NOTE (stubs do unsafe `TypeAlias` and `TypeVar` imports)
+# pythonVersion = "3.8"
+reportMissingImports = "none"
+reportMissingModuleSource = "none"
+reportPrivateImportUsage = "none"
+reportUnusedExpression = "none"    # handled by (https://docs.astral.sh/ruff/rules/unused-variable/)
+typeCheckingMode = "basic"
+include = ["narwhals", "tests"]
+ignore = [
+  "../.venv/",
+  "../../../**/Lib",      # stdlib
+  "../../../**/typeshed*" # typeshed-fallback
+]

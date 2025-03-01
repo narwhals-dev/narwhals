@@ -44,7 +44,9 @@ class ExprNameNamespace(Generic[ExprT]):
 
             >>> def agnostic_name_keep(df_native: IntoFrame) -> list[str]:
             ...     df = nw.from_native(df_native)
-            ...     return df.select(nw.col("foo").alias("alias_for_foo").name.keep()).columns
+            ...     return df.select(
+            ...         nw.col("foo").alias("alias_for_foo").name.keep()
+            ...     ).columns
 
             We can then pass any supported library such as pandas, Polars, or
             PyArrow to `agnostic_name_keep`:
@@ -60,9 +62,7 @@ class ExprNameNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).name.keep(),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def map(self: Self, function: Callable[[str], str]) -> ExprT:
@@ -112,9 +112,7 @@ class ExprNameNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).name.map(function),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def prefix(self: Self, prefix: str) -> ExprT:
@@ -163,9 +161,7 @@ class ExprNameNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).name.prefix(prefix),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def suffix(self: Self, suffix: str) -> ExprT:
@@ -214,9 +210,7 @@ class ExprNameNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).name.suffix(suffix),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def to_lowercase(self: Self) -> ExprT:
@@ -262,9 +256,7 @@ class ExprNameNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).name.to_lowercase(),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )
 
     def to_uppercase(self: Self) -> ExprT:
@@ -310,7 +302,5 @@ class ExprNameNamespace(Generic[ExprT]):
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).name.to_uppercase(),
-            self._expr._is_order_dependent,
-            changes_length=self._expr._changes_length,
-            aggregates=self._expr._aggregates,
+            self._expr._metadata,
         )

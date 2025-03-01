@@ -14,12 +14,15 @@ import pyarrow as pa
 import pytest
 
 from narwhals.utils import generate_temporary_column_name
+from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     import duckdb
 
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoFrame
+
+MIN_PANDAS_NULLABLE_VERSION = (1, 5)
 
 # When testing cudf.pandas in Kaggle, we get an error if we try to run
 # python -m cudf.pandas -m pytest --constructors=pandas. This gives us
@@ -71,15 +74,15 @@ def pytest_collection_modifyitems(
 
 
 def pandas_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
-    return pd.DataFrame(obj)  # type: ignore[no-any-return]
+    return pd.DataFrame(obj)
 
 
 def pandas_nullable_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
-    return pd.DataFrame(obj).convert_dtypes(dtype_backend="numpy_nullable")  # type: ignore[no-any-return]
+    return pd.DataFrame(obj).convert_dtypes(dtype_backend="numpy_nullable")
 
 
 def pandas_pyarrow_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
-    return pd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
+    return pd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")
 
 
 def modin_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:  # pragma: no cover
@@ -129,8 +132,8 @@ def dask_lazy_p2_constructor(obj: dict[str, list[Any]]) -> IntoFrame:  # pragma:
     return dd.from_dict(obj, npartitions=2)  # type: ignore[no-any-return]
 
 
-def pyarrow_table_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
-    return pa.table(obj)  # type: ignore[no-any-return]
+def pyarrow_table_constructor(obj: dict[str, Any]) -> IntoDataFrame:
+    return pa.table(obj)
 
 
 def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cover
@@ -154,7 +157,7 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
         os.environ["TZ"] = "UTC"
 
         session = (
-            SparkSession.builder.appName("unit-tests")
+            SparkSession.builder.appName("unit-tests")  # pyright: ignore[reportAttributeAccessIssue]
             .master("local[1]")
             .config("spark.ui.enabled", "false")
             # executing one task at a time makes the tests faster
@@ -170,7 +173,7 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
             index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
             _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
 
-            return (  # type: ignore[no-any-return]
+            return (
                 session.createDataFrame([*zip(*_obj.values())], schema=[*_obj.keys()])
                 .repartition(2)
                 .orderBy(index_col_name)
@@ -178,6 +181,17 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
             )
 
         return _constructor
+
+
+def sqlframe_pyspark_lazy_constructor(
+    obj: dict[str, Any],
+) -> IntoFrame:  # pragma: no cover
+    from sqlframe.duckdb import DuckDBSession
+
+    session = DuckDBSession()
+    return (  # type: ignore[no-any-return]
+        session.createDataFrame([*zip(*obj.values())], schema=[*obj.keys()])
+    )
 
 
 EAGER_CONSTRUCTORS: dict[str, Callable[[Any], IntoDataFrame]] = {
@@ -195,6 +209,7 @@ LAZY_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {
     "polars[lazy]": polars_lazy_constructor,
     "duckdb": duckdb_lazy_constructor,
     "pyspark": pyspark_lazy_constructor,  # type: ignore[dict-item]
+    "sqlframe": sqlframe_pyspark_lazy_constructor,
 }
 GPU_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {"cudf": cudf_constructor}
 
@@ -208,10 +223,10 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         selected_constructors = [
             x
             for x in selected_constructors
-            if x not in GPU_CONSTRUCTORS and x not in "modin"  # too slow
+            if x not in GPU_CONSTRUCTORS and x != "modin"  # too slow
         ]
     else:  # pragma: no cover
-        selected_constructors = metafunc.config.getoption("constructors").split(",")
+        selected_constructors = metafunc.config.getoption("constructors").split(",")  # pyright: ignore[reportAttributeAccessIssue]
 
     eager_constructors: list[Callable[[Any], IntoDataFrame]] = []
     eager_constructors_ids: list[str] = []
@@ -219,6 +234,11 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     constructors_ids: list[str] = []
 
     for constructor in selected_constructors:
+        if (
+            constructor in {"pandas[nullable]", "pandas[pyarrow]"}
+            and MIN_PANDAS_NULLABLE_VERSION > PANDAS_VERSION
+        ):  # pragma: no cover
+            continue
         if constructor in EAGER_CONSTRUCTORS:
             eager_constructors.append(EAGER_CONSTRUCTORS[constructor])
             eager_constructors_ids.append(constructor)
@@ -226,10 +246,9 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             constructors_ids.append(constructor)
         elif constructor in LAZY_CONSTRUCTORS:
             if constructor == "pyspark":
-                if sys.version_info < (3, 12):  # pragma: no cover
-                    constructors.append(pyspark_lazy_constructor())
-                else:  # pragma: no cover
+                if sys.version_info >= (3, 12):  # pragma: no cover
                     continue
+                constructors.append(pyspark_lazy_constructor())  # pragma: no cover
             else:
                 constructors.append(LAZY_CONSTRUCTORS[constructor])
             constructors_ids.append(constructor)
@@ -243,7 +262,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         )
     elif "constructor" in metafunc.fixturenames:
         if (
-            any(x in str(metafunc.module) for x in ("unpivot", "from_dict", "from_numpy"))
+            any(x in str(metafunc.module) for x in ("from_dict", "from_numpy"))
             and LAZY_CONSTRUCTORS["duckdb"] in constructors
         ):
             constructors.remove(LAZY_CONSTRUCTORS["duckdb"])
