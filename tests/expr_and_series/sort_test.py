@@ -30,7 +30,9 @@ def test_sort_expr(
         nw.col("b").sort(descending=descending, nulls_last=nulls_last),
     )
     assert_equal_data(result, expected)
-    with pytest.deprecated_call():
+    with pytest.deprecated_call(
+        match="is deprecated and will be removed in a future version"
+    ):
         df.select(
             "a",
             nw_main.col("b").sort(descending=descending, nulls_last=nulls_last),
