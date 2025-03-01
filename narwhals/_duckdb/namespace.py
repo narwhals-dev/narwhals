@@ -238,12 +238,12 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "duckdb.Expression"]
             *column_names, backend_version=self._backend_version, version=self._version
         )
 
-    def exclude(self: Self, column_names: Container[str]) -> DuckDBExpr:
+    def exclude(self: Self, excluded_names: Container[str]) -> DuckDBExpr:
         def evaluate_output_names(df: DuckDBLazyFrame) -> Sequence[str]:
             return [
                 column_name
                 for column_name in df.columns
-                if column_name not in column_names
+                if column_name not in excluded_names
             ]
 
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:

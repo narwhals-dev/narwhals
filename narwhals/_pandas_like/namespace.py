@@ -116,12 +116,12 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeDataFrame, PandasLikeSeri
             version=self._version,
         )
 
-    def exclude(self: Self, column_names: Container[str]) -> PandasLikeExpr:
+    def exclude(self: Self, excluded_names: Container[str]) -> PandasLikeExpr:
         def evaluate_output_names(df: PandasLikeDataFrame) -> Sequence[str]:
             return [
                 column_name
                 for column_name in df.columns
-                if column_name not in column_names
+                if column_name not in excluded_names
             ]
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:

@@ -69,12 +69,12 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):  #
             implementation=self._implementation,
         )
 
-    def exclude(self: Self, column_names: Container[str]) -> SparkLikeExpr:
+    def exclude(self: Self, excluded_names: Container[str]) -> SparkLikeExpr:
         def evaluate_output_names(df: SparkLikeLazyFrame) -> Sequence[str]:
             return [
                 column_name
                 for column_name in df.columns
-                if column_name not in column_names
+                if column_name not in excluded_names
             ]
 
         def func(df: SparkLikeLazyFrame) -> list[Column]:
