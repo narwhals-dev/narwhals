@@ -52,6 +52,7 @@ if TYPE_CHECKING:
 
 SeriesT = TypeVar("SeriesT", bound="CompliantSeries")
 FrameT = TypeVar("FrameT", bound="CompliantDataFrame[Any] | CompliantLazyFrame")
+DataFrameT = TypeVar("DataFrameT", bound="CompliantDataFrame[Any]")
 SelectorOrExpr: TypeAlias = (
     "CompliantSelector[FrameT, SeriesT] | CompliantExpr[FrameT, SeriesT]"
 )
@@ -166,6 +167,13 @@ class CompliantSelectorNamespace(Protocol[FrameT, SeriesT]):
             return [name for name, tp in self._iter_schema(df) if matches(tp)]
 
         return self._selector(series, names)
+
+
+class EagerSelectorNamespace(
+    CompliantSelectorNamespace[DataFrameT, SeriesT], Protocol[DataFrameT, SeriesT]
+):
+    def _iter_columns(self, df: DataFrameT, /) -> Iterator[SeriesT]:
+        yield from df.iter_columns()
 
 
 class LazySelectorNamespace(

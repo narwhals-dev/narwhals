@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from functools import partial
 from typing import TYPE_CHECKING
-from typing import Iterator
 
 from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._selectors import CompliantSelector
-from narwhals._selectors import CompliantSelectorNamespace
+from narwhals._selectors import EagerSelectorNamespace
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -21,20 +19,8 @@ if TYPE_CHECKING:
 
 
 class PandasSelectorNamespace(
-    CompliantSelectorNamespace["PandasLikeDataFrame", "PandasLikeSeries"]
+    EagerSelectorNamespace["PandasLikeDataFrame", "PandasLikeSeries"]
 ):
-    def _iter_columns(self, df: PandasLikeDataFrame) -> Iterator[PandasLikeSeries]:
-        from narwhals._pandas_like.series import PandasLikeSeries
-
-        series = partial(
-            PandasLikeSeries,
-            implementation=df._implementation,
-            backend_version=df._backend_version,
-            version=df._version,
-        )
-        for _col, ser in df._native_frame.items():  # noqa: PERF102
-            yield series(ser)
-
     def _selector(
         self,
         call: EvalSeries[PandasLikeDataFrame, PandasLikeSeries],

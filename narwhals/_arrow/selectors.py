@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from typing import Iterator
 
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._selectors import CompliantSelector
-from narwhals._selectors import CompliantSelectorNamespace
+from narwhals._selectors import EagerSelectorNamespace
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -17,15 +16,7 @@ if TYPE_CHECKING:
     from narwhals.utils import _FullContext
 
 
-class ArrowSelectorNamespace(CompliantSelectorNamespace["ArrowDataFrame", "ArrowSeries"]):
-    def _iter_columns(self, df: ArrowDataFrame) -> Iterator[ArrowSeries]:
-        from narwhals._arrow.series import ArrowSeries
-
-        for col, ser in zip(df.columns, df._native_frame.itercolumns()):
-            yield ArrowSeries(
-                ser, name=col, backend_version=df._backend_version, version=df._version
-            )
-
+class ArrowSelectorNamespace(EagerSelectorNamespace["ArrowDataFrame", "ArrowSeries"]):
     def _selector(
         self,
         call: EvalSeries[ArrowDataFrame, ArrowSeries],
