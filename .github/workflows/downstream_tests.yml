@@ -523,10 +523,13 @@ jobs:
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals --system
-          uv pip install -e . --system
+          # TODO(FBruzzesi): Install polars from darts requirements when they introcude it
+          uv pip install -e ".[polars]" --system
       - name: show-deps
         run: uv pip freeze
       - name: Run tests
         run: |
           cd darts
           pytest darts/tests/test_timeseries.py
+          pytest darts/tests/test_timeseries_multivariate.py
+          pytest darts/tests/test_static_covariates.py
