@@ -18,6 +18,8 @@ if not TYPE_CHECKING:
     else:
         from typing import Generic as Protocol38
 else:
+    # TODO @dangotbanned: Remove after dropping `3.8` (#2084)
+    # - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
     from typing import Protocol as Protocol38
 
 if TYPE_CHECKING:

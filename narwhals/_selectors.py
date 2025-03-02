@@ -23,6 +23,8 @@ from narwhals.utils import is_compliant_dataframe
 from narwhals.utils import is_tracks_depth
 
 if not TYPE_CHECKING:  # pragma: no cover
+    # TODO @dangotbanned: Remove after dropping `3.8` (#2084)
+    # - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
     import sys
 
     if sys.version_info >= (3, 9):
