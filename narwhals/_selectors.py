@@ -80,7 +80,7 @@ class CompliantSelectorNamespace(Protocol[FrameT, SeriesT]):
             yield ser.name, ser.dtype
 
     def _iter_columns_dtypes(self, df: FrameT, /) -> Iterator[tuple[SeriesT, DType]]:
-        # NOTE: Defined to be overriden for lazy
+        # NOTE: Defined to be overridden for lazy
         # - Their `SeriesT` is a **native** object
         #   - `.dtype` won't return a `nw.DType` (or maybe anything) for lazy backends
         #   - See (https://github.com/narwhals-dev/narwhals/issues/2044)
