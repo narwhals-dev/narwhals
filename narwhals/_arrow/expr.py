@@ -87,7 +87,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
     @classmethod
     def from_column_names(
         cls: type[Self],
-        get_column_names: Callable[[ArrowDataFrame], Sequence[str]],
+        evaluate_column_names: Callable[[ArrowDataFrame], Sequence[str]],
         function_name: str,
         backend_version: tuple[int, ...],
         version: Version,
@@ -101,10 +101,12 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
                         backend_version=df._backend_version,
                         version=df._version,
                     )
-                    for column_name in get_column_names(df)
+                    for column_name in evaluate_column_names(df)
                 ]
             except KeyError as e:
-                missing_columns = [x for x in get_column_names(df) if x not in df.columns]
+                missing_columns = [
+                    x for x in evaluate_column_names(df) if x not in df.columns
+                ]
                 raise ColumnNotFoundError.from_missing_and_available_column_names(
                     missing_columns=missing_columns, available_columns=df.columns
                 ) from e
@@ -113,7 +115,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
             func,
             depth=0,
             function_name=function_name,
-            evaluate_output_names=get_column_names,
+            evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
             backend_version=backend_version,
             version=version,

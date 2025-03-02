@@ -117,18 +117,18 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
     def col(self: Self, *column_names: str) -> ArrowExpr:
         from narwhals._arrow.expr import ArrowExpr
 
-        def get_column_names(_: ArrowDataFrame) -> Sequence[str]:
+        def evaluate_column_names(_: ArrowDataFrame) -> Sequence[str]:
             return column_names
 
         return ArrowExpr.from_column_names(
-            get_column_names=get_column_names,
+            evaluate_column_names=evaluate_column_names,
             function_name="col",
             backend_version=self._backend_version,
             version=self._version,
         )
 
     def exclude(self: Self, excluded_names: Container[str]) -> ArrowExpr:
-        def get_column_names(df: ArrowDataFrame) -> Sequence[str]:
+        def evaluate_column_names(df: ArrowDataFrame) -> Sequence[str]:
             return [
                 column_name
                 for column_name in df.columns
@@ -136,7 +136,7 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
             ]
 
         return ArrowExpr.from_column_names(
-            get_column_names=get_column_names,
+            evaluate_column_names=evaluate_column_names,
             function_name="exclude",
             backend_version=self._backend_version,
             version=self._version,
