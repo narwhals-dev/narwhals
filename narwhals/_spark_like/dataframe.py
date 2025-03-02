@@ -4,6 +4,7 @@ import warnings
 from importlib import import_module
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import cast
@@ -195,6 +196,10 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             to_arrow: Incomplete = self._native_frame.toArrow
             return to_arrow()
 
+    def _iter_columns(self) -> Iterator[Column]:
+        for col in self.columns:
+            yield self._F.col(col)
+
     @property
     def columns(self: Self) -> list[str]:
         return list(self.schema)
@@ -203,7 +208,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         self: Self,
         backend: ModuleType | Implementation | str | None,
         **kwargs: Any,
-    ) -> CompliantDataFrame:
+    ) -> CompliantDataFrame[Any]:
         if backend is Implementation.PANDAS:
             import pandas as pd  # ignore-banned-import
 

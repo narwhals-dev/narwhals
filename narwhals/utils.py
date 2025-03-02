@@ -10,6 +10,7 @@ from secrets import token_hex
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Literal
 from typing import Sequence
 from typing import TypeVar
 from typing import Union
@@ -46,6 +47,7 @@ if TYPE_CHECKING:
 
     import pandas as pd
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
     from narwhals.dataframe import DataFrame
@@ -54,7 +56,7 @@ if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantExpr
-    from narwhals.typing import CompliantFrameT_contra
+    from narwhals.typing import CompliantFrameT
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import CompliantSeries
     from narwhals.typing import CompliantSeriesT_co
@@ -72,6 +74,8 @@ if TYPE_CHECKING:
     _T1 = TypeVar("_T1")
     _T2 = TypeVar("_T2")
     _T3 = TypeVar("_T3")
+
+    _TracksDepth: TypeAlias = "Literal[Implementation.DASK,Implementation.CUDF,Implementation.MODIN,Implementation.PANDAS,Implementation.PYSPARK]"
 
     class _SupportsVersion(Protocol):
         __version__: str
@@ -1357,7 +1361,9 @@ def _hasattr_static(obj: Any, attr: str) -> bool:
     return getattr_static(obj, attr, sentinel) is not sentinel
 
 
-def is_compliant_dataframe(obj: Any) -> TypeIs[CompliantDataFrame]:
+def is_compliant_dataframe(
+    obj: CompliantDataFrame[CompliantSeriesT_co] | Any,
+) -> TypeIs[CompliantDataFrame[CompliantSeriesT_co]]:
     return _hasattr_static(obj, "__narwhals_dataframe__")
 
 
@@ -1370,8 +1376,8 @@ def is_compliant_series(obj: Any) -> TypeIs[CompliantSeries]:
 
 
 def is_compliant_expr(
-    obj: CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co] | Any,
-) -> TypeIs[CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co]]:
+    obj: CompliantExpr[CompliantFrameT, CompliantSeriesT_co] | Any,
+) -> TypeIs[CompliantExpr[CompliantFrameT, CompliantSeriesT_co]]:
     return hasattr(obj, "__narwhals_expr__")
 
 
@@ -1381,3 +1387,8 @@ def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
 
 def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
     return hasattr(obj, "__dataframe__")
+
+
+def is_tracks_depth(obj: Implementation, /) -> TypeIs[_TracksDepth]:  # pragma: no cover
+    # Return `True` for implementations that utilize `CompliantExpr._depth`.
+    return obj.is_pandas_like() or obj in {Implementation.PYARROW, Implementation.DASK}

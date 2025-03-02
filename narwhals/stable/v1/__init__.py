@@ -348,6 +348,20 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         """
         return super().tail(n)
 
+    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+        r"""Take every nth row in the DataFrame and return as a new DataFrame.
+
+        Arguments:
+            n: Gather every *n*-th row.
+            offset: Starting index.
+
+        Returns:
+            The LazyFrame containing only the selected rows.
+        """
+        return self._from_compliant_dataframe(
+            self._compliant_frame.gather_every(n=n, offset=offset)
+        )
+
 
 class Series(NwSeries[IntoSeriesT]):
     """Narwhals Series, backed by a native series.
@@ -1812,6 +1826,18 @@ def col(*names: str | Iterable[str]) -> Expr:
     return _stableify(nw.col(*names))
 
 
+def exclude(*names: str | Iterable[str]) -> Expr:
+    """Creates an expression that excludes columns by their name(s).
+
+    Arguments:
+        names: Name(s) of the columns to exclude.
+
+    Returns:
+        A new expression.
+    """
+    return _stableify(nw.exclude(*names))
+
+
 def nth(*indices: int | Sequence[int]) -> Expr:
     """Creates an expression that references one or more columns by their index(es).
 
@@ -2403,6 +2429,7 @@ __all__ = [
     "dependencies",
     "dtypes",
     "exceptions",
+    "exclude",
     "from_arrow",
     "from_dict",
     "from_native",

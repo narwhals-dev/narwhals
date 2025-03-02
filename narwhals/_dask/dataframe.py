@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 
@@ -24,6 +25,7 @@ from narwhals.utils import validate_backend_version
 if TYPE_CHECKING:
     from types import ModuleType
 
+    import dask.dataframe.dask_expr as dx
     from typing_extensions import Self
 
     from narwhals._dask.expr import DaskExpr
@@ -79,6 +81,10 @@ class DaskLazyFrame(CompliantLazyFrame):
             version=self._version,
         )
 
+    def _iter_columns(self) -> Iterator[dx.Series]:
+        for _col, ser in self._native_frame.items():  # noqa: PERF102
+            yield ser
+
     def with_columns(self: Self, *exprs: DaskExpr) -> Self:
         df = self._native_frame
         new_series = evaluate_exprs(self, *exprs)
@@ -89,7 +95,7 @@ class DaskLazyFrame(CompliantLazyFrame):
         self: Self,
         backend: Implementation | None,
         **kwargs: Any,
-    ) -> CompliantDataFrame:
+    ) -> CompliantDataFrame[Any]:
         import pandas as pd
 
         result = self._native_frame.compute(**kwargs)

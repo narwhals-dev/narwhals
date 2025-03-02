@@ -347,6 +347,8 @@ jobs:
       - name: install-deps
         run: |
           cd hierarchicalforecast
+          # temporary pin to get ci green
+          uv pip install "IPython<9" --system
           uv pip install --system ".[dev]"
       - name: install-narwhals-dev
         run: |
