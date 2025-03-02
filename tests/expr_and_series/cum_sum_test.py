@@ -105,7 +105,9 @@ def test_lazy_cum_sum_pandas_duplicate_index() -> None:
     )
     dfpd.index = pd.Index([0, 0, 1])
     df = nw.from_native(dfpd)
-    df.with_columns(nw.col("a").cum_sum().over(_order_by="b"))
+    result = df.with_columns(nw.col("a").cum_sum().over(_order_by="b"))
+    expected = {"a": [3, 2, 6], "b": [1, 0, 2], "i": [0, 1, 2]}
+    assert_equal_data(result, expected)
 
 
 def test_cum_sum_series(constructor_eager: ConstructorEager) -> None:
