@@ -123,8 +123,9 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeDataFrame, PandasLikeSeri
         )
 
     def exclude(self: Self, excluded_names: Container[str]) -> PandasLikeExpr:
+        evaluate_column_names = partial(exclude_column_names, names=excluded_names)
         return PandasLikeExpr.from_column_names(
-            evaluate_column_names=partial(exclude_column_names, names=excluded_names),
+            evaluate_column_names=evaluate_column_names,
             function_name="exclude",
             implementation=self._implementation,
             backend_version=self._backend_version,

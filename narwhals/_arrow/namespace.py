@@ -130,8 +130,9 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
         )
 
     def exclude(self: Self, excluded_names: Container[str]) -> ArrowExpr:
+        evaluate_column_names = partial(exclude_column_names, names=excluded_names)
         return ArrowExpr.from_column_names(
-            evaluate_column_names=partial(exclude_column_names, names=excluded_names),
+            evaluate_column_names=evaluate_column_names,
             function_name="exclude",
             backend_version=self._backend_version,
             version=self._version,

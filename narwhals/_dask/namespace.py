@@ -74,8 +74,9 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):  # pyright:
         )
 
     def exclude(self: Self, excluded_names: Container[str]) -> DaskExpr:
+        evaluate_column_names = partial(exclude_column_names, names=excluded_names)
         return DaskExpr.from_column_names(
-            evaluate_column_names=partial(exclude_column_names, names=excluded_names),
+            evaluate_column_names=evaluate_column_names,
             function_name="exclude",
             backend_version=self._backend_version,
             version=self._version,
