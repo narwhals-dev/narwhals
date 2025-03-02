@@ -527,13 +527,11 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
         return self._from_call(_is_nan, "is_nan")
 
     def cum_sum(self, *, reverse: bool) -> Self:
-        if reverse:
-            msg = "todo"
-            raise NotImplementedError(msg)
-
         def func(
             _input: Column, partition_by: Sequence[str], order_by: Sequence[str]
         ) -> Column:
+            if reverse:
+                order_by = [self._F.col(x).desc() for x in order_by]
             window = (
                 self._Window()
                 .partitionBy(partition_by)

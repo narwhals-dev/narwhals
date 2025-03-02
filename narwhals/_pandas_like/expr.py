@@ -439,7 +439,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
             def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
                 if order_by is not None:
                     native_frame = df.sort(
-                        *order_by, descending=False, nulls_last=False
+                        *order_by, descending=self._call_kwargs['reverse'], nulls_last=False
                     )._native_frame
                 else:
                     native_frame = df._native_frame
@@ -466,8 +466,6 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         "pct": False,
                     }
                 else:  # Cumulative operation
-                    if self._call_kwargs["reverse"]:
-                        raise NotImplementedError(unsupported_reverse_msg)
                     kwargs = {"skipna": True}
 
                 if keys:
