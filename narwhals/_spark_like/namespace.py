@@ -62,32 +62,31 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):  #
         )
 
     def col(self: Self, *column_names: str) -> SparkLikeExpr:
+        def get_column_names(_: SparkLikeLazyFrame) -> Sequence[str]:
+            return column_names
+
         return SparkLikeExpr.from_column_names(
-            *column_names,
+            get_column_names=get_column_names,
+            function_name="col",
+            implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
-            implementation=self._implementation,
         )
 
     def exclude(self: Self, excluded_names: Container[str]) -> SparkLikeExpr:
-        def evaluate_output_names(df: SparkLikeLazyFrame) -> Sequence[str]:
+        def get_column_names(df: SparkLikeLazyFrame) -> Sequence[str]:
             return [
                 column_name
                 for column_name in df.columns
                 if column_name not in excluded_names
             ]
 
-        def func(df: SparkLikeLazyFrame) -> list[Column]:
-            return [df._F.col(column_name) for column_name in evaluate_output_names(df)]
-
-        return SparkLikeExpr(
-            func,
+        return SparkLikeExpr.from_column_names(
+            get_column_names=get_column_names,
             function_name="exclude",
-            evaluate_output_names=evaluate_output_names,
-            alias_output_names=None,
+            implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
-            implementation=self._implementation,
         )
 
     def nth(self: Self, *column_indices: int) -> SparkLikeExpr:

@@ -67,29 +67,27 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):  # pyright:
         )
 
     def col(self: Self, *column_names: str) -> DaskExpr:
+        def get_column_names(_: DaskLazyFrame) -> Sequence[str]:
+            return column_names
+
         return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
+            get_column_names=get_column_names,
+            function_name="col",
+            backend_version=self._backend_version,
+            version=self._version,
         )
 
     def exclude(self: Self, excluded_names: Container[str]) -> DaskExpr:
-        def evaluate_output_names(df: DaskLazyFrame) -> Sequence[str]:
+        def get_column_names(df: DaskLazyFrame) -> Sequence[str]:
             return [
                 column_name
                 for column_name in df.columns
                 if column_name not in excluded_names
             ]
 
-        def func(df: DaskLazyFrame) -> list[dx.Series]:
-            return [
-                df._native_frame[column_name] for column_name in evaluate_output_names(df)
-            ]
-
-        return DaskExpr(
-            func,
-            depth=0,
+        return DaskExpr.from_column_names(
+            get_column_names=get_column_names,
             function_name="exclude",
-            evaluate_output_names=evaluate_output_names,
-            alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
         )

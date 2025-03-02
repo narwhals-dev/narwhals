@@ -109,38 +109,31 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeDataFrame, PandasLikeSeri
 
     # --- selection ---
     def col(self: Self, *column_names: str) -> PandasLikeExpr:
+        def get_column_names(_: PandasLikeDataFrame) -> Sequence[str]:
+            return column_names
+
         return PandasLikeExpr.from_column_names(
-            *column_names,
+            get_column_names=get_column_names,
+            function_name="col",
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
         )
 
     def exclude(self: Self, excluded_names: Container[str]) -> PandasLikeExpr:
-        def evaluate_output_names(df: PandasLikeDataFrame) -> Sequence[str]:
+        def get_column_names(df: PandasLikeDataFrame) -> Sequence[str]:
             return [
                 column_name
                 for column_name in df.columns
                 if column_name not in excluded_names
             ]
 
-        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            return [
-                PandasLikeSeries(
-                    df._native_frame[column_name],
-                    implementation=df._implementation,
-                    backend_version=df._backend_version,
-                    version=df._version,
-                )
-                for column_name in evaluate_output_names(df)
-            ]
-
-        return self._create_expr_from_callable(
-            func,
-            depth=0,
-            evaluate_output_names=evaluate_output_names,
+        return PandasLikeExpr.from_column_names(
+            get_column_names=get_column_names,
             function_name="exclude",
-            alias_output_names=None,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+            version=self._version,
         )
 
     def nth(self: Self, *column_indices: int) -> PandasLikeExpr:
