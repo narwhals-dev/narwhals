@@ -282,14 +282,19 @@ def test_over_diff(
     assert_equal_data(result, expected)
 
 
-def test_over_cum_reverse() -> None:
-    df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
-
-    with pytest.raises(
-        NotImplementedError,
-        match=r"Cumulative operation with `reverse=True` is not supported",
-    ):
-        nw.from_native(df).select(nw.col("b").cum_max(reverse=True).over("a"))
+def test_over_cum_reverse(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "pyarrow_table" in str(constructor):
+        # grouped cumulative ops not yet supported for pyarrow
+        request.applymarker(pytest.mark.xfail)
+    if "pandas_nullable" in str(constructor):
+        # https://github.com/pandas-dev/pandas/issues/61031
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6], "i": [0, 1, 2]}))
+    result = df.with_columns(nw.col("b").cum_max(reverse=True).over("a")).sort("i")
+    expected = {"a": [1, 1, 2], "b": [5, 5, 6], "i": [0, 1, 2]}
+    assert_equal_data(result, expected)
 
 
 def test_over_raise_len_change(constructor: Constructor) -> None:

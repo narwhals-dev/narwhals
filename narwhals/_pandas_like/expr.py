@@ -427,8 +427,8 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
             call_kwargs=self._call_kwargs,
         )
 
-    def over(
-        self: Self, keys: list[str], kind: ExprKind, order_by: str | None = None
+    def over(  # noqa: PLR0915
+        self: Self, keys: list[str], kind: ExprKind, order_by: Sequence[str] | None = None
     ) -> Self:
         if not keys:
             # This is something like `nw.col('a').cum_sum().order_by(key)`
@@ -455,6 +455,13 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
         ):
 
             def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
+                output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
+                reverse = self._call_kwargs.get("reverse", False)
+
+                if function_name == "cum_count":
+                    plx = self.__narwhals_namespace__()
+                    df = df.with_columns(~plx.col(*output_names).is_null())
+
                 native_frame = df._native_frame
                 if order_by:
                     sorting_indices = (
@@ -462,18 +469,11 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         .MultiIndex.from_frame(native_frame[order_by])
                         .argsort()
                     )
+                    if reverse:
+                        sorting_indices = sorting_indices[::-1]
                     native_frame = native_frame.iloc[sorting_indices]
-                output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
-
-                unsupported_reverse_msg = (
-                    "Cumulative operation with `reverse=True` is not supported in "
-                    "over context for pandas-like backend."
-                )
-                if function_name == "cum_count":
-                    if self._call_kwargs["reverse"]:
-                        raise NotImplementedError(unsupported_reverse_msg)
-                    plx = self.__narwhals_namespace__()
-                    df = df.with_columns(~plx.col(*output_names).is_null())
+                elif reverse:
+                    native_frame = native_frame[::-1]
 
                 if function_name == "shift":
                     kwargs = {"periods": self._call_kwargs["n"]}
@@ -508,10 +508,12 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         backend_version=self._backend_version,
                     )
                 )
-                if order_by is not None:
+                if order_by:
                     result_frame = result_frame._from_native_frame(
                         result_frame._native_frame.iloc[sorting_indices]
                     )
+                elif reverse:
+                    result_frame = result_frame[::-1]
                 return [result_frame[name] for name in aliases]
         elif not is_scalar_like(kind):
             msg = (

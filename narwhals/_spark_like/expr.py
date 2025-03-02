@@ -491,7 +491,7 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
         return self._from_call(_n_unique, "n_unique")
 
     def over(
-        self: Self, keys: list[str], kind: ExprKind, order_by: Sequence[str] | None = None
+        self: Self, keys: list[str], kind: ExprKind, order_by: Sequence[str]
     ) -> Self:
         if (window_function := self._window_function) is not None:
             assert order_by is not None  # noqa: S101

@@ -98,7 +98,7 @@ class PolarsExpr:
         return self._from_native_expr(self._native_expr.is_nan())
 
     def over(
-        self: Self, keys: list[str], kind: ExprKind, order_by: Sequence[str]
+        self: Self, keys: list[str], kind: ExprKind, order_by: Sequence[str] | None
     ) -> Self:
         return self._from_native_expr(
             self._native_expr.over(keys or pl.lit(1), order_by=order_by)

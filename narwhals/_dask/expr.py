@@ -527,7 +527,9 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
             lambda _input: _input.isna().sum().to_series(), "null_count"
         )
 
-    def over(self: Self, keys: list[str], kind: ExprKind) -> Self:
+    def over(
+        self: Self, keys: list[str], kind: ExprKind, order_by: Sequence[str] | None
+    ) -> Self:
         def func(df: DaskLazyFrame) -> list[Any]:
             output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
             if overlap := set(output_names).intersection(keys):
