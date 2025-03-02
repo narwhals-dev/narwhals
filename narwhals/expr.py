@@ -1327,7 +1327,7 @@ class Expr:
 
     def fill_null(
         self: Self,
-        value: Any | None = None,
+        value: Expr | Any | None = None,
         strategy: Literal["forward", "backward"] | None = None,
         limit: int | None = None,
     ) -> Self:

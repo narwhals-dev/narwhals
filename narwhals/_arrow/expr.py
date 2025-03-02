@@ -364,7 +364,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
 
     def fill_null(
         self: Self,
-        value: Any | None,
+        value: Self | Any | None,
         strategy: Literal["forward", "backward"] | None,
         limit: int | None,
     ) -> Self:

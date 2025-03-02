@@ -350,6 +350,8 @@ class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyF
                 version=self._version,
             )
 
+    _iter_columns = iter_columns
+
     def iter_rows(
         self: Self,
         *,

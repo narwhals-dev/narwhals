@@ -250,7 +250,7 @@ class ExprStringNamespace(Generic[ExprT]):
             A new expression.
 
         Examples:
-           >>> import pandas as pd
+            >>> import pandas as pd
             >>> import narwhals as nw
             >>> df_native = pd.DataFrame({"s": ["pear", None, "papaya"]})
             >>> df = nw.from_native(df_native)

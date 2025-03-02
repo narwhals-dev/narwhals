@@ -4,6 +4,7 @@ import math
 import os
 import sys
 import warnings
+from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import Iterator
@@ -159,3 +160,13 @@ def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:
 def is_windows() -> bool:
     """Check if the current platform is Windows."""
     return sys.platform in {"win32", "cygwin"}
+
+
+def windows_has_tzdata() -> bool:  # pragma: no cover
+    """From PyArrow: python/pyarrow/tests/util.py."""
+    return (Path.home() / "Downloads" / "tzdata").exists()
+
+
+def is_pyarrow_windows_no_tzdata(constructor: Constructor, /) -> bool:
+    """Skip test on Windows when the tz database is not configured."""
+    return "pyarrow" in str(constructor) and is_windows() and not windows_has_tzdata()
