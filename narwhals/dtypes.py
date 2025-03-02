@@ -639,6 +639,19 @@ class Field:
     Arguments:
         name: The name of the field within its parent `Struct`.
         dtype: The `DataType` of the field's values.
+
+    Examples:
+       >>> import polars as pl
+       >>> import pyarrow as pa
+       >>> import narwhals as nw
+       >>> data = [{"a": 1, "b": ["narwhal", "beluga"]}, {"a": 2, "b": ["orca"]}]
+       >>> ser_pl = pl.Series(data)
+       >>> ser_pa = pa.chunked_array([data])
+
+       >>> nw.from_native(ser_pl, series_only=True).dtype.fields
+       [Field('a', Int64), Field('b', List(String))]
+       >>> nw.from_native(ser_pa, series_only=True).dtype.fields
+       [Field('a', Int64), Field('b', List(String))]
     """
 
     name: str
