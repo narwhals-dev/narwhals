@@ -3,14 +3,28 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Iterator
 from typing import Literal
 from typing import Protocol
 from typing import Sequence
 from typing import TypeVar
 from typing import Union
 
+if not TYPE_CHECKING:
+    import sys
+
+    if sys.version_info >= (3, 9):
+        from typing import Protocol as Protocol38
+    else:
+        from typing import Generic as Protocol38
+else:
+    # TODO @dangotbanned: Remove after dropping `3.8` (#2084)
+    # - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
+    from typing import Protocol as Protocol38
+
 if TYPE_CHECKING:
     from types import ModuleType
+    from typing import Mapping
 
     import numpy as np
     from typing_extensions import Self
@@ -18,6 +32,7 @@ if TYPE_CHECKING:
 
     from narwhals import dtypes
     from narwhals._expression_parsing import ExprKind
+    from narwhals._selectors import CompliantSelectorNamespace
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -68,7 +83,10 @@ class CompliantDataFrame(Protocol[CompliantSeriesT_co]):
 
     @property
     def columns(self) -> Sequence[str]: ...
+    @property
+    def schema(self) -> Mapping[str, DType]: ...
     def get_column(self, name: str) -> CompliantSeriesT_co: ...
+    def iter_columns(self) -> Iterator[CompliantSeriesT_co]: ...
 
 
 class CompliantLazyFrame(Protocol):
@@ -83,6 +101,9 @@ class CompliantLazyFrame(Protocol):
 
     @property
     def columns(self) -> Sequence[str]: ...
+    @property
+    def schema(self) -> Mapping[str, DType]: ...
+    def _iter_columns(self) -> Iterator[Any]: ...
 
 
 CompliantFrameT = TypeVar(
@@ -90,7 +111,7 @@ CompliantFrameT = TypeVar(
 )
 
 
-class CompliantExpr(Protocol[CompliantFrameT, CompliantSeriesT_co]):
+class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesT_co]):
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
@@ -132,6 +153,8 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantSeriesT_co]):
     def lit(
         self, value: Any, dtype: DType | None
     ) -> CompliantExpr[CompliantFrameT, CompliantSeriesT_co]: ...
+    @property
+    def selectors(self) -> CompliantSelectorNamespace[Any, Any]: ...
 
 
 class SupportsNativeNamespace(Protocol):
