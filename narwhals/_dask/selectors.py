@@ -19,11 +19,6 @@ if TYPE_CHECKING:
     from narwhals._selectors import EvalSeries
     from narwhals.utils import _FullContext
 
-    try:
-        import dask.dataframe.dask_expr as dx
-    except ModuleNotFoundError:
-        import dask_expr as dx
-
 
 class DaskSelectorNamespace(LazySelectorNamespace["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[reportInvalidTypeArguments]
     def _selector(
