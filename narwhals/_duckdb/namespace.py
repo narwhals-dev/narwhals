@@ -12,7 +12,6 @@ from typing import Sequence
 
 from duckdb import CaseExpression
 from duckdb import CoalesceOperator
-from duckdb import ColumnExpression
 from duckdb import FunctionExpression
 from duckdb.typing import BIGINT
 from duckdb.typing import VARCHAR
@@ -52,14 +51,9 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "duckdb.Expression"]
         return DuckDBSelectorNamespace(self)
 
     def all(self: Self) -> DuckDBExpr:
-        def _all(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            return [ColumnExpression(col_name) for col_name in df.columns]
-
-        return DuckDBExpr(
-            call=_all,
+        return DuckDBExpr.from_column_names(
+            evaluate_column_names=get_column_names,
             function_name="all",
-            evaluate_output_names=get_column_names,
-            alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
         )

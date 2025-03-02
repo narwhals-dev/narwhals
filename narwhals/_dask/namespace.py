@@ -55,15 +55,9 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):  # pyright:
         self._version = version
 
     def all(self: Self) -> DaskExpr:
-        def func(df: DaskLazyFrame) -> list[dx.Series]:
-            return [df._native_frame[column_name] for column_name in df.columns]
-
-        return DaskExpr(
-            func,
-            depth=0,
+        return DaskExpr.from_column_names(
+            evaluate_column_names=get_column_names,
             function_name="all",
-            evaluate_output_names=get_column_names,
-            alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
         )

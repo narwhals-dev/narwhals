@@ -140,20 +140,9 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeDataFrame, PandasLikeSeri
         )
 
     def all(self: Self) -> PandasLikeExpr:
-        return PandasLikeExpr(
-            lambda df: [
-                PandasLikeSeries(
-                    df._native_frame[column_name],
-                    implementation=self._implementation,
-                    backend_version=self._backend_version,
-                    version=self._version,
-                )
-                for column_name in df.columns
-            ],
-            depth=0,
+        return PandasLikeExpr.from_column_names(
+            evaluate_column_names=get_column_names,
             function_name="all",
-            evaluate_output_names=get_column_names,
-            alias_output_names=None,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,

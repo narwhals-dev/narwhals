@@ -164,23 +164,9 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
         )
 
     def all(self: Self) -> ArrowExpr:
-        from narwhals._arrow.expr import ArrowExpr
-        from narwhals._arrow.series import ArrowSeries
-
-        return ArrowExpr(
-            lambda df: [
-                ArrowSeries(
-                    df._native_frame[column_name],
-                    name=column_name,
-                    backend_version=df._backend_version,
-                    version=df._version,
-                )
-                for column_name in df.columns
-            ],
-            depth=0,
+        return ArrowExpr.from_column_names(
+            evaluate_column_names=get_column_names,
             function_name="all",
-            evaluate_output_names=get_column_names,
-            alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
         )

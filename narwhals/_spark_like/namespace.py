@@ -50,17 +50,12 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):  #
         return SparkLikeSelectorNamespace(self)
 
     def all(self: Self) -> SparkLikeExpr:
-        def _all(df: SparkLikeLazyFrame) -> list[Column]:
-            return [df._F.col(col_name) for col_name in df.columns]
-
-        return SparkLikeExpr(
-            call=_all,
+        return SparkLikeExpr.from_column_names(
+            evaluate_column_names=get_column_names,
             function_name="all",
-            evaluate_output_names=get_column_names,
-            alias_output_names=None,
+            implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
-            implementation=self._implementation,
         )
 
     def col(self: Self, *column_names: str) -> SparkLikeExpr:
