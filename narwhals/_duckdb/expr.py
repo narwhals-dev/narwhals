@@ -445,7 +445,9 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
             lambda _input: FunctionExpression("round", _input, lit(decimals)), "round"
         )
 
-    def fill_null(self: Self, value: Any, strategy: Any, limit: int | None) -> Self:
+    def fill_null(
+        self: Self, value: Self | Any, strategy: Any, limit: int | None
+    ) -> Self:
         if strategy is not None:
             msg = "todo"
             raise NotImplementedError(msg)

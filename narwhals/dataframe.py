@@ -615,41 +615,18 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
+            >>> df_native = pd.DataFrame(
+            ...     {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            ... )
 
             Calling `to_native` on a Narwhals DataFrame returns the native object:
 
-            >>> nw.from_native(df_pd).to_native()
+            >>> nw.from_native(df_native).to_native()
                foo  bar ham
             0    1  6.0   a
             1    2  7.0   b
             2    3  8.0   c
-            >>> nw.from_native(df_pl).to_native()
-            shape: (3, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ f64 ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 1   ┆ 6.0 ┆ a   │
-            │ 2   ┆ 7.0 ┆ b   │
-            │ 3   ┆ 8.0 ┆ c   │
-            └─────┴─────┴─────┘
-            >>> nw.from_native(df_pa).to_native()
-            pyarrow.Table
-            foo: int64
-            bar: double
-            ham: string
-            ----
-            foo: [[1,2,3]]
-            bar: [[6,7,8]]
-            ham: [["a","b","c"]]
         """
         return self._compliant_frame._native_frame  # type: ignore[no-any-return]
 
@@ -660,38 +637,13 @@ class DataFrame(BaseFrame[DataFrameT]):
             A pandas DataFrame.
 
         Examples:
-            Construct pandas, Polars (eager) and PyArrow DataFrames:
-
-            >>> import pandas as pd
             >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoDataFrame
-            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_to_pandas(df_native: IntoDataFrame) -> pd.DataFrame:
-            ...     df = nw.from_native(df_native)
-            ...     return df.to_pandas()
-
-            We can then pass any supported library such as pandas, Polars (eager), or
-            PyArrow to `agnostic_to_pandas`:
-
-            >>> agnostic_to_pandas(df_pd)
-               foo  bar ham
-            0    1  6.0   a
-            1    2  7.0   b
-            2    3  8.0   c
-            >>> agnostic_to_pandas(df_pl)
-               foo  bar ham
-            0    1  6.0   a
-            1    2  7.0   b
-            2    3  8.0   c
-            >>> agnostic_to_pandas(df_pa)
+            >>> df_native = pl.DataFrame(
+            ...     {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.to_pandas()
                foo  bar ham
             0    1  6.0   a
             1    2  7.0   b
@@ -740,32 +692,14 @@ class DataFrame(BaseFrame[DataFrameT]):
             String or None.
 
         Examples:
-            Construct pandas, Polars (eager) and PyArrow DataFrames:
-
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoDataFrame
-            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_write_csv(df_native: IntoDataFrame) -> str:
-            ...     df = nw.from_native(df_native)
-            ...     return df.write_csv()
-
-            We can pass any supported library such as pandas, Polars or PyArrow to `agnostic_write_csv`:
-
-            >>> agnostic_write_csv(df_pd)
+            >>> df_native = pd.DataFrame(
+            ...     {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.write_csv()
             'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
-            >>> agnostic_write_csv(df_pl)
-            'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
-            >>> agnostic_write_csv(df_pa)
-            '"foo","bar","ham"\n1,6,"a"\n2,7,"b"\n3,8,"c"\n'
 
             If we had passed a file name to `write_csv`, it would have been
             written to that file.
