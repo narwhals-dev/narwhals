@@ -440,6 +440,9 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
                 .drop([key_token]),
             )
 
+        coalesce_keys = True
+        if how == "full":  # polars full join does not coalesce keys
+            coalesce_keys = False
         return self._from_native_frame(
             self._native_frame.join(
                 other._native_frame,
@@ -447,7 +450,7 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
                 right_keys=right_on,
                 join_type=how_to_join_map[how],
                 right_suffix=suffix,
-                coalesce_keys=False,  # in compliance w/polars API
+                coalesce_keys=coalesce_keys,
             ),
         )
 
