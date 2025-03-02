@@ -146,6 +146,9 @@ class _SeriesNamespace(  # type: ignore[misc]  # noqa: PYI046
     def native(self) -> NativeT_co:
         return self._compliant_series.native
 
+    def from_native(self, series: Any, /) -> CompliantSeriesT_co:
+        return self.compliant._from_native_series(series)
+
 
 class _ExprNamespace(  # type: ignore[misc] # noqa: PYI046
     _StoresCompliant[CompliantExprT_co], Protocol[CompliantExprT_co]
