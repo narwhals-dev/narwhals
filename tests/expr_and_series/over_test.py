@@ -123,7 +123,7 @@ def test_over_cumcount(
 def test_over_cummax(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table",)):
+    if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
     if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1):
         request.applymarker(pytest.mark.xfail)
@@ -171,7 +171,7 @@ def test_over_cummin(
 def test_over_cumprod(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table",)):
+    if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
     if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1):
         request.applymarker(pytest.mark.xfail)
@@ -251,9 +251,7 @@ def test_over_anonymous_reduction(
 def test_over_shift(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if "pyarrow_table_constructor" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor_eager)) or "duckdb" in str(constructor_eager):
+    if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data))
@@ -264,6 +262,23 @@ def test_over_shift(
         "b_shift": [None, None, None, None, 3],
     }
     result = df.with_columns(b_shift=nw.col("b").shift(2).over("a")).sort("i").drop("i")
+    assert_equal_data(result, expected)
+
+
+def test_over_diff(
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+) -> None:
+    if "pyarrow_table" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor_eager(data))
+    expected = {
+        "a": ["a", "a", "b", "b", "b"],
+        "b": [1, 2, 3, 5, 3],
+        "c": [5, 4, 3, 2, 1],
+        "b_diff": [None, 1, None, 2, -2],
+    }
+    result = df.with_columns(b_diff=nw.col("b").diff().over("a")).sort("i").drop("i")
     assert_equal_data(result, expected)
 
 
