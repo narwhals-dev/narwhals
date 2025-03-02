@@ -27,8 +27,19 @@ def test_cum_sum_expr(constructor_eager: ConstructorEager, *, reverse: bool) -> 
     assert_equal_data(result, {name: expected[name]})
 
 
+@pytest.mark.parametrize(
+    ("reverse", "expected_a"),
+    [
+        (False, [3, 2, 6]),
+        (True, [4, 6, 3]),
+    ],
+)
 def test_lazy_cum_sum_grouped(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    *,
+    reverse: bool,
+    expected_a: list[int],
 ) -> None:
     if "duckdb" in str(constructor):
         # no window function support yet in duckdb
@@ -52,8 +63,10 @@ def test_lazy_cum_sum_grouped(
             }
         )
     )
-    result = df.with_columns(nw.col("a").cum_sum().over("g", _order_by="b")).sort("i")
-    expected = {"a": [3, 2, 6], "b": [1, 0, 2], "i": [0, 1, 2]}
+    result = df.with_columns(
+        nw.col("a").cum_sum(reverse=reverse).over("g", _order_by="b")
+    ).sort("i")
+    expected = {"a": expected_a, "b": [1, 0, 2], "i": [0, 1, 2]}
     assert_equal_data(result, expected)
 
 
