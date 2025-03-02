@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -38,6 +39,8 @@ def test_lazy_cum_sum_grouped(
     if "dask" in str(constructor):
         # not (yet?) supported with multiple partitions
         request.applymarker(pytest.mark.xfail)
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
+        pytest.skip(reason="too old version")
 
     df = nw.from_native(
         constructor(
@@ -54,8 +57,19 @@ def test_lazy_cum_sum_grouped(
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize(
+    ("reverse", "expected_a"),
+    [
+        (False, [3, 2, 6]),
+        (True, [4, 6, 3]),
+    ],
+)
 def test_lazy_cum_sum_ungrouped(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    *,
+    reverse: bool,
+    expected_a: list[int],
 ) -> None:
     if "duckdb" in str(constructor):
         # no window function support yet in duckdb
@@ -63,6 +77,8 @@ def test_lazy_cum_sum_ungrouped(
     if "dask" in str(constructor):
         # TODO(unassigned) - we should be able to support this
         request.applymarker(pytest.mark.xfail)
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
+        pytest.skip(reason="too old version")
 
     df = nw.from_native(
         constructor(
@@ -73,8 +89,10 @@ def test_lazy_cum_sum_ungrouped(
             }
         )
     )
-    result = df.with_columns(nw.col("a").cum_sum().over(_order_by="b")).sort("i")
-    expected = {"a": [3, 2, 6], "b": [1, 0, 2], "i": [0, 1, 2]}
+    result = df.with_columns(
+        nw.col("a").cum_sum(reverse=reverse).over(_order_by="b")
+    ).sort("i")
+    expected = {"a": expected_a, "b": [1, 0, 2], "i": [0, 1, 2]}
     assert_equal_data(result, expected)
 
 
@@ -87,6 +105,8 @@ def test_lazy_cum_sum_ungrouped_reverse(
     if "dask" in str(constructor):
         # TODO(unassigned) - we should be able to support this
         request.applymarker(pytest.mark.xfail)
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
+        pytest.skip(reason="too old version")
 
     df = nw.from_native(
         constructor(
