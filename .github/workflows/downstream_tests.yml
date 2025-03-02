@@ -532,4 +532,4 @@ jobs:
           cd darts
           pytest darts/tests/test_timeseries.py
           pytest darts/tests/test_timeseries_multivariate.py
-          pytest darts/tests/test_static_covariates.py
+          pytest darts/tests/test_timeseries_static_covariates.py
