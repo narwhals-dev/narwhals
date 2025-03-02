@@ -53,6 +53,7 @@ if TYPE_CHECKING:
 SeriesT = TypeVar("SeriesT", bound="CompliantSeries")
 FrameT = TypeVar("FrameT", bound="CompliantDataFrame[Any] | CompliantLazyFrame")
 DataFrameT = TypeVar("DataFrameT", bound="CompliantDataFrame[Any]")
+LazyFrameT = TypeVar("LazyFrameT", bound="CompliantLazyFrame")
 SelectorOrExpr: TypeAlias = (
     "CompliantSelector[FrameT, SeriesT] | CompliantExpr[FrameT, SeriesT]"
 )
@@ -177,12 +178,15 @@ class EagerSelectorNamespace(
 
 
 class LazySelectorNamespace(
-    CompliantSelectorNamespace[FrameT, SeriesT], Protocol[FrameT, SeriesT]
+    CompliantSelectorNamespace[LazyFrameT, SeriesT], Protocol[LazyFrameT, SeriesT]
 ):
-    def _iter_schema(self, df: FrameT) -> Iterator[tuple[str, DType]]:
+    def _iter_schema(self, df: LazyFrameT) -> Iterator[tuple[str, DType]]:
         yield from df.schema.items()
 
-    def _iter_columns_dtypes(self, df: FrameT, /) -> Iterator[tuple[SeriesT, DType]]:
+    def _iter_columns(self, df: LazyFrameT) -> Iterator[SeriesT]:
+        yield from df._iter_columns()
+
+    def _iter_columns_dtypes(self, df: LazyFrameT, /) -> Iterator[tuple[SeriesT, DType]]:
         yield from zip(self._iter_columns(df), df.schema.values())
 
 

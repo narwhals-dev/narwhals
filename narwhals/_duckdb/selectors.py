@@ -1,9 +1,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from typing import Iterator
-
-from duckdb import ColumnExpression
 
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._selectors import CompliantSelector
@@ -22,10 +19,6 @@ if TYPE_CHECKING:
 class DuckDBSelectorNamespace(
     LazySelectorNamespace["DuckDBLazyFrame", "duckdb.Expression"]  # type: ignore[type-var]
 ):
-    def _iter_columns(self, df: DuckDBLazyFrame) -> Iterator[duckdb.Expression]:
-        for col in df.columns:
-            yield ColumnExpression(col)
-
     def _selector(
         self,
         call: EvalSeries[DuckDBLazyFrame, duckdb.Expression],  # type: ignore[type-var]

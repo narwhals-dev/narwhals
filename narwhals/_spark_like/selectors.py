@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from typing import Iterator
 
 from narwhals._selectors import CompliantSelector
 from narwhals._selectors import LazySelectorNamespace
@@ -19,10 +18,6 @@ if TYPE_CHECKING:
 
 # NOTE: See issue regarding ignores (#2044)
 class SparkLikeSelectorNamespace(LazySelectorNamespace["SparkLikeLazyFrame", "Column"]):  # type: ignore[type-var]
-    def _iter_columns(self, df: SparkLikeLazyFrame) -> Iterator[Column]:
-        for col in df.columns:
-            yield df._F.col(col)
-
     def _selector(
         self,
         call: EvalSeries[SparkLikeLazyFrame, Column],  # type: ignore[type-var]

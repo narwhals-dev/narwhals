@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from typing import Iterator
 
 from narwhals._dask.expr import DaskExpr
 from narwhals._selectors import CompliantSelector
@@ -27,10 +26,6 @@ if TYPE_CHECKING:
 
 
 class DaskSelectorNamespace(LazySelectorNamespace["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[reportInvalidTypeArguments]
-    def _iter_columns(self, df: DaskLazyFrame) -> Iterator[dx.Series]:
-        for _col, ser in df._native_frame.items():  # noqa: PERF102
-            yield ser
-
     def _selector(
         self,
         call: EvalSeries[DaskLazyFrame, dx.Series],  # pyright: ignore[reportInvalidTypeForm]
