@@ -435,10 +435,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
                     native_frame = pc.take(native_frame, sorting_indices)  # type: ignore[call-overload]
                 result = self(df._from_native_frame(native_frame))
                 if order_by:
-                    result = [
-                        ser.scatter(sorting_indices, ser._native_series)  # type: ignore[arg-type]
-                        for ser in result
-                    ]
+                    result = [ser[sorting_indices] for ser in result]  # type: ignore[call-overload]
                 return result
         else:
 

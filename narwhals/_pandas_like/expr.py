@@ -443,10 +443,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     native_frame = native_frame.iloc[sorting_indices]
                 result = self(df._from_native_frame(native_frame))
                 if order_by:
-                    result = [
-                        ser._from_native_series(ser._native_series.iloc[sorting_indices])
-                        for ser in result
-                    ]
+                    result = [ser[sorting_indices] for ser in result]
                 return result
         elif (
             is_simple_aggregation(self)
