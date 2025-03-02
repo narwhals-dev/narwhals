@@ -426,16 +426,14 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
         if not keys:
             # This is something like `nw.col('a').cum_sum().order_by(key)`
             # which we can always easily support, as it doesn't require grouping.
-            def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-                output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
+            def func(df: ArrowDataFrame) -> Sequence[ArrowSeries]:
                 native_frame = df._native_frame
                 if order_by:
                     sorting_indices = pc.sort_indices(
                         native_frame, sort_keys=[(key, "ascending") for key in order_by]
                     )
                     native_frame = pc.take(native_frame, sorting_indices)  # type: ignore[call-overload]
-                result = self(df._from_native_frame(native_frame)[output_names])
-                result = [ser.alias(alias) for ser, alias in zip(result, aliases)]
+                result = self(df._from_native_frame(native_frame))
                 if order_by:
                     result = [
                         ser.scatter(sorting_indices, ser._native_series)  # type: ignore[arg-type]
@@ -444,7 +442,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
                 return result
         else:
 
-            def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            def func(df: ArrowDataFrame) -> Sequence[ArrowSeries]:
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
                 if overlap := set(output_names).intersection(keys):
                     # E.g. `df.select(nw.all().sum().over('a'))`. This is well-defined,

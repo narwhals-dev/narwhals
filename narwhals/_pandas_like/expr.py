@@ -22,7 +22,6 @@ from narwhals._pandas_like.utils import rename
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ColumnNotFoundError
-from narwhals.exceptions import ComputeError
 from narwhals.typing import CompliantExpr
 
 if TYPE_CHECKING:
@@ -431,21 +430,39 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
     def over(
         self: Self, keys: list[str], kind: ExprKind, order_by: str | None = None
     ) -> Self:
-        if (
+        if not keys:
+            # This is something like `nw.col('a').cum_sum().order_by(key)`
+            # which we can always easily support, as it doesn't require grouping.
+            def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
+                native_frame = df._native_frame
+                if order_by:
+                    sorting_indices = (
+                        df.__native_namespace__()
+                        .MultiIndex.from_frame(native_frame[order_by])
+                        .argsort()
+                    )
+                    native_frame = native_frame.iloc[sorting_indices]
+                result = self(df._from_native_frame(native_frame))
+                if order_by:
+                    result = [
+                        ser.scatter(sorting_indices, ser._native_series) for ser in result
+                    ]
+                return result
+        elif (
             is_simple_aggregation(self)
             and (function_name := re.sub(r"(\w+->)", "", self._function_name))
             in MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT
         ):
 
-            def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-                if order_by is not None:
-                    native_frame = df.sort(
-                        *order_by,
-                        descending=self._call_kwargs["reverse"],
-                        nulls_last=False,
-                    )._native_frame
-                else:
-                    native_frame = df._native_frame
+            def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
+                native_frame = df._native_frame
+                if order_by:
+                    sorting_indices = (
+                        df.__native_namespace__()
+                        .MultiIndex.from_frame(native_frame[order_by])
+                        .argsort()
+                    )
+                    native_frame = native_frame.iloc[sorting_indices]
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
 
                 unsupported_reverse_msg = (
@@ -492,17 +509,9 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     )
                 )
                 if order_by is not None:
-                    # This implementation is not ideal, as we do two
                     result_frame = result_frame._from_native_frame(
-                        result_frame._native_frame.loc[df._native_frame.index]
+                        result_frame._native_frame.iloc[sorting_indices]
                     )
-                    if len(result_frame) != len(df):
-                        msg = (
-                            "Cannot use `.over` with `order_by` on pandas DataFrame\n"
-                            "which has Index with duplicate values.\n\n"
-                            "Hint: you may want to use `nw.maybe_reset_index`."
-                        )
-                        raise ComputeError(msg)
                 return [result_frame[name] for name in aliases]
         elif not is_scalar_like(kind):
             msg = (
@@ -513,7 +522,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
             raise NotImplementedError(msg)
         else:
 
-            def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
                 if overlap := set(output_names).intersection(keys):
                     # E.g. `df.select(nw.all().sum().over('a'))`. This is well-defined,
