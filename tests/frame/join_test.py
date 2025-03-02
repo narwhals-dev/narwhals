@@ -18,7 +18,8 @@ from tests.utils import assert_equal_data
 
 
 def test_full_join(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "pandas" in str(constructor):
+    not_implemented = ("pandas", "dask", "duckdb", "modin", "sqlframe")
+    if any(lib for lib in not_implemented if lib in str(constructor)):
         request.applymarker(pytest.mark.xfail)
 
     df1 = {"id": [1, 2, 3], "value1": ["A", "B", "C"]}
