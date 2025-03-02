@@ -41,6 +41,7 @@ from narwhals.functions import any_horizontal
 from narwhals.functions import col
 from narwhals.functions import concat
 from narwhals.functions import concat_str
+from narwhals.functions import exclude
 from narwhals.functions import from_arrow
 from narwhals.functions import from_dict
 from narwhals.functions import from_numpy
@@ -125,6 +126,7 @@ __all__ = [
     "dependencies",
     "dtypes",
     "exceptions",
+    "exclude",
     "from_arrow",
     "from_dict",
     "from_native",

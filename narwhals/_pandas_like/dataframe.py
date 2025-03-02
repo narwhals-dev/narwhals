@@ -83,7 +83,7 @@ CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
 )
 
 
-class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
+class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyFrame):
     # --- not in the spec ---
     def __init__(
         self: Self,
@@ -341,6 +341,17 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
 
         return self._native_frame.to_dict(orient="records")
 
+    def iter_columns(self) -> Iterator[PandasLikeSeries]:
+        for _name, series in self._native_frame.items():  # noqa: PERF102
+            yield PandasLikeSeries(
+                series,
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+                version=self._version,
+            )
+
+    _iter_columns = iter_columns
+
     def iter_rows(
         self: Self,
         *,
@@ -387,11 +398,13 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             validate_column_names=False,
         )
 
-    def aggregate(self: Self, *exprs: PandasLikeExpr) -> Self:
+    def aggregate(
+        self: PandasLikeDataFrame, *exprs: PandasLikeExpr
+    ) -> PandasLikeDataFrame:
         return self.select(*exprs)
 
-    def select(self: Self, *exprs: PandasLikeExpr) -> Self:
-        new_series: list[PandasLikeSeries] = evaluate_into_exprs(self, *exprs)
+    def select(self: PandasLikeDataFrame, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
+        new_series = evaluate_into_exprs(self, *exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_frame(
@@ -405,7 +418,9 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         )
         return self._from_native_frame(df, validate_column_names=True)
 
-    def drop_nulls(self: Self, subset: list[str] | None) -> Self:
+    def drop_nulls(
+        self: PandasLikeDataFrame, subset: list[str] | None
+    ) -> PandasLikeDataFrame:
         if subset is None:
             return self._from_native_frame(
                 self._native_frame.dropna(axis=0), validate_column_names=False
@@ -436,7 +451,9 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
     def row(self: Self, row: int) -> tuple[Any, ...]:
         return tuple(x for x in self._native_frame.iloc[row])
 
-    def filter(self: Self, predicate: PandasLikeExpr | list[bool]) -> Self:
+    def filter(
+        self: PandasLikeDataFrame, predicate: PandasLikeExpr | list[bool]
+    ) -> PandasLikeDataFrame:
         if isinstance(predicate, list):
             mask_native: pd.Series[Any] | list[bool] = predicate
         else:
@@ -448,9 +465,11 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
             self._native_frame.loc[mask_native], validate_column_names=False
         )
 
-    def with_columns(self: Self, *exprs: PandasLikeExpr) -> Self:
+    def with_columns(
+        self: PandasLikeDataFrame, *exprs: PandasLikeExpr
+    ) -> PandasLikeDataFrame:
         index = self._native_frame.index
-        new_columns: list[PandasLikeSeries] = evaluate_into_exprs(self, *exprs)
+        new_columns = evaluate_into_exprs(self, *exprs)
         if not new_columns and len(self) == 0:
             return self
 
@@ -519,7 +538,7 @@ class PandasLikeDataFrame(CompliantDataFrame, CompliantLazyFrame):
         self: Self,
         backend: Implementation | None,
         **kwargs: Any,
-    ) -> CompliantDataFrame:
+    ) -> CompliantDataFrame[Any]:
         if backend is None:
             return PandasLikeDataFrame(
                 self._native_frame,

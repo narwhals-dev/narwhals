@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import overload
@@ -232,6 +233,14 @@ class PolarsDataFrame:
             version=self._version,
         )
 
+    def iter_columns(self) -> Iterator[PolarsSeries]:
+        from narwhals._polars.series import PolarsSeries
+
+        for series in self._native_frame.iter_columns():
+            yield PolarsSeries(
+                series, backend_version=self._backend_version, version=self._version
+            )
+
     @property
     def columns(self: Self) -> list[str]:
         return self._native_frame.columns
@@ -429,6 +438,9 @@ class PolarsLazyFrame:
 
         return func
 
+    def _iter_columns(self) -> Iterator[PolarsSeries]:  # pragma: no cover
+        yield from self.collect(self._implementation).iter_columns()
+
     @property
     def columns(self: Self) -> list[str]:
         return self._native_frame.columns
@@ -465,7 +477,7 @@ class PolarsLazyFrame:
         self: Self,
         backend: Implementation | None,
         **kwargs: Any,
-    ) -> CompliantDataFrame:
+    ) -> CompliantDataFrame[Any]:
         try:
             result = self._native_frame.collect(**kwargs)
         except Exception as e:  # noqa: BLE001

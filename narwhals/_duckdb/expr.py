@@ -445,14 +445,17 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
             lambda _input: FunctionExpression("round", _input, lit(decimals)), "round"
         )
 
-    def fill_null(self: Self, value: Any, strategy: Any, limit: int | None) -> Self:
+    def fill_null(
+        self: Self, value: Self | Any, strategy: Any, limit: int | None
+    ) -> Self:
         if strategy is not None:
             msg = "todo"
             raise NotImplementedError(msg)
 
-        return self._from_call(
-            lambda _input: CoalesceOperator(_input, lit(value)), "fill_null"
-        )
+        def func(_input: duckdb.Expression, value: Any) -> duckdb.Expression:
+            return CoalesceOperator(_input, value)
+
+        return self._from_call(func, "fill_null", value=value)
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
         def func(_input: duckdb.Expression) -> duckdb.Expression:

@@ -250,7 +250,7 @@ class ExprStringNamespace(Generic[ExprT]):
             A new expression.
 
         Examples:
-           >>> import pandas as pd
+            >>> import pandas as pd
             >>> import narwhals as nw
             >>> df_native = pd.DataFrame({"s": ["pear", None, "papaya"]})
             >>> df = nw.from_native(df_native)
@@ -268,6 +268,40 @@ class ExprStringNamespace(Generic[ExprT]):
             lambda plx: self._expr._to_compliant_expr(plx).str.slice(
                 offset=offset, length=length
             ),
+            self._expr._metadata,
+        )
+
+    def split(self: Self, by: str) -> ExprT:
+        r"""Split the string values of an expression by a substring.
+
+        Arguments:
+            by: Substring to split by.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"s": ["foo bar", "foo_bar"]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(nw.col("s").str.split("_").alias("s_split"))
+            ┌────────────────────────────┐
+            |     Narwhals DataFrame     |
+            |----------------------------|
+            |shape: (2, 2)               |
+            |┌─────────┬────────────────┐|
+            |│ s       ┆ s_split        │|
+            |│ ---     ┆ ---            │|
+            |│ str     ┆ list[str]      │|
+            |╞═════════╪════════════════╡|
+            |│ foo bar ┆ ["foo bar"]    │|
+            |│ foo_bar ┆ ["foo", "bar"] │|
+            |└─────────┴────────────────┘|
+            └────────────────────────────┘
+        """
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).str.split(by=by),
             self._expr._metadata,
         )
 

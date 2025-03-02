@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 
@@ -85,11 +86,15 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             self._native_frame.select(item), version=self._version
         )
 
+    def _iter_columns(self) -> Iterator[duckdb.Expression]:
+        for col in self.columns:
+            yield ColumnExpression(col)
+
     def collect(
         self: Self,
         backend: ModuleType | Implementation | str | None,
         **kwargs: Any,
-    ) -> CompliantDataFrame:
+    ) -> CompliantDataFrame[Any]:
         if backend is None or backend is Implementation.PYARROW:
             import pyarrow as pa  # ignore-banned-import
 

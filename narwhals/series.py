@@ -1328,7 +1328,9 @@ class Series(Generic[IntoSeriesT]):
             msg = f"strategy not supported: {strategy}"
             raise ValueError(msg)
         return self._from_compliant_series(
-            self._compliant_series.fill_null(value=value, strategy=strategy, limit=limit)
+            self._compliant_series.fill_null(
+                value=self._extract_native(value), strategy=strategy, limit=limit
+            )
         )
 
     def is_between(

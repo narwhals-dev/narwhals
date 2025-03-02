@@ -44,6 +44,7 @@ MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
     "cum_count": "cumsum",
     "shift": "shift",
     "rank": "rank",
+    "diff": "diff",
 }
 
 
@@ -314,7 +315,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
 
     def fill_null(
         self: Self,
-        value: Any | None,
+        value: Self | Any | None,
         strategy: Literal["forward", "backward"] | None,
         limit: int | None,
     ) -> Self:
@@ -456,15 +457,15 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         "na_option": "keep",
                         "pct": False,
                     }
-                else:  # Cumulative operation
+                elif function_name.startswith("cum_"):  # Cumulative operation
                     if self._call_kwargs["reverse"]:
                         raise NotImplementedError(unsupported_reverse_msg)
                     kwargs = {"skipna": True}
+                else:
+                    kwargs = {}
 
                 res_native = getattr(
-                    df._native_frame.groupby([df._native_frame[key] for key in keys])[
-                        list(output_names)
-                    ],
+                    df._native_frame.groupby(keys)[list(output_names)],
                     MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT[function_name],
                 )(**kwargs)
                 result_frame = df._from_native_frame(
