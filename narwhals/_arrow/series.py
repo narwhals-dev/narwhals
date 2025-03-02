@@ -651,7 +651,8 @@ class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
             )
 
         if value is not None:
-            series = pc.fill_null(self.native, lit(value, self._type))  # type: ignore[attr-defined]
+            _, value = extract_native(self, value)
+            series = pc.fill_null(self.native, value)  # type: ignore[attr-defined]
         elif limit is None:
             fill_func = (
                 pc.fill_null_forward if strategy == "forward" else pc.fill_null_backward

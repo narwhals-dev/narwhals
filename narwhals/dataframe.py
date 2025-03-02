@@ -34,6 +34,7 @@ from narwhals.utils import find_stacklevel
 from narwhals.utils import flatten
 from narwhals.utils import generate_repr
 from narwhals.utils import is_sequence_but_not_str
+from narwhals.utils import issue_deprecation_warning
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -201,21 +202,22 @@ class BaseFrame(Generic[_FrameT]):
             and isinstance(predicates[0], list)
             and all(isinstance(x, bool) for x in predicates[0])
         ):
+            from narwhals.functions import col
+
             flat_predicates = flatten(predicates)
             check_expressions_preserve_length(*flat_predicates, function_name="filter")
-            compliant_predicates, _kinds = self._flatten_and_extract(*flat_predicates)
             plx = self.__narwhals_namespace__()
+            compliant_predicates, _kinds = self._flatten_and_extract(*flat_predicates)
+            compliant_constraints = (
+                (col(name) == v)._to_compliant_expr(plx)
+                for name, v in constraints.items()
+            )
             predicate = plx.all_horizontal(
-                *chain(
-                    compliant_predicates,
-                    (plx.col(name) == v for name, v in constraints.items()),
-                )
+                *chain(compliant_predicates, compliant_constraints)
             )
         else:
             predicate = predicates[0]
-        return self._from_compliant_dataframe(
-            self._compliant_frame.filter(predicate),
-        )
+        return self._from_compliant_dataframe(self._compliant_frame.filter(predicate))
 
     def sort(
         self: Self,
@@ -1234,6 +1236,37 @@ class DataFrame(BaseFrame[DataFrameT]):
             [(1, 6.0), (2, 7.0)]
         """
         return self._compliant_frame.rows(named=named)  # type: ignore[no-any-return]
+
+    def iter_columns(self: Self) -> Iterator[Series[Any]]:
+        """Returns an iterator over the columns of this DataFrame.
+
+        Yields:
+            A Narwhals Series, backed by a native series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame({"foo": [1, 2], "bar": [6.0, 7.0]})
+            >>> iter_columns = nw.from_native(df_native).iter_columns()
+            >>> next(iter_columns)
+            ┌───────────────────────┐
+            |    Narwhals Series    |
+            |-----------------------|
+            |0    1                 |
+            |1    2                 |
+            |Name: foo, dtype: int64|
+            └───────────────────────┘
+            >>> next(iter_columns)
+            ┌─────────────────────────┐
+            |     Narwhals Series     |
+            |-------------------------|
+            |0    6.0                 |
+            |1    7.0                 |
+            |Name: bar, dtype: float64|
+            └─────────────────────────┘
+        """
+        for series in self._compliant_frame.iter_columns():
+            yield self._series(series, level=self._level)
 
     @overload
     def iter_rows(
@@ -3109,6 +3142,11 @@ class LazyFrame(BaseFrame[FrameT]):
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         r"""Take every nth row in the DataFrame and return as a new DataFrame.
 
+        !!! warning
+            `LazyFrame.gather_every` is deprecated and will be removed in a future version.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
+
         Arguments:
             n: Gather every *n*-th row.
             offset: Starting index.
@@ -3116,6 +3154,13 @@ class LazyFrame(BaseFrame[FrameT]):
         Returns:
             The LazyFrame containing only the selected rows.
         """
+        msg = (
+            "`LazyFrame.gather_every` is deprecated and will be removed in a future version.\n\n"
+            "Note: this will remain available in `narwhals.stable.v1`.\n"
+            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+        )
+        issue_deprecation_warning(msg, _version="1.29.0")
+
         return super().gather_every(n=n, offset=offset)
 
     def unpivot(

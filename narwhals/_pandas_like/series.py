@@ -535,6 +535,7 @@ class PandasLikeSeries(CompliantSeries):
     ) -> Self:
         ser = self._native_series
         if value is not None:
+            _, value = align_and_extract_native(self, value)
             res_ser = self._from_native_series(ser.fillna(value=value))
         else:
             res_ser = self._from_native_series(

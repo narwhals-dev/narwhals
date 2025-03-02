@@ -5,9 +5,11 @@ from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Container
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
+from typing import cast
 
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
@@ -29,7 +31,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):
+class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):  # type: ignore[type-var] # (#2044)
     def __init__(
         self: Self,
         *,
@@ -62,6 +64,27 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):
     def col(self: Self, *column_names: str) -> SparkLikeExpr:
         return SparkLikeExpr.from_column_names(
             *column_names,
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
+        )
+
+    def exclude(self: Self, excluded_names: Container[str]) -> SparkLikeExpr:
+        def evaluate_output_names(df: SparkLikeLazyFrame) -> Sequence[str]:
+            return [
+                column_name
+                for column_name in df.columns
+                if column_name not in excluded_names
+            ]
+
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            return [df._F.col(column_name) for column_name in evaluate_output_names(df)]
+
+        return SparkLikeExpr(
+            func,
+            function_name="exclude",
+            evaluate_output_names=evaluate_output_names,
+            alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
@@ -222,7 +245,7 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):
         *,
         how: Literal["horizontal", "vertical", "diagonal"],
     ) -> SparkLikeLazyFrame:
-        dfs: list[DataFrame] = [item._native_frame for item in items]
+        dfs = cast("Sequence[DataFrame]", [item._native_frame for item in items])
         if how == "horizontal":
             msg = (
                 "Horizontal concatenation is not supported for LazyFrame backed by "

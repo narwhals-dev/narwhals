@@ -122,7 +122,7 @@ def test_lazyframe_docstrings() -> None:
         if item in {"schema", "columns"}:
             # to avoid performance warning
             continue
-        if item in {"tail"}:
+        if item in {"tail", "gather_every"}:
             # deprecated
             continue
         assert remove_docstring_examples(
