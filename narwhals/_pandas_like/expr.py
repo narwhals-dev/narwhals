@@ -22,8 +22,8 @@ from narwhals._pandas_like.utils import rename
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import ComputeError
 from narwhals.typing import CompliantExpr
-from narwhals.utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -438,13 +438,9 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
 
             def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
                 if order_by is not None:
-                    original_index = df._native_frame.index
-                    token = generate_temporary_column_name(8, df.columns)
-                    native_frame = (
-                        df.with_row_index(token)
-                        .sort(*order_by, descending=False, nulls_last=False)
-                        ._native_frame.set_index(token)
-                    )
+                    native_frame = df.sort(
+                        *order_by, descending=False, nulls_last=False
+                    )._native_frame
                 else:
                     native_frame = df._native_frame
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
@@ -493,9 +489,17 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     )
                 )
                 if order_by is not None:
-                    res_native = result_frame._native_frame.sort_index()
-                    res_native.index = original_index
-                    result_frame = result_frame._from_native_frame(res_native)
+                    # This implementation is not ideal, as we do two
+                    result_frame = result_frame._from_native_frame(
+                        result_frame._native_frame.loc[df._native_frame.index]
+                    )
+                    if len(result_frame) != len(df):
+                        msg = (
+                            "Cannot use `.over` with `order_by` on pandas DataFrame\n"
+                            "which has Index with duplicate values.\n\n"
+                            "Hint: you may want to use `nw.maybe_reset_index`."
+                        )
+                        raise ComputeError(msg)
                 return [result_frame[name] for name in aliases]
         elif not is_scalar_like(kind):
             msg = (
