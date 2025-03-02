@@ -1552,9 +1552,10 @@ class Expr:
             n_open_windows -= 1
         metadata = ExprMetadata(kind, n_open_windows=n_open_windows)
         flat_partition_by = flatten(partition_by)
+        order_by = [_order_by] if isinstance(_order_by, str) else _order_by
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).over(
-                flat_partition_by, order_by=_order_by, kind=self._metadata.kind
+                flat_partition_by, order_by=order_by, kind=self._metadata.kind
             ),
             metadata,
         )
