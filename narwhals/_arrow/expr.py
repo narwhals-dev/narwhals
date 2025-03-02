@@ -418,31 +418,33 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
         )
 
     def over(
-        self: Self, keys: list[str], kind: ExprKind, order_by: Sequence[str] | None
+        self: Self,
+        partition_by: list[str],
+        kind: ExprKind,
+        order_by: Sequence[str] | None,
     ) -> Self:
-        if keys and not is_scalar_like(kind):
+        if partition_by and not is_scalar_like(kind):
             msg = "Only aggregation or literal operations are supported in grouped `over` context for PyArrow."
             raise NotImplementedError(msg)
 
-        if not keys:
+        if not partition_by:
+            assert order_by is not None  # help type checkers  # noqa: S101
+
             # This is something like `nw.col('a').cum_sum().order_by(key)`
             # which we can always easily support, as it doesn't require grouping.
             def func(df: ArrowDataFrame) -> Sequence[ArrowSeries]:
                 native_frame = df._native_frame
-                if order_by:
-                    sorting_indices = pc.sort_indices(
-                        native_frame, sort_keys=[(key, "ascending") for key in order_by]
-                    )
-                    native_frame = pc.take(native_frame, sorting_indices)  # type: ignore[call-overload]
+                sorting_indices = pc.sort_indices(
+                    native_frame, sort_keys=[(key, "ascending") for key in order_by]
+                )
+                native_frame = pc.take(native_frame, sorting_indices)  # type: ignore[call-overload]
                 result = self(df._from_native_frame(native_frame))
-                if order_by:
-                    result = [ser[pa.chunked_array(sorting_indices)] for ser in result]
-                return result
+                return [ser[pa.chunked_array(sorting_indices)] for ser in result]
         else:
 
             def func(df: ArrowDataFrame) -> Sequence[ArrowSeries]:
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
-                if overlap := set(output_names).intersection(keys):
+                if overlap := set(output_names).intersection(partition_by):
                     # E.g. `df.select(nw.all().sum().over('a'))`. This is well-defined,
                     # we just don't support it yet.
                     msg = (
@@ -451,9 +453,13 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
                     )
                     raise NotImplementedError(msg)
 
-                tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
-                tmp = df.simple_select(*keys).join(
-                    tmp, how="left", left_on=keys, right_on=keys, suffix="_right"
+                tmp = df.group_by(*partition_by, drop_null_keys=False).agg(self)
+                tmp = df.simple_select(*partition_by).join(
+                    tmp,
+                    how="left",
+                    left_on=partition_by,
+                    right_on=partition_by,
+                    suffix="_right",
                 )
                 return [tmp[alias] for alias in aliases]
 

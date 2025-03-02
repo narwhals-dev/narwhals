@@ -428,23 +428,23 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
         )
 
     def over(  # noqa: PLR0915
-        self: Self, keys: list[str], kind: ExprKind, order_by: Sequence[str] | None = None
+        self: Self,
+        partition_by: list[str],
+        kind: ExprKind,
+        order_by: Sequence[str] | None = None,
     ) -> Self:
-        if not keys:
+        if not partition_by:
             # This is something like `nw.col('a').cum_sum().order_by(key)`
             # which we can always easily support, as it doesn't require grouping.
             def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
                 native_frame = df._native_frame
                 pdx = df.__native_namespace__()
-                if order_by:
-                    sorting_indices = pdx.MultiIndex.from_frame(
-                        native_frame[order_by]
-                    ).argsort()
-                    native_frame = native_frame.iloc[sorting_indices]
+                sorting_indices = pdx.MultiIndex.from_frame(
+                    native_frame[order_by]
+                ).argsort()
+                native_frame = native_frame.iloc[sorting_indices]
                 result = self(df._from_native_frame(native_frame))
-                if order_by:
-                    result = [ser[sorting_indices] for ser in result]
-                return result
+                return [ser[sorting_indices] for ser in result]
         elif (
             is_simple_aggregation(self)
             and (function_name := re.sub(r"(\w+->)", "", self._function_name))
@@ -487,9 +487,9 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 else:
                     kwargs = {}
 
-                if keys:
+                if partition_by:
                     res_native = getattr(
-                        native_frame.groupby(keys)[list(output_names)],
+                        native_frame.groupby(partition_by)[list(output_names)],
                         MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT[function_name],
                     )(**kwargs)
                 else:
@@ -523,7 +523,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
 
             def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
-                if overlap := set(output_names).intersection(keys):
+                if overlap := set(output_names).intersection(partition_by):
                     # E.g. `df.select(nw.all().sum().over('a'))`. This is well-defined,
                     # we just don't support it yet.
                     msg = (
@@ -532,9 +532,13 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     )
                     raise NotImplementedError(msg)
 
-                tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
-                tmp = df.simple_select(*keys).join(
-                    tmp, how="left", left_on=keys, right_on=keys, suffix="_right"
+                tmp = df.group_by(*partition_by, drop_null_keys=False).agg(self)
+                tmp = df.simple_select(*partition_by).join(
+                    tmp,
+                    how="left",
+                    left_on=partition_by,
+                    right_on=partition_by,
+                    suffix="_right",
                 )
                 return [tmp[name] for name in aliases]
 

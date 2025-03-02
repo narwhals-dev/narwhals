@@ -98,15 +98,20 @@ class PolarsExpr:
         return self._from_native_expr(self._native_expr.is_nan())
 
     def over(
-        self: Self, keys: list[str], kind: ExprKind, order_by: Sequence[str] | None
+        self: Self,
+        partition_by: list[str],
+        kind: ExprKind,
+        order_by: Sequence[str] | None,
     ) -> Self:
         if self._backend_version < (1, 9):
             if order_by:
                 msg = "`order_by` in Polars requires version 1.10 or greater"
                 raise NotImplementedError(msg)
-            return self._from_native_expr(self._native_expr.over(keys or pl.lit(1)))
+            return self._from_native_expr(
+                self._native_expr.over(partition_by or pl.lit(1))
+            )
         return self._from_native_expr(
-            self._native_expr.over(keys or pl.lit(1), order_by=order_by)
+            self._native_expr.over(partition_by or pl.lit(1), order_by=order_by)
         )
 
     def rolling_var(

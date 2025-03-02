@@ -1543,6 +1543,9 @@ class Expr:
             |2  4  y                    4|
             └────────────────────────────┘
         """
+        if not partition_by and not _order_by:  # pragma: no cover
+            msg = "At least one of `partition_by` or `order_by` must be specified."
+            raise ValueError(msg)
         if self._metadata.kind.is_filtration():
             msg = "`.over()` can not be used for expressions which change length."
             raise LengthChangingExprError(msg)

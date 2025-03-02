@@ -491,18 +491,22 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
         return self._from_call(_n_unique, "n_unique")
 
     def over(
-        self: Self, keys: list[str], kind: ExprKind, order_by: Sequence[str]
+        self: Self, partition_by: list[str], kind: ExprKind, order_by: Sequence[str]
     ) -> Self:
         if (window_function := self._window_function) is not None:
             assert order_by is not None  # noqa: S101
 
             def func(df: SparkLikeLazyFrame) -> list[Column]:
-                return [window_function(expr, keys, order_by) for expr in self._call(df)]
+                return [
+                    window_function(expr, partition_by, order_by)
+                    for expr in self._call(df)
+                ]
         else:
 
             def func(df: SparkLikeLazyFrame) -> list[Column]:
                 return [
-                    expr.over(self._Window.partitionBy(*keys)) for expr in self._call(df)
+                    expr.over(self._Window.partitionBy(*partition_by))
+                    for expr in self._call(df)
                 ]
 
         return self.__class__(
