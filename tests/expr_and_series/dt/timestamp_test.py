@@ -17,8 +17,7 @@ from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
-from tests.utils import is_windows
-from tests.utils import windows_has_tzdata
+from tests.utils import is_pyarrow_windows_no_tzdata
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoSeriesT
@@ -105,11 +104,7 @@ def test_timestamp_datetimes_tz_aware(
         )
     version_conditions = [
         (
-            (
-                any(x in str(constructor) for x in ("pyarrow",))
-                and is_windows()
-                and not windows_has_tzdata()
-            ),
+            is_pyarrow_windows_no_tzdata(constructor),
             "Timezone database is not installed on Windows",
         ),
         (

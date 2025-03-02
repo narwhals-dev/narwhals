@@ -163,12 +163,10 @@ def is_windows() -> bool:
 
 
 def windows_has_tzdata() -> bool:  # pragma: no cover
-    """From PyArrow: python/pyarrow/tests/util.py.
-
-    This is the default location where tz.cpp will look for (until we make
-    this configurable at run-time)
-
-    Skip test on Windows when the tz database is not configured.
-
-    """
+    """From PyArrow: python/pyarrow/tests/util.py."""
     return (Path.home() / "Downloads" / "tzdata").exists()
+
+
+def is_pyarrow_windows_no_tzdata(constructor: Constructor, /) -> bool:
+    """Skip test on Windows when the tz database is not configured."""
+    return "pyarrow" in str(constructor) and is_windows() and not windows_has_tzdata()
