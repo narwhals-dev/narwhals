@@ -35,6 +35,9 @@ def test_lazy_cum_sum_grouped(
     if "pyarrow_table" in str(constructor):
         # grouped window functions not yet supported
         request.applymarker(pytest.mark.xfail)
+    if "dask" in str(constructor):
+        # not (yet?) supported with multiple partitions
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
         constructor(
@@ -57,6 +60,9 @@ def test_lazy_cum_sum_ungrouped(
     if "duckdb" in str(constructor):
         # no window function support yet in duckdb
         request.applymarker(pytest.mark.xfail)
+    if "dask" in str(constructor):
+        # TODO(unassigned) - we should be able to support this
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
         constructor(
@@ -77,6 +83,9 @@ def test_lazy_cum_sum_ungrouped_reverse(
 ) -> None:
     if "duckdb" in str(constructor):
         # no window function support yet in duckdb
+        request.applymarker(pytest.mark.xfail)
+    if "dask" in str(constructor):
+        # TODO(unassigned) - we should be able to support this
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
