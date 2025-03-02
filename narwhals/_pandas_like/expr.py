@@ -435,17 +435,17 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
             # which we can always easily support, as it doesn't require grouping.
             def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
                 native_frame = df._native_frame
+                pdx = df.__native_namespace__()
                 if order_by:
-                    sorting_indices = (
-                        df.__native_namespace__()
-                        .MultiIndex.from_frame(native_frame[order_by])
-                        .argsort()
-                    )
+                    sorting_indices = pdx.MultiIndex.from_frame(
+                        native_frame[order_by]
+                    ).argsort()
                     native_frame = native_frame.iloc[sorting_indices]
                 result = self(df._from_native_frame(native_frame))
                 if order_by:
                     result = [
-                        ser.scatter(sorting_indices, ser._native_series) for ser in result
+                        ser._from_native_series(ser._native_series.iloc[sorting_indices])
+                        for ser in result
                     ]
                 return result
         elif (
