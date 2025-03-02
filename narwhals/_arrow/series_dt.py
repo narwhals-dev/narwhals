@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import Any
 from typing import cast
 
 import pyarrow as pa
@@ -16,10 +17,19 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import ArrowChunkedArray
+    from narwhals.dtypes import Datetime
     from narwhals.typing import TimeUnit
 
 
 class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
+    @property
+    def unit(self) -> TimeUnit:  # NOTE: Unsafe (native).
+        return cast("pa.TimestampType[TimeUnit, Any]", self.native.type).unit
+
+    @property
+    def time_zone(self) -> str | None:  # NOTE: Unsafe (narwhals).
+        return cast("Datetime", self.compliant.dtype).time_zone
+
     def to_string(self: Self, format: str) -> ArrowSeries:  # noqa: A002
         # PyArrow differs from other libraries in that %S also prints out
         # the fractional part of the second...:'(
@@ -35,13 +45,8 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
         return self.from_native(result)
 
     def convert_time_zone(self: Self, time_zone: str) -> ArrowSeries:
-        if self.compliant.dtype.time_zone is None:  # type: ignore[attr-defined]
-            ser = self.replace_time_zone("UTC")
-        else:
-            ser = self.compliant
-        native_type = pa.timestamp(ser._type.unit, time_zone)  # type: ignore[attr-defined]
-        result = ser.native.cast(native_type)
-        return self.from_native(result)
+        ser = self.replace_time_zone("UTC") if self.time_zone is None else self.compliant
+        return self.from_native(ser.native.cast(pa.timestamp(self.unit, time_zone)))
 
     def timestamp(self: Self, time_unit: TimeUnit) -> ArrowSeries:
         ser: ArrowSeries = self.compliant
@@ -141,8 +146,7 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
             "us": 60 * 1e6,  # micro
             "ns": 60 * 1e9,  # nano
         }
-        unit = self.compliant._type.unit  # type: ignore[attr-defined]
-        factor = lit(unit_to_minutes_factor[unit], type=pa.int64())
+        factor = lit(unit_to_minutes_factor[self.unit], type=pa.int64())
         return self.from_native(pc.divide(self.native, factor).cast(pa.int64()))
 
     def total_seconds(self: Self) -> ArrowSeries:
@@ -152,33 +156,30 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
             "us": 1e6,  # micro
             "ns": 1e9,  # nano
         }
-        unit = self.compliant._type.unit  # type: ignore[attr-defined]
-        factor = lit(unit_to_seconds_factor[unit], type=pa.int64())
+        factor = lit(unit_to_seconds_factor[self.unit], type=pa.int64())
         return self.from_native(pc.divide(self.native, factor).cast(pa.int64()))
 
     def total_milliseconds(self: Self) -> ArrowSeries:
-        unit = self.compliant._type.unit  # type: ignore[attr-defined]
         unit_to_milli_factor = {
             "s": 1e3,  # seconds
             "ms": 1,  # milli
             "us": 1e3,  # micro
             "ns": 1e6,  # nano
         }
-        factor = lit(unit_to_milli_factor[unit], type=pa.int64())
-        if unit == "s":
+        factor = lit(unit_to_milli_factor[self.unit], type=pa.int64())
+        if self.unit == "s":
             return self.from_native(pc.multiply(self.native, factor).cast(pa.int64()))
         return self.from_native(pc.divide(self.native, factor).cast(pa.int64()))
 
     def total_microseconds(self: Self) -> ArrowSeries:
-        unit = self.compliant._type.unit  # type: ignore[attr-defined]
         unit_to_micro_factor = {
             "s": 1e6,  # seconds
             "ms": 1e3,  # milli
             "us": 1,  # micro
             "ns": 1e3,  # nano
         }
-        factor = lit(unit_to_micro_factor[unit], type=pa.int64())
-        if unit in {"s", "ms"}:
+        factor = lit(unit_to_micro_factor[self.unit], type=pa.int64())
+        if self.unit in {"s", "ms"}:
             return self.from_native(pc.multiply(self.native, factor).cast(pa.int64()))
         return self.from_native(pc.divide(self.native, factor).cast(pa.int64()))
 
@@ -189,7 +190,5 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
             "us": 1e3,  # micro
             "ns": 1,  # nano
         }
-
-        unit = self.compliant._type.unit  # type: ignore[attr-defined]
-        factor = lit(unit_to_nano_factor[unit], type=pa.int64())
+        factor = lit(unit_to_nano_factor[self.unit], type=pa.int64())
         return self.from_native(pc.multiply(self.native, factor).cast(pa.int64()))
