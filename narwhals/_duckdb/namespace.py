@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import functools
 import operator
+from functools import partial
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
@@ -26,6 +26,7 @@ from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.typing import CompliantNamespace
 from narwhals.utils import Implementation
+from narwhals.utils import exclude_column_names
 from narwhals.utils import get_column_names
 
 if TYPE_CHECKING:
@@ -80,9 +81,7 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "duckdb.Expression"]
         if how == "vertical" and not all(x.schema == schema for x in items[1:]):
             msg = "inputs should all have the same schema"
             raise TypeError(msg)
-        res = functools.reduce(
-            lambda x, y: x.union(y), (item._native_frame for item in items)
-        )
+        res = reduce(lambda x, y: x.union(y), (item._native_frame for item in items))
         return first._from_native_frame(res)
 
     def concat_str(
@@ -248,15 +247,8 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "duckdb.Expression"]
         )
 
     def exclude(self: Self, excluded_names: Container[str]) -> DuckDBExpr:
-        def evaluate_column_names(df: DuckDBLazyFrame) -> Sequence[str]:
-            return [
-                column_name
-                for column_name in df.columns
-                if column_name not in excluded_names
-            ]
-
         return DuckDBExpr.from_column_names(
-            evaluate_column_names=evaluate_column_names,
+            evaluate_column_names=partial(exclude_column_names, names=excluded_names),
             function_name="exclude",
             backend_version=self._backend_version,
             version=self._version,

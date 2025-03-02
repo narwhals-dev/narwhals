@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+from functools import partial
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
@@ -23,6 +24,7 @@ from narwhals._pandas_like.utils import extract_dataframe_comparand
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import vertical_concat
 from narwhals.typing import CompliantNamespace
+from narwhals.utils import exclude_column_names
 from narwhals.utils import get_column_names
 from narwhals.utils import import_dtypes_module
 
@@ -121,15 +123,8 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeDataFrame, PandasLikeSeri
         )
 
     def exclude(self: Self, excluded_names: Container[str]) -> PandasLikeExpr:
-        def evaluate_column_names(df: PandasLikeDataFrame) -> Sequence[str]:
-            return [
-                column_name
-                for column_name in df.columns
-                if column_name not in excluded_names
-            ]
-
         return PandasLikeExpr.from_column_names(
-            evaluate_column_names=evaluate_column_names,
+            evaluate_column_names=partial(exclude_column_names, names=excluded_names),
             function_name="exclude",
             implementation=self._implementation,
             backend_version=self._backend_version,

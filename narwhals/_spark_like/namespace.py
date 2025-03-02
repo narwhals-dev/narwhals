@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+from functools import partial
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
@@ -19,6 +20,7 @@ from narwhals._spark_like.selectors import SparkLikeSelectorNamespace
 from narwhals._spark_like.utils import maybe_evaluate_expr
 from narwhals._spark_like.utils import narwhals_to_native_dtype
 from narwhals.typing import CompliantNamespace
+from narwhals.utils import exclude_column_names
 from narwhals.utils import get_column_names
 
 if TYPE_CHECKING:
@@ -74,15 +76,8 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):  #
         )
 
     def exclude(self: Self, excluded_names: Container[str]) -> SparkLikeExpr:
-        def evaluate_column_names(df: SparkLikeLazyFrame) -> Sequence[str]:
-            return [
-                column_name
-                for column_name in df.columns
-                if column_name not in excluded_names
-            ]
-
         return SparkLikeExpr.from_column_names(
-            evaluate_column_names=evaluate_column_names,
+            evaluate_column_names=partial(exclude_column_names, names=excluded_names),
             function_name="exclude",
             implementation=self._implementation,
             backend_version=self._backend_version,
