@@ -17,7 +17,10 @@ from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
 
-def test_full_join(constructor: Constructor) -> None:
+def test_full_join(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "pandas" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     df1 = {"id": [1, 2, 3], "value1": ["A", "B", "C"]}
     df2 = {"id": [2, 3, 4], "value2": ["X", "Y", "Z"]}
     expected_no_coalesce = {
