@@ -283,15 +283,17 @@ def test_over_diff(
 
 
 def test_over_cum_reverse(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if "pyarrow_table" in str(constructor):
+    if "pyarrow_table" in str(constructor_eager):
         # grouped cumulative ops not yet supported for pyarrow
         request.applymarker(pytest.mark.xfail)
-    if "pandas_nullable" in str(constructor):
+    if "pandas_nullable" in str(constructor_eager):
         # https://github.com/pandas-dev/pandas/issues/61031
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6], "i": [0, 1, 2]}))
+    df = nw.from_native(
+        constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6], "i": [0, 1, 2]})
+    )
     result = df.with_columns(nw.col("b").cum_max(reverse=True).over("a")).sort("i")
     expected = {"a": [1, 1, 2], "b": [5, 5, 6], "i": [0, 1, 2]}
     assert_equal_data(result, expected)
