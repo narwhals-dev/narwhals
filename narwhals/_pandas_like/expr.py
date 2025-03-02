@@ -44,6 +44,7 @@ MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
     "cum_count": "cumsum",
     "shift": "shift",
     "rank": "rank",
+    "diff": "diff",
 }
 
 
@@ -456,10 +457,12 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         "na_option": "keep",
                         "pct": False,
                     }
-                else:  # Cumulative operation
+                elif function_name.startswith("cum_"):  # Cumulative operation
                     if self._call_kwargs["reverse"]:
                         raise NotImplementedError(unsupported_reverse_msg)
                     kwargs = {"skipna": True}
+                else:
+                    kwargs = {}
 
                 res_native = getattr(
                     df._native_frame.groupby(keys)[list(output_names)],
