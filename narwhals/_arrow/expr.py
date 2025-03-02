@@ -6,6 +6,7 @@ from typing import Callable
 from typing import Literal
 from typing import Sequence
 
+import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.expr_cat import ArrowExprCatNamespace
@@ -435,7 +436,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
                     native_frame = pc.take(native_frame, sorting_indices)  # type: ignore[call-overload]
                 result = self(df._from_native_frame(native_frame))
                 if order_by:
-                    result = [ser[sorting_indices] for ser in result]  # type: ignore[call-overload]
+                    result = [ser[pa.chunked_array(sorting_indices)] for ser in result]
                 return result
         else:
 
