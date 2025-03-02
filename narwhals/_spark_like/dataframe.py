@@ -4,6 +4,7 @@ import warnings
 from importlib import import_module
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import cast
@@ -194,6 +195,10 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             # NOTE: See https://github.com/narwhals-dev/narwhals/pull/2051#discussion_r1969224309
             to_arrow: Incomplete = self._native_frame.toArrow
             return to_arrow()
+
+    def _iter_columns(self) -> Iterator[Column]:
+        for col in self.columns:
+            yield self._F.col(col)
 
     @property
     def columns(self: Self) -> list[str]:
