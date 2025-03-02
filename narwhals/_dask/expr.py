@@ -412,7 +412,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
 
     def fill_null(
         self: Self,
-        value: Any | None,
+        value: Self | Any | None,
         strategy: Literal["forward", "backward"] | None,
         limit: int | None,
     ) -> DaskExpr:

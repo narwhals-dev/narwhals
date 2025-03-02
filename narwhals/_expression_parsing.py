@@ -52,8 +52,7 @@ def is_expr(obj: Any) -> TypeIs[Expr]:
 
 
 def evaluate_into_expr(
-    df: CompliantFrameT,
-    expr: CompliantExpr[CompliantFrameT, CompliantSeriesT_co],
+    df: CompliantFrameT, expr: CompliantExpr[CompliantFrameT, CompliantSeriesT_co]
 ) -> Sequence[CompliantSeriesT_co]:
     """Return list of raw columns.
 
@@ -87,8 +86,7 @@ def evaluate_into_exprs(
 
 @overload
 def maybe_evaluate_expr(
-    df: CompliantFrameT,
-    expr: CompliantExpr[CompliantFrameT, CompliantSeriesT_co],
+    df: CompliantFrameT, expr: CompliantExpr[CompliantFrameT, CompliantSeriesT_co]
 ) -> CompliantSeriesT_co: ...
 
 

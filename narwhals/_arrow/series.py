@@ -56,6 +56,8 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
+# TODO @dangotbanned: move into `_arrow.utils`
+# Lots of modules are importing inline
 @overload
 def maybe_extract_py_scalar(
     value: pa.Scalar[_BasicDataType[_AsPyType]],

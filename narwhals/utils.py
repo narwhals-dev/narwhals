@@ -49,6 +49,7 @@ if TYPE_CHECKING:
     import pandas as pd
     from typing_extensions import Never
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
     from narwhals.dataframe import DataFrame
@@ -76,6 +77,8 @@ if TYPE_CHECKING:
     _T2 = TypeVar("_T2")
     _T3 = TypeVar("_T3")
     _Fn = TypeVar("_Fn", bound="Callable[..., Any]")
+
+    _TracksDepth: TypeAlias = "Literal[Implementation.DASK,Implementation.CUDF,Implementation.MODIN,Implementation.PANDAS,Implementation.PYSPARK]"
 
     class _SupportsVersion(Protocol):
         __version__: str
@@ -1387,6 +1390,11 @@ def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
 
 def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
     return hasattr(obj, "__dataframe__")
+
+
+def is_tracks_depth(obj: Implementation, /) -> TypeIs[_TracksDepth]:  # pragma: no cover
+    # Return `True` for implementations that utilize `CompliantExpr._depth`.
+    return obj.is_pandas_like() or obj in {Implementation.PYARROW, Implementation.DASK}
 
 
 def unstable(fn: _Fn, /) -> _Fn:

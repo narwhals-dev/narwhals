@@ -5,6 +5,7 @@ from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Container
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
@@ -118,6 +119,35 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
 
         return ArrowExpr.from_column_names(
             *column_names, backend_version=self._backend_version, version=self._version
+        )
+
+    def exclude(self: Self, excluded_names: Container[str]) -> ArrowExpr:
+        from narwhals._arrow.series import ArrowSeries
+
+        def evaluate_output_names(df: ArrowDataFrame) -> Sequence[str]:
+            return [
+                column_name
+                for column_name in df.columns
+                if column_name not in excluded_names
+            ]
+
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            return [
+                ArrowSeries(
+                    df._native_frame[column_name],
+                    name=column_name,
+                    backend_version=df._backend_version,
+                    version=df._version,
+                )
+                for column_name in evaluate_output_names(df)
+            ]
+
+        return self._create_expr_from_callable(
+            func,
+            depth=0,
+            function_name="exclude",
+            evaluate_output_names=evaluate_output_names,
+            alias_output_names=None,
         )
 
     def nth(self: Self, *column_indices: int) -> ArrowExpr:
