@@ -1641,6 +1641,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
                   * *inner*: Returns rows that have matching values in both tables.
                   * *left*: Returns all rows from the left table, and the matched rows from the right table.
+                  * *full*: Returns all rows in both dataframes, with the suffix appended to the right join keys.
                   * *cross*: Returns the Cartesian product of rows from both tables.
                   * *semi*: Filter rows that have a match in the right table.
                   * *anti*: Filter rows that do not have a match in the right table.
@@ -2932,6 +2933,7 @@ class LazyFrame(BaseFrame[FrameT]):
 
                   * *inner*: Returns rows that have matching values in both tables.
                   * *left*: Returns all rows from the left table, and the matched rows from the right table.
+                  * *full*: Returns all rows in both dataframes, with the suffix appended to the right join keys.
                   * *cross*: Returns the Cartesian product of rows from both tables.
                   * *semi*: Filter rows that have a match in the right table.
                   * *anti*: Filter rows that do not have a match in the right table.
