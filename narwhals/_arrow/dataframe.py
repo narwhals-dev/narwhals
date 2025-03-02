@@ -447,6 +447,7 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
                 right_keys=right_on,
                 join_type=how_to_join_map[how],
                 right_suffix=suffix,
+                coalesce_keys=False,  # in compliance w/polars API
             ),
         )
 

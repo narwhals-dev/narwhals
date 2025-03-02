@@ -20,11 +20,6 @@ from tests.utils import assert_equal_data
 def test_full_join(constructor: Constructor) -> None:
     df1 = {"id": [1, 2, 3], "value1": ["A", "B", "C"]}
     df2 = {"id": [2, 3, 4], "value2": ["X", "Y", "Z"]}
-    expected_coalesce = {
-        "id": [1, 2, 3, 4],
-        "value1": ["A", "B", "C", None],
-        "value2": [None, "X", "Y", "Z"],
-    }
     expected_no_coalesce = {
         "id": [None, 1, 2, 3],
         "value1": [None, "A", "B", "C"],
@@ -36,10 +31,7 @@ def test_full_join(constructor: Constructor) -> None:
     df_right = nw_main.from_native(constructor(df2))
     result = df_left.join(df_right, left_on="id", right_on="id", how="full")
     result = result.sort("id")
-    try:
-        assert_equal_data(result, expected_coalesce)
-    except AssertionError:  # coealesce-join not implemented
-        assert_equal_data(result, expected_no_coalesce)
+    assert_equal_data(result, expected_no_coalesce)
 
 
 def test_inner_join_two_keys(constructor: Constructor) -> None:
