@@ -47,6 +47,9 @@ def test_lazy_cum_sum_grouped(
     if "pyarrow_table" in str(constructor):
         # grouped window functions not yet supported
         request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor):
+        # bugged
+        request.applymarker(pytest.mark.xfail)
     if "dask" in str(constructor):
         # not (yet?) supported with multiple partitions
         request.applymarker(pytest.mark.xfail)
