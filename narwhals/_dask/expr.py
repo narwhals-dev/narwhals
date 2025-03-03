@@ -92,15 +92,23 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
     @classmethod
     def from_column_names(
         cls: type[Self],
-        *column_names: str,
+        evaluate_column_names: Callable[[DaskLazyFrame], Sequence[str]],
+        /,
+        *,
+        function_name: str,
         backend_version: tuple[int, ...],
         version: Version,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             try:
-                return [df._native_frame[column_name] for column_name in column_names]
+                return [
+                    df._native_frame[column_name]
+                    for column_name in evaluate_column_names(df)
+                ]
             except KeyError as e:
-                missing_columns = [x for x in column_names if x not in df.columns]
+                missing_columns = [
+                    x for x in evaluate_column_names(df) if x not in df.columns
+                ]
                 raise ColumnNotFoundError.from_missing_and_available_column_names(
                     missing_columns=missing_columns,
                     available_columns=df.columns,
@@ -109,8 +117,8 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
         return cls(
             func,
             depth=0,
-            function_name="col",
-            evaluate_output_names=lambda _df: column_names,
+            function_name=function_name,
+            evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
             backend_version=backend_version,
             version=version,
