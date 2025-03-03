@@ -402,7 +402,7 @@ def test_not_implemented_alt() -> None:
             return PolarsExprStringNamespace(pl_expr)
 
         # NOTE: Typing still happy - but it complicates runtime (API completeness) access
-        _list = not_implemented_alt().alias("list")
+        _list = not_implemented_alt("list")
 
         @property
         def list(self) -> Any:
@@ -413,6 +413,7 @@ def test_not_implemented_alt() -> None:
     assert expr._implementation is nw.Implementation.POLARS
     assert expr.alias("new name") == "new name"
     assert isinstance(expr.str, PolarsExprStringNamespace)
+    assert isinstance(expr.cat, PolarsExprStringNamespace)
 
     # NOTE: not implemented override
     pattern = re.compile(
@@ -438,3 +439,12 @@ def test_not_implemented_alt() -> None:
 
     assert isinstance(DummyExpr.dt, not_implemented_alt)
     assert repr(DummyExpr.dt) == "<not_implemented_alt>: DummyExpr.dt"
+
+    pattern = re.compile(
+        r".+list.+ not implemented.+polars", flags=re.DOTALL | re.IGNORECASE
+    )
+    with pytest.raises(NotImplementedError, match=pattern):
+        expr.list  # noqa: B018
+
+    assert isinstance(DummyExpr._list, not_implemented_alt)
+    assert repr(DummyExpr._list) == "<not_implemented_alt>: DummyExpr.list"

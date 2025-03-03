@@ -1472,13 +1472,18 @@ class not_implemented_alt:  # noqa: N801
     https://docs.python.org/3/howto/descriptor.html
     """
 
+    def __init__(self, alias: str | None = None, /) -> None:
+        # NOTE: Don't like this
+        # Trying to workaround `mypy` requiring `@property` everywhere
+        self._alias: str | None = alias
+
     def __repr__(self) -> str:
         return f"<{type(self).__name__}>: {self._name_owner}.{self._name}"
 
     def __set_name__(self, owner: type[_T], name: str) -> None:
         # https://docs.python.org/3/howto/descriptor.html#customized-names
         self._name_owner: str = owner.__name__
-        self._name: str = name
+        self._name: str = self._alias or name
 
     def __get__(
         self, instance: _T | Literal["raise"] | None, owner: type[_T] | None = None, /
@@ -1497,12 +1502,6 @@ class not_implemented_alt:  # noqa: N801
         # NOTE: Purely to duck-type as assignable to **any** instance method
         # Wouldn't be reachable through *regular* attribute access
         return self.__get__("raise")
-
-    # NOTE: Don't like this
-    # Trying to workaround `mypy` requiring `@property` everywhere
-    def alias(self, name: str, /) -> Self:
-        self._name = name
-        return self
 
 
 def _not_implemented_error(what: str, who: str, /) -> NotImplementedError:
