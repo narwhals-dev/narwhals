@@ -507,8 +507,8 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 )
                 if order_by:
                     result = [result_frame[name] for name in aliases]
-                    return [s.scatter(sorting_indices, s._native_series) for s in result]
-                elif reverse:
+                    return [s.scatter(sorting_indices, s) for s in result]
+                if reverse:
                     result_frame = result_frame[::-1]
                 return [result_frame[name] for name in aliases]
         elif not is_scalar_like(kind):
