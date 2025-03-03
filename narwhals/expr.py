@@ -20,6 +20,7 @@ from narwhals.expr_dt import ExprDateTimeNamespace
 from narwhals.expr_list import ExprListNamespace
 from narwhals.expr_name import ExprNameNamespace
 from narwhals.expr_str import ExprStringNamespace
+from narwhals.expr_struct import ExprStructNamespace
 from narwhals.translate import to_native
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import flatten
@@ -2466,6 +2467,10 @@ class Expr:
     @property
     def list(self: Self) -> ExprListNamespace[Self]:
         return ExprListNamespace(self)
+
+    @property
+    def struct(self: Self) -> ExprStructNamespace[Self]:
+        return ExprStructNamespace(self)
 
 
 __all__ = [

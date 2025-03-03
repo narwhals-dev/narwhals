@@ -267,7 +267,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             if self._backend_version < (1, 1, 4):
                 msg = f"DuckDB>=1.1.4 is required for cross-join, found version: {self._backend_version}"
                 raise NotImplementedError(msg)
-            rel = self._native_frame.set_alias("lhs").cross(  # pragma: no cover
+            rel = self._native_frame.set_alias("lhs").cross(  # type: ignore[operator]  # pragma: no cover
                 other._native_frame.set_alias("rhs")
             )
         else:

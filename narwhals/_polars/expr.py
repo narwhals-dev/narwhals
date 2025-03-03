@@ -306,6 +306,10 @@ class PolarsExpr:
     def list(self: Self) -> PolarsExprListNamespace:
         return PolarsExprListNamespace(self)
 
+    @property
+    def struct(self: Self) -> PolarsExprStructNamespace:
+        return PolarsExprStructNamespace(self)
+
 
 class PolarsExprDateTimeNamespace:
     def __init__(self: Self, expr: PolarsExpr) -> None:
@@ -391,3 +395,14 @@ class PolarsExprListNamespace:
             )
 
         return func
+
+
+class PolarsExprStructNamespace:
+    def __init__(self: Self, expr: PolarsExpr) -> None:
+        self._expr = expr
+
+    def field(self: Self, *names: str) -> PolarsExpr:
+        native_expr = self._expr._native_expr
+        native_result = native_expr.struct.field(*names)
+
+        return self._expr._from_native_expr(native_result)

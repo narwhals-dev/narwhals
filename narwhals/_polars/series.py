@@ -647,3 +647,14 @@ class PolarsSeriesListNamespace:
             )
 
         return func
+
+
+class PolarsSeriesStructNamespace:
+    def __init__(self: Self, series: PolarsSeries) -> None:
+        self._series = series
+
+    def field(self: Self, *names: str) -> PolarsSeries:
+        native_series = self._series._native_series
+        native_result = native_series.struct.field(*names)
+
+        return self._series._from_native_series(native_result)
