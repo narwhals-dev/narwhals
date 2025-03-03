@@ -354,13 +354,21 @@ def test_not_implemented() -> None:
 
 
 def test_not_implemented_alt() -> None:
+    from narwhals._polars.expr import PolarsExpr
+    from narwhals._polars.expr import PolarsExprStringNamespace
     from narwhals.utils import not_implemented_alt
+
+    if TYPE_CHECKING:
+        from narwhals.utils import _SupportsGet
 
     class DummyCompliant(Protocol):
         _implementation: nw.Implementation
 
         def alias(self, name: str) -> str: ...
         def unique(self) -> Self: ...
+
+        str: _SupportsGet
+        dt: _SupportsGet
 
     class DummyExpr(DummyCompliant):
         def __init__(self) -> None:
@@ -371,9 +379,22 @@ def test_not_implemented_alt() -> None:
 
         unique = not_implemented_alt()
 
+        # NOTE: Only `mypy` has an issue with this?
+        # error: Cannot override writeable attribute with read-only property
+        @property
+        def str(self) -> PolarsExprStringNamespace:  # type: ignore[override]
+            pl_expr = cast("PolarsExpr", self)
+            return PolarsExprStringNamespace(pl_expr)
+
+        dt = not_implemented_alt()
+
     expr = DummyExpr()
+    # NOTE: Happy path
     assert expr._implementation is nw.Implementation.POLARS
     assert expr.alias("new name") == "new name"
+    assert isinstance(expr.str, PolarsExprStringNamespace)
+
+    # NOTE: not implemented override
     pattern = re.compile(
         r".+unique.+ not implemented.+polars", flags=re.DOTALL | re.IGNORECASE
     )
@@ -388,3 +409,12 @@ def test_not_implemented_alt() -> None:
     )
     with pytest.raises(NotImplementedError, match=pattern):
         DummyExpr.unique()
+
+    pattern = re.compile(
+        r".+dt.+ not implemented.+polars", flags=re.DOTALL | re.IGNORECASE
+    )
+    with pytest.raises(NotImplementedError, match=pattern):
+        expr.dt  # noqa: B018
+
+    assert isinstance(DummyExpr.dt, not_implemented_alt)
+    assert repr(DummyExpr.dt) == "<not_implemented_alt>: DummyExpr.dt"

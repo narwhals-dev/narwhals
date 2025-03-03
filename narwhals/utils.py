@@ -83,6 +83,9 @@ if TYPE_CHECKING:
     class _SupportsVersion(Protocol):
         __version__: str
 
+    class _SupportsGet(Protocol):  # noqa: PYI046
+        def __get__(self, instance: Any, owner: Any | None = None, /) -> Any: ...
+
     class _StoresImplementation(Protocol):
         _implementation: Implementation
         """Implementation of native object (pandas, Polars, PyArrow, ...)."""
