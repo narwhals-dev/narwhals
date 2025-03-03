@@ -21,6 +21,7 @@ from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import not_implemented
+from narwhals.utils import not_implemented_alt
 
 if TYPE_CHECKING:
     try:
@@ -599,7 +600,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
     rolling_var = not_implemented("rolling_var")
     rolling_std = not_implemented("rolling_std")
     gather_every = not_implemented("gather_every")
-    replace_strict = not_implemented("replace_strict")
+    replace_strict = not_implemented_alt()
 
     cat = not_implemented("cat", is_property=True)
     list = not_implemented("list", is_property=True)

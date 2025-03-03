@@ -5,6 +5,7 @@ import string
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Protocol
 from typing import cast
 
 import hypothesis.strategies as st
@@ -27,6 +28,8 @@ from tests.utils import PANDAS_VERSION
 from tests.utils import get_module_version_as_tuple
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from narwhals.series import Series
     from narwhals.typing import IntoSeries
     from narwhals.utils import _SupportsVersion
@@ -348,3 +351,34 @@ def test_not_implemented() -> None:
     )
     with pytest.raises(NotImplementedError, match=pattern):
         duckdb_expr.cat  # noqa: B018
+
+
+def test_not_implemented_alt() -> None:
+    from narwhals.utils import not_implemented_alt
+
+    class DummyCompliant(Protocol):
+        _implementation: nw.Implementation
+
+        def alias(self, name: str) -> str: ...
+        def unique(self) -> Self: ...
+
+    class DummyExpr(DummyCompliant):
+        def __init__(self) -> None:
+            self._implementation = nw.Implementation.POLARS
+
+        def alias(self, name: str) -> str:
+            return name
+
+        unique = not_implemented_alt()
+
+    expr = DummyExpr()
+    assert expr._implementation is nw.Implementation.POLARS
+    assert expr.alias("new name") == "new name"
+    pattern = re.compile(
+        r".+unique.+ not implemented.+polars", flags=re.DOTALL | re.IGNORECASE
+    )
+    with pytest.raises(NotImplementedError, match=pattern):
+        expr.unique()
+
+    assert isinstance(DummyExpr.unique, not_implemented_alt)
+    assert repr(DummyExpr.unique) == "<not_implemented_alt>: DummyExpr.unique"

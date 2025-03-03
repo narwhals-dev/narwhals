@@ -1445,12 +1445,7 @@ def not_implemented(
 
     def wrapper(self: Any, *args: Any, **kwds: Any) -> Never:  # noqa: ARG001
         who = getattr(self, "_implementation", type(self).__name__)
-        msg = (
-            f"{name!r} is not implemented for: {who!r}.\n\n"
-            "If you would like to see this functionality in `narwhals`, "
-            "please open an issue at: https://github.com/narwhals-dev/narwhals/issues"
-        )
-        raise NotImplementedError(msg)
+        raise _not_implemented_error(name, who)
 
     setattr(wrapper, "__narwhals_not_implemented__", True)  # noqa: B010
 
@@ -1458,3 +1453,53 @@ def not_implemented(
         return property(wrapper)
 
     return wrapper
+
+
+# TODO @dangotbanned: Can this type nicely for `@property`?
+# If not, can it provide improved instrospection? vs (https://github.com/narwhals-dev/narwhals/pull/2119#discussion_r1976484198)
+class not_implemented_alt:  # noqa: N801
+    """Descriptor version of `not_implemented`.
+
+    Notes:
+        - Attribute/method name *doesn't* need to be declared twice
+            - Utilizes the data model's [`__set_name__`](https://docs.python.org/3/reference/datamodel.html#object.__set_name__) hook
+        - Allows different behavior when looked up on the class vs instance
+        - Allows us to use `isinstance(...)` instead of monkeypatching an attribute to the function
+
+    https://docs.python.org/3/howto/descriptor.html
+    """
+
+    def __repr__(self) -> str:
+        return f"<{type(self).__name__}>: {self._name_owner}.{self._name}"
+
+    def __set_name__(self, owner: type[_T], name: str) -> None:
+        # https://docs.python.org/3/howto/descriptor.html#customized-names
+        self._name_owner: str = owner.__name__
+        self._name: str = name
+
+    def __get__(
+        self, instance: _T | Literal["raise"] | None, owner: type[_T] | None = None, /
+    ) -> Any:
+        if instance is None:
+            # NOTE: Branch for `cls._name`
+            # We can check that to see if an instance of `type(self)` for
+            # https://narwhals-dev.github.io/narwhals/api-completeness/expr/
+            return self
+        # NOTE: Prefer not exposing the actual class we're defining in
+        # `_implementation` may not be available everywhere
+        who = getattr(instance, "_implementation", self._name_owner)
+        raise _not_implemented_error(self._name, who)
+
+    def __call__(self, *args: Any, **kwds: Any) -> Any:
+        # NOTE: Purely to duck-type as assignable to **any** instance method
+        # Wouldn't be reachable through *regular* attribute access
+        return self.__get__("raise")
+
+
+def _not_implemented_error(what: str, who: str, /) -> NotImplementedError:
+    msg = (
+        f"{what!r} is not implemented for: {who!r}.\n\n"
+        "If you would like to see this functionality in `narwhals`, "
+        "please open an issue at: https://github.com/narwhals-dev/narwhals/issues"
+    )
+    return NotImplementedError(msg)
