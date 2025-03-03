@@ -12,8 +12,6 @@ from narwhals._dask.expr_str import DaskExprStringNamespace
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import maybe_evaluate_expr
 from narwhals._dask.utils import narwhals_to_native_dtype
-from narwhals._expression_parsing import ExprKind
-from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
@@ -22,6 +20,8 @@ from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
+    from narwhals._expression_parsing import ExprKind
+
     try:
         import dask.dataframe.dask_expr as dx
     except ModuleNotFoundError:
@@ -542,34 +542,9 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
             def func(df: DaskLazyFrame) -> Sequence[dx.Series]:
                 return self(df.sort(*order_by, descending=False, nulls_last=False))
         else:
-
-            def func(df: DaskLazyFrame) -> Sequence[dx.Series]:
-                output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
-                if overlap := set(output_names).intersection(partition_by):
-                    # E.g. `df.select(nw.all().sum().over('a'))`. This is well-defined,
-                    # we just don't support it yet.
-                    msg = (
-                        f"Column names {overlap} appear in both expression output names and in `over` keys.\n"
-                        "This is not yet supported."
-                    )
-                    raise NotImplementedError(msg)
-                if df._native_frame.npartitions == 1:  # pragma: no cover
-                    tmp = df.group_by(*partition_by, drop_null_keys=False).agg(self)
-                    tmp_native = (
-                        df.simple_select(*partition_by)
-                        .join(
-                            tmp,
-                            how="left",
-                            left_on=partition_by,
-                            right_on=partition_by,
-                            suffix="_right",
-                        )
-                        ._native_frame
-                    )
-                    return [tmp_native[name] for name in aliases]
-                # https://github.com/dask/dask/issues/6659
-                msg = "`Expr.over` is not supported for Dask backend with multiple partitions."
-                raise NotImplementedError(msg)
+            # https://github.com/dask/dask/issues/6659
+            msg = "`Expr.over` with `partition_by` is not supported for Dask backend."
+            raise NotImplementedError(msg)
 
         return self.__class__(
             func,
