@@ -1456,7 +1456,7 @@ def not_implemented(
 
 
 # TODO @dangotbanned: Can this type nicely for `@property`?
-# If not, can it provide improved instrospection? vs (https://github.com/narwhals-dev/narwhals/pull/2119#discussion_r1976484198)
+# If not, can it provide improved introspection? vs (https://github.com/narwhals-dev/narwhals/pull/2119#discussion_r1976484198)
 class not_implemented_alt:  # noqa: N801
     """Descriptor version of `not_implemented`.
 
