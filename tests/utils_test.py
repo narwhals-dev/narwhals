@@ -382,3 +382,9 @@ def test_not_implemented_alt() -> None:
 
     assert isinstance(DummyExpr.unique, not_implemented_alt)
     assert repr(DummyExpr.unique) == "<not_implemented_alt>: DummyExpr.unique"
+
+    pattern = re.compile(
+        r".+unique.+ not implemented.+DummyExpr", flags=re.DOTALL | re.IGNORECASE
+    )
+    with pytest.raises(NotImplementedError, match=pattern):
+        DummyExpr.unique()
