@@ -30,8 +30,6 @@ data_cum = {
 
 
 def test_over_single(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "dask_lazy_p2" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
@@ -50,8 +48,6 @@ def test_over_single(request: pytest.FixtureRequest, constructor: Constructor) -
 
 
 def test_over_multiple(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "dask_lazy_p2" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
@@ -229,8 +225,6 @@ def test_over_anonymous_reduction(
     context = (
         pytest.raises(NotImplementedError)
         if df.implementation.is_pyarrow()
-        or df.implementation.is_pandas_like()
-        or df.implementation.is_dask()
         else does_not_raise()
     )
     with context:
