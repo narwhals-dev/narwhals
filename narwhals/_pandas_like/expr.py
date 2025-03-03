@@ -469,7 +469,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 pandas_function_name = AGGREGATIONS_TO_PANDAS_EQUIVALENT[function_name]
             except KeyError:
                 msg = (
-                    f"Unsupported function: {function_name} in `over` context.\n\n."
+                    f"Unsupported function: {function_name} in `over` context.\n\n"
                     f"Supported functions are {', '.join(WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT)}\n"
                     f"and {', '.join(AGGREGATIONS_TO_PANDAS_EQUIVALENT)}."
                 )
