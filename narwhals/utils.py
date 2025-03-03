@@ -1498,6 +1498,12 @@ class not_implemented_alt:  # noqa: N801
         # Wouldn't be reachable through *regular* attribute access
         return self.__get__("raise")
 
+    # NOTE: Don't like this
+    # Trying to workaround `mypy` requiring `@property` everywhere
+    def alias(self, name: str, /) -> Self:
+        self._name = name
+        return self
+
 
 def _not_implemented_error(what: str, who: str, /) -> NotImplementedError:
     msg = (

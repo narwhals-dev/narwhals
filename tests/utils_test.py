@@ -367,8 +367,15 @@ def test_not_implemented_alt() -> None:
         def alias(self, name: str) -> str: ...
         def unique(self) -> Self: ...
 
+        # NOTE property option (1)
         str: _SupportsGet
         dt: _SupportsGet
+
+        # NOTE property option (2)
+        @property
+        def cat(self) -> Any: ...
+        @property
+        def list(self) -> Any: ...
 
     class DummyExpr(DummyCompliant):
         def __init__(self) -> None:
@@ -387,6 +394,19 @@ def test_not_implemented_alt() -> None:
             return PolarsExprStringNamespace(pl_expr)
 
         dt = not_implemented_alt()
+
+        # NOTE: Typing is happy w/ double property
+        @property
+        def cat(self) -> PolarsExprStringNamespace:
+            pl_expr = cast("PolarsExpr", self)
+            return PolarsExprStringNamespace(pl_expr)
+
+        # NOTE: Typing still happy - but it complicates runtime (API completeness) access
+        _list = not_implemented_alt().alias("list")
+
+        @property
+        def list(self) -> Any:
+            return self._list
 
     expr = DummyExpr()
     # NOTE: Happy path
