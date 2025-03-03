@@ -164,6 +164,8 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
                 version=self._version,
             )
 
+    _iter_columns = iter_columns
+
     def iter_rows(
         self: Self, *, named: bool, buffer_size: int
     ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:

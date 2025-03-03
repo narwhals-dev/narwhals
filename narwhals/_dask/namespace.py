@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import operator
+from functools import partial
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Container
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
@@ -23,7 +25,10 @@ from narwhals._dask.utils import validate_comparand
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.typing import CompliantNamespace
+from narwhals.utils import Implementation
+from narwhals.utils import exclude_column_names
 from narwhals.utils import get_column_names
+from narwhals.utils import passthrough_column_names
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -38,6 +43,8 @@ if TYPE_CHECKING:
 
 
 class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):  # pyright: ignore[reportInvalidTypeArguments] (#2044)
+    _implementation: Implementation = Implementation.DASK
+
     @property
     def selectors(self: Self) -> DaskSelectorNamespace:
         return DaskSelectorNamespace(self)
@@ -49,22 +56,27 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):  # pyright:
         self._version = version
 
     def all(self: Self) -> DaskExpr:
-        def func(df: DaskLazyFrame) -> list[dx.Series]:
-            return [df._native_frame[column_name] for column_name in df.columns]
-
-        return DaskExpr(
-            func,
-            depth=0,
+        return DaskExpr.from_column_names(
+            get_column_names,
             function_name="all",
-            evaluate_output_names=get_column_names,
-            alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
         )
 
     def col(self: Self, *column_names: str) -> DaskExpr:
         return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
+            passthrough_column_names(column_names),
+            function_name="col",
+            backend_version=self._backend_version,
+            version=self._version,
+        )
+
+    def exclude(self: Self, excluded_names: Container[str]) -> DaskExpr:
+        return DaskExpr.from_column_names(
+            partial(exclude_column_names, names=excluded_names),
+            function_name="exclude",
+            backend_version=self._backend_version,
+            version=self._version,
         )
 
     def nth(self: Self, *column_indices: int) -> DaskExpr:

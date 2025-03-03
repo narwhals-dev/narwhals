@@ -438,6 +438,9 @@ class PolarsLazyFrame:
 
         return func
 
+    def _iter_columns(self) -> Iterator[PolarsSeries]:  # pragma: no cover
+        yield from self.collect(self._implementation).iter_columns()
+
     @property
     def columns(self: Self) -> list[str]:
         return self._native_frame.columns

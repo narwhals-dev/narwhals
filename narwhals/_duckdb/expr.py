@@ -79,17 +79,20 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
     @classmethod
     def from_column_names(
         cls: type[Self],
-        *column_names: str,
+        evaluate_column_names: Callable[[DuckDBLazyFrame], Sequence[str]],
+        /,
+        *,
+        function_name: str,
         backend_version: tuple[int, ...],
         version: Version,
     ) -> Self:
-        def func(_: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            return [ColumnExpression(col_name) for col_name in column_names]
+        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+            return [ColumnExpression(col_name) for col_name in evaluate_column_names(df)]
 
         return cls(
             func,
-            function_name="col",
-            evaluate_output_names=lambda _df: column_names,
+            function_name=function_name,
+            evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
             backend_version=backend_version,
             version=version,
@@ -445,7 +448,9 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
             lambda _input: FunctionExpression("round", _input, lit(decimals)), "round"
         )
 
-    def fill_null(self: Self, value: Any, strategy: Any, limit: int | None) -> Self:
+    def fill_null(
+        self: Self, value: Self | Any, strategy: Any, limit: int | None
+    ) -> Self:
         if strategy is not None:
             msg = "todo"
             raise NotImplementedError(msg)

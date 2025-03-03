@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import operator
+from functools import partial
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Container
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
@@ -26,8 +28,10 @@ from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.typing import CompliantNamespace
 from narwhals.utils import Implementation
+from narwhals.utils import exclude_column_names
 from narwhals.utils import get_column_names
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import passthrough_column_names
 
 if TYPE_CHECKING:
     from typing import Callable
@@ -117,7 +121,18 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
         from narwhals._arrow.expr import ArrowExpr
 
         return ArrowExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
+            passthrough_column_names(column_names),
+            function_name="col",
+            backend_version=self._backend_version,
+            version=self._version,
+        )
+
+    def exclude(self: Self, excluded_names: Container[str]) -> ArrowExpr:
+        return ArrowExpr.from_column_names(
+            partial(exclude_column_names, names=excluded_names),
+            function_name="exclude",
+            backend_version=self._backend_version,
+            version=self._version,
         )
 
     def nth(self: Self, *column_indices: int) -> ArrowExpr:
@@ -147,23 +162,9 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
         )
 
     def all(self: Self) -> ArrowExpr:
-        from narwhals._arrow.expr import ArrowExpr
-        from narwhals._arrow.series import ArrowSeries
-
-        return ArrowExpr(
-            lambda df: [
-                ArrowSeries(
-                    df._native_frame[column_name],
-                    name=column_name,
-                    backend_version=df._backend_version,
-                    version=df._version,
-                )
-                for column_name in df.columns
-            ],
-            depth=0,
+        return ArrowExpr.from_column_names(
+            get_column_names,
             function_name="all",
-            evaluate_output_names=get_column_names,
-            alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
         )

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 
@@ -84,6 +85,10 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         return DuckDBInterchangeSeries(
             self._native_frame.select(item), version=self._version
         )
+
+    def _iter_columns(self) -> Iterator[duckdb.Expression]:
+        for col in self.columns:
+            yield ColumnExpression(col)
 
     def collect(
         self: Self,

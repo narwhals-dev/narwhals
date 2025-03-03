@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import operator
+from functools import partial
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Container
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
@@ -22,8 +24,10 @@ from narwhals._pandas_like.utils import extract_dataframe_comparand
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import vertical_concat
 from narwhals.typing import CompliantNamespace
+from narwhals.utils import exclude_column_names
 from narwhals.utils import get_column_names
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import passthrough_column_names
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -109,7 +113,17 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeDataFrame, PandasLikeSeri
     # --- selection ---
     def col(self: Self, *column_names: str) -> PandasLikeExpr:
         return PandasLikeExpr.from_column_names(
-            *column_names,
+            passthrough_column_names(column_names),
+            function_name="col",
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+            version=self._version,
+        )
+
+    def exclude(self: Self, excluded_names: Container[str]) -> PandasLikeExpr:
+        return PandasLikeExpr.from_column_names(
+            partial(exclude_column_names, names=excluded_names),
+            function_name="exclude",
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
@@ -124,20 +138,9 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeDataFrame, PandasLikeSeri
         )
 
     def all(self: Self) -> PandasLikeExpr:
-        return PandasLikeExpr(
-            lambda df: [
-                PandasLikeSeries(
-                    df._native_frame[column_name],
-                    implementation=self._implementation,
-                    backend_version=self._backend_version,
-                    version=self._version,
-                )
-                for column_name in df.columns
-            ],
-            depth=0,
+        return PandasLikeExpr.from_column_names(
+            get_column_names,
             function_name="all",
-            evaluate_output_names=get_column_names,
-            alias_output_names=None,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
