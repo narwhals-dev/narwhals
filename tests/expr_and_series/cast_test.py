@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from datetime import datetime
+from datetime import time
 from datetime import timedelta
 from datetime import timezone
 from typing import Any
 
+import duckdb
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -285,3 +288,22 @@ def test_raise_if_polars_dtype(constructor: Constructor, dtype: Any) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
     with pytest.raises(TypeError, match="Expected Narwhals dtype, got:"):
         df.select(nw.col("a").cast(dtype))
+
+
+def test_cast_time() -> None:
+    df = pl.DataFrame({"a": [time(12, 0, 0), time(12, 0, 5)]}, schema={"a": pl.Time})
+    pa_array_32 = pa.array([time(12, 0, 0), time(12, 0, 5)], type=pa.time32("s"))
+    pa_array_64 = pa.array([time(12, 0, 0), time(12, 0, 5)], type=pa.time64("ns"))
+    pa_table = pa.table({"b": pa_array_32, "c": pa_array_64})
+
+    result = nw.from_native(df).schema
+    assert result["a"] == nw.Time
+    result = nw.from_native(pa_table).schema
+    assert result["b"] == nw.Time
+    assert result["c"] == nw.Time
+    rel = duckdb.sql("""
+        select *
+        from df
+                     """)
+    result = nw.from_native(rel).schema
+    assert result["a"] == nw.Time

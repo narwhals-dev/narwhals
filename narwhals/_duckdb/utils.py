@@ -110,6 +110,8 @@ def native_to_narwhals_dtype(duckdb_dtype: str, version: Version) -> DType:
         )
     if duckdb_dtype.startswith("DECIMAL("):
         return dtypes.Decimal()
+    if duckdb_dtype == "TIME":
+        return dtypes.Time()
     return dtypes.Unknown()  # pragma: no cover
 
 
@@ -146,6 +148,8 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
         return "VARCHAR"
     if isinstance_or_issubclass(dtype, dtypes.Boolean):  # pragma: no cover
         return "BOOLEAN"
+    if isinstance_or_issubclass(dtype, dtypes.Time):
+        return "TIME"
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
         msg = "Categorical not supported by DuckDB"
         raise NotImplementedError(msg)
