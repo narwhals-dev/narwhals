@@ -331,6 +331,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
 
     def cum_sum(self: Self, *, reverse: bool) -> Self:
         if reverse:  # pragma: no cover
+            # https://github.com/dask/dask/issues/11802
             msg = "`cum_sum(reverse=True)` is not supported with Dask backend"
             raise NotImplementedError(msg)
 
@@ -534,38 +535,41 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
         order_by: Sequence[str] | None,
     ) -> Self:
         if not partition_by:
-            msg = "`over` without `partition_by` is not yet supported for Dask."
-            raise NotImplementedError(msg)
+            assert order_by is not None  # help type checkers  # noqa: S101
 
-        def func(df: DaskLazyFrame) -> Sequence[dx.Series]:
-            output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
-            if overlap := set(output_names).intersection(partition_by):
-                # E.g. `df.select(nw.all().sum().over('a'))`. This is well-defined,
-                # we just don't support it yet.
-                msg = (
-                    f"Column names {overlap} appear in both expression output names and in `over` keys.\n"
-                    "This is not yet supported."
-                )
-                raise NotImplementedError(msg)
-            if df._native_frame.npartitions == 1:  # pragma: no cover
-                tmp = df.group_by(*partition_by, drop_null_keys=False).agg(self)
-                tmp_native = (
-                    df.simple_select(*partition_by)
-                    .join(
-                        tmp,
-                        how="left",
-                        left_on=partition_by,
-                        right_on=partition_by,
-                        suffix="_right",
+            # This is something like `nw.col('a').cum_sum().order_by(key)`
+            # which we can always easily support, as it doesn't require grouping.
+            def func(df: DaskLazyFrame) -> Sequence[dx.Series]:
+                return self(df.sort(*order_by, descending=False, nulls_last=False))
+        else:
+
+            def func(df: DaskLazyFrame) -> Sequence[dx.Series]:
+                output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
+                if overlap := set(output_names).intersection(partition_by):
+                    # E.g. `df.select(nw.all().sum().over('a'))`. This is well-defined,
+                    # we just don't support it yet.
+                    msg = (
+                        f"Column names {overlap} appear in both expression output names and in `over` keys.\n"
+                        "This is not yet supported."
                     )
-                    ._native_frame
-                )
-                return [tmp_native[name] for name in aliases]
-            # https://github.com/dask/dask/issues/6659
-            msg = (
-                "`Expr.over` is not supported for Dask backend with multiple partitions."
-            )
-            raise NotImplementedError(msg)
+                    raise NotImplementedError(msg)
+                if df._native_frame.npartitions == 1:  # pragma: no cover
+                    tmp = df.group_by(*partition_by, drop_null_keys=False).agg(self)
+                    tmp_native = (
+                        df.simple_select(*partition_by)
+                        .join(
+                            tmp,
+                            how="left",
+                            left_on=partition_by,
+                            right_on=partition_by,
+                            suffix="_right",
+                        )
+                        ._native_frame
+                    )
+                    return [tmp_native[name] for name in aliases]
+                # https://github.com/dask/dask/issues/6659
+                msg = "`Expr.over` is not supported for Dask backend with multiple partitions."
+                raise NotImplementedError(msg)
 
         return self.__class__(
             func,
