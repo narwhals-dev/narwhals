@@ -3,6 +3,7 @@ from __future__ import annotations
 import operator
 from functools import partial
 from functools import reduce
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -193,7 +194,7 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
 
     def all_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            series = (s for _expr in exprs for s in _expr(df))
+            series = chain.from_iterable(expr(df) for expr in exprs)
             return [reduce(operator.and_, align_series_full_broadcast(*series))]
 
         return self._create_expr_from_callable(
@@ -206,7 +207,7 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
 
     def any_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            series = (s for _expr in exprs for s in _expr(df))
+            series = chain.from_iterable(expr(df) for expr in exprs)
             return [reduce(operator.or_, align_series_full_broadcast(*series))]
 
         return self._create_expr_from_callable(
@@ -219,11 +220,8 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
 
     def sum_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            series = [
-                s.fill_null(0, strategy=None, limit=None)
-                for _expr in exprs
-                for s in _expr(df)
-            ]
+            it = chain.from_iterable(expr(df) for expr in exprs)
+            series = (s.fill_null(0, strategy=None, limit=None) for s in it)
             return [reduce(operator.add, align_series_full_broadcast(*series))]
 
         return self._create_expr_from_callable(
@@ -238,7 +236,7 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
         dtypes = import_dtypes_module(self._version)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            expr_results = [s for _expr in exprs for s in _expr(df)]
+            expr_results = list(chain.from_iterable(expr(df) for expr in exprs))
             series = align_series_full_broadcast(
                 *(s.fill_null(0, strategy=None, limit=None) for s in expr_results)
             )
@@ -257,7 +255,7 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
 
     def min_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            init_series, *series = [s for _expr in exprs for s in _expr(df)]
+            init_series, *series = list(chain.from_iterable(expr(df) for expr in exprs))
             init_series, *series = align_series_full_broadcast(init_series, *series)
             # NOTE: Stubs copy the wrong signature https://github.com/zen-xu/pyarrow-stubs/blob/d97063876720e6a5edda7eb15f4efe07c31b8296/pyarrow-stubs/compute.pyi#L963
             min_element_wise: Incomplete = pc.min_element_wise
@@ -285,7 +283,7 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
 
     def max_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            init_series, *series = [s for _expr in exprs for s in _expr(df)]
+            init_series, *series = list(chain.from_iterable(expr(df) for expr in exprs))
             init_series, *series = align_series_full_broadcast(init_series, *series)
             # NOTE: stubs are missing `ChunkedArray` support
             # https://github.com/zen-xu/pyarrow-stubs/blob/d97063876720e6a5edda7eb15f4efe07c31b8296/pyarrow-stubs/compute.pyi#L948-L954
@@ -357,7 +355,7 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             compliant_series_list = align_series_full_broadcast(
-                *(s for _expr in exprs for s in _expr.cast(dtypes.String())(df))
+                *(chain.from_iterable(expr.cast(dtypes.String())(df) for expr in exprs))
             )
             null_handling: Literal["skip", "emit_null"] = (
                 "skip" if ignore_nulls else "emit_null"

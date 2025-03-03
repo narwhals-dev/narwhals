@@ -77,11 +77,7 @@ def evaluate_into_exprs(
     *exprs: CompliantExpr[CompliantFrameT, CompliantSeriesT_co],
 ) -> list[CompliantSeriesT_co]:
     """Evaluate each expr into Series."""
-    return [
-        item
-        for sublist in (evaluate_into_expr(df, into_expr) for into_expr in exprs)
-        for item in sublist
-    ]
+    return list(chain.from_iterable(evaluate_into_expr(df, expr) for expr in exprs))
 
 
 @overload
