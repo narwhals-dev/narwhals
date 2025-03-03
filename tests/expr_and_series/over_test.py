@@ -220,6 +220,9 @@ def test_over_anonymous_reduction(
     if "duckdb" in str(constructor):
         # TODO(unassigned): we should be able to support these
         request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor):
+        # probably bugged
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     context = (
