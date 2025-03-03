@@ -250,7 +250,7 @@ def is_elementary_expression(expr: CompliantExpr[Any, Any]) -> bool:
 
         - nw.col('a').filter(nw.col('b')>nw.col('c')).max()
 
-    Elementary ones are the only ones supported properly in
+    Elementary expressions are the only ones supported properly in
     pandas, PyArrow, and Dask.
     """
     return expr._depth < 2
