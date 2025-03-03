@@ -27,6 +27,7 @@ from narwhals.typing import CompliantNamespace
 from narwhals.utils import exclude_column_names
 from narwhals.utils import get_column_names
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import passthrough_column_names
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -111,11 +112,8 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeDataFrame, PandasLikeSeri
 
     # --- selection ---
     def col(self: Self, *column_names: str) -> PandasLikeExpr:
-        def evaluate_column_names(_: PandasLikeDataFrame) -> Sequence[str]:
-            return column_names
-
         return PandasLikeExpr.from_column_names(
-            evaluate_column_names=evaluate_column_names,
+            evaluate_column_names=passthrough_column_names(column_names),
             function_name="col",
             implementation=self._implementation,
             backend_version=self._backend_version,

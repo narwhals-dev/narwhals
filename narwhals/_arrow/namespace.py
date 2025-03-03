@@ -31,6 +31,7 @@ from narwhals.utils import Implementation
 from narwhals.utils import exclude_column_names
 from narwhals.utils import get_column_names
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import passthrough_column_names
 
 if TYPE_CHECKING:
     from typing import Callable
@@ -119,11 +120,8 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
     def col(self: Self, *column_names: str) -> ArrowExpr:
         from narwhals._arrow.expr import ArrowExpr
 
-        def evaluate_column_names(_: ArrowDataFrame) -> Sequence[str]:
-            return column_names
-
         return ArrowExpr.from_column_names(
-            evaluate_column_names=evaluate_column_names,
+            evaluate_column_names=passthrough_column_names(column_names),
             function_name="col",
             backend_version=self._backend_version,
             version=self._version,

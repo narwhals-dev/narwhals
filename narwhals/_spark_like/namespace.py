@@ -22,6 +22,7 @@ from narwhals._spark_like.utils import narwhals_to_native_dtype
 from narwhals.typing import CompliantNamespace
 from narwhals.utils import exclude_column_names
 from narwhals.utils import get_column_names
+from narwhals.utils import passthrough_column_names
 
 if TYPE_CHECKING:
     from pyspark.sql import Column
@@ -59,11 +60,8 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):  #
         )
 
     def col(self: Self, *column_names: str) -> SparkLikeExpr:
-        def evaluate_column_names(_: SparkLikeLazyFrame) -> Sequence[str]:
-            return column_names
-
         return SparkLikeExpr.from_column_names(
-            evaluate_column_names=evaluate_column_names,
+            evaluate_column_names=passthrough_column_names(column_names),
             function_name="col",
             implementation=self._implementation,
             backend_version=self._backend_version,

@@ -27,6 +27,7 @@ from narwhals.typing import CompliantNamespace
 from narwhals.utils import Implementation
 from narwhals.utils import exclude_column_names
 from narwhals.utils import get_column_names
+from narwhals.utils import passthrough_column_names
 
 if TYPE_CHECKING:
     import duckdb
@@ -230,11 +231,8 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "duckdb.Expression"]
         )
 
     def col(self: Self, *column_names: str) -> DuckDBExpr:
-        def evaluate_column_names(_: DuckDBLazyFrame) -> Sequence[str]:
-            return column_names
-
         return DuckDBExpr.from_column_names(
-            evaluate_column_names=evaluate_column_names,
+            evaluate_column_names=passthrough_column_names(column_names),
             function_name="col",
             backend_version=self._backend_version,
             version=self._version,

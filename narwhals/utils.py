@@ -9,6 +9,7 @@ from inspect import getattr_static
 from secrets import token_hex
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Container
 from typing import Iterable
 from typing import Literal
@@ -1359,6 +1360,13 @@ def get_column_names(frame: _StoresColumns, /) -> Sequence[str]:
 
 def exclude_column_names(frame: _StoresColumns, names: Container[str]) -> Sequence[str]:
     return [col_name for col_name in frame.columns if col_name not in names]
+
+
+def passthrough_column_names(names: Sequence[str], /) -> Callable[[Any], Sequence[str]]:
+    def fn(_frame: Any, /) -> Sequence[str]:
+        return names
+
+    return fn
 
 
 def _hasattr_static(obj: Any, attr: str) -> bool:
