@@ -264,6 +264,8 @@ def test_over_diff(
 ) -> None:
     if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
+    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 1):
+        pytest.skip(reason="bug in old version")
 
     df = nw.from_native(constructor_eager(data))
     expected = {
