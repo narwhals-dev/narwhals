@@ -88,6 +88,8 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
     def from_column_names(
         cls: type[Self],
         evaluate_column_names: Callable[[ArrowDataFrame], Sequence[str]],
+        /,
+        *,
         function_name: str,
         backend_version: tuple[int, ...],
         version: Version,

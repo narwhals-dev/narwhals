@@ -53,7 +53,7 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "duckdb.Expression"]
 
     def all(self: Self) -> DuckDBExpr:
         return DuckDBExpr.from_column_names(
-            evaluate_column_names=get_column_names,
+            get_column_names,
             function_name="all",
             backend_version=self._backend_version,
             version=self._version,
@@ -232,16 +232,15 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "duckdb.Expression"]
 
     def col(self: Self, *column_names: str) -> DuckDBExpr:
         return DuckDBExpr.from_column_names(
-            evaluate_column_names=passthrough_column_names(column_names),
+            passthrough_column_names(column_names),
             function_name="col",
             backend_version=self._backend_version,
             version=self._version,
         )
 
     def exclude(self: Self, excluded_names: Container[str]) -> DuckDBExpr:
-        evaluate_column_names = partial(exclude_column_names, names=excluded_names)
         return DuckDBExpr.from_column_names(
-            evaluate_column_names=evaluate_column_names,
+            partial(exclude_column_names, names=excluded_names),
             function_name="exclude",
             backend_version=self._backend_version,
             version=self._version,

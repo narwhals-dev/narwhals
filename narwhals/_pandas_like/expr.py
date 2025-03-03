@@ -116,6 +116,8 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
     def from_column_names(
         cls: type[Self],
         evaluate_column_names: Callable[[PandasLikeDataFrame], Sequence[str]],
+        /,
+        *,
         function_name: str,
         implementation: Implementation,
         backend_version: tuple[int, ...],

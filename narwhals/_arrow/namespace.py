@@ -121,16 +121,15 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
         from narwhals._arrow.expr import ArrowExpr
 
         return ArrowExpr.from_column_names(
-            evaluate_column_names=passthrough_column_names(column_names),
+            passthrough_column_names(column_names),
             function_name="col",
             backend_version=self._backend_version,
             version=self._version,
         )
 
     def exclude(self: Self, excluded_names: Container[str]) -> ArrowExpr:
-        evaluate_column_names = partial(exclude_column_names, names=excluded_names)
         return ArrowExpr.from_column_names(
-            evaluate_column_names=evaluate_column_names,
+            partial(exclude_column_names, names=excluded_names),
             function_name="exclude",
             backend_version=self._backend_version,
             version=self._version,
@@ -164,7 +163,7 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
 
     def all(self: Self) -> ArrowExpr:
         return ArrowExpr.from_column_names(
-            evaluate_column_names=get_column_names,
+            get_column_names,
             function_name="all",
             backend_version=self._backend_version,
             version=self._version,

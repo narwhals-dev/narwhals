@@ -132,6 +132,8 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
     def from_column_names(
         cls: type[Self],
         evaluate_column_names: Callable[[SparkLikeLazyFrame], Sequence[str]],
+        /,
+        *,
         function_name: str,
         implementation: Implementation,
         backend_version: tuple[int, ...],

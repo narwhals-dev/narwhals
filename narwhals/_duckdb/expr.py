@@ -80,6 +80,8 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
     def from_column_names(
         cls: type[Self],
         evaluate_column_names: Callable[[DuckDBLazyFrame], Sequence[str]],
+        /,
+        *,
         function_name: str,
         backend_version: tuple[int, ...],
         version: Version,

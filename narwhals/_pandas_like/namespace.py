@@ -113,7 +113,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeDataFrame, PandasLikeSeri
     # --- selection ---
     def col(self: Self, *column_names: str) -> PandasLikeExpr:
         return PandasLikeExpr.from_column_names(
-            evaluate_column_names=passthrough_column_names(column_names),
+            passthrough_column_names(column_names),
             function_name="col",
             implementation=self._implementation,
             backend_version=self._backend_version,
@@ -121,9 +121,8 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeDataFrame, PandasLikeSeri
         )
 
     def exclude(self: Self, excluded_names: Container[str]) -> PandasLikeExpr:
-        evaluate_column_names = partial(exclude_column_names, names=excluded_names)
         return PandasLikeExpr.from_column_names(
-            evaluate_column_names=evaluate_column_names,
+            partial(exclude_column_names, names=excluded_names),
             function_name="exclude",
             implementation=self._implementation,
             backend_version=self._backend_version,
@@ -140,7 +139,7 @@ class PandasLikeNamespace(CompliantNamespace[PandasLikeDataFrame, PandasLikeSeri
 
     def all(self: Self) -> PandasLikeExpr:
         return PandasLikeExpr.from_column_names(
-            evaluate_column_names=get_column_names,
+            get_column_names,
             function_name="all",
             implementation=self._implementation,
             backend_version=self._backend_version,

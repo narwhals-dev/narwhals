@@ -91,6 +91,8 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
     def from_column_names(
         cls: type[Self],
         evaluate_column_names: Callable[[DaskLazyFrame], Sequence[str]],
+        /,
+        *,
         function_name: str,
         backend_version: tuple[int, ...],
         version: Version,

@@ -52,7 +52,7 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):  #
 
     def all(self: Self) -> SparkLikeExpr:
         return SparkLikeExpr.from_column_names(
-            evaluate_column_names=get_column_names,
+            get_column_names,
             function_name="all",
             implementation=self._implementation,
             backend_version=self._backend_version,
@@ -61,7 +61,7 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):  #
 
     def col(self: Self, *column_names: str) -> SparkLikeExpr:
         return SparkLikeExpr.from_column_names(
-            evaluate_column_names=passthrough_column_names(column_names),
+            passthrough_column_names(column_names),
             function_name="col",
             implementation=self._implementation,
             backend_version=self._backend_version,
@@ -69,9 +69,8 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):  #
         )
 
     def exclude(self: Self, excluded_names: Container[str]) -> SparkLikeExpr:
-        evaluate_column_names = partial(exclude_column_names, names=excluded_names)
         return SparkLikeExpr.from_column_names(
-            evaluate_column_names=evaluate_column_names,
+            partial(exclude_column_names, names=excluded_names),
             function_name="exclude",
             implementation=self._implementation,
             backend_version=self._backend_version,
