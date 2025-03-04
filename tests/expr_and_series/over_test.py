@@ -50,6 +50,9 @@ def test_over_single(request: pytest.FixtureRequest, constructor: Constructor) -
 def test_over_std_var(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor):
+        # https://github.com/rapidsai/cudf/issues/18159
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
     expected = {
@@ -109,6 +112,9 @@ def test_over_cumsum(
         request.applymarker(pytest.mark.xfail)
     if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1):
         request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor_eager):
+        # https://github.com/rapidsai/cudf/issues/18159
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data_cum))
     expected = {
@@ -131,6 +137,9 @@ def test_over_cumcount(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
     if "pyarrow_table" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor_eager):
+        # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data_cum))
@@ -157,6 +166,9 @@ def test_over_cummax(
         request.applymarker(pytest.mark.xfail)
     if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1):
         request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor_eager):
+        # https://github.com/rapidsai/cudf/issues/18159
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor_eager(data_cum))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
@@ -179,6 +191,9 @@ def test_over_cummin(
     if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
     if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1):
+        request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor_eager):
+        # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data_cum))
@@ -205,6 +220,9 @@ def test_over_cumprod(
         request.applymarker(pytest.mark.xfail)
     if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1):
         request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor_eager):
+        # https://github.com/rapidsai/cudf/issues/18159
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data_cum))
     expected = {
@@ -223,7 +241,12 @@ def test_over_cumprod(
     assert_equal_data(result, expected)
 
 
-def test_over_anonymous_cumulative(constructor_eager: ConstructorEager) -> None:
+def test_over_anonymous_cumulative(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if "cudf" in str(constructor_eager):
+        # https://github.com/rapidsai/cudf/issues/18159
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}))
     context = (
         pytest.raises(NotImplementedError)
@@ -299,6 +322,9 @@ def test_over_shift(
 ) -> None:
     if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor_eager):
+        # https://github.com/rapidsai/cudf/issues/18159
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data))
     expected = {
@@ -318,6 +344,9 @@ def test_over_diff(
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 1):
         pytest.skip(reason="bug in old version")
+    if "cudf" in str(constructor_eager):
+        # https://github.com/rapidsai/cudf/issues/18159
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data))
     expected = {
@@ -350,6 +379,9 @@ def test_over_cum_reverse(
         request.applymarker(pytest.mark.xfail)
     if "pandas_nullable" in str(constructor_eager) and attr in {"cum_max", "cum_min"}:
         # https://github.com/pandas-dev/pandas/issues/61031
+        request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor_eager):
+        # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
     df = constructor_eager(
         {
