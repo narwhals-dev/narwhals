@@ -579,6 +579,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
 
                 with warnings.catch_warnings():
+                    # https://github.com/dask/dask/issues/11804
                     warnings.filterwarnings(
                         "ignore",
                         message=".*`meta` is not specified",
