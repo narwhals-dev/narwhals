@@ -30,8 +30,6 @@ data_cum = {
 
 
 def test_over_single(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "dask_lazy_p2" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
@@ -49,9 +47,41 @@ def test_over_single(request: pytest.FixtureRequest, constructor: Constructor) -
     assert_equal_data(result, expected)
 
 
-def test_over_multiple(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "dask_lazy_p2" in str(constructor):
+def test_over_std_var(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor(data))
+    expected = {
+        "a": ["a", "a", "b", "b", "b"],
+        "b": [1, 2, 3, 5, 3],
+        "c": [5, 4, 3, 2, 1],
+        "c_std0": [0.5, 0.5, 0.816496580927726, 0.816496580927726, 0.816496580927726],
+        "c_std1": [0.7071067811865476, 0.7071067811865476, 1.0, 1.0, 1.0],
+        "c_var0": [
+            0.25,
+            0.25,
+            0.6666666666666666,
+            0.6666666666666666,
+            0.6666666666666666,
+        ],
+        "c_var1": [0.5, 0.5, 1.0, 1.0, 1.0],
+    }
+
+    result = (
+        df.with_columns(
+            c_std0=nw.col("c").std(ddof=0).over("a"),
+            c_std1=nw.col("c").std(ddof=1).over("a"),
+            c_var0=nw.col("c").var(ddof=0).over("a"),
+            c_var1=nw.col("c").var(ddof=1).over("a"),
+        )
+        .sort("i")
+        .drop("i")
+    )
+    assert_equal_data(result, expected)
+
+
+def test_over_multiple(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
@@ -224,13 +254,14 @@ def test_over_anonymous_reduction(
     if "duckdb" in str(constructor):
         # TODO(unassigned): we should be able to support these
         request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor):
+        # probably bugged
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     context = (
         pytest.raises(NotImplementedError)
         if df.implementation.is_pyarrow()
-        or df.implementation.is_pandas_like()
-        or df.implementation.is_dask()
         else does_not_raise()
     )
     with context:
@@ -246,6 +277,21 @@ def test_over_anonymous_reduction(
             "b_sum": [9, 9, 6],
         }
         assert_equal_data(result, expected)
+
+
+def test_over_unsupported() -> None:
+    dfpd = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
+    with pytest.raises(NotImplementedError):
+        nw.from_native(dfpd).select(nw.col("a").round().over("a"))
+
+
+def test_over_unsupported_dask() -> None:
+    pytest.importorskip("dask")
+    import dask.dataframe as dd
+
+    df = dd.from_pandas(pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    with pytest.raises(NotImplementedError):
+        nw.from_native(df).select(nw.col("a").round().over("a"))
 
 
 def test_over_shift(
@@ -270,6 +316,8 @@ def test_over_diff(
 ) -> None:
     if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
+    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 1):
+        pytest.skip(reason="bug in old version")
 
     df = nw.from_native(constructor_eager(data))
     expected = {
@@ -282,14 +330,37 @@ def test_over_diff(
     assert_equal_data(result, expected)
 
 
-def test_over_cum_reverse() -> None:
-    df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
-
-    with pytest.raises(
-        NotImplementedError,
-        match=r"Cumulative operation with `reverse=True` is not supported",
-    ):
-        nw.from_native(df).select(nw.col("b").cum_max(reverse=True).over("a"))
+@pytest.mark.parametrize(
+    ("attr", "expected_b"),
+    [
+        ("cum_max", [5, 5, 9, None, 9]),
+        ("cum_min", [4, 5, 7, None, 9]),
+        ("cum_sum", [9, 5, 16, None, 9]),
+        ("cum_count", [2, 1, 2, 1, 1]),
+        ("cum_prod", [20, 5, 63, None, 9]),
+    ],
+)
+def test_over_cum_reverse(
+    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest,
+    attr: str,
+    expected_b: list[object],
+) -> None:
+    if "pyarrow_table" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
+    if "pandas_nullable" in str(constructor_eager) and attr in {"cum_max", "cum_min"}:
+        # https://github.com/pandas-dev/pandas/issues/61031
+        request.applymarker(pytest.mark.xfail)
+    df = constructor_eager(
+        {
+            "a": [1, 1, 2, 2, 2],
+            "b": [4, 5, 7, None, 9],
+        }
+    )
+    expr = getattr(nw.col("b"), attr)(reverse=True)
+    result = nw.from_native(df).with_columns(expr.over("a"))
+    expected = {"a": [1, 1, 2, 2, 2], "b": expected_b}
+    assert_equal_data(result, expected)
 
 
 def test_over_raise_len_change(constructor: Constructor) -> None:

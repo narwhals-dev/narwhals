@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.28.0"
+version = "1.29.0"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
@@ -237,7 +237,8 @@ exclude_also = [
   'request.applymarker\(pytest.mark.xfail',
   'backend_version <',
   'if "cudf" in str\(constructor',
-  'if "pyspark" in str\(constructor'
+  'if "pyspark" in str\(constructor',
+  'pytest.skip\('
 ]
 
 [tool.mypy]

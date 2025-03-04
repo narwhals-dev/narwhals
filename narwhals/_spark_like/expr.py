@@ -132,18 +132,21 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
     @classmethod
     def from_column_names(
         cls: type[Self],
-        *column_names: str,
+        evaluate_column_names: Callable[[SparkLikeLazyFrame], Sequence[str]],
+        /,
+        *,
+        function_name: str,
+        implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
-        implementation: Implementation,
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            return [df._F.col(col_name) for col_name in column_names]
+            return [df._F.col(col_name) for col_name in evaluate_column_names(df)]
 
         return cls(
             func,
-            function_name="col",
-            evaluate_output_names=lambda _df: column_names,
+            function_name=function_name,
+            evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
             backend_version=backend_version,
             version=version,
@@ -382,7 +385,13 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
 
         from narwhals._spark_like.utils import _std
 
-        func = partial(_std, ddof=ddof, np_version=parse_version(np), functions=self._F)
+        func = partial(
+            _std,
+            ddof=ddof,
+            np_version=parse_version(np),
+            functions=self._F,
+            implementation=self._implementation,
+        )
 
         return self._from_call(func, "std")
 
@@ -393,7 +402,13 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
 
         from narwhals._spark_like.utils import _var
 
-        func = partial(_var, ddof=ddof, np_version=parse_version(np), functions=self._F)
+        func = partial(
+            _var,
+            ddof=ddof,
+            np_version=parse_version(np),
+            functions=self._F,
+            implementation=self._implementation,
+        )
 
         return self._from_call(func, "var")
 
