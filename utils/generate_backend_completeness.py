@@ -91,7 +91,9 @@ def parse_module(module_name: str, backend: str, nw_class_name: str) -> list[str
 
 
 def render_table_and_write_to_output(
-    results: list[pl.DataFrame], title: str, output_filename: str
+    results: list[pl.DataFrame],  # pyright: ignore[reportRedeclaration]
+    title: str,
+    output_filename: str,
 ) -> None:
     results: pl.DataFrame = (
         pl.concat(results)
@@ -125,7 +127,7 @@ def render_table_and_write_to_output(
     with (DESTINATION_PATH / f"{output_filename}.md").open(mode="w") as destination:
         destination.write(new_content)
 
-    return table
+    return table  # pyright: ignore[reportReturnType]
 
 
 def get_backend_completeness_table() -> None:
