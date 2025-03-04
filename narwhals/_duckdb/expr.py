@@ -500,7 +500,6 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
     rolling_var = not_implemented()
     rolling_std = not_implemented()
     gather_every = not_implemented()
-
     drop_nulls = not_implemented()
     diff = not_implemented()
     unique = not_implemented()
