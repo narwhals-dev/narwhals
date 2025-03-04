@@ -11,6 +11,7 @@ from narwhals._arrow.expr_dt import ArrowExprDateTimeNamespace
 from narwhals._arrow.expr_list import ArrowExprListNamespace
 from narwhals._arrow.expr_name import ArrowExprNameNamespace
 from narwhals._arrow.expr_str import ArrowExprStringNamespace
+from narwhals._arrow.expr_struct import ArrowExprStructNamespace
 from narwhals._arrow.series import ArrowSeries
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
@@ -595,3 +596,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
     @property
     def list(self: Self) -> ArrowExprListNamespace:
         return ArrowExprListNamespace(self)
+
+    @property
+    def struct(self: Self) -> ArrowExprStructNamespace:
+        return ArrowExprStructNamespace(self)

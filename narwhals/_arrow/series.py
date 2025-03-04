@@ -16,6 +16,7 @@ from narwhals._arrow.series_cat import ArrowSeriesCatNamespace
 from narwhals._arrow.series_dt import ArrowSeriesDateTimeNamespace
 from narwhals._arrow.series_list import ArrowSeriesListNamespace
 from narwhals._arrow.series_str import ArrowSeriesStringNamespace
+from narwhals._arrow.series_struct import ArrowSeriesStructNamespace
 from narwhals._arrow.utils import cast_for_truediv
 from narwhals._arrow.utils import chunked_array
 from narwhals._arrow.utils import extract_native
@@ -1232,3 +1233,7 @@ class ArrowSeries(CompliantSeries):
     @property
     def list(self: Self) -> ArrowSeriesListNamespace:
         return ArrowSeriesListNamespace(self)
+
+    @property
+    def struct(self: Self) -> ArrowSeriesStructNamespace:
+        return ArrowSeriesStructNamespace(self)
