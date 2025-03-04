@@ -494,7 +494,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 else df._native_frame
             )
 
-            res_native = native_frame.groupby(partition_by)[list(output_names)].transform(
+            res_native = native_frame.groupby(partition_by).transform(
                 pandas_function_name, **pandas_kwargs
             )
             result_frame = df._from_native_frame(
