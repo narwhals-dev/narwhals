@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+import warnings
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -12,6 +14,9 @@ from narwhals._dask.expr_str import DaskExprStringNamespace
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import maybe_evaluate_expr
 from narwhals._dask.utils import narwhals_to_native_dtype
+from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals._expression_parsing import is_elementary_expression
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
@@ -90,15 +95,23 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
     @classmethod
     def from_column_names(
         cls: type[Self],
-        *column_names: str,
+        evaluate_column_names: Callable[[DaskLazyFrame], Sequence[str]],
+        /,
+        *,
+        function_name: str,
         backend_version: tuple[int, ...],
         version: Version,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             try:
-                return [df._native_frame[column_name] for column_name in column_names]
+                return [
+                    df._native_frame[column_name]
+                    for column_name in evaluate_column_names(df)
+                ]
             except KeyError as e:
-                missing_columns = [x for x in column_names if x not in df.columns]
+                missing_columns = [
+                    x for x in evaluate_column_names(df) if x not in df.columns
+                ]
                 raise ColumnNotFoundError.from_missing_and_available_column_names(
                     missing_columns=missing_columns,
                     available_columns=df.columns,
@@ -107,8 +120,8 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
         return cls(
             func,
             depth=0,
-            function_name="col",
-            evaluate_output_names=lambda _df: column_names,
+            function_name=function_name,
+            evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
             backend_version=backend_version,
             version=version,
@@ -534,6 +547,16 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
         kind: ExprKind,
         order_by: Sequence[str] | None,
     ) -> Self:
+        # pandas is a required dependency of dask so it's safe to import this
+        from narwhals._pandas_like.group_by import AGGREGATIONS_TO_PANDAS_EQUIVALENT
+
+        if not is_elementary_expression(self):  # pragma: no cover
+            msg = (
+                "Only elementary expressions are supported for `.over` in dask.\n\n"
+                "Please see: "
+                "https://narwhals-dev.github.io/narwhals/pandas_like_concepts/improve_group_by_operation/"
+            )
+            raise NotImplementedError(msg)
         if not partition_by:
             assert order_by is not None  # help type checkers  # noqa: S101
 
@@ -542,9 +565,32 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
             def func(df: DaskLazyFrame) -> Sequence[dx.Series]:
                 return self(df.sort(*order_by, descending=False, nulls_last=False))
         else:
-            # https://github.com/dask/dask/issues/6659
-            msg = "`Expr.over` with `partition_by` is not supported for Dask backend."
-            raise NotImplementedError(msg)
+            function_name = re.sub(r"(\w+->)", "", self._function_name)
+            try:
+                dask_function_name = AGGREGATIONS_TO_PANDAS_EQUIVALENT[function_name]
+            except KeyError:
+                msg = (
+                    f"Unsupported function: {function_name} in `over` context.\n\n."
+                    f"Supported functions are {', '.join(AGGREGATIONS_TO_PANDAS_EQUIVALENT)}\n"
+                )
+                raise NotImplementedError(msg) from None
+
+            def func(df: DaskLazyFrame) -> Sequence[dx.Series]:
+                output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
+
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                        "ignore",
+                        message=".*`meta` is not specified",
+                        category=UserWarning,
+                    )
+                    res_native = df._native_frame.groupby(partition_by)[
+                        list(output_names)
+                    ].transform(dask_function_name, **self._call_kwargs)
+                result_frame = df._from_native_frame(
+                    res_native.rename(columns=dict(zip(output_names, aliases)))
+                )._native_frame
+                return [result_frame[name] for name in aliases]
 
         return self.__class__(
             func,
@@ -554,7 +600,6 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            call_kwargs=self._call_kwargs,
         )
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
