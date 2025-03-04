@@ -112,6 +112,9 @@ def test_over_cumsum(
         request.applymarker(pytest.mark.xfail)
     if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1):
         request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor_eager):
+        # https://github.com/rapidsai/cudf/issues/18159
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data_cum))
     expected = {
