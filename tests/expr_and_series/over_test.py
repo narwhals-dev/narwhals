@@ -319,13 +319,7 @@ def test_over_cum_reverse(
         request.applymarker(pytest.mark.xfail)
     df = constructor_eager(
         {
-            "a": [
-                1,
-                1,
-                2,
-                2,
-                2,
-            ],
+            "a": [1, 1, 2, 2, 2],
             "b": [4, 5, 7, None, 9],
         }
     )
