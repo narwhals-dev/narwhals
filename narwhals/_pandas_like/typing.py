@@ -41,3 +41,7 @@ if TYPE_CHECKING:
         shift: ReadOnly[Literal["shift"]]
         rank: ReadOnly[Literal["rank"]]
         diff: ReadOnly[Literal["diff"]]
+
+    WindowFunctionName: TypeAlias = Literal[
+        "cum_sum", "cum_min", "cum_max", "cum_prod", "cum_count", "shift", "rank", "diff"
+    ]

@@ -26,13 +26,21 @@ from narwhals.typing import CompliantExpr
 
 if TYPE_CHECKING:
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals._pandas_like.typing import WindowFunctionName
     from narwhals._pandas_like.typing import WindowFunctionsToPandasEquivalent
     from narwhals.dtypes import DType
     from narwhals.utils import Implementation
     from narwhals.utils import Version
+
+
+_PandasKey: TypeAlias = Literal[
+    "periods", "method", "ascending", "na_option", "pct", "skipna"
+]
+_KwargsKey: TypeAlias = Literal["n", "method", "descending", "reverse"]
 
 WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT: WindowFunctionsToPandasEquivalent = {
     "cum_sum": "cumsum",
@@ -50,14 +58,14 @@ WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT: WindowFunctionsToPandasEquivalent = {
 
 
 def window_kwargs_to_pandas_equivalent(
-    function_name: str, kwargs: dict[str, object]
-) -> dict[str, object]:
+    function_name: WindowFunctionName, kwargs: dict[_KwargsKey, Any]
+) -> dict[_PandasKey, Any]:
     unsupported_reverse_msg = (
         "Cumulative operation with `reverse=True` is not supported in "
         "over context for pandas-like backend."
     )
     if function_name == "shift":
-        pandas_kwargs: dict[str, object] = {"periods": kwargs["n"]}
+        pandas_kwargs: dict[_PandasKey, Any] = {"periods": kwargs["n"]}
     elif function_name == "rank":
         _method = kwargs["method"]
         pandas_kwargs = {
@@ -467,27 +475,28 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 "https://narwhals-dev.github.io/narwhals/pandas_like_concepts/improve_group_by_operation/"
             )
             raise NotImplementedError(msg)
-        function_name = re.sub(r"(\w+->)", "", self._function_name)
-        try:
-            pandas_function_name = WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT[function_name]
-        except KeyError:
-            try:
-                pandas_function_name = AGGREGATIONS_TO_PANDAS_EQUIVALENT[function_name]
-            except KeyError:
-                msg = (
-                    f"Unsupported function: {function_name} in `over` context.\n\n"
-                    f"Supported functions are {', '.join(WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT)}\n"
-                    f"and {', '.join(AGGREGATIONS_TO_PANDAS_EQUIVALENT)}."
-                )
-                raise NotImplementedError(msg) from None
+        function_name: Any = re.sub(r"(\w+->)", "", self._function_name)
+        if pandas_function_name := WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT.get(
+            function_name, AGGREGATIONS_TO_PANDAS_EQUIVALENT.get(function_name, None)
+        ):
+            window_function_name: WindowFunctionName = function_name
+        else:
+            msg = (
+                f"Unsupported function: {function_name} in `over` context.\n\n"
+                f"Supported functions are {', '.join(WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT)}\n"
+                f"and {', '.join(AGGREGATIONS_TO_PANDAS_EQUIVALENT)}."
+            )
+            raise NotImplementedError(msg)
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
             pandas_kwargs = window_kwargs_to_pandas_equivalent(
-                function_name, self._call_kwargs
+                window_function_name,
+                # TODO @dangotbanned: Probably want to validate these earlier?
+                self._call_kwargs,  # type: ignore[arg-type]
             )
 
-            if function_name == "cum_count":
+            if window_function_name == "cum_count":
                 plx = self.__narwhals_namespace__()
                 df = df.with_columns(~plx.col(*output_names).is_null())
 
