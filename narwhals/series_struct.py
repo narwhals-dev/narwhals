@@ -17,26 +17,27 @@ class SeriesStructNamespace(Generic[SeriesT]):
     def __init__(self: Self, series: SeriesT) -> None:
         self._narwhals_series = series
 
-    def field(self: Self, *names: str) -> SeriesT:
-        r"""Return the length of each string as the number of characters.
+    def field(self: Self, name: str) -> SeriesT:
+        r"""Retrieve a Struct field as a new expression.
+
+        Arguments:
+            name: Name of the struct field to retrieve.
 
         Returns:
-            A new Series containing the length of each string in characters.
+            A new Series.
 
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> s_native = pl.Series(["foo", "345", None])
+            >>> s_native = pl.Series(
+            ...     [
+            ...         {"id": "0", "name": "john"},
+            ...         {"id": "1", "name": "jane"},
+            ...     ]
+            ... )
             >>> s = nw.from_native(s_native, series_only=True)
-            >>> s.str.len_chars().to_native()  # doctest: +NORMALIZE_WHITESPACE
-            shape: (3,)
-            Series: '' [u32]
-            [
-                    3
-                    3
-                    null
-            ]
+            >>> s.struct.field("name").to_native()
         """
         return self._narwhals_series._from_compliant_series(
-            self._narwhals_series._compliant_series.struct.field(*names)
+            self._narwhals_series._compliant_series.struct.field(name)
         )

@@ -17,7 +17,14 @@ def test_get_field(
     if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data))
-    result = nw.from_native(df).select(nw.col("user").struct.field("id", "name"))
+    df_native = constructor(data)
+    df = nw.from_native(df_native)
+    result = nw.from_native(df).select(
+        nw.col("user").struct.field("id"),
+        nw.col("user").struct.field("name"),
+    )
+
+    if "pandas" in str(constructor):
+        _df = result.to_native()
 
     assert_equal_data(result, expected)

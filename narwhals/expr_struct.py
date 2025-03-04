@@ -16,11 +16,11 @@ class ExprStructNamespace(Generic[ExprT]):
     def __init__(self: Self, expr: ExprT) -> None:
         self._expr = expr
 
-    def field(self: Self, *names: str) -> ExprT:
-        r"""Retrieve one or multiple Struct field as a new expression.
+    def field(self: Self, name: str) -> ExprT:
+        r"""Retrieve a Struct field as a new expression.
 
         Arguments:
-            names: Name of the struct field to retrieve.
+            name: Name of the struct field to retrieve.
 
         Returns:
             A new expression.
@@ -31,8 +31,8 @@ class ExprStructNamespace(Generic[ExprT]):
             >>> df_native = pl.DataFrame(
             ...     {
             ...         "user": [
-            ...             {"id": 0, "name": "john"},
-            ...             {"id": 1, "name": "jane"},
+            ...             {"id": "0", "name": "john"},
+            ...             {"id": "1", "name": "jane"},
             ...         ]
             ...     }
             ... )
@@ -40,6 +40,6 @@ class ExprStructNamespace(Generic[ExprT]):
             >>> df.with_columns(name=nw.col("user").struct.field("name"))
         """
         return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).struct.field(*names),
+            lambda plx: self._expr._to_compliant_expr(plx).struct.field(name),
             self._expr._metadata,
         )
