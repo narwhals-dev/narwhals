@@ -213,6 +213,8 @@ def test_pandas_fixed_offset_1302() -> None:
             series_only=True,
         ).dtype
         assert result == nw.Datetime("ns", "+01:00")
+    else:  # pragma: no cover
+        pass
 
 
 def test_huge_int() -> None:
@@ -222,6 +224,9 @@ def test_huge_int() -> None:
     if POLARS_VERSION >= (1, 18):
         result = nw.from_native(df.select(pl.col("a").cast(pl.Int128))).schema
         assert result["a"] == nw.Int128
+    else:  # pragma: no cover
+        # Int128 was not available yet
+        pass
 
     rel = duckdb.sql("""
         select cast(a as int128) as a
