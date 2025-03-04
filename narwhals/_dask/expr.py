@@ -569,6 +569,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
             try:
                 dask_function_name = AGGREGATIONS_TO_PANDAS_EQUIVALENT[function_name]
             except KeyError:
+                # window functions are unsupported: https://github.com/dask/dask/issues/11806
                 msg = (
                     f"Unsupported function: {function_name} in `over` context.\n\n."
                     f"Supported functions are {', '.join(AGGREGATIONS_TO_PANDAS_EQUIVALENT)}\n"

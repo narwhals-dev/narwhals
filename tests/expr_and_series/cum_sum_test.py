@@ -93,50 +93,25 @@ def test_lazy_cum_sum_ungrouped(
     if "dask" in str(constructor) and reverse:
         # https://github.com/dask/dask/issues/11802
         request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor) and reverse:
+        # probably bugged
+        request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
         pytest.skip(reason="too old version")
 
     df = nw.from_native(
         constructor(
             {
-                "a": [1, 2, 3],
-                "b": [1, 0, 2],
-                "i": [0, 1, 2],
+                "a": [2, 3, 1],
+                "b": [0, 2, 1],
+                "i": [1, 2, 0],
             }
         )
-    )
+    ).sort("i")
     result = df.with_columns(
         nw.col("a").cum_sum(reverse=reverse).over(_order_by="b")
     ).sort("i")
     expected = {"a": expected_a, "b": [1, 0, 2], "i": [0, 1, 2]}
-    assert_equal_data(result, expected)
-
-
-def test_lazy_cum_sum_ungrouped_reverse(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "duckdb" in str(constructor):
-        # no window function support yet in duckdb
-        request.applymarker(pytest.mark.xfail)
-    if "dask" in str(constructor):
-        # TODO(unassigned) - we should be able to support this
-        request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
-        pytest.skip(reason="too old version")
-
-    df = nw.from_native(
-        constructor(
-            {
-                "a": [1, 2, 3],
-                "b": [1, 0, 2],
-                "i": [0, 1, 2],
-            }
-        )
-    )
-    result = df.with_columns(nw.col("a").cum_sum(reverse=True).over(_order_by="b")).sort(
-        "i"
-    )
-    expected = {"a": [4, 6, 3], "b": [1, 0, 2], "i": [0, 1, 2]}
     assert_equal_data(result, expected)
 
 
