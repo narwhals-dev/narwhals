@@ -385,7 +385,13 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
 
         from narwhals._spark_like.utils import _std
 
-        func = partial(_std, ddof=ddof, np_version=parse_version(np), functions=self._F)
+        func = partial(
+            _std,
+            ddof=ddof,
+            np_version=parse_version(np),
+            functions=self._F,
+            implementation=self._implementation,
+        )
 
         return self._from_call(func, "std")
 
@@ -396,7 +402,13 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
 
         from narwhals._spark_like.utils import _var
 
-        func = partial(_var, ddof=ddof, np_version=parse_version(np), functions=self._F)
+        func = partial(
+            _var,
+            ddof=ddof,
+            np_version=parse_version(np),
+            functions=self._F,
+            implementation=self._implementation,
+        )
 
         return self._from_call(func, "var")
 

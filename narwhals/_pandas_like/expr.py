@@ -64,8 +64,8 @@ def window_kwargs_to_pandas_equivalent(
         }
     elif function_name.startswith("cum_"):  # Cumulative operation
         pandas_kwargs = {"skipna": True}
-    else:
-        pandas_kwargs = {}
+    else:  # e.g. std, var
+        pandas_kwargs = kwargs
     return pandas_kwargs
 
 
