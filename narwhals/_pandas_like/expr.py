@@ -29,11 +29,12 @@ if TYPE_CHECKING:
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals._pandas_like.typing import WindowFunctionsToPandasEquivalent
     from narwhals.dtypes import DType
     from narwhals.utils import Implementation
     from narwhals.utils import Version
 
-WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
+WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT: WindowFunctionsToPandasEquivalent = {
     "cum_sum": "cumsum",
     "cum_min": "cummin",
     "cum_max": "cummax",

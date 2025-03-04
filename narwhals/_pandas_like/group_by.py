@@ -21,8 +21,9 @@ if TYPE_CHECKING:
 
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
+    from narwhals._pandas_like.typing import AggregationsToPandasEquivalent
 
-AGGREGATIONS_TO_PANDAS_EQUIVALENT = {
+AGGREGATIONS_TO_PANDAS_EQUIVALENT: AggregationsToPandasEquivalent = {
     "sum": "sum",
     "mean": "mean",
     "median": "median",
