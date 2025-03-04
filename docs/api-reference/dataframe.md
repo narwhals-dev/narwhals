@@ -23,6 +23,7 @@
         - is_empty
         - is_unique
         - item
+        - iter_columns
         - iter_rows
         - join
         - join_asof

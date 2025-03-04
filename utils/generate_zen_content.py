@@ -23,5 +23,5 @@ import narwhals.this
 ```
 """
 
-with DESTINATION_PATH.open(mode="w") as destination:
+with DESTINATION_PATH.open(mode="w", encoding="utf-8", newline="\n") as destination:
     destination.write(content)

@@ -10,9 +10,9 @@ from typing import Sequence
 
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
+from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import extract_compliant
-from narwhals._expression_parsing import operation_is_order_dependent
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.expr_cat import ExprCatNamespace
@@ -20,6 +20,7 @@ from narwhals.expr_dt import ExprDateTimeNamespace
 from narwhals.expr_list import ExprListNamespace
 from narwhals.expr_name import ExprNameNamespace
 from narwhals.expr_str import ExprStringNamespace
+from narwhals.translate import to_native
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import flatten
 from narwhals.utils import issue_deprecation_warning
@@ -33,7 +34,6 @@ if TYPE_CHECKING:
 
     from narwhals.dtypes import DType
     from narwhals.typing import CompliantExpr
-    from narwhals.typing import CompliantNamespace
     from narwhals.typing import IntoExpr
 
     PS = ParamSpec("PS")
@@ -50,6 +50,10 @@ class Expr:
         self._to_compliant_expr = to_compliant_expr
         self._metadata = metadata
 
+    def _from_callable(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
+        # Instantiate new Expr keeping metadata unchanged.
+        return self.__class__(to_compliant_expr, self._metadata)
+
     def __repr__(self: Self) -> str:
         return f"Narwhals Expr\nmetadata: {self._metadata}\n"
 
@@ -58,10 +62,7 @@ class Expr:
         # It's not intended to be used.
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).abs().sum(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     # --- convert ---
@@ -88,9 +89,7 @@ class Expr:
             |      1  15       |
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).alias(name), self._metadata
-        )
+        return self._from_callable(lambda plx: self._to_compliant_expr(plx).alias(name))
 
     def pipe(
         self: Self,
@@ -151,226 +150,204 @@ class Expr:
             └──────────────────┘
         """
         _validate_dtype(dtype)
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).cast(dtype), self._metadata
-        )
+        return self._from_callable(lambda plx: self._to_compliant_expr(plx).cast(dtype))
 
     # --- binary ---
     def __eq__(self: Self, other: Self | Any) -> Self:  # type: ignore[override]
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__eq__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x == y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __ne__(self: Self, other: Self | Any) -> Self:  # type: ignore[override]
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__ne__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x != y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __and__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__and__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x & y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __rand__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__and__(extract_compliant(plx, self, strings_are_column_names=False))
-
-        return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
-        )
+        return (self & other).alias("literal")  # type: ignore[no-any-return]
 
     def __or__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__or__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x | y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __ror__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__or__(extract_compliant(plx, self, strings_are_column_names=False))
-
-        return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
-        )
+        return (self | other).alias("literal")  # type: ignore[no-any-return]
 
     def __add__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__add__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x + y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __radd__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__add__(extract_compliant(plx, self, strings_are_column_names=False))
-
-        return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
-        )
+        return (self + other).alias("literal")  # type: ignore[no-any-return]
 
     def __sub__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__sub__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x - y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __rsub__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__sub__(extract_compliant(plx, self, strings_are_column_names=False))
-
         return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx,
+                lambda x, y: x.__rsub__(y),
+                self,
+                other,
+                str_as_lit=True,
+            ),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __truediv__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__truediv__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x / y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __rtruediv__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__truediv__(extract_compliant(plx, self, strings_are_column_names=False))
-
         return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx,
+                lambda x, y: x.__rtruediv__(y),
+                self,
+                other,
+                str_as_lit=True,
+            ),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __mul__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__mul__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x * y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __rmul__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__mul__(extract_compliant(plx, self, strings_are_column_names=False))
-
-        return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
-        )
+        return (self * other).alias("literal")  # type: ignore[no-any-return]
 
     def __le__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__le__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x <= y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __lt__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__lt__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x < y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __gt__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__gt__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x > y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __ge__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__ge__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x >= y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __pow__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__pow__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x**y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __rpow__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__pow__(extract_compliant(plx, self, strings_are_column_names=False))
-
         return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx,
+                lambda x, y: x.__rpow__(y),
+                self,
+                other,
+                str_as_lit=True,
+            ),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __floordiv__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__floordiv__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x // y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __rfloordiv__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__floordiv__(extract_compliant(plx, self, strings_are_column_names=False))
-
         return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx,
+                lambda x, y: x.__rfloordiv__(y),
+                self,
+                other,
+                str_as_lit=True,
+            ),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __mod__(self: Self, other: Any) -> Self:
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__mod__(
-                extract_compliant(plx, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx, lambda x, y: x % y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, strings_are_column_names=False),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     def __rmod__(self: Self, other: Any) -> Self:
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            return plx.lit(
-                extract_compliant(plx, other, strings_are_column_names=False), dtype=None
-            ).__mod__(extract_compliant(plx, self, strings_are_column_names=False))
-
         return self.__class__(
-            func, combine_metadata(self, other, strings_are_column_names=False)
+            lambda plx: apply_n_ary_operation(
+                plx,
+                lambda x, y: x.__rmod__(y),
+                self,
+                other,
+                str_as_lit=True,
+            ),
+            combine_metadata(self, other, str_as_lit=True),
         )
 
     # --- unary ---
     def __invert__(self: Self) -> Self:
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).__invert__(), self._metadata
-        )
+        return self._from_callable(lambda plx: self._to_compliant_expr(plx).__invert__())
 
     def any(self: Self) -> Self:
         """Return whether any of the values in the column are `True`.
@@ -393,10 +370,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).any(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def all(self: Self) -> Self:
@@ -420,10 +394,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).all(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def ewm_mean(
@@ -516,7 +487,7 @@ class Expr:
             │ 2.428571 │
             └──────────┘
         """
-        return self.__class__(
+        return self._from_callable(
             lambda plx: self._to_compliant_expr(plx).ewm_mean(
                 com=com,
                 span=span,
@@ -525,8 +496,7 @@ class Expr:
                 adjust=adjust,
                 min_samples=min_samples,
                 ignore_nulls=ignore_nulls,
-            ),
-            self._metadata,
+            )
         )
 
     def mean(self: Self) -> Self:
@@ -550,10 +520,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).mean(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def median(self: Self) -> Self:
@@ -580,10 +547,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).median(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def std(self: Self, *, ddof: int = 1) -> Self:
@@ -611,10 +575,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).std(ddof=ddof),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def var(self: Self, *, ddof: int = 1) -> Self:
@@ -642,10 +603,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).var(ddof=ddof),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def map_batches(
@@ -692,7 +650,7 @@ class Expr:
                 function=function, return_dtype=return_dtype
             ),
             # safest assumptions
-            ExprMetadata(kind=ExprKind.CHANGES_LENGTH, is_order_dependent=True),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
         )
 
     def skew(self: Self) -> Self:
@@ -716,10 +674,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).skew(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def sum(self: Self) -> Expr:
@@ -747,10 +702,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).sum(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def min(self: Self) -> Self:
@@ -774,10 +726,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).min(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def max(self: Self) -> Self:
@@ -801,10 +750,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).max(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def arg_min(self: Self) -> Self:
@@ -828,7 +774,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_min(),
-            ExprMetadata(kind=ExprKind.AGGREGATION, is_order_dependent=True),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.AGGREGATION),
         )
 
     def arg_max(self: Self) -> Self:
@@ -852,7 +798,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_max(),
-            ExprMetadata(kind=ExprKind.AGGREGATION, is_order_dependent=True),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.AGGREGATION),
         )
 
     def count(self: Self) -> Self:
@@ -876,10 +822,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).count(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def n_unique(self: Self) -> Self:
@@ -903,10 +846,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).n_unique(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def unique(self: Self) -> Self:
@@ -930,10 +870,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).unique(),
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            self._metadata.with_kind(ExprKind.FILTRATION),
         )
 
     def abs(self: Self) -> Self:
@@ -956,9 +893,7 @@ class Expr:
             |1 -2  4      2      4|
             └─────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).abs(), self._metadata
-        )
+        return self._from_callable(lambda plx: self._to_compliant_expr(plx).abs())
 
     def cum_sum(self: Self, *, reverse: bool = False) -> Self:
         """Return cumulative sum.
@@ -988,7 +923,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_sum(reverse=reverse),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def diff(self: Self) -> Self:
@@ -1031,7 +966,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).diff(),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def shift(self: Self, n: int) -> Self:
@@ -1077,7 +1012,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).shift(n),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def replace_strict(
@@ -1133,11 +1068,10 @@ class Expr:
             new = list(old.values())
             old = list(old.keys())
 
-        return self.__class__(
+        return self._from_callable(
             lambda plx: self._to_compliant_expr(plx).replace_strict(
                 old, new, return_dtype=return_dtype
-            ),
-            self._metadata,
+            )
         )
 
     def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
@@ -1163,12 +1097,12 @@ class Expr:
             "Note: this will remain available in `narwhals.stable.v1`.\n"
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
-        issue_deprecation_warning(msg, _version="1.22.0")
+        issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             ),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            self._metadata.with_extra_open_window(),
         )
 
     # --- transform ---
@@ -1206,24 +1140,24 @@ class Expr:
             └──────────────────┘
         """
 
-        def func(plx: CompliantNamespace[Any]) -> CompliantExpr[Any]:
-            lb = extract_compliant(plx, lower_bound, strings_are_column_names=True)
-            ub = extract_compliant(plx, upper_bound, strings_are_column_names=True)
-            expr = self._to_compliant_expr(plx)
+        def func(
+            compliant_expr: CompliantExpr[Any, Any],
+            lb: CompliantExpr[Any, Any],
+            ub: CompliantExpr[Any, Any],
+        ) -> CompliantExpr[Any, Any]:
             if closed == "left":
-                return (expr >= lb) & (expr < ub)  # type: ignore[no-any-return]
+                return (compliant_expr >= lb) & (compliant_expr < ub)
             elif closed == "right":
-                return (expr > lb) & (expr <= ub)  # type: ignore[no-any-return]
+                return (compliant_expr > lb) & (compliant_expr <= ub)
             elif closed == "none":
-                return (expr > lb) & (expr < ub)  # type: ignore[no-any-return]
-            return (expr >= lb) & (expr <= ub)  # type: ignore[no-any-return]
+                return (compliant_expr > lb) & (compliant_expr < ub)
+            return (compliant_expr >= lb) & (compliant_expr <= ub)
 
-        is_order_dependent = operation_is_order_dependent(self, lower_bound, upper_bound)
         return self.__class__(
-            func,
-            ExprMetadata(
-                kind=self._metadata["kind"], is_order_dependent=is_order_dependent
+            lambda plx: apply_n_ary_operation(
+                plx, func, self, lower_bound, upper_bound, str_as_lit=False
             ),
+            combine_metadata(self, lower_bound, upper_bound, str_as_lit=False),
         )
 
     def is_in(self: Self, other: Any) -> Self:
@@ -1252,11 +1186,10 @@ class Expr:
             └──────────────────┘
         """
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
-            return self.__class__(
+            return self._from_callable(
                 lambda plx: self._to_compliant_expr(plx).is_in(
-                    extract_compliant(plx, other, strings_are_column_names=False)
+                    to_native(other, pass_through=True)
                 ),
-                self._metadata,
             )
         else:
             msg = "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
@@ -1292,16 +1225,16 @@ class Expr:
             └──────────────────┘
         """
         flat_predicates = flatten(predicates)
-        is_order_dependent = operation_is_order_dependent(*flat_predicates)
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).filter(
-                *[
-                    extract_compliant(plx, pred, strings_are_column_names=True)
-                    for pred in flat_predicates
-                ],
+            lambda plx: apply_n_ary_operation(
+                plx,
+                lambda *exprs: exprs[0].filter(*exprs[1:]),
+                self,
+                *flat_predicates,
+                str_as_lit=False,
             ),
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH, is_order_dependent=is_order_dependent
+            combine_metadata(self, *flat_predicates, str_as_lit=False).with_kind(
+                ExprKind.FILTRATION
             ),
         )
 
@@ -1338,9 +1271,7 @@ class Expr:
             |└───────┴────────┴───────────┴───────────┘|
             └──────────────────────────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).is_null(), self._metadata
-        )
+        return self._from_callable(lambda plx: self._to_compliant_expr(plx).is_null())
 
     def is_nan(self: Self) -> Self:
         """Indicate which values are NaN.
@@ -1375,9 +1306,7 @@ class Expr:
             |└───────┴────────┴──────────┴──────────┘|
             └────────────────────────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).is_nan(), self._metadata
-        )
+        return self._from_callable(lambda plx: self._to_compliant_expr(plx).is_nan())
 
     def arg_true(self: Self) -> Self:
         """Find elements where boolean expression is True.
@@ -1393,19 +1322,19 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_true(),
-            ExprMetadata(kind=ExprKind.CHANGES_LENGTH, is_order_dependent=True),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
         )
 
     def fill_null(
         self: Self,
-        value: Any | None = None,
+        value: Expr | Any | None = None,
         strategy: Literal["forward", "backward"] | None = None,
         limit: int | None = None,
     ) -> Self:
         """Fill null values with given value.
 
         Arguments:
-            value: Value used to fill null values.
+            value: Value or expression used to fill null values.
             strategy: Strategy used to fill null values.
             limit: Number of consecutive null values to fill when using the 'forward' or 'backward' strategy.
 
@@ -1424,34 +1353,37 @@ class Expr:
             ...     {
             ...         "a": [2, None, None, 3],
             ...         "b": [2.0, float("nan"), float("nan"), 3.0],
+            ...         "c": [1, 2, 3, 4],
             ...     }
             ... )
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(
-            ...     nw.col("a", "b").fill_null(0).name.suffix("_nulls_filled")
+            ...     nw.col("a", "b").fill_null(0).name.suffix("_filled"),
+            ...     nw.col("a").fill_null(nw.col("c")).name.suffix("_filled_with_c"),
             ... )
-            ┌────────────────────────────────────────────────┐
-            |               Narwhals DataFrame               |
-            |------------------------------------------------|
-            |shape: (4, 4)                                   |
-            |┌──────┬─────┬────────────────┬────────────────┐|
-            |│ a    ┆ b   ┆ a_nulls_filled ┆ b_nulls_filled │|
-            |│ ---  ┆ --- ┆ ---            ┆ ---            │|
-            |│ i64  ┆ f64 ┆ i64            ┆ f64            │|
-            |╞══════╪═════╪════════════════╪════════════════╡|
-            |│ 2    ┆ 2.0 ┆ 2              ┆ 2.0            │|
-            |│ null ┆ NaN ┆ 0              ┆ NaN            │|
-            |│ null ┆ NaN ┆ 0              ┆ NaN            │|
-            |│ 3    ┆ 3.0 ┆ 3              ┆ 3.0            │|
-            |└──────┴─────┴────────────────┴────────────────┘|
-            └────────────────────────────────────────────────┘
+            ┌────────────────────────────────────────────────────────────┐
+            |                     Narwhals DataFrame                     |
+            |------------------------------------------------------------|
+            |shape: (4, 6)                                               |
+            |┌──────┬─────┬─────┬──────────┬──────────┬─────────────────┐|
+            |│ a    ┆ b   ┆ c   ┆ a_filled ┆ b_filled ┆ a_filled_with_c │|
+            |│ ---  ┆ --- ┆ --- ┆ ---      ┆ ---      ┆ ---             │|
+            |│ i64  ┆ f64 ┆ i64 ┆ i64      ┆ f64      ┆ i64             │|
+            |╞══════╪═════╪═════╪══════════╪══════════╪═════════════════╡|
+            |│ 2    ┆ 2.0 ┆ 1   ┆ 2        ┆ 2.0      ┆ 2               │|
+            |│ null ┆ NaN ┆ 2   ┆ 0        ┆ NaN      ┆ 2               │|
+            |│ null ┆ NaN ┆ 3   ┆ 0        ┆ NaN      ┆ 3               │|
+            |│ 3    ┆ 3.0 ┆ 4   ┆ 3        ┆ 3.0      ┆ 3               │|
+            |└──────┴─────┴─────┴──────────┴──────────┴─────────────────┘|
+            └────────────────────────────────────────────────────────────┘
 
             Using a strategy:
 
-            >>> df.with_columns(
+            >>> df.select(
+            ...     nw.col("a", "b"),
             ...     nw.col("a", "b")
             ...     .fill_null(strategy="forward", limit=1)
-            ...     .name.suffix("_nulls_forward_filled")
+            ...     .name.suffix("_nulls_forward_filled"),
             ... )
             ┌────────────────────────────────────────────────────────────────┐
             |                       Narwhals DataFrame                       |
@@ -1478,11 +1410,12 @@ class Expr:
         if strategy is not None and strategy not in {"forward", "backward"}:
             msg = f"strategy not supported: {strategy}"
             raise ValueError(msg)
-        return self.__class__(
+        return self._from_callable(
             lambda plx: self._to_compliant_expr(plx).fill_null(
-                value=value, strategy=strategy, limit=limit
-            ),
-            self._metadata,
+                value=extract_compliant(plx, value, str_as_lit=True),
+                strategy=strategy,
+                limit=limit,
+            )
         )
 
     # --- partial reduction ---
@@ -1522,10 +1455,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).drop_nulls(),
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            self._metadata.with_kind(ExprKind.FILTRATION),
         )
 
     def sample(
@@ -1561,24 +1491,26 @@ class Expr:
             "Note: this will remain available in `narwhals.stable.v1`.\n"
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
-        issue_deprecation_warning(msg, _version="1.22.0")
+        issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
             ),
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            self._metadata.with_kind(ExprKind.FILTRATION),
         )
 
-    def over(self: Self, *keys: str | Iterable[str]) -> Self:
+    def over(
+        self: Self,
+        *partition_by: str | Iterable[str],
+        _order_by: str | None = None,
+    ) -> Self:
         """Compute expressions over the given groups.
 
         Arguments:
-            keys: Names of columns to compute window expression over.
-                  Must be names of columns, as opposed to expressions -
-                  so, this is a bit less flexible than Polars' `Expr.over`.
+            partition_by: Names of columns to compute window expression over.
+                Must be names of columns, as opposed to expressions -
+                so, this is a bit less flexible than Polars' `Expr.over`.
+            _order_by: Unused, but this is building up to something.
 
         Returns:
             A new expression.
@@ -1611,11 +1543,20 @@ class Expr:
             |2  4  y                    4|
             └────────────────────────────┘
         """
-        if self._metadata["kind"] is ExprKind.CHANGES_LENGTH:
+        if self._metadata.kind.is_filtration():
             msg = "`.over()` can not be used for expressions which change length."
             raise LengthChangingExprError(msg)
+        kind = ExprKind.TRANSFORM
+        n_open_windows = self._metadata.n_open_windows
+        if _order_by is not None and self._metadata.kind.is_window():
+            n_open_windows -= 1
+        metadata = ExprMetadata(kind, n_open_windows=n_open_windows)
+        flat_partition_by = flatten(partition_by)
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).over(flatten(keys)), self._metadata
+            lambda plx: self._to_compliant_expr(plx).over(
+                flat_partition_by, kind=self._metadata.kind
+            ),
+            metadata,
         )
 
     def is_duplicated(self: Self) -> Self:
@@ -1664,9 +1605,7 @@ class Expr:
             |3  1  c        False         True|
             └─────────────────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).is_unique(), self._metadata
-        )
+        return self._from_callable(lambda plx: self._to_compliant_expr(plx).is_unique())
 
     def null_count(self: Self) -> Self:
         r"""Count null values.
@@ -1696,10 +1635,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).null_count(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def is_first_distinct(self: Self) -> Self:
@@ -1728,7 +1664,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_first_distinct(),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def is_last_distinct(self: Self) -> Self:
@@ -1757,7 +1693,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_last_distinct(),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def quantile(
@@ -1798,10 +1734,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).quantile(quantile, interpolation),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def head(self: Self, n: int = 10) -> Self:
@@ -1826,10 +1759,10 @@ class Expr:
             "Note: this will remain available in `narwhals.stable.v1`.\n"
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
-        issue_deprecation_warning(msg, _version="1.22.0")
+        issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).head(n),
-            ExprMetadata(kind=ExprKind.CHANGES_LENGTH, is_order_dependent=True),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
         )
 
     def tail(self: Self, n: int = 10) -> Self:
@@ -1854,10 +1787,10 @@ class Expr:
             "Note: this will remain available in `narwhals.stable.v1`.\n"
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
-        issue_deprecation_warning(msg, _version="1.22.0")
+        issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).tail(n),
-            ExprMetadata(kind=ExprKind.CHANGES_LENGTH, is_order_dependent=True),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
         )
 
     def round(self: Self, decimals: int = 0) -> Self:
@@ -1893,8 +1826,8 @@ class Expr:
             |2  3.901234        3.9|
             └──────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).round(decimals), self._metadata
+        return self._from_callable(
+            lambda plx: self._to_compliant_expr(plx).round(decimals)
         )
 
     def len(self: Self) -> Self:
@@ -1923,10 +1856,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).len(),
-            ExprMetadata(
-                kind=ExprKind.AGGREGATION,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            self._metadata.with_kind(ExprKind.AGGREGATION),
         )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
@@ -1952,10 +1882,10 @@ class Expr:
             "Note: this will remain available in `narwhals.stable.v1`.\n"
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
-        issue_deprecation_warning(msg, _version="1.22.0")
+        issue_deprecation_warning(msg, _version="1.23.0")
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
-            ExprMetadata(kind=ExprKind.CHANGES_LENGTH, is_order_dependent=True),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
         )
 
     # need to allow numeric typing
@@ -1989,15 +1919,19 @@ class Expr:
             | 2  3          3  |
             └──────────────────┘
         """
-        is_order_dependent = operation_is_order_dependent(self, lower_bound, upper_bound)
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).clip(
-                extract_compliant(plx, lower_bound, strings_are_column_names=True),
-                extract_compliant(plx, upper_bound, strings_are_column_names=True),
+            lambda plx: apply_n_ary_operation(
+                plx,
+                lambda *exprs: exprs[0].clip(
+                    exprs[1] if lower_bound is not None else None,
+                    exprs[2] if upper_bound is not None else None,
+                ),
+                self,
+                lower_bound,  # type: ignore[arg-type]
+                upper_bound,  # type: ignore[arg-type]
+                str_as_lit=False,
             ),
-            ExprMetadata(
-                kind=self._metadata["kind"], is_order_dependent=is_order_dependent
-            ),
+            combine_metadata(self, lower_bound, upper_bound, str_as_lit=False),
         )
 
     def mode(self: Self) -> Self:
@@ -2023,10 +1957,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).mode(),
-            ExprMetadata(
-                kind=ExprKind.CHANGES_LENGTH,
-                is_order_dependent=self._metadata["is_order_dependent"],
-            ),
+            self._metadata.with_kind(ExprKind.FILTRATION),
         )
 
     def is_finite(self: Self) -> Self:
@@ -2065,9 +1996,7 @@ class Expr:
             |└──────┴─────────────┘|
             └──────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).is_finite(), self._metadata
-        )
+        return self._from_callable(lambda plx: self._to_compliant_expr(plx).is_finite())
 
     def cum_count(self: Self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative count of the non-null values in the column.
@@ -2099,7 +2028,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_count(reverse=reverse),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def cum_min(self: Self, *, reverse: bool = False) -> Self:
@@ -2132,7 +2061,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_min(reverse=reverse),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def cum_max(self: Self, *, reverse: bool = False) -> Self:
@@ -2165,7 +2094,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_max(reverse=reverse),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def cum_prod(self: Self, *, reverse: bool = False) -> Self:
@@ -2198,7 +2127,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_prod(reverse=reverse),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def rolling_sum(
@@ -2260,7 +2189,7 @@ class Expr:
                 min_samples=min_samples,
                 center=center,
             ),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def rolling_mean(
@@ -2322,7 +2251,7 @@ class Expr:
                 min_samples=min_samples,
                 center=center,
             ),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def rolling_var(
@@ -2384,7 +2313,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).rolling_var(
                 window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
             ),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def rolling_std(
@@ -2449,7 +2378,7 @@ class Expr:
                 center=center,
                 ddof=ddof,
             ),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     def rank(
@@ -2515,7 +2444,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).rank(
                 method=method, descending=descending
             ),
-            ExprMetadata(kind=self._metadata["kind"], is_order_dependent=True),
+            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
         )
 
     @property

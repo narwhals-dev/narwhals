@@ -5,12 +5,14 @@ import re
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
+from typing import cast
 
 import pyarrow as pa
 import pyarrow.compute as pc
 
+from narwhals._arrow.utils import extract_py_scalar
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._expression_parsing import is_simple_aggregation
+from narwhals._expression_parsing import is_elementary_expression
 from narwhals.utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
@@ -18,6 +20,7 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.expr import ArrowExpr
+    from narwhals._arrow.typing import Incomplete
 
 POLARS_TO_ARROW_AGGREGATIONS = {
     "sum": "sum",
@@ -48,7 +51,7 @@ class ArrowGroupBy:
         all_simple_aggs = True
         for expr in exprs:
             if not (
-                is_simple_aggregation(expr)
+                is_elementary_expression(expr)
                 and re.sub(r"(\w+->)", "", expr._function_name)
                 in POLARS_TO_ARROW_AGGREGATIONS
             ):
@@ -68,7 +71,7 @@ class ArrowGroupBy:
             )
             raise ValueError(msg)
 
-        aggs: list[tuple[str, str, pc.FunctionOptions | None]] = []
+        aggs: list[tuple[str, str, Any]] = []
         expected_pyarrow_column_names: list[str] = self._keys.copy()
         new_column_names: list[str] = self._keys.copy()
 
@@ -91,7 +94,7 @@ class ArrowGroupBy:
 
             function_name = re.sub(r"(\w+->)", "", expr._function_name)
             if function_name in {"std", "var"}:
-                option = pc.VarianceOptions(ddof=expr._kwargs["ddof"])
+                option: Any = pc.VarianceOptions(ddof=expr._call_kwargs["ddof"])
             elif function_name in {"len", "n_unique"}:
                 option = pc.CountOptions(mode="all")
             elif function_name == "count":
@@ -139,30 +142,24 @@ class ArrowGroupBy:
 
     def __iter__(self: Self) -> Iterator[tuple[Any, ArrowDataFrame]]:
         col_token = generate_temporary_column_name(n_bytes=8, columns=self._df.columns)
-        null_token = "__null_token_value__"  # noqa: S105
+        null_token: str = "__null_token_value__"  # noqa: S105
 
         table = self._df._native_frame
-        key_values = pc.binary_join_element_wise(
-            *[pc.cast(table[key], pa.string()) for key in self._keys],
-            "",
-            null_handling="replace",
-            null_replacement=null_token,
+        # NOTE: stubs fail in multiple places for `ChunkedArray`
+        it = cast(
+            "Iterator[pa.StringArray]",
+            (table[key].cast(pa.string()) for key in self._keys),
+        )
+        # NOTE: stubs indicate `separator` must also be a `ChunkedArray`
+        # Reality: `str` is fine
+        concat_str: Incomplete = pc.binary_join_element_wise
+        key_values = concat_str(
+            *it, "", null_handling="replace", null_replacement=null_token
         )
         table = table.add_column(i=0, field_=col_token, column=key_values)
-
-        yield from (
-            (
-                next(
-                    (
-                        t := self._df._from_native_frame(
-                            table.filter(pc.equal(table[col_token], v)).drop([col_token])
-                        )
-                    )
-                    .simple_select(*self._keys)
-                    .head(1)
-                    .iter_rows(named=False, buffer_size=512)
-                ),
-                t,
+        for v in pc.unique(key_values):
+            t = self._df._from_native_frame(
+                table.filter(pc.equal(table[col_token], v)).drop([col_token])
             )
-            for v in pc.unique(key_values)
-        )
+            row = t.simple_select(*self._keys).row(0)
+            yield tuple(extract_py_scalar(el) for el in row), t

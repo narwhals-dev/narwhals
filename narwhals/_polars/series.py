@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
-from typing import Union
 from typing import cast
 from typing import overload
 
@@ -116,13 +115,18 @@ class PolarsSeries:
             self._native_series.dtype, self._version, self._backend_version
         )
 
+    def alias(self, name: str) -> Self:
+        return self._from_native_object(self._native_series.alias(name))
+
     @overload
     def __getitem__(self: Self, item: int) -> Any: ...
 
     @overload
-    def __getitem__(self: Self, item: slice | Sequence[int]) -> Self: ...
+    def __getitem__(self: Self, item: slice | Sequence[int] | pl.Series) -> Self: ...
 
-    def __getitem__(self: Self, item: int | slice | Sequence[int]) -> Any | Self:
+    def __getitem__(
+        self: Self, item: int | slice | Sequence[int] | pl.Series
+    ) -> Any | Self:
         return self._from_native_object(self._native_series.__getitem__(item))
 
     def cast(self: Self, dtype: DType) -> Self:
@@ -144,7 +148,7 @@ class PolarsSeries:
             raise NotImplementedError(msg)
         return self._from_native_series(ser.replace_strict(old, new, return_dtype=dtype))
 
-    def __array__(self: Self, dtype: Any, copy: bool | None) -> _1DArray:
+    def __array__(self: Self, dtype: Any, *, copy: bool | None) -> _1DArray:
         if self._backend_version < (0, 20, 29):
             return self._native_series.__array__(dtype=dtype)
         return self._native_series.__array__(dtype=dtype, copy=copy)
@@ -481,7 +485,7 @@ class PolarsSeries:
                 version=self._version,
             )
         elif (self._backend_version < (1, 15)) and self._native_series.count() < 1:
-            data_dict: dict[str, list[int | float] | pl.Series | pl.Expr]
+            data_dict: dict[str, Sequence[Any] | pl.Series]
             if bins is not None:
                 data_dict = {
                     "breakpoint": bins[1:],
@@ -511,8 +515,8 @@ class PolarsSeries:
             and (bin_count is not None)
             and (self._native_series.count() > 0)
         ):  # pragma: no cover
-            lower = cast(Union[int, float], self._native_series.min())
-            upper = cast(Union[int, float], self._native_series.max())
+            lower = cast("float", self._native_series.min())
+            upper = cast("float", self._native_series.max())
             pad_lowest_bin = False
             if lower == upper:
                 width = 1 / bin_count

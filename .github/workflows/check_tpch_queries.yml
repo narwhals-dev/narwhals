@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
 
+env:
+  PY_COLORS: 1
+
 jobs:
   validate-queries:
     strategy:
@@ -25,7 +28,10 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: local-install
-        run: uv pip install -U --pre -e ".[tests, core, dask]" --system
+        run: |
+          # once https://github.com/duckdb/duckdb/issues/16445
+          # is addressed, try using `--pre`
+          uv pip install -U -e ".[tests, core, dask]" --system
       - name: generate-data
         run: cd tpch && python generate_data.py
       - name: tpch-tests 

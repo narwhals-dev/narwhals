@@ -59,6 +59,7 @@ nav:
     - api-reference/series_list.md
     - api-reference/series_str.md
     - api-reference/dependencies.md
+    - api-reference/implementation.md
     - api-reference/dtypes.md
     - api-reference/exceptions.md
     - api-reference/selectors.md

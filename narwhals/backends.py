@@ -10,7 +10,6 @@ from typing import Any
 from typing import Callable
 from typing import Generator
 from typing import TypeVar
-from typing import cast
 
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
@@ -39,20 +38,24 @@ class Adaptation:
 
     @property
     def imported_adapter(self) -> type:
-        if isinstance(self.adapter, str):
-            return dynamic_import(self.adapter)
-        return self.adapter
+        obj = dynamic_import(self.adapter)
+        if not isinstance(obj, type):
+            msg = f"Attempted to import {self.adapter!r}, expected an instance of type but got {obj}"
+            raise TypeError(msg)
+        return obj
 
     @property
     def imported_native(self) -> type:
-        if isinstance(self.native, str):
-            return dynamic_import(self.native)
-        return self.native
+        obj = dynamic_import(self.adapter)
+        if not isinstance(obj, type):
+            msg = f"Attempted to import {self.adapter!r}, expected an instance of type but got {obj}"
+            raise TypeError(msg)
+        return obj
 
 
 @dataclass
 class Backend:
-    requires: list[tuple[str, str | Callable, tuple[int, ...]]]
+    requires: list[tuple[str, str | Callable[[], str], tuple[int, ...]]]
     adaptations: list[Adaptation]
     implementation: Implementation | None = None
 
@@ -80,7 +83,6 @@ class Backend:
                 return adapt
 
             elif isinstance(adapt.native, str):
-                adapt.native = cast(str, adapt.native)
                 adapt_module_name, *_, adapt_cls_name = adapt.native.split(".")
                 if (
                     (adapt_module_name in sys.modules)  # base-module is imported
@@ -141,7 +143,9 @@ def traverse_rsplits(text: str, sep: str = " ") -> Generator[tuple[str, list[str
         yield base, remaining
 
 
-def dynamic_import(dotted_path: str) -> Any:
+def dynamic_import(dotted_path: str | type, /) -> Any:
+    if isinstance(dotted_path, type):
+        return dotted_path
     for base, attributes in traverse_rsplits(dotted_path, sep="."):
         if not attributes:
             continue

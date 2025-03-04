@@ -27,9 +27,9 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
-    import pyarrow as pa
     from typing_extensions import Self
 
+    from narwhals._arrow.typing import ArrowArray
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
     from narwhals.typing import _1DArray
@@ -111,24 +111,24 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series._implementation  # type: ignore[no-any-return]
 
-    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> _1DArray:
-        return self._compliant_series.__array__(dtype=dtype, copy=copy)
+    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> _1DArray:  # noqa: FBT001
+        return self._compliant_series.__array__(dtype=dtype, copy=copy)  # type: ignore[no-any-return]
 
     @overload
     def __getitem__(self: Self, idx: int) -> Any: ...
 
     @overload
-    def __getitem__(self: Self, idx: slice | Sequence[int]) -> Self: ...
+    def __getitem__(self: Self, idx: slice | Sequence[int] | Self) -> Self: ...
 
-    def __getitem__(self: Self, idx: int | slice | Sequence[int]) -> Any | Self:
+    def __getitem__(self: Self, idx: int | slice | Sequence[int] | Self) -> Any | Self:
         """Retrieve elements from the object using integer indexing or slicing.
 
         Arguments:
             idx: The index, slice, or sequence of indices to retrieve.
 
                 - If `idx` is an integer, a single element is returned.
-                - If `idx` is a slice or a sequence of integers,
-                  a subset of the Series is returned.
+                - If `idx` is a slice, a sequence of integers, or another Series
+                    (with integer values) a subset of the Series is returned.
 
         Returns:
             A single element if `idx` is an integer, else a subset of the Series.
@@ -152,11 +152,15 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
+        from narwhals.translate import to_native
+
         if isinstance(idx, int) or (
-            is_numpy_scalar(idx) and idx.dtype.kind in ("i", "u")
+            is_numpy_scalar(idx) and idx.dtype.kind in {"i", "u"}
         ):
             return self._compliant_series[idx]
-        return self._from_compliant_series(self._compliant_series[idx])
+        return self._from_compliant_series(
+            self._compliant_series[to_native(idx, pass_through=True)]
+        )
 
     def __native_namespace__(self: Self) -> ModuleType:
         return self._compliant_series.__native_namespace__()  # type: ignore[no-any-return]
@@ -183,7 +187,9 @@ class Series(Generic[IntoSeriesT]):
         if parse_version(pa) < (16, 0):  # pragma: no cover
             msg = f"PyArrow>=16.0.0 is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
             raise ModuleNotFoundError(msg)
-        ca = pa.chunked_array([self.to_arrow()])  # type: ignore[call-overload, unused-ignore]
+        from narwhals._arrow.utils import chunked_array
+
+        ca = chunked_array(self.to_arrow())
         return ca.__arrow_c_stream__(requested_schema=requested_schema)
 
     def to_native(self: Self) -> IntoSeriesT:
@@ -799,8 +805,10 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
+        from narwhals.translate import to_native
+
         return self._from_compliant_series(
-            self._compliant_series.is_in(self._extract_native(other))
+            self._compliant_series.is_in(to_native(other, pass_through=True))
         )
 
     def arg_true(self: Self) -> Self:
@@ -1323,7 +1331,9 @@ class Series(Generic[IntoSeriesT]):
             msg = f"strategy not supported: {strategy}"
             raise ValueError(msg)
         return self._from_compliant_series(
-            self._compliant_series.fill_null(value=value, strategy=strategy, limit=limit)
+            self._compliant_series.fill_null(
+                value=self._extract_native(value), strategy=strategy, limit=limit
+            )
         )
 
     def is_between(
@@ -1402,9 +1412,9 @@ class Series(Generic[IntoSeriesT]):
             >>> nw.from_native(s_native, series_only=True).to_numpy()
             array([1, 2, 3]...)
         """
-        return self._compliant_series.to_numpy()
+        return self._compliant_series.to_numpy()  # type: ignore[no-any-return]
 
-    def to_pandas(self: Self) -> pd.Series:
+    def to_pandas(self: Self) -> pd.Series[Any]:
         """Convert to pandas Series.
 
         Returns:
@@ -1421,7 +1431,7 @@ class Series(Generic[IntoSeriesT]):
             2    3
             Name: a, dtype: int64
         """
-        return self._compliant_series.to_pandas()
+        return self._compliant_series.to_pandas()  # type: ignore[no-any-return]
 
     def to_polars(self: Self) -> pl.Series:
         """Convert to polars Series.
@@ -2044,7 +2054,7 @@ class Series(Generic[IntoSeriesT]):
             self._compliant_series.gather_every(n=n, offset=offset)
         )
 
-    def to_arrow(self: Self) -> pa.Array:
+    def to_arrow(self: Self) -> ArrowArray:
         r"""Convert to arrow.
 
         Returns:
@@ -2066,7 +2076,7 @@ class Series(Generic[IntoSeriesT]):
                 4
             ]
         """
-        return self._compliant_series.to_arrow()
+        return self._compliant_series.to_arrow()  # type: ignore[no-any-return]
 
     def mode(self: Self) -> Self:
         r"""Compute the most occurring value(s).

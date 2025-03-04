@@ -4,9 +4,11 @@ import math
 import os
 import sys
 import warnings
+from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import Iterator
+from typing import Mapping
 from typing import Sequence
 
 import pandas as pd
@@ -70,7 +72,7 @@ def _to_comparable_list(column_values: Any) -> Any:
 
 
 def _sort_dict_by_key(
-    data_dict: dict[str, list[Any]], key: str
+    data_dict: Mapping[str, list[Any]], key: str
 ) -> dict[str, list[Any]]:  # pragma: no cover
     sort_list = data_dict[key]
     sorted_indices = sorted(
@@ -84,7 +86,7 @@ def _sort_dict_by_key(
     return {key: [value[i] for i in sorted_indices] for key, value in data_dict.items()}
 
 
-def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
+def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
     is_pyspark = (
         hasattr(result, "_compliant_frame")
         and result.implementation is Implementation.PYSPARK
@@ -98,9 +100,9 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
     if hasattr(result, "collect"):
         kwargs: dict[Implementation, dict[str, Any]] = {Implementation.POLARS: {}}
 
-        if os.environ.get("NARWHALS_POLARS_GPU", False):  # pragma: no cover
+        if os.environ.get("NARWHALS_POLARS_GPU", None):  # pragma: no cover
             kwargs[Implementation.POLARS].update({"engine": "gpu"})
-        if os.environ.get("NARWHALS_POLARS_NEW_STREAMING", False):  # pragma: no cover
+        if os.environ.get("NARWHALS_POLARS_NEW_STREAMING", None):  # pragma: no cover
             kwargs[Implementation.POLARS].update({"new_streaming": True})
 
         result = result.collect(**kwargs.get(result.implementation, {}))
@@ -130,6 +132,10 @@ def assert_equal_data(result: Any, expected: dict[str, Any]) -> None:
                 are_equivalent_values = lhs is None or math.isnan(lhs)
             elif lhs is None:
                 are_equivalent_values = rhs is None
+            elif isinstance(lhs, list) and isinstance(rhs, list):
+                are_equivalent_values = all(
+                    left_side == right_side for left_side, right_side in zip(lhs, rhs)
+                )
             elif pd.isna(lhs):
                 are_equivalent_values = pd.isna(rhs)
             else:
@@ -153,4 +159,14 @@ def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:
 
 def is_windows() -> bool:
     """Check if the current platform is Windows."""
-    return sys.platform in ["win32", "cygwin"]
+    return sys.platform in {"win32", "cygwin"}
+
+
+def windows_has_tzdata() -> bool:  # pragma: no cover
+    """From PyArrow: python/pyarrow/tests/util.py."""
+    return (Path.home() / "Downloads" / "tzdata").exists()
+
+
+def is_pyarrow_windows_no_tzdata(constructor: Constructor, /) -> bool:
+    """Skip test on Windows when the tz database is not configured."""
+    return "pyarrow" in str(constructor) and is_windows() and not windows_has_tzdata()
