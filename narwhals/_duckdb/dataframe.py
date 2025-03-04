@@ -288,7 +288,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
                 other._native_frame.set_alias("rhs"), condition=condition, how=native_how
             )
 
-        if how in {"inner", "left", "cross", "outer"}:
+        if native_how in {"inner", "left", "cross", "outer"}:
             select = [f'lhs."{x}"' for x in self._native_frame.columns]
             for col in other._native_frame.columns:
                 if col in self._native_frame.columns and (
