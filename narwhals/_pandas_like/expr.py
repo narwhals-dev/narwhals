@@ -488,10 +488,14 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
             else:
                 assert "reverse" not in self._call_kwargs  # debug assertion  # noqa: S101
                 reverse = False
-            native_frame = df[[*output_names, *partition_by]]._native_frame
             if reverse:
-                native_frame = native_frame[::-1]
-            res_native = native_frame.groupby(partition_by).transform(
+                # Only select the columns we need to avoid reversing columns
+                # unnecessarily
+                columns = list(set(partition_by).union(output_names))
+                native_frame = df[columns]._native_frame[::-1]
+            else:
+                native_frame = df._native_frame
+            res_native = native_frame.groupby(partition_by)[list(output_names)].transform(
                 pandas_function_name, **pandas_kwargs
             )
             result_frame = df._from_native_frame(
