@@ -1488,3 +1488,21 @@ def _not_implemented_error(what: str, who: str, /) -> NotImplementedError:
         "please open an issue at: https://github.com/narwhals-dev/narwhals/issues"
     )
     return NotImplementedError(msg)
+
+
+if TYPE_CHECKING:
+    import sys
+
+    if sys.version_info >= (3, 13):
+        # NOTE: avoids `mypy`
+        #     error: Module "narwhals.utils" does not explicitly export attribute "deprecated"  [attr-defined]
+        from warnings import deprecated as deprecated  # noqa: PLC0414
+    else:
+        from typing_extensions import deprecated as deprecated  # noqa: PLC0414
+else:
+
+    def deprecated(message: str, /) -> Callable[[_Fn], _Fn]:  # noqa: ARG001
+        def wrapper(func: _Fn, /) -> _Fn:
+            return func
+
+        return wrapper

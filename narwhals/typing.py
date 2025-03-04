@@ -12,6 +12,7 @@ from typing import Sequence
 from typing import TypeVar
 from typing import Union
 
+from narwhals.utils import deprecated
 from narwhals.utils import unstable
 
 if not TYPE_CHECKING:
@@ -42,7 +43,6 @@ if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.utils import Implementation
     from narwhals.utils import Version
-    from narwhals.utils import _Fn
 
     # All dataframes supported by Narwhals have a
     # `columns` property. Their similarities don't extend
@@ -58,20 +58,6 @@ if TYPE_CHECKING:
 
     class DataFrameLike(Protocol):
         def __dataframe__(self, *args: Any, **kwargs: Any) -> Any: ...
-
-
-if TYPE_CHECKING:
-    if sys.version_info >= (3, 13):
-        from warnings import deprecated
-    else:
-        from typing_extensions import deprecated
-else:
-
-    def deprecated(message: str, /) -> Callable[[_Fn], _Fn]:  # noqa: ARG001
-        def wrapper(func: _Fn, /) -> _Fn:
-            return func
-
-        return wrapper
 
 
 class CompliantSeries(Protocol):
