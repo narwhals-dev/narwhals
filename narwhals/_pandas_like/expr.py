@@ -51,10 +51,6 @@ WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
 def window_kwargs_to_pandas_equivalent(
     function_name: str, kwargs: dict[str, object]
 ) -> dict[str, object]:
-    unsupported_reverse_msg = (
-        "Cumulative operation with `reverse=True` is not supported in "
-        "over context for pandas-like backend."
-    )
     if function_name == "shift":
         pandas_kwargs: dict[str, object] = {"periods": kwargs["n"]}
     elif function_name == "rank":
@@ -66,8 +62,6 @@ def window_kwargs_to_pandas_equivalent(
             "pct": False,
         }
     elif function_name.startswith("cum_"):  # Cumulative operation
-        if kwargs["reverse"]:
-            raise NotImplementedError(unsupported_reverse_msg)
         pandas_kwargs = {"skipna": True}
     else:
         pandas_kwargs = {}
