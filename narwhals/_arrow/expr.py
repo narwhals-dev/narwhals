@@ -586,7 +586,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
             self, "rank", method=method, descending=descending
         )
 
-    ewm_mean = not_implemented("ewm_mean")
+    ewm_mean = not_implemented()
 
     @property
     def dt(self: Self) -> ArrowExprDateTimeNamespace:

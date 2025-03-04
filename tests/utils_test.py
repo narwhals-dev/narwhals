@@ -21,7 +21,6 @@ from pandas.testing import assert_series_equal
 import narwhals as unstable_nw
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import ColumnNotFoundError
-from narwhals.utils import Version
 from narwhals.utils import check_column_exists
 from narwhals.utils import parse_version
 from tests.utils import PANDAS_VERSION
@@ -322,6 +321,9 @@ def test_check_column_exists() -> None:
 
 def test_not_implemented() -> None:
     from narwhals._arrow.expr import ArrowExpr
+    from narwhals._polars.expr import PolarsExpr
+    from narwhals._polars.expr import PolarsExprStringNamespace
+    from narwhals.utils import not_implemented
 
     data: dict[str, Any] = {"foo": [1, 2], "bar": [6.0, 7.0]}
     df = pa.table(data)
@@ -333,30 +335,7 @@ def test_not_implemented() -> None:
     with pytest.raises(NotImplementedError, match=pattern):
         nw_df.with_columns(ewm_mean)
 
-    assert ArrowExpr.ewm_mean.__narwhals_not_implemented__ is True  # type: ignore[attr-defined]
-
-    pytest.importorskip("duckdb")
-    from narwhals._duckdb.expr import DuckDBExpr
-
-    duckdb_expr = DuckDBExpr(
-        lambda df: [],  # noqa: ARG005
-        function_name="",
-        evaluate_output_names=lambda df: ["names"],  # noqa: ARG005
-        alias_output_names=None,
-        backend_version=(0, 0, 0),
-        version=Version.MAIN,
-    )
-    pattern = re.compile(
-        r".+cat.+ not implemented.+duckdb", flags=re.DOTALL | re.IGNORECASE
-    )
-    with pytest.raises(NotImplementedError, match=pattern):
-        duckdb_expr.cat  # noqa: B018
-
-
-def test_not_implemented_alt() -> None:
-    from narwhals._polars.expr import PolarsExpr
-    from narwhals._polars.expr import PolarsExprStringNamespace
-    from narwhals.utils import not_implemented_alt
+    assert isinstance(ArrowExpr.ewm_mean, not_implemented)
 
     if TYPE_CHECKING:
         from narwhals.utils import _SupportsGet
@@ -384,7 +363,7 @@ def test_not_implemented_alt() -> None:
         def alias(self, name: str) -> str:
             return name
 
-        unique = not_implemented_alt()
+        unique = not_implemented()
 
         # NOTE: Only `mypy` has an issue with this?
         # error: Cannot override writeable attribute with read-only property
@@ -393,7 +372,7 @@ def test_not_implemented_alt() -> None:
             pl_expr = cast("PolarsExpr", self)
             return PolarsExprStringNamespace(pl_expr)
 
-        dt = not_implemented_alt()
+        dt = not_implemented()
 
         # NOTE: Typing is happy w/ double property
         @property
@@ -402,7 +381,7 @@ def test_not_implemented_alt() -> None:
             return PolarsExprStringNamespace(pl_expr)
 
         # NOTE: Typing still happy - but it complicates runtime (API completeness) access
-        _list = not_implemented_alt("list")
+        _list = not_implemented("list")
 
         @property
         def list(self) -> Any:
@@ -422,8 +401,8 @@ def test_not_implemented_alt() -> None:
     with pytest.raises(NotImplementedError, match=pattern):
         expr.unique()
 
-    assert isinstance(DummyExpr.unique, not_implemented_alt)
-    assert repr(DummyExpr.unique) == "<not_implemented_alt>: DummyExpr.unique"
+    assert isinstance(DummyExpr.unique, not_implemented)
+    assert repr(DummyExpr.unique) == "<not_implemented>: DummyExpr.unique"
 
     pattern = re.compile(
         r".+unique.+ not implemented.+DummyExpr", flags=re.DOTALL | re.IGNORECASE
@@ -437,8 +416,8 @@ def test_not_implemented_alt() -> None:
     with pytest.raises(NotImplementedError, match=pattern):
         expr.dt  # noqa: B018
 
-    assert isinstance(DummyExpr.dt, not_implemented_alt)
-    assert repr(DummyExpr.dt) == "<not_implemented_alt>: DummyExpr.dt"
+    assert isinstance(DummyExpr.dt, not_implemented)
+    assert repr(DummyExpr.dt) == "<not_implemented>: DummyExpr.dt"
 
     pattern = re.compile(
         r".+list.+ not implemented.+polars", flags=re.DOTALL | re.IGNORECASE
@@ -446,5 +425,5 @@ def test_not_implemented_alt() -> None:
     with pytest.raises(NotImplementedError, match=pattern):
         expr.list  # noqa: B018
 
-    assert isinstance(DummyExpr._list, not_implemented_alt)
-    assert repr(DummyExpr._list) == "<not_implemented_alt>: DummyExpr.list"
+    assert isinstance(DummyExpr._list, not_implemented)
+    assert repr(DummyExpr._list) == "<not_implemented>: DummyExpr.list"

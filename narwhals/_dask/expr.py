@@ -24,7 +24,6 @@ from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import not_implemented
-from narwhals.utils import not_implemented_alt
 
 if TYPE_CHECKING:
     try:
@@ -604,23 +603,23 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
     def name(self: Self) -> DaskExprNameNamespace:
         return DaskExprNameNamespace(self)
 
-    arg_min = not_implemented("arg_min")
-    arg_max = not_implemented("arg_max")
-    arg_true = not_implemented("arg_true")
-    head = not_implemented("head")
-    tail = not_implemented("tail")
-    mode = not_implemented("mode")
-    sort = not_implemented("sort")
-    rank = not_implemented("rank")
-    sample = not_implemented("sample")
-    map_batches = not_implemented("map_batches")
-    ewm_mean = not_implemented("ewm_mean")
-    rolling_sum = not_implemented("rolling_sum")
-    rolling_mean = not_implemented("rolling_mean")
-    rolling_var = not_implemented("rolling_var")
-    rolling_std = not_implemented("rolling_std")
-    gather_every = not_implemented("gather_every")
-    replace_strict = not_implemented_alt()
+    arg_min = not_implemented()
+    arg_max = not_implemented()
+    arg_true = not_implemented()
+    head = not_implemented()
+    tail = not_implemented()
+    mode = not_implemented()
+    sort = not_implemented()
+    rank = not_implemented()
+    sample = not_implemented()
+    map_batches = not_implemented()
+    ewm_mean = not_implemented()
+    rolling_sum = not_implemented()
+    rolling_mean = not_implemented()
+    rolling_var = not_implemented()
+    rolling_std = not_implemented()
+    gather_every = not_implemented()
+    replace_strict = not_implemented()
 
-    cat = not_implemented("cat", is_property=True)
-    list = not_implemented("list", is_property=True)
+    cat = not_implemented()  # pyright: ignore[reportAssignmentType]
+    list = not_implemented()  # pyright: ignore[reportAssignmentType]

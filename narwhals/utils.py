@@ -48,7 +48,6 @@ if TYPE_CHECKING:
     from typing import Protocol
 
     import pandas as pd
-    from typing_extensions import Never
     from typing_extensions import Self
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
@@ -1416,27 +1415,21 @@ def unstable(fn: _Fn, /) -> _Fn:
     return fn
 
 
-@overload
-def not_implemented(
-    name: str, /, *, is_property: Literal[False] = ...
-) -> Callable[..., Any]: ...
-
-
-@overload
-def not_implemented(name: str, /, *, is_property: Literal[True]) -> property: ...
-
-
-def not_implemented(
-    name: str, /, *, is_property: bool = False
-) -> Callable[..., Any] | property:
+# TODO @dangotbanned: Can this type nicely for `@property`?
+# If not, can it provide improved introspection? vs (https://github.com/narwhals-dev/narwhals/pull/2119#discussion_r1976484198)
+class not_implemented:  # noqa: N801
     """Mark some functionality as unsupported.
 
     Arguments:
-        name: Method or property name.
-        is_property: Return a descriptor, instead of a callable.
+        alias: optional name used instead of `__set_name__` hook.
 
-    Returns:
-        An exception-raising wrapper.
+    Notes:
+        - Attribute/method name *doesn't* need to be declared twice
+            - Utilizes the data model's [`__set_name__`](https://docs.python.org/3/reference/datamodel.html#object.__set_name__) hook
+        - Allows different behavior when looked up on the class vs instance
+        - Allows us to use `isinstance(...)` instead of monkeypatching an attribute to the function
+        - https://docs.python.org/3/howto/descriptor.html
+
 
     Examples:
         >>> from narwhals.utils import not_implemented
@@ -1444,7 +1437,7 @@ def not_implemented(
         ...     def totally_ready(self) -> str:
         ...         return "I'm ready!"
         ...
-        ...     not_ready_yet = not_implemented("not_ready_yet")
+        ...     not_ready_yet = not_implemented()
         >>>
         >>> thing = Thing()
         >>> thing.totally_ready()
@@ -1454,34 +1447,8 @@ def not_implemented(
             ...
         NotImplementedError: 'not_ready_yet' is not implemented for: 'Thing'.
         ...
-        >>> thing.not_ready_yet.__narwhals_not_implemented__
+        >>> isinstance(Thing.not_ready_yet, not_implemented)
         True
-    """
-
-    def wrapper(self: Any, *args: Any, **kwds: Any) -> Never:  # noqa: ARG001
-        who = getattr(self, "_implementation", type(self).__name__)
-        raise _not_implemented_error(name, who)
-
-    setattr(wrapper, "__narwhals_not_implemented__", True)  # noqa: B010
-
-    if is_property:
-        return property(wrapper)
-
-    return wrapper
-
-
-# TODO @dangotbanned: Can this type nicely for `@property`?
-# If not, can it provide improved introspection? vs (https://github.com/narwhals-dev/narwhals/pull/2119#discussion_r1976484198)
-class not_implemented_alt:  # noqa: N801
-    """Descriptor version of `not_implemented`.
-
-    Notes:
-        - Attribute/method name *doesn't* need to be declared twice
-            - Utilizes the data model's [`__set_name__`](https://docs.python.org/3/reference/datamodel.html#object.__set_name__) hook
-        - Allows different behavior when looked up on the class vs instance
-        - Allows us to use `isinstance(...)` instead of monkeypatching an attribute to the function
-
-    https://docs.python.org/3/howto/descriptor.html
     """
 
     def __init__(self, alias: str | None = None, /) -> None:
