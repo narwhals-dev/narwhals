@@ -313,7 +313,7 @@ def test_dtype_is_x() -> None:
         assert dtype.is_nested() == (dtype in is_nested)
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (1, 18), reason="too old for Int128")
+@pytest.mark.skipif(POLARS_VERSION < (1, 18), reason="too old for Int128")
 def test_huge_int_to_native() -> None:
     duckdb = pytest.importorskip("duckdb")
     df = pl.DataFrame({"a": [1, 2, 3]})
