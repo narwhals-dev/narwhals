@@ -506,7 +506,28 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     plx = self.__narwhals_namespace__()
                     df = df.with_columns(~plx.col(*output_names).is_null())
 
-                res_native = df._native_frame.groupby(partition_by)[
+                if function_name.startswith("cum_"):
+                    reverse = self._call_kwargs["reverse"]
+                else:
+                    assert "reverse" not in self._call_kwargs  # noqa: S101
+                    reverse = False
+                if order_by or reverse:
+                    # Only select the columns we need to avoid reordering columns
+                    # unnecessarily
+                    columns = list(set(partition_by).union(output_names))
+                    if order_by:
+                        pdx = df.__native_namespace__()
+                        sorting_indices = pdx.MultiIndex.from_frame(
+                            df[order_by]._native_frame
+                        ).argsort()
+                        if reverse:
+                            sorting_indices = sorting_indices[::-1]
+                        native_frame = df[columns]._native_frame.iloc[sorting_indices]
+                    else:  # reverse
+                        native_frame = df._native_frame[::-1]
+                else:
+                    native_frame = df._native_frame
+                res_native = native_frame.groupby(partition_by)[
                     list(output_names)
                 ].transform(pandas_function_name, **pandas_kwargs)
                 result_frame = df._from_native_frame(
@@ -517,7 +538,12 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         backend_version=self._backend_version,
                     )
                 )
-                return [result_frame[name] for name in aliases]
+                results = (result_frame[name] for name in aliases)
+                if order_by:
+                    return [s.scatter(sorting_indices, s) for s in results]
+                elif reverse:
+                    return [s[::-1] for s in results]
+                return list(results)
 
         return self.__class__(
             func,

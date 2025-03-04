@@ -296,20 +296,36 @@ def test_over_diff(
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize(
+    ("attr", "expected_b"),
+    [
+        ("cum_max", [5, 5, 9, None, 9]),
+        ("cum_min", [4, 5, 7, None, 9]),
+        ("cum_sum", [9, 5, 16, None, 9]),
+        ("cum_count", [2, 1, 2, 1, 1]),
+        ("cum_prod", [20, 5, 63, None, 9]),
+    ],
+)
 def test_over_cum_reverse(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest,
+    attr: str,
+    expected_b: list[object],
 ) -> None:
     if "pyarrow_table" in str(constructor_eager):
-        # grouped cumulative ops not yet supported for pyarrow
         request.applymarker(pytest.mark.xfail)
-    if "pandas_nullable" in str(constructor_eager):
+    if "pandas_nullable" in str(constructor_eager) and attr in {"cum_max", "cum_min"}:
         # https://github.com/pandas-dev/pandas/issues/61031
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(
-        constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6], "i": [0, 1, 2]})
+    df = constructor_eager(
+        {
+            "a": [1, 1, 2, 2, 2],
+            "b": [4, 5, 7, None, 9],
+        }
     )
-    result = df.with_columns(nw.col("b").cum_max(reverse=True).over("a")).sort("i")
-    expected = {"a": [1, 1, 2], "b": [5, 5, 6], "i": [0, 1, 2]}
+    expr = getattr(nw.col("b"), attr)(reverse=True)
+    result = nw.from_native(df).with_columns(expr.over("a"))
+    expected = {"a": [1, 1, 2, 2, 2], "b": expected_b}
     assert_equal_data(result, expected)
 
 
