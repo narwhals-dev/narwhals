@@ -1415,8 +1415,6 @@ def unstable(fn: _Fn, /) -> _Fn:
     return fn
 
 
-# TODO @dangotbanned: Can this type nicely for `@property`?
-# If not, can it provide improved introspection? vs (https://github.com/narwhals-dev/narwhals/pull/2119#discussion_r1976484198)
 class not_implemented:  # noqa: N801
     """Mark some functionality as unsupported.
 
