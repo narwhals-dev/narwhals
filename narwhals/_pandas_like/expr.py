@@ -51,10 +51,6 @@ WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
 def window_kwargs_to_pandas_equivalent(
     function_name: str, kwargs: dict[str, object]
 ) -> dict[str, object]:
-    unsupported_reverse_msg = (
-        "Cumulative operation with `reverse=True` is not supported in "
-        "over context for pandas-like backend."
-    )
     if function_name == "shift":
         pandas_kwargs: dict[str, object] = {"periods": kwargs["n"]}
     elif function_name == "rank":
@@ -66,8 +62,6 @@ def window_kwargs_to_pandas_equivalent(
             "pct": False,
         }
     elif function_name.startswith("cum_"):  # Cumulative operation
-        if kwargs["reverse"]:
-            raise NotImplementedError(unsupported_reverse_msg)
         pandas_kwargs = {"skipna": True}
     else:
         pandas_kwargs = {}
@@ -458,7 +452,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
             call_kwargs=self._call_kwargs,
         )
 
-    def over(self: Self, keys: list[str], kind: ExprKind) -> Self:
+    def over(self: Self, partition_by: list[str], kind: ExprKind) -> Self:
         if not is_elementary_expression(self):
             msg = (
                 "Only elementary expressions are supported for `.over` in pandas-like backends.\n\n"
@@ -489,8 +483,19 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
             if function_name == "cum_count":
                 plx = self.__narwhals_namespace__()
                 df = df.with_columns(~plx.col(*output_names).is_null())
-
-            res_native = df._native_frame.groupby(keys)[list(output_names)].transform(
+            if function_name.startswith("cum_"):
+                reverse = self._call_kwargs["reverse"]
+            else:
+                assert "reverse" not in self._call_kwargs  # debug assertion  # noqa: S101
+                reverse = False
+            if reverse:
+                # Only select the columns we need to avoid reversing columns
+                # unnecessarily
+                columns = list(set(partition_by).union(output_names))
+                native_frame = df[columns]._native_frame[::-1]
+            else:
+                native_frame = df._native_frame
+            res_native = native_frame.groupby(partition_by)[list(output_names)].transform(
                 pandas_function_name, **pandas_kwargs
             )
             result_frame = df._from_native_frame(
@@ -501,6 +506,8 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     backend_version=self._backend_version,
                 )
             )
+            if reverse:
+                return [result_frame[name][::-1] for name in aliases]
             return [result_frame[name] for name in aliases]
 
         return self.__class__(
