@@ -24,7 +24,4 @@ def test_get_field(
         nw.col("user").struct.field("name"),
     )
 
-    if "pandas" in str(constructor):
-        _df = result.to_native()
-
     assert_equal_data(result, expected)
