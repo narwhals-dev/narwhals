@@ -234,8 +234,8 @@ def reuse_series_namespace_implementation(
     )
 
 
-def is_simple_aggregation(expr: CompliantExpr[Any, Any]) -> bool:
-    """Check if expr is a very simple one.
+def is_elementary_expression(expr: CompliantExpr[Any, Any]) -> bool:
+    """Check if expr is elementary.
 
     Examples:
         - nw.col('a').mean()  # depth 1
@@ -246,7 +246,8 @@ def is_simple_aggregation(expr: CompliantExpr[Any, Any]) -> bool:
 
         - nw.col('a').filter(nw.col('b')>nw.col('c')).max()
 
-    because then, we can use a fastpath in pandas.
+    Elementary expressions are the only ones supported properly in
+    pandas, PyArrow, and Dask.
     """
     return expr._depth < 2
 
