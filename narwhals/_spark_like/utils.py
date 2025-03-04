@@ -219,11 +219,7 @@ def _var(
             return functions.var_samp(_input)
 
         n_rows = functions.count(_input)
-        return (
-            functions.var_samp(_input)
-            * (n_rows - functions.lit(1))
-            / (n_rows - functions.lit(ddof))
-        )
+        return functions.var_samp(_input) * (n_rows - 1) / (n_rows - ddof)
 
     from pyspark.pandas.spark.functions import var
 
