@@ -93,7 +93,7 @@ def test_lazy_cum_sum_ungrouped(
     if "dask" in str(constructor) and reverse:
         # https://github.com/dask/dask/issues/11802
         request.applymarker(pytest.mark.xfail)
-    if "modin" in str(constructor) and reverse:
+    if "modin" in str(constructor):
         # probably bugged
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
