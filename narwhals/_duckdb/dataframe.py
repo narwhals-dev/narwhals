@@ -256,12 +256,14 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         self: Self,
         other: Self,
         *,
-        how: Literal["left", "inner", "cross", "anti", "semi"],
+        how: Literal["left", "inner", "full", "cross", "anti", "semi"],
         left_on: list[str] | None,
         right_on: list[str] | None,
         suffix: str,
     ) -> Self:
         original_alias = self._native_frame.alias
+
+        native_how = "outer" if how == "full" else how
 
         if how == "cross":
             if self._backend_version < (1, 1, 4):
@@ -278,16 +280,19 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             conditions = [
                 f'lhs."{left}" = rhs."{right}"' for left, right in zip(left_on, right_on)
             ]
+            if how == "full":  # swap native how
+                native_how = "outer"
+
             condition = " and ".join(conditions)
             rel = self._native_frame.set_alias("lhs").join(
-                other._native_frame.set_alias("rhs"), condition=condition, how=how
+                other._native_frame.set_alias("rhs"), condition=condition, how=native_how
             )
 
-        if how in {"inner", "left", "cross"}:
+        if how in {"inner", "left", "cross", "outer"}:
             select = [f'lhs."{x}"' for x in self._native_frame.columns]
             for col in other._native_frame.columns:
                 if col in self._native_frame.columns and (
-                    right_on is None or col not in right_on
+                    right_on is None or col not in right_on or (native_how == "outer")
                 ):
                     select.append(f'rhs."{col}" as "{col}{suffix}"')
                 elif right_on is None or col not in right_on:
