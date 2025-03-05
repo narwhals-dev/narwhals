@@ -458,7 +458,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
             call_kwargs=self._call_kwargs,
         )
 
-    def over(  # noqa: PLR0915
+    def over(
         self: Self,
         partition_by: Sequence[str],
         kind: ExprKind,
@@ -475,13 +475,8 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     *order_by, descending=False, nulls_last=False
                 )
                 results = self(df)
-                sorting_indices = df[token]._native_series
-                final_results = []
-                for s in results:
-                    s_native = s._native_series
-                    s_native.iloc[sorting_indices] = s_native
-                    final_results.append(s._from_native_series(s_native))
-                return final_results
+                sorting_indices = df[token]._native_series.to_numpy()
+                return [s.scatter(sorting_indices, s) for s in results]
         elif not is_elementary_expression(self):
             msg = (
                 "Only elementary expressions are supported for `.over` in pandas-like backends.\n\n"
@@ -549,12 +544,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 )
                 results = (result_frame[name] for name in aliases)
                 if order_by:
-                    final_results = []
-                    for s in results:
-                        s_native = s._native_series
-                        s_native.iloc[sorting_indices] = s_native
-                        final_results.append(s._from_native_series(s_native))
-                    return final_results
+                    return [s.scatter(sorting_indices, s) for s in results]
                 if reverse:
                     return [s[::-1] for s in results]
                 return list(results)
