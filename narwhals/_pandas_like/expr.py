@@ -524,13 +524,12 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     df = (
                         df[columns]
                         .with_row_index(token)
-                        .sort(*order_by, descending=False, nulls_last=False)
+                        .sort(*order_by, descending=reverse, nulls_last=reverse)
                     )
                     sorting_indices = df[token]._native_series
-                if reverse:
+                elif reverse:
                     columns = list(set(partition_by).union(output_names))
                     df = df[columns][::-1]
-                    sorting_indices = sorting_indices[::-1]
                 native_frame = df._native_frame
                 res_native = native_frame.groupby(partition_by)[
                     list(output_names)
@@ -544,8 +543,6 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     )
                 )
                 results = (result_frame[name] for name in aliases)
-                if not order_by and reverse:
-                    return [s[::-1] for s in results]
                 if order_by:
                     final_results = []
                     for s in results:
@@ -553,6 +550,8 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         s_native.iloc[sorting_indices] = s_native
                         final_results.append(s._from_native_series(s_native))
                     return final_results
+                if reverse:
+                    return [s[::-1] for s in results]
                 return list(results)
 
         return self.__class__(

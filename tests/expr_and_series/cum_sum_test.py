@@ -75,8 +75,8 @@ def test_lazy_cum_sum_grouped(
 @pytest.mark.parametrize(
     ("reverse", "expected_a"),
     [
-        (False, [7, 6, 14, 11, 16, 10, 4]),
-        (True, [10, 12, 5, 6, 2, 9, 16]),
+        (False, [10, 6, 14, 11, 16, 9, 4]),
+        (True, [7, 12, 5, 6, 2, 10, 16]),
     ],
 )
 def test_lazy_cum_sum_ordered_by_nulls(
@@ -105,7 +105,7 @@ def test_lazy_cum_sum_ordered_by_nulls(
         constructor(
             {
                 "a": [1, 2, 3, 1, 2, 3, 4],
-                "b": [1, 0, 3, 2, 5, 1, None],
+                "b": [1, -1, 3, 2, 5, 0, None],
                 "i": [0, 1, 2, 3, 4, 5, 6],
                 "g": [1, 1, 1, 1, 1, 1, 1],
             }
@@ -116,7 +116,7 @@ def test_lazy_cum_sum_ordered_by_nulls(
     ).sort("i")
     expected = {
         "a": expected_a,
-        "b": [1, 0, 3, 2, 5, 1, None],
+        "b": [1, -1, 3, 2, 5, 0, None],
         "i": [0, 1, 2, 3, 4, 5, 6],
     }
     assert_equal_data(result, expected)
@@ -167,8 +167,8 @@ def test_lazy_cum_sum_ungrouped(
 @pytest.mark.parametrize(
     ("reverse", "expected_a"),
     [
-        (False, [7, 6, 14, 11, 16, 10, 4]),
-        (True, [10, 12, 5, 6, 2, 9, 16]),
+        (False, [10, 6, 14, 11, 16, 9, 4]),
+        (True, [7, 12, 5, 6, 2, 10, 16]),
     ],
 )
 def test_lazy_cum_sum_ungrouped_ordered_by_nulls(
@@ -194,7 +194,7 @@ def test_lazy_cum_sum_ungrouped_ordered_by_nulls(
         constructor(
             {
                 "a": [1, 2, 3, 1, 2, 3, 4],
-                "b": [1, 0, 3, 2, 5, 1, None],
+                "b": [1, -1, 3, 2, 5, 0, None],
                 "i": [0, 1, 2, 3, 4, 5, 6],
             }
         )
@@ -204,7 +204,7 @@ def test_lazy_cum_sum_ungrouped_ordered_by_nulls(
     ).sort("i")
     expected = {
         "a": expected_a,
-        "b": [1, 0, 3, 2, 5, 1, None],
+        "b": [1, -1, 3, 2, 5, 0, None],
         "i": [0, 1, 2, 3, 4, 5, 6],
     }
     assert_equal_data(result, expected)

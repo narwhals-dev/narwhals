@@ -550,7 +550,9 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
             _input: Column, partition_by: Sequence[str], order_by: Sequence[str]
         ) -> Column:
             if reverse:
-                order_by = [self._F.col(x).desc() for x in order_by]
+                order_by = [self._F.col(x).desc_nulls_last() for x in order_by]
+            else:
+                order_by = [self._F.col(x).asc_nulls_first() for x in order_by]
             window = (
                 self._Window()
                 .partitionBy(partition_by)
