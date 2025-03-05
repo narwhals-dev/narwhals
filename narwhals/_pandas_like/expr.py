@@ -453,24 +453,45 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
             call_kwargs=self._call_kwargs,
         )
 
-    def over(
+    def over(  # noqa: PLR0915
         self: Self,
         partition_by: list[str],
         kind: ExprKind,
         order_by: Sequence[str] | None = None,
     ) -> Self:
         if not partition_by:
+            assert order_by is not None  # noqa: S101  # help type-check
+
             # This is something like `nw.col('a').cum_sum().order_by(key)`
             # which we can always easily support, as it doesn't require grouping.
             def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
-                native_frame = df._native_frame
-                pdx = df.__native_namespace__()
-                sorting_indices = pdx.MultiIndex.from_frame(
-                    native_frame[order_by]
-                ).argsort()
-                native_frame = native_frame.iloc[sorting_indices]
-                result = self(df._from_native_frame(native_frame))
-                return [ser.scatter(sorting_indices, ser) for ser in result]
+                original_index = df._native_frame.index
+                # expected iterable as variadic?
+                df = df.sort(*order_by, descending=False, nulls_last=False)  # type: ignore[misc]
+                result = self(df)
+                result = [
+                    s._from_native_series(s._native_series.loc[original_index])
+                    for s in result
+                ]
+                if len(result[0]) != len(df):
+                    # One way around this would be:
+                    # - use `with_row_index` to create a temporary column
+                    # - apply the groupby-transform operation
+                    # - insert the row index into the result, relying on pandas to
+                    #   do index alignment
+                    # - sort by the row index, then drop it
+                    # However, that involves doing 2 sorts, whereas the current
+                    # algorithm only does a single sort. If someone comes up with a
+                    # way to do this with a single which supports Indexes with duplicates,
+                    # we can use that instead.
+                    msg = (
+                        "`over` operation with `order_by` is not supported when "
+                        "Index contains duplicate values.\n\n"
+                        "You may want to use `nw.maybe_reset_index` prior to "
+                        "this operation."
+                    )
+                    raise ComputeError(msg)
+                return result
         elif not is_elementary_expression(self):
             msg = (
                 "Only elementary expressions are supported for `.over` in pandas-like backends.\n\n"

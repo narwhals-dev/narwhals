@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.exceptions import ComputeError
 from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -165,19 +166,67 @@ def test_lazy_cum_sum_ungrouped(
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize(
+    ("reverse", "expected_a"),
+    [
+        (False, [7, 6, 14, 11, 16, 10, 4]),
+        (True, [10, 12, 5, 6, 2, 9, 16]),
+    ],
+)
+def test_lazy_cum_sum_ungrouped_ordered_by_nulls(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    *,
+    reverse: bool,
+    expected_a: list[int],
+) -> None:
+    if "duckdb" in str(constructor):
+        # no window function support yet in duckdb
+        request.applymarker(pytest.mark.xfail)
+    if "dask" in str(constructor) and reverse:
+        # https://github.com/dask/dask/issues/11802
+        request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor):
+        # probably bugged
+        request.applymarker(pytest.mark.xfail)
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
+        pytest.skip(reason="too old version")
+
+    df = nw.from_native(
+        constructor(
+            {
+                "a": [1, 2, 3, 1, 2, 3, 4],
+                "b": [1, 0, 3, 2, 5, 1, None],
+                "i": [0, 1, 2, 3, 4, 5, 6],
+            }
+        )
+    ).sort("i")
+    result = df.with_columns(
+        nw.col("a").cum_sum(reverse=reverse).over(_order_by="b")
+    ).sort("i")
+    expected = {
+        "a": expected_a,
+        "b": [1, 0, 3, 2, 5, 1, None],
+        "i": [0, 1, 2, 3, 4, 5, 6],
+    }
+    assert_equal_data(result, expected)
+
+
 def test_lazy_cum_sum_pandas_duplicate_index() -> None:
     dfpd = pd.DataFrame(
         {
             "a": [1, 2, 3],
             "b": [1, 0, 2],
             "i": [0, 1, 2],
+            "g": [1, 1, 1],
         }
     )
     dfpd.index = pd.Index([0, 0, 1])
     df = nw.from_native(dfpd)
-    result = df.with_columns(nw.col("a").cum_sum().over(_order_by="b"))
-    expected = {"a": [3, 2, 6], "b": [1, 0, 2], "i": [0, 1, 2]}
-    assert_equal_data(result, expected)
+    with pytest.raises(ComputeError, match="duplicate"):
+        df.with_columns(nw.col("a").cum_sum().over(_order_by="b"))
+    with pytest.raises(ComputeError, match="duplicate"):
+        df.with_columns(nw.col("a").cum_sum().over("g", _order_by="b"))
 
 
 def test_cum_sum_series(constructor_eager: ConstructorEager) -> None:
