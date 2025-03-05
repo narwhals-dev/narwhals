@@ -13,7 +13,7 @@ data = {"user": [{"id": "0", "name": "john"}, {"id": "1", "name": "jane"}]}
 expected = {"id": ["0", "1"], "name": ["john", "jane"]}
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="old pandas")
+@pytest.mark.skipif(PANDAS_VERSION < (2, 2, 0), reason="old pandas")
 def test_get_field(
     request: pytest.FixtureRequest,
     constructor: Constructor,
