@@ -50,3 +50,18 @@ def test_get_field(
     result = nw.from_native(df).select(*selects)
 
     assert_equal_data(result, _expected)
+
+
+def test_series_get_field() -> None:
+    import polars as pl
+
+    import narwhals as nw
+
+    s_native = pl.Series(
+        [
+            {"id": "0", "name": "john"},
+            {"id": "1", "name": "jane"},
+        ]
+    )
+    s = nw.from_native(s_native, series_only=True)
+    assert s.struct.field("name").to_list() == ["john", "jane"]
