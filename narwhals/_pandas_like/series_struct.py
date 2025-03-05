@@ -10,14 +10,12 @@ if TYPE_CHECKING:
 
 class PandasLikeSeriesStructNamespace:
     def __init__(self: Self, series: PandasLikeSeries) -> None:
+        if not hasattr(series._native_series, "struct"):
+            msg = "Series must be of PyArrow Struct type to support struct namespace."
+            raise TypeError(msg)
         self._compliant_series = series
 
     def field(self: Self, name: str) -> PandasLikeSeries:
-        series = self._compliant_series._native_series
-
-        if hasattr(series, "struct"):
-            series = series.struct.field(name)
-        else:
-            series = series.apply(lambda x: x[name])
-
-        return self._compliant_series._from_native_series(series.rename(name))
+        return self._compliant_series._from_native_series(
+            self._compliant_series._native_series.struct.field(name).rename(name)
+        )

@@ -13,6 +13,7 @@ data = {"user": [{"id": "0", "name": "john"}, {"id": "1", "name": "jane"}]}
 expected = {"id": ["0", "1"], "name": ["john", "jane"]}
 
 
+@pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="old pandas")
 def test_get_field(
     request: pytest.FixtureRequest,
     constructor: Constructor,
@@ -25,10 +26,9 @@ def test_get_field(
     _expected = expected.copy()
     df_native = constructor(data)
 
-    # Pandas may use 2 different methods depending on the data type
-    if "pandas" in str(constructor) and PANDAS_VERSION >= (2,):
-        df_native.assign(  # type: ignore[union-attr]
-            user_arrow=pd.Series(
+    if "pandas" in str(constructor):
+        df_native = df_native.assign(  # type: ignore[union-attr]
+            user=pd.Series(
                 data["user"],
                 dtype=pd.ArrowDtype(
                     pa.struct([("id", pa.string()), ("name", pa.string())])
@@ -37,17 +37,10 @@ def test_get_field(
         )
 
     df = nw.from_native(df_native)
-    selects = [
+    result = nw.from_native(df).select(
         nw.col("user").struct.field("id"),
         nw.col("user").struct.field("name"),
-    ]
-    if "pandas" in str(constructor) and PANDAS_VERSION >= (2,):
-        selects += [
-            nw.col("user").struct.field("name").alias("name_arrow"),
-        ]
-        _expected["name_arrow"] = _expected["name"]
-
-    result = nw.from_native(df).select(*selects)
+    )
 
     assert_equal_data(result, _expected)
 
