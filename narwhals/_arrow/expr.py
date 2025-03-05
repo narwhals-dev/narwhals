@@ -23,6 +23,7 @@ from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
+from narwhals.utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -435,14 +436,14 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
             # This is something like `nw.col('a').cum_sum().order_by(key)`
             # which we can always easily support, as it doesn't require grouping.
             def func(df: ArrowDataFrame) -> Sequence[ArrowSeries]:
-                native_frame = df._native_frame
-                sorting_indices = pc.sort_indices(
-                    native_frame, sort_keys=[(key, "ascending") for key in order_by]
+                token = generate_temporary_column_name(8, df.columns)
+                df = df.with_row_index(token).sort(
+                    *order_by, descending=False, nulls_last=False
                 )
-                native_frame = pc.take(native_frame, sorting_indices)  # type: ignore[call-overload]
-                result = self(df._from_native_frame(native_frame))
+                result = self(df)
+                sorting_indices = pc.sort_indices(df[token]._native_series)  # type: ignore[call-overload]
                 return [
-                    ser.scatter(sorting_indices, ser._native_series)  # type: ignore[arg-type]
+                    ser._from_native_series(pc.take(ser._native_series, sorting_indices))  # type: ignore[call-overload]
                     for ser in result
                 ]
         else:
