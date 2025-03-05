@@ -16,7 +16,9 @@ def test_get_field(
     request: pytest.FixtureRequest,
     constructor: Constructor,
 ) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
+    if any(
+        backend in str(constructor) for backend in ("dask", "modin", "cudf", "sqlframe")
+    ):
         request.applymarker(pytest.mark.xfail)
 
     _expected = expected.copy()
