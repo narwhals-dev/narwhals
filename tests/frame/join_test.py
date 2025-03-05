@@ -17,25 +17,96 @@ from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
 
-def test_full_join(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    not_implemented = ("pandas", "dask", "duckdb", "modin", "sqlframe")
+@pytest.mark.parametrize(
+    ("df1", "df2", "expected", "on", "left_on", "right_on"),
+    [
+        (
+            {"id": [1, 2, 3], "name": ["Alice", "Bob", "Charlie"], "age": [25, 30, 35]},
+            {
+                "id": [2, 3, 4],
+                "department": ["HR", "Engineering", "Marketing"],
+                "salary": [50000, 60000, 70000],
+            },
+            {
+                "id": [1, 2, 3, None],
+                "name": ["Alice", "Bob", "Charlie", None],
+                "age": [25, 30, 35, None],
+                "id_right": [None, 2, 3, 4],
+                "department": [None, "HR", "Engineering", "Marketing"],
+                "salary": [None, 50000, 60000, 70000],
+            },
+            None,
+            ["id"],
+            ["id"],
+        ),
+        (
+            {"id": [1, 2, 3], "name": ["Alice", "Bob", "Charlie"], "age": [25, 30, 35]},
+            {
+                "id": [2, 3, 4],
+                "department": ["HR", "Engineering", "Marketing"],
+                "salary": [50000, 60000, 70000],
+            },
+            {
+                "id": [1, 2, 3, None],
+                "name": ["Alice", "Bob", "Charlie", None],
+                "age": [25, 30, 35, None],
+                "id_right": [None, 2, 3, 4],
+                "department": [None, "HR", "Engineering", "Marketing"],
+                "salary": [None, 50000, 60000, 70000],
+            },
+            "id",
+            None,
+            None,
+        ),
+        (
+            {
+                "id": [1, 2, 3, 4],
+                "year": [2020, 2021, 2022, 2023],
+                "value1": [100, 200, 300, 400],
+            },
+            {
+                "id": [2, 3, 4, 5],
+                "year_foo": [2021, 2022, 2023, 2024],
+                "value2": [500, 600, 700, 800],
+            },
+            {
+                "id": [1, 2, 3, 4, None],
+                "year": [2020, 2021, 2022, 2023, None],
+                "value1": [100, 200, 300, 400, None],
+                "id_right": [None, 2, 3, 4, 5],
+                # since year is different, don't apply suffix
+                "year_foo": [None, 2021, 2022, 2023, 2024],
+                "value2": [None, 500, 600, 700, 800],
+            },
+            None,
+            ["id", "year"],
+            ["id", "year_foo"],
+        ),
+    ],
+)
+def test_full_join(
+    df1: dict[str, list[Any]],
+    df2: dict[str, list[Any]],
+    expected: dict[str, list[Any]],
+    on: None | str | list[str],
+    left_on: None | str | list[str],
+    right_on: None | str | list[str],
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+) -> None:
+    not_implemented = ("modin[pyarrow]", "sqlframe")
     if any(lib for lib in not_implemented if lib in str(constructor)):
         request.applymarker(pytest.mark.xfail)
 
-    df1 = {"id": [1, 2, 3], "value1": ["A", "B", "C"]}
-    df2 = {"id": [2, 3, 4], "value2": ["X", "Y", "Z"]}
-    expected_no_coalesce = {
-        "id": [None, 1, 2, 3],
-        "value1": [None, "A", "B", "C"],
-        "id_right": [4, None, 2, 3],
-        "value2": ["Z", None, "X", "Y"],
-    }
-
     df_left = nw_main.from_native(constructor(df1))
     df_right = nw_main.from_native(constructor(df2))
-    result = df_left.join(df_right, left_on="id", right_on="id", how="full")
-    result = result.sort("id")
-    assert_equal_data(result, expected_no_coalesce)
+    result = df_left.join(
+        df_right, on=on, left_on=left_on, right_on=right_on, how="full"
+    ).sort("id", nulls_last=True)
+    assert_equal_data(result, expected)
+
+
+pytest.main([__file__])
 
 
 def test_inner_join_two_keys(constructor: Constructor) -> None:
