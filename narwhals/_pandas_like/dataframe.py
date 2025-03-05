@@ -723,15 +723,23 @@ class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyF
             return self._from_native_frame(result_native.drop(columns=extra))
 
         if how == "full":
-            ## pandas does not retain keys post-join
-            ## we must append the suffix to each key before-hand
-            if right_on is None:  # pragma: no cover
-                msg = "`right_on` cannot be `None` in full-join"
-                raise TypeError(msg)
-            right_on_suffixed = [f"{k}{suffix}" for k in right_on]
-            right_on_mapper: dict[str, str] = dict(zip(right_on, right_on_suffixed))
+            ## Pandas coalesces keys in full joins unless there's no collision
+
+            # help mypy
+            assert right_on is not None  # noqa: S101
+            assert left_on is not None  # noqa: S101
+
+            right_keys_suffixed: list[str] = []
+            for key in right_on:
+                if key in left_on:
+                    suffixed = f"{key}{suffix}"
+                    right_keys_suffixed.append(suffixed)
+                    continue
+                right_keys_suffixed.append(key)
+
+            right_on_mapper: dict[str, str] = dict(zip(right_on, right_keys_suffixed))
             other._native_frame = other._native_frame.rename(columns=right_on_mapper)
-            right_on = right_on_suffixed  # we now have the suffixed keys
+            right_on = right_keys_suffixed  # we now have the suffixed keys
             how = "outer"  # type: ignore[assignment]
 
         return self._from_native_frame(
