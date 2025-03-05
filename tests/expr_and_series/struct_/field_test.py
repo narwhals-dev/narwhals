@@ -37,6 +37,7 @@ def test_get_field(
         )
 
     df = nw.from_native(df_native)
+
     result = nw.from_native(df).select(
         nw.col("user").struct.field("id"),
         nw.col("user").struct.field("name"),
@@ -45,7 +46,7 @@ def test_get_field(
     assert_equal_data(result, _expected)
 
 
-def test_series_get_field() -> None:
+def test_polars_series_get_field() -> None:
     import polars as pl
 
     import narwhals as nw
@@ -58,3 +59,20 @@ def test_series_get_field() -> None:
     )
     s = nw.from_native(s_native, series_only=True)
     assert s.struct.field("name").to_list() == ["john", "jane"]
+
+
+def test_pandas_series_get_field() -> None:
+    import pandas as pd
+
+    import narwhals as nw
+
+    s_native = pd.Series(
+        data=[
+            {"id": "0", "name": "john"},
+            {"id": "1", "name": "jane"},
+        ]
+    )
+    s = nw.from_native(s_native, series_only=True)
+
+    with pytest.raises(TypeError):
+        s.struct.field("name")
