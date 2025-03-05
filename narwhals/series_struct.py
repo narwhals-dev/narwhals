@@ -36,13 +36,8 @@ class SeriesStructNamespace(Generic[SeriesT]):
             ...     ]
             ... )
             >>> s = nw.from_native(s_native, series_only=True)
-            >>> s.struct.field("name").to_native()
-            shape: (2,)
-            Series: 'name' [str]
-            [
-               "john"
-               "jane"
-            ]
+            >>> s.struct.field("name").to_list()
+            ['john', 'jane']
         """
         return self._narwhals_series._from_compliant_series(
             self._narwhals_series._compliant_series.struct.field(name)
