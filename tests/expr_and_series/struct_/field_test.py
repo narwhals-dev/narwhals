@@ -5,6 +5,7 @@ import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -25,7 +26,7 @@ def test_get_field(
     df_native = constructor(data)
 
     # Pandas may use 2 different methods depending on the data type
-    if "pandas" in str(constructor):
+    if "pandas" in str(constructor) and PANDAS_VERSION >= (2,):
         df_native.assign(  # type: ignore[union-attr]
             user_arrow=pd.Series(
                 data["user"],
@@ -40,7 +41,7 @@ def test_get_field(
         nw.col("user").struct.field("id"),
         nw.col("user").struct.field("name"),
     ]
-    if "pandas" in str(constructor):
+    if "pandas" in str(constructor) and PANDAS_VERSION >= (2,):
         selects += [
             nw.col("user").struct.field("name").alias("name_arrow"),
         ]
