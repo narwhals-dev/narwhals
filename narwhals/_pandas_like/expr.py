@@ -22,8 +22,8 @@ from narwhals._pandas_like.utils import rename
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ColumnNotFoundError
-from narwhals.exceptions import ComputeError
 from narwhals.typing import CompliantExpr
+from narwhals.utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -453,11 +453,11 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
             call_kwargs=self._call_kwargs,
         )
 
-    def over(  # noqa: PLR0915
+    def over(
         self: Self,
         partition_by: list[str],
         kind: ExprKind,
-        order_by: Sequence[str] | None = None,
+        order_by: Sequence[str] | None,
     ) -> Self:
         if not partition_by:
             assert order_by is not None  # noqa: S101  # help type-check
@@ -465,33 +465,16 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
             # This is something like `nw.col('a').cum_sum().order_by(key)`
             # which we can always easily support, as it doesn't require grouping.
             def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
-                original_index = df._native_frame.index
-                # expected iterable as variadic?
-                df = df.sort(*order_by, descending=False, nulls_last=False)  # type: ignore[misc]
+                token = generate_temporary_column_name(8, df.columns)
+                df = df.with_row_index(token).sort(
+                    *order_by, descending=False, nulls_last=False
+                )
                 result = self(df)
-                result = [
-                    s._from_native_series(s._native_series.loc[original_index])
+                sorting_indices = df[token]._native_series.argsort()
+                return [
+                    s._from_native_series(s._native_series.iloc[sorting_indices])
                     for s in result
                 ]
-                if len(result[0]) != len(df):
-                    # One way around this would be:
-                    # - use `with_row_index` to create a temporary column
-                    # - apply the groupby-transform operation
-                    # - insert the row index into the result, relying on pandas to
-                    #   do index alignment
-                    # - sort by the row index, then drop it
-                    # However, that involves doing 2 sorts, whereas the current
-                    # algorithm only does a single sort. If someone comes up with a
-                    # way to do this with a single which supports Indexes with duplicates,
-                    # we can use that instead.
-                    msg = (
-                        "`over` operation with `order_by` is not supported when "
-                        "Index contains duplicate values.\n\n"
-                        "You may want to use `nw.maybe_reset_index` prior to "
-                        "this operation."
-                    )
-                    raise ComputeError(msg)
-                return result
         elif not is_elementary_expression(self):
             msg = (
                 "Only elementary expressions are supported for `.over` in pandas-like backends.\n\n"
@@ -535,8 +518,13 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     reverse = False
                 if order_by:
                     columns = list(set(partition_by).union(output_names).union(order_by))
-                    original_index = df._native_frame.index
-                    df = df[columns].sort(*order_by, descending=False, nulls_last=False)
+                    token = generate_temporary_column_name(8, columns)
+                    df = (
+                        df[columns]
+                        .with_row_index(token)
+                        .sort(*order_by, descending=False, nulls_last=False)
+                    )
+                    sorting_indices = df[token]._native_series.argsort()
                 if reverse:
                     columns = list(set(partition_by).union(output_names))
                     df = df[columns][::-1]
@@ -552,28 +540,14 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         backend_version=self._backend_version,
                     )
                 )
-                if order_by:
+                if order_by and reverse:
                     result_frame = result_frame._from_native_frame(
-                        result_frame._native_frame.loc[original_index]
+                        result_frame._native_frame[::-1].iloc[sorting_indices]
                     )
-                    if len(result_frame) != len(df):
-                        # One way around this would be:
-                        # - use `with_row_index` to create a temporary column
-                        # - apply the groupby-transform operation
-                        # - insert the row index into the result, relying on pandas to
-                        #   do index alignment
-                        # - sort by the row index, then drop it
-                        # However, that involves doing 2 sorts, whereas the current
-                        # algorithm only does a single sort. If someone comes up with a
-                        # way to do this with a single which supports Indexes with duplicates,
-                        # we can use that instead.
-                        msg = (
-                            "`over` operation with `order_by` is not supported when "
-                            "Index contains duplicate values.\n\n"
-                            "You may want to use `nw.maybe_reset_index` prior to "
-                            "this operation."
-                        )
-                        raise ComputeError(msg)
+                elif order_by:
+                    result_frame = result_frame._from_native_frame(
+                        result_frame._native_frame.iloc[sorting_indices]
+                    )
                 results = (result_frame[name] for name in aliases)
                 if not order_by and reverse:
                     return [s[::-1] for s in results]
