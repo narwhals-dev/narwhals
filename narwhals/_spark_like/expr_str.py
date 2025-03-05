@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from functools import partial
 from typing import TYPE_CHECKING
-from typing import overload
+from typing import Any
 
 if TYPE_CHECKING:
     from pyspark.sql import Column
@@ -107,47 +108,28 @@ class SparkLikeExprStringNamespace:
         )
 
     def to_datetime(self: Self, format: str | None) -> SparkLikeExpr:  # noqa: A002
-        is_naive = (
-            format is not None
-            and "%s" not in format
-            and "%z" not in format
-            and "Z" not in format
-        )
-        function = (
-            self._compliant_expr._F.to_timestamp_ntz
-            if is_naive
-            else self._compliant_expr._F.to_timestamp
-        )
-        pyspark_format = strptime_to_pyspark_format(format)
-        format = (
-            self._compliant_expr._F.lit(pyspark_format) if is_naive else pyspark_format
-        )
+        F = self._compliant_expr._F  # noqa: N806
+        if not format:
+            function = F.to_timestamp
+        elif is_naive(format):
+            function = partial(
+                F.to_timestamp_ntz, format=F.lit(strptime_to_pyspark_format(format))
+            )
+        else:
+            function = partial(F.to_timestamp, format=strptime_to_pyspark_format(format))
         return self._compliant_expr._from_call(
-            lambda _input: function(
-                self._compliant_expr._F.replace(
-                    _input,
-                    self._compliant_expr._F.lit("T"),
-                    self._compliant_expr._F.lit(" "),
-                ),
-                format=format,
-            ),
+            lambda _input: function(F.replace(_input, F.lit("T"), F.lit(" "))),
             "to_datetime",
         )
 
 
-@overload
-def strptime_to_pyspark_format(format: None) -> None: ...
+def is_naive(obj: Any) -> bool:
+    return obj is not None and {"%s", "%z", "Z"}.isdisjoint(obj)
 
 
-@overload
-def strptime_to_pyspark_format(format: str) -> str: ...
-
-
-def strptime_to_pyspark_format(format: str | None) -> str | None:  # noqa: A002
+def strptime_to_pyspark_format(format: str) -> str:  # noqa: A002
     """Converts a Python strptime datetime format string to a PySpark datetime format string."""
     # Mapping from Python strptime format to PySpark format
-    if format is None:
-        return None
 
     # see https://spark.apache.org/docs/latest/sql-ref-datetime-pattern.html
     # and https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior
