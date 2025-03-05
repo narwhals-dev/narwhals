@@ -38,6 +38,19 @@ class ExprStructNamespace(Generic[ExprT]):
             ... )
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(name=nw.col("user").struct.field("name"))
+            ┌───────────────────────┐
+            |  Narwhals DataFrame   |
+            |-----------------------|
+            |shape: (2, 2)          |
+            |┌──────────────┬──────┐|
+            |│ user         ┆ name │|
+            |│ ---          ┆ ---  │|
+            |│ struct[2]    ┆ str  │|
+            |╞══════════════╪══════╡|
+            |│ {"0","john"} ┆ john │|
+            |│ {"1","jane"} ┆ jane │|
+            |└──────────────┴──────┘|
+            └───────────────────────┘
         """
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).struct.field(name),

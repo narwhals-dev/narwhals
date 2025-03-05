@@ -577,6 +577,10 @@ class PolarsSeries:
     def list(self: Self) -> PolarsSeriesListNamespace:
         return PolarsSeriesListNamespace(self)
 
+    @property
+    def struct(self: Self) -> PolarsSeriesStructNamespace:
+        return PolarsSeriesStructNamespace(self)
+
 
 class PolarsSeriesDateTimeNamespace:
     def __init__(self: Self, series: PolarsSeries) -> None:
@@ -653,8 +657,8 @@ class PolarsSeriesStructNamespace:
     def __init__(self: Self, series: PolarsSeries) -> None:
         self._series = series
 
-    def field(self: Self, *names: str) -> PolarsSeries:
+    def field(self: Self, name: str) -> PolarsSeries:
         native_series = self._series._native_series
-        native_result = native_series.struct.field(*names)
+        native_result = native_series.struct.field(name)
 
         return self._series._from_native_series(native_result)
