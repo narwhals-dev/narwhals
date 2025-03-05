@@ -524,10 +524,11 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         .with_row_index(token)
                         .sort(*order_by, descending=False, nulls_last=False)
                     )
-                    sorting_indices = df[token]._native_series.argsort()
+                    sorting_indices = df[token]._native_series  # .argsort()
                 if reverse:
                     columns = list(set(partition_by).union(output_names))
                     df = df[columns][::-1]
+                    sorting_indices = sorting_indices[::-1]
                 native_frame = df._native_frame
                 res_native = native_frame.groupby(partition_by)[
                     list(output_names)
@@ -540,17 +541,16 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         backend_version=self._backend_version,
                     )
                 )
-                if order_by and reverse:
-                    result_frame = result_frame._from_native_frame(
-                        result_frame._native_frame[::-1].iloc[sorting_indices]
-                    )
-                elif order_by:
-                    result_frame = result_frame._from_native_frame(
-                        result_frame._native_frame.iloc[sorting_indices]
-                    )
                 results = (result_frame[name] for name in aliases)
                 if not order_by and reverse:
                     return [s[::-1] for s in results]
+                if order_by:
+                    final_results = []
+                    for s in results:
+                        s_native = s._native_series
+                        s_native.iloc[sorting_indices] = s_native
+                        final_results.append(s._from_native_series(s_native))
+                    return final_results
                 return list(results)
 
         return self.__class__(
