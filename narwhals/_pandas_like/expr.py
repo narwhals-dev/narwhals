@@ -526,7 +526,9 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         .with_row_index(token)
                         .sort(*order_by, descending=reverse, nulls_last=reverse)
                     )
-                    sorting_indices = df[token]._native_series
+                    # Intentionally using `.values`, as for pandas we know this is
+                    # numeric without missing values and for cuDF it gives cuPY array.
+                    sorting_indices = df[token]._native_series.values
                 elif reverse:
                     columns = list(set(partition_by).union(output_names))
                     df = df[columns][::-1]

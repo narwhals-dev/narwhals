@@ -225,7 +225,7 @@ class PandasLikeSeries(CompliantSeries):
         result[mask_na] = None
         return self._from_native_series(result)
 
-    def scatter(self: Self, indices: int | Sequence[int], values: Any) -> Self:
+    def scatter(self: Self, indices: int | Sequence[int] | Self, values: Any) -> Self:
         if isinstance(values, self.__class__):
             # .copy() is necessary in some pre-2.2 versions of pandas to avoid
             # `values` also getting modified (!)
