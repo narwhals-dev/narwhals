@@ -266,7 +266,7 @@ class DaskLazyFrame(CompliantLazyFrame):
         self: Self,
         other: Self,
         *,
-        how: Literal["left", "inner", "cross", "anti", "semi"],
+        how: Literal["left", "inner", "full", "cross", "anti", "semi"],
         left_on: list[str] | None,
         right_on: list[str] | None,
         suffix: str,
@@ -360,6 +360,18 @@ class DaskLazyFrame(CompliantLazyFrame):
                 elif right_key != left_key:
                     extra.append(f"{right_key}_right")
             return self._from_native_frame(result_native.drop(columns=extra))
+
+        if how == "full":
+            ## dask does not retain keys post-join
+            ## we must append the suffix to each key before-hand
+            if right_on is None:  # pragma: no cover
+                msg = "`right_on` cannot be `None` in full-join"
+                raise TypeError(msg)
+            right_on_suffixed = [f"{k}{suffix}" for k in right_on]
+            right_on_mapper: dict[str, str] = dict(zip(right_on, right_on_suffixed))
+            other._native_frame = other._native_frame.rename(columns=right_on_mapper)
+            right_on = right_on_suffixed  # we now have the suffixed keys
+            how = "outer"  # type: ignore[assignment]
 
         return self._from_native_frame(
             self._native_frame.merge(
