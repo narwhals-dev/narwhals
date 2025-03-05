@@ -7,7 +7,9 @@ from typing import Callable
 from typing import Literal
 from typing import Sequence
 
+from narwhals._compliant.typing import CompliantDataFrameT
 from narwhals._compliant.typing import CompliantFrameT
+from narwhals._compliant.typing import CompliantLazyFrameT
 from narwhals._compliant.typing import CompliantSeriesT_co
 from narwhals.utils import deprecated
 from narwhals.utils import unstable
@@ -212,3 +214,16 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesT_co]):
     def broadcast(
         self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]
     ) -> Self: ...
+
+
+class EagerExpr(
+    CompliantExpr[CompliantDataFrameT, CompliantSeriesT_co],
+    Protocol38[CompliantDataFrameT, CompliantSeriesT_co],
+): ...
+
+
+# NOTE: See (https://github.com/narwhals-dev/narwhals/issues/2044#issuecomment-2674262833)
+class LazyExpr(
+    CompliantExpr[CompliantLazyFrameT, CompliantSeriesT_co],
+    Protocol38[CompliantLazyFrameT, CompliantSeriesT_co],
+): ...
