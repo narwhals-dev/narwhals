@@ -2,16 +2,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._selectors import CompliantSelector
-from narwhals._selectors import LazySelectorNamespace
+from narwhals._compliant import CompliantSelector
+from narwhals._compliant import LazySelectorNamespace
 from narwhals._spark_like.expr import SparkLikeExpr
 
 if TYPE_CHECKING:
     from pyspark.sql import Column
     from typing_extensions import Self
 
-    from narwhals._selectors import EvalNames
-    from narwhals._selectors import EvalSeries
+    from narwhals._compliant.selectors import EvalNames
+    from narwhals._compliant.selectors import EvalSeries
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals.utils import _FullContext
 

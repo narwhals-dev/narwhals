@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._compliant import CompliantSelector
+from narwhals._compliant import LazySelectorNamespace
 from narwhals._dask.expr import DaskExpr
-from narwhals._selectors import CompliantSelector
-from narwhals._selectors import LazySelectorNamespace
 
 if TYPE_CHECKING:
     try:
@@ -14,9 +14,9 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from narwhals._compliant.selectors import EvalNames
+    from narwhals._compliant.selectors import EvalSeries
     from narwhals._dask.dataframe import DaskLazyFrame
-    from narwhals._selectors import EvalNames
-    from narwhals._selectors import EvalSeries
     from narwhals.utils import _FullContext
 
 

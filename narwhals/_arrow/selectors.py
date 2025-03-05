@@ -3,16 +3,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._arrow.expr import ArrowExpr
-from narwhals._selectors import CompliantSelector
-from narwhals._selectors import EagerSelectorNamespace
+from narwhals._compliant import CompliantSelector
+from narwhals._compliant import EagerSelectorNamespace
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
-    from narwhals._selectors import EvalNames
-    from narwhals._selectors import EvalSeries
+    from narwhals._compliant.selectors import EvalNames
+    from narwhals._compliant.selectors import EvalSeries
     from narwhals.utils import _FullContext
 
 
