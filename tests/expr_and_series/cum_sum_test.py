@@ -50,7 +50,7 @@ def test_lazy_cum_sum_grouped(
         # bugged
         request.applymarker(pytest.mark.xfail)
     if "dask" in str(constructor):
-        # not (yet?) supported with multiple partitions
+        # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
         pytest.skip(reason="too old version")
@@ -96,7 +96,7 @@ def test_lazy_cum_sum_ordered_by_nulls(
         # bugged
         request.applymarker(pytest.mark.xfail)
     if "dask" in str(constructor):
-        # not (yet?) supported with multiple partitions
+        # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
         pytest.skip(reason="too old version")
@@ -181,8 +181,8 @@ def test_lazy_cum_sum_ungrouped_ordered_by_nulls(
     if "duckdb" in str(constructor):
         # no window function support yet in duckdb
         request.applymarker(pytest.mark.xfail)
-    if "dask" in str(constructor) and reverse:
-        # https://github.com/dask/dask/issues/11802
+    if "dask" in str(constructor):
+        # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         # probably bugged
