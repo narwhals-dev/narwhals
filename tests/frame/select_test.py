@@ -154,6 +154,9 @@ def test_filtration_vs_aggregation(constructor_eager: ConstructorEager) -> None:
 
 
 def test_select_duplicates(constructor: Constructor) -> None:
+    if "cudf" in str(constructor):
+        # cudf already raises its own error
+        pytest.skip()
     df = nw.from_native(constructor({"a": [1, 2]})).lazy()
     with pytest.raises(ValueError, match="Expected unique|duplicate|more than one"):
         df.select("a", nw.col("a") + 1).collect()
