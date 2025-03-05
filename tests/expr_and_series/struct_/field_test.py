@@ -61,7 +61,7 @@ def test_polars_series_get_field() -> None:
     assert s.struct.field("name").to_list() == ["john", "jane"]
 
 
-def test_pandas_series_get_field() -> None:
+def test_pandas_object_series() -> None:
     import pandas as pd
 
     import narwhals as nw
