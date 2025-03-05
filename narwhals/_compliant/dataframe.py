@@ -23,7 +23,7 @@ class CompliantDataFrame(Protocol[CompliantSeriesT_co]):
     def simple_select(
         self, *column_names: str
     ) -> Self: ...  # `select` where all args are column names.
-    def aggregate(self, *exprs: Any) -> Self:
+    def aggregate(self, *exprs: Any) -> Self:  # pragma: no cover
         ...  # `select` where all args are aggregations or literals
         # (so, no broadcasting is necessary).
 
@@ -41,7 +41,7 @@ class CompliantLazyFrame(Protocol):
     def simple_select(
         self, *column_names: str
     ) -> Self: ...  # `select` where all args are column names.
-    def aggregate(self, *exprs: Any) -> Self:
+    def aggregate(self, *exprs: Any) -> Self:  # pragma: no cover
         ...  # `select` where all args are aggregations or literals
         # (so, no broadcasting is necessary).
 

@@ -14,12 +14,12 @@ from narwhals._compliant.typing import CompliantSeriesT_co
 from narwhals.utils import deprecated
 from narwhals.utils import unstable
 
-if not TYPE_CHECKING:
+if not TYPE_CHECKING:  # pragma: no cover
     if sys.version_info >= (3, 9):
         from typing import Protocol as Protocol38
     else:
         from typing import Generic as Protocol38
-else:
+else:  # pragma: no cover
     # TODO @dangotbanned: Remove after dropping `3.8` (#2084)
     # - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
     from typing import Protocol as Protocol38
