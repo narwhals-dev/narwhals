@@ -102,10 +102,11 @@ def test_rank_expr_in_over_context(
     constructor_eager: ConstructorEager,
     method: Literal["average", "min", "max", "dense", "ordinal"],
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "dask")):
+    if any(x in str(constructor_eager) for x in ("pyarrow_table", "dask", "cudf")):
         # Pyarrow raises:
         # > pyarrow.lib.ArrowKeyError: No function registered with name: hash_rank
         # We can handle that to provide a better error message.
+        # cudf: https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
 
     if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1):
