@@ -441,6 +441,10 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
                     *order_by, descending=False, nulls_last=False
                 )
                 result = self(df)
+                # TODO(marco): is there a way to do this efficiently without
+                # doing 2 sorts? Here we're sorting the dataframe and then
+                # again calling `sort_indices`. We can't use the same trick
+                # we use in pandas as PyArrow arrays are immutable.
                 sorting_indices = pc.sort_indices(df[token]._native_series)  # type: ignore[call-overload]
                 return [
                     ser._from_native_series(pc.take(ser._native_series, sorting_indices))  # type: ignore[call-overload]
