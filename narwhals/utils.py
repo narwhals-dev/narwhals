@@ -1423,6 +1423,7 @@ def unstable(fn: _Fn, /) -> _Fn:
         Decorated function (unchanged).
 
     Examples:
+        >>> from narwhals.utils import unstable
         >>> @unstable
         ... def a_work_in_progress_feature(*args):
         ...     return args
