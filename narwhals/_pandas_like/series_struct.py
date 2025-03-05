@@ -13,6 +13,11 @@ class PandasLikeSeriesStructNamespace:
         self._compliant_series = series
 
     def field(self: Self, name: str) -> PandasLikeSeries:
-        return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.apply(lambda x: x[name]).rename(name),
-        )
+        series = self._compliant_series._native_series
+
+        if hasattr(series, "struct"):
+            series = series.struct.field(name)
+        else:
+            series = series.apply(lambda x: x[name])
+
+        return self._compliant_series._from_native_series(series.rename(name))
