@@ -519,7 +519,7 @@ class ArrowSeries(CompliantSeries):
     def is_nan(self: Self) -> Self:
         return self._from_native_series(pc.is_nan(self._native_series))
 
-    def cast(self: Self, dtype: DType) -> Self:
+    def cast(self: Self, dtype: DType | type[DType]) -> Self:
         ser = self._native_series
         data_type = narwhals_to_native_dtype(dtype, self._version)
         return self._from_native_series(pc.cast(ser, data_type))
