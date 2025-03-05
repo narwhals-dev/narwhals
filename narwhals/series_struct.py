@@ -40,8 +40,8 @@ class SeriesStructNamespace(Generic[SeriesT]):
             shape: (2,)
             Series: 'name' [str]
             [
-                "john"
-                "jane"
+               "john"
+               "jane"
             ]
         """
         return self._narwhals_series._from_compliant_series(
