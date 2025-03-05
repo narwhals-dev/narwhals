@@ -22,6 +22,7 @@ from narwhals._pandas_like.utils import rename
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import ComputeError
 from narwhals.typing import CompliantExpr
 
 if TYPE_CHECKING:
@@ -511,22 +512,14 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 else:
                     assert "reverse" not in self._call_kwargs  # noqa: S101
                     reverse = False
-                if order_by or reverse:
-                    # Only select the columns we need to avoid reordering columns
-                    # unnecessarily
+                if order_by:
+                    columns = list(set(partition_by).union(output_names).union(order_by))
+                    original_index = df._native_frame.index
+                    df = df[columns].sort(*order_by, descending=False, nulls_last=False)
+                if reverse:
                     columns = list(set(partition_by).union(output_names))
-                    if order_by:
-                        pdx = df.__native_namespace__()
-                        sorting_indices = pdx.MultiIndex.from_frame(
-                            df[order_by]._native_frame
-                        ).argsort()
-                        if reverse:
-                            sorting_indices = sorting_indices[::-1]
-                        native_frame = df[columns]._native_frame.iloc[sorting_indices]
-                    else:  # reverse
-                        native_frame = df._native_frame[::-1]
-                else:
-                    native_frame = df._native_frame
+                    df = df[columns][::-1]
+                native_frame = df._native_frame
                 res_native = native_frame.groupby(partition_by)[
                     list(output_names)
                 ].transform(pandas_function_name, **pandas_kwargs)
@@ -538,10 +531,30 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         backend_version=self._backend_version,
                     )
                 )
-                results = (result_frame[name] for name in aliases)
                 if order_by:
-                    return [s.scatter(sorting_indices, s) for s in results]
-                elif reverse:
+                    result_frame = result_frame._from_native_frame(
+                        result_frame._native_frame.loc[original_index]
+                    )
+                    if len(result_frame) != len(df):
+                        # One way around this would be:
+                        # - use `with_row_index` to create a temporary column
+                        # - apply the groupby-transform operation
+                        # - insert the row index into the result, relying on pandas to
+                        #   do index alignment
+                        # - sort by the row index, then drop it
+                        # However, that involves doing 2 sorts, whereas the current
+                        # algorithm only does a single sort. If someone comes up with a
+                        # way to do this with a single which supports Indexes with duplicates,
+                        # we can use that instead.
+                        msg = (
+                            "`over` operation with `order_by` is not supported when "
+                            "Index contains duplicate values.\n\n"
+                            "You may want to use `nw.maybe_reset_index` prior to "
+                            "this operation."
+                        )
+                        raise ComputeError(msg)
+                results = (result_frame[name] for name in aliases)
+                if not order_by and reverse:
                     return [s[::-1] for s in results]
                 return list(results)
 

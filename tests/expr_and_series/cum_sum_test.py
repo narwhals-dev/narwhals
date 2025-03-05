@@ -76,6 +76,56 @@ def test_lazy_cum_sum_grouped(
 @pytest.mark.parametrize(
     ("reverse", "expected_a"),
     [
+        (False, [7, 6, 14, 11, 16, 10, 4]),
+        (True, [10, 12, 5, 6, 2, 9, 16]),
+    ],
+)
+def test_lazy_cum_sum_ordered_by_nulls(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    *,
+    reverse: bool,
+    expected_a: list[int],
+) -> None:
+    if "duckdb" in str(constructor):
+        # no window function support yet in duckdb
+        request.applymarker(pytest.mark.xfail)
+    if "pyarrow_table" in str(constructor):
+        # grouped window functions not yet supported
+        request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor):
+        # bugged
+        request.applymarker(pytest.mark.xfail)
+    if "dask" in str(constructor):
+        # not (yet?) supported with multiple partitions
+        request.applymarker(pytest.mark.xfail)
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
+        pytest.skip(reason="too old version")
+
+    df = nw.from_native(
+        constructor(
+            {
+                "a": [1, 2, 3, 1, 2, 3, 4],
+                "b": [1, 0, 3, 2, 5, 1, None],
+                "i": [0, 1, 2, 3, 4, 5, 6],
+                "g": [1, 1, 1, 1, 1, 1, 1],
+            }
+        )
+    )
+    result = df.with_columns(
+        nw.col("a").cum_sum(reverse=reverse).over("g", _order_by="b")
+    ).sort("i")
+    expected = {
+        "a": expected_a,
+        "b": [1, 0, 3, 2, 5, 1, None],
+        "i": [0, 1, 2, 3, 4, 5, 6],
+    }
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("reverse", "expected_a"),
+    [
         (False, [3, 2, 6]),
         (True, [4, 6, 3]),
     ],
