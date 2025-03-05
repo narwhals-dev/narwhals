@@ -23,6 +23,7 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
+from narwhals.utils import not_implemented
 
 if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprKind
@@ -395,12 +396,6 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
     def drop_nulls(self: Self) -> Self:
         return self._from_call(lambda _input: _input.dropna(), "drop_nulls")
 
-    def replace_strict(
-        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
-    ) -> Self:
-        msg = "`replace_strict` is not yet supported for Dask expressions"
-        raise NotImplementedError(msg)
-
     def abs(self: Self) -> Self:
         return self._from_call(lambda _input: _input.abs(), "abs")
 
@@ -543,7 +538,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
 
     def over(
         self: Self,
-        partition_by: list[str],
+        partition_by: Sequence[str],
         kind: ExprKind,
         order_by: Sequence[str] | None,
     ) -> Self:
@@ -627,3 +622,24 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
     @property
     def name(self: Self) -> DaskExprNameNamespace:
         return DaskExprNameNamespace(self)
+
+    arg_min = not_implemented()
+    arg_max = not_implemented()
+    arg_true = not_implemented()
+    head = not_implemented()
+    tail = not_implemented()
+    mode = not_implemented()
+    sort = not_implemented()
+    rank = not_implemented()
+    sample = not_implemented()
+    map_batches = not_implemented()
+    ewm_mean = not_implemented()
+    rolling_sum = not_implemented()
+    rolling_mean = not_implemented()
+    rolling_var = not_implemented()
+    rolling_std = not_implemented()
+    gather_every = not_implemented()
+    replace_strict = not_implemented()
+
+    cat = not_implemented()  # pyright: ignore[reportAssignmentType]
+    list = not_implemented()  # pyright: ignore[reportAssignmentType]

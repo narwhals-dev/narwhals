@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 
 import pyarrow.compute as pc
@@ -24,6 +25,7 @@ from narwhals.exceptions import ColumnNotFoundError
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
+from narwhals.utils import not_implemented
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -265,7 +267,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
     def skew(self: Self) -> Self:
         return reuse_series_implementation(self, "skew", returns_scalar=True)
 
-    def cast(self: Self, dtype: DType) -> Self:
+    def cast(self: Self, dtype: DType | type[DType]) -> Self:
         return reuse_series_implementation(self, "cast", dtype=dtype)
 
     def abs(self: Self) -> Self:
@@ -388,7 +390,11 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
         return reuse_series_implementation(self, "unique", maintain_order=False)
 
     def replace_strict(
-        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+        self: Self,
+        old: Sequence[Any] | Mapping[Any, Any],
+        new: Sequence[Any],
+        *,
+        return_dtype: DType | type[DType] | None,
     ) -> Self:
         return reuse_series_implementation(
             self, "replace_strict", old=old, new=new, return_dtype=return_dtype
@@ -422,7 +428,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
 
     def over(
         self: Self,
-        partition_by: list[str],
+        partition_by: Sequence[str],
         kind: ExprKind,
         order_by: Sequence[str] | None,
     ) -> Self:
@@ -489,7 +495,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
     def map_batches(
         self: Self,
         function: Callable[[Any], Any],
-        return_dtype: DType | None,
+        return_dtype: DType | type[DType] | None,
     ) -> Self:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             input_series_list = self._call(df)
@@ -612,6 +618,8 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
         return reuse_series_implementation(
             self, "rank", method=method, descending=descending
         )
+
+    ewm_mean = not_implemented()
 
     @property
     def dt(self: Self) -> ArrowExprDateTimeNamespace:

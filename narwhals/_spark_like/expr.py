@@ -19,6 +19,7 @@ from narwhals._spark_like.utils import narwhals_to_native_dtype
 from narwhals.dependencies import get_pyspark
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
+from narwhals.utils import not_implemented
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -506,7 +507,10 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
         return self._from_call(_n_unique, "n_unique")
 
     def over(
-        self: Self, partition_by: list[str], kind: ExprKind, order_by: Sequence[str]
+        self: Self,
+        partition_by: Sequence[str],
+        kind: ExprKind,
+        order_by: Sequence[str] | None,
     ) -> Self:
         if (window_function := self._window_function) is not None:
             assert order_by is not None  # noqa: S101
@@ -578,3 +582,35 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
     @property
     def list(self: Self) -> SparkLikeExprListNamespace:
         return SparkLikeExprListNamespace(self)
+
+    arg_min = not_implemented()
+    arg_max = not_implemented()
+    arg_true = not_implemented()
+    head = not_implemented()
+    tail = not_implemented()
+    mode = not_implemented()
+    sort = not_implemented()
+    rank = not_implemented()
+    sample = not_implemented()
+    map_batches = not_implemented()
+    ewm_mean = not_implemented()
+    rolling_sum = not_implemented()
+    rolling_mean = not_implemented()
+    rolling_var = not_implemented()
+    rolling_std = not_implemented()
+    gather_every = not_implemented()
+    drop_nulls = not_implemented()
+    diff = not_implemented()
+    unique = not_implemented()
+    shift = not_implemented()
+    is_first_distinct = not_implemented()
+    is_last_distinct = not_implemented()
+    cum_count = not_implemented()
+    cum_min = not_implemented()
+    cum_max = not_implemented()
+    cum_prod = not_implemented()
+    replace_strict = not_implemented()
+    fill_null = not_implemented()
+    quantile = not_implemented()
+
+    cat = not_implemented()  # pyright: ignore[reportAssignmentType]

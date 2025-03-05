@@ -99,7 +99,7 @@ class PolarsExpr:
 
     def over(
         self: Self,
-        partition_by: list[str],
+        partition_by: Sequence[str],
         kind: ExprKind,
         order_by: Sequence[str] | None,
     ) -> Self:
