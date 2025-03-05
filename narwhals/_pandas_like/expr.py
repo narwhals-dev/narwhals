@@ -453,7 +453,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
             call_kwargs=self._call_kwargs,
         )
 
-    def over(
+    def over(  # noqa: PLR0915
         self: Self,
         partition_by: list[str],
         kind: ExprKind,
@@ -469,12 +469,14 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 df = df.with_row_index(token).sort(
                     *order_by, descending=False, nulls_last=False
                 )
-                result = self(df)
-                sorting_indices = df[token]._native_series.argsort()
-                return [
-                    s._from_native_series(s._native_series.iloc[sorting_indices])
-                    for s in result
-                ]
+                results = self(df)
+                sorting_indices = df[token]._native_series
+                final_results = []
+                for s in results:
+                    s_native = s._native_series
+                    s_native.iloc[sorting_indices] = s_native
+                    final_results.append(s._from_native_series(s_native))
+                return final_results
         elif not is_elementary_expression(self):
             msg = (
                 "Only elementary expressions are supported for `.over` in pandas-like backends.\n\n"
@@ -524,7 +526,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         .with_row_index(token)
                         .sort(*order_by, descending=False, nulls_last=False)
                     )
-                    sorting_indices = df[token]._native_series  # .argsort()
+                    sorting_indices = df[token]._native_series
                 if reverse:
                     columns = list(set(partition_by).union(output_names))
                     df = df[columns][::-1]
