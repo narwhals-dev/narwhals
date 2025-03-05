@@ -1411,7 +1411,27 @@ def is_tracks_depth(obj: Implementation, /) -> TypeIs[_TracksDepth]:  # pragma: 
     return obj.is_pandas_like() or obj in {Implementation.PYARROW, Implementation.DASK}
 
 
+# TODO @dangotbanned: Extend with runtime behavior for `v1.*`
+# See `narwhals.exceptions.NarwhalsUnstableWarning`
 def unstable(fn: _Fn, /) -> _Fn:
+    """Visual-only marker for unstable functionality.
+
+    Arguments:
+        fn: Function to decorate.
+
+    Returns:
+        Decorated function (unchanged).
+
+    Examples:
+        >>> @unstable
+        ... def a_work_in_progress_feature(*args):
+        ...     return args
+        >>>
+        >>> a_work_in_progress_feature.__name__
+        'a_work_in_progress_feature'
+        >>> a_work_in_progress_feature(1, 2, 3)
+        (1, 2, 3)
+    """
     return fn
 
 
@@ -1419,15 +1439,15 @@ class not_implemented:  # noqa: N801
     """Mark some functionality as unsupported.
 
     Arguments:
-        alias: optional name used instead of `__set_name__` hook.
+        alias: optional name used instead of the data model hook [`__set_name__`].
+
+    Returns:
+        An exception-raising [descriptor].
 
     Notes:
         - Attribute/method name *doesn't* need to be declared twice
-            - Utilizes the data model's [`__set_name__`](https://docs.python.org/3/reference/datamodel.html#object.__set_name__) hook
         - Allows different behavior when looked up on the class vs instance
         - Allows us to use `isinstance(...)` instead of monkeypatching an attribute to the function
-        - https://docs.python.org/3/howto/descriptor.html
-
 
     Examples:
         >>> from narwhals.utils import not_implemented
@@ -1447,6 +1467,9 @@ class not_implemented:  # noqa: N801
         ...
         >>> isinstance(Thing.not_ready_yet, not_implemented)
         True
+
+    [`__set_name__`]: https://docs.python.org/3/reference/datamodel.html#object.__set_name__
+    [descriptor]: https://docs.python.org/3/howto/descriptor.html
     """
 
     def __init__(self, alias: str | None = None, /) -> None:
