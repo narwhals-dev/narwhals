@@ -7,6 +7,8 @@ from narwhals._compliant.namespace import CompliantNamespace
 from narwhals._compliant.selectors import CompliantSelector
 from narwhals._compliant.selectors import CompliantSelectorNamespace
 from narwhals._compliant.selectors import EagerSelectorNamespace
+from narwhals._compliant.selectors import EvalNames
+from narwhals._compliant.selectors import EvalSeries
 from narwhals._compliant.selectors import LazySelectorNamespace
 from narwhals._compliant.series import CompliantSeries
 from narwhals._compliant.typing import CompliantFrameT
@@ -24,6 +26,8 @@ __all__ = [
     "CompliantSeries",
     "CompliantSeriesT_co",
     "EagerSelectorNamespace",
+    "EvalNames",
+    "EvalSeries",
     "IntoCompliantExpr",
     "LazySelectorNamespace",
 ]

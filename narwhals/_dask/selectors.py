@@ -14,8 +14,8 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals._compliant.selectors import EvalNames
-    from narwhals._compliant.selectors import EvalSeries
+    from narwhals._compliant import EvalNames
+    from narwhals._compliant import EvalSeries
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals.utils import _FullContext
 

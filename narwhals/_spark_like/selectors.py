@@ -10,8 +10,8 @@ if TYPE_CHECKING:
     from pyspark.sql import Column
     from typing_extensions import Self
 
-    from narwhals._compliant.selectors import EvalNames
-    from narwhals._compliant.selectors import EvalSeries
+    from narwhals._compliant import EvalNames
+    from narwhals._compliant import EvalSeries
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals.utils import _FullContext
 

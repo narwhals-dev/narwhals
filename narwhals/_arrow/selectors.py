@@ -11,8 +11,8 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
-    from narwhals._compliant.selectors import EvalNames
-    from narwhals._compliant.selectors import EvalSeries
+    from narwhals._compliant import EvalNames
+    from narwhals._compliant import EvalSeries
     from narwhals.utils import _FullContext
 
 
