@@ -247,7 +247,7 @@ def test_over_anonymous_cumulative(
     if "cudf" in str(constructor_eager):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    df = nw.from_native(constructor_eager({"": [1, 1, 2], "b": [4, 5, 6]}))
     context = (
         pytest.raises(NotImplementedError)
         if df.implementation.is_pyarrow()
@@ -260,12 +260,12 @@ def test_over_anonymous_cumulative(
     )
     with context:
         result = df.with_columns(
-            nw.all().cum_sum().over("a").name.suffix("_cum_sum")
-        ).sort("a", "b")
+            nw.all().cum_sum().over("").name.suffix("_cum_sum")
+        ).sort("", "b")
         expected = {
-            "a": [1, 1, 2],
+            "": [1, 1, 2],
             "b": [4, 5, 6],
-            "a_cum_sum": [1, 2, 2],
+            "_cum_sum": [1, 2, 2],
             "b_cum_sum": [4, 9, 6],
         }
         assert_equal_data(result, expected)

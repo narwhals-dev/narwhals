@@ -1543,19 +1543,22 @@ class Expr:
             |2  4  y                    4|
             └────────────────────────────┘
         """
-        if not partition_by and not _order_by:  # pragma: no cover
-            msg = "At least one of `partition_by` or `order_by` must be specified."
-            raise ValueError(msg)
         if self._metadata.kind.is_filtration():
             msg = "`.over()` can not be used for expressions which change length."
             raise LengthChangingExprError(msg)
+
+        flat_partition_by = flatten(partition_by)
+        order_by = [_order_by] if isinstance(_order_by, str) else _order_by
+        if not flat_partition_by and not _order_by:  # pragma: no cover
+            msg = "At least one of `partition_by` or `order_by` must be specified."
+            raise ValueError(msg)
+
         kind = ExprKind.TRANSFORM
         n_open_windows = self._metadata.n_open_windows
         if _order_by is not None and self._metadata.kind.is_window():
             n_open_windows -= 1
         metadata = ExprMetadata(kind, n_open_windows=n_open_windows)
-        flat_partition_by = flatten(partition_by)
-        order_by = [_order_by] if isinstance(_order_by, str) else _order_by
+
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).over(
                 flat_partition_by, order_by=order_by, kind=self._metadata.kind
