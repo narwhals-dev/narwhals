@@ -512,7 +512,7 @@ class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
     def is_nan(self: Self) -> Self:
         return self._from_native_series(pc.is_nan(self.native))
 
-    def cast(self: Self, dtype: DType) -> Self:
+    def cast(self: Self, dtype: DType | type[DType]) -> Self:
         data_type = narwhals_to_native_dtype(dtype, self._version)
         return self._from_native_series(pc.cast(self.native, data_type))
 
