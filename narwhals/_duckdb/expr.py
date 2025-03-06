@@ -14,7 +14,7 @@ from duckdb import ColumnExpression
 from duckdb import FunctionExpression
 from duckdb.typing import DuckDBPyType
 
-from narwhals._compliant import CompliantExpr
+from narwhals._compliant import LazyExpr
 from narwhals._duckdb.expr_dt import DuckDBExprDateTimeNamespace
 from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_name import DuckDBExprNameNamespace
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):
+class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     _implementation = Implementation.DUCKDB
     _depth = 0  # Unused, just for compatibility with CompliantExpr
 
@@ -484,22 +484,6 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     def list(self: Self) -> DuckDBExprListNamespace:
         return DuckDBExprListNamespace(self)
 
-    arg_min = not_implemented()
-    arg_max = not_implemented()
-    arg_true = not_implemented()
-    head = not_implemented()
-    tail = not_implemented()
-    mode = not_implemented()
-    sort = not_implemented()
-    rank = not_implemented()
-    sample = not_implemented()
-    map_batches = not_implemented()
-    ewm_mean = not_implemented()
-    rolling_sum = not_implemented()
-    rolling_mean = not_implemented()
-    rolling_var = not_implemented()
-    rolling_std = not_implemented()
-    gather_every = not_implemented()
     drop_nulls = not_implemented()
     diff = not_implemented()
     unique = not_implemented()
@@ -512,7 +496,4 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     cum_min = not_implemented()
     cum_max = not_implemented()
     cum_prod = not_implemented()
-    replace_strict = not_implemented()
     over = not_implemented()
-
-    cat = not_implemented()  # pyright: ignore[reportAssignmentType]

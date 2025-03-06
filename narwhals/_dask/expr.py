@@ -8,7 +8,7 @@ from typing import Callable
 from typing import Literal
 from typing import Sequence
 
-from narwhals._compliant import CompliantExpr
+from narwhals._compliant import LazyExpr
 from narwhals._dask.expr_dt import DaskExprDateTimeNamespace
 from narwhals._dask.expr_name import DaskExprNameNamespace
 from narwhals._dask.expr_str import DaskExprStringNamespace
@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):
+class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
     _implementation: Implementation = Implementation.DASK
 
     def __init__(
@@ -603,23 +603,4 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):
     def name(self: Self) -> DaskExprNameNamespace:
         return DaskExprNameNamespace(self)
 
-    arg_min = not_implemented()
-    arg_max = not_implemented()
-    arg_true = not_implemented()
-    head = not_implemented()
-    tail = not_implemented()
-    mode = not_implemented()
-    sort = not_implemented()
-    rank = not_implemented()
-    sample = not_implemented()
-    map_batches = not_implemented()
-    ewm_mean = not_implemented()
-    rolling_sum = not_implemented()
-    rolling_mean = not_implemented()
-    rolling_var = not_implemented()
-    rolling_std = not_implemented()
-    gather_every = not_implemented()
-    replace_strict = not_implemented()
-
-    cat = not_implemented()  # pyright: ignore[reportAssignmentType]
     list = not_implemented()  # pyright: ignore[reportAssignmentType]

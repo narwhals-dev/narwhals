@@ -15,6 +15,7 @@ from narwhals._compliant.typing import CompliantSeriesOrNativeExprT_co
 from narwhals._compliant.typing import CompliantSeriesT_co
 from narwhals._compliant.typing import NativeExprT_co
 from narwhals.utils import deprecated
+from narwhals.utils import not_implemented
 from narwhals.utils import unstable
 
 if not TYPE_CHECKING:  # pragma: no cover
@@ -237,4 +238,22 @@ class EagerExpr(
 class LazyExpr(
     CompliantExpr[CompliantLazyFrameT, NativeExprT_co],
     Protocol38[CompliantLazyFrameT, NativeExprT_co],
-): ...
+):
+    arg_min = not_implemented()
+    arg_max = not_implemented()
+    arg_true = not_implemented()
+    head = not_implemented()
+    tail = not_implemented()
+    mode = not_implemented()
+    sort = not_implemented()
+    rank = not_implemented()
+    sample = not_implemented()
+    map_batches = not_implemented()
+    ewm_mean = not_implemented()
+    rolling_sum = not_implemented()
+    rolling_mean = not_implemented()
+    rolling_var = not_implemented()
+    rolling_std = not_implemented()
+    gather_every = not_implemented()
+    replace_strict = not_implemented()
+    cat = not_implemented()  # pyright: ignore[reportAssignmentType]
