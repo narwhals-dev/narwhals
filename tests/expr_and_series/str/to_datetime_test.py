@@ -62,6 +62,7 @@ def test_to_datetime_tz_aware(
     elif "pyarrow" in constructor_str and "pandas" not in constructor_str:
         from pyarrow.lib import ArrowInvalid
 
+        expected = expected_polars_duckdb_pyspark
         request.applymarker(
             pytest.mark.xfail(
                 True,  # noqa: FBT003
