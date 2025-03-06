@@ -142,9 +142,10 @@ def narwhals_to_native_dtype(
             dtypes.UInt8,
             dtypes.Enum,
             dtypes.Categorical,
+            dtypes.Time,
         ),
     ):  # pragma: no cover
-        msg = "Unsigned integer, Enum and Categorical types are not supported by spark-like backend"
+        msg = "Unsigned integer, Enum, Categorical and Time types are not supported by spark-like backend"
         raise UnsupportedDTypeError(msg)
 
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover

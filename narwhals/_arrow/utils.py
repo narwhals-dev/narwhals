@@ -209,6 +209,8 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
         inner = narwhals_to_native_dtype(dtype.inner, version=version)
         list_size = dtype.size
         return pa.list_(inner, list_size=list_size)
+    if isinstance_or_issubclass(dtype, dtypes.Time):
+        return pa.time64("ns")
 
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)

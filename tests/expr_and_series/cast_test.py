@@ -289,7 +289,10 @@ def test_raise_if_polars_dtype(constructor: Constructor, dtype: Any) -> None:
 
 
 def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "pandas", "pyspark")):
+    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
+        request.applymarker(pytest.mark.xfail)
+
+    if any(backend in str(constructor) for backend in ("dask", "pyspark", "modin")):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [time(12, 0, 0), time(12, 0, 5)]}
