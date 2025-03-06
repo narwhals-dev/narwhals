@@ -403,23 +403,28 @@ class ArrowSeries(CompliantSeries):
     def scatter(self: Self, indices: int | Sequence[int], values: Any) -> Self:
         import numpy as np  # ignore-banned-import
 
-        if isinstance(values, self.__class__):
-            _, values = extract_native(self, values)
-            values = values.combine_chunks()
+        if isinstance(indices, int):
+            indices_native = pa.array([indices])
+            values_native = pa.array([values])
         else:
-            values = pa.array(values)
+            # TODO(unassigned): we may also want to let `indices` be a Series.
+            # https://github.com/narwhals-dev/narwhals/issues/2155
+            indices_native = pa.array(indices)
+            if isinstance(values, self.__class__):
+                values_native = values._native_series.combine_chunks()
+            else:
+                values_native = pa.array(values)
 
-        if not isinstance(indices, int):
-            sorting_indices = pc.sort_indices(indices)  # type: ignore[call-overload]
-            indices = pc.take(indices, sorting_indices)  # type: ignore[call-overload]
-            values = pc.take(values, sorting_indices)
+        sorting_indices = pc.sort_indices(indices_native)  # type: ignore[call-overload]
+        indices_native = pc.take(indices_native, sorting_indices)
+        values_native = pc.take(values_native, sorting_indices)
 
         mask: _1DArray = np.zeros(self.len(), dtype=bool)
-        mask[indices] = True
+        mask[indices_native] = True
         result = pc.replace_with_mask(
             self._native_series,
             cast("list[bool]", mask),
-            values.take(cast("Indices", indices)),
+            values_native.take(cast("Indices", indices_native)),
         )
         return self._from_native_series(result)
 

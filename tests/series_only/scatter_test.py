@@ -51,6 +51,16 @@ def test_single_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data({"a": s}, expected)
 
 
+def test_scatter_integer(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(
+        constructor_eager({"a": [1, 2, 3], "b": [142, 124, 132]}), eager_only=True
+    )
+    s = df["a"]
+    result = s.scatter(0, 999)
+    expected = {"a": [999, 2, 3]}
+    assert_equal_data({"a": result}, expected)
+
+
 def test_scatter_unordered_indices(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
