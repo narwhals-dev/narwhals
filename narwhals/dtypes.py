@@ -680,13 +680,19 @@ class Time(TemporalType):
        >>> import polars as pl
        >>> import pyarrow as pa
        >>> import narwhals as nw
+       >>> import duckdb
        >>> from datetime import time
        >>> data = [time(9, 0), time(9, 1, 10), time(9, 2)]
        >>> ser_pl = pl.Series(data)
        >>> ser_pa = pa.chunked_array([pa.array(data, type=pa.time64("ns"))])
+       >>> rel = duckdb.sql(
+       ...     " SELECT * FROM (VALUES (TIME '12:00:00'), (TIME '14:30:15')) df(t)"
+       ... )
 
        >>> nw.from_native(ser_pl, series_only=True).dtype
        Time
        >>> nw.from_native(ser_pa, series_only=True).dtype
+       Time
+       >>> nw.from_native(rel).schema["t"]
        Time
     """

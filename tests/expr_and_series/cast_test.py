@@ -6,10 +6,8 @@ from datetime import timedelta
 from datetime import timezone
 from typing import Any
 
-import duckdb
 import pandas as pd
 import polars as pl
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -290,20 +288,13 @@ def test_raise_if_polars_dtype(constructor: Constructor, dtype: Any) -> None:
         df.select(nw.col("a").cast(dtype))
 
 
-def test_cast_time() -> None:
-    df = pl.DataFrame({"a": [time(12, 0, 0), time(12, 0, 5)]}, schema={"a": pl.Time})
-    pa_array_32 = pa.array([time(12, 0, 0), time(12, 0, 5)], type=pa.time32("s"))
-    pa_array_64 = pa.array([time(12, 0, 0), time(12, 0, 5)], type=pa.time64("ns"))
-    pa_table = pa.table({"b": pa_array_32, "c": pa_array_64})
+def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if any(backend in str(constructor) for backend in ("dask", "pandas", "pyspark")):
+        request.applymarker(pytest.mark.xfail)
 
-    result = nw.from_native(df).schema
-    assert result["a"] == nw.Time
-    result = nw.from_native(pa_table).schema
-    assert result["b"] == nw.Time
-    assert result["c"] == nw.Time
-    rel = duckdb.sql("""
-        select *
-        from df
-                     """)
-    result = nw.from_native(rel).schema
-    assert result["a"] == nw.Time
+    data = {"a": [time(12, 0, 0), time(12, 0, 5)]}
+    df_native = nw.from_native(constructor(data))
+    result = df_native.select(nw.col("a").cast(nw.Time))
+    assert result.collect_schema() == {"a": nw.Time}
+    result_native = nw.to_native(result)
+    assert isinstance(result_native, type(constructor(data)))
