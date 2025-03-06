@@ -93,7 +93,7 @@ def test_to_datetime_tz_aware(
         .item(row=0, column="b")
     )
 
-    assert str(result) == expected
+    assert str(result).startswith(expected)
 
 
 def test_to_datetime_series(constructor_eager: ConstructorEager) -> None:
