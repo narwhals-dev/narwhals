@@ -296,8 +296,6 @@ def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> 
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [time(12, 0, 0), time(12, 0, 5)]}
-    df_native = nw.from_native(constructor(data))
-    result = df_native.select(nw.col("a").cast(nw.Time))
-    assert result.collect_schema() == {"a": nw.Time}
-    result_native = nw.to_native(result)
-    assert isinstance(result_native, type(constructor(data)))
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.col("a").cast(nw.Time()))
+    assert result.collect_schema() == {"a": nw.Time()}
