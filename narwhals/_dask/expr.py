@@ -154,6 +154,8 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
         call: Callable[..., dx.Series],
         expr_name: str,
         call_kwargs: dict[str, Any] | None = None,
+        evaluate_output_names: Callable[[DaskLazyFrame], Sequence[str]] | None = None,
+        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None = None,
         **expressifiable_args: Self | Any,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
@@ -168,12 +170,18 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
                 native_results.append(result_native)
             return native_results
 
+        if evaluate_output_names is None:
+            evaluate_output_names = self._evaluate_output_names
+
+        if alias_output_names is None:
+            alias_output_names = self._alias_output_names
+
         return self.__class__(
             func,
             depth=self._depth + 1,
             function_name=f"{self._function_name}->{expr_name}",
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
+            evaluate_output_names=evaluate_output_names,
+            alias_output_names=alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
             call_kwargs=call_kwargs,

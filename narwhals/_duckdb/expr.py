@@ -125,6 +125,8 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
         self: Self,
         call: Callable[..., duckdb.Expression],
         expr_name: str,
+        evaluate_output_names: Callable[[DuckDBLazyFrame], Sequence[str]] | None = None,
+        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None = None,
         **expressifiable_args: Self | Any,
     ) -> Self:
         """Create expression from callable.
@@ -132,6 +134,8 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
         Arguments:
             call: Callable from compliant DataFrame to native Expression
             expr_name: Expression name
+            evaluate_output_names: Output names function.
+            alias_output_names: Alias Output names function.
             expressifiable_args: arguments pass to expression which should be parsed
                 as expressions (e.g. in `nw.col('a').is_between('b', 'c')`)
         """
@@ -147,11 +151,17 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
                 for native_series in native_series_list
             ]
 
+        if evaluate_output_names is None:
+            evaluate_output_names = self._evaluate_output_names
+
+        if alias_output_names is None:
+            alias_output_names = self._alias_output_names
+
         return self.__class__(
             func,
             function_name=f"{self._function_name}->{expr_name}",
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
+            evaluate_output_names=evaluate_output_names,
+            alias_output_names=alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
         )

@@ -14,9 +14,9 @@ class SparkLikeExprStructNamespace:
         self._compliant_expr = expr
 
     def field(self: Self, name: str) -> SparkLikeExpr:
-        self._compliant_expr._evaluate_output_names = lambda _col: [name]
-
         def func(_input: Column) -> Column:
             return _input.getField(name)
 
-        return self._compliant_expr._from_call(func, "field")
+        return self._compliant_expr._from_call(
+            func, "field", _evaluate_output_names=lambda _col: [name]
+        )

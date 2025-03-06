@@ -17,10 +17,10 @@ class DuckDBExprStructNamespace:
         self._compliant_expr = expr
 
     def field(self: Self, name: str) -> DuckDBExpr:
-        self._compliant_expr._evaluate_output_names = lambda _col: [name]
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("struct_extract", _input, lit(name)).alias(
                 name
             ),
             "field",
+            evaluate_output_names=lambda _col: [name],
         )

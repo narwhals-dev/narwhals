@@ -15,7 +15,10 @@ class PandasLikeExprStructNamespace:
         self._compliant_expr = expr
 
     def field(self, name: str) -> PandasLikeExpr:
-        self._compliant_expr._evaluate_output_names = lambda _col: [name]
         return reuse_series_namespace_implementation(
-            self._compliant_expr, "struct", "field", name=name
+            self._compliant_expr,
+            "struct",
+            "field",
+            name=name,
+            evaluate_output_names=lambda _col: [name],
         )
