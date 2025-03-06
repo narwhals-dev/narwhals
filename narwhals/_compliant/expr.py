@@ -457,6 +457,14 @@ class EagerExpr(
     def __invert__(self) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
         return self._reuse_series_implementation("__invert__")
 
+    def cast(
+        self, dtype: DType | type[DType]
+    ) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
+        return self._reuse_series_implementation("cast", dtype=dtype)
+
+    def null_count(self) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
+        return self._reuse_series_implementation("null_count", returns_scalar=True)
+
 
 # NOTE: See (https://github.com/narwhals-dev/narwhals/issues/2044#issuecomment-2674262833)
 class LazyExpr(
