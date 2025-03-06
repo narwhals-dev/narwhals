@@ -150,6 +150,8 @@ def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
         )
     if pa.types.is_decimal(dtype):
         return dtypes.Decimal()
+    if pa.types.is_time32(dtype):
+        return dtypes.Time()
     if pa.types.is_time64(dtype):
         return dtypes.Time()
     return dtypes.Unknown()  # pragma: no cover
