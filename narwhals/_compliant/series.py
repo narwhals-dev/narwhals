@@ -30,10 +30,13 @@ class CompliantSeries(Protocol):
 
 
 class EagerSeries(CompliantSeries, Protocol[NativeSeriesT_co]):
-    _native_series: NativeSeriesT_co
+    _native_series: Any
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
+
+    @property
+    def native(self) -> NativeSeriesT_co: ...
 
     def _from_scalar(self, value: Any) -> Self:
         return self._from_iterable([value], name=self.name, context=self)

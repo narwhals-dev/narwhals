@@ -10,6 +10,7 @@ from typing import TypeVar
 
 from narwhals._compliant.typing import CompliantSeriesT_co
 from narwhals._compliant.typing import EagerSeriesT
+from narwhals._compliant.typing import EagerSeriesT_co
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -58,12 +59,12 @@ class CompliantLazyFrame(Protocol):
     def _iter_columns(self) -> Iterator[Any]: ...
 
 
-class EagerDataFrame(CompliantDataFrame[EagerSeriesT], Protocol[EagerSeriesT]):  # pyright: ignore[reportInvalidTypeVarUse]
+class EagerDataFrame(CompliantDataFrame[EagerSeriesT_co], Protocol[EagerSeriesT_co]):
     def _maybe_evaluate_expr(
-        self, expr: EagerExpr[EagerDataFrame[EagerSeriesT], EagerSeriesT] | T, /
-    ) -> EagerSeriesT | T:
+        self, expr: EagerExpr[EagerDataFrame[EagerSeriesT_co], EagerSeriesT_co] | T, /
+    ) -> EagerSeriesT_co | T:
         if is_eager_expr(expr):
-            result: Sequence[EagerSeriesT] = expr(self)
+            result: Sequence[EagerSeriesT_co] = expr(self)
             if len(result) > 1:
                 msg = (
                     "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) "

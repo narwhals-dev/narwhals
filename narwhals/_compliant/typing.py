@@ -40,3 +40,4 @@ IntoCompliantExpr: TypeAlias = "CompliantExpr[CompliantFrameT, CompliantSeriesOr
 
 EagerDataFrameT = TypeVar("EagerDataFrameT", bound="EagerDataFrame[Any]")
 EagerSeriesT = TypeVar("EagerSeriesT", bound="EagerSeries[Any]")
+EagerSeriesT_co = TypeVar("EagerSeriesT_co", bound="EagerSeries[Any]", covariant=True)
