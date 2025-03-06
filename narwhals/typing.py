@@ -14,7 +14,6 @@ from narwhals._compliant import CompliantLazyFrame
 from narwhals._compliant import CompliantNamespace
 from narwhals._compliant import CompliantSeries
 from narwhals._compliant import CompliantSeriesT_co
-from narwhals._compliant import IntoCompliantExpr
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -248,7 +247,6 @@ __all__ = [
     "DataFrameT",
     "Frame",
     "FrameT",
-    "IntoCompliantExpr",
     "IntoDataFrame",
     "IntoDataFrameT",
     "IntoExpr",
