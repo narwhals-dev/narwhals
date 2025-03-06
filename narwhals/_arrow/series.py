@@ -403,9 +403,10 @@ class ArrowSeries(CompliantSeries):
     def scatter(self: Self, indices: int | Sequence[int], values: Any) -> Self:
         import numpy as np  # ignore-banned-import
 
-        if isinstance(values, pa.ChunkedArray):
+        if isinstance(values, self.__class__):
+            _, values = extract_native(self, values)
             values = values.combine_chunks()
-        if not isinstance(values, pa.Array):
+        else:
             values = pa.array(values)
 
         if not isinstance(indices, int):
@@ -415,12 +416,10 @@ class ArrowSeries(CompliantSeries):
 
         mask: _1DArray = np.zeros(self.len(), dtype=bool)
         mask[indices] = True
-        if isinstance(values, self.__class__):
-            ser, values = extract_native(self, values)
-        else:
-            ser = self._native_series
         result = pc.replace_with_mask(
-            ser, cast("list[bool]", mask), values.take(cast("Indices", indices))
+            self._native_series,
+            cast("list[bool]", mask),
+            values.take(cast("Indices", indices)),
         )
         return self._from_native_series(result)
 
