@@ -383,6 +383,80 @@ class EagerExpr(
             context=self,
         )
 
+    def __eq__(self, other: Self | Any) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:  # type: ignore[override]
+        return self._reuse_series_implementation("__eq__", other=other)
+
+    def __ne__(self, other: Self | Any) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:  # type: ignore[override]
+        return self._reuse_series_implementation("__ne__", other=other)
+
+    def __ge__(self, other: Self | Any) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
+        return self._reuse_series_implementation("__ge__", other=other)
+
+    def __gt__(self, other: Self | Any) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
+        return self._reuse_series_implementation("__gt__", other=other)
+
+    def __le__(self, other: Self | Any) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
+        return self._reuse_series_implementation("__le__", other=other)
+
+    def __lt__(self, other: Self | Any) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
+        return self._reuse_series_implementation("__lt__", other=other)
+
+    def __and__(
+        self, other: Self | bool | Any
+    ) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
+        return self._reuse_series_implementation("__and__", other=other)
+
+    def __or__(
+        self, other: Self | bool | Any
+    ) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
+        return self._reuse_series_implementation("__or__", other=other)
+
+    def __add__(self, other: Self | Any) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
+        return self._reuse_series_implementation("__add__", other=other)
+
+    def __sub__(self, other: Self | Any) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
+        return self._reuse_series_implementation("__sub__", other=other)
+
+    def __rsub__(self, other: Self | Any) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
+        return self.alias("literal")._reuse_series_implementation("__rsub__", other=other)
+
+    def __mul__(self, other: Self | Any) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
+        return self._reuse_series_implementation("__mul__", other=other)
+
+    def __truediv__(self, other: Self | Any) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
+        return self._reuse_series_implementation("__truediv__", other=other)
+
+    def __rtruediv__(self, other: Self | Any) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
+        return self.alias("literal")._reuse_series_implementation(
+            "__rtruediv__", other=other
+        )
+
+    def __floordiv__(self, other: Self | Any) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
+        return self._reuse_series_implementation("__floordiv__", other=other)
+
+    def __rfloordiv__(
+        self, other: Self | Any
+    ) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
+        return self.alias("literal")._reuse_series_implementation(
+            "__rfloordiv__", other=other
+        )
+
+    def __pow__(self, other: Self | Any) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
+        return self._reuse_series_implementation("__pow__", other=other)
+
+    def __rpow__(self, other: Self | Any) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
+        return self.alias("literal")._reuse_series_implementation("__rpow__", other=other)
+
+    def __mod__(self, other: Self | Any) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
+        return self._reuse_series_implementation("__mod__", other=other)
+
+    def __rmod__(self, other: Self | Any) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
+        return self.alias("literal")._reuse_series_implementation("__rmod__", other=other)
+
+    # Unary
+    def __invert__(self) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
+        return self._reuse_series_implementation("__invert__")
+
 
 # NOTE: See (https://github.com/narwhals-dev/narwhals/issues/2044#issuecomment-2674262833)
 class LazyExpr(
