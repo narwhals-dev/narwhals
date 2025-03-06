@@ -194,8 +194,6 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
         return pa.duration(dtype.time_unit)
     if isinstance_or_issubclass(dtype, dtypes.Date):
         return pa.date32()
-    if isinstance_or_issubclass(dtype, dtypes.Time):
-        return pa.time64("ns")
     if isinstance_or_issubclass(dtype, dtypes.List):
         return pa.list_(value_type=narwhals_to_native_dtype(dtype.inner, version=version))
     if isinstance_or_issubclass(dtype, dtypes.Struct):
