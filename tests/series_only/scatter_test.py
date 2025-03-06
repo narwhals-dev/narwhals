@@ -51,7 +51,12 @@ def test_single_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data({"a": s}, expected)
 
 
-def test_scatter_unordered_indices(constructor_eager: ConstructorEager) -> None:
+def test_scatter_unordered_indices(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if "modin" in str(constructor_eager):
+        # bugged
+        request.applymarker(pytest.mark.xfail)
     data = {
         "a": [16, 12, 10, 9, 6, 5, 2],
     }
