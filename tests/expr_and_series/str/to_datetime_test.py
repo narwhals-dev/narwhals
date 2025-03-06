@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from datetime import timezone
 from typing import TYPE_CHECKING
+from typing import Sequence
 
 import pyarrow as pa
 import pytest
@@ -31,6 +32,52 @@ def test_to_datetime(constructor: Constructor) -> None:
         .collect()
         .item(row=0, column="b")
     )
+    assert str(result) == expected
+
+
+@pytest.mark.parametrize(
+    ("fmt", "data", "expected", "expected_polars_duckdb_pyspark"),
+    [
+        (
+            "%Y-%m-%d %H:%M:%S%z",
+            {"a": ["2020-01-01 12:34:56+02:00"]},
+            "2020-01-01 12:34:56+02:00",
+            "2020-01-01 10:34:56+00:00",
+        )
+    ],
+)
+def test_to_datetime_tz_aware(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    fmt: str,
+    data: dict[str, Sequence[str]],
+    expected: str,
+    expected_polars_duckdb_pyspark: str,
+) -> None:
+    constructor_str = str(constructor)
+    if any(
+        name in constructor_str for name in ("polars", "duckdb", "pyspark", "sqlframe")
+    ):
+        expected = expected_polars_duckdb_pyspark
+    elif "pyarrow" in constructor_str and "pandas" not in constructor_str:
+        from pyarrow.lib import ArrowInvalid
+
+        request.applymarker(
+            pytest.mark.xfail(
+                True,  # noqa: FBT003
+                raises=ArrowInvalid,
+                reason="Unclear, see https://github.com/narwhals-dev/narwhals/pull/2152#discussion_r1983225794",
+            )
+        )
+
+    result = (
+        nw.from_native(constructor(data))
+        .lazy()
+        .select(b=nw.col("a").str.to_datetime(fmt))
+        .collect()
+        .item(row=0, column="b")
+    )
+
     assert str(result) == expected
 
 
