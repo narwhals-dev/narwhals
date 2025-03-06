@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from datetime import datetime
 from datetime import timezone
 from typing import TYPE_CHECKING
@@ -59,7 +60,17 @@ def test_to_datetime_tz_aware(
         name in constructor_str for name in ("polars", "duckdb", "pyspark", "sqlframe")
     ):
         expected = expected_polars_duckdb_pyspark
-    elif "pyarrow" in constructor_str and "pandas" not in constructor_str:
+        request.applymarker(
+            pytest.mark.xfail(
+                "polars" in constructor_str and sys.version_info < (3, 9),
+                reason="Needs 'polars[timezone]'",
+            )
+        )
+    elif (
+        "pyarrow" in constructor_str
+        and "pandas" not in constructor_str
+        and "modin" not in constructor_str
+    ):
         from pyarrow.lib import ArrowInvalid
 
         expected = expected_polars_duckdb_pyspark
