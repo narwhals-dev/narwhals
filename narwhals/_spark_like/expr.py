@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ignore[type-var] # (#2044)
+class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):
     _depth = 0  # Unused, just for compatibility with CompliantExpr
 
     def __init__(

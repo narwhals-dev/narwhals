@@ -5,7 +5,7 @@ from typing import Any
 from typing import Protocol
 
 from narwhals._compliant.typing import CompliantFrameT
-from narwhals._compliant.typing import CompliantSeriesT_co
+from narwhals._compliant.typing import CompliantSeriesOrNativeExprT_co
 
 if TYPE_CHECKING:
     from narwhals._compliant.expr import CompliantExpr
@@ -15,12 +15,12 @@ if TYPE_CHECKING:
 __all__ = ["CompliantNamespace"]
 
 
-class CompliantNamespace(Protocol[CompliantFrameT, CompliantSeriesT_co]):
+class CompliantNamespace(Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co]):
     def col(
         self, *column_names: str
-    ) -> CompliantExpr[CompliantFrameT, CompliantSeriesT_co]: ...
+    ) -> CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co]: ...
     def lit(
         self, value: Any, dtype: DType | None
-    ) -> CompliantExpr[CompliantFrameT, CompliantSeriesT_co]: ...
+    ) -> CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co]: ...
     @property
     def selectors(self) -> CompliantSelectorNamespace[Any, Any]: ...

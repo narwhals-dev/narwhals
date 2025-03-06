@@ -5,12 +5,15 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
+from typing import Protocol
 from typing import Sequence
 
 from narwhals._compliant.typing import CompliantDataFrameT
 from narwhals._compliant.typing import CompliantFrameT
 from narwhals._compliant.typing import CompliantLazyFrameT
+from narwhals._compliant.typing import CompliantSeriesOrNativeExprT_co
 from narwhals._compliant.typing import CompliantSeriesT_co
+from narwhals._compliant.typing import NativeExprT_co
 from narwhals.utils import deprecated
 from narwhals.utils import unstable
 
@@ -39,7 +42,13 @@ if TYPE_CHECKING:
 __all__ = ["CompliantExpr"]
 
 
-class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesT_co]):
+# NOTE: Only common methods for lazy expr-like objects
+class NativeExpr(Protocol):
+    def between(self, *args: Any, **kwds: Any) -> Any: ...
+    def isin(self, *args: Any, **kwds: Any) -> Any: ...
+
+
+class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]):
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
@@ -48,11 +57,13 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesT_co]):
     _depth: int
     _function_name: str
 
-    def __call__(self, df: CompliantFrameT) -> Sequence[CompliantSeriesT_co]: ...
+    def __call__(
+        self, df: CompliantFrameT
+    ) -> Sequence[CompliantSeriesOrNativeExprT_co]: ...
     def __narwhals_expr__(self) -> None: ...
     def __narwhals_namespace__(
         self,
-    ) -> CompliantNamespace[CompliantFrameT, CompliantSeriesT_co]: ...
+    ) -> CompliantNamespace[CompliantFrameT, CompliantSeriesOrNativeExprT_co]: ...
     def is_null(self) -> Self: ...
     def abs(self) -> Self: ...
     def all(self) -> Self: ...
@@ -224,6 +235,6 @@ class EagerExpr(
 
 # NOTE: See (https://github.com/narwhals-dev/narwhals/issues/2044#issuecomment-2674262833)
 class LazyExpr(
-    CompliantExpr[CompliantLazyFrameT, CompliantSeriesT_co],
-    Protocol38[CompliantLazyFrameT, CompliantSeriesT_co],
+    CompliantExpr[CompliantLazyFrameT, NativeExprT_co],
+    Protocol38[CompliantLazyFrameT, NativeExprT_co],
 ): ...
