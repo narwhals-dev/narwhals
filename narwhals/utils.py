@@ -53,6 +53,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
     from narwhals._compliant import CompliantFrameT
+    from narwhals._compliant import CompliantSeriesT_co
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -61,7 +62,6 @@ if TYPE_CHECKING:
     from narwhals.typing import CompliantExpr
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import CompliantSeries
-    from narwhals.typing import CompliantSeriesT_co
     from narwhals.typing import DataFrameLike
     from narwhals.typing import DTypes
     from narwhals.typing import IntoSeriesT
