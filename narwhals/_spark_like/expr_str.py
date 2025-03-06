@@ -146,7 +146,8 @@ def strptime_to_pyspark_format(format: str) -> str:  # noqa: A002
         "%a": "E",  # Abbreviated weekday name
         "%A": "E",  # Full weekday name
         "%j": "D",  # Day of the year
-        "%z": "Z",  # Timezone offset
+        # NOTE: This replacement seems to be happening upstream?
+        # "%z": "Z",  # Timezone offset
         "%s": "X",  # Unix timestamp
     }
 
