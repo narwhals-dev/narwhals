@@ -4,13 +4,14 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Protocol
 
-from narwhals._compliant.typing import CompliantDataFrameT
 from narwhals._compliant.typing import CompliantFrameT
 from narwhals._compliant.typing import CompliantSeriesOrNativeExprT_co
-from narwhals._compliant.typing import CompliantSeriesT_co
+from narwhals._compliant.typing import EagerDataFrameT
+from narwhals._compliant.typing import EagerSeriesT
 
 if TYPE_CHECKING:
     from narwhals._compliant.expr import CompliantExpr
+    from narwhals._compliant.expr import EagerExpr
     from narwhals._compliant.selectors import CompliantSelectorNamespace
     from narwhals.dtypes import DType
 
@@ -29,6 +30,9 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_
 
 
 class EagerNamespace(
-    CompliantNamespace[CompliantDataFrameT, CompliantSeriesT_co],
-    Protocol[CompliantDataFrameT, CompliantSeriesT_co],
-): ...
+    CompliantNamespace[EagerDataFrameT, EagerSeriesT],
+    Protocol[EagerDataFrameT, EagerSeriesT],
+):
+    def all_horizontal(
+        self, *exprs: EagerExpr[EagerDataFrameT, EagerSeriesT]
+    ) -> EagerExpr[EagerDataFrameT, EagerSeriesT]: ...

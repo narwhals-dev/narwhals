@@ -34,6 +34,7 @@ class EagerSeries(CompliantSeries, Protocol[NativeSeriesT_co]):
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
+    _broadcast: bool
 
     @property
     def native(self) -> NativeSeriesT_co: ...
