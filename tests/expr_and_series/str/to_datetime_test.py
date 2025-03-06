@@ -12,6 +12,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals._arrow.utils import parse_datetime_format
 from tests.utils import assert_equal_data
+from tests.utils import is_pyarrow_windows_no_tzdata
 
 if TYPE_CHECKING:
     from tests.utils import Constructor
@@ -37,13 +38,14 @@ def test_to_datetime(constructor: Constructor) -> None:
 
 
 @pytest.mark.parametrize(
-    ("fmt", "data", "expected", "expected_polars_duckdb_pyspark"),
+    ("fmt", "data", "expected", "expected_polars_duckdb_pyspark", "expected_pyarrow"),
     [
         (
             "%Y-%m-%d %H:%M:%S%z",
             {"a": ["2020-01-01 12:34:56+02:00"]},
             "2020-01-01 12:34:56+02:00",
             "2020-01-01 10:34:56+00:00",
+            "2020-01-01 10:34:56",
         )
     ],
 )
@@ -54,6 +56,7 @@ def test_to_datetime_tz_aware(
     data: dict[str, Sequence[str]],
     expected: str,
     expected_polars_duckdb_pyspark: str,
+    expected_pyarrow: str,
 ) -> None:
     constructor_str = str(constructor)
     if any(
@@ -73,12 +76,12 @@ def test_to_datetime_tz_aware(
     ):
         from pyarrow.lib import ArrowInvalid
 
-        expected = expected_polars_duckdb_pyspark
+        expected = expected_pyarrow
         request.applymarker(
             pytest.mark.xfail(
-                True,  # noqa: FBT003
+                is_pyarrow_windows_no_tzdata(constructor),
                 raises=ArrowInvalid,
-                reason="Unclear, see https://github.com/narwhals-dev/narwhals/pull/2152#discussion_r1983225794",
+                reason="Timezone database unavailable",
             )
         )
 
