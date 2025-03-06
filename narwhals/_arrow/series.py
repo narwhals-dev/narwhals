@@ -403,16 +403,22 @@ class ArrowSeries(CompliantSeries):
     def scatter(self: Self, indices: int | Sequence[int], values: Any) -> Self:
         import numpy as np  # ignore-banned-import
 
+        if isinstance(values, pa.ChunkedArray):
+            values = values.combine_chunks()
+        if not isinstance(values, pa.Array):
+            values = pa.array(values)
+
+        if not isinstance(indices, int):
+            sorting_indices = pc.sort_indices(indices)  # type: ignore[call-overload]
+            indices = pc.take(indices, sorting_indices)  # type: ignore[call-overload]
+            values = pc.take(values, sorting_indices)
+
         mask: _1DArray = np.zeros(self.len(), dtype=bool)
         mask[indices] = True
         if isinstance(values, self.__class__):
             ser, values = extract_native(self, values)
         else:
             ser = self._native_series
-        if isinstance(values, pa.ChunkedArray):
-            values = values.combine_chunks()
-        if not isinstance(values, pa.Array):
-            values = pa.array(values)
         result = pc.replace_with_mask(
             ser, cast("list[bool]", mask), values.take(cast("Indices", indices))
         )
