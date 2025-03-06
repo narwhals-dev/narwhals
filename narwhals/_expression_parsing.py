@@ -143,7 +143,6 @@ def reuse_series_implementation(
         attr: name of method.
         returns_scalar: whether the Series version returns a scalar. In this case,
             the expression version should return a 1-row Series.
-        args: arguments to pass to function.
         call_kwargs: non-expressifiable args which we may need to reuse in `agg` or `over`,
             such as `ddof` for `std` and `var`.
         expressifiable_args: keyword arguments to pass to function, which may
@@ -226,7 +225,6 @@ def reuse_series_namespace_implementation(
         attr: name of method.
         evaluate_output_names: Output names function.
         alias_output_names: Alias output names function.
-        args: arguments to pass to function.
         kwargs: keyword arguments to pass to function.
     """
     plx = expr.__narwhals_namespace__()
