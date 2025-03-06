@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from functools import partial
 from typing import TYPE_CHECKING
-from typing import Any
 
 if TYPE_CHECKING:
     from pyspark.sql import Column
@@ -111,7 +110,7 @@ class SparkLikeExprStringNamespace:
         F = self._compliant_expr._F  # noqa: N806
         if not format:
             function = F.to_timestamp
-        elif is_naive(format):
+        elif is_naive_format(format):
             function = partial(
                 F.to_timestamp_ntz, format=F.lit(strptime_to_pyspark_format(format))
             )
@@ -123,8 +122,8 @@ class SparkLikeExprStringNamespace:
         )
 
 
-def is_naive(obj: Any) -> bool:
-    return obj is not None and {"%s", "%z", "Z"}.isdisjoint(obj)
+def is_naive_format(format_str: str) -> bool:
+    return {"%s", "%z", "Z"}.isdisjoint(format_str)
 
 
 def strptime_to_pyspark_format(format: str) -> str:  # noqa: A002
