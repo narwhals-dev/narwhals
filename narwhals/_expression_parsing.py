@@ -26,11 +26,11 @@ if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
     from narwhals._arrow.expr import ArrowExpr
+    from narwhals._compliant import CompliantFrameT
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals.expr import Expr
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantExpr
-    from narwhals.typing import CompliantFrameT
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import CompliantNamespace
     from narwhals.typing import CompliantSeries

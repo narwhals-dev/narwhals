@@ -9,7 +9,6 @@ from typing import Union
 
 from narwhals._compliant import CompliantDataFrame
 from narwhals._compliant import CompliantExpr
-from narwhals._compliant import CompliantFrameT
 from narwhals._compliant import CompliantLazyFrame
 from narwhals._compliant import CompliantNamespace
 from narwhals._compliant import CompliantSeries
@@ -239,7 +238,6 @@ class DTypes:
 __all__ = [
     "CompliantDataFrame",
     "CompliantExpr",
-    "CompliantFrameT",
     "CompliantLazyFrame",
     "CompliantNamespace",
     "CompliantSeries",
