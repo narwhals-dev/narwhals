@@ -9,6 +9,8 @@ from typing import Sequence
 from typing import cast
 from typing import overload
 
+import numpy as np
+
 from narwhals._pandas_like.series_cat import PandasLikeSeriesCatNamespace
 from narwhals._pandas_like.series_dt import PandasLikeSeriesDateTimeNamespace
 from narwhals._pandas_like.series_list import PandasLikeSeriesListNamespace
@@ -27,6 +29,7 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantSeries
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import parse_version
 from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
@@ -225,7 +228,7 @@ class PandasLikeSeries(CompliantSeries):
         result[mask_na] = None
         return self._from_native_series(result)
 
-    def scatter(self: Self, indices: int | Sequence[int] | Self, values: Any) -> Self:
+    def scatter(self: Self, indices: int | Sequence[int], values: Any) -> Self:
         if isinstance(values, self.__class__):
             # .copy() is necessary in some pre-2.2 versions of pandas to avoid
             # `values` also getting modified (!)
@@ -240,6 +243,18 @@ class PandasLikeSeries(CompliantSeries):
         s.iloc[indices] = values
         s.name = self.name
         return self._from_native_series(s)
+
+    def _scatter_in_place(self: Self, indices: Self, values: Self) -> None:
+        # Scatter, modifying original Series. Use with care!
+        values_native = set_index(
+            values._native_series,
+            self._native_series.index[indices._native_series],
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+        )
+        if self._implementation is Implementation.PANDAS and parse_version(np) < (2,):
+            values_native = values_native.copy()
+        self._native_series.iloc[indices._native_series] = values_native
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
         ser = self._native_series
