@@ -253,7 +253,7 @@ class PandasLikeSeries(CompliantSeries):
             backend_version=self._backend_version,
         )
         if self._implementation is Implementation.PANDAS and parse_version(np) < (2,):
-            values_native = values_native.copy()
+            values_native = values_native.copy()  # pragma: no cover
         self._native_series.iloc[indices._native_series] = values_native
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
