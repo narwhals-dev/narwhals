@@ -11,6 +11,7 @@ from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
+from narwhals._compliant import CompliantNamespace
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -23,7 +24,6 @@ from narwhals._pandas_like.utils import diagonal_concat
 from narwhals._pandas_like.utils import extract_dataframe_comparand
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import vertical_concat
-from narwhals.typing import CompliantNamespace
 from narwhals.utils import exclude_column_names
 from narwhals.utils import get_column_names
 from narwhals.utils import import_dtypes_module

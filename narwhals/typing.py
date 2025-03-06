@@ -10,7 +10,6 @@ from typing import Union
 from narwhals._compliant import CompliantDataFrame
 from narwhals._compliant import CompliantExpr
 from narwhals._compliant import CompliantLazyFrame
-from narwhals._compliant import CompliantNamespace
 from narwhals._compliant import CompliantSeries
 
 if TYPE_CHECKING:
@@ -238,7 +237,6 @@ __all__ = [
     "CompliantDataFrame",
     "CompliantExpr",
     "CompliantLazyFrame",
-    "CompliantNamespace",
     "CompliantSeries",
     "DataFrameT",
     "Frame",

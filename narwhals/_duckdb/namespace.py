@@ -16,6 +16,7 @@ from duckdb import FunctionExpression
 from duckdb.typing import BIGINT
 from duckdb.typing import VARCHAR
 
+from narwhals._compliant import CompliantNamespace
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.selectors import DuckDBSelectorNamespace
 from narwhals._duckdb.utils import lit
@@ -23,7 +24,6 @@ from narwhals._duckdb.utils import maybe_evaluate_expr
 from narwhals._duckdb.utils import narwhals_to_native_dtype
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
-from narwhals.typing import CompliantNamespace
 from narwhals.utils import Implementation
 from narwhals.utils import exclude_column_names
 from narwhals.utils import get_column_names

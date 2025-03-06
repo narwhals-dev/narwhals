@@ -25,9 +25,9 @@ from narwhals._arrow.utils import extract_dataframe_comparand
 from narwhals._arrow.utils import horizontal_concat
 from narwhals._arrow.utils import nulls_like
 from narwhals._arrow.utils import vertical_concat
+from narwhals._compliant import CompliantNamespace
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
-from narwhals.typing import CompliantNamespace
 from narwhals.utils import Implementation
 from narwhals.utils import exclude_column_names
 from narwhals.utils import get_column_names

@@ -33,9 +33,9 @@ if TYPE_CHECKING:
     from typing_extensions import Self
     from typing_extensions import TypeAlias
 
+    from narwhals._compliant import CompliantNamespace
     from narwhals.dtypes import DType
     from narwhals.typing import CompliantExpr
-    from narwhals.typing import CompliantNamespace
     from narwhals.typing import IntoExpr
 
     PS = ParamSpec("PS")

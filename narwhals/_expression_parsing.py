@@ -27,13 +27,13 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._compliant import CompliantFrameT
+    from narwhals._compliant import CompliantNamespace
     from narwhals._compliant import CompliantSeriesT_co
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals.expr import Expr
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantExpr
     from narwhals.typing import CompliantLazyFrame
-    from narwhals.typing import CompliantNamespace
     from narwhals.typing import CompliantSeries
     from narwhals.typing import IntoExpr
     from narwhals.typing import _1DArray
