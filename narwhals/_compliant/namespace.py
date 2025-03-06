@@ -4,8 +4,10 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Protocol
 
+from narwhals._compliant.typing import CompliantDataFrameT
 from narwhals._compliant.typing import CompliantFrameT
 from narwhals._compliant.typing import CompliantSeriesOrNativeExprT_co
+from narwhals._compliant.typing import CompliantSeriesT_co
 
 if TYPE_CHECKING:
     from narwhals._compliant.expr import CompliantExpr
@@ -24,3 +26,9 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_
     ) -> CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co]: ...
     @property
     def selectors(self) -> CompliantSelectorNamespace[Any, Any]: ...
+
+
+class EagerNamespace(
+    CompliantNamespace[CompliantDataFrameT, CompliantSeriesT_co],
+    Protocol[CompliantDataFrameT, CompliantSeriesT_co],
+): ...

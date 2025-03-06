@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sys
+from functools import partial
+from operator import methodcaller
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -8,12 +10,13 @@ from typing import Literal
 from typing import Protocol
 from typing import Sequence
 
-from narwhals._compliant.typing import CompliantDataFrameT
 from narwhals._compliant.typing import CompliantFrameT
 from narwhals._compliant.typing import CompliantLazyFrameT
 from narwhals._compliant.typing import CompliantSeriesOrNativeExprT_co
-from narwhals._compliant.typing import CompliantSeriesT_co
+from narwhals._compliant.typing import EagerDataFrameT
+from narwhals._compliant.typing import EagerSeriesT
 from narwhals._compliant.typing import NativeExprT_co
+from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals.utils import deprecated
 from narwhals.utils import not_implemented
 from narwhals.utils import unstable
@@ -39,6 +42,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.utils import Implementation
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
 __all__ = ["CompliantExpr"]
 
@@ -229,9 +233,155 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
 
 
 class EagerExpr(
-    CompliantExpr[CompliantDataFrameT, CompliantSeriesT_co],
-    Protocol38[CompliantDataFrameT, CompliantSeriesT_co],
-): ...
+    CompliantExpr[EagerDataFrameT, EagerSeriesT],
+    Protocol38[EagerDataFrameT, EagerSeriesT],
+):
+    _depth: int
+    _function_name: str
+    _evaluate_output_names: Any
+    _alias_output_names: Any
+    _call_kwargs: dict[str, Any]
+
+    @property
+    def _series(self) -> type[EagerSeriesT]: ...
+
+    def __init__(
+        self: Self,
+        call: Callable[[EagerDataFrameT], Sequence[EagerSeriesT]],
+        *,
+        depth: int,
+        function_name: str,
+        evaluate_output_names: Callable[[EagerDataFrameT], Sequence[str]],
+        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
+        implementation: Implementation,
+        backend_version: tuple[int, ...],
+        version: Version,
+        call_kwargs: dict[str, Any] | None = None,
+    ) -> None: ...
+
+    @classmethod
+    def _from_callable(
+        cls,
+        func: Callable[[EagerDataFrameT], Sequence[EagerSeriesT]],
+        *,
+        depth: int,
+        function_name: str,
+        evaluate_output_names: Callable[[EagerDataFrameT], Sequence[str]],
+        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
+        context: _FullContext,
+        call_kwargs: dict[str, Any] | None = None,
+    ) -> Self:
+        return cls(
+            func,
+            depth=depth,
+            function_name=function_name,
+            evaluate_output_names=evaluate_output_names,
+            alias_output_names=alias_output_names,
+            implementation=context._implementation,
+            backend_version=context._backend_version,
+            version=context._version,
+            call_kwargs=call_kwargs,
+        )
+
+    @classmethod
+    def _from_series(cls, series: EagerSeriesT, *, context: _FullContext) -> Self:
+        return cls(
+            lambda _df: [series],
+            depth=0,
+            function_name="series",
+            evaluate_output_names=lambda _df: [series.name],
+            alias_output_names=None,
+            implementation=context._implementation,
+            backend_version=context._backend_version,
+            version=context._version,
+        )
+
+    # https://github.com/narwhals-dev/narwhals/blob/35cef0b1e2c892fb24aa730902b08b6994008c18/narwhals/_protocols.py#L135
+    def _reuse_series_implementation(
+        self: EagerExpr[EagerDataFrameT, EagerSeriesT],
+        attr: str,
+        *,
+        returns_scalar: bool = False,
+        call_kwargs: dict[str, Any] | None = None,
+        **expressifiable_args: Any,
+    ) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
+        func = partial(
+            self._reuse_series_inner,
+            method_name=attr,
+            returns_scalar=returns_scalar,
+            call_kwargs=call_kwargs or {},
+            expressifiable_args=expressifiable_args,
+        )
+        return self._from_callable(
+            func,
+            depth=self._depth + 1,
+            function_name=f"{self._function_name}->{attr}",
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            call_kwargs=call_kwargs,
+            context=self,
+        )
+
+    # For PyArrow.Series, we return Python Scalars (like Polars does) instead of PyArrow Scalars.
+    # However, when working with expressions, we keep everything PyArrow-native.
+    def _reuse_series_extra_kwargs(
+        self, *, returns_scalar: bool = False
+    ) -> dict[str, Any]:
+        return {}
+
+    def _reuse_series_inner(
+        self,
+        df: EagerDataFrameT,
+        *,
+        method_name: str,
+        returns_scalar: bool,
+        call_kwargs: dict[str, Any],
+        expressifiable_args: dict[str, Any],
+    ) -> Sequence[EagerSeriesT]:
+        kwargs = {
+            **call_kwargs,
+            **{
+                arg_name: df._maybe_evaluate_expr(arg_value)
+                for arg_name, arg_value in expressifiable_args.items()
+            },
+        }
+        method = methodcaller(
+            method_name,
+            **self._reuse_series_extra_kwargs(returns_scalar=returns_scalar),
+            **kwargs,
+        )
+        out: Sequence[EagerSeriesT] = [
+            series._from_scalar(method(series)) if returns_scalar else method(series)
+            for series in self(df)
+        ]
+        _, aliases = evaluate_output_names_and_aliases(self, df, [])
+        if [s.name for s in out] != list(aliases):  # pragma: no cover
+            msg = (
+                f"Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues\n"
+                f"Expression aliases: {aliases}\n"
+                f"Series names: {[s.name for s in out]}"
+            )
+            raise AssertionError(msg)
+        return out
+
+    def _reuse_series_namespace_implementation(
+        self: EagerExpr[EagerDataFrameT, EagerSeriesT],
+        series_namespace: str,
+        attr: str,
+        **kwargs: Any,
+    ) -> EagerExpr[EagerDataFrameT, EagerSeriesT]:
+        return self._from_callable(
+            lambda df: [
+                getattr(getattr(series, series_namespace), attr)(**kwargs)
+                for series in self(df)
+            ],
+            depth=self._depth + 1,
+            function_name=f"{self._function_name}->{series_namespace}.{attr}",
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            call_kwargs={**self._call_kwargs, **kwargs},
+            context=self,
+        )
 
 
 # NOTE: See (https://github.com/narwhals-dev/narwhals/issues/2044#issuecomment-2674262833)

@@ -9,9 +9,11 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.dataframe import CompliantDataFrame
     from narwhals._compliant.dataframe import CompliantLazyFrame
+    from narwhals._compliant.dataframe import EagerDataFrame
     from narwhals._compliant.expr import CompliantExpr
     from narwhals._compliant.expr import NativeExpr
     from narwhals._compliant.series import CompliantSeries
+    from narwhals._compliant.series import EagerSeries
 
 __all__ = [
     "CompliantDataFrameT",
@@ -35,3 +37,6 @@ CompliantFrameT = TypeVar(
 CompliantDataFrameT = TypeVar("CompliantDataFrameT", bound="CompliantDataFrame[Any]")
 CompliantLazyFrameT = TypeVar("CompliantLazyFrameT", bound="CompliantLazyFrame")
 IntoCompliantExpr: TypeAlias = "CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | CompliantSeriesOrNativeExprT_co"
+
+EagerDataFrameT = TypeVar("EagerDataFrameT", bound="EagerDataFrame[Any]")
+EagerSeriesT = TypeVar("EagerSeriesT", bound="EagerSeries[Any]")
