@@ -42,12 +42,12 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
 
+    from narwhals._compliant import CompliantExpr
     from narwhals._compliant import CompliantNamespace
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.series import Series
-    from narwhals.typing import CompliantExpr
     from narwhals.typing import DTypeBackend
     from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoExpr

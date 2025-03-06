@@ -8,6 +8,7 @@ from typing import Callable
 from typing import Literal
 from typing import Sequence
 
+from narwhals._compliant import CompliantExpr
 from narwhals._dask.expr_dt import DaskExprDateTimeNamespace
 from narwhals._dask.expr_name import DaskExprNameNamespace
 from narwhals._dask.expr_str import DaskExprStringNamespace
@@ -20,7 +21,6 @@ from narwhals._expression_parsing import is_elementary_expression
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import not_implemented

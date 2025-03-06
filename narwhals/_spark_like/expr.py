@@ -9,6 +9,7 @@ from typing import Literal
 from typing import Sequence
 from typing import cast
 
+from narwhals._compliant import CompliantExpr
 from narwhals._expression_parsing import ExprKind
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
@@ -17,7 +18,6 @@ from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
 from narwhals._spark_like.utils import maybe_evaluate_expr
 from narwhals._spark_like.utils import narwhals_to_native_dtype
 from narwhals.dependencies import get_pyspark
-from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 from narwhals.utils import not_implemented
 from narwhals.utils import parse_version

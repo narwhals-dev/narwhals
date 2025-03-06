@@ -13,6 +13,7 @@ from narwhals._arrow.expr_list import ArrowExprListNamespace
 from narwhals._arrow.expr_name import ArrowExprNameNamespace
 from narwhals._arrow.expr_str import ArrowExprStringNamespace
 from narwhals._arrow.series import ArrowSeries
+from narwhals._compliant import CompliantExpr
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._expression_parsing import is_scalar_like
@@ -20,7 +21,6 @@ from narwhals._expression_parsing import reuse_series_implementation
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ColumnNotFoundError
-from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 from narwhals.utils import not_implemented
 

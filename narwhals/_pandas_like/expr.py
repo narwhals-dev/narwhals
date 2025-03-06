@@ -8,6 +8,7 @@ from typing import Literal
 from typing import Mapping
 from typing import Sequence
 
+from narwhals._compliant import CompliantExpr
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._expression_parsing import is_elementary_expression
@@ -23,7 +24,6 @@ from narwhals._pandas_like.utils import rename
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ColumnNotFoundError
-from narwhals.typing import CompliantExpr
 
 if TYPE_CHECKING:
     from typing_extensions import Self
