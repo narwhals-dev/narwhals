@@ -18,5 +18,5 @@ class SparkLikeExprStructNamespace:
             return _input.getField(name)
 
         return self._compliant_expr._from_call(
-            func, "field", _evaluate_output_names=lambda _col: [name]
+            func, "field", evaluate_output_names=lambda _col: [name]
         )

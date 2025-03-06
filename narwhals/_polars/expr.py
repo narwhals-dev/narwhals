@@ -401,12 +401,6 @@ class PolarsExprStructNamespace:
     def __init__(self: Self, expr: PolarsExpr) -> None:
         self._expr = expr
 
-    def field(self: Self, name: str) -> PolarsExpr:
-        native_expr = self._expr._native_expr
-        native_result = native_expr.struct.field(name)
-
-        return self._expr._from_native_expr(native_result)
-
     def __getattr__(
         self: Self, attr: str
     ) -> Callable[[Any], PolarsExpr]:  # pragma: no cover
