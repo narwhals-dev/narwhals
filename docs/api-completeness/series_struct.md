@@ -1,4 +1,4 @@
-# Series.str
+# Series.struct
 
 | Method       | arrow               | pandas-like        | polars             |
 |--------------|---------------------|--------------------|--------------------|
