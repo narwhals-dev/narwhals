@@ -254,7 +254,14 @@ class PandasLikeSeries(CompliantSeries):
         )
         if self._implementation is Implementation.PANDAS and parse_version(np) < (2,):
             values_native = values_native.copy()  # pragma: no cover
-        self._native_series.iloc[indices._native_series] = values_native
+        min_pd_version = (1, 2)
+        if (
+            self._implementation is Implementation.PANDAS
+            and self._backend_version < min_pd_version
+        ):
+            self._native_series.iloc[indices._native_series.values] = values_native  # noqa: PD011
+        else:
+            self._native_series.iloc[indices._native_series] = values_native
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
         ser = self._native_series
