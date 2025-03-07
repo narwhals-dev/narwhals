@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._expression_parsing import reuse_series_namespace_implementation
-
 if TYPE_CHECKING:
     from typing_extensions import Self
 
@@ -15,6 +13,6 @@ class ArrowExprCatNamespace:
         self._compliant_expr = expr
 
     def get_categories(self: Self) -> ArrowExpr:
-        return reuse_series_namespace_implementation(
-            self._compliant_expr, "cat", "get_categories"
+        return self._compliant_expr._reuse_series_namespace_implementation(
+            "cat", "get_categories"
         )
