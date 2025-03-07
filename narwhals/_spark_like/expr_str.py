@@ -124,7 +124,7 @@ class SparkLikeExprStringNamespace:
 
 
 def is_naive_format(format: str) -> bool:  # noqa: A002
-    return {"s", "z", "Z"}.isdisjoint(format)
+    return not any(x in format for x in ("%s", "%z", "Z"))
 
 
 def strptime_to_pyspark_format(format: str) -> str:  # noqa: A002
