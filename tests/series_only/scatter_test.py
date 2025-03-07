@@ -57,3 +57,28 @@ def test_single_series(constructor_eager: ConstructorEager) -> None:
     s.scatter([0, 1], [999, 888])
     expected = {"a": [1, 2, 3]}
     assert_equal_data({"a": s}, expected)
+
+
+def test_scatter_integer(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(
+        constructor_eager({"a": [1, 2, 3], "b": [142, 124, 132]}), eager_only=True
+    )
+    s = df["a"]
+    result = s.scatter(0, 999)
+    expected = {"a": [999, 2, 3]}
+    assert_equal_data({"a": result}, expected)
+
+
+def test_scatter_unordered_indices(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if "modin" in str(constructor_eager):
+        # bugged
+        request.applymarker(pytest.mark.xfail)
+    data = {
+        "a": [16, 12, 10, 9, 6, 5, 2],
+    }
+    indices = [6, 1, 0, 5, 3, 2, 4]
+    df = nw.from_native(constructor_eager(data))
+    result = df["a"].scatter(indices, df["a"])
+    assert_equal_data({"a": result}, {"a": [10, 12, 5, 6, 2, 9, 16]})

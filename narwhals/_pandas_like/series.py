@@ -230,11 +230,8 @@ class PandasLikeSeries(CompliantSeries):
 
     def scatter(self: Self, indices: int | Sequence[int], values: Any) -> Self:
         if isinstance(values, self.__class__):
-            # .copy() is necessary in some pre-2.2 versions of pandas to avoid
-            # `values` also getting modified (!)
-            _, values = align_and_extract_native(self, values)
             values = set_index(
-                values.copy(),
+                values._native_series,
                 self._native_series.index[indices],
                 implementation=self._implementation,
                 backend_version=self._backend_version,
