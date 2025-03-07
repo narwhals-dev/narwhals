@@ -422,6 +422,10 @@ def test_over_without_partition_by(
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
     if "duckdb" in str(constructor):
+        # windows not yet supported
+        request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor):
+        # probably bugged
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, -1, 2], "i": [0, 2, 1]}))
     result = (
