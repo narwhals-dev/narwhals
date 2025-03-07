@@ -607,8 +607,8 @@ class EagerExpr(
 
     def filter(self, *predicates: Self) -> Self:
         plx = self.__narwhals_namespace__()
-        other = plx.all_horizontal(*predicates)
-        return self._reuse_series_implementation("filter", other=other)
+        predicate = plx.all_horizontal(*predicates)
+        return self._reuse_series_implementation("filter", predicate=predicate)
 
     def drop_nulls(self) -> Self:
         return self._reuse_series_implementation("drop_nulls")

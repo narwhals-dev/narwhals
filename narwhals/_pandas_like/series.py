@@ -328,11 +328,13 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     # Binary comparisons
 
-    def filter(self: Self, other: Any) -> PandasLikeSeries:
-        if not (isinstance(other, list) and all(isinstance(x, bool) for x in other)):
-            _, other_native = align_and_extract_native(self, other)
+    def filter(self: Self, predicate: Any) -> PandasLikeSeries:
+        if not (
+            isinstance(predicate, list) and all(isinstance(x, bool) for x in predicate)
+        ):
+            _, other_native = align_and_extract_native(self, predicate)
         else:
-            other_native = other
+            other_native = predicate
         return self._from_native_series(self._native_series.loc[other_native]).alias(
             self.name
         )
