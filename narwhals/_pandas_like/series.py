@@ -9,6 +9,7 @@ from typing import Sequence
 from typing import cast
 from typing import overload
 
+from narwhals._compliant import EagerSeries
 from narwhals._pandas_like.series_cat import PandasLikeSeriesCatNamespace
 from narwhals._pandas_like.series_dt import PandasLikeSeriesDateTimeNamespace
 from narwhals._pandas_like.series_list import PandasLikeSeriesListNamespace
@@ -24,7 +25,6 @@ from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_index
 from narwhals.dependencies import is_numpy_scalar
 from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantSeries
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import validate_backend_version
@@ -90,7 +90,7 @@ PANDAS_TO_NUMPY_DTYPE_MISSING = {
 }
 
 
-class PandasLikeSeries(CompliantSeries):
+class PandasLikeSeries(EagerSeries[Any]):
     def __init__(
         self: Self,
         native_series: Any,
@@ -111,6 +111,10 @@ class PandasLikeSeries(CompliantSeries):
         # become a Series of length 1. Rather that doing a full broadcast so it matches
         # the length of the whole dataframe, we just extract the scalar.
         self._broadcast = False
+
+    @property
+    def native(self) -> Any:
+        return self._native_series
 
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation in {
@@ -139,7 +143,7 @@ class PandasLikeSeries(CompliantSeries):
 
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
-            self._native_series,
+            self.native,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=version,

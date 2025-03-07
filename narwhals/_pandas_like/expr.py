@@ -8,7 +8,7 @@ from typing import Literal
 from typing import Mapping
 from typing import Sequence
 
-from narwhals._compliant import CompliantExpr
+from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._expression_parsing import is_elementary_expression
@@ -69,7 +69,7 @@ def window_kwargs_to_pandas_equivalent(
     return pandas_kwargs
 
 
-class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
+class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
     def __init__(
         self: Self,
         call: Callable[[PandasLikeDataFrame], Sequence[PandasLikeSeries]],

@@ -10,6 +10,7 @@ from typing import overload
 
 import numpy as np
 
+from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
 from narwhals._pandas_like.series import PandasLikeSeries
@@ -26,6 +27,8 @@ from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError
+from narwhals.typing import CompliantDataFrame
+from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
 from narwhals.utils import generate_temporary_column_name
@@ -54,8 +57,6 @@ if TYPE_CHECKING:
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
 
-from narwhals.typing import CompliantDataFrame
-from narwhals.typing import CompliantLazyFrame
 
 CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
     [
@@ -83,7 +84,7 @@ CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
 )
 
 
-class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyFrame):
+class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame):
     # --- not in the spec ---
     def __init__(
         self: Self,

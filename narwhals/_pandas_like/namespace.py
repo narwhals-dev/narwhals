@@ -11,7 +11,7 @@ from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
-from narwhals._compliant import CompliantNamespace
+from narwhals._compliant import EagerNamespace
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -40,7 +40,15 @@ if TYPE_CHECKING:
     _Scalar: TypeAlias = Any
 
 
-class PandasLikeNamespace(CompliantNamespace[PandasLikeDataFrame, PandasLikeSeries]):
+class PandasLikeNamespace(EagerNamespace[PandasLikeDataFrame, PandasLikeSeries]):
+    @property
+    def _expr(self) -> type[PandasLikeExpr]:
+        return PandasLikeExpr
+
+    @property
+    def _series(self) -> type[PandasLikeSeries]:
+        return PandasLikeSeries
+
     @property
     def selectors(self: Self) -> PandasSelectorNamespace:
         return PandasSelectorNamespace(self)
