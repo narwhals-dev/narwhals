@@ -29,10 +29,16 @@ def test_to_datetime(constructor: Constructor) -> None:
         nw.from_native(constructor(data))
         .lazy()
         .select(b=nw.col("a").str.to_datetime(format="%Y-%m-%dT%H:%M:%S"))
-        .collect()
-        .item(row=0, column="b")
     )
-    assert str(result) == expected
+    result_schema = result.collect_schema()
+    assert isinstance(result_schema["b"], nw.Datetime)
+    if "sqlframe" in str(constructor):
+        # https://github.com/eakmanrq/sqlframe/issues/326
+        assert result_schema["b"].time_zone == "UTC"
+    else:
+        assert result_schema["b"].time_zone is None
+    result_item = result.collect().item(row=0, column="b")
+    assert str(result_item) == expected
 
 
 def test_to_datetime_series(constructor_eager: ConstructorEager) -> None:
@@ -201,8 +207,7 @@ def test_to_datetime_tz_aware(
 ) -> None:
     context = (
         pytest.raises(NotImplementedError)
-        if any(x in str(constructor) for x in ("duckdb", "sqlframe", "pyspark"))
-        and format is None
+        if any(x in str(constructor) for x in ("duckdb", "sqlframe")) and format is None
         else does_not_raise()
     )
     df = nw.from_native(constructor({"a": ["2020-01-01T01:02:03+0100"]}))
