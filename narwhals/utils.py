@@ -1402,11 +1402,11 @@ def is_compliant_expr(
     return hasattr(obj, "__narwhals_expr__")
 
 
-# NOTE: Temporary - just to introduce a path for the Arrow WIP
+# NOTE: Temporary - just to introduce a path for the (Arrow|PandasLike) WIP
 def is_eager_namespace(
     obj: EagerNamespace[EagerDataFrameT, EagerSeriesT] | Any,
 ) -> TypeIs[EagerNamespace[EagerDataFrameT, EagerSeriesT]]:
-    return type(obj).__name__ == "ArrowNamespace"
+    return type(obj).__name__ in {"ArrowNamespace", "PandasLikeNamespace"}
     # return all(hasattr(obj, name) for name in ("selectors", "_expr", "_series"))  # noqa: ERA001
 
 
