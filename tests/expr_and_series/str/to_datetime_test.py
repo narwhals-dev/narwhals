@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import nullcontext as does_not_raise
 from datetime import datetime
 from datetime import timezone
 from typing import TYPE_CHECKING
@@ -190,3 +191,36 @@ def test_pyarrow_infer_datetime_raise_inconsistent_date_fmt(
 ) -> None:
     with pytest.raises(ValueError, match="Unable to infer datetime format. "):
         parse_datetime_format(pa.chunked_array([data]))
+
+
+@pytest.mark.parametrize("format", [None, "%Y-%m-%dT%H:%M:%S%z"])
+def test_to_datetime_tz_aware(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    format: str | None,  # noqa: A002
+) -> None:
+    context = (
+        pytest.raises(NotImplementedError)
+        if any(x in str(constructor) for x in ("duckdb", "sqlframe", "pyspark"))
+        and format is None
+        else does_not_raise()
+    )
+    df = nw.from_native(constructor({"a": ["2020-01-01T01:02:03+0100"]}))
+    with context:
+        result = df.with_columns(b=nw.col("a").str.to_datetime(format))
+        result_schema = result.collect_schema()
+        assert result_schema["a"] == nw.String
+        assert isinstance(result_schema["b"], nw.Datetime)
+        if "polars_lazy" in str(constructor):
+            # bug? report to Polars?
+            assert result_schema["b"].time_zone is None
+        else:
+            assert result_schema["b"].time_zone == "UTC"
+        if "sqlframe" in str(constructor):
+            # https://github.com/eakmanrq/sqlframe/issues/325
+            request.applymarker(pytest.mark.xfail)
+        expected = {
+            "a": ["2020-01-01T01:02:03+0100"],
+            "b": [datetime(2020, 1, 1, 0, 2, 3, tzinfo=timezone.utc)],
+        }
+        assert_equal_data(result, expected)
