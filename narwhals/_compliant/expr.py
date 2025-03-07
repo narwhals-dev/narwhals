@@ -323,7 +323,6 @@ class EagerExpr(
         context: _FullContext,
     ) -> Self: ...
 
-    # https://github.com/narwhals-dev/narwhals/blob/35cef0b1e2c892fb24aa730902b08b6994008c18/narwhals/_protocols.py#L135
     def _reuse_series_implementation(
         self: Self,
         attr: str,
@@ -332,6 +331,20 @@ class EagerExpr(
         call_kwargs: dict[str, Any] | None = None,
         **expressifiable_args: Any,
     ) -> Self:
+        """Reuse Series implementation for expression.
+
+        If Series.foo is already defined, and we'd like Expr.foo to be the same, we can
+        leverage this method to do that for us.
+
+        Arguments:
+            attr: name of method.
+            returns_scalar: whether the Series version returns a scalar. In this case,
+                the expression version should return a 1-row Series.
+            call_kwargs: non-expressifiable args which we may need to reuse in `agg` or `over`,
+                such as `ddof` for `std` and `var`.
+            expressifiable_args: keyword arguments to pass to function, which may
+                be expressifiable (e.g. `nw.col('a').is_between(3, nw.col('b')))`).
+        """
         func = partial(
             self._reuse_series_inner,
             method_name=attr,
@@ -394,6 +407,16 @@ class EagerExpr(
     def _reuse_series_namespace_implementation(
         self: Self, series_namespace: str, attr: str, **kwargs: Any
     ) -> Self:
+        """Reuse Series implementation for expression.
+
+        Just like `_reuse_series_implementation`, but for e.g. `Expr.dt.foo` instead
+        of `Expr.foo`.
+
+        Arguments:
+            series_namespace: The Series namespace (e.g. `dt`, `cat`, `str`, `list`, `name`)
+            attr: name of method.
+            kwargs: keyword arguments to pass to function.
+        """
         return self._from_callable(
             lambda df: [
                 getattr(getattr(series, series_namespace), attr)(**kwargs)

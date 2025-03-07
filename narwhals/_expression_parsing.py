@@ -12,7 +12,6 @@ from typing import Callable
 from typing import Literal
 from typing import Sequence
 from typing import TypeVar
-from typing import overload
 
 from narwhals.dependencies import is_narwhals_series
 from narwhals.dependencies import is_numpy_array
@@ -30,15 +29,11 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantNamespace
     from narwhals._compliant import CompliantSeriesOrNativeExprT_co
     from narwhals._compliant import CompliantSeriesT_co
-    from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals.expr import Expr
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
-    from narwhals.typing import CompliantSeries
     from narwhals.typing import IntoExpr
     from narwhals.typing import _1DArray
-
-    PandasLikeExprT = TypeVar("PandasLikeExprT", bound=PandasLikeExpr)
 
     T = TypeVar("T")
 
@@ -77,122 +72,6 @@ def evaluate_into_exprs(
 ) -> list[CompliantSeriesT_co]:
     """Evaluate each expr into Series."""
     return list(chain.from_iterable(evaluate_into_expr(df, expr) for expr in exprs))
-
-
-@overload
-def maybe_evaluate_expr(
-    df: CompliantFrameT, expr: CompliantExpr[CompliantFrameT, CompliantSeriesT_co]
-) -> CompliantSeriesT_co: ...
-
-
-@overload
-def maybe_evaluate_expr(df: CompliantDataFrame[Any], expr: T) -> T: ...
-
-
-def maybe_evaluate_expr(
-    df: Any, expr: CompliantExpr[Any, CompliantSeriesT_co] | T
-) -> CompliantSeriesT_co | T:
-    """Evaluate `expr` if it's an expression, otherwise return it as is."""
-    if is_compliant_expr(expr):
-        result: Sequence[CompliantSeriesT_co] = expr(df)
-        if len(result) > 1:
-            msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) are not supported in this context"
-            raise ValueError(msg)
-        return result[0]
-    return expr
-
-
-def reuse_series_implementation(
-    expr: PandasLikeExprT,
-    attr: str,
-    *,
-    returns_scalar: bool = False,
-    call_kwargs: dict[str, Any] | None = None,
-    **expressifiable_args: Any,
-) -> PandasLikeExprT:
-    """Reuse Series implementation for expression.
-
-    If Series.foo is already defined, and we'd like Expr.foo to be the same, we can
-    leverage this method to do that for us.
-
-    Arguments:
-        expr: expression object.
-        attr: name of method.
-        returns_scalar: whether the Series version returns a scalar. In this case,
-            the expression version should return a 1-row Series.
-        call_kwargs: non-expressifiable args which we may need to reuse in `agg` or `over`,
-            such as `ddof` for `std` and `var`.
-        expressifiable_args: keyword arguments to pass to function, which may
-            be expressifiable (e.g. `nw.col('a').is_between(3, nw.col('b')))`).
-    """
-    plx = expr.__narwhals_namespace__()
-
-    def func(df: CompliantDataFrame[Any]) -> Sequence[CompliantSeries]:
-        _kwargs = {
-            **(call_kwargs or {}),
-            **{
-                arg_name: maybe_evaluate_expr(df, arg_value)
-                for arg_name, arg_value in expressifiable_args.items()
-            },
-        }
-
-        out: list[CompliantSeries] = [
-            plx._create_series_from_scalar(  # type: ignore  # noqa: PGH003
-                getattr(series, attr)(**_kwargs),
-                reference_series=series,
-            )
-            if returns_scalar
-            else getattr(series, attr)(**_kwargs)
-            for series in expr(df)  # type: ignore  # noqa: PGH003
-        ]
-        _, aliases = evaluate_output_names_and_aliases(expr, df, [])
-        if [s.name for s in out] != list(aliases):  # pragma: no cover
-            msg = (
-                f"Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues\n"
-                f"Expression aliases: {aliases}\n"
-                f"Series names: {[s.name for s in out]}"
-            )
-            raise AssertionError(msg)
-        return out
-
-    return plx._create_expr_from_callable(  # type: ignore  # noqa: PGH003
-        func,
-        depth=expr._depth + 1,
-        function_name=f"{expr._function_name}->{attr}",
-        evaluate_output_names=expr._evaluate_output_names,
-        alias_output_names=expr._alias_output_names,
-        call_kwargs=call_kwargs,
-    )
-
-
-def reuse_series_namespace_implementation(
-    expr: PandasLikeExprT,
-    series_namespace: str,
-    attr: str,
-    **kwargs: Any,
-) -> PandasLikeExprT:
-    """Reuse Series implementation for expression.
-
-    Just like `reuse_series_implementation`, but for e.g. `Expr.dt.foo` instead
-    of `Expr.foo`.
-
-    Arguments:
-        expr: expression object.
-        series_namespace: The Series namespace (e.g. `dt`, `cat`, `str`, `list`, `name`)
-        attr: name of method.
-        kwargs: keyword arguments to pass to function.
-    """
-    plx = expr.__narwhals_namespace__()
-    return plx._create_expr_from_callable(  # type: ignore  # noqa: PGH003
-        lambda df: [
-            getattr(getattr(series, series_namespace), attr)(**kwargs)
-            for series in expr(df)
-        ],
-        depth=expr._depth + 1,
-        function_name=f"{expr._function_name}->{series_namespace}.{attr}",
-        evaluate_output_names=expr._evaluate_output_names,
-        alias_output_names=expr._alias_output_names,
-    )
 
 
 def is_elementary_expression(expr: CompliantExpr[Any, Any]) -> bool:
