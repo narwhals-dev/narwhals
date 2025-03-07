@@ -171,7 +171,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             native_series_from_iterable(
                 data,
                 name=name,
-                index=index or [],
+                index=[] if index is None else index,
                 implementation=context._implementation,
             ),
             implementation=context._implementation,
