@@ -48,7 +48,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
-__all__ = ["CompliantExpr"]
+__all__ = ["CompliantExpr", "EagerExpr", "LazyExpr", "NativeExpr"]
 
 
 # NOTE: Only common methods for lazy expr-like objects

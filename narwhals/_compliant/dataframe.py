@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.expr import EagerExpr
     from narwhals.dtypes import DType
 
-__all__ = ["CompliantDataFrame", "CompliantLazyFrame"]
+__all__ = ["CompliantDataFrame", "CompliantLazyFrame", "EagerDataFrame"]
 
 T = TypeVar("T")
 

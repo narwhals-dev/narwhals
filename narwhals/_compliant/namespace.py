@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.selectors import CompliantSelectorNamespace
     from narwhals.dtypes import DType
 
-__all__ = ["CompliantNamespace"]
+__all__ = ["CompliantNamespace", "EagerNamespace"]
 
 
 class CompliantNamespace(Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co]):

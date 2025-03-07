@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
-__all__ = ["CompliantSeries"]
+__all__ = ["CompliantSeries", "EagerSeries"]
 
 NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=True)
 
