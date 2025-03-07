@@ -18,7 +18,6 @@ from narwhals.dependencies import is_narwhals_series
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.exceptions import ShapeError
-from narwhals.utils import Implementation
 from narwhals.utils import is_compliant_expr
 from narwhals.utils import is_eager_namespace
 
@@ -26,7 +25,6 @@ if TYPE_CHECKING:
     from typing_extensions import Never
     from typing_extensions import TypeIs
 
-    from narwhals._arrow.expr import ArrowExpr
     from narwhals._compliant import CompliantExpr
     from narwhals._compliant import CompliantFrameT
     from narwhals._compliant import CompliantNamespace
@@ -41,7 +39,6 @@ if TYPE_CHECKING:
     from narwhals.typing import _1DArray
 
     PandasLikeExprT = TypeVar("PandasLikeExprT", bound=PandasLikeExpr)
-    ArrowExprT = TypeVar("ArrowExprT", bound=ArrowExpr)
 
     T = TypeVar("T")
 
@@ -105,34 +102,14 @@ def maybe_evaluate_expr(
     return expr
 
 
-@overload
 def reuse_series_implementation(
     expr: PandasLikeExprT,
     attr: str,
     *,
     returns_scalar: bool = False,
-    **kwargs: Any,
-) -> PandasLikeExprT: ...
-
-
-@overload
-def reuse_series_implementation(
-    expr: ArrowExprT,
-    attr: str,
-    *,
-    returns_scalar: bool = False,
-    **kwargs: Any,
-) -> ArrowExprT: ...
-
-
-def reuse_series_implementation(
-    expr: ArrowExprT | PandasLikeExprT,
-    attr: str,
-    *,
-    returns_scalar: bool = False,
     call_kwargs: dict[str, Any] | None = None,
     **expressifiable_args: Any,
-) -> ArrowExprT | PandasLikeExprT:
+) -> PandasLikeExprT:
     """Reuse Series implementation for expression.
 
     If Series.foo is already defined, and we'd like Expr.foo to be the same, we can
@@ -159,18 +136,10 @@ def reuse_series_implementation(
             },
         }
 
-        # For PyArrow.Series, we return Python Scalars (like Polars does) instead of PyArrow Scalars.
-        # However, when working with expressions, we keep everything PyArrow-native.
-        extra_kwargs = (
-            {"_return_py_scalar": False}
-            if returns_scalar and expr._implementation is Implementation.PYARROW
-            else {}
-        )
-
         out: list[CompliantSeries] = [
-            plx._create_series_from_scalar(  # type: ignore  # noqa: PGH003
-                getattr(series, attr)(**extra_kwargs, **_kwargs),
-                reference_series=series,  # type: ignore[arg-type]
+            plx._create_series_from_scalar(
+                getattr(series, attr)(**_kwargs),
+                reference_series=series,
             )
             if returns_scalar
             else getattr(series, attr)(**_kwargs)
@@ -186,30 +155,22 @@ def reuse_series_implementation(
             raise AssertionError(msg)
         return out
 
-    return plx._create_expr_from_callable(  # type: ignore[return-value, union-attr]
+    return plx._create_expr_from_callable(  # type: ignore[return-value]
         func,  # type: ignore[arg-type]
         depth=expr._depth + 1,
         function_name=f"{expr._function_name}->{attr}",
-        evaluate_output_names=expr._evaluate_output_names,  # type: ignore[arg-type]
+        evaluate_output_names=expr._evaluate_output_names,
         alias_output_names=expr._alias_output_names,
         call_kwargs=call_kwargs,
     )
 
 
-@overload
 def reuse_series_namespace_implementation(
-    expr: ArrowExprT, series_namespace: str, attr: str, **kwargs: Any
-) -> ArrowExprT: ...
-@overload
-def reuse_series_namespace_implementation(
-    expr: PandasLikeExprT, series_namespace: str, attr: str, **kwargs: Any
-) -> PandasLikeExprT: ...
-def reuse_series_namespace_implementation(
-    expr: ArrowExprT | PandasLikeExprT,
+    expr: PandasLikeExprT,
     series_namespace: str,
     attr: str,
     **kwargs: Any,
-) -> ArrowExprT | PandasLikeExprT:
+) -> PandasLikeExprT:
     """Reuse Series implementation for expression.
 
     Just like `reuse_series_implementation`, but for e.g. `Expr.dt.foo` instead
@@ -222,14 +183,14 @@ def reuse_series_namespace_implementation(
         kwargs: keyword arguments to pass to function.
     """
     plx = expr.__narwhals_namespace__()
-    return plx._create_expr_from_callable(  # type: ignore[return-value, union-attr]
+    return plx._create_expr_from_callable(  # type: ignore[return-value]
         lambda df: [
             getattr(getattr(series, series_namespace), attr)(**kwargs)
-            for series in expr(df)  # type: ignore[arg-type]
+            for series in expr(df)
         ],
         depth=expr._depth + 1,
         function_name=f"{expr._function_name}->{series_namespace}.{attr}",
-        evaluate_output_names=expr._evaluate_output_names,  # type: ignore[arg-type]
+        evaluate_output_names=expr._evaluate_output_names,
         alias_output_names=expr._alias_output_names,
     )
 
