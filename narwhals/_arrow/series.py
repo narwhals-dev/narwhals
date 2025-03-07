@@ -118,7 +118,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
 
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
-            self._native_series,
+            self.native,
             name=self._name,
             backend_version=self._backend_version,
             version=version,

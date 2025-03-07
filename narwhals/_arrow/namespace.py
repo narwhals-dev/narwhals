@@ -58,7 +58,7 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries]):
         return ArrowSeries
 
     def _create_compliant_series(self: Self, value: Any) -> ArrowSeries:
-        return ArrowSeries(
+        return self._series(
             native_series=pa.chunked_array([value]),
             name="",
             backend_version=self._backend_version,
