@@ -575,7 +575,7 @@ class EagerExpr(
         )
 
     def is_in(self, other: Any) -> Self:
-        return self._reuse_series_implementation("is_in", other="other")
+        return self._reuse_series_implementation("is_in", other=other)
 
     def arg_true(self) -> Self:
         return self._reuse_series_implementation("arg_true")
