@@ -10,6 +10,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals._arrow.utils import parse_datetime_format
+from tests.utils import PYARROW_VERSION
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
@@ -205,6 +206,9 @@ def test_to_datetime_tz_aware(
     request: pytest.FixtureRequest,
     format: str | None,  # noqa: A002
 ) -> None:
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (13,):
+        # bugged
+        pytest.skip()
     context = (
         pytest.raises(NotImplementedError)
         if any(x in str(constructor) for x in ("duckdb", "sqlframe")) and format is None
