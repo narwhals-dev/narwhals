@@ -295,16 +295,16 @@ class EagerExpr(
         )
 
     @classmethod
-    def _from_series(cls, series: EagerSeriesT, *, context: _FullContext) -> Self:
+    def _from_series(cls, series: EagerSeriesT) -> Self:
         return cls(
             lambda _df: [series],
             depth=0,
             function_name="series",
             evaluate_output_names=lambda _df: [series.name],
             alias_output_names=None,
-            implementation=context._implementation,
-            backend_version=context._backend_version,
-            version=context._version,
+            implementation=series._implementation,
+            backend_version=series._backend_version,
+            version=series._version,
         )
 
     @classmethod

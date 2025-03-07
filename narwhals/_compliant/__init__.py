@@ -19,6 +19,8 @@ from narwhals._compliant.series import EagerSeries
 from narwhals._compliant.typing import CompliantFrameT
 from narwhals._compliant.typing import CompliantSeriesOrNativeExprT_co
 from narwhals._compliant.typing import CompliantSeriesT_co
+from narwhals._compliant.typing import EagerDataFrameT
+from narwhals._compliant.typing import EagerSeriesT
 from narwhals._compliant.typing import IntoCompliantExpr
 
 __all__ = [
@@ -33,10 +35,12 @@ __all__ = [
     "CompliantSeriesOrNativeExprT_co",
     "CompliantSeriesT_co",
     "EagerDataFrame",
+    "EagerDataFrameT",
     "EagerExpr",
     "EagerNamespace",
     "EagerSelectorNamespace",
     "EagerSeries",
+    "EagerSeriesT",
     "EvalNames",
     "EvalSeries",
     "IntoCompliantExpr",

@@ -54,6 +54,7 @@ if TYPE_CHECKING:
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
 
 # TODO @dangotbanned: move into `_arrow.utils`
@@ -140,15 +141,19 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         data: Iterable[Any],
         name: str,
         *,
-        backend_version: tuple[int, ...],
-        version: Version,
+        context: _FullContext,
     ) -> Self:
         return cls(
             chunked_array([data]),
             name=name,
-            backend_version=backend_version,
-            version=version,
+            backend_version=context._backend_version,
+            version=context._version,
         )
+
+    def _from_scalar(self, value: Any) -> Self:
+        if self._backend_version < (13,) and hasattr(value, "as_py"):
+            value = value.as_py()
+        return super()._from_scalar(value)
 
     def __narwhals_namespace__(self: Self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
@@ -570,12 +575,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
 
         ser = self._native_series
         res = np.flatnonzero(ser)
-        return self._from_iterable(
-            res,
-            name=self.name,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        return self._from_iterable(res, name=self.name, context=self)
 
     def item(self: Self, index: int | None = None) -> Any:
         if index is None:

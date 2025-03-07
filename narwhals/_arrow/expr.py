@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
 
 class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
@@ -45,6 +46,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         backend_version: tuple[int, ...],
         version: Version,
         call_kwargs: dict[str, Any] | None = None,
+        implementation: Implementation | None = None,
     ) -> None:
         self._call = call
         self._depth = depth
@@ -63,8 +65,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         /,
         *,
         function_name: str,
-        backend_version: tuple[int, ...],
-        version: Version,
+        context: _FullContext,
     ) -> Self:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             try:
@@ -91,16 +92,13 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
             function_name=function_name,
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
-            backend_version=backend_version,
-            version=version,
+            backend_version=context._backend_version,
+            version=context._version,
         )
 
     @classmethod
     def from_column_indices(
-        cls: type[Self],
-        *column_indices: int,
-        backend_version: tuple[int, ...],
-        version: Version,
+        cls: type[Self], *column_indices: int, context: _FullContext
     ) -> Self:
         from narwhals._arrow.series import ArrowSeries
 
@@ -121,8 +119,8 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
             function_name="nth",
             evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
             alias_output_names=None,
-            backend_version=backend_version,
-            version=version,
+            backend_version=context._backend_version,
+            version=context._version,
         )
 
     def __narwhals_namespace__(self: Self) -> ArrowNamespace:

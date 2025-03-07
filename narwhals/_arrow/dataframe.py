@@ -778,7 +778,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries"], CompliantLazyFrame):
 
         keep_idx = self.simple_select(*subset).is_unique()
         plx = self.__narwhals_namespace__()
-        return self.filter(plx._create_expr_from_series(keep_idx))
+        return self.filter(plx._expr._from_series(keep_idx))
 
     def gather_every(self: Self, n: int, offset: int) -> Self:
         return self._from_native_frame(

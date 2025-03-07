@@ -20,6 +20,7 @@ from narwhals.exceptions import LengthChangingExprError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import is_compliant_expr
+from narwhals.utils import is_eager_namespace
 
 if TYPE_CHECKING:
     from typing_extensions import Never
@@ -167,7 +168,7 @@ def reuse_series_implementation(
         )
 
         out: list[CompliantSeries] = [
-            plx._create_series_from_scalar(
+            plx._create_series_from_scalar(  # type: ignore  # noqa: PGH003
                 getattr(series, attr)(**extra_kwargs, **_kwargs),
                 reference_series=series,  # type: ignore[arg-type]
             )
@@ -185,7 +186,7 @@ def reuse_series_implementation(
             raise AssertionError(msg)
         return out
 
-    return plx._create_expr_from_callable(  # type: ignore[return-value]
+    return plx._create_expr_from_callable(  # type: ignore[return-value, union-attr]
         func,  # type: ignore[arg-type]
         depth=expr._depth + 1,
         function_name=f"{expr._function_name}->{attr}",
@@ -221,7 +222,7 @@ def reuse_series_namespace_implementation(
         kwargs: keyword arguments to pass to function.
     """
     plx = expr.__narwhals_namespace__()
-    return plx._create_expr_from_callable(  # type: ignore[return-value]
+    return plx._create_expr_from_callable(  # type: ignore[return-value, union-attr]
         lambda df: [
             getattr(getattr(series, series_namespace), attr)(**kwargs)
             for series in expr(df)  # type: ignore[arg-type]
@@ -291,8 +292,12 @@ def extract_compliant(
     if isinstance(other, str) and not str_as_lit:
         return plx.col(other)
     if is_narwhals_series(other):
+        if is_eager_namespace(plx):
+            return plx._expr._from_series(other._compliant_series)
         return plx._create_expr_from_series(other._compliant_series)  # type: ignore[attr-defined]
     if is_numpy_array(other):
+        if is_eager_namespace(plx):
+            return plx._expr._from_series(plx._create_compliant_series(other))
         series = plx._create_compliant_series(other)  # type: ignore[attr-defined]
         return plx._create_expr_from_series(series)  # type: ignore[attr-defined]
     return other

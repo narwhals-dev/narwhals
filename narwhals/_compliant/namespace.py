@@ -8,6 +8,7 @@ from narwhals._compliant.typing import CompliantFrameT
 from narwhals._compliant.typing import CompliantSeriesOrNativeExprT_co
 from narwhals._compliant.typing import EagerDataFrameT
 from narwhals._compliant.typing import EagerSeriesT
+from narwhals.utils import deprecated
 
 if TYPE_CHECKING:
     from narwhals._compliant.expr import CompliantExpr
@@ -49,3 +50,6 @@ class EagerNamespace(
     def all_horizontal(
         self, *exprs: EagerExpr[EagerDataFrameT, EagerSeriesT]
     ) -> EagerExpr[EagerDataFrameT, EagerSeriesT]: ...
+
+    @deprecated("ref'd in untyped code")
+    def _create_compliant_series(self, value: Any) -> EagerSeriesT: ...

@@ -33,6 +33,7 @@ from narwhals.utils import Implementation
 from narwhals.utils import find_stacklevel
 from narwhals.utils import flatten
 from narwhals.utils import generate_repr
+from narwhals.utils import is_eager_namespace
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import issue_deprecation_warning
 from narwhals.utils import parse_version
@@ -429,6 +430,8 @@ class DataFrame(BaseFrame[DataFrameT]):
         if isinstance(arg, BaseFrame):
             return arg._compliant_frame
         if isinstance(arg, Series):
+            if is_eager_namespace(plx):
+                return plx._expr._from_series(arg._compliant_series)
             return plx._create_expr_from_series(arg._compliant_series)
         if isinstance(arg, Expr):
             return arg._to_compliant_expr(self.__narwhals_namespace__())
@@ -443,6 +446,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             )
             raise TypeError(msg)
         if is_numpy_array(arg):
+            if is_eager_namespace(plx):
+                return plx._expr._from_series(plx._create_compliant_series(arg))
             return plx._create_expr_from_series(plx._create_compliant_series(arg))
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
