@@ -220,6 +220,7 @@ def test_to_datetime_tz_aware(
     df = nw.from_native(constructor({"a": ["2020-01-01T01:02:03+0100"]}))
     with context:
         result = df.with_columns(b=nw.col("a").str.to_datetime(format))
+        assert isinstance(result.collect_schema()["b"], nw.Datetime)
         result_schema = result.lazy().collect().schema
         assert result_schema["a"] == nw.String
         assert isinstance(result_schema["b"], nw.Datetime)
