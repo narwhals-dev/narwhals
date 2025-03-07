@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
+    from narwhals._spark_like.typing import WindowFunction
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
@@ -53,9 +54,7 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
         self._backend_version = backend_version
         self._version = version
         self._implementation = implementation
-        self._window_function: (
-            Callable[[Column, Sequence[str], Sequence[str]], Column] | None
-        ) = None
+        self._window_function: WindowFunction | None = None
 
     def __call__(self: Self, df: SparkLikeLazyFrame) -> Sequence[Column]:
         return self._call(df)
@@ -207,7 +206,7 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
 
     def _with_window_function(
         self: Self,
-        window_function: Callable[..., Column],
+        window_function: WindowFunction,
     ) -> Self:
         result = self.__class__(
             self._call,
