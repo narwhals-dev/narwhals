@@ -115,8 +115,7 @@ class SparkLikeExprStringNamespace:
                 F.to_timestamp_ntz, format=F.lit(strptime_to_pyspark_format(format))
             )
         else:
-            is_pyspark = self._compliant_expr._implementation.is_pyspark()
-            format = strptime_to_pyspark_format(format, is_pyspark=is_pyspark)
+            format = strptime_to_pyspark_format(format)
             function = partial(F.to_timestamp, format=format)
         return self._compliant_expr._from_call(
             lambda _input: function(F.replace(_input, F.lit("T"), F.lit(" "))),
@@ -128,7 +127,7 @@ def is_naive_format(format_str: str) -> bool:
     return {"s", "z", "Z"}.isdisjoint(format_str)
 
 
-def strptime_to_pyspark_format(format: str, *, is_pyspark: bool = False) -> str:  # noqa: A002
+def strptime_to_pyspark_format(format: str) -> str:  # noqa: A002
     """Converts a Python strptime datetime format string to a PySpark datetime format string."""
     # Mapping from Python strptime format to PySpark format
 
@@ -148,11 +147,9 @@ def strptime_to_pyspark_format(format: str, *, is_pyspark: bool = False) -> str:
         "%a": "E",  # Abbreviated weekday name
         "%A": "E",  # Full weekday name
         "%j": "D",  # Day of the year
+        "%z": "Z",  # Timezone offset
         "%s": "X",  # Unix timestamp
     }
-    if is_pyspark:
-        # NOTE: This replacement seems to be happening upstream for `sqlframe`
-        format_mapping["%z"] = "Z"  # Timezone offset
 
     # Replace Python format specifiers with PySpark specifiers
     pyspark_format = format

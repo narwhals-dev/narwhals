@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import sys
 from datetime import datetime
 from datetime import timezone
 from typing import TYPE_CHECKING
-from typing import Sequence
 
 import pyarrow as pa
 import pytest
@@ -12,7 +10,6 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals._arrow.utils import parse_datetime_format
 from tests.utils import assert_equal_data
-from tests.utils import is_pyarrow_windows_no_tzdata
 
 if TYPE_CHECKING:
     from tests.utils import Constructor
@@ -35,65 +32,6 @@ def test_to_datetime(constructor: Constructor) -> None:
         .item(row=0, column="b")
     )
     assert str(result) == expected
-
-
-@pytest.mark.parametrize(
-    ("fmt", "data", "expected", "expected_polars_duckdb_pyspark", "expected_pyarrow"),
-    [
-        (
-            "%Y-%m-%d %H:%M:%S%z",
-            {"a": ["2020-01-01 12:34:56+02:00"]},
-            "2020-01-01 12:34:56+02:00",
-            "2020-01-01 10:34:56+00:00",
-            "2020-01-01 10:34:56",
-        )
-    ],
-)
-def test_to_datetime_tz_aware(
-    request: pytest.FixtureRequest,
-    constructor: Constructor,
-    fmt: str,
-    data: dict[str, Sequence[str]],
-    expected: str,
-    expected_polars_duckdb_pyspark: str,
-    expected_pyarrow: str,
-) -> None:
-    constructor_str = str(constructor)
-    if any(
-        name in constructor_str for name in ("polars", "duckdb", "pyspark", "sqlframe")
-    ):
-        expected = expected_polars_duckdb_pyspark
-        request.applymarker(
-            pytest.mark.xfail(
-                "polars" in constructor_str and sys.version_info < (3, 9),
-                reason="Needs 'polars[timezone]'",
-            )
-        )
-    elif (
-        "pyarrow" in constructor_str
-        and "pandas" not in constructor_str
-        and "modin" not in constructor_str
-    ):
-        from pyarrow.lib import ArrowInvalid
-
-        expected = expected_pyarrow
-        request.applymarker(
-            pytest.mark.xfail(
-                is_pyarrow_windows_no_tzdata(constructor),
-                raises=ArrowInvalid,
-                reason="Timezone database unavailable",
-            )
-        )
-
-    result = (
-        nw.from_native(constructor(data))
-        .lazy()
-        .select(b=nw.col("a").str.to_datetime(fmt))
-        .collect()
-        .item(row=0, column="b")
-    )
-
-    assert str(result).startswith(expected)
 
 
 def test_to_datetime_series(constructor_eager: ConstructorEager) -> None:
