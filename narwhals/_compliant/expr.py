@@ -325,7 +325,7 @@ class EagerExpr(
 
     def _reuse_series(
         self: Self,
-        attr: str,
+        method_name: str,
         *,
         returns_scalar: bool = False,
         call_kwargs: dict[str, Any] | None = None,
@@ -337,7 +337,7 @@ class EagerExpr(
         leverage this method to do that for us.
 
         Arguments:
-            attr: name of method.
+            method_name: name of method.
             returns_scalar: whether the Series version returns a scalar. In this case,
                 the expression version should return a 1-row Series.
             call_kwargs: non-expressifiable args which we may need to reuse in `agg` or `over`,
@@ -347,7 +347,7 @@ class EagerExpr(
         """
         func = partial(
             self._reuse_series_inner,
-            method_name=attr,
+            method_name=method_name,
             returns_scalar=returns_scalar,
             call_kwargs=call_kwargs or {},
             expressifiable_args=expressifiable_args,
@@ -355,7 +355,7 @@ class EagerExpr(
         return self._from_callable(
             func,
             depth=self._depth + 1,
-            function_name=f"{self._function_name}->{attr}",
+            function_name=f"{self._function_name}->{method_name}",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             call_kwargs=call_kwargs,
@@ -405,25 +405,28 @@ class EagerExpr(
         return out
 
     def _reuse_series_namespace(
-        self: Self, series_namespace: str, attr: str, **kwargs: Any
+        self: Self,
+        series_namespace: Literal["cat", "dt", "list", "str", "name"],
+        method_name: str,
+        **kwargs: Any,
     ) -> Self:
         """Reuse Series implementation for expression.
 
-        Just like `_reuse_series_implementation`, but for e.g. `Expr.dt.foo` instead
+        Just like `_reuse_series`, but for e.g. `Expr.dt.foo` instead
         of `Expr.foo`.
 
         Arguments:
             series_namespace: The Series namespace (e.g. `dt`, `cat`, `str`, `list`, `name`)
-            attr: name of method.
+            method_name: name of method.
             kwargs: keyword arguments to pass to function.
         """
         return self._from_callable(
             lambda df: [
-                getattr(getattr(series, series_namespace), attr)(**kwargs)
+                getattr(getattr(series, series_namespace), method_name)(**kwargs)
                 for series in self(df)
             ],
             depth=self._depth + 1,
-            function_name=f"{self._function_name}->{series_namespace}.{attr}",
+            function_name=f"{self._function_name}->{series_namespace}.{method_name}",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             call_kwargs={**self._call_kwargs, **kwargs},
