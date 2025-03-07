@@ -169,4 +169,6 @@ def windows_has_tzdata() -> bool:  # pragma: no cover
 
 def is_pyarrow_windows_no_tzdata(constructor: Constructor, /) -> bool:
     """Skip test on Windows when the tz database is not configured."""
-    return "pyarrow" in str(constructor) and is_windows() and not windows_has_tzdata()
+    return (
+        "pyarrow_table" in str(constructor) and is_windows() and not windows_has_tzdata()
+    )
