@@ -39,6 +39,9 @@ class EagerSeries(CompliantSeries, Protocol[NativeSeriesT_co]):
     @property
     def native(self) -> NativeSeriesT_co: ...
 
+    # NOTE: `ArrowSeries` needs to intercept `value` w/
+    # if self._backend_version < (13,) and hasattr(value, "as_py"):
+    #     value = value.as_py()  # noqa: ERA001
     def _from_scalar(self, value: Any) -> Self:
         return self._from_iterable([value], name=self.name, context=self)
 
@@ -46,3 +49,9 @@ class EagerSeries(CompliantSeries, Protocol[NativeSeriesT_co]):
     def _from_iterable(
         cls: type[Self], data: Iterable[Any], name: str, *, context: _FullContext
     ) -> Self: ...
+
+    # TODO @dangotbanned: replacing `Namespace._create_compliant_series``
+    # - All usage within `*Expr.map_batches`
+    #   - `PandasLikeExpr` uses that **once**
+    #   - `ArrowExpr` uses **twice**
+    # - `PandasLikeDataFrame.with_row_index` uses the wrapped `utils` function once
