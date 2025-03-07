@@ -13,7 +13,7 @@ from narwhals._arrow.utils import parse_datetime_format
 from tests.utils import PANDAS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import assert_equal_data
-from tests.utils import is_windows
+from tests.utils import is_pyarrow_windows_no_tzdata
 
 if TYPE_CHECKING:
     from tests.utils import Constructor
@@ -214,8 +214,7 @@ def test_to_datetime_tz_aware(
     if "pandas" in str(constructor) and PANDAS_VERSION < (1,):
         # "Cannot pass a tz argument when parsing strings with timezone information."
         pytest.skip()
-    if "pyarrow_table" in str(constructor) and is_windows():
-        # fails to parse on windows
+    if is_pyarrow_windows_no_tzdata(constructor):
         pytest.skip()
     if "sqlframe" in str(constructor):
         # https://github.com/eakmanrq/sqlframe/issues/325
