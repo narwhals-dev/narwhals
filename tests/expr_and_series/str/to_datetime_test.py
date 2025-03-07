@@ -209,6 +209,9 @@ def test_to_datetime_tz_aware(
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (13,):
         # bugged
         pytest.skip()
+    if "sqlframe" in str(constructor):
+        # https://github.com/eakmanrq/sqlframe/issues/325
+        request.applymarker(pytest.mark.xfail)
     context = (
         pytest.raises(NotImplementedError)
         if any(x in str(constructor) for x in ("duckdb", "sqlframe")) and format is None
@@ -220,9 +223,6 @@ def test_to_datetime_tz_aware(
         result_schema = result.lazy().collect().schema
         assert result_schema["a"] == nw.String
         assert isinstance(result_schema["b"], nw.Datetime)
-        if "sqlframe" in str(constructor):
-            # https://github.com/eakmanrq/sqlframe/issues/325
-            request.applymarker(pytest.mark.xfail)
         expected = {
             "a": ["2020-01-01T01:02:03+0100"],
             "b": [datetime(2020, 1, 1, 0, 2, 3, tzinfo=timezone.utc)],
