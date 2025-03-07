@@ -6,6 +6,7 @@ The following is a non-exhaustive list of libraries and tools that choose to use
 for their dataframe interoperability needs:
 
 * [altair](https://github.com/vega/altair/)
+* [darts](https://github.com/unit8co/darts)
 * [hierarchicalforecast](https://github.com/Nixtla/hierarchicalforecast)
 * [marimo](https://github.com/marimo-team/marimo)
 * [panel-graphic-walker](https://github.com/panel-extensions/panel-graphic-walker)

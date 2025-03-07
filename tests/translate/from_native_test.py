@@ -292,16 +292,20 @@ def test_from_mock_interchange_protocol_non_strict() -> None:
     assert result is mockdf
 
 
-def test_from_native_altair_array_like() -> None:
+def test_from_native_strict_native_series() -> None:
     obj: list[int] = [1, 2, 3, 4]
     array_like = cast("Iterable[Any]", obj)
     not_array_like: Literal[1] = 1
+    np_array = pl.Series(obj).to_numpy()
 
     with pytest.raises(TypeError, match="got.+list"):
-        false_positive_native_series = nw.from_native(obj, series_only=True)  # noqa: F841
+        nw.from_native(obj, series_only=True)  # type: ignore[call-overload]
 
     with pytest.raises(TypeError, match="got.+list"):
-        true_negative_iterable = nw.from_native(array_like, series_only=True)  # type: ignore[call-overload] # noqa: F841
+        nw.from_native(array_like, series_only=True)  # type: ignore[call-overload]
 
     with pytest.raises(TypeError, match="got.+int"):
-        true_negative_not_native_series = nw.from_native(not_array_like, series_only=True)  # type: ignore[call-overload] # noqa: F841
+        nw.from_native(not_array_like, series_only=True)  # type: ignore[call-overload]
+
+    with pytest.raises(TypeError, match="got.+numpy.ndarray"):
+        nw.from_native(np_array, series_only=True)  # type: ignore[call-overload]
