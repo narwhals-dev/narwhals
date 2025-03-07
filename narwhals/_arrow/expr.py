@@ -138,10 +138,10 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         return {"_return_py_scalar": False} if returns_scalar else {}
 
     def cum_sum(self: Self, *, reverse: bool) -> Self:
-        return self._reuse_series_implementation("cum_sum", reverse=reverse)
+        return self._reuse_series("cum_sum", reverse=reverse)
 
     def shift(self: Self, n: int) -> Self:
-        return self._reuse_series_implementation("shift", n=n)
+        return self._reuse_series("shift", n=n)
 
     def over(self: Self, keys: Sequence[str], kind: ExprKind) -> Self:
         if not is_scalar_like(kind):
@@ -215,16 +215,16 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         )
 
     def cum_count(self: Self, *, reverse: bool) -> Self:
-        return self._reuse_series_implementation("cum_count", reverse=reverse)
+        return self._reuse_series("cum_count", reverse=reverse)
 
     def cum_min(self: Self, *, reverse: bool) -> Self:
-        return self._reuse_series_implementation("cum_min", reverse=reverse)
+        return self._reuse_series("cum_min", reverse=reverse)
 
     def cum_max(self: Self, *, reverse: bool) -> Self:
-        return self._reuse_series_implementation("cum_max", reverse=reverse)
+        return self._reuse_series("cum_max", reverse=reverse)
 
     def cum_prod(self: Self, *, reverse: bool) -> Self:
-        return self._reuse_series_implementation("cum_prod", reverse=reverse)
+        return self._reuse_series("cum_prod", reverse=reverse)
 
     def rank(
         self: Self,
@@ -232,9 +232,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         *,
         descending: bool,
     ) -> Self:
-        return self._reuse_series_implementation(
-            "rank", method=method, descending=descending
-        )
+        return self._reuse_series("rank", method=method, descending=descending)
 
     ewm_mean = not_implemented()
 

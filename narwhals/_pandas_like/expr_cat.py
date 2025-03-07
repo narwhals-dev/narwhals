@@ -13,6 +13,4 @@ class PandasLikeExprCatNamespace:
         self._compliant_expr = expr
 
     def get_categories(self: Self) -> PandasLikeExpr:
-        return self._compliant_expr._reuse_series_namespace_implementation(
-            "cat", "get_categories"
-        )
+        return self._compliant_expr._reuse_series_namespace("cat", "get_categories")

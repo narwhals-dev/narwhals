@@ -13,4 +13,4 @@ class PandasLikeExprListNamespace:
         self._expr = expr
 
     def len(self: Self) -> PandasLikeExpr:
-        return self._expr._reuse_series_namespace_implementation("list", "len")
+        return self._expr._reuse_series_namespace("list", "len")

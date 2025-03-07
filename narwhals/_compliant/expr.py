@@ -323,7 +323,7 @@ class EagerExpr(
         context: _FullContext,
     ) -> Self: ...
 
-    def _reuse_series_implementation(
+    def _reuse_series(
         self: Self,
         attr: str,
         *,
@@ -404,7 +404,7 @@ class EagerExpr(
             raise AssertionError(msg)
         return out
 
-    def _reuse_series_namespace_implementation(
+    def _reuse_series_namespace(
         self: Self, series_namespace: str, attr: str, **kwargs: Any
     ) -> Self:
         """Reuse Series implementation for expression.
@@ -454,138 +454,130 @@ class EagerExpr(
         )
 
     def cast(self, dtype: DType | type[DType]) -> Self:
-        return self._reuse_series_implementation("cast", dtype=dtype)
+        return self._reuse_series("cast", dtype=dtype)
 
     def __eq__(self, other: Self | Any) -> Self:  # type: ignore[override]
-        return self._reuse_series_implementation("__eq__", other=other)
+        return self._reuse_series("__eq__", other=other)
 
     def __ne__(self, other: Self | Any) -> Self:  # type: ignore[override]
-        return self._reuse_series_implementation("__ne__", other=other)
+        return self._reuse_series("__ne__", other=other)
 
     def __ge__(self, other: Self | Any) -> Self:
-        return self._reuse_series_implementation("__ge__", other=other)
+        return self._reuse_series("__ge__", other=other)
 
     def __gt__(self, other: Self | Any) -> Self:
-        return self._reuse_series_implementation("__gt__", other=other)
+        return self._reuse_series("__gt__", other=other)
 
     def __le__(self, other: Self | Any) -> Self:
-        return self._reuse_series_implementation("__le__", other=other)
+        return self._reuse_series("__le__", other=other)
 
     def __lt__(self, other: Self | Any) -> Self:
-        return self._reuse_series_implementation("__lt__", other=other)
+        return self._reuse_series("__lt__", other=other)
 
     def __and__(self, other: Self | bool | Any) -> Self:
-        return self._reuse_series_implementation("__and__", other=other)
+        return self._reuse_series("__and__", other=other)
 
     def __or__(self, other: Self | bool | Any) -> Self:
-        return self._reuse_series_implementation("__or__", other=other)
+        return self._reuse_series("__or__", other=other)
 
     def __add__(self, other: Self | Any) -> Self:
-        return self._reuse_series_implementation("__add__", other=other)
+        return self._reuse_series("__add__", other=other)
 
     def __sub__(self, other: Self | Any) -> Self:
-        return self._reuse_series_implementation("__sub__", other=other)
+        return self._reuse_series("__sub__", other=other)
 
     def __rsub__(self, other: Self | Any) -> Self:
-        return self.alias("literal")._reuse_series_implementation("__rsub__", other=other)
+        return self.alias("literal")._reuse_series("__rsub__", other=other)
 
     def __mul__(self, other: Self | Any) -> Self:
-        return self._reuse_series_implementation("__mul__", other=other)
+        return self._reuse_series("__mul__", other=other)
 
     def __truediv__(self, other: Self | Any) -> Self:
-        return self._reuse_series_implementation("__truediv__", other=other)
+        return self._reuse_series("__truediv__", other=other)
 
     def __rtruediv__(self, other: Self | Any) -> Self:
-        return self.alias("literal")._reuse_series_implementation(
-            "__rtruediv__", other=other
-        )
+        return self.alias("literal")._reuse_series("__rtruediv__", other=other)
 
     def __floordiv__(self, other: Self | Any) -> Self:
-        return self._reuse_series_implementation("__floordiv__", other=other)
+        return self._reuse_series("__floordiv__", other=other)
 
     def __rfloordiv__(self, other: Self | Any) -> Self:
-        return self.alias("literal")._reuse_series_implementation(
-            "__rfloordiv__", other=other
-        )
+        return self.alias("literal")._reuse_series("__rfloordiv__", other=other)
 
     def __pow__(self, other: Self | Any) -> Self:
-        return self._reuse_series_implementation("__pow__", other=other)
+        return self._reuse_series("__pow__", other=other)
 
     def __rpow__(self, other: Self | Any) -> Self:
-        return self.alias("literal")._reuse_series_implementation("__rpow__", other=other)
+        return self.alias("literal")._reuse_series("__rpow__", other=other)
 
     def __mod__(self, other: Self | Any) -> Self:
-        return self._reuse_series_implementation("__mod__", other=other)
+        return self._reuse_series("__mod__", other=other)
 
     def __rmod__(self, other: Self | Any) -> Self:
-        return self.alias("literal")._reuse_series_implementation("__rmod__", other=other)
+        return self.alias("literal")._reuse_series("__rmod__", other=other)
 
     # Unary
     def __invert__(self) -> Self:
-        return self._reuse_series_implementation("__invert__")
+        return self._reuse_series("__invert__")
 
     # Reductions
     def null_count(self) -> Self:
-        return self._reuse_series_implementation("null_count", returns_scalar=True)
+        return self._reuse_series("null_count", returns_scalar=True)
 
     def n_unique(self) -> Self:
-        return self._reuse_series_implementation("n_unique", returns_scalar=True)
+        return self._reuse_series("n_unique", returns_scalar=True)
 
     def sum(self) -> Self:
-        return self._reuse_series_implementation("sum", returns_scalar=True)
+        return self._reuse_series("sum", returns_scalar=True)
 
     def count(self) -> Self:
-        return self._reuse_series_implementation("count", returns_scalar=True)
+        return self._reuse_series("count", returns_scalar=True)
 
     def mean(self) -> Self:
-        return self._reuse_series_implementation("mean", returns_scalar=True)
+        return self._reuse_series("mean", returns_scalar=True)
 
     def median(self) -> Self:
-        return self._reuse_series_implementation("median", returns_scalar=True)
+        return self._reuse_series("median", returns_scalar=True)
 
     def std(self, *, ddof: int) -> Self:
-        return self._reuse_series_implementation(
-            "std", returns_scalar=True, call_kwargs={"ddof": ddof}
-        )
+        return self._reuse_series("std", returns_scalar=True, call_kwargs={"ddof": ddof})
 
     def var(self, *, ddof: int) -> Self:
-        return self._reuse_series_implementation(
-            "var", returns_scalar=True, call_kwargs={"ddof": ddof}
-        )
+        return self._reuse_series("var", returns_scalar=True, call_kwargs={"ddof": ddof})
 
     def skew(self) -> Self:
-        return self._reuse_series_implementation("skew", returns_scalar=True)
+        return self._reuse_series("skew", returns_scalar=True)
 
     def any(self) -> Self:
-        return self._reuse_series_implementation("any", returns_scalar=True)
+        return self._reuse_series("any", returns_scalar=True)
 
     def all(self) -> Self:
-        return self._reuse_series_implementation("all", returns_scalar=True)
+        return self._reuse_series("all", returns_scalar=True)
 
     def max(self) -> Self:
-        return self._reuse_series_implementation("max", returns_scalar=True)
+        return self._reuse_series("max", returns_scalar=True)
 
     def min(self) -> Self:
-        return self._reuse_series_implementation("min", returns_scalar=True)
+        return self._reuse_series("min", returns_scalar=True)
 
     def arg_min(self) -> Self:
-        return self._reuse_series_implementation("arg_min", returns_scalar=True)
+        return self._reuse_series("arg_min", returns_scalar=True)
 
     def arg_max(self) -> Self:
-        return self._reuse_series_implementation("arg_max", returns_scalar=True)
+        return self._reuse_series("arg_max", returns_scalar=True)
 
     # Other
 
     def clip(self, lower_bound: Any, upper_bound: Any) -> Self:
-        return self._reuse_series_implementation(
+        return self._reuse_series(
             "clip", lower_bound=lower_bound, upper_bound=upper_bound
         )
 
     def is_null(self) -> Self:
-        return self._reuse_series_implementation("is_null")
+        return self._reuse_series("is_null")
 
     def is_nan(self) -> Self:
-        return self._reuse_series_implementation("is_nan")
+        return self._reuse_series("is_nan")
 
     def fill_null(
         self,
@@ -593,25 +585,25 @@ class EagerExpr(
         strategy: Literal["forward", "backward"] | None,
         limit: int | None,
     ) -> Self:
-        return self._reuse_series_implementation(
+        return self._reuse_series(
             "fill_null", value=value, strategy=strategy, limit=limit
         )
 
     def is_in(self, other: Any) -> Self:
-        return self._reuse_series_implementation("is_in", other=other)
+        return self._reuse_series("is_in", other=other)
 
     def arg_true(self) -> Self:
-        return self._reuse_series_implementation("arg_true")
+        return self._reuse_series("arg_true")
 
     # NOTE: `ewm_mean` not implemented `pyarrow`
 
     def filter(self, *predicates: Self) -> Self:
         plx = self.__narwhals_namespace__()
         predicate = plx.all_horizontal(*predicates)
-        return self._reuse_series_implementation("filter", predicate=predicate)
+        return self._reuse_series("filter", predicate=predicate)
 
     def drop_nulls(self) -> Self:
-        return self._reuse_series_implementation("drop_nulls")
+        return self._reuse_series("drop_nulls")
 
     def replace_strict(
         self,
@@ -620,23 +612,21 @@ class EagerExpr(
         *,
         return_dtype: DType | type[DType] | None,
     ) -> Self:
-        return self._reuse_series_implementation(
+        return self._reuse_series(
             "replace_strict", old=old, new=new, return_dtype=return_dtype
         )
 
     def sort(self, *, descending: bool, nulls_last: bool) -> Self:
-        return self._reuse_series_implementation(
-            "sort", descending=descending, nulls_last=nulls_last
-        )
+        return self._reuse_series("sort", descending=descending, nulls_last=nulls_last)
 
     def abs(self) -> Self:
-        return self._reuse_series_implementation("abs")
+        return self._reuse_series("abs")
 
     def unique(self) -> Self:
-        return self._reuse_series_implementation("unique", maintain_order=False)
+        return self._reuse_series("unique", maintain_order=False)
 
     def diff(self) -> Self:
-        return self._reuse_series_implementation("diff")
+        return self._reuse_series("diff")
 
     # NOTE: `shift` differs
 
@@ -648,7 +638,7 @@ class EagerExpr(
         with_replacement: bool,
         seed: int | None,
     ) -> Self:
-        return self._reuse_series_implementation(
+        return self._reuse_series(
             "sample", n=n, fraction=fraction, with_replacement=with_replacement, seed=seed
         )
 
@@ -676,20 +666,20 @@ class EagerExpr(
     # NOTE: `over` differs
 
     def is_unique(self) -> Self:
-        return self._reuse_series_implementation("is_unique")
+        return self._reuse_series("is_unique")
 
     def is_first_distinct(self) -> Self:
-        return self._reuse_series_implementation("is_first_distinct")
+        return self._reuse_series("is_first_distinct")
 
     def is_last_distinct(self) -> Self:
-        return self._reuse_series_implementation("is_last_distinct")
+        return self._reuse_series("is_last_distinct")
 
     def quantile(
         self,
         quantile: float,
         interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     ) -> Self:
-        return self._reuse_series_implementation(
+        return self._reuse_series(
             "quantile",
             quantile=quantile,
             interpolation=interpolation,
@@ -697,34 +687,34 @@ class EagerExpr(
         )
 
     def head(self, n: int) -> Self:
-        return self._reuse_series_implementation("head", n=n)
+        return self._reuse_series("head", n=n)
 
     def tail(self, n: int) -> Self:
-        return self._reuse_series_implementation("tail", n=n)
+        return self._reuse_series("tail", n=n)
 
     def round(self, decimals: int) -> Self:
-        return self._reuse_series_implementation("round", decimals=decimals)
+        return self._reuse_series("round", decimals=decimals)
 
     def len(self) -> Self:
-        return self._reuse_series_implementation("len", returns_scalar=True)
+        return self._reuse_series("len", returns_scalar=True)
 
     def gather_every(self, n: int, offset: int) -> Self:
-        return self._reuse_series_implementation("gather_every", n=n, offset=offset)
+        return self._reuse_series("gather_every", n=n, offset=offset)
 
     def mode(self) -> Self:
-        return self._reuse_series_implementation("mode")
+        return self._reuse_series("mode")
 
     # NOTE: `map_batches` differs
 
     def is_finite(self) -> Self:
-        return self._reuse_series_implementation("is_finite")
+        return self._reuse_series("is_finite")
 
     # NOTE: `cum_(sum|count|min|max|prod)` differ
 
     def rolling_mean(
         self, window_size: int, *, min_samples: int | None, center: bool
     ) -> Self:
-        return self._reuse_series_implementation(
+        return self._reuse_series(
             "rolling_mean",
             window_size=window_size,
             min_samples=min_samples,
@@ -734,7 +724,7 @@ class EagerExpr(
     def rolling_std(
         self, window_size: int, *, min_samples: int | None, center: bool, ddof: int
     ) -> Self:
-        return self._reuse_series_implementation(
+        return self._reuse_series(
             "rolling_std",
             window_size=window_size,
             min_samples=min_samples,
@@ -745,14 +735,14 @@ class EagerExpr(
     def rolling_sum(
         self, window_size: int, *, min_samples: int | None, center: bool
     ) -> Self:
-        return self._reuse_series_implementation(
+        return self._reuse_series(
             "rolling_sum", window_size=window_size, min_samples=min_samples, center=center
         )
 
     def rolling_var(
         self, window_size: int, *, min_samples: int | None, center: bool, ddof: int
     ) -> Self:
-        return self._reuse_series_implementation(
+        return self._reuse_series(
             "rolling_var",
             window_size=window_size,
             min_samples=min_samples,

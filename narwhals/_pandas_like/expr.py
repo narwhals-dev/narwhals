@@ -178,7 +178,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         min_samples: int,
         ignore_nulls: bool,
     ) -> Self:
-        return self._reuse_series_implementation(
+        return self._reuse_series(
             "ewm_mean",
             com=com,
             span=span,
@@ -190,12 +190,10 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         )
 
     def cum_sum(self: Self, *, reverse: bool) -> Self:
-        return self._reuse_series_implementation(
-            "cum_sum", call_kwargs={"reverse": reverse}
-        )
+        return self._reuse_series("cum_sum", call_kwargs={"reverse": reverse})
 
     def shift(self: Self, n: int) -> Self:
-        return self._reuse_series_implementation("shift", call_kwargs={"n": n})
+        return self._reuse_series("shift", call_kwargs={"n": n})
 
     def over(self: Self, partition_by: Sequence[str], kind: ExprKind) -> Self:
         if not is_elementary_expression(self):
@@ -300,24 +298,16 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         )
 
     def cum_count(self: Self, *, reverse: bool) -> Self:
-        return self._reuse_series_implementation(
-            "cum_count", call_kwargs={"reverse": reverse}
-        )
+        return self._reuse_series("cum_count", call_kwargs={"reverse": reverse})
 
     def cum_min(self: Self, *, reverse: bool) -> Self:
-        return self._reuse_series_implementation(
-            "cum_min", call_kwargs={"reverse": reverse}
-        )
+        return self._reuse_series("cum_min", call_kwargs={"reverse": reverse})
 
     def cum_max(self: Self, *, reverse: bool) -> Self:
-        return self._reuse_series_implementation(
-            "cum_max", call_kwargs={"reverse": reverse}
-        )
+        return self._reuse_series("cum_max", call_kwargs={"reverse": reverse})
 
     def cum_prod(self: Self, *, reverse: bool) -> Self:
-        return self._reuse_series_implementation(
-            "cum_prod", call_kwargs={"reverse": reverse}
-        )
+        return self._reuse_series("cum_prod", call_kwargs={"reverse": reverse})
 
     def rank(
         self: Self,
@@ -325,7 +315,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         *,
         descending: bool,
     ) -> Self:
-        return self._reuse_series_implementation(
+        return self._reuse_series(
             "rank", call_kwargs={"method": method, "descending": descending}
         )
 
