@@ -43,6 +43,7 @@ if TYPE_CHECKING:
     from narwhals.typing import _1DArray
     from narwhals.typing import _AnyDArray
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
 PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
     "Int64": "int64",
@@ -162,22 +163,20 @@ class PandasLikeSeries(EagerSeries[Any]):
         cls: type[Self],
         data: Iterable[Any],
         name: str,
-        index: Any,
         *,
-        implementation: Implementation,
-        backend_version: tuple[int, ...],
-        version: Version,
+        context: _FullContext,
+        index: Any = None,  # NOTE: Originally a liskov substitution principle violation
     ) -> Self:
         return cls(
             native_series_from_iterable(
                 data,
                 name=name,
-                index=index,
-                implementation=implementation,
+                index=index or [],
+                implementation=context._implementation,
             ),
-            implementation=implementation,
-            backend_version=backend_version,
-            version=version,
+            implementation=context._implementation,
+            backend_version=context._backend_version,
+            version=context._version,
         )
 
     def __len__(self: Self) -> int:

@@ -137,13 +137,13 @@ def reuse_series_implementation(
         }
 
         out: list[CompliantSeries] = [
-            plx._create_series_from_scalar(
+            plx._create_series_from_scalar(  # type: ignore  # noqa: PGH003
                 getattr(series, attr)(**_kwargs),
                 reference_series=series,
             )
             if returns_scalar
             else getattr(series, attr)(**_kwargs)
-            for series in expr(df)  # type: ignore[arg-type]
+            for series in expr(df)  # type: ignore  # noqa: PGH003
         ]
         _, aliases = evaluate_output_names_and_aliases(expr, df, [])
         if [s.name for s in out] != list(aliases):  # pragma: no cover
@@ -155,8 +155,8 @@ def reuse_series_implementation(
             raise AssertionError(msg)
         return out
 
-    return plx._create_expr_from_callable(  # type: ignore[return-value]
-        func,  # type: ignore[arg-type]
+    return plx._create_expr_from_callable(  # type: ignore  # noqa: PGH003
+        func,
         depth=expr._depth + 1,
         function_name=f"{expr._function_name}->{attr}",
         evaluate_output_names=expr._evaluate_output_names,
@@ -183,7 +183,7 @@ def reuse_series_namespace_implementation(
         kwargs: keyword arguments to pass to function.
     """
     plx = expr.__narwhals_namespace__()
-    return plx._create_expr_from_callable(  # type: ignore[return-value]
+    return plx._create_expr_from_callable(  # type: ignore  # noqa: PGH003
         lambda df: [
             getattr(getattr(series, series_namespace), attr)(**kwargs)
             for series in expr(df)
