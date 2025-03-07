@@ -19,7 +19,6 @@ from narwhals._pandas_like.expr_name import PandasLikeExprNameNamespace
 from narwhals._pandas_like.expr_str import PandasLikeExprStringNamespace
 from narwhals._pandas_like.group_by import AGGREGATIONS_TO_PANDAS_EQUIVALENT
 from narwhals._pandas_like.series import PandasLikeSeries
-from narwhals._pandas_like.utils import rename
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ColumnNotFoundError
@@ -465,17 +464,17 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
         order_by: Sequence[str] | None,
     ) -> Self:
         if not partition_by:
+            # e.g. `nw.col('a').cum_sum().order_by(key)`
+            # We can always easily support this as it doesn't require grouping.
             assert order_by is not None  # noqa: S101  # help type-check
 
-            # This is something like `nw.col('a').cum_sum().order_by(key)`
-            # which we can always easily support, as it doesn't require grouping.
             def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
                 token = generate_temporary_column_name(8, df.columns)
                 df = df.with_row_index(token).sort(
                     *order_by, descending=False, nulls_last=False
                 )
                 results = self(df)
-                sorting_indices = df[token]  # ._native_series.to_numpy()
+                sorting_indices = df[token]
                 for s in results:
                     s._scatter_in_place(sorting_indices, s)
                 return results
@@ -487,29 +486,24 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
             )
             raise NotImplementedError(msg)
         else:
-            function_name = re.sub(r"(\w+->)", "", self._function_name)
-            try:
-                pandas_function_name = WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT[
-                    function_name
-                ]
-            except KeyError:
-                try:
-                    pandas_function_name = AGGREGATIONS_TO_PANDAS_EQUIVALENT[
-                        function_name
-                    ]
-                except KeyError:
-                    msg = (
-                        f"Unsupported function: {function_name} in `over` context.\n\n"
-                        f"Supported functions are {', '.join(WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT)}\n"
-                        f"and {', '.join(AGGREGATIONS_TO_PANDAS_EQUIVALENT)}."
-                    )
-                    raise NotImplementedError(msg) from None
+            function_name: str = re.sub(r"(\w+->)", "", self._function_name)
+            if pandas_function_name := WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT.get(
+                function_name, AGGREGATIONS_TO_PANDAS_EQUIVALENT.get(function_name, None)
+            ):
+                pass
+            else:
+                msg = (
+                    f"Unsupported function: {function_name} in `over` context.\n\n"
+                    f"Supported functions are {', '.join(WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT)}\n"
+                    f"and {', '.join(AGGREGATIONS_TO_PANDAS_EQUIVALENT)}."
+                )
+                raise NotImplementedError(msg)
+            pandas_kwargs = window_kwargs_to_pandas_equivalent(
+                function_name, self._call_kwargs
+            )
 
             def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
-                pandas_kwargs = window_kwargs_to_pandas_equivalent(
-                    function_name, self._call_kwargs
-                )
 
                 if function_name == "cum_count":
                     plx = self.__narwhals_namespace__()
@@ -520,6 +514,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 else:
                     assert "reverse" not in self._call_kwargs  # noqa: S101
                     reverse = False
+
                 if order_by:
                     columns = list(set(partition_by).union(output_names).union(order_by))
                     token = generate_temporary_column_name(8, columns)
@@ -532,17 +527,11 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 elif reverse:
                     columns = list(set(partition_by).union(output_names))
                     df = df[columns][::-1]
-                native_frame = df._native_frame
-                res_native = native_frame.groupby(partition_by)[
+                res_native = df._native_frame.groupby(partition_by)[
                     list(output_names)
                 ].transform(pandas_function_name, **pandas_kwargs)
-                result_frame = df._from_native_frame(
-                    rename(
-                        res_native,
-                        columns=dict(zip(output_names, aliases)),
-                        implementation=self._implementation,
-                        backend_version=self._backend_version,
-                    )
+                result_frame = df._from_native_frame(res_native).rename(
+                    dict(zip(output_names, aliases))
                 )
                 results = [result_frame[name] for name in aliases]
                 if order_by:
@@ -551,7 +540,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     return results
                 if reverse:
                     return [s[::-1] for s in results]
-                return list(results)
+                return results
 
         return self.__class__(
             func,
