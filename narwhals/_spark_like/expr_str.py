@@ -123,8 +123,8 @@ class SparkLikeExprStringNamespace:
         )
 
 
-def is_naive_format(format_str: str) -> bool:
-    return {"s", "z", "Z"}.isdisjoint(format_str)
+def is_naive_format(format: str) -> bool:  # noqa: A002
+    return {"s", "z", "Z"}.isdisjoint(format)
 
 
 def strptime_to_pyspark_format(format: str) -> str:  # noqa: A002
