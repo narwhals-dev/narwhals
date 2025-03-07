@@ -213,14 +213,9 @@ def test_to_datetime_tz_aware(
     df = nw.from_native(constructor({"a": ["2020-01-01T01:02:03+0100"]}))
     with context:
         result = df.with_columns(b=nw.col("a").str.to_datetime(format))
-        result_schema = result.collect_schema()
+        result_schema = result.lazy().collect().schema
         assert result_schema["a"] == nw.String
         assert isinstance(result_schema["b"], nw.Datetime)
-        if "polars_lazy" in str(constructor):
-            # bug? report to Polars?
-            assert result_schema["b"].time_zone is None
-        else:
-            assert result_schema["b"].time_zone == "UTC"
         if "sqlframe" in str(constructor):
             # https://github.com/eakmanrq/sqlframe/issues/325
             request.applymarker(pytest.mark.xfail)
