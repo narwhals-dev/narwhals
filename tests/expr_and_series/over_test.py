@@ -10,6 +10,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import LengthChangingExprError
 from tests.utils import PANDAS_VERSION
+from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -418,6 +419,8 @@ def test_unsupported_over() -> None:
 def test_over_without_partition_by(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+        pytest.skip()
     if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, -1, 2], "i": [0, 2, 1]}))
