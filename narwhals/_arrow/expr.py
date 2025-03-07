@@ -437,10 +437,10 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
             raise NotImplementedError(msg)
 
         if not partition_by:
+            # e.g. `nw.col('a').cum_sum().order_by(key)`
+            # which we can always easily support, as it doesn't require grouping.
             assert order_by is not None  # help type checkers  # noqa: S101
 
-            # This is something like `nw.col('a').cum_sum().order_by(key)`
-            # which we can always easily support, as it doesn't require grouping.
             def func(df: ArrowDataFrame) -> Sequence[ArrowSeries]:
                 token = generate_temporary_column_name(8, df.columns)
                 df = df.with_row_index(token).sort(

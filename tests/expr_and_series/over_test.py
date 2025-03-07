@@ -413,3 +413,18 @@ def test_unsupported_over() -> None:
     tbl = pa.table(data)  # type: ignore[arg-type]
     with pytest.raises(NotImplementedError, match="aggregation or literal"):
         nw.from_native(tbl).select(nw.col("a").shift(1).cum_sum().over("b"))
+
+
+def test_over_without_partition_by(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor({"a": [1, -1, 2], "i": [0, 2, 1]}))
+    result = (
+        df.with_columns(b=nw.col("a").abs().cum_sum().over(_order_by="i"))
+        .sort("i")
+        .select("a", "b", "i")
+    )
+    expected = {"a": [1, 2, -1], "b": [1, 3, 4], "i": [0, 1, 2]}
+    assert_equal_data(result, expected)

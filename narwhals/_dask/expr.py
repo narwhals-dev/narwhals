@@ -545,13 +545,6 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
         # pandas is a required dependency of dask so it's safe to import this
         from narwhals._pandas_like.group_by import AGGREGATIONS_TO_PANDAS_EQUIVALENT
 
-        if not is_elementary_expression(self):  # pragma: no cover
-            msg = (
-                "Only elementary expressions are supported for `.over` in dask.\n\n"
-                "Please see: "
-                "https://narwhals-dev.github.io/narwhals/pandas_like_concepts/improve_group_by_operation/"
-            )
-            raise NotImplementedError(msg)
         if not partition_by:
             assert order_by is not None  # help type checkers  # noqa: S101
 
@@ -559,6 +552,13 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
             # which we can always easily support, as it doesn't require grouping.
             def func(df: DaskLazyFrame) -> Sequence[dx.Series]:
                 return self(df.sort(*order_by, descending=False, nulls_last=False))
+        elif not is_elementary_expression(self):  # pragma: no cover
+            msg = (
+                "Only elementary expressions are supported for `.over` in dask.\n\n"
+                "Please see: "
+                "https://narwhals-dev.github.io/narwhals/pandas_like_concepts/improve_group_by_operation/"
+            )
+            raise NotImplementedError(msg)
         else:
             function_name = re.sub(r"(\w+->)", "", self._function_name)
             try:
