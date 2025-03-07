@@ -511,6 +511,9 @@ class EagerExpr(
     def sum(self) -> Self:
         return self._reuse_series_implementation("sum", returns_scalar=True)
 
+    def count(self) -> Self:
+        return self._reuse_series_implementation("count", returns_scalar=True)
+
     def mean(self) -> Self:
         return self._reuse_series_implementation("mean", returns_scalar=True)
 
@@ -539,7 +542,7 @@ class EagerExpr(
     def max(self) -> Self:
         return self._reuse_series_implementation("max", returns_scalar=True)
 
-    def mix(self) -> Self:
+    def min(self) -> Self:
         return self._reuse_series_implementation("min", returns_scalar=True)
 
     def arg_min(self) -> Self:
