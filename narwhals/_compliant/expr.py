@@ -247,9 +247,6 @@ class EagerExpr(
     _alias_output_names: Any
     _call_kwargs: dict[str, Any]
 
-    @property
-    def _series(self) -> type[EagerSeriesT]: ...
-
     def __init__(
         self: Self,
         call: Callable[[EagerDataFrameT], Sequence[EagerSeriesT]],
