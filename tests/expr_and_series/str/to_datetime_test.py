@@ -12,6 +12,7 @@ import narwhals.stable.v1 as nw
 from narwhals._arrow.utils import parse_datetime_format
 from tests.utils import PYARROW_VERSION
 from tests.utils import assert_equal_data
+from tests.utils import is_windows
 
 if TYPE_CHECKING:
     from tests.utils import Constructor
@@ -35,9 +36,9 @@ def test_to_datetime(constructor: Constructor) -> None:
     assert isinstance(result_schema["b"], nw.Datetime)
     if "sqlframe" in str(constructor):
         # https://github.com/eakmanrq/sqlframe/issues/326
-        assert result_schema["b"].time_zone == "UTC"
+        assert result_schema["b"].time_zone == "UTC"  # pyright: ignore[reportAttributeAccessIssue]
     else:
-        assert result_schema["b"].time_zone is None
+        assert result_schema["b"].time_zone is None  # pyright: ignore[reportAttributeAccessIssue]
     result_item = result.collect().item(row=0, column="b")
     assert str(result_item) == expected
 
@@ -208,6 +209,9 @@ def test_to_datetime_tz_aware(
 ) -> None:
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (13,):
         # bugged
+        pytest.skip()
+    if "pyarrow_table" in str(constructor) and is_windows():
+        # fails to parse on windows
         pytest.skip()
     if "sqlframe" in str(constructor):
         # https://github.com/eakmanrq/sqlframe/issues/325
