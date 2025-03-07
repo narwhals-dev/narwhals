@@ -236,8 +236,8 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
 
     def filter(self: Self, *predicates: ArrowExpr) -> Self:
         plx = self.__narwhals_namespace__()
-        other = plx.all_horizontal(*predicates)
-        return reuse_series_implementation(self, "filter", other=other)
+        predicate = plx.all_horizontal(*predicates)
+        return reuse_series_implementation(self, "filter", predicate=predicate)
 
     def mean(self: Self) -> Self:
         return reuse_series_implementation(self, "mean", returns_scalar=True)
