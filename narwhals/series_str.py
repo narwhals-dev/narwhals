@@ -377,7 +377,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         """Parse Series with strings to a Series with Datetime dtype.
 
         Notes:
-            - defaults to nanosecond time unit, Polars to microsecond.
+            - pandas defaults to nanosecond time unit, Polars to microsecond.
               Prior to pandas 2.0, nanoseconds were the only time unit supported
               in pandas, with no ability to set any other one. The ability to
               set the time unit in pandas, if the version permits, will arrive.
