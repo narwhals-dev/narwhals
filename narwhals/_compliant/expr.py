@@ -307,6 +307,22 @@ class EagerExpr(
             version=context._version,
         )
 
+    @classmethod
+    def from_column_names(
+        cls,
+        evaluate_column_names: Callable[[EagerDataFrameT], Sequence[str]],
+        /,
+        *,
+        function_name: str,
+        context: _FullContext,
+    ) -> Self: ...
+    @classmethod
+    def from_column_indices(
+        cls,
+        *column_indices: int,
+        context: _FullContext,
+    ) -> Self: ...
+
     # https://github.com/narwhals-dev/narwhals/blob/35cef0b1e2c892fb24aa730902b08b6994008c18/narwhals/_protocols.py#L135
     def _reuse_series_implementation(
         self: EagerExpr[EagerDataFrameT, EagerSeriesT],
