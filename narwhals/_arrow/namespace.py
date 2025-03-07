@@ -25,7 +25,7 @@ from narwhals._arrow.utils import extract_dataframe_comparand
 from narwhals._arrow.utils import horizontal_concat
 from narwhals._arrow.utils import nulls_like
 from narwhals._arrow.utils import vertical_concat
-from narwhals._compliant import CompliantNamespace
+from narwhals._compliant import EagerNamespace
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.utils import Implementation
@@ -48,7 +48,15 @@ if TYPE_CHECKING:
     _Scalar: TypeAlias = Any
 
 
-class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
+class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries]):
+    @property
+    def _expr(self) -> type[ArrowExpr]:
+        return ArrowExpr
+
+    @property
+    def _series(self) -> type[ArrowSeries]:
+        return ArrowSeries
+
     def _create_expr_from_callable(
         self: Self,
         func: Callable[[ArrowDataFrame], Sequence[ArrowSeries]],

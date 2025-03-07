@@ -13,7 +13,7 @@ from narwhals._arrow.expr_list import ArrowExprListNamespace
 from narwhals._arrow.expr_name import ArrowExprNameNamespace
 from narwhals._arrow.expr_str import ArrowExprStringNamespace
 from narwhals._arrow.series import ArrowSeries
-from narwhals._compliant import CompliantExpr
+from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._expression_parsing import is_scalar_like
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
+class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
     _implementation: Implementation = Implementation.PYARROW
 
     def __init__(

@@ -25,8 +25,8 @@ from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import nulls_like
 from narwhals._arrow.utils import pad_series
+from narwhals._compliant import EagerSeries
 from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantSeries
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
@@ -94,7 +94,7 @@ def maybe_extract_py_scalar(value: Any, return_py_scalar: bool) -> Any:  # noqa:
     return value
 
 
-class ArrowSeries(CompliantSeries):
+class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def __init__(
         self: Self,
         native_series: ArrowChunkedArray,
@@ -110,6 +110,10 @@ class ArrowSeries(CompliantSeries):
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
         self._broadcast = False
+
+    @property
+    def native(self) -> ArrowChunkedArray:
+        return self._native_series
 
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
