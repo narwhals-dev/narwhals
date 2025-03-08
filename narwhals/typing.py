@@ -193,7 +193,9 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesT_co]):
         *,
         return_dtype: DType | type[DType] | None,
     ) -> Self: ...
-    def over(self: Self, keys: Sequence[str], kind: ExprKind) -> Self: ...
+    def over(
+        self: Self, keys: Sequence[str], kind: ExprKind, order_by: Sequence[str] | None
+    ) -> Self: ...
     def sample(
         self,
         n: int | None,

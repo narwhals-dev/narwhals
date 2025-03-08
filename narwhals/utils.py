@@ -884,7 +884,7 @@ def maybe_set_index(
         msg = "Only one of `column_names` or `index` should be provided"
         raise ValueError(msg)
 
-    if not column_names and not index:
+    if not column_names and index is None:
         msg = "Either `column_names` or `index` should be provided"
         raise ValueError(msg)
 
