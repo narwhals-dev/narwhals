@@ -137,7 +137,7 @@ class _StoresNative(Protocol[NativeT_co]):
 class _StoresCompliant(Protocol[CompliantT_co]):
     @property
     def compliant(self) -> CompliantT_co:
-        """Return the narwhals object."""
+        """Return the compliant object."""
         ...
 
 
