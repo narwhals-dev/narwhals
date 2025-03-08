@@ -46,6 +46,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from narwhals._compliant.any_namespace import NameNamespace
     from narwhals._compliant.namespace import CompliantNamespace
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals._compliant.series import CompliantSeries
@@ -780,6 +781,9 @@ class EagerExpr(
     @property
     def str(self) -> EagerExprStringNamespace[Self]:
         return EagerExprStringNamespace(self)
+
+    @property
+    def name(self) -> NameNamespace[Self]: ...
 
 
 # NOTE: See (https://github.com/narwhals-dev/narwhals/issues/2044#issuecomment-2674262833)
