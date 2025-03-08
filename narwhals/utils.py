@@ -1479,7 +1479,6 @@ def is_tracks_depth(obj: Implementation, /) -> TypeIs[_TracksDepth]:  # pragma: 
     return obj.is_pandas_like() or obj in {Implementation.PYARROW, Implementation.DASK}
 
 
-
 def _remap_join_keys(
     left_on: list[str], right_on: list[str], suffix: str
 ) -> dict[str, str]:
@@ -1505,6 +1504,7 @@ def _remap_join_keys(
         right_keys_suffixed.append(key)
 
     return dict(zip(right_on, right_keys_suffixed))
+
 
 # TODO @dangotbanned: Extend with runtime behavior for `v1.*`
 # See `narwhals.exceptions.NarwhalsUnstableWarning`
