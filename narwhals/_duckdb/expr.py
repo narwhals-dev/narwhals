@@ -18,6 +18,7 @@ from narwhals._duckdb.expr_dt import DuckDBExprDateTimeNamespace
 from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_name import DuckDBExprNameNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
+from narwhals._duckdb.expr_struct import DuckDBExprStructNamespace
 from narwhals._duckdb.utils import lit
 from narwhals._duckdb.utils import maybe_evaluate_expr
 from narwhals._duckdb.utils import narwhals_to_native_dtype
@@ -124,6 +125,8 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
         self: Self,
         call: Callable[..., duckdb.Expression],
         expr_name: str,
+        evaluate_output_names: Callable[[DuckDBLazyFrame], Sequence[str]] | None = None,
+        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None = None,
         **expressifiable_args: Self | Any,
     ) -> Self:
         """Create expression from callable.
@@ -131,6 +134,8 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
         Arguments:
             call: Callable from compliant DataFrame to native Expression
             expr_name: Expression name
+            evaluate_output_names: Output names function.
+            alias_output_names: Alias Output names function.
             expressifiable_args: arguments pass to expression which should be parsed
                 as expressions (e.g. in `nw.col('a').is_between('b', 'c')`)
         """
@@ -146,11 +151,17 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
                 for native_series in native_series_list
             ]
 
+        if evaluate_output_names is None:
+            evaluate_output_names = self._evaluate_output_names
+
+        if alias_output_names is None:
+            alias_output_names = self._alias_output_names
+
         return self.__class__(
             func,
             function_name=f"{self._function_name}->{expr_name}",
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
+            evaluate_output_names=evaluate_output_names,
+            alias_output_names=alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -483,6 +494,10 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
     @property
     def list(self: Self) -> DuckDBExprListNamespace:
         return DuckDBExprListNamespace(self)
+
+    @property
+    def struct(self: Self) -> DuckDBExprStructNamespace:
+        return DuckDBExprStructNamespace(self)
 
     arg_min = not_implemented()
     arg_max = not_implemented()

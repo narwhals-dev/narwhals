@@ -15,6 +15,7 @@ from narwhals._pandas_like.series_cat import PandasLikeSeriesCatNamespace
 from narwhals._pandas_like.series_dt import PandasLikeSeriesDateTimeNamespace
 from narwhals._pandas_like.series_list import PandasLikeSeriesListNamespace
 from narwhals._pandas_like.series_str import PandasLikeSeriesStringNamespace
+from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
 from narwhals._pandas_like.utils import align_and_extract_native
 from narwhals._pandas_like.utils import get_dtype_backend
 from narwhals._pandas_like.utils import narwhals_to_native_dtype
@@ -1131,3 +1132,7 @@ class PandasLikeSeries(CompliantSeries):
     @property
     def list(self: Self) -> PandasLikeSeriesListNamespace:
         return PandasLikeSeriesListNamespace(self)
+
+    @property
+    def struct(self: Self) -> PandasLikeSeriesStructNamespace:
+        return PandasLikeSeriesStructNamespace(self)

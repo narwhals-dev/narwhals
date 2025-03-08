@@ -14,6 +14,7 @@ from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
 from narwhals._spark_like.expr_name import SparkLikeExprNameNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
+from narwhals._spark_like.expr_struct import SparkLikeExprStructNamespace
 from narwhals._spark_like.utils import maybe_evaluate_expr
 from narwhals._spark_like.utils import narwhals_to_native_dtype
 from narwhals.dependencies import get_pyspark
@@ -190,6 +191,9 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
         self: Self,
         call: Callable[..., Column],
         expr_name: str,
+        evaluate_output_names: Callable[[SparkLikeLazyFrame], Sequence[str]]
+        | None = None,
+        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None = None,
         **expressifiable_args: Self | Any,
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
@@ -203,11 +207,17 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
                 for native_series in native_series_list
             ]
 
+        if evaluate_output_names is None:
+            evaluate_output_names = self._evaluate_output_names
+
+        if alias_output_names is None:
+            alias_output_names = self._alias_output_names
+
         return self.__class__(
             func,
             function_name=f"{self._function_name}->{expr_name}",
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
+            evaluate_output_names=evaluate_output_names,
+            alias_output_names=alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
@@ -590,6 +600,10 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
     @property
     def list(self: Self) -> SparkLikeExprListNamespace:
         return SparkLikeExprListNamespace(self)
+
+    @property
+    def struct(self: Self) -> SparkLikeExprStructNamespace:
+        return SparkLikeExprStructNamespace(self)
 
     arg_min = not_implemented()
     arg_max = not_implemented()
