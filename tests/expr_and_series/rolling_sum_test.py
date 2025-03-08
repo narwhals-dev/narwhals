@@ -68,18 +68,71 @@ def test_rolling_sum_expr(constructor_eager: ConstructorEager) -> None:
     ],
 )
 def test_rolling_sum_expr_lazy_ungrouped(
-    constructor: Constructor, expected_a: list[float], window_size: int, min_samples: int
+    constructor: Constructor,
+    expected_a: list[float],
+    window_size: int,
+    min_samples: int,
+    request: pytest.FixtureRequest,
 ) -> None:
+    if any(x in str(constructor) for x in ("duckdb",)):
+        request.applymarker(pytest.mark.xfail)
     data = {
         "a": [1, None, 2, None, 4, 6, 11],
         "b": [1, None, 2, 3, 4, 5, 6],
         "i": list(range(7)),
     }
     df = nw.from_native(constructor(data))
-    result = df.with_columns(
-        nw.col("a").rolling_sum(window_size, min_samples=min_samples).over(_order_by="b")
-    ).sort("i")
-    expected = {"a": expected_a, "b": [1, None, 2, 3, 4, 5, 6], "i": list(range(7))}
+    result = (
+        df.with_columns(
+            nw.col("a")
+            .rolling_sum(window_size, min_samples=min_samples)
+            .over(_order_by="b")
+        )
+        .sort("i")
+        .select("a")
+    )
+    expected = {"a": expected_a}
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.filterwarnings(
+    "ignore:`Expr.rolling_sum` is being called from the stable API although considered an unstable feature."
+)
+@pytest.mark.parametrize(
+    ("expected_a", "window_size", "min_samples"),
+    [
+        ([None, None, 3, None, None, 10, 17], 2, None),
+        ([None, None, 3, None, None, 10, 17], 2, 2),
+        ([None, None, 3, 3, None, 10, 21], 3, 2),
+        ([1, None, 3, 3, 4, 10, 21], 3, 1),
+    ],
+)
+def test_rolling_sum_expr_lazy_grouped(
+    constructor: Constructor,
+    expected_a: list[float],
+    window_size: int,
+    min_samples: int,
+    request: pytest.FixtureRequest,
+) -> None:
+    if any(x in str(constructor) for x in ("dask", "pyarrow_table", "duckdb")):
+        request.applymarker(pytest.mark.xfail)
+    data = {
+        "a": [1, None, 2, None, 4, 6, 11],
+        "g": [1, 1, 1, 1, 2, 2, 2],
+        "b": [1, None, 2, 3, 4, 5, 6],
+        "i": list(range(7)),
+    }
+    df = nw.from_native(constructor(data))
+    result = (
+        df.with_columns(
+            nw.col("a")
+            .rolling_sum(window_size, min_samples=min_samples)
+            .over("g", _order_by="b")
+        )
+        .sort("i")
+        .select("a")
+    )
+    expected = {"a": expected_a}
     assert_equal_data(result, expected)
 
 

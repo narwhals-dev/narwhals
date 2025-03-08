@@ -391,7 +391,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
             lambda _input: _input.rolling(
                 window=window_size, min_periods=min_samples
             ).sum(),
-            "cum_sum",
+            "rolling_sum",
         )
 
     def sum(self: Self) -> Self:
@@ -579,7 +579,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
             except KeyError:
                 # window functions are unsupported: https://github.com/dask/dask/issues/11806
                 msg = (
-                    f"Unsupported function: {function_name} in `over` context.\n\n."
+                    f"Unsupported function: {function_name} in `over` context.\n\n"
                     f"Supported functions are {', '.join(AGGREGATIONS_TO_PANDAS_EQUIVALENT)}\n"
                 )
                 raise NotImplementedError(msg) from None
