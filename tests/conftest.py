@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import sys
-from copy import deepcopy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -13,7 +12,6 @@ import polars as pl
 import pyarrow as pa
 import pytest
 
-from narwhals.utils import generate_temporary_column_name
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
@@ -168,16 +166,9 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
         register(session.stop)
 
         def _constructor(obj: dict[str, list[Any]]) -> IntoFrame:
-            _obj = deepcopy(obj)
-            index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
-            _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
-
-            return (
-                session.createDataFrame([*zip(*_obj.values())], schema=[*_obj.keys()])
-                .repartition(2)
-                .orderBy(index_col_name)
-                .drop(index_col_name)
-            )
+            return session.createDataFrame(
+                [*zip(*obj.values())], schema=[*obj.keys()]
+            ).repartition(2)
 
         return _constructor
 
