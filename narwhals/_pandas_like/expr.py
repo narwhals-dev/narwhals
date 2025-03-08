@@ -380,8 +380,8 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
 
     def filter(self: Self, *predicates: PandasLikeExpr) -> Self:
         plx = self.__narwhals_namespace__()
-        other = plx.all_horizontal(*predicates)
-        return reuse_series_implementation(self, "filter", other=other)
+        predicate = plx.all_horizontal(*predicates)
+        return reuse_series_implementation(self, "filter", predicate=predicate)
 
     def drop_nulls(self: Self) -> Self:
         return reuse_series_implementation(self, "drop_nulls")

@@ -180,7 +180,7 @@ class PandasLikeSeries(CompliantSeries):
         )
 
     def __len__(self: Self) -> int:
-        return len(self._native_series)
+        return len(self.native)
 
     @property
     def name(self: Self) -> str:
@@ -188,14 +188,18 @@ class PandasLikeSeries(CompliantSeries):
 
     @property
     def dtype(self: Self) -> DType:
-        native_dtype = self._native_series.dtype
+        native_dtype = self.native.dtype
         return (
             native_to_narwhals_dtype(native_dtype, self._version, self._implementation)
             if native_dtype != "object"
             else object_native_to_narwhals_dtype(
-                self._native_series, self._version, self._implementation
+                self.native, self._version, self._implementation
             )
         )
+
+    @property
+    def native(self) -> Any:
+        return self._native_series
 
     def ewm_mean(
         self: Self,
@@ -347,11 +351,13 @@ class PandasLikeSeries(CompliantSeries):
 
     # Binary comparisons
 
-    def filter(self: Self, other: Any) -> PandasLikeSeries:
-        if not (isinstance(other, list) and all(isinstance(x, bool) for x in other)):
-            _, other_native = align_and_extract_native(self, other)
+    def filter(self: Self, predicate: Any) -> PandasLikeSeries:
+        if not (
+            isinstance(predicate, list) and all(isinstance(x, bool) for x in predicate)
+        ):
+            _, other_native = align_and_extract_native(self, predicate)
         else:
-            other_native = other
+            other_native = predicate
         return self._from_native_series(self._native_series.loc[other_native]).alias(
             self.name
         )
