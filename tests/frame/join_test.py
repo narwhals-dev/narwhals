@@ -10,6 +10,8 @@ import pytest
 
 import narwhals as nw_main  # use nw_main in some tests for coverage
 import narwhals.stable.v1 as nw
+from narwhals import LazyFrame
+from narwhals.exceptions import DuplicateError
 from narwhals.utils import Implementation
 from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
@@ -105,8 +107,20 @@ def test_full_join(
     ).sort("id", nulls_last=True)
     assert_equal_data(result, expected)
 
+    # test duplication
+    if isinstance(df_left, LazyFrame):
+        return  # cannot materialize columns for a check
+    df1 = {"foo": [1, 2, 3], "val1": [1, 2, 3]}
+    df2 = {"foo": [1, 2, 3], "foo_right": [1, 2, 3]}
+    df_left = nw_main.from_native(constructor(df1))
+    df_right = nw_main.from_native(constructor(df2))
 
-pytest.main([__file__])
+    # polars throws `NarwhalsError`, everything else should raise `DuplicateError`
+    with pytest.raises((DuplicateError, nw.exceptions.NarwhalsError)):
+        df_left.join(df_right, on="foo", how="full")
+
+
+pytest.main([__file__, "--all-cpu-constructors"])
 
 
 def test_inner_join_two_keys(constructor: Constructor) -> None:

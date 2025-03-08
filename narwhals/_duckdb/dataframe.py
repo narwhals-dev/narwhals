@@ -291,8 +291,11 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         if native_how in {"inner", "left", "cross", "outer"}:
             select = [f'lhs."{x}"' for x in self._native_frame.columns]
             for col in other._native_frame.columns:
-                if col in self._native_frame.columns and (
-                    right_on is None or col not in right_on or (native_how == "outer")
+                col_in_lhs: bool = col in self._native_frame.columns
+                if native_how == "outer" and not col_in_lhs:
+                    select.append(f'rhs."{col}"')
+                elif (native_how == "outer") or (
+                    col_in_lhs and (right_on is None or col not in right_on)
                 ):
                     select.append(f'rhs."{col}" as "{col}{suffix}"')
                 elif right_on is None or col not in right_on:
