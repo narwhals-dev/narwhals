@@ -4,7 +4,7 @@ ci:
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: 'v0.9.4'
+  rev: 'v0.9.9'
   hooks:
     # Run the formatter.
     - id: ruff-format
@@ -22,7 +22,7 @@ repos:
       args: [--ignore-words-list=ser]
       exclude: ^docs/api-completeness.md$
 -   repo: https://github.com/pycqa/flake8
-    rev: '7.1.1'  # todo: remove once https://github.com/astral-sh/ruff/issues/458 is addressed
+    rev: '7.1.2'  # todo: remove once https://github.com/astral-sh/ruff/issues/458 is addressed
     hooks:
     -   id: flake8
         additional_dependencies: [darglint==1.8.1, Flake8-pyproject]

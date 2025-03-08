@@ -31,13 +31,18 @@ if TYPE_CHECKING:
     from typing_extensions import Concatenate
     from typing_extensions import ParamSpec
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
 
     from narwhals.dtypes import DType
     from narwhals.typing import CompliantExpr
+    from narwhals.typing import CompliantNamespace
     from narwhals.typing import IntoExpr
 
     PS = ParamSpec("PS")
     R = TypeVar("R")
+    _ToCompliant: TypeAlias = Callable[
+        [CompliantNamespace[Any, Any]], CompliantExpr[Any, Any]
+    ]
 
 
 class Expr:
@@ -47,7 +52,7 @@ class Expr:
         metadata: ExprMetadata,
     ) -> None:
         # callable from CompliantNamespace to CompliantExpr
-        self._to_compliant_expr = to_compliant_expr
+        self._to_compliant_expr: _ToCompliant = to_compliant_expr
         self._metadata = metadata
 
     def _from_callable(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
@@ -608,7 +613,7 @@ class Expr:
 
     def map_batches(
         self: Self,
-        function: Callable[[Any], Self],
+        function: Callable[[Any], CompliantExpr[Any, Any]],
         return_dtype: DType | None = None,
     ) -> Self:
         """Apply a custom python function to a whole Series or sequence of Series.
@@ -1546,15 +1551,22 @@ class Expr:
         if self._metadata.kind.is_filtration():
             msg = "`.over()` can not be used for expressions which change length."
             raise LengthChangingExprError(msg)
+
+        flat_partition_by = flatten(partition_by)
+        order_by = [_order_by] if isinstance(_order_by, str) else _order_by
+        if not flat_partition_by and not _order_by:  # pragma: no cover
+            msg = "At least one of `partition_by` or `order_by` must be specified."
+            raise ValueError(msg)
+
         kind = ExprKind.TRANSFORM
         n_open_windows = self._metadata.n_open_windows
         if _order_by is not None and self._metadata.kind.is_window():
             n_open_windows -= 1
         metadata = ExprMetadata(kind, n_open_windows=n_open_windows)
-        flat_partition_by = flatten(partition_by)
+
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).over(
-                flat_partition_by, kind=self._metadata.kind
+                flat_partition_by, order_by=order_by, kind=self._metadata.kind
             ),
             metadata,
         )

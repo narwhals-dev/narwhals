@@ -5,24 +5,25 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._expression_parsing import is_scalar_like
-from narwhals._expression_parsing import is_simple_aggregation
+from narwhals._expression_parsing import is_elementary_expression
 from narwhals._expression_parsing import reuse_series_implementation
 from narwhals._pandas_like.expr_cat import PandasLikeExprCatNamespace
 from narwhals._pandas_like.expr_dt import PandasLikeExprDateTimeNamespace
 from narwhals._pandas_like.expr_list import PandasLikeExprListNamespace
 from narwhals._pandas_like.expr_name import PandasLikeExprNameNamespace
 from narwhals._pandas_like.expr_str import PandasLikeExprStringNamespace
+from narwhals._pandas_like.group_by import AGGREGATIONS_TO_PANDAS_EQUIVALENT
 from narwhals._pandas_like.series import PandasLikeSeries
-from narwhals._pandas_like.utils import rename
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.typing import CompliantExpr
+from narwhals.utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -33,7 +34,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Implementation
     from narwhals.utils import Version
 
-MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
+WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
     "cum_sum": "cumsum",
     "cum_min": "cummin",
     "cum_max": "cummax",
@@ -46,6 +47,26 @@ MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
     "rank": "rank",
     "diff": "diff",
 }
+
+
+def window_kwargs_to_pandas_equivalent(
+    function_name: str, kwargs: dict[str, object]
+) -> dict[str, object]:
+    if function_name == "shift":
+        pandas_kwargs: dict[str, object] = {"periods": kwargs["n"]}
+    elif function_name == "rank":
+        _method = kwargs["method"]
+        pandas_kwargs = {
+            "method": "first" if _method == "ordinal" else _method,
+            "ascending": not kwargs["descending"],
+            "na_option": "keep",
+            "pct": False,
+        }
+    elif function_name.startswith("cum_"):  # Cumulative operation
+        pandas_kwargs = {"skipna": True}
+    else:  # e.g. std, var
+        pandas_kwargs = kwargs
+    return pandas_kwargs
 
 
 class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
@@ -115,7 +136,10 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
     @classmethod
     def from_column_names(
         cls: type[Self],
-        *column_names: str,
+        evaluate_column_names: Callable[[PandasLikeDataFrame], Sequence[str]],
+        /,
+        *,
+        function_name: str,
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
@@ -129,10 +153,12 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         backend_version=df._backend_version,
                         version=df._version,
                     )
-                    for column_name in column_names
+                    for column_name in evaluate_column_names(df)
                 ]
             except KeyError as e:
-                missing_columns = [x for x in column_names if x not in df.columns]
+                missing_columns = [
+                    x for x in evaluate_column_names(df) if x not in df.columns
+                ]
                 raise ColumnNotFoundError.from_missing_and_available_column_names(
                     missing_columns=missing_columns,
                     available_columns=df.columns,
@@ -141,8 +167,8 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
         return cls(
             func,
             depth=0,
-            function_name="col",
-            evaluate_output_names=lambda _df: column_names,
+            function_name=function_name,
+            evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
             implementation=implementation,
             backend_version=backend_version,
@@ -354,14 +380,18 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
 
     def filter(self: Self, *predicates: PandasLikeExpr) -> Self:
         plx = self.__narwhals_namespace__()
-        other = plx.all_horizontal(*predicates)
-        return reuse_series_implementation(self, "filter", other=other)
+        predicate = plx.all_horizontal(*predicates)
+        return reuse_series_implementation(self, "filter", predicate=predicate)
 
     def drop_nulls(self: Self) -> Self:
         return reuse_series_implementation(self, "drop_nulls")
 
     def replace_strict(
-        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+        self: Self,
+        old: Sequence[Any] | Mapping[Any, Any],
+        new: Sequence[Any],
+        *,
+        return_dtype: DType | type[DType] | None,
     ) -> Self:
         return reuse_series_implementation(
             self, "replace_strict", old=old, new=new, return_dtype=return_dtype
@@ -427,81 +457,90 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
             call_kwargs=self._call_kwargs,
         )
 
-    def over(self: Self, keys: list[str], kind: ExprKind) -> Self:
-        if (
-            is_simple_aggregation(self)
-            and (function_name := re.sub(r"(\w+->)", "", self._function_name))
-            in MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT
-        ):
+    def over(
+        self: Self,
+        partition_by: Sequence[str],
+        kind: ExprKind,
+        order_by: Sequence[str] | None,
+    ) -> Self:
+        if not partition_by:
+            # e.g. `nw.col('a').cum_sum().order_by(key)`
+            # We can always easily support this as it doesn't require grouping.
+            assert order_by is not None  # noqa: S101  # help type-check
 
-            def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-                output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
-
-                unsupported_reverse_msg = (
-                    "Cumulative operation with `reverse=True` is not supported in "
-                    "over context for pandas-like backend."
+            def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
+                token = generate_temporary_column_name(8, df.columns)
+                df = df.with_row_index(token).sort(
+                    *order_by, descending=False, nulls_last=False
                 )
-                if function_name == "cum_count":
-                    if self._call_kwargs["reverse"]:
-                        raise NotImplementedError(unsupported_reverse_msg)
-                    plx = self.__narwhals_namespace__()
-                    df = df.with_columns(~plx.col(*output_names).is_null())
-
-                if function_name == "shift":
-                    kwargs = {"periods": self._call_kwargs["n"]}
-                elif function_name == "rank":
-                    _method = self._call_kwargs["method"]
-                    kwargs = {
-                        "method": "first" if _method == "ordinal" else _method,
-                        "ascending": not self._call_kwargs["descending"],
-                        "na_option": "keep",
-                        "pct": False,
-                    }
-                elif function_name.startswith("cum_"):  # Cumulative operation
-                    if self._call_kwargs["reverse"]:
-                        raise NotImplementedError(unsupported_reverse_msg)
-                    kwargs = {"skipna": True}
-                else:
-                    kwargs = {}
-
-                res_native = getattr(
-                    df._native_frame.groupby(keys)[list(output_names)],
-                    MANY_TO_MANY_AGG_FUNCTIONS_TO_PANDAS_EQUIVALENT[function_name],
-                )(**kwargs)
-                result_frame = df._from_native_frame(
-                    rename(
-                        res_native,
-                        columns=dict(zip(output_names, aliases)),
-                        implementation=self._implementation,
-                        backend_version=self._backend_version,
-                    )
-                )
-                return [result_frame[name] for name in aliases]
-        elif not is_scalar_like(kind):
+                results = self(df)
+                sorting_indices = df[token]
+                for s in results:
+                    s._scatter_in_place(sorting_indices, s)
+                return results
+        elif not is_elementary_expression(self):
             msg = (
-                "Length-preserving operations are only supported in `over` context "
-                "for pandas if they are elementary "
-                "(e.g. `nw.col('a').cum_sum().over('b'))`)."
+                "Only elementary expressions are supported for `.over` in pandas-like backends.\n\n"
+                "Please see: "
+                "https://narwhals-dev.github.io/narwhals/pandas_like_concepts/improve_group_by_operation/"
             )
             raise NotImplementedError(msg)
         else:
-
-            def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-                output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
-                if overlap := set(output_names).intersection(keys):
-                    # E.g. `df.select(nw.all().sum().over('a'))`. This is well-defined,
-                    # we just don't support it yet.
-                    msg = (
-                        f"Column names {overlap} appear in both expression output names and in `over` keys.\n"
-                        "This is not yet supported."
-                    )
-                    raise NotImplementedError(msg)
-
-                tmp = df.group_by(*keys, drop_null_keys=False).agg(self)
-                tmp = df.simple_select(*keys).join(
-                    tmp, how="left", left_on=keys, right_on=keys, suffix="_right"
+            function_name: str = re.sub(r"(\w+->)", "", self._function_name)
+            if pandas_function_name := WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT.get(
+                function_name, AGGREGATIONS_TO_PANDAS_EQUIVALENT.get(function_name, None)
+            ):
+                pass
+            else:
+                msg = (
+                    f"Unsupported function: {function_name} in `over` context.\n\n"
+                    f"Supported functions are {', '.join(WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT)}\n"
+                    f"and {', '.join(AGGREGATIONS_TO_PANDAS_EQUIVALENT)}."
                 )
-                return [tmp[name] for name in aliases]
+                raise NotImplementedError(msg)
+            pandas_kwargs = window_kwargs_to_pandas_equivalent(
+                function_name, self._call_kwargs
+            )
+
+            def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
+                output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
+
+                if function_name == "cum_count":
+                    plx = self.__narwhals_namespace__()
+                    df = df.with_columns(~plx.col(*output_names).is_null())
+
+                if function_name.startswith("cum_"):
+                    reverse = self._call_kwargs["reverse"]
+                else:
+                    assert "reverse" not in self._call_kwargs  # noqa: S101
+                    reverse = False
+
+                if order_by:
+                    columns = list(set(partition_by).union(output_names).union(order_by))
+                    token = generate_temporary_column_name(8, columns)
+                    df = (
+                        df[columns]
+                        .with_row_index(token)
+                        .sort(*order_by, descending=reverse, nulls_last=reverse)
+                    )
+                    sorting_indices = df[token]
+                elif reverse:
+                    columns = list(set(partition_by).union(output_names))
+                    df = df[columns][::-1]
+                res_native = df._native_frame.groupby(partition_by)[
+                    list(output_names)
+                ].transform(pandas_function_name, **pandas_kwargs)
+                result_frame = df._from_native_frame(res_native).rename(
+                    dict(zip(output_names, aliases))
+                )
+                results = [result_frame[name] for name in aliases]
+                if order_by:
+                    for s in results:
+                        s._scatter_in_place(sorting_indices, s)
+                    return results
+                if reverse:
+                    return [s[::-1] for s in results]
+                return results
 
         return self.__class__(
             func,
@@ -557,7 +596,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
     def map_batches(
         self: Self,
         function: Callable[[Any], Any],
-        return_dtype: DType | None,
+        return_dtype: DType | type[DType] | None,
     ) -> Self:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             input_series_list = self._call(df)
