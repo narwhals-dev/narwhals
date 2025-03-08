@@ -27,7 +27,9 @@ else:
 
 if TYPE_CHECKING:
     from types import ModuleType
+    from typing import Iterable
     from typing import Mapping
+    from typing import Sized
 
     import numpy as np
     from typing_extensions import Self
@@ -53,8 +55,8 @@ if TYPE_CHECKING:
 
         def join(self, *args: Any, **kwargs: Any) -> Any: ...
 
-    class NativeSeries(Protocol):
-        def __len__(self) -> int: ...
+    class NativeSeries(Sized, Iterable[Any], Protocol):
+        def filter(self, *args: Any, **kwargs: Any) -> Any: ...
 
     class DataFrameLike(Protocol):
         def __dataframe__(self, *args: Any, **kwargs: Any) -> Any: ...

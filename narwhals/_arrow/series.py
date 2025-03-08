@@ -274,11 +274,13 @@ class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
     def len(self: Self, *, _return_py_scalar: bool = True) -> int:
         return maybe_extract_py_scalar(len(self.native), _return_py_scalar)
 
-    def filter(self: Self, other: ArrowSeries | list[bool | None]) -> Self:
-        if not (isinstance(other, list) and all(isinstance(x, bool) for x in other)):
-            _, other_native = extract_native(self, other)
+    def filter(self: Self, predicate: ArrowSeries | list[bool | None]) -> Self:
+        if not (
+            isinstance(predicate, list) and all(isinstance(x, bool) for x in predicate)
+        ):
+            _, other_native = extract_native(self, predicate)
         else:
-            other_native = other
+            other_native = predicate
         return self._from_native_series(self.native.filter(other_native))  # pyright: ignore[reportArgumentType]
 
     def mean(self: Self, *, _return_py_scalar: bool = True) -> float:
