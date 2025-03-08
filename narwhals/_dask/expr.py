@@ -381,6 +381,19 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
 
         return self._from_call(lambda _input: _input.cumprod(), "cum_prod")
 
+    def rolling_sum(
+        self: Self, window_size: int, *, min_samples: int, center: bool
+    ) -> Self:
+        if center:  # pragma: no cover
+            msg = "todo"
+            raise NotImplementedError(msg)
+        return self._from_call(
+            lambda _input: _input.rolling(
+                window=window_size, min_periods=min_samples
+            ).sum(),
+            "cum_sum",
+        )
+
     def sum(self: Self) -> Self:
         return self._from_call(lambda _input: _input.sum().to_series(), "sum")
 
@@ -634,7 +647,6 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
     sample = not_implemented()
     map_batches = not_implemented()
     ewm_mean = not_implemented()
-    rolling_sum = not_implemented()
     rolling_mean = not_implemented()
     rolling_var = not_implemented()
     rolling_std = not_implemented()

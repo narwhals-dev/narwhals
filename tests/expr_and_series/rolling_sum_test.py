@@ -12,6 +12,7 @@ from hypothesis import given
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import InvalidOperationError
 from tests.utils import PANDAS_VERSION
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -51,6 +52,34 @@ def test_rolling_sum_expr(constructor_eager: ConstructorEager) -> None:
     )
     expected = {name: values["expected"] for name, values in kwargs_and_expected.items()}
 
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.filterwarnings(
+    "ignore:`Expr.rolling_sum` is being called from the stable API although considered an unstable feature."
+)
+@pytest.mark.parametrize(
+    ("expected_a", "window_size", "min_samples"),
+    [
+        ([None, None, 3, None, None, 10, 17], 2, None),
+        ([None, None, 3, None, None, 10, 17], 2, 2),
+        ([None, None, 3, 3, 6, 10, 21], 3, 2),
+        ([1, None, 3, 3, 6, 10, 21], 3, 1),
+    ],
+)
+def test_rolling_sum_expr_lazy_ungrouped(
+    constructor: Constructor, expected_a: list[float], window_size: int, min_samples: int
+) -> None:
+    data = {
+        "a": [1, None, 2, None, 4, 6, 11],
+        "b": [1, None, 2, 3, 4, 5, 6],
+        "i": list(range(7)),
+    }
+    df = nw.from_native(constructor(data))
+    result = df.with_columns(
+        nw.col("a").rolling_sum(window_size, min_samples=min_samples).over(_order_by="b")
+    ).sort("i")
+    expected = {"a": expected_a, "b": [1, None, 2, 3, 4, 5, 6], "i": list(range(7))}
     assert_equal_data(result, expected)
 
 

@@ -575,6 +575,27 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
 
         return self._with_window_function(func)
 
+    def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
+        if center:
+            msg = "todo"
+            raise NotImplementedError(msg)
+
+        def func(
+            _input: Column, partition_by: Sequence[str], order_by: Sequence[str]
+        ) -> Column:
+            window = (
+                self._Window()
+                .partitionBy(list(partition_by))
+                .orderBy([self._F.col(x).asc_nulls_first() for x in order_by])
+                .rangeBetween(self._Window().currentRow - window_size + 1, 0)
+            )
+            return self._F.when(
+                self._F.count(_input).over(window) >= min_samples,
+                self._F.sum(_input).over(window),
+            )
+
+        return self._with_window_function(func)
+
     @property
     def str(self: Self) -> SparkLikeExprStringNamespace:
         return SparkLikeExprStringNamespace(self)
@@ -602,7 +623,6 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
     sample = not_implemented()
     map_batches = not_implemented()
     ewm_mean = not_implemented()
-    rolling_sum = not_implemented()
     rolling_mean = not_implemented()
     rolling_var = not_implemented()
     rolling_std = not_implemented()
