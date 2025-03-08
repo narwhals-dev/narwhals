@@ -107,12 +107,15 @@ def test_rolling_sum_expr_lazy_ungrouped(
     "ignore:`Expr.rolling_sum` is being called from the stable API although considered an unstable feature."
 )
 @pytest.mark.parametrize(
-    ("expected_a", "window_size", "min_samples"),
+    ("expected_a", "window_size", "min_samples", "center"),
     [
-        ([None, None, 3, None, None, 10, 17], 2, None),
-        ([None, None, 3, None, None, 10, 17], 2, 2),
-        ([None, None, 3, 3, None, 10, 21], 3, 2),
-        ([1, None, 3, 3, 4, 10, 21], 3, 1),
+        ([None, None, 3, None, None, 10, 17], 2, None, False),
+        ([None, None, 3, None, None, 10, 17], 2, 2, False),
+        ([None, None, 3, 3, None, 10, 21], 3, 2, False),
+        ([1, None, 3, 3, 4, 10, 21], 3, 1, False),
+        ([3, 1, 3, 2, 10, 21, 17], 3, 1, True),
+        ([3, 1, 3, 3, 10, 21, 21], 4, 1, True),
+        ([3, 3, 3, 3, 21, 21, 21], 5, 1, True),
     ],
 )
 def test_rolling_sum_expr_lazy_grouped(
@@ -121,6 +124,8 @@ def test_rolling_sum_expr_lazy_grouped(
     window_size: int,
     min_samples: int,
     request: pytest.FixtureRequest,
+    *,
+    center: bool,
 ) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
@@ -136,7 +141,7 @@ def test_rolling_sum_expr_lazy_grouped(
     result = (
         df.with_columns(
             nw.col("a")
-            .rolling_sum(window_size, min_samples=min_samples)
+            .rolling_sum(window_size, min_samples=min_samples, center=center)
             .over("g", _order_by="b")
         )
         .sort("i")

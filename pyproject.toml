@@ -195,7 +195,7 @@ filterwarnings = [
   # This warning was temporarily raised by pandas but then reverted.
   'ignore:.*Passing a BlockManager to DataFrame:DeprecationWarning',
   # This warning was temporarily raised by Polars but then reverted.
-  'ignore:.*The default coalesce behavior of left join will change:DeprecationWarning:polars',
+  'ignore:.*The default coalesce behavior of left join will change:DeprecationWarning',
   'ignore: unclosed <socket.socket',
   'ignore:.*The distutils package is deprecated and slated for removal in Python 3.12:DeprecationWarning:pyspark',
   'ignore:.*distutils Version classes are deprecated. Use packaging.version instead.*:DeprecationWarning:pyspark',
