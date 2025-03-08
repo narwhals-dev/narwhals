@@ -813,14 +813,14 @@ class EagerExprNamespace(_ExprNamespace[EagerExprT], Generic[EagerExprT]):
 
 
 class EagerExprCatNamespace(
-    CatNamespace[EagerExprT], EagerExprNamespace[EagerExprT], Generic[EagerExprT]
+    EagerExprNamespace[EagerExprT], CatNamespace[EagerExprT], Generic[EagerExprT]
 ):
     def get_categories(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("cat", "get_categories")
 
 
 class EagerExprDateTimeNamespace(
-    DateTimeNamespace[EagerExprT], EagerExprNamespace[EagerExprT], Generic[EagerExprT]
+    EagerExprNamespace[EagerExprT], DateTimeNamespace[EagerExprT], Generic[EagerExprT]
 ):
     def to_string(self, format: str) -> EagerExprT:  # noqa: A002
         return self.compliant._reuse_series_namespace("dt", "to_string", format=format)
@@ -893,14 +893,14 @@ class EagerExprDateTimeNamespace(
 
 
 class EagerExprListNamespace(
-    ListNamespace[EagerExprT], EagerExprNamespace[EagerExprT], Generic[EagerExprT]
+    EagerExprNamespace[EagerExprT], ListNamespace[EagerExprT], Generic[EagerExprT]
 ):
     def len(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("list", "len")
 
 
 class EagerExprStringNamespace(
-    StringNamespace[EagerExprT], EagerExprNamespace[EagerExprT], Generic[EagerExprT]
+    EagerExprNamespace[EagerExprT], StringNamespace[EagerExprT], Generic[EagerExprT]
 ):
     def len_chars(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "len_chars")
