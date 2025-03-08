@@ -9,6 +9,8 @@ from typing import Sequence
 from typing import cast
 from typing import overload
 
+import numpy as np
+
 from narwhals._pandas_like.series_cat import PandasLikeSeriesCatNamespace
 from narwhals._pandas_like.series_dt import PandasLikeSeriesDateTimeNamespace
 from narwhals._pandas_like.series_list import PandasLikeSeriesListNamespace
@@ -28,6 +30,7 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantSeries
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import parse_version
 from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
@@ -178,7 +181,7 @@ class PandasLikeSeries(CompliantSeries):
         )
 
     def __len__(self: Self) -> int:
-        return len(self._native_series)
+        return len(self.native)
 
     @property
     def name(self: Self) -> str:
@@ -186,14 +189,18 @@ class PandasLikeSeries(CompliantSeries):
 
     @property
     def dtype(self: Self) -> DType:
-        native_dtype = self._native_series.dtype
+        native_dtype = self.native.dtype
         return (
             native_to_narwhals_dtype(native_dtype, self._version, self._implementation)
             if native_dtype != "object"
             else object_native_to_narwhals_dtype(
-                self._native_series, self._version, self._implementation
+                self.native, self._version, self._implementation
             )
         )
+
+    @property
+    def native(self) -> Any:
+        return self._native_series
 
     def ewm_mean(
         self: Self,
@@ -228,11 +235,8 @@ class PandasLikeSeries(CompliantSeries):
 
     def scatter(self: Self, indices: int | Sequence[int], values: Any) -> Self:
         if isinstance(values, self.__class__):
-            # .copy() is necessary in some pre-2.2 versions of pandas to avoid
-            # `values` also getting modified (!)
-            _, values = align_and_extract_native(self, values)
             values = set_index(
-                values.copy(),
+                values._native_series,
                 self._native_series.index[indices],
                 implementation=self._implementation,
                 backend_version=self._backend_version,
@@ -241,6 +245,25 @@ class PandasLikeSeries(CompliantSeries):
         s.iloc[indices] = values
         s.name = self.name
         return self._from_native_series(s)
+
+    def _scatter_in_place(self: Self, indices: Self, values: Self) -> None:
+        # Scatter, modifying original Series. Use with care!
+        values_native = set_index(
+            values._native_series,
+            self._native_series.index[indices._native_series],
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+        )
+        if self._implementation is Implementation.PANDAS and parse_version(np) < (2,):
+            values_native = values_native.copy()  # pragma: no cover
+        min_pd_version = (1, 2)
+        if (
+            self._implementation is Implementation.PANDAS
+            and self._backend_version < min_pd_version
+        ):
+            self._native_series.iloc[indices._native_series.values] = values_native  # noqa: PD011
+        else:
+            self._native_series.iloc[indices._native_series] = values_native
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
         ser = self._native_series
@@ -329,11 +352,13 @@ class PandasLikeSeries(CompliantSeries):
 
     # Binary comparisons
 
-    def filter(self: Self, other: Any) -> PandasLikeSeries:
-        if not (isinstance(other, list) and all(isinstance(x, bool) for x in other)):
-            _, other_native = align_and_extract_native(self, other)
+    def filter(self: Self, predicate: Any) -> PandasLikeSeries:
+        if not (
+            isinstance(predicate, list) and all(isinstance(x, bool) for x in predicate)
+        ):
+            _, other_native = align_and_extract_native(self, predicate)
         else:
-            other_native = other
+            other_native = predicate
         return self._from_native_series(self._native_series.loc[other_native]).alias(
             self.name
         )

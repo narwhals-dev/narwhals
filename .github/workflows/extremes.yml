@@ -25,7 +25,7 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-minimum-versions
-        run: uv pip install pipdeptree tox virtualenv setuptools pandas==0.25.3 polars==0.20.3 numpy==1.17.5 pyarrow==11.0.0 "pyarrow-stubs<17" scipy==1.5.0 scikit-learn==1.1.0 duckdb==1.0 tzdata --system
+        run: uv pip install pipdeptree tox virtualenv setuptools pandas==0.25.3 polars==0.20.3 numpy==1.17.5 pyarrow==11.0.0 "pyarrow-stubs<17" scipy==1.5.0 scikit-learn==1.1.0 duckdb==1.0 tzdata backports.zoneinfo --system
       - name: install-reqs
         run: |
           uv pip install -e ".[tests]" --system
@@ -62,7 +62,7 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-pretty-old-versions
-        run: uv pip install pipdeptree tox virtualenv setuptools pandas==1.1.5 polars==0.20.3 numpy==1.17.5 pyarrow==11.0.0 "pyarrow-stubs<17" pyspark==3.5.0 scipy==1.5.0 scikit-learn==1.1.0 duckdb==1.0 tzdata --system
+        run: uv pip install pipdeptree tox virtualenv setuptools pandas==1.1.5 polars==0.20.3 numpy==1.17.5 pyarrow==11.0.0 "pyarrow-stubs<17" pyspark==3.5.0 scipy==1.5.0 scikit-learn==1.1.0 duckdb==1.0 tzdata backports.zoneinfo --system
       - name: install-reqs
         run: uv pip install -e ".[tests]" --system
       - name: show-deps

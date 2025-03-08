@@ -25,10 +25,12 @@ from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from pyspark.sql import Column
+    from pyspark.sql import Window
     from typing_extensions import Self
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
+    from narwhals._spark_like.typing import WindowFunction
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
@@ -54,6 +56,7 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
         self._backend_version = backend_version
         self._version = version
         self._implementation = implementation
+        self._window_function: WindowFunction | None = None
 
     def __call__(self: Self, df: SparkLikeLazyFrame) -> Sequence[Column]:
         return self._call(df)
@@ -79,7 +82,11 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
         )
 
     @property
-    def _F(self: Self) -> Any:  # noqa: N802
+    def _F(self: Self):  # type: ignore[no-untyped-def] # noqa: ANN202, N802
+        if TYPE_CHECKING:
+            from pyspark.sql import functions
+
+            return functions
         if self._implementation is Implementation.SQLFRAME:
             from sqlframe.base.session import _BaseSession
 
@@ -92,7 +99,11 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
         return functions
 
     @property
-    def _native_dtypes(self: Self) -> Any:
+    def _native_dtypes(self: Self):  # type: ignore[no-untyped-def] # noqa: ANN202
+        if TYPE_CHECKING:
+            from pyspark.sql import types
+
+            return types
         if self._implementation is Implementation.SQLFRAME:
             from sqlframe.base.session import _BaseSession
 
@@ -105,7 +116,7 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
         return types
 
     @property
-    def _Window(self: Self) -> Any:  # noqa: N802
+    def _Window(self: Self) -> type[Window]:  # noqa: N802
         if self._implementation is Implementation.SQLFRAME:
             from sqlframe.base.session import _BaseSession
 
@@ -211,6 +222,22 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
             version=self._version,
             implementation=self._implementation,
         )
+
+    def _with_window_function(
+        self: Self,
+        window_function: WindowFunction,
+    ) -> Self:
+        result = self.__class__(
+            self._call,
+            function_name=self._function_name,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
+        )
+        result._window_function = window_function
+        return result
 
     def __eq__(self: Self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
         return self._from_call(
@@ -497,9 +524,27 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
 
         return self._from_call(_n_unique, "n_unique")
 
-    def over(self: Self, keys: Sequence[str], kind: ExprKind) -> Self:
-        def func(df: SparkLikeLazyFrame) -> list[Column]:
-            return [expr.over(self._Window.partitionBy(*keys)) for expr in self._call(df)]
+    def over(
+        self: Self,
+        partition_by: Sequence[str],
+        kind: ExprKind,
+        order_by: Sequence[str] | None,
+    ) -> Self:
+        if (window_function := self._window_function) is not None:
+            assert order_by is not None  # noqa: S101
+
+            def func(df: SparkLikeLazyFrame) -> list[Column]:
+                return [
+                    window_function(expr, partition_by, order_by)
+                    for expr in self._call(df)
+                ]
+        else:
+
+            def func(df: SparkLikeLazyFrame) -> list[Column]:
+                return [
+                    expr.over(self._Window.partitionBy(*partition_by))
+                    for expr in self._call(df)
+                ]
 
         return self.__class__(
             func,
@@ -521,6 +566,24 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
             )
 
         return self._from_call(_is_nan, "is_nan")
+
+    def cum_sum(self, *, reverse: bool) -> Self:
+        def func(
+            _input: Column, partition_by: Sequence[str], order_by: Sequence[str]
+        ) -> Column:
+            if reverse:
+                order_by_cols = [self._F.col(x).desc_nulls_last() for x in order_by]
+            else:
+                order_by_cols = [self._F.col(x).asc_nulls_first() for x in order_by]
+            window = (
+                self._Window()
+                .partitionBy(list(partition_by))
+                .orderBy(order_by_cols)
+                .rangeBetween(self._Window().unboundedPreceding, 0)
+            )
+            return self._F.sum(_input).over(window)
+
+        return self._with_window_function(func)
 
     @property
     def str(self: Self) -> SparkLikeExprStringNamespace:
@@ -564,7 +627,6 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
     shift = not_implemented()
     is_first_distinct = not_implemented()
     is_last_distinct = not_implemented()
-    cum_sum = not_implemented()
     cum_count = not_implemented()
     cum_min = not_implemented()
     cum_max = not_implemented()

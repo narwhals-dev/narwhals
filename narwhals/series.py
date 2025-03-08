@@ -1579,7 +1579,7 @@ class Series(Generic[IntoSeriesT]):
     def __invert__(self: Self) -> Self:
         return self._from_compliant_series(self._compliant_series.__invert__())
 
-    def filter(self: Self, other: Any) -> Self:
+    def filter(self: Self, predicate: Any) -> Self:
         """Filter elements in the Series based on a condition.
 
         Returns:
@@ -1598,7 +1598,7 @@ class Series(Generic[IntoSeriesT]):
             dtype: int64
         """
         return self._from_compliant_series(
-            self._compliant_series.filter(self._extract_native(other))
+            self._compliant_series.filter(self._extract_native(predicate))
         )
 
     # --- descriptive ---
