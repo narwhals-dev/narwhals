@@ -12,7 +12,6 @@ from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
-import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.dataframe import ArrowDataFrame
@@ -58,12 +57,7 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries]):
         return ArrowSeries
 
     def _create_compliant_series(self: Self, value: Any) -> ArrowSeries:
-        return self._series(
-            native_series=pa.chunked_array([value]),
-            name="",
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        return self._series._from_iterable(value, name="", context=self)
 
     # --- not in spec ---
     def __init__(
