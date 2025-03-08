@@ -77,7 +77,7 @@ def test_rolling_sum_expr_lazy_ungrouped(
 ) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
-    if any(x in str(constructor) for x in ("duckdb",)):
+    if any(x in str(constructor) for x in ("duckdb", "modin")):
         request.applymarker(pytest.mark.xfail)
     data = {
         "a": [1, None, 2, None, 4, 6, 11],
@@ -119,7 +119,7 @@ def test_rolling_sum_expr_lazy_grouped(
 ) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
-    if any(x in str(constructor) for x in ("dask", "pyarrow_table", "duckdb")):
+    if any(x in str(constructor) for x in ("dask", "pyarrow_table", "duckdb", "modin")):
         request.applymarker(pytest.mark.xfail)
     data = {
         "a": [1, None, 2, None, 4, 6, 11],
