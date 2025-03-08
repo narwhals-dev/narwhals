@@ -128,6 +128,14 @@ CompliantSeriesT_co = TypeVar(
 
 
 class _StoresNative(Protocol[NativeT_co]):
+    """Provides access to a native object.
+
+    Native objects are types like:
+
+    >>> from pandas import Series
+    >>> from pyarrow import Table
+    """
+
     @property
     def native(self) -> NativeT_co:
         """Return the native object."""
@@ -135,6 +143,14 @@ class _StoresNative(Protocol[NativeT_co]):
 
 
 class _StoresCompliant(Protocol[CompliantT_co]):
+    """Provides access to a compliant object.
+
+    Compliant objects have types like:
+
+    >>> from narwhals._pandas_like.series import PandasLikeSeries
+    >>> from narwhals._arrow.dataframe import ArrowDataFrame
+    """
+
     @property
     def compliant(self) -> CompliantT_co:
         """Return the compliant object."""
