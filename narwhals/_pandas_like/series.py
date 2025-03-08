@@ -188,7 +188,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         )
 
     def __len__(self: Self) -> int:
-        return len(self._native_series)
+        return len(self.native)
 
     @property
     def name(self: Self) -> str:
@@ -196,12 +196,12 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     @property
     def dtype(self: Self) -> DType:
-        native_dtype = self._native_series.dtype
+        native_dtype = self.native.dtype
         return (
             native_to_narwhals_dtype(native_dtype, self._version, self._implementation)
             if native_dtype != "object"
             else object_native_to_narwhals_dtype(
-                self._native_series, self._version, self._implementation
+                self.native, self._version, self._implementation
             )
         )
 
