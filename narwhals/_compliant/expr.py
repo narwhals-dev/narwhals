@@ -18,6 +18,8 @@ from narwhals._compliant.any_namespace import ListNamespace
 from narwhals._compliant.any_namespace import NameNamespace
 from narwhals._compliant.any_namespace import StringNamespace
 from narwhals._compliant.namespace import CompliantNamespace
+from narwhals._compliant.typing import AliasName
+from narwhals._compliant.typing import AliasNames
 from narwhals._compliant.typing import CompliantFrameT
 from narwhals._compliant.typing import CompliantLazyFrameT
 from narwhals._compliant.typing import CompliantSeriesOrNativeExprT_co
@@ -908,70 +910,45 @@ class EagerExprNameNamespace(
     EagerExprNamespace[EagerExprT], NameNamespace[EagerExprT], Generic[EagerExprT]
 ):
     def keep(self) -> EagerExprT:
-        return self._from_colname_func_and_alias_output_names(
-            name_mapping_func=lambda name: name
-        )
+        return self._from_callable(lambda name: name, alias=False)
 
-    def map(self, function: Callable[[str], str]) -> EagerExprT:
-        return self._from_colname_func_and_alias_output_names(
-            name_mapping_func=function,
-            alias_output_names=lambda output_names: [
-                function(name) for name in output_names
-            ],
-        )
+    def map(self, function: AliasName) -> EagerExprT:
+        return self._from_callable(function)
 
     def prefix(self, prefix: str) -> EagerExprT:
-        return self._from_colname_func_and_alias_output_names(
-            name_mapping_func=lambda name: f"{prefix}{name}",
-            alias_output_names=lambda output_names: [
-                f"{prefix}{output_name}" for output_name in output_names
-            ],
-        )
+        return self._from_callable(lambda name: f"{prefix}{name}")
 
     def suffix(self, suffix: str) -> EagerExprT:
-        return self._from_colname_func_and_alias_output_names(
-            name_mapping_func=lambda name: f"{name}{suffix}",
-            alias_output_names=lambda output_names: [
-                f"{output_name}{suffix}" for output_name in output_names
-            ],
-        )
+        return self._from_callable(lambda name: f"{name}{suffix}")
 
     def to_lowercase(self) -> EagerExprT:
-        return self._from_colname_func_and_alias_output_names(
-            name_mapping_func=str.lower,
-            alias_output_names=lambda output_names: [
-                name.lower() for name in output_names
-            ],
-        )
+        return self._from_callable(str.lower)
 
     def to_uppercase(self) -> EagerExprT:
-        return self._from_colname_func_and_alias_output_names(
-            name_mapping_func=str.upper,
-            alias_output_names=lambda output_names: [
-                name.upper() for name in output_names
-            ],
-        )
+        return self._from_callable(str.upper)
 
-    def _from_colname_func_and_alias_output_names(
-        self,
-        name_mapping_func: Callable[[str], str],
-        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None = None,
-    ) -> EagerExprT:
-        return type(self.compliant)(
-            call=lambda df: [
-                series.alias(name_mapping_func(name))
-                for series, name in zip(
-                    self.compliant._call(df), self.compliant._evaluate_output_names(df)
-                )
+    @staticmethod
+    def _alias_output_names(func: AliasName, /) -> AliasNames:
+        def fn(output_names: Sequence[str], /) -> Sequence[str]:
+            return [func(name) for name in output_names]
+
+        return fn
+
+    def _from_callable(self, func: AliasName, /, *, alias: bool = True) -> EagerExprT:
+        expr = self.compliant
+        return type(expr)(
+            lambda df: [
+                series.alias(func(name))
+                for series, name in zip(expr(df), expr._evaluate_output_names(df))
             ],
-            depth=self.compliant._depth,
-            function_name=self.compliant._function_name,
-            evaluate_output_names=self.compliant._evaluate_output_names,
-            alias_output_names=alias_output_names,
-            backend_version=self.compliant._backend_version,
-            implementation=self.compliant._implementation,
-            version=self.compliant._version,
-            call_kwargs=self.compliant._call_kwargs,
+            depth=expr._depth,
+            function_name=expr._function_name,
+            evaluate_output_names=expr._evaluate_output_names,
+            alias_output_names=self._alias_output_names(func) if alias else None,
+            backend_version=expr._backend_version,
+            implementation=expr._implementation,
+            version=expr._version,
+            call_kwargs=expr._call_kwargs,
         )
 
 

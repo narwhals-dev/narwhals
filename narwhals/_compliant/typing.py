@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
+from typing import Sequence
 from typing import TypeVar
 
 if TYPE_CHECKING:
@@ -17,6 +19,8 @@ if TYPE_CHECKING:
     from narwhals._compliant.series import EagerSeries
 
 __all__ = [
+    "AliasName",
+    "AliasNames",
     "CompliantDataFrameT",
     "CompliantFrameT",
     "CompliantLazyFrameT",
@@ -43,3 +47,5 @@ EagerDataFrameT = TypeVar("EagerDataFrameT", bound="EagerDataFrame[Any]")
 EagerSeriesT = TypeVar("EagerSeriesT", bound="EagerSeries[Any]")
 EagerSeriesT_co = TypeVar("EagerSeriesT_co", bound="EagerSeries[Any]", covariant=True)
 EagerExprT = TypeVar("EagerExprT", bound="EagerExpr[Any, Any]")
+AliasNames: TypeAlias = Callable[[Sequence[str]], Sequence[str]]
+AliasName: TypeAlias = Callable[[str], str]
