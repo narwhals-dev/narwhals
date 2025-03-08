@@ -11,6 +11,7 @@ from typing import overload
 
 import numpy as np
 
+from narwhals._compliant import EagerSeries
 from narwhals._pandas_like.series_cat import PandasLikeSeriesCatNamespace
 from narwhals._pandas_like.series_dt import PandasLikeSeriesDateTimeNamespace
 from narwhals._pandas_like.series_list import PandasLikeSeriesListNamespace
@@ -26,7 +27,6 @@ from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_index
 from narwhals.dependencies import is_numpy_scalar
 from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantSeries
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_version
@@ -42,10 +42,12 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.typing import ArrowArray
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+    from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.dtypes import DType
     from narwhals.typing import _1DArray
     from narwhals.typing import _AnyDArray
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
 PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
     "Int64": "int64",
@@ -93,7 +95,7 @@ PANDAS_TO_NUMPY_DTYPE_MISSING = {
 }
 
 
-class PandasLikeSeries(CompliantSeries):
+class PandasLikeSeries(EagerSeries[Any]):
     def __init__(
         self: Self,
         native_series: Any,
@@ -115,6 +117,10 @@ class PandasLikeSeries(CompliantSeries):
         # the length of the whole dataframe, we just extract the scalar.
         self._broadcast = False
 
+    @property
+    def native(self) -> Any:
+        return self._native_series
+
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation in {
             Implementation.PANDAS,
@@ -129,6 +135,13 @@ class PandasLikeSeries(CompliantSeries):
     def __narwhals_series__(self: Self) -> Self:
         return self
 
+    def __narwhals_namespace__(self) -> PandasLikeNamespace:
+        from narwhals._pandas_like.namespace import PandasLikeNamespace
+
+        return PandasLikeNamespace(
+            self._implementation, self._backend_version, self._version
+        )
+
     @overload
     def __getitem__(self: Self, idx: int) -> Any: ...
 
@@ -142,7 +155,7 @@ class PandasLikeSeries(CompliantSeries):
 
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
-            self._native_series,
+            self.native,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=version,
@@ -161,22 +174,20 @@ class PandasLikeSeries(CompliantSeries):
         cls: type[Self],
         data: Iterable[Any],
         name: str,
-        index: Any,
         *,
-        implementation: Implementation,
-        backend_version: tuple[int, ...],
-        version: Version,
+        context: _FullContext,
+        index: Any = None,  # NOTE: Originally a liskov substitution principle violation
     ) -> Self:
         return cls(
             native_series_from_iterable(
                 data,
                 name=name,
-                index=index,
-                implementation=implementation,
+                index=[] if index is None else index,
+                implementation=context._implementation,
             ),
-            implementation=implementation,
-            backend_version=backend_version,
-            version=version,
+            implementation=context._implementation,
+            backend_version=context._backend_version,
+            version=context._version,
         )
 
     def __len__(self: Self) -> int:
@@ -196,10 +207,6 @@ class PandasLikeSeries(CompliantSeries):
                 self.native, self._version, self._implementation
             )
         )
-
-    @property
-    def native(self) -> Any:
-        return self._native_series
 
     def ewm_mean(
         self: Self,
