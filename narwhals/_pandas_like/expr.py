@@ -494,18 +494,17 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
             raise NotImplementedError(msg)
         else:
             function_name: str = re.sub(r"(\w+->)", "", self._function_name)
-            try:
-                pandas_function_name = WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT.get(
-                    function_name,
-                    AGGREGATIONS_TO_PANDAS_EQUIVALENT[function_name],
-                )
-            except KeyError:
+            pandas_function_name = WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT.get(
+                function_name,
+                AGGREGATIONS_TO_PANDAS_EQUIVALENT.get(function_name),
+            )
+            if pandas_function_name is None:
                 msg = (
                     f"Unsupported function: {function_name} in `over` context.\n\n"
                     f"Supported functions are {', '.join(WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT)}\n"
                     f"and {', '.join(AGGREGATIONS_TO_PANDAS_EQUIVALENT)}."
                 )
-                raise NotImplementedError(msg) from None
+                raise NotImplementedError(msg)
             pandas_kwargs = window_kwargs_to_pandas_equivalent(
                 function_name, self._call_kwargs
             )
@@ -538,6 +537,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     rolling = df._native_frame.groupby(partition_by)[
                         list(output_names)
                     ].rolling(**pandas_kwargs)
+                    assert pandas_function_name is not None  # help mypy  # noqa: S101
                     res_native = getattr(rolling, pandas_function_name)()
                 else:
                     res_native = df._native_frame.groupby(partition_by)[
