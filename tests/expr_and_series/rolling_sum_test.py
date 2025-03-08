@@ -66,7 +66,9 @@ def test_rolling_sum_expr(constructor_eager: ConstructorEager) -> None:
         ([None, None, 3, None, None, 10, 17], 2, 2, False),
         ([None, None, 3, 3, 6, 10, 21], 3, 2, False),
         ([1, None, 3, 3, 6, 10, 21], 3, 1, False),
-        ([3,1,3,6,10,21,17], 3, 1, True),
+        ([3, 1, 3, 6, 10, 21, 17], 3, 1, True),
+        ([3, 1, 3, 7, 12, 21, 21], 4, 1, True),
+        ([3, 3, 7, 13, 23, 21, 21], 5, 1, True),
     ],
 )
 def test_rolling_sum_expr_lazy_ungrouped(
@@ -74,8 +76,9 @@ def test_rolling_sum_expr_lazy_ungrouped(
     expected_a: list[float],
     window_size: int,
     min_samples: int,
-    center: bool,
     request: pytest.FixtureRequest,
+    *,
+    center: bool,
 ) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
@@ -93,11 +96,10 @@ def test_rolling_sum_expr_lazy_ungrouped(
             .rolling_sum(window_size, min_samples=min_samples, center=center)
             .over(_order_by="b")
         )
-        .select("a", 'i')
+        .select("a", "i")
         .sort("i")
     )
-    expected = {"a": expected_a, 'i': list(range(7))}
-    breakpoint()
+    expected = {"a": expected_a, "i": list(range(7))}
     assert_equal_data(result, expected)
 
 

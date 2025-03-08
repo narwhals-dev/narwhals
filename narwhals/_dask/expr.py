@@ -384,12 +384,9 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
     def rolling_sum(
         self: Self, window_size: int, *, min_samples: int, center: bool
     ) -> Self:
-        if center:  # pragma: no cover
-            msg = "todo"
-            raise NotImplementedError(msg)
         return self._from_call(
             lambda _input: _input.rolling(
-                window=window_size, min_periods=min_samples
+                window=window_size, min_periods=min_samples, center=center
             ).sum(),
             "rolling_sum",
         )
