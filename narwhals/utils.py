@@ -130,7 +130,7 @@ CompliantSeriesT_co = TypeVar(
 class _StoresNative(Protocol[NativeT_co]):
     """Provides access to a native object.
 
-    Native objects are types like:
+    Native objects have types like:
 
     >>> from pandas import Series
     >>> from pyarrow import Table
