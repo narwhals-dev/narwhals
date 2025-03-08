@@ -115,6 +115,10 @@ class PolarsSeries:
             self._native_series.dtype, self._version, self._backend_version
         )
 
+    @property
+    def native(self) -> pl.Series:
+        return self._native_series
+
     def alias(self, name: str) -> Self:
         return self._from_native_object(self._native_series.alias(name))
 
@@ -130,9 +134,8 @@ class PolarsSeries:
         return self._from_native_object(self._native_series.__getitem__(item))
 
     def cast(self: Self, dtype: DType) -> Self:
-        ser = self._native_series
         dtype_pl = narwhals_to_native_dtype(dtype, self._version, self._backend_version)
-        return self._from_native_series(ser.cast(dtype_pl))
+        return self._from_native_series(self.native.cast(dtype_pl))
 
     def replace_strict(
         self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
