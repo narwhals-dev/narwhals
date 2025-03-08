@@ -12,6 +12,7 @@ from hypothesis import given
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import InvalidOperationError
 from tests.utils import PANDAS_VERSION
+from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -74,6 +75,8 @@ def test_rolling_sum_expr_lazy_ungrouped(
     min_samples: int,
     request: pytest.FixtureRequest,
 ) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+        pytest.skip()
     if any(x in str(constructor) for x in ("duckdb",)):
         request.applymarker(pytest.mark.xfail)
     data = {
@@ -114,6 +117,8 @@ def test_rolling_sum_expr_lazy_grouped(
     min_samples: int,
     request: pytest.FixtureRequest,
 ) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+        pytest.skip()
     if any(x in str(constructor) for x in ("dask", "pyarrow_table", "duckdb")):
         request.applymarker(pytest.mark.xfail)
     data = {
