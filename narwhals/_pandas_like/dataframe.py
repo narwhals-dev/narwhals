@@ -27,6 +27,7 @@ from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
+from narwhals.utils import _remap_join_keys
 from narwhals.utils import check_column_exists
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
@@ -724,22 +725,14 @@ class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyF
 
         if how == "full":
             ## Pandas coalesces keys in full joins unless there's no collision
-
-            # help mypy
-            assert right_on is not None  # noqa: S101
             assert left_on is not None  # noqa: S101
+            assert right_on is not None  # noqa: S101
 
-            right_keys_suffixed: list[str] = []
-            for key in right_on:
-                if key in left_on:
-                    suffixed = f"{key}{suffix}"
-                    right_keys_suffixed.append(suffixed)
-                    continue
-                right_keys_suffixed.append(key)
+            right_on_mapper = _remap_join_keys(left_on, right_on, suffix)
 
-            right_on_mapper: dict[str, str] = dict(zip(right_on, right_keys_suffixed))
             other._native_frame = other._native_frame.rename(columns=right_on_mapper)
-            right_on = right_keys_suffixed  # we now have the suffixed keys
+            check_column_names_are_unique(other._native_frame.columns)
+            right_on = list(right_on_mapper.values())  # we now have the suffixed keys
             how = "outer"  # type: ignore[assignment]
 
         return self._from_native_frame(

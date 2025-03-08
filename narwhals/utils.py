@@ -1392,3 +1392,30 @@ def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
 def is_tracks_depth(obj: Implementation, /) -> TypeIs[_TracksDepth]:  # pragma: no cover
     # Return `True` for implementations that utilize `CompliantExpr._depth`.
     return obj.is_pandas_like() or obj in {Implementation.PYARROW, Implementation.DASK}
+
+
+def _remap_join_keys(
+    left_on: list[str], right_on: list[str], suffix: str
+) -> dict[str, str]:
+    """Remap join keys to avoid collisions.
+
+    If left keys collide with the right keys, append the suffix.
+    If there's no collision, let the right keys be.
+
+    Args:
+        left_on (list[str]): Left keys.
+        right_on (list[str]): Right keys.
+        suffix (str): Suffix to append to right keys.
+
+    Returns:
+        dict[str, str]: A map of old to new right keys..
+    """
+    right_keys_suffixed: list[str] = []
+    for key in right_on:
+        if key in left_on:
+            suffixed = f"{key}{suffix}"
+            right_keys_suffixed.append(suffixed)
+            continue
+        right_keys_suffixed.append(key)
+
+    return dict(zip(right_on, right_keys_suffixed))

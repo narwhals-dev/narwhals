@@ -16,7 +16,9 @@ from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
+from narwhals.utils import _remap_join_keys
 from narwhals.utils import check_column_exists
+from narwhals.utils import check_column_names_are_unique
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -364,13 +366,12 @@ class DaskLazyFrame(CompliantLazyFrame):
         if how == "full":
             ## dask does not retain keys post-join
             ## we must append the suffix to each key before-hand
-            if right_on is None:  # pragma: no cover
-                msg = "`right_on` cannot be `None` in full-join"
-                raise TypeError(msg)
-            right_on_suffixed = [f"{k}{suffix}" for k in right_on]
-            right_on_mapper: dict[str, str] = dict(zip(right_on, right_on_suffixed))
+            assert left_on is not None  # noqa: S101
+            assert right_on is not None  # noqa: S101
+            right_on_mapper = _remap_join_keys(left_on, right_on, suffix)
             other._native_frame = other._native_frame.rename(columns=right_on_mapper)
-            right_on = right_on_suffixed  # we now have the suffixed keys
+            check_column_names_are_unique(other._native_frame.columns)
+            right_on = list(right_on_mapper.values())  # we now have the suffixed keys
             how = "outer"  # type: ignore[assignment]
 
         return self._from_native_frame(
