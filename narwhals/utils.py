@@ -56,9 +56,6 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantFrameT
     from narwhals._compliant import CompliantSeriesOrNativeExprT_co
     from narwhals._compliant import CompliantSeriesT_co
-    from narwhals._compliant import EagerDataFrameT
-    from narwhals._compliant import EagerNamespace
-    from narwhals._compliant import EagerSeriesT
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -1400,14 +1397,6 @@ def is_compliant_expr(
     obj: CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | Any,
 ) -> TypeIs[CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co]]:
     return hasattr(obj, "__narwhals_expr__")
-
-
-# NOTE: Temporary - just to introduce a path for the (Arrow|PandasLike) WIP
-def is_eager_namespace(
-    obj: EagerNamespace[EagerDataFrameT, EagerSeriesT] | Any,
-) -> TypeIs[EagerNamespace[EagerDataFrameT, EagerSeriesT]]:
-    return type(obj).__name__ in {"ArrowNamespace", "PandasLikeNamespace"}
-    # return all(hasattr(obj, name) for name in ("selectors", "_expr", "_series"))  # noqa: ERA001
 
 
 def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:

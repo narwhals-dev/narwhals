@@ -9,6 +9,10 @@ from typing import TypeVar
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals._compliant.expr import CompliantExpr  # noqa: F401
+    from narwhals._compliant.expr import EagerExpr
+    from narwhals._compliant.namespace import CompliantNamespace  # noqa: F401
+    from narwhals._compliant.namespace import EagerNamespace
     from narwhals.dtypes import DType
     from narwhals.typing import NativeSeries
     from narwhals.utils import Implementation
@@ -27,6 +31,8 @@ class CompliantSeries(Protocol):
     def name(self) -> str: ...
     def __narwhals_series__(self) -> CompliantSeries: ...
     def alias(self, name: str) -> Self: ...
+    def __narwhals_namespace__(self) -> Any: ...  # CompliantNamespace[Any, Self]: ...
+    def _to_expr(self) -> Any: ...  # CompliantExpr[Any, Self]: ...
 
 
 class EagerSeries(CompliantSeries, Protocol[NativeSeriesT_co]):
@@ -49,6 +55,11 @@ class EagerSeries(CompliantSeries, Protocol[NativeSeriesT_co]):
     def _from_iterable(
         cls: type[Self], data: Iterable[Any], name: str, *, context: _FullContext
     ) -> Self: ...
+
+    def __narwhals_namespace__(self) -> EagerNamespace[Any, Self]: ...
+
+    def _to_expr(self) -> EagerExpr[Any, Self]:
+        return self.__narwhals_namespace__()._expr._from_series(self)
 
     # TODO @dangotbanned: replacing `Namespace._create_compliant_series``
     # - All usage within `*Expr.map_batches`

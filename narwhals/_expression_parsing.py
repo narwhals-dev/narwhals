@@ -18,7 +18,6 @@ from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import is_compliant_expr
-from narwhals.utils import is_eager_namespace
 
 if TYPE_CHECKING:
     from typing_extensions import Never
@@ -132,14 +131,9 @@ def extract_compliant(
     if isinstance(other, str) and not str_as_lit:
         return plx.col(other)
     if is_narwhals_series(other):
-        if is_eager_namespace(plx):
-            return plx._expr._from_series(other._compliant_series)
-        return plx._create_expr_from_series(other._compliant_series)  # type: ignore[attr-defined]
+        return other._compliant_series._to_expr()
     if is_numpy_array(other):
-        if is_eager_namespace(plx):
-            return plx._expr._from_series(plx._create_compliant_series(other))
-        series = plx._create_compliant_series(other)  # type: ignore[attr-defined]
-        return plx._create_expr_from_series(series)  # type: ignore[attr-defined]
+        return plx._create_compliant_series(other)._to_expr()  # type: ignore[attr-defined]
     return other
 
 

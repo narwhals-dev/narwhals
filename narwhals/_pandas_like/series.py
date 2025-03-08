@@ -39,6 +39,7 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.typing import ArrowArray
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+    from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.dtypes import DType
     from narwhals.typing import _1DArray
     from narwhals.typing import _AnyDArray
@@ -130,6 +131,13 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def __narwhals_series__(self: Self) -> Self:
         return self
+
+    def __narwhals_namespace__(self) -> PandasLikeNamespace:
+        from narwhals._pandas_like.namespace import PandasLikeNamespace
+
+        return PandasLikeNamespace(
+            self._implementation, self._backend_version, self._version
+        )
 
     @overload
     def __getitem__(self: Self, idx: int) -> Any: ...

@@ -49,17 +49,17 @@ class PolarsNamespace:
 
         return func
 
+    @property
+    def _expr(self) -> type[PolarsExpr]:
+        return PolarsExpr
+
+    @property
+    def _series(self) -> type[PolarsSeries]:
+        return PolarsSeries
+
     def _create_compliant_series(self, value: Any) -> PolarsSeries:
         return PolarsSeries(
             pl.Series(value), backend_version=self._backend_version, version=self._version
-        )
-
-    def _create_expr_from_series(self, value: Any) -> PolarsExpr:
-        # Let Polars do its own thing.
-        return PolarsExpr(
-            value._native_series,
-            version=self._version,
-            backend_version=self._backend_version,
         )
 
     def nth(self: Self, *indices: int) -> PolarsExpr:
