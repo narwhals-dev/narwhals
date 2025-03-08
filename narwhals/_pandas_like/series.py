@@ -9,6 +9,8 @@ from typing import Sequence
 from typing import cast
 from typing import overload
 
+import numpy as np
+
 from narwhals._compliant import EagerSeries
 from narwhals._pandas_like.series_cat import PandasLikeSeriesCatNamespace
 from narwhals._pandas_like.series_dt import PandasLikeSeriesDateTimeNamespace
@@ -27,6 +29,7 @@ from narwhals.dependencies import is_numpy_scalar
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import parse_version
 from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
@@ -248,6 +251,25 @@ class PandasLikeSeries(EagerSeries[Any]):
         s.iloc[indices] = values
         s.name = self.name
         return self._from_native_series(s)
+
+    def _scatter_in_place(self: Self, indices: Self, values: Self) -> None:
+        # Scatter, modifying original Series. Use with care!
+        values_native = set_index(
+            values._native_series,
+            self._native_series.index[indices._native_series],
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+        )
+        if self._implementation is Implementation.PANDAS and parse_version(np) < (2,):
+            values_native = values_native.copy()  # pragma: no cover
+        min_pd_version = (1, 2)
+        if (
+            self._implementation is Implementation.PANDAS
+            and self._backend_version < min_pd_version
+        ):
+            self._native_series.iloc[indices._native_series.values] = values_native  # noqa: PD011
+        else:
+            self._native_series.iloc[indices._native_series] = values_native
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
         ser = self._native_series
