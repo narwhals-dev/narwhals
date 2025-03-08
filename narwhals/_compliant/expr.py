@@ -15,6 +15,7 @@ from typing import Sequence
 from narwhals._compliant.any_namespace import CatNamespace
 from narwhals._compliant.any_namespace import DateTimeNamespace
 from narwhals._compliant.any_namespace import ListNamespace
+from narwhals._compliant.any_namespace import NameNamespace
 from narwhals._compliant.any_namespace import StringNamespace
 from narwhals._compliant.namespace import CompliantNamespace
 from narwhals._compliant.typing import CompliantFrameT
@@ -46,7 +47,6 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals._compliant.any_namespace import NameNamespace
     from narwhals._compliant.namespace import CompliantNamespace
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals._compliant.series import CompliantSeries
@@ -783,7 +783,8 @@ class EagerExpr(
         return EagerExprStringNamespace(self)
 
     @property
-    def name(self) -> NameNamespace[Self]: ...
+    def name(self) -> EagerExprNameNamespace[Self]:
+        return EagerExprNameNamespace(self)
 
 
 # NOTE: See (https://github.com/narwhals-dev/narwhals/issues/2044#issuecomment-2674262833)
@@ -901,6 +902,77 @@ class EagerExprListNamespace(
 ):
     def len(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("list", "len")
+
+
+class EagerExprNameNamespace(
+    EagerExprNamespace[EagerExprT], NameNamespace[EagerExprT], Generic[EagerExprT]
+):
+    def keep(self) -> EagerExprT:
+        return self._from_colname_func_and_alias_output_names(
+            name_mapping_func=lambda name: name
+        )
+
+    def map(self, function: Callable[[str], str]) -> EagerExprT:
+        return self._from_colname_func_and_alias_output_names(
+            name_mapping_func=function,
+            alias_output_names=lambda output_names: [
+                function(name) for name in output_names
+            ],
+        )
+
+    def prefix(self, prefix: str) -> EagerExprT:
+        return self._from_colname_func_and_alias_output_names(
+            name_mapping_func=lambda name: f"{prefix}{name}",
+            alias_output_names=lambda output_names: [
+                f"{prefix}{output_name}" for output_name in output_names
+            ],
+        )
+
+    def suffix(self, suffix: str) -> EagerExprT:
+        return self._from_colname_func_and_alias_output_names(
+            name_mapping_func=lambda name: f"{name}{suffix}",
+            alias_output_names=lambda output_names: [
+                f"{output_name}{suffix}" for output_name in output_names
+            ],
+        )
+
+    def to_lowercase(self) -> EagerExprT:
+        return self._from_colname_func_and_alias_output_names(
+            name_mapping_func=str.lower,
+            alias_output_names=lambda output_names: [
+                name.lower() for name in output_names
+            ],
+        )
+
+    def to_uppercase(self) -> EagerExprT:
+        return self._from_colname_func_and_alias_output_names(
+            name_mapping_func=str.upper,
+            alias_output_names=lambda output_names: [
+                name.upper() for name in output_names
+            ],
+        )
+
+    def _from_colname_func_and_alias_output_names(
+        self,
+        name_mapping_func: Callable[[str], str],
+        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None = None,
+    ) -> EagerExprT:
+        return type(self.compliant)(
+            call=lambda df: [
+                series.alias(name_mapping_func(name))
+                for series, name in zip(
+                    self.compliant._call(df), self.compliant._evaluate_output_names(df)
+                )
+            ],
+            depth=self.compliant._depth,
+            function_name=self.compliant._function_name,
+            evaluate_output_names=self.compliant._evaluate_output_names,
+            alias_output_names=alias_output_names,
+            backend_version=self.compliant._backend_version,
+            implementation=self.compliant._implementation,
+            version=self.compliant._version,
+            call_kwargs=self.compliant._call_kwargs,
+        )
 
 
 class EagerExprStringNamespace(
