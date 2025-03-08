@@ -8,11 +8,7 @@ from typing import Sequence
 
 import pyarrow.compute as pc
 
-from narwhals._arrow.expr_cat import ArrowExprCatNamespace
-from narwhals._arrow.expr_dt import ArrowExprDateTimeNamespace
-from narwhals._arrow.expr_list import ArrowExprListNamespace
 from narwhals._arrow.expr_name import ArrowExprNameNamespace
-from narwhals._arrow.expr_str import ArrowExprStringNamespace
 from narwhals._arrow.series import ArrowSeries
 from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import ExprKind
@@ -269,21 +265,5 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
     ewm_mean = not_implemented()
 
     @property
-    def dt(self: Self) -> ArrowExprDateTimeNamespace:
-        return ArrowExprDateTimeNamespace(self)
-
-    @property
-    def str(self: Self) -> ArrowExprStringNamespace:
-        return ArrowExprStringNamespace(self)
-
-    @property
-    def cat(self: Self) -> ArrowExprCatNamespace:
-        return ArrowExprCatNamespace(self)
-
-    @property
     def name(self: Self) -> ArrowExprNameNamespace:
         return ArrowExprNameNamespace(self)
-
-    @property
-    def list(self: Self) -> ArrowExprListNamespace:
-        return ArrowExprListNamespace(self)
