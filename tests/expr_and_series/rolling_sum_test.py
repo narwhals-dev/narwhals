@@ -12,6 +12,8 @@ from hypothesis import given
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import InvalidOperationError
 from tests.utils import PANDAS_VERSION
+from tests.utils import POLARS_VERSION
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -51,6 +53,109 @@ def test_rolling_sum_expr(constructor_eager: ConstructorEager) -> None:
     )
     expected = {name: values["expected"] for name, values in kwargs_and_expected.items()}
 
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.filterwarnings(
+    "ignore:`Expr.rolling_sum` is being called from the stable API although considered an unstable feature."
+)
+@pytest.mark.parametrize(
+    ("expected_a", "window_size", "min_samples", "center"),
+    [
+        ([None, None, 3, None, None, 10, 17], 2, None, False),
+        ([None, None, 3, None, None, 10, 17], 2, 2, False),
+        ([None, None, 3, 3, 6, 10, 21], 3, 2, False),
+        ([1, None, 3, 3, 6, 10, 21], 3, 1, False),
+        ([3, 1, 3, 6, 10, 21, 17], 3, 1, True),
+        ([3, 1, 3, 7, 12, 21, 21], 4, 1, True),
+        ([3, 3, 7, 13, 23, 21, 21], 5, 1, True),
+    ],
+)
+def test_rolling_sum_expr_lazy_ungrouped(
+    constructor: Constructor,
+    expected_a: list[float],
+    window_size: int,
+    min_samples: int,
+    request: pytest.FixtureRequest,
+    *,
+    center: bool,
+) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+        pytest.skip()
+    if "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor):
+        # unreliable
+        pytest.skip()
+    data = {
+        "a": [1, None, 2, None, 4, 6, 11],
+        "b": [1, None, 2, 3, 4, 5, 6],
+        "i": list(range(7)),
+    }
+    df = nw.from_native(constructor(data))
+    result = (
+        df.with_columns(
+            nw.col("a")
+            .rolling_sum(window_size, min_samples=min_samples, center=center)
+            .over(_order_by="b")
+        )
+        .select("a", "i")
+        .sort("i")
+    )
+    expected = {"a": expected_a, "i": list(range(7))}
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.filterwarnings(
+    "ignore:`Expr.rolling_sum` is being called from the stable API although considered an unstable feature."
+)
+@pytest.mark.parametrize(
+    ("expected_a", "window_size", "min_samples", "center"),
+    [
+        ([None, None, 3, None, None, 10, 17], 2, None, False),
+        ([None, None, 3, None, None, 10, 17], 2, 2, False),
+        ([None, None, 3, 3, None, 10, 21], 3, 2, False),
+        ([1, None, 3, 3, 4, 10, 21], 3, 1, False),
+        ([3, 1, 3, 2, 10, 21, 17], 3, 1, True),
+        ([3, 1, 3, 3, 10, 21, 21], 4, 1, True),
+        ([3, 3, 3, 3, 21, 21, 21], 5, 1, True),
+    ],
+)
+def test_rolling_sum_expr_lazy_grouped(
+    constructor: Constructor,
+    expected_a: list[float],
+    window_size: int,
+    min_samples: int,
+    request: pytest.FixtureRequest,
+    *,
+    center: bool,
+) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+        pytest.skip()
+    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 2):
+        pytest.skip()
+    if any(x in str(constructor) for x in ("dask", "pyarrow_table", "duckdb")):
+        request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor):
+        # unreliable
+        pytest.skip()
+    data = {
+        "a": [1, None, 2, None, 4, 6, 11],
+        "g": [1, 1, 1, 1, 2, 2, 2],
+        "b": [1, None, 2, 3, 4, 5, 6],
+        "i": list(range(7)),
+    }
+    df = nw.from_native(constructor(data))
+    result = (
+        df.with_columns(
+            nw.col("a")
+            .rolling_sum(window_size, min_samples=min_samples, center=center)
+            .over("g", _order_by="b")
+        )
+        .sort("i")
+        .select("a")
+    )
+    expected = {"a": expected_a}
     assert_equal_data(result, expected)
 
 

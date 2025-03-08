@@ -545,11 +545,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
         return reuse_series_implementation(self, "cum_prod", reverse=reverse)
 
     def rolling_sum(
-        self: Self,
-        window_size: int,
-        *,
-        min_samples: int | None,
-        center: bool,
+        self: Self, window_size: int, *, min_samples: int, center: bool
     ) -> Self:
         return reuse_series_implementation(
             self,
@@ -563,7 +559,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
     ) -> Self:
         return reuse_series_implementation(
@@ -578,7 +574,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -595,7 +591,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:

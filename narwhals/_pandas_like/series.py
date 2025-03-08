@@ -922,7 +922,7 @@ class PandasLikeSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
     ) -> Self:
         result = self._native_series.rolling(
@@ -934,7 +934,7 @@ class PandasLikeSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
     ) -> Self:
         result = self._native_series.rolling(
@@ -946,7 +946,7 @@ class PandasLikeSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -959,7 +959,7 @@ class PandasLikeSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:

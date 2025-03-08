@@ -2191,14 +2191,14 @@ class Expr:
             |3  4.0            6.0|
             └─────────────────────┘
         """
-        window_size, min_samples = _validate_rolling_arguments(
+        window_size, min_samples_int = _validate_rolling_arguments(
             window_size=window_size, min_samples=min_samples
         )
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).rolling_sum(
                 window_size=window_size,
-                min_samples=min_samples,
+                min_samples=min_samples_int,
                 center=center,
             ),
             self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
