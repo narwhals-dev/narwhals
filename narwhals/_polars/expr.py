@@ -118,7 +118,7 @@ class PolarsExpr:
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -144,7 +144,7 @@ class PolarsExpr:
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -167,11 +167,7 @@ class PolarsExpr:
         )
 
     def rolling_sum(
-        self: Self,
-        window_size: int,
-        *,
-        min_samples: int | None,
-        center: bool,
+        self: Self, window_size: int, *, min_samples: int, center: bool
     ) -> Self:
         extra_kwargs = (
             {"min_periods": min_samples}
@@ -191,7 +187,7 @@ class PolarsExpr:
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
     ) -> Self:
         extra_kwargs = (
