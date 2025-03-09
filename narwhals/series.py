@@ -2288,7 +2288,7 @@ class Series(Generic[IntoSeriesT]):
             3    7.0
             dtype: float64
         """
-        window_size, min_samples = _validate_rolling_arguments(
+        window_size, min_samples_int = _validate_rolling_arguments(
             window_size=window_size, min_samples=min_samples
         )
 
@@ -2298,7 +2298,7 @@ class Series(Generic[IntoSeriesT]):
         return self._from_compliant_series(
             self._compliant_series.rolling_sum(
                 window_size=window_size,
-                min_samples=min_samples,
+                min_samples=min_samples_int,
                 center=center,
             )
         )

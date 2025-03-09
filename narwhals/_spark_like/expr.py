@@ -570,9 +570,35 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
                 self._Window()
                 .partitionBy(list(partition_by))
                 .orderBy(order_by_cols)
-                .rangeBetween(self._Window().unboundedPreceding, 0)
+                .rowsBetween(self._Window().unboundedPreceding, 0)
             )
             return self._F.sum(_input).over(window)
+
+        return self._with_window_function(func)
+
+    def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
+        if center:
+            half = (window_size - 1) // 2
+            remainder = (window_size - 1) % 2
+            start = self._Window().currentRow - half - remainder
+            end = self._Window().currentRow + half
+        else:
+            start = self._Window().currentRow - window_size + 1
+            end = self._Window().currentRow
+
+        def func(
+            _input: Column, partition_by: Sequence[str], order_by: Sequence[str]
+        ) -> Column:
+            window = (
+                self._Window()
+                .partitionBy(list(partition_by))
+                .orderBy([self._F.col(x).asc_nulls_first() for x in order_by])
+                .rowsBetween(start, end)
+            )
+            return self._F.when(
+                self._F.count(_input).over(window) >= min_samples,
+                self._F.sum(_input).over(window),
+            )
 
         return self._with_window_function(func)
 
@@ -607,7 +633,6 @@ class SparkLikeExpr(CompliantExpr["SparkLikeLazyFrame", "Column"]):  # type: ign
     sample = not_implemented()
     map_batches = not_implemented()
     ewm_mean = not_implemented()
-    rolling_sum = not_implemented()
     rolling_mean = not_implemented()
     rolling_var = not_implemented()
     rolling_std = not_implemented()
