@@ -217,8 +217,6 @@ def reuse_series_namespace_implementation(
         expr: expression object.
         series_namespace: The Series namespace (e.g. `dt`, `cat`, `str`, `list`, `name`)
         attr: name of method.
-        evaluate_output_names: Output names function.
-        alias_output_names: Alias output names function.
         kwargs: keyword arguments to pass to function.
     """
     plx = expr.__narwhals_namespace__()

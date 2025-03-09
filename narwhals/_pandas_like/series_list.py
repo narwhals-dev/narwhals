@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 class PandasLikeSeriesListNamespace:
     def __init__(self: Self, series: PandasLikeSeries) -> None:
         if not hasattr(series._native_series, "list"):
-            msg = "Series must be of PyArrow List type to support struct namespace."
+            msg = "Series must be of PyArrow List type to support list namespace."
             raise TypeError(msg)
         self._compliant_series = series
 

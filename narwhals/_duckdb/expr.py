@@ -132,8 +132,6 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
         Arguments:
             call: Callable from compliant DataFrame to native Expression
             expr_name: Expression name
-            evaluate_output_names: Output names function.
-            alias_output_names: Alias Output names function.
             expressifiable_args: arguments pass to expression which should be parsed
                 as expressions (e.g. in `nw.col('a').is_between('b', 'c')`)
         """
