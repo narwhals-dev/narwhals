@@ -15,7 +15,6 @@ class ArrowSeriesStructNamespace:
         self._compliant_series: ArrowSeries = series
 
     def field(self: Self, name: str) -> ArrowSeries:
-        self._compliant_series._name = name
         return self._compliant_series._from_native_series(
-            pc.struct_field(self._compliant_series._native_series, name),
+            pc.struct_field(self._compliant_series.alias(name)._native_series, name),
         )
