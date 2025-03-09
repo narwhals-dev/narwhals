@@ -985,9 +985,9 @@ def _has_default_index(
     index = native_frame_or_series.index
     return (
         _is_range_index(index, native_namespace)
-        and index.start == 0  # type: ignore[comparison-overlap]
-        and index.stop == len(index)  # type: ignore[comparison-overlap]
-        and index.step == 1  # type: ignore[comparison-overlap]
+        and index.start == 0
+        and index.stop == len(index)
+        and index.step == 1
     )
 
 
