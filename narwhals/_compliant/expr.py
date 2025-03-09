@@ -792,7 +792,6 @@ class EagerExpr(
         return EagerExprNameNamespace(self)
 
 
-# NOTE: See (https://github.com/narwhals-dev/narwhals/issues/2044#issuecomment-2674262833)
 class LazyExpr(
     CompliantExpr[CompliantLazyFrameT, NativeExprT_co],
     Protocol38[CompliantLazyFrameT, NativeExprT_co],
