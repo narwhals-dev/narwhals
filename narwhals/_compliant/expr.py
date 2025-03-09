@@ -748,9 +748,7 @@ class EagerExpr(
             ddof=ddof,
         )
 
-    def rolling_sum(
-        self, window_size: int, *, min_samples: int | None, center: bool
-    ) -> Self:
+    def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._reuse_series(
             "rolling_sum", window_size=window_size, min_samples=min_samples, center=center
         )
@@ -805,7 +803,6 @@ class LazyExpr(
     sample: not_implemented = not_implemented()
     map_batches: not_implemented = not_implemented()
     ewm_mean: not_implemented = not_implemented()
-    rolling_sum: not_implemented = not_implemented()
     rolling_mean: not_implemented = not_implemented()
     rolling_var: not_implemented = not_implemented()
     rolling_std: not_implemented = not_implemented()

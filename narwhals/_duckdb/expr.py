@@ -497,3 +497,4 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     cum_max = not_implemented()
     cum_prod = not_implemented()
     over = not_implemented()
+    rolling_sum = not_implemented()
