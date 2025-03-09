@@ -188,20 +188,16 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> import pyarrow as pa
-            >>> import narwhals as nw
             >>> s_native = pa.chunked_array([["cat", "dog", "rabbit and parrot"]])
             >>> s = nw.from_native(s_native, series_only=True)
-            >>> s.str.contains(
-            ...     "cat|parrot"
-            ... ).to_native()  # doctest: +ELLIPSIS  +NORMALIZE_WHITESPACE
+            >>> s.str.contains("cat|parrot").to_native()  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
-            [
+              [
                 true,
                 false,
                 true
-            ]
+              ]
             ]
         """
         return self._narwhals_series._from_compliant_series(
@@ -281,14 +277,14 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> import narwhals as nw
             >>> s_native = pa.chunked_array([["taata", "taatatata", "zukkyun"]])
             >>> s = nw.from_native(s_native, series_only=True)
-            >>> s.str.head().to_native()  # doctest: +ELLIPSIS  +NORMALIZE_WHITESPACE
+            >>> s.str.head().to_native()  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
-            [
+              [
                 "taata",
                 "taata",
                 "zukky"
-            ]
+              ]
             ]
         """
         return self._narwhals_series._from_compliant_series(
@@ -314,14 +310,14 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> import narwhals as nw
             >>> s_native = pa.chunked_array([["taata", "taatatata", "zukkyun"]])
             >>> s = nw.from_native(s_native, series_only=True)
-            >>> s.str.tail().to_native()  # doctest: +ELLIPSIS  +NORMALIZE_WHITESPACE
+            >>> s.str.tail().to_native()  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
-            [
+              [
                 "taata",
                 "atata",
                 "kkyun"
-            ]
+              ]
             ]
         """
         return self._narwhals_series._from_compliant_series(

@@ -897,7 +897,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
     ) -> Self:
         min_samples = min_samples if min_samples is not None else window_size
@@ -931,7 +931,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
     ) -> Self:
         min_samples = min_samples if min_samples is not None else window_size
@@ -968,7 +968,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -1021,7 +1021,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:

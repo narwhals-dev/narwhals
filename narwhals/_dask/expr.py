@@ -381,6 +381,16 @@ class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
 
         return self._from_call(lambda _input: _input.cumprod(), "cum_prod")
 
+    def rolling_sum(
+        self: Self, window_size: int, *, min_samples: int, center: bool
+    ) -> Self:
+        return self._from_call(
+            lambda _input: _input.rolling(
+                window=window_size, min_periods=min_samples, center=center
+            ).sum(),
+            "rolling_sum",
+        )
+
     def sum(self: Self) -> Self:
         return self._from_call(lambda _input: _input.sum().to_series(), "sum")
 
@@ -566,7 +576,7 @@ class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
             except KeyError:
                 # window functions are unsupported: https://github.com/dask/dask/issues/11806
                 msg = (
-                    f"Unsupported function: {function_name} in `over` context.\n\n."
+                    f"Unsupported function: {function_name} in `over` context.\n\n"
                     f"Supported functions are {', '.join(AGGREGATIONS_TO_PANDAS_EQUIVALENT)}\n"
                 )
                 raise NotImplementedError(msg) from None

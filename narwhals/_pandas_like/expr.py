@@ -37,6 +37,7 @@ WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
     # Pandas cumcount counts nulls while Polars does not
     # So, instead of using "cumcount" we use "cumsum" on notna() to get the same result
     "cum_count": "cumsum",
+    "rolling_sum": "sum",
     "shift": "shift",
     "rank": "rank",
     "diff": "diff",
@@ -58,6 +59,12 @@ def window_kwargs_to_pandas_equivalent(
         }
     elif function_name.startswith("cum_"):  # Cumulative operation
         pandas_kwargs = {"skipna": True}
+    elif function_name.startswith("rolling_"):  # Rolling operation
+        pandas_kwargs = {
+            "min_periods": kwargs["min_samples"],
+            "window": kwargs["window_size"],
+            "center": kwargs["center"],
+        }
     else:  # e.g. std, var
         pandas_kwargs = kwargs
     return pandas_kwargs
@@ -220,11 +227,11 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             raise NotImplementedError(msg)
         else:
             function_name: str = re.sub(r"(\w+->)", "", self._function_name)
-            if pandas_function_name := WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT.get(
-                function_name, AGGREGATIONS_TO_PANDAS_EQUIVALENT.get(function_name, None)
-            ):
-                pass
-            else:
+            pandas_function_name = WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT.get(
+                function_name,
+                AGGREGATIONS_TO_PANDAS_EQUIVALENT.get(function_name),
+            )
+            if pandas_function_name is None:
                 msg = (
                     f"Unsupported function: {function_name} in `over` context.\n\n"
                     f"Supported functions are {', '.join(WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT)}\n"
@@ -237,7 +244,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
 
             def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
-
                 if function_name == "cum_count":
                     plx = self.__narwhals_namespace__()
                     df = df.with_columns(~plx.col(*output_names).is_null())
@@ -260,9 +266,16 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 elif reverse:
                     columns = list(set(partition_by).union(output_names))
                     df = df[columns][::-1]
-                res_native = df._native_frame.groupby(partition_by)[
-                    list(output_names)
-                ].transform(pandas_function_name, **pandas_kwargs)
+                if function_name.startswith("rolling"):
+                    rolling = df._native_frame.groupby(partition_by)[
+                        list(output_names)
+                    ].rolling(**pandas_kwargs)
+                    assert pandas_function_name is not None  # help mypy  # noqa: S101
+                    res_native = getattr(rolling, pandas_function_name)()
+                else:
+                    res_native = df._native_frame.groupby(partition_by)[
+                        list(output_names)
+                    ].transform(pandas_function_name, **pandas_kwargs)
                 result_frame = df._from_native_frame(res_native).rename(
                     dict(zip(output_names, aliases))
                 )
@@ -330,6 +343,18 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
 
     def cum_prod(self: Self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_prod", call_kwargs={"reverse": reverse})
+
+    def rolling_sum(
+        self: Self, window_size: int, *, min_samples: int, center: bool
+    ) -> Self:
+        return self._reuse_series(
+            "rolling_sum",
+            call_kwargs={
+                "window_size": window_size,
+                "min_samples": min_samples,
+                "center": center,
+            },
+        )
 
     def rank(
         self: Self,
