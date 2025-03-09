@@ -5,6 +5,7 @@ from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Iterator
 from typing import Sequence
 from typing import cast
 from typing import overload
@@ -183,7 +184,7 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
     if isinstance_or_issubclass(dtype, dtypes.UInt8):
         return pa.uint8()
     if isinstance_or_issubclass(dtype, dtypes.String):
-        return pa.string()
+        return pa.large_string()
     if isinstance_or_issubclass(dtype, dtypes.Boolean):
         return pa.bool_()
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
@@ -195,7 +196,9 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
     if isinstance_or_issubclass(dtype, dtypes.Date):
         return pa.date32()
     if isinstance_or_issubclass(dtype, dtypes.List):
-        return pa.list_(value_type=narwhals_to_native_dtype(dtype.inner, version=version))
+        return pa.large_list(
+            value_type=narwhals_to_native_dtype(dtype.inner, version=version)
+        )
     if isinstance_or_issubclass(dtype, dtypes.Struct):
         return pa.struct(
             [
@@ -543,6 +546,20 @@ def pad_series(
     pad_right = pa.array([None] * offset_right, type=series._type)
     concat = pa.concat_arrays([pad_left, *series.native.chunks, pad_right])
     return series._from_native_series(concat), offset_left + offset_right
+
+
+def ensure_all_compatible_strings(
+    *chunked_arrays: ArrowChunkedArray,
+    separator: str,
+) -> tuple[Iterator[ArrowChunkedArray], pa.Scalar[Any]]:
+    if all(pa.types.is_string(ca.type) for ca in chunked_arrays):
+        # Keep as-is, no need to upcast.
+        return iter(chunked_arrays), pa.scalar(separator, type=pa.string())
+    it = (
+        ca.cast(pa.large_string()) if not pa.types.is_large_string(ca.type) else ca
+        for ca in chunked_arrays
+    )
+    return it, pa.scalar(separator, type=pa.large_string())
 
 
 class ArrowSeriesNamespace(_SeriesNamespace["ArrowSeries", "ArrowChunkedArray"]):

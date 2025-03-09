@@ -9,6 +9,7 @@ from typing import cast
 from typing import overload
 
 import numpy as np
+import pandas as pd
 
 from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
@@ -41,7 +42,6 @@ if TYPE_CHECKING:
     from pathlib import Path
     from types import ModuleType
 
-    import pandas as pd
     import polars as pl
     from typing_extensions import Self
 
@@ -1091,6 +1091,8 @@ class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyF
         dtypes = import_dtypes_module(self._version)
 
         schema = self.collect_schema()
+        schema_overrides = {}
+        native_dtypes = self._native_frame.dtypes
         for col_to_explode in columns:
             dtype = schema[col_to_explode]
 
@@ -1100,13 +1102,27 @@ class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyF
                     "expected List type"
                 )
                 raise InvalidOperationError(msg)
+            if self._implementation is Implementation.PANDAS and self._backend_version < (
+                3,
+            ):
+                # workaround for
+                # https://github.com/pandas-dev/pandas/issues/61091
+                # import pyarrow as we already know we've got pyarrow types
+                import pyarrow as pa  # ignore-banned-import
+
+                pyarrow_dtype = native_dtypes[col_to_explode].pyarrow_dtype
+                schema_overrides[col_to_explode] = pd.ArrowDtype(
+                    pa.list_(pyarrow_dtype.field(0))
+                )
+        native_frame = self._native_frame
+        if schema_overrides:
+            native_frame = native_frame.astype(schema_overrides)
 
         if len(columns) == 1:
             return self._from_native_frame(
-                self._native_frame.explode(columns[0]), validate_column_names=False
+                native_frame.explode(columns[0]), validate_column_names=False
             )
         else:
-            native_frame = self._native_frame
             anchor_series = native_frame[columns[0]].list.len()
 
             if not all(
