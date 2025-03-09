@@ -25,9 +25,7 @@ if TYPE_CHECKING:
     from typing_extensions import Never
     from typing_extensions import TypeIs
 
-    from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.expr import ArrowExpr
-    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals.expr import Expr
     from narwhals.typing import CompliantDataFrame
@@ -208,10 +206,6 @@ def reuse_series_namespace_implementation(
     expr: ArrowExprT | PandasLikeExprT,
     series_namespace: str,
     attr: str,
-    evaluate_output_names: Callable[[ArrowDataFrame], Sequence[str]]
-    | Callable[[PandasLikeDataFrame], Sequence[str]]
-    | None = None,
-    alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None = None,
     **kwargs: Any,
 ) -> ArrowExprT | PandasLikeExprT:
     """Reuse Series implementation for expression.
@@ -229,12 +223,6 @@ def reuse_series_namespace_implementation(
     """
     plx = expr.__narwhals_namespace__()
 
-    if evaluate_output_names is None:
-        evaluate_output_names = expr._evaluate_output_names
-
-    if alias_output_names is None:
-        alias_output_names = expr._alias_output_names
-
     return plx._create_expr_from_callable(  # type: ignore[return-value]
         lambda df: [
             getattr(getattr(series, series_namespace), attr)(**kwargs)
@@ -242,8 +230,8 @@ def reuse_series_namespace_implementation(
         ],
         depth=expr._depth + 1,
         function_name=f"{expr._function_name}->{series_namespace}.{attr}",
-        evaluate_output_names=evaluate_output_names,  # type: ignore[arg-type]
-        alias_output_names=alias_output_names,
+        evaluate_output_names=expr._evaluate_output_names,  # type: ignore[arg-type]
+        alias_output_names=expr._alias_output_names,
     )
 
 

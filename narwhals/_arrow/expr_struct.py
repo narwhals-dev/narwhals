@@ -20,5 +20,4 @@ class ArrowExprStructNamespace:
             "struct",
             "field",
             name=name,
-            evaluate_output_names=lambda _col: [name],
-        )
+        ).alias(name)

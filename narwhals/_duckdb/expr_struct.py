@@ -22,5 +22,4 @@ class DuckDBExprStructNamespace:
                 name
             ),
             "field",
-            evaluate_output_names=lambda _col: [name],
-        )
+        ).alias(name)
