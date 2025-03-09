@@ -7,12 +7,12 @@ from typing import Protocol
 from narwhals._compliant.typing import CompliantFrameT
 from narwhals._compliant.typing import CompliantSeriesOrNativeExprT_co
 from narwhals._compliant.typing import EagerDataFrameT
-from narwhals._compliant.typing import EagerSeriesT
+from narwhals._compliant.typing import EagerExprT
+from narwhals._compliant.typing import EagerSeriesT_co
 from narwhals.utils import deprecated
 
 if TYPE_CHECKING:
     from narwhals._compliant.expr import CompliantExpr
-    from narwhals._compliant.expr import EagerExpr
     from narwhals._compliant.selectors import CompliantSelectorNamespace
     from narwhals.dtypes import DType
 
@@ -31,25 +31,23 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_
 
 
 class EagerNamespace(
-    CompliantNamespace[EagerDataFrameT, EagerSeriesT],
-    Protocol[EagerDataFrameT, EagerSeriesT],
+    CompliantNamespace[EagerDataFrameT, EagerSeriesT_co],
+    Protocol[EagerDataFrameT, EagerSeriesT_co, EagerExprT],
 ):
     # NOTE: Supporting moved ops
     # - `self_create_expr_from_callable` -> `self._expr._from_callable`
     # - `self_create_expr_from_series` -> `self._expr._from_series`
     @property
-    def _expr(self) -> type[EagerExpr[EagerDataFrameT, EagerSeriesT]]: ...
+    def _expr(self) -> type[EagerExprT]: ...
 
     # NOTE: Supporting moved ops
     # - `self._create_series_from_scalar` -> `EagerSeries()._from_scalar`
     #   - Was dependent on a `reference_series`, so is now an instance method
     # - `<class>._from_iterable` -> `self._series._from_iterable`
     @property
-    def _series(self) -> type[EagerSeriesT]: ...
+    def _series(self) -> type[EagerSeriesT_co]: ...
 
-    def all_horizontal(
-        self, *exprs: EagerExpr[EagerDataFrameT, EagerSeriesT]
-    ) -> EagerExpr[EagerDataFrameT, EagerSeriesT]: ...
+    def all_horizontal(self, *exprs: EagerExprT) -> EagerExprT: ...
 
     @deprecated("ref'd in untyped code")
-    def _create_compliant_series(self, value: Any) -> EagerSeriesT: ...
+    def _create_compliant_series(self, value: Any) -> EagerSeriesT_co: ...

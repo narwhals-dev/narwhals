@@ -56,7 +56,7 @@ class EagerSeries(CompliantSeries, Protocol[NativeSeriesT_co]):
         cls: type[Self], data: Iterable[Any], name: str, *, context: _FullContext
     ) -> Self: ...
 
-    def __narwhals_namespace__(self) -> EagerNamespace[Any, Self]: ...
+    def __narwhals_namespace__(self) -> EagerNamespace[Any, Self, Any]: ...
 
-    def _to_expr(self) -> EagerExpr[Any, Self]:
-        return self.__narwhals_namespace__()._expr._from_series(self)
+    def _to_expr(self) -> EagerExpr[Any, Any]:
+        return self.__narwhals_namespace__()._expr._from_series(self)  # type: ignore[no-any-return]

@@ -285,7 +285,9 @@ class EagerExpr(
     def __repr__(self) -> str:  # pragma: no cover
         return f"{type(self).__name__}(depth={self._depth}, function_name={self._function_name})"
 
-    def __narwhals_namespace__(self) -> EagerNamespace[EagerDataFrameT, EagerSeriesT]: ...
+    def __narwhals_namespace__(
+        self,
+    ) -> EagerNamespace[EagerDataFrameT, EagerSeriesT, Self]: ...
     def __narwhals_expr__(self) -> None: ...
 
     @classmethod

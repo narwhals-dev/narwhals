@@ -47,7 +47,7 @@ if TYPE_CHECKING:
     _Scalar: TypeAlias = Any
 
 
-class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries]):
+class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
     @property
     def _expr(self) -> type[ArrowExpr]:
         return ArrowExpr
@@ -123,9 +123,7 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries]):
             version=self._version,
         )
 
-    # NOTE: Needs to be resolved in `EagerNamespace`
-    # Probably, by adding an `EagerExprT` typevar
-    def all_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:  # type: ignore[override]
+    def all_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = chain.from_iterable(expr(df) for expr in exprs)
             return [reduce(operator.and_, align_series_full_broadcast(*series))]

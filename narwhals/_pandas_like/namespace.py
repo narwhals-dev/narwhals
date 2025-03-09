@@ -40,7 +40,9 @@ if TYPE_CHECKING:
     _Scalar: TypeAlias = Any
 
 
-class PandasLikeNamespace(EagerNamespace[PandasLikeDataFrame, PandasLikeSeries]):
+class PandasLikeNamespace(
+    EagerNamespace[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr]
+):
     @property
     def _expr(self) -> type[PandasLikeExpr]:
         return PandasLikeExpr
@@ -149,9 +151,7 @@ class PandasLikeNamespace(EagerNamespace[PandasLikeDataFrame, PandasLikeSeries])
             context=self,
         )
 
-    # NOTE: Needs to be resolved in `EagerNamespace`
-    # Probably, by adding an `EagerExprT` typevar
-    def all_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:  # type: ignore[override]
+    def all_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = align_series_full_broadcast(
                 *(s for _expr in exprs for s in _expr(df))
