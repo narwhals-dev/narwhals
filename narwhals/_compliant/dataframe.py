@@ -61,7 +61,7 @@ class CompliantLazyFrame(Protocol):
 
 class EagerDataFrame(CompliantDataFrame[EagerSeriesT_co], Protocol[EagerSeriesT_co]):
     def _maybe_evaluate_expr(
-        self, expr: EagerExpr[EagerDataFrame[EagerSeriesT_co], EagerSeriesT_co] | T, /
+        self, expr: EagerExpr[Self, EagerSeriesT_co] | T, /
     ) -> EagerSeriesT_co | T:
         if is_eager_expr(expr):
             result: Sequence[EagerSeriesT_co] = expr(self)
@@ -75,7 +75,8 @@ class EagerDataFrame(CompliantDataFrame[EagerSeriesT_co], Protocol[EagerSeriesT_
         return expr
 
 
-# NOTE: DON'T CHANGE THIS EITHER
+# NOTE: `mypy` is requiring the gymnastics here and is very fragile
+# DON'T CHANGE THIS or `EagerDataFrame._maybe_evaluate_expr`
 def is_eager_expr(
     obj: EagerExpr[Any, EagerSeriesT] | Any,
 ) -> TypeIs[EagerExpr[Any, EagerSeriesT]]:
