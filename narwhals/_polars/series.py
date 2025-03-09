@@ -658,10 +658,15 @@ class PolarsSeriesListNamespace:
 
 class PolarsSeriesStructNamespace:
     def __init__(self: Self, series: PolarsSeries) -> None:
-        self._series = series
+        self._compliant_series = series
 
-    def field(self: Self, name: str) -> PolarsSeries:
-        native_series = self._series._native_series
-        native_result = native_series.struct.field(name)
+    def __getattr__(self: Self, attr: str) -> Any:
+        def func(*args: Any, **kwargs: Any) -> Any:
+            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
+            return self._compliant_series._from_native_series(
+                getattr(self._compliant_series._native_series.struct, attr)(
+                    *args, **kwargs
+                )
+            )
 
-        return self._series._from_native_series(native_result)
+        return func

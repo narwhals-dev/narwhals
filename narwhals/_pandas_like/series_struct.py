@@ -17,5 +17,5 @@ class PandasLikeSeriesStructNamespace:
 
     def field(self: Self, name: str) -> PandasLikeSeries:
         return self._compliant_series._from_native_series(
-            self._compliant_series._native_series.struct.field(name).rename(name)
-        )
+            self._compliant_series._native_series.struct.field(name)
+        ).alias(name)
