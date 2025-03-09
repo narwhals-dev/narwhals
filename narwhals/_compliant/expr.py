@@ -62,8 +62,13 @@ if TYPE_CHECKING:
 __all__ = ["CompliantExpr", "EagerExpr", "LazyExpr", "NativeExpr"]
 
 
-# NOTE: Only common methods for lazy expr-like objects
 class NativeExpr(Protocol):
+    """An `Expr`-like object from a package with [Lazy-only support](https://narwhals-dev.github.io/narwhals/extending/#levels-of-support).
+
+    Protocol members are chosen *purely* for matching statically - as they
+    are common to all currently supported packages.
+    """
+
     def between(self, *args: Any, **kwds: Any) -> Any: ...
     def isin(self, *args: Any, **kwds: Any) -> Any: ...
 
