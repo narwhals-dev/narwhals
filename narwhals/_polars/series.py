@@ -309,7 +309,7 @@ class PolarsSeries:
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -336,7 +336,7 @@ class PolarsSeries:
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -363,7 +363,7 @@ class PolarsSeries:
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
     ) -> Self:
         extra_kwargs = (
@@ -384,7 +384,7 @@ class PolarsSeries:
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
     ) -> Self:
         extra_kwargs = (
