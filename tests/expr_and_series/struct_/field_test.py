@@ -82,3 +82,16 @@ def test_get_field_series(
     )
     expected = {"id": ["0", "1"], "name": ["john", "jane"]}
     assert_equal_data(result, _expected)
+
+
+def test_pandas_object_series() -> None:
+    s_native = pd.Series(
+        data=[
+            {"id": "0", "name": "john"},
+            {"id": "1", "name": "jane"},
+        ]
+    )
+    s = nw.from_native(s_native, series_only=True)
+
+    with pytest.raises(TypeError):
+        s.struct.field("name")
