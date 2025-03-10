@@ -181,6 +181,9 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
             )
             if dtype:
                 return arrow_series.cast(dtype)
+            elif isinstance(value, str) and dtype is None:
+                # Cast to nw.String() to ensure we default to large-string.
+                return arrow_series.cast(import_dtypes_module(self._version).String())
             return arrow_series
 
         return ArrowExpr(
