@@ -4,6 +4,7 @@ import os
 import re
 from datetime import timezone
 from enum import Enum
+from enum import Flag
 from enum import auto
 from inspect import getattr_static
 from secrets import token_hex
@@ -114,7 +115,7 @@ if TYPE_CHECKING:
         def columns(self) -> Sequence[str]: ...
 
 
-class Version(Enum):
+class Version(Flag):
     V1 = auto()
     MAIN = auto()
 

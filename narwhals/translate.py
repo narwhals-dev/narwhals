@@ -401,7 +401,7 @@ def _from_native_impl(  # noqa: PLR0915
             level="full",
         )
 
-    for backend in reversed(narwhals.backends.BACKENDS):
+    for backend in narwhals.backends.BACKENDS:
         adapter = backend.get_adapter(type(native_object), version=version)
         if adapter is None:
             continue
@@ -411,30 +411,30 @@ def _from_native_impl(  # noqa: PLR0915
             kwargs = kwargs.copy()
             kwargs.setdefault("implementation", backend.implementation)
 
-        if adapter.narwhals is Series and not (allow_series or series_only):
+        if adapter.interface is Series and not (allow_series or series_only):
             if pass_through:
                 return native_object
             msg = "Please set `allow_series=True` or `series_only=True`"
             raise TypeError(msg)
 
-        if adapter.narwhals is not Series and series_only:
+        if adapter.interface is not Series and series_only:
             if not pass_through:
                 msg = f"Cannot only use `series_only` with {type(native_object)!r}"
                 raise TypeError(msg)
             return native_object
 
-        elif (adapter.narwhals is LazyFrame and eager_only) or eager_or_interchange_only:
+        elif adapter.interface is LazyFrame and (eager_only or eager_or_interchange_only):
             if pass_through:
                 return native_object
             elif not eager_or_interchange_only:
                 msg = f"Cannot only use `eager_only` or `eager_or_interchange_only` with {type(native_object)!r}"
                 raise TypeError(msg)
 
-        return adapter.narwhals(
+        return adapter.interface(
             adapter.imported_adapter(
                 native_object,
-                version=adapter.version,
-                backend_version=backend.version(),
+                version=version,
+                backend_version=backend.requirement.version(),
                 **kwargs,
             ),
             level=adapter.level,
@@ -498,9 +498,9 @@ def get_native_namespace(
 
     if has_native_namespace(obj):
         return obj.__native_namespace__()
-    for backend in reversed(narwhals.backends.BACKENDS):
+    for backend in narwhals.backends.BACKENDS:
         if backend.get_adapter(type(obj)) is not None:
-            return backend.native_namespace()
+            return backend.imported_package()
     msg = "Could not get native namespace"
     raise TypeError(msg)
 
