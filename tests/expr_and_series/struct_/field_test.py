@@ -15,9 +15,7 @@ def test_get_field_expr(
     request: pytest.FixtureRequest,
     constructor: Constructor,
 ) -> None:
-    if any(
-        backend in str(constructor) for backend in ("dask", "modin", "cudf", "sqlframe")
-    ):
+    if any(backend in str(constructor) for backend in ("dask", "modin", "sqlframe")):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2, 0):
         pytest.skip()
@@ -54,7 +52,7 @@ def test_get_field_series(
     request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
 ) -> None:
-    if any(backend in str(constructor_eager) for backend in ("modin", "cudf")):
+    if any(backend in str(constructor_eager) for backend in ("modin",)):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2, 0):
         pytest.skip()
