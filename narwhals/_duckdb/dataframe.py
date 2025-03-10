@@ -451,6 +451,34 @@ class DuckDBLazyFrame(CompliantLazyFrame):
 
         return self._from_native_frame(non_null_rel.union(null_rel))
 
+    def interpolate_by(self: Self, target: str, by: str) -> Self:
+        rel = self._native_frame  # noqa: F841
+        interpolation_query = f"""
+        WITH in_data AS (
+            SELECT *,
+                row_number() OVER () AS original_id
+            FROM rel
+        ),
+        interpolation_cte AS (
+            SELECT *,
+                lag("{by}") OVER (ORDER BY "{by}") AS prev_x,
+                lag("{target}") OVER (ORDER BY "{by}") AS prev_y,
+                lead("{by}") OVER (ORDER BY "{by}") AS next_x,
+                lead("{target}") OVER (ORDER BY "{by}") AS next_y
+            FROM in_data
+        )
+        SELECT
+            "{by}",
+            CASE
+                WHEN "{target}" IS NULL AND prev_x IS NOT NULL AND next_x IS NOT NULL THEN
+                    prev_y + ("{by}" - prev_x) * (next_y - prev_y) / NULLIF(next_x - prev_x, 0)
+                ELSE "{target}"
+            END AS "{target}"
+        FROM interpolation_cte
+        ORDER BY original_id
+        """  # noqa: S608
+        return self._from_native_frame(duckdb.sql(interpolation_query))
+
     def unpivot(
         self: Self,
         on: list[str] | None,

@@ -16,6 +16,7 @@
         - group_by
         - head
         - implementation
+        - interpolate_by
         - join
         - join_asof
         - lazy

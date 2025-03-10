@@ -286,6 +286,15 @@ class BaseFrame(Generic[_FrameT]):
             self._compliant_frame.gather_every(n=n, offset=offset)
         )
 
+    def interpolate_by(
+        self: Self,
+        target: str,
+        by: str,
+    ) -> Self:
+        return self._from_compliant_dataframe(
+            self._compliant_frame.interpolate_by(target, by)
+        )
+
     def join_asof(
         self: Self,
         other: Self,
@@ -1667,6 +1676,51 @@ class DataFrame(BaseFrame[DataFrameT]):
             other, how=how, left_on=left_on, right_on=right_on, on=on, suffix=suffix
         )
 
+    def interpolate_by(
+        self: Self,
+        target: str,
+        by: str,
+    ) -> Self:
+        r"""Fill null values in a column using interpolation based on another column.
+
+        Arguments:
+            target: Column name to be interpolated.
+            by: Column name to interpolate by.
+
+        Returns:
+            A new DataFrame.
+
+        Notes:
+            Supports only linear interpolation.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame(
+            ...     {"full": [0, 1, 1, 2, 3, 5], "gaps": [0, None, 2, None, 6, 10]}
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.interpolate_by(target="gaps", by="full")
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            | shape: (6, 2)    |
+            | ┌──────┬──────┐  |
+            | │ full ┆ gaps │  |
+            | │ ---  ┆ ---  │  |
+            | │ i64  ┆ f64  │  |
+            | ╞══════╪══════╡  |
+            | │ 0    ┆ 0.0  │  |
+            | │ 1    ┆ 2.0  │  |
+            | │ 1    ┆ 2.0  │  |
+            | │ 2    ┆ 4.0  │  |
+            | │ 3    ┆ 6.0  │  |
+            | │ 5    ┆ 10.0 │  |
+            | └──────┴──────┘  |
+            └──────────────────┘
+        """
+        return super().interpolate_by(target, by)
+
     def join_asof(
         self: Self,
         other: Self,
@@ -2966,6 +3020,47 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().join(
             other, how=how, left_on=left_on, right_on=right_on, on=on, suffix=suffix
         )
+
+    def interpolate_by(
+        self: Self,
+        target: str,
+        by: str,
+    ) -> Self:
+        r"""Fill null values in a column using interpolation based on another column.
+
+        Arguments:
+            target: Column name to be interpolated.
+            by: Column name to interpolate by.
+
+        Returns:
+            A new Lazyframe.
+
+        Notes:
+            Supports only linear interpolation.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame(
+            ...     {"full": [0, 1, 1, 2, 3, 5], "gaps": [0, None, 2, None, 6, 10]}
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.interpolate_by(target="gaps", by="full").to_native()
+            shape: (6, 2)
+            ┌──────┬──────┐
+            │ full ┆ gaps │
+            │ ---  ┆ ---  │
+            │ i64  ┆ f64  │
+            ╞══════╪══════╡
+            │ 0    ┆ 0.0  │
+            │ 1    ┆ 2.0  │
+            │ 1    ┆ 2.0  │
+            │ 2    ┆ 4.0  │
+            │ 3    ┆ 6.0  │
+            │ 5    ┆ 10.0 │
+            └──────┴──────┘
+        """
+        return super().interpolate_by(target, by)
 
     def join_asof(
         self: Self,

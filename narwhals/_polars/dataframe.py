@@ -221,6 +221,15 @@ class PolarsDataFrame:
     def simple_select(self, *column_names: str) -> Self:
         return self._from_native_frame(self._native_frame.select(*column_names))
 
+    def interpolate_by(
+        self: Self,
+        target: str,
+        by: str,
+    ) -> Self:
+        return self._from_native_frame(
+            self._native_frame.with_columns(pl.col(target).interpolate_by(by))
+        )
+
     def aggregate(self: Self, *exprs: Any) -> Self:
         return self.select(*exprs)  # type: ignore[no-any-return]
 
@@ -559,6 +568,15 @@ class PolarsLazyFrame:
 
     def simple_select(self, *column_names: str) -> Self:
         return self._from_native_frame(self._native_frame.select(*column_names))
+
+    def interpolate_by(
+        self: Self,
+        target: str,
+        by: str,
+    ) -> Self:
+        return self._from_native_frame(
+            self._native_frame.with_columns(pl.col(target).interpolate_by(by))
+        )
 
     def aggregate(self: Self, *exprs: Any) -> Self:
         return self.select(*exprs)  # type: ignore[no-any-return]

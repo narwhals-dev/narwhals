@@ -412,6 +412,63 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             self_native.join(other_native, on=left_on, how=how).select(col_order)
         )
 
+    def interpolate_by(
+        self: Self,
+        target: str,
+        by: str,
+    ) -> Self:
+        self_native = self._native_frame
+
+        sql_frame_window = self._Window.orderBy(self._F.lit(1))
+        if self._implementation.is_sqlframe():
+            id_frame = self_native.withColumn(
+                "_original_index", self._F.row_number().over(sql_frame_window)
+            ).orderBy(by)
+        else:
+            id_frame = self_native.withColumn(
+                "_original_index", self._F.monotonically_increasing_id()
+            ).orderBy(by)
+
+        # Set bounds for columns
+        bounds_window = self._Window.orderBy(by)
+        bounds_frame = id_frame.withColumns(
+            {
+                "x_prev": self._F.lag(by).over(bounds_window),
+                "y_prev": self._F.lag(target).over(bounds_window),
+                "x_next": self._F.lead(by).over(bounds_window),
+                "y_next": self._F.lead(target).over(bounds_window),
+            }
+        )
+
+        # Interpolate
+        interpolate_expr = (
+            self._F.when(
+                self._F.isnull(self._F.col(target)),
+                self._F.col("y_prev")
+                + (self._F.col(by) - self._F.col("x_prev"))
+                * (self._F.col("y_next") - self._F.col("y_prev"))
+                / (self._F.col("x_next") - self._F.col("x_prev")),
+            )
+            .otherwise(self._F.col(target))
+            .alias(target)
+        )
+
+        # Determine column order dynamically
+        cols = self_native.columns
+        target_id = cols.index(target)
+
+        select_cols = (
+            [interpolate_expr, self._F.col(by)]
+            if target_id == 0
+            else [self._F.col(by), interpolate_expr]
+        )
+
+        return self._from_native_frame(
+            bounds_frame.select(*select_cols)
+            .orderBy("_original_index")
+            .drop("_original_index")
+        )
+
     def explode(self: Self, columns: list[str]) -> Self:
         dtypes = import_dtypes_module(self._version)
 
