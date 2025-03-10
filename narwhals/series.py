@@ -17,6 +17,7 @@ from narwhals.series_cat import SeriesCatNamespace
 from narwhals.series_dt import SeriesDateTimeNamespace
 from narwhals.series_list import SeriesListNamespace
 from narwhals.series_str import SeriesStringNamespace
+from narwhals.series_struct import SeriesStructNamespace
 from narwhals.translate import to_native
 from narwhals.typing import IntoSeriesT
 from narwhals.utils import _validate_rolling_arguments
@@ -2633,3 +2634,7 @@ class Series(Generic[IntoSeriesT]):
     @property
     def list(self: Self) -> SeriesListNamespace[Self]:
         return SeriesListNamespace(self)
+
+    @property
+    def struct(self: Self) -> SeriesStructNamespace[Self]:
+        return SeriesStructNamespace(self)

@@ -15,6 +15,7 @@ from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
 from narwhals._spark_like.expr_name import SparkLikeExprNameNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
+from narwhals._spark_like.expr_struct import SparkLikeExprStructNamespace
 from narwhals._spark_like.utils import maybe_evaluate_expr
 from narwhals._spark_like.utils import narwhals_to_native_dtype
 from narwhals.dependencies import get_pyspark
@@ -616,6 +617,10 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     @property
     def list(self: Self) -> SparkLikeExprListNamespace:
         return SparkLikeExprListNamespace(self)
+
+    @property
+    def struct(self: Self) -> SparkLikeExprStructNamespace:
+        return SparkLikeExprStructNamespace(self)
 
     drop_nulls = not_implemented()
     diff = not_implemented()

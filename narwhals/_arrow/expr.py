@@ -8,6 +8,7 @@ from typing import Sequence
 
 import pyarrow.compute as pc
 
+from narwhals._arrow.expr_struct import ArrowExprStructNamespace
 from narwhals._arrow.series import ArrowSeries
 from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import ExprKind
@@ -262,3 +263,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         return self._reuse_series("rank", method=method, descending=descending)
 
     ewm_mean = not_implemented()
+
+    @property
+    def struct(self: Self) -> ArrowExprStructNamespace:
+        return ArrowExprStructNamespace(self)
