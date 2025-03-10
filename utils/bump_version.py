@@ -77,4 +77,4 @@ with open("docs/installation.md", "w", encoding="utf-8") as f:
 subprocess.run(["git", "commit", "-a", "-m", f"release: Bump version to {version}"])
 subprocess.run(["git", "tag", "-a", f"v{version}", "-m", f"v{version}"])
 subprocess.run(["git", "push", "upstream", "HEAD", "--follow-tags"])
-subprocess.run(["git", "push", "upstream", "HEAD:stable"])
+subprocess.run(["git", "push", "upstream", "HEAD:stable", "-f", "--follow-tags"])
