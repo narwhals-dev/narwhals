@@ -26,10 +26,9 @@ from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import nulls_like
 from narwhals._arrow.utils import pad_series
+from narwhals._compliant import EagerSeries
 from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantSeries
 from narwhals.utils import Implementation
-from narwhals.utils import _StoresNative
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import validate_backend_version
@@ -56,6 +55,7 @@ if TYPE_CHECKING:
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
 
 # TODO @dangotbanned: move into `_arrow.utils`
@@ -96,7 +96,7 @@ def maybe_extract_py_scalar(value: Any, return_py_scalar: bool) -> Any:  # noqa:
     return value
 
 
-class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
+class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def __init__(
         self: Self,
         native_series: ArrowChunkedArray,
@@ -112,6 +112,10 @@ class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
         self._broadcast = False
+
+    @property
+    def native(self) -> ArrowChunkedArray:
+        return self._native_series
 
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
@@ -138,15 +142,19 @@ class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
         data: Iterable[Any],
         name: str,
         *,
-        backend_version: tuple[int, ...],
-        version: Version,
+        context: _FullContext,
     ) -> Self:
         return cls(
             chunked_array([data]),
             name=name,
-            backend_version=backend_version,
-            version=version,
+            backend_version=context._backend_version,
+            version=context._version,
         )
+
+    def _from_scalar(self, value: Any) -> Self:
+        if self._backend_version < (13,) and hasattr(value, "as_py"):
+            value = value.as_py()
+        return super()._from_scalar(value)
 
     def __narwhals_namespace__(self: Self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
@@ -267,10 +275,6 @@ class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
     @property
     def _type(self: Self) -> pa.DataType:
         return self.native.type
-
-    @property
-    def native(self) -> ArrowChunkedArray:
-        return self._native_series
 
     def len(self: Self, *, _return_py_scalar: bool = True) -> int:
         return maybe_extract_py_scalar(len(self.native), _return_py_scalar)
@@ -557,12 +561,7 @@ class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
         import numpy as np  # ignore-banned-import
 
         res = np.flatnonzero(self.native)
-        return self._from_iterable(
-            res,
-            name=self.name,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        return self._from_iterable(res, name=self.name, context=self)
 
     def item(self: Self, index: int | None = None) -> Any:
         if index is None:

@@ -2,25 +2,24 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._selectors import CompliantSelector
-from narwhals._selectors import LazySelectorNamespace
+from narwhals._compliant import CompliantSelector
+from narwhals._compliant import LazySelectorNamespace
 from narwhals._spark_like.expr import SparkLikeExpr
 
 if TYPE_CHECKING:
     from pyspark.sql import Column
     from typing_extensions import Self
 
-    from narwhals._selectors import EvalNames
-    from narwhals._selectors import EvalSeries
+    from narwhals._compliant import EvalNames
+    from narwhals._compliant import EvalSeries
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals.utils import _FullContext
 
 
-# NOTE: See issue regarding ignores (#2044)
-class SparkLikeSelectorNamespace(LazySelectorNamespace["SparkLikeLazyFrame", "Column"]):  # type: ignore[type-var]
+class SparkLikeSelectorNamespace(LazySelectorNamespace["SparkLikeLazyFrame", "Column"]):
     def _selector(
         self,
-        call: EvalSeries[SparkLikeLazyFrame, Column],  # type: ignore[type-var]
+        call: EvalSeries[SparkLikeLazyFrame, Column],
         evaluate_output_names: EvalNames[SparkLikeLazyFrame],
         /,
     ) -> SparkLikeSelector:
@@ -40,7 +39,7 @@ class SparkLikeSelectorNamespace(LazySelectorNamespace["SparkLikeLazyFrame", "Co
         self._implementation = context._implementation
 
 
-class SparkLikeSelector(CompliantSelector["SparkLikeLazyFrame", "Column"], SparkLikeExpr):  # type: ignore[type-var, misc]
+class SparkLikeSelector(CompliantSelector["SparkLikeLazyFrame", "Column"], SparkLikeExpr):  # type: ignore[misc]
     def _to_expr(self: Self) -> SparkLikeExpr:
         return SparkLikeExpr(
             self._call,

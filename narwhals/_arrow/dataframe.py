@@ -17,8 +17,8 @@ from narwhals._arrow.utils import convert_str_slice_to_int_slice
 from narwhals._arrow.utils import extract_dataframe_comparand
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import select_rows
+from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
-from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.utils import Implementation
 from narwhals.utils import Version
@@ -71,7 +71,7 @@ from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 
 
-class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
+class ArrowDataFrame(EagerDataFrame["ArrowSeries"], CompliantLazyFrame):
     # --- not in the spec ---
     def __init__(
         self: Self,
@@ -360,7 +360,7 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
         return self.select(*exprs)
 
     def select(self: ArrowDataFrame, *exprs: ArrowExpr) -> ArrowDataFrame:
-        new_series = evaluate_into_exprs(self, *exprs)
+        new_series = self._evaluate_into_exprs(*exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_frame(
@@ -373,7 +373,7 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
 
     def with_columns(self: ArrowDataFrame, *exprs: ArrowExpr) -> ArrowDataFrame:
         native_frame = self._native_frame
-        new_columns = evaluate_into_exprs(self, *exprs)
+        new_columns = self._evaluate_into_exprs(*exprs)
 
         length = len(self)
         columns = self.columns
@@ -560,7 +560,7 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
             mask_native: Mask | ArrowChunkedArray = predicate
         else:
             # `[0]` is safe as the predicate's expression only returns a single column
-            mask_native = evaluate_into_exprs(self, predicate)[0]._native_series
+            mask_native = self._evaluate_into_exprs(predicate)[0]._native_series
         return self._from_native_frame(
             self._native_frame.filter(mask_native),  # pyright: ignore[reportArgumentType]
             validate_column_names=False,
@@ -777,7 +777,7 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
 
         keep_idx = self.simple_select(*subset).is_unique()
         plx = self.__narwhals_namespace__()
-        return self.filter(plx._create_expr_from_series(keep_idx))
+        return self.filter(plx._expr._from_series(keep_idx))
 
     def gather_every(self: Self, n: int, offset: int) -> Self:
         return self._from_native_frame(
