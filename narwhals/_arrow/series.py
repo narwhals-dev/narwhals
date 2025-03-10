@@ -16,6 +16,7 @@ from narwhals._arrow.series_cat import ArrowSeriesCatNamespace
 from narwhals._arrow.series_dt import ArrowSeriesDateTimeNamespace
 from narwhals._arrow.series_list import ArrowSeriesListNamespace
 from narwhals._arrow.series_str import ArrowSeriesStringNamespace
+from narwhals._arrow.series_struct import ArrowSeriesStructNamespace
 from narwhals._arrow.utils import cast_for_truediv
 from narwhals._arrow.utils import chunked_array
 from narwhals._arrow.utils import extract_native
@@ -898,7 +899,7 @@ class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
     ) -> Self:
         min_samples = min_samples if min_samples is not None else window_size
@@ -932,7 +933,7 @@ class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
     ) -> Self:
         min_samples = min_samples if min_samples is not None else window_size
@@ -969,7 +970,7 @@ class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -1022,7 +1023,7 @@ class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -1213,3 +1214,7 @@ class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
     @property
     def list(self: Self) -> ArrowSeriesListNamespace:
         return ArrowSeriesListNamespace(self)
+
+    @property
+    def struct(self: Self) -> ArrowSeriesStructNamespace:
+        return ArrowSeriesStructNamespace(self)

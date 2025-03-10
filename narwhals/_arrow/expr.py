@@ -14,6 +14,7 @@ from narwhals._arrow.expr_dt import ArrowExprDateTimeNamespace
 from narwhals._arrow.expr_list import ArrowExprListNamespace
 from narwhals._arrow.expr_name import ArrowExprNameNamespace
 from narwhals._arrow.expr_str import ArrowExprStringNamespace
+from narwhals._arrow.expr_struct import ArrowExprStructNamespace
 from narwhals._arrow.series import ArrowSeries
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
@@ -545,11 +546,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
         return reuse_series_implementation(self, "cum_prod", reverse=reverse)
 
     def rolling_sum(
-        self: Self,
-        window_size: int,
-        *,
-        min_samples: int | None,
-        center: bool,
+        self: Self, window_size: int, *, min_samples: int, center: bool
     ) -> Self:
         return reuse_series_implementation(
             self,
@@ -563,7 +560,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
     ) -> Self:
         return reuse_series_implementation(
@@ -578,7 +575,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -595,7 +592,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -639,3 +636,7 @@ class ArrowExpr(CompliantExpr["ArrowDataFrame", ArrowSeries]):
     @property
     def list(self: Self) -> ArrowExprListNamespace:
         return ArrowExprListNamespace(self)
+
+    @property
+    def struct(self: Self) -> ArrowExprStructNamespace:
+        return ArrowExprStructNamespace(self)
