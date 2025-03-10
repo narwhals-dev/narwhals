@@ -133,13 +133,9 @@ def test_struct_hashes() -> None:
     assert len({hash(tp) for tp in (dtypes)}) == 3
 
 
-def test_2d_array(constructor: Constructor) -> None:
+def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     version_conditions = [
         (PANDAS_VERSION < (2, 2), "Requires pandas 2.2+ for 2D array support"),
-        (
-            any(x in str(constructor) for x in ("dask", "modin", "cudf", "pyspark")),
-            "2D array operations not supported in these backends",
-        ),
         (
             "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14,),
             "PyArrow 14+ required for 2D array support",
@@ -148,6 +144,13 @@ def test_2d_array(constructor: Constructor) -> None:
     for condition, reason in version_conditions:
         if condition:
             pytest.skip(reason)
+
+    if any(x in str(constructor) for x in ("dask", "modin", "cudf", "pyspark")):
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="2D array operations not supported in these backends"
+            )
+        )
 
     data = {"a": [[[1, 2], [3, 4], [5, 6]]]}
     df = nw.from_native(constructor(data)).with_columns(
