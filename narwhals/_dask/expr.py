@@ -23,8 +23,11 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
+from narwhals.utils import not_implemented
 
 if TYPE_CHECKING:
+    from narwhals._expression_parsing import ExprKind
+
     try:
         import dask.dataframe.dask_expr as dx
     except ModuleNotFoundError:
@@ -342,6 +345,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
 
     def cum_sum(self: Self, *, reverse: bool) -> Self:
         if reverse:  # pragma: no cover
+            # https://github.com/dask/dask/issues/11802
             msg = "`cum_sum(reverse=True)` is not supported with Dask backend"
             raise NotImplementedError(msg)
 
@@ -377,6 +381,16 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
 
         return self._from_call(lambda _input: _input.cumprod(), "cum_prod")
 
+    def rolling_sum(
+        self: Self, window_size: int, *, min_samples: int, center: bool
+    ) -> Self:
+        return self._from_call(
+            lambda _input: _input.rolling(
+                window=window_size, min_periods=min_samples, center=center
+            ).sum(),
+            "rolling_sum",
+        )
+
     def sum(self: Self) -> Self:
         return self._from_call(lambda _input: _input.sum().to_series(), "sum")
 
@@ -391,12 +405,6 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
 
     def drop_nulls(self: Self) -> Self:
         return self._from_call(lambda _input: _input.dropna(), "drop_nulls")
-
-    def replace_strict(
-        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
-    ) -> Self:
-        msg = "`replace_strict` is not yet supported for Dask expressions"
-        raise NotImplementedError(msg)
 
     def abs(self: Self) -> Self:
         return self._from_call(lambda _input: _input.abs(), "abs")
@@ -538,41 +546,58 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
             lambda _input: _input.isna().sum().to_series(), "null_count"
         )
 
-    def over(self: Self, keys: list[str], kind: ExprKind) -> Self:
+    def over(
+        self: Self,
+        partition_by: Sequence[str],
+        kind: ExprKind,
+        order_by: Sequence[str] | None,
+    ) -> Self:
         # pandas is a required dependency of dask so it's safe to import this
         from narwhals._pandas_like.group_by import AGGREGATIONS_TO_PANDAS_EQUIVALENT
 
-        if not is_elementary_expression(self):  # pragma: no cover
+        if not partition_by:
+            assert order_by is not None  # help type checkers  # noqa: S101
+
+            # This is something like `nw.col('a').cum_sum().order_by(key)`
+            # which we can always easily support, as it doesn't require grouping.
+            def func(df: DaskLazyFrame) -> Sequence[dx.Series]:
+                return self(df.sort(*order_by, descending=False, nulls_last=False))
+        elif not is_elementary_expression(self):  # pragma: no cover
             msg = (
                 "Only elementary expressions are supported for `.over` in dask.\n\n"
                 "Please see: "
                 "https://narwhals-dev.github.io/narwhals/pandas_like_concepts/improve_group_by_operation/"
             )
             raise NotImplementedError(msg)
-        function_name = re.sub(r"(\w+->)", "", self._function_name)
-        try:
-            dask_function_name = AGGREGATIONS_TO_PANDAS_EQUIVALENT[function_name]
-        except KeyError:
-            msg = (
-                f"Unsupported function: {function_name} in `over` context.\n\n."
-                f"Supported functions are {', '.join(AGGREGATIONS_TO_PANDAS_EQUIVALENT)}\n"
-            )
-            raise NotImplementedError(msg) from None
-
-        def func(df: DaskLazyFrame) -> list[dx.Series]:
-            output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
-
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore", message=".*`meta` is not specified", category=UserWarning
+        else:
+            function_name = re.sub(r"(\w+->)", "", self._function_name)
+            try:
+                dask_function_name = AGGREGATIONS_TO_PANDAS_EQUIVALENT[function_name]
+            except KeyError:
+                # window functions are unsupported: https://github.com/dask/dask/issues/11806
+                msg = (
+                    f"Unsupported function: {function_name} in `over` context.\n\n"
+                    f"Supported functions are {', '.join(AGGREGATIONS_TO_PANDAS_EQUIVALENT)}\n"
                 )
-                res_native = df._native_frame.groupby(keys)[list(output_names)].transform(
-                    dask_function_name, **self._call_kwargs
-                )
-            result_frame = df._from_native_frame(
-                res_native.rename(columns=dict(zip(output_names, aliases)))
-            )._native_frame
-            return [result_frame[name] for name in aliases]
+                raise NotImplementedError(msg) from None
+
+            def func(df: DaskLazyFrame) -> Sequence[dx.Series]:
+                output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
+
+                with warnings.catch_warnings():
+                    # https://github.com/dask/dask/issues/11804
+                    warnings.filterwarnings(
+                        "ignore",
+                        message=".*`meta` is not specified",
+                        category=UserWarning,
+                    )
+                    res_native = df._native_frame.groupby(partition_by)[
+                        list(output_names)
+                    ].transform(dask_function_name, **self._call_kwargs)
+                result_frame = df._from_native_frame(
+                    res_native.rename(columns=dict(zip(output_names, aliases)))
+                )._native_frame
+                return [result_frame[name] for name in aliases]
 
         return self.__class__(
             func,
@@ -607,3 +632,24 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
     @property
     def name(self: Self) -> DaskExprNameNamespace:
         return DaskExprNameNamespace(self)
+
+    arg_min = not_implemented()
+    arg_max = not_implemented()
+    arg_true = not_implemented()
+    head = not_implemented()
+    tail = not_implemented()
+    mode = not_implemented()
+    sort = not_implemented()
+    rank = not_implemented()
+    sample = not_implemented()
+    map_batches = not_implemented()
+    ewm_mean = not_implemented()
+    rolling_mean = not_implemented()
+    rolling_var = not_implemented()
+    rolling_std = not_implemented()
+    gather_every = not_implemented()
+    replace_strict = not_implemented()
+
+    cat = not_implemented()  # pyright: ignore[reportAssignmentType]
+    list = not_implemented()  # pyright: ignore[reportAssignmentType]
+    struct = not_implemented()  # pyright: ignore[reportAssignmentType]

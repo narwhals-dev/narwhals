@@ -5,17 +5,20 @@ import string
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Protocol
 from typing import cast
 
 import hypothesis.strategies as st
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
 from hypothesis import given
 from pandas.testing import assert_frame_equal
 from pandas.testing import assert_index_equal
 from pandas.testing import assert_series_equal
 
+import narwhals as unstable_nw
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import check_column_exists
@@ -24,6 +27,8 @@ from tests.utils import PANDAS_VERSION
 from tests.utils import get_module_version_as_tuple
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from narwhals.series import Series
     from narwhals.typing import IntoSeries
     from narwhals.utils import _SupportsVersion
@@ -135,7 +140,7 @@ def test_maybe_set_index_pandas_direct_index(
         native_df_or_series.index = pandas_index  # type: ignore[assignment]
         assert_series_equal(nw.to_native(result), native_df_or_series)
     else:
-        expected = native_df_or_series.set_index(pandas_index)  # type: ignore[type-var]
+        expected = native_df_or_series.set_index(pandas_index)  # type: ignore[arg-type]
         assert_frame_equal(nw.to_native(result), expected)
 
 
@@ -312,3 +317,113 @@ def test_check_column_exists() -> None:
         match=re.escape("Column(s) ['d', 'f'] not found in ['a', 'b', 'c']"),
     ):
         check_column_exists(columns, subset)
+
+
+def test_not_implemented() -> None:
+    from narwhals._arrow.expr import ArrowExpr
+    from narwhals._polars.expr import PolarsExpr
+    from narwhals._polars.expr import PolarsExprStringNamespace
+    from narwhals.utils import not_implemented
+
+    data: dict[str, Any] = {"foo": [1, 2], "bar": [6.0, 7.0]}
+    df = pa.table(data)
+    nw_df = unstable_nw.from_native(df)
+    ewm_mean = unstable_nw.col("foo").ewm_mean(com=1, ignore_nulls=False)
+    pattern = re.compile(
+        r".+ewm_mean.+ not implemented.+arrow", flags=re.DOTALL | re.IGNORECASE
+    )
+    with pytest.raises(NotImplementedError, match=pattern):
+        nw_df.with_columns(ewm_mean)
+
+    assert isinstance(ArrowExpr.ewm_mean, not_implemented)
+
+    if TYPE_CHECKING:
+        from narwhals.utils import _SupportsGet
+
+    class DummyCompliant(Protocol):
+        _implementation: nw.Implementation
+
+        def alias(self, name: str) -> str: ...
+        def unique(self) -> Self: ...
+
+        # NOTE property option (1)
+        str: _SupportsGet
+        dt: _SupportsGet
+
+        # NOTE property option (2)
+        @property
+        def cat(self) -> Any: ...
+        @property
+        def list(self) -> Any: ...
+
+    class DummyExpr(DummyCompliant):
+        def __init__(self) -> None:
+            self._implementation = nw.Implementation.POLARS
+
+        def alias(self, name: str) -> str:
+            return name
+
+        unique = not_implemented()
+
+        # NOTE: Only `mypy` has an issue with this?
+        # error: Cannot override writeable attribute with read-only property
+        @property
+        def str(self) -> PolarsExprStringNamespace:  # type: ignore[override]
+            pl_expr = cast("PolarsExpr", self)
+            return PolarsExprStringNamespace(pl_expr)
+
+        dt = not_implemented()
+
+        # NOTE: Typing is happy w/ double property
+        @property
+        def cat(self) -> PolarsExprStringNamespace:
+            pl_expr = cast("PolarsExpr", self)
+            return PolarsExprStringNamespace(pl_expr)
+
+        # NOTE: Typing still happy - but it complicates runtime (API completeness) access
+        _list = not_implemented("list")
+
+        @property
+        def list(self) -> Any:
+            return self._list
+
+    expr = DummyExpr()
+    # NOTE: Happy path
+    assert expr._implementation is nw.Implementation.POLARS
+    assert expr.alias("new name") == "new name"
+    assert isinstance(expr.str, PolarsExprStringNamespace)
+    assert isinstance(expr.cat, PolarsExprStringNamespace)
+
+    # NOTE: not implemented override
+    pattern = re.compile(
+        r".+unique.+ not implemented.+polars", flags=re.DOTALL | re.IGNORECASE
+    )
+    with pytest.raises(NotImplementedError, match=pattern):
+        expr.unique()
+
+    assert isinstance(DummyExpr.unique, not_implemented)
+    assert repr(DummyExpr.unique) == "<not_implemented>: DummyExpr.unique"
+
+    pattern = re.compile(
+        r".+unique.+ not implemented.+DummyExpr", flags=re.DOTALL | re.IGNORECASE
+    )
+    with pytest.raises(NotImplementedError, match=pattern):
+        DummyExpr.unique()
+
+    pattern = re.compile(
+        r".+dt.+ not implemented.+polars", flags=re.DOTALL | re.IGNORECASE
+    )
+    with pytest.raises(NotImplementedError, match=pattern):
+        expr.dt  # noqa: B018
+
+    assert isinstance(DummyExpr.dt, not_implemented)
+    assert repr(DummyExpr.dt) == "<not_implemented>: DummyExpr.dt"
+
+    pattern = re.compile(
+        r".+list.+ not implemented.+polars", flags=re.DOTALL | re.IGNORECASE
+    )
+    with pytest.raises(NotImplementedError, match=pattern):
+        expr.list  # noqa: B018
+
+    assert isinstance(DummyExpr._list, not_implemented)
+    assert repr(DummyExpr._list) == "<not_implemented>: DummyExpr.list"

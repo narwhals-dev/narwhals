@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.29.0"
+version = "1.30.0"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
@@ -114,48 +114,46 @@ preview = true
 explicit-preview-rules = true
 
 extend-safe-fixes = [
-  "C419",
-  "C420",
-  "PLR6201",
-  "TC",
-  "UP",
+  "C419",    # unnecessary-comprehension-in-call
+  "C420",    # unnecessary-dict-comprehension-for-iterable
+  "PLR6201", # literal-membership
+  "TC",      # flake8-type-checking
+  "UP",      # pyupgrade
 ]
 extend-select = [
-  "PLR6201",
+  "PLR6201", # literal-membership
 ]
-select = [
-  "ALL",
-]
+select = ["ALL"]
 ignore = [
-  "A001",
-  "A004",
-  "A005",
-  "ARG002",
-  "ANN401",
-  "C901",
-  "COM812",
-  "D100",
-  "D101",
-  "D102",
-  "D103",
-  "D104",
-  "D105",
-  "D107",
-  "DTZ001",
-  "E501",
-  "FIX",
-  "ISC001",
-  "PD003",
-  "PD010",
-  "PD901",  # This is a auxiliary library so dataframe variables have no concrete business meaning
-  "PLR0911",
-  "PLR0912",
-  "PLR0913",
-  "PLR2004",
-  "RET505",
-  "SLF001",
-  "TD003",
-  "TD004",
+  "A001",    # builtin-variable-shadowing
+  "A004",    # builtin-import-shadowing
+  "A005",    # stdlib-module-shadowing
+  "ARG002",  # unused-method-argument
+  "ANN401",  # any-type
+  "C901",    # complex-structure
+  "COM812",  # missing-trailing-comma
+  "D100",    # undocumented-public-module
+  "D101",    # undocumented-public-class
+  "D102",    # undocumented-public-method
+  "D103",    # undocumented-public-function
+  "D104",    # undocumented-public-package
+  "D105",    # undocumented-magic-method
+  "D107",    # undocumented-public-init
+  "DTZ001",  # call-datetime-without-tzinfo
+  "E501",    # line-too-long
+  "FIX",     # flake8-fixme
+  "ISC001",  # single-line-implicit-string-concatenation
+  "PD003",   # pandas-use-of-dot-is-null
+  "PD010",   # pandas-use-of-dot-pivot-or-unstack
+  "PD901",   # pandas-df-variable-name (This is a auxiliary library so dataframe variables have no concrete business meaning)
+  "PLR0911", # too-many-return-statements
+  "PLR0912", # too-many-branches
+  "PLR0913", # too-many-arguments
+  "PLR2004", # magic-value-comparison
+  "RET505",  # superfluous-else-return
+  "SLF001",  # private-member-access
+  "TD003",   # missing-todo-link
+  "TD004",   # missing-todo-colon
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -202,8 +200,11 @@ filterwarnings = [
   'ignore:.*is_datetime64tz_dtype is deprecated and will be removed in a future version.*:DeprecationWarning:pyspark',
   # Warning raised by PyArrow nightly just by importing pandas
   'ignore:.*Python binding for RankQuantileOptions not exposed:RuntimeWarning:pyarrow',
-  'ignore:.*pandas only supports SQLAlchemy:UserWarning',
+  'ignore:.*pandas only supports SQLAlchemy:UserWarning:sqlframe',
   'ignore:.*numpy.core is deprecated and has been renamed to numpy._core.*:DeprecationWarning:sqlframe',
+  "ignore:.*__array__ implementation doesn't accept a copy keyword, so passing copy=False failed:DeprecationWarning:modin",
+  # raised internally by pandas
+  "ignore:.*np.find_common_type is deprecated:DeprecationWarning:pandas",
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
