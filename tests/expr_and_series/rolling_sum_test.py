@@ -136,6 +136,9 @@ def test_rolling_sum_expr_lazy_grouped(
         pytest.skip()
     if any(x in str(constructor) for x in ("dask", "pyarrow_table", "duckdb")):
         request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor) and center:
+        # center is not implemented for offset-based windows
+        request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         # unreliable
         pytest.skip()

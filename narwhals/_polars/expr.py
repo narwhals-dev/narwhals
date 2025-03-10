@@ -316,6 +316,10 @@ class PolarsExpr:
     def list(self: Self) -> PolarsExprListNamespace:
         return PolarsExprListNamespace(self)
 
+    @property
+    def struct(self: Self) -> PolarsExprStructNamespace:
+        return PolarsExprStructNamespace(self)
+
 
 class PolarsExprDateTimeNamespace:
     def __init__(self: Self, expr: PolarsExpr) -> None:
@@ -398,6 +402,22 @@ class PolarsExprListNamespace:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._expr._from_native_expr(
                 getattr(self._expr._native_expr.list, attr)(*args, **kwargs)
+            )
+
+        return func
+
+
+class PolarsExprStructNamespace:
+    def __init__(self: Self, expr: PolarsExpr) -> None:
+        self._expr = expr
+
+    def __getattr__(
+        self: Self, attr: str
+    ) -> Callable[[Any], PolarsExpr]:  # pragma: no cover
+        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
+            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
+            return self._expr._from_native_expr(
+                getattr(self._expr._native_expr.struct, attr)(*args, **kwargs)
             )
 
         return func

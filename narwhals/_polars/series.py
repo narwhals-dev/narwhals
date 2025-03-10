@@ -580,6 +580,10 @@ class PolarsSeries:
     def list(self: Self) -> PolarsSeriesListNamespace:
         return PolarsSeriesListNamespace(self)
 
+    @property
+    def struct(self: Self) -> PolarsSeriesStructNamespace:
+        return PolarsSeriesStructNamespace(self)
+
 
 class PolarsSeriesDateTimeNamespace:
     def __init__(self: Self, series: PolarsSeries) -> None:
@@ -647,6 +651,22 @@ class PolarsSeriesListNamespace:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._series._from_native_series(
                 getattr(self._series._native_series.list, attr)(*args, **kwargs)
+            )
+
+        return func
+
+
+class PolarsSeriesStructNamespace:
+    def __init__(self: Self, series: PolarsSeries) -> None:
+        self._compliant_series = series
+
+    def __getattr__(self: Self, attr: str) -> Any:
+        def func(*args: Any, **kwargs: Any) -> Any:
+            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
+            return self._compliant_series._from_native_series(
+                getattr(self._compliant_series._native_series.struct, attr)(
+                    *args, **kwargs
+                )
             )
 
         return func

@@ -219,6 +219,9 @@ def test_to_datetime_tz_aware(
     if "sqlframe" in str(constructor):
         # https://github.com/eakmanrq/sqlframe/issues/325
         request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor):
+        # cuDF does not yet support timezone-aware datetimes
+        request.applymarker(pytest.mark.xfail)
     context = (
         pytest.raises(NotImplementedError)
         if any(x in str(constructor) for x in ("duckdb", "sqlframe")) and format is None
