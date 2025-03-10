@@ -21,6 +21,7 @@ from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import align_series_full_broadcast
 from narwhals._arrow.utils import diagonal_concat
+from narwhals._arrow.utils import ensure_all_compatible_strings
 from narwhals._arrow.utils import extract_dataframe_comparand
 from narwhals._arrow.utils import horizontal_concat
 from narwhals._arrow.utils import nulls_like
@@ -180,6 +181,9 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
             )
             if dtype:
                 return arrow_series.cast(dtype)
+            elif isinstance(value, str) and dtype is None:
+                # Cast to nw.String() to ensure we default to large-string.
+                return arrow_series.cast(import_dtypes_module(self._version).String())
             return arrow_series
 
         return ArrowExpr(
@@ -360,13 +364,19 @@ class ArrowNamespace(CompliantNamespace[ArrowDataFrame, ArrowSeries]):
             null_handling: Literal["skip", "emit_null"] = (
                 "skip" if ignore_nulls else "emit_null"
             )
-            it = (s._native_series for s in compliant_series_list)
+            it, separator_scalar = ensure_all_compatible_strings(
+                *(s._native_series for s in compliant_series_list), separator=separator
+            )
             # NOTE: stubs indicate `separator` must also be a `ChunkedArray`
             # Reality: `str` is fine
             concat_str: Incomplete = pc.binary_join_element_wise
             return [
                 ArrowSeries(
-                    native_series=concat_str(*it, separator, null_handling=null_handling),
+                    native_series=concat_str(
+                        *it,
+                        separator_scalar,
+                        null_handling=null_handling,
+                    ),
                     name=compliant_series_list[0].name,
                     backend_version=self._backend_version,
                     version=self._version,
