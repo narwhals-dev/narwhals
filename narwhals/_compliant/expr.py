@@ -17,6 +17,7 @@ from narwhals._compliant.any_namespace import DateTimeNamespace
 from narwhals._compliant.any_namespace import ListNamespace
 from narwhals._compliant.any_namespace import NameNamespace
 from narwhals._compliant.any_namespace import StringNamespace
+from narwhals._compliant.any_namespace import StructNamespace
 from narwhals._compliant.namespace import CompliantNamespace
 from narwhals._compliant.typing import AliasName
 from narwhals._compliant.typing import AliasNames
@@ -428,7 +429,7 @@ class EagerExpr(
 
     def _reuse_series_namespace(
         self: Self,
-        series_namespace: Literal["cat", "dt", "list", "str", "name"],
+        series_namespace: Literal["cat", "dt", "list", "name", "str", "struct"],
         method_name: str,
         **kwargs: Any,
     ) -> Self:
@@ -438,8 +439,8 @@ class EagerExpr(
         of `Expr.foo`.
 
         Arguments:
-            series_namespace: The Series namespace (e.g. `dt`, `cat`, `str`, `list`, `name`)
-            method_name: name of method.
+            series_namespace: The Series namespace.
+            method_name: name of method, within `series_namespace`.
             kwargs: keyword arguments to pass to function.
         """
         return self._from_callable(
@@ -788,12 +789,16 @@ class EagerExpr(
         return EagerExprListNamespace(self)
 
     @property
+    def name(self) -> EagerExprNameNamespace[Self]:
+        return EagerExprNameNamespace(self)
+
+    @property
     def str(self) -> EagerExprStringNamespace[Self]:
         return EagerExprStringNamespace(self)
 
     @property
-    def name(self) -> EagerExprNameNamespace[Self]:
-        return EagerExprNameNamespace(self)
+    def struct(self) -> EagerExprStructNamespace[Self]:
+        return EagerExprStructNamespace(self)
 
 
 class LazyExpr(
@@ -1005,3 +1010,12 @@ class EagerExprStringNamespace(
 
     def to_uppercase(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "to_uppercase")
+
+
+class EagerExprStructNamespace(
+    EagerExprNamespace[EagerExprT], StructNamespace[EagerExprT], Generic[EagerExprT]
+):
+    def field(self, name: str) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("struct", "field", name=name).alias(
+            name
+        )

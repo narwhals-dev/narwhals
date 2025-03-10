@@ -11,7 +11,6 @@ from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._expression_parsing import is_elementary_expression
-from narwhals._pandas_like.expr_struct import PandasLikeExprStructNamespace
 from narwhals._pandas_like.group_by import AGGREGATIONS_TO_PANDAS_EQUIVALENT
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals.dependencies import get_numpy
@@ -366,7 +365,3 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         return self._reuse_series(
             "rank", call_kwargs={"method": method, "descending": descending}
         )
-
-    @property
-    def struct(self: Self) -> PandasLikeExprStructNamespace:
-        return PandasLikeExprStructNamespace(self)

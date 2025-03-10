@@ -19,6 +19,7 @@ __all__ = [
     "ListNamespace",
     "NameNamespace",
     "StringNamespace",
+    "StructNamespace",
 ]
 
 
@@ -80,3 +81,7 @@ class StringNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]):
     def to_datetime(self, format: str | None) -> CompliantT_co: ...  # noqa: A002
     def to_lowercase(self) -> CompliantT_co: ...
     def to_uppercase(self) -> CompliantT_co: ...
+
+
+class StructNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]):
+    def field(self, name: str) -> CompliantT_co: ...
