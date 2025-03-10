@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoFrame
 
-MIN_PANDAS_NULLABLE_VERSION = (1, 5)
+MIN_PANDAS_NULLABLE_VERSION = (2,)
 
 # When testing cudf.pandas in Kaggle, we get an error if we try to run
 # python -m cudf.pandas -m pytest --constructors=pandas. This gives us

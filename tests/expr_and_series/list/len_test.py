@@ -56,3 +56,15 @@ def test_pandas_preserve_index(request: pytest.FixtureRequest) -> None:
     result = df["a"].cast(nw.List(nw.Int32())).list.len()
     assert_equal_data({"a": result}, expected)
     assert (result.to_native().index == index).all()
+
+
+def test_pandas_object_series() -> None:
+    import pandas as pd
+
+    import narwhals as nw
+
+    s_native = pd.Series(data=data["a"])
+    s = nw.from_native(s_native, series_only=True)
+
+    with pytest.raises(TypeError):
+        s.list.len()

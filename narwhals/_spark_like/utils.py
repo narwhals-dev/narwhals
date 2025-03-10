@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from narwhals.exceptions import UnsupportedDTypeError
+from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
@@ -54,6 +55,8 @@ def native_to_narwhals_dtype(
     if isinstance(dtype, native.TimestampNTZType):
         return dtypes.Datetime()
     if isinstance(dtype, native.TimestampType):
+        # TODO(marco): is UTC correct, or should we be getting the connection timezone?
+        # https://github.com/narwhals-dev/narwhals/issues/2165
         return dtypes.Datetime(time_zone="UTC")
     if isinstance(dtype, native.DecimalType):
         return dtypes.Decimal()
@@ -181,13 +184,17 @@ def maybe_evaluate_expr(df: SparkLikeLazyFrame, obj: SparkLikeExpr | object) -> 
 
 
 def _std(
-    _input: Column | str, ddof: int, np_version: tuple[int, ...], functions: Any
+    _input: Column | str,
+    ddof: int,
+    np_version: tuple[int, ...],
+    functions: Any,
+    implementation: Implementation,
 ) -> Column:
-    if np_version > (2, 0):
-        if ddof == 1:
-            return functions.stddev_samp(_input)
+    if implementation is Implementation.SQLFRAME or np_version > (2, 0):
         if ddof == 0:
             return functions.stddev_pop(_input)
+        if ddof == 1:
+            return functions.stddev_samp(_input)
 
         n_rows = functions.count(_input)
         return functions.stddev_samp(_input) * functions.sqrt(
@@ -201,9 +208,15 @@ def _std(
 
 
 def _var(
-    _input: Column | str, ddof: int, np_version: tuple[int, ...], functions: Any
+    _input: Column | str,
+    ddof: int,
+    np_version: tuple[int, ...],
+    functions: Any,
+    implementation: Implementation,
 ) -> Column:
-    if np_version > (2, 0):
+    if implementation is Implementation.SQLFRAME or np_version > (2, 0):
+        if ddof == 0:
+            return functions.var_pop(_input)
         if ddof == 1:
             return functions.var_samp(_input)
 
