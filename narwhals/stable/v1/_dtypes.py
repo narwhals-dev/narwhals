@@ -1,6 +1,11 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import Any
+from typing import Literal
+from typing import TypeVar
+from typing import cast
+from typing import overload
 
 from narwhals.dtypes import Array
 from narwhals.dtypes import Boolean
@@ -37,10 +42,20 @@ from narwhals.dtypes import Unknown
 from narwhals.dtypes import UnsignedIntegerType
 
 if TYPE_CHECKING:
+    from datetime import timezone
+
     from typing_extensions import Self
 
+    from narwhals.dtypes import IntoZone
+    from narwhals.dtypes import _UnitT
+    from narwhals.dtypes import _ZoneT
+    from narwhals.typing import TimeUnit
 
-class Datetime(NwDatetime):
+UnitT = TypeVar("UnitT", bound="TimeUnit")
+ZoneT = TypeVar("ZoneT", str, None)
+
+
+class Datetime(NwDatetime[UnitT, ZoneT]):
     """Data type representing a calendar date and time of day.
 
     Arguments:
@@ -54,6 +69,49 @@ class Datetime(NwDatetime):
 
     def __hash__(self: Self) -> int:
         return hash(self.__class__)
+
+    @overload
+    def __init__(
+        self: Datetime[Literal["us"], None],
+        time_unit: Literal["us"] = ...,
+        time_zone: None = ...,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: Datetime[_UnitT, None], time_unit: _UnitT, time_zone: None = ...
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: Datetime[_UnitT, _ZoneT], time_unit: _UnitT, time_zone: _ZoneT
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: Datetime[_UnitT, str], time_unit: _UnitT, time_zone: timezone
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: Datetime[Literal["us"], _ZoneT],
+        time_unit: Literal["us"] = ...,
+        *,
+        time_zone: _ZoneT,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: Datetime[Literal["us"], str],
+        time_unit: Literal["us"] = ...,
+        *,
+        time_zone: timezone,
+    ) -> None: ...
+
+    def __init__(
+        self: Self, time_unit: TimeUnit | Literal["us"] = "us", time_zone: IntoZone = None
+    ) -> None:
+        super().__init__(cast("Any", time_unit), cast("Any", time_zone))
 
 
 class Duration(NwDuration):

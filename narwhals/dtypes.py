@@ -4,17 +4,66 @@ from collections import OrderedDict
 from datetime import timezone
 from itertools import starmap
 from typing import TYPE_CHECKING
+from typing import Any
+from typing import Generic
 from typing import Mapping
+from typing import cast
+from typing import overload
 
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from typing import Iterator
+    from typing import Literal
     from typing import Sequence
 
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
+    from typing_extensions import TypeIs
+    from typing_extensions import TypeVar
 
     from narwhals.typing import TimeUnit
+
+    _DTypeT = TypeVar("_DTypeT", bound="DType")
+    UnitT = TypeVar("UnitT", bound=TimeUnit)
+    _UnitT = TypeVar("_UnitT", bound=TimeUnit)
+    IntoZone: TypeAlias = "str | timezone | None"
+    ZoneT = TypeVar("ZoneT", str, None)
+    _ZoneT = TypeVar("_ZoneT", str, None)
+else:
+    from typing import TypeVar
+
+    UnitT = TypeVar("UnitT", bound="TimeUnit")
+    ZoneT = TypeVar("ZoneT", str, None)
+
+__all__ = [
+    "Array",
+    "Boolean",
+    "Categorical",
+    "Date",
+    "Datetime",
+    "Decimal",
+    "Duration",
+    "Enum",
+    "Field",
+    "Float32",
+    "Float64",
+    "Int8",
+    "Int16",
+    "Int32",
+    "Int64",
+    "Int128",
+    "List",
+    "Object",
+    "String",
+    "Struct",
+    "UInt8",
+    "UInt16",
+    "UInt32",
+    "UInt64",
+    "UInt128",
+    "Unknown",
+]
 
 
 def _validate_dtype(dtype: DType | type[DType]) -> None:
@@ -62,7 +111,7 @@ class DType:
     def is_nested(cls: type[Self]) -> bool:
         return issubclass(cls, NestedType)
 
-    def __eq__(self: Self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+    def __eq__(self: _DTypeT, other: object) -> TypeIs[_DTypeT | type[_DTypeT]]:  # type: ignore[override]
         from narwhals.utils import isinstance_or_issubclass
 
         return isinstance_or_issubclass(other, type(self))
@@ -308,7 +357,7 @@ class _DatetimeMeta(type):
         return None
 
 
-class Datetime(TemporalType, metaclass=_DatetimeMeta):
+class Datetime(TemporalType, Generic[UnitT, ZoneT], metaclass=_DatetimeMeta):
     """Data type representing a calendar date and time of day.
 
     Arguments:
@@ -332,10 +381,49 @@ class Datetime(TemporalType, metaclass=_DatetimeMeta):
         Datetime(time_unit='ms', time_zone='Africa/Accra')
     """
 
+    time_unit: UnitT
+    time_zone: ZoneT
+
+    @overload
     def __init__(
-        self: Self,
-        time_unit: TimeUnit = "us",
-        time_zone: str | timezone | None = None,
+        self: Datetime[Literal["us"], None],
+        time_unit: Literal["us"] = ...,
+        time_zone: None = ...,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: Datetime[_UnitT, None], time_unit: _UnitT, time_zone: None = ...
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: Datetime[_UnitT, _ZoneT], time_unit: _UnitT, time_zone: _ZoneT
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: Datetime[_UnitT, str], time_unit: _UnitT, time_zone: timezone
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: Datetime[Literal["us"], _ZoneT],
+        time_unit: Literal["us"] = ...,
+        *,
+        time_zone: _ZoneT,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: Datetime[Literal["us"], str],
+        time_unit: Literal["us"] = ...,
+        *,
+        time_zone: timezone,
+    ) -> None: ...
+
+    def __init__(
+        self: Self, time_unit: TimeUnit | Literal["us"] = "us", time_zone: IntoZone = None
     ) -> None:
         if time_unit not in {"s", "ms", "us", "ns"}:
             msg = (
@@ -344,13 +432,26 @@ class Datetime(TemporalType, metaclass=_DatetimeMeta):
             )
             raise ValueError(msg)
 
-        if isinstance(time_zone, timezone):
-            time_zone = str(time_zone)
+        zone = str(time_zone) if isinstance(time_zone, timezone) else time_zone
+        self.time_unit = cast("UnitT", time_unit)
+        self.time_zone = cast("ZoneT", zone)
 
-        self.time_unit: TimeUnit = time_unit
-        self.time_zone: str | None = time_zone
+    @overload  # type: ignore[override]
+    def __eq__(
+        self: Datetime[UnitT, ZoneT], other: Datetime[UnitT, ZoneT]
+    ) -> TypeIs[Datetime[UnitT, ZoneT]]: ...
 
-    def __eq__(self: Self, other: object) -> bool:
+    @overload
+    def __eq__(  # type: ignore[override]
+        self: Self, other: type[Datetime[Any, Any]]
+    ) -> TypeIs[type[Datetime[Any, Any]]]: ...
+
+    @overload
+    def __eq__(self: Self, other: Datetime) -> TypeIs[Datetime]: ...
+
+    def __eq__(  # type: ignore[override]
+        self: Datetime[UnitT, ZoneT], other: object
+    ) -> TypeIs[Datetime[UnitT, ZoneT] | type[Datetime[Any, Any]] | Datetime]:
         # allow comparing object instances to class
         if type(other) is _DatetimeMeta:
             return True
@@ -403,7 +504,8 @@ class Duration(TemporalType, metaclass=_DurationMeta):
 
         self.time_unit: TimeUnit = time_unit
 
-    def __eq__(self: Self, other: object) -> bool:
+    # TODO @dangotbanned: convert to `TypeIs`
+    def __eq__(self: Self, other: object) -> bool:  # type: ignore[override]
         # allow comparing object instances to class
         if type(other) is _DurationMeta:
             return True
