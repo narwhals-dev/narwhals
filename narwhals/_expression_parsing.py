@@ -27,7 +27,6 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantFrameT
     from narwhals._compliant import CompliantNamespace
     from narwhals._compliant import CompliantSeriesOrNativeExprT_co
-    from narwhals._compliant import CompliantSeriesT_co
     from narwhals.expr import Expr
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
@@ -42,35 +41,6 @@ def is_expr(obj: Any) -> TypeIs[Expr]:
     from narwhals.expr import Expr
 
     return isinstance(obj, Expr)
-
-
-def evaluate_into_expr(
-    df: CompliantFrameT, expr: CompliantExpr[CompliantFrameT, CompliantSeriesT_co]
-) -> Sequence[CompliantSeriesT_co]:
-    """Return list of raw columns.
-
-    This is only use for eager backends (pandas, PyArrow), where we
-    alias operations at each step. As a safety precaution, here we
-    can check that the expected result names match those we were
-    expecting from the various `evaluate_output_names` / `alias_output_names`
-    calls. Note that for PySpark / DuckDB, we are less free to liberally
-    set aliases whenever we want.
-    """
-    _, aliases = evaluate_output_names_and_aliases(expr, df, [])
-    result = expr(df)
-    if list(aliases) != [s.name for s in result]:  # pragma: no cover
-        msg = f"Safety assertion failed, expected {aliases}, got {result}"
-        raise AssertionError(msg)
-    return result
-
-
-def evaluate_into_exprs(
-    df: CompliantFrameT,
-    /,
-    *exprs: CompliantExpr[CompliantFrameT, CompliantSeriesT_co],
-) -> list[CompliantSeriesT_co]:
-    """Evaluate each expr into Series."""
-    return list(chain.from_iterable(evaluate_into_expr(df, expr) for expr in exprs))
 
 
 def is_elementary_expression(expr: CompliantExpr[Any, Any]) -> bool:

@@ -11,7 +11,6 @@ from typing import overload
 import numpy as np
 
 from narwhals._compliant import EagerDataFrame
-from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_series_full_broadcast
@@ -405,7 +404,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
         return self.select(*exprs)
 
     def select(self: PandasLikeDataFrame, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
-        new_series = evaluate_into_exprs(self, *exprs)
+        new_series = self._evaluate_into_exprs(*exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_frame(
@@ -459,7 +458,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
             mask_native: pd.Series[Any] | list[bool] = predicate
         else:
             # `[0]` is safe as the predicate's expression only returns a single column
-            mask = evaluate_into_exprs(self, predicate)[0]
+            mask = self._evaluate_into_exprs(predicate)[0]
             mask_native = extract_dataframe_comparand(self._native_frame.index, mask)
 
         return self._from_native_frame(
@@ -470,7 +469,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
         self: PandasLikeDataFrame, *exprs: PandasLikeExpr
     ) -> PandasLikeDataFrame:
         index = self._native_frame.index
-        new_columns = evaluate_into_exprs(self, *exprs)
+        new_columns = self._evaluate_into_exprs(*exprs)
         if not new_columns and len(self) == 0:
             return self
 

@@ -19,7 +19,6 @@ from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import select_rows
 from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
-from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.utils import Implementation
 from narwhals.utils import Version
@@ -361,7 +360,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries"], CompliantLazyFrame):
         return self.select(*exprs)
 
     def select(self: ArrowDataFrame, *exprs: ArrowExpr) -> ArrowDataFrame:
-        new_series = evaluate_into_exprs(self, *exprs)
+        new_series = self._evaluate_into_exprs(*exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_frame(
@@ -374,7 +373,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries"], CompliantLazyFrame):
 
     def with_columns(self: ArrowDataFrame, *exprs: ArrowExpr) -> ArrowDataFrame:
         native_frame = self._native_frame
-        new_columns = evaluate_into_exprs(self, *exprs)
+        new_columns = self._evaluate_into_exprs(*exprs)
 
         length = len(self)
         columns = self.columns
@@ -561,7 +560,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries"], CompliantLazyFrame):
             mask_native: Mask | ArrowChunkedArray = predicate
         else:
             # `[0]` is safe as the predicate's expression only returns a single column
-            mask_native = evaluate_into_exprs(self, predicate)[0]._native_series
+            mask_native = self._evaluate_into_exprs(predicate)[0]._native_series
         return self._from_native_frame(
             self._native_frame.filter(mask_native),  # pyright: ignore[reportArgumentType]
             validate_column_names=False,

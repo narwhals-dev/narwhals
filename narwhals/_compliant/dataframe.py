@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
@@ -10,7 +11,7 @@ from typing import TypeVar
 
 from narwhals._compliant.typing import CompliantSeriesT_co
 from narwhals._compliant.typing import EagerSeriesT
-from narwhals._compliant.typing import EagerSeriesT_co
+from narwhals._expression_parsing import evaluate_output_names_and_aliases
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -59,12 +60,12 @@ class CompliantLazyFrame(Protocol):
     def _iter_columns(self) -> Iterator[Any]: ...
 
 
-class EagerDataFrame(CompliantDataFrame[EagerSeriesT_co], Protocol[EagerSeriesT_co]):
+class EagerDataFrame(CompliantDataFrame[EagerSeriesT], Protocol[EagerSeriesT]):
     def _maybe_evaluate_expr(
-        self, expr: EagerExpr[Self, EagerSeriesT_co] | T, /
-    ) -> EagerSeriesT_co | T:
+        self, expr: EagerExpr[Self, EagerSeriesT] | T, /
+    ) -> EagerSeriesT | T:
         if is_eager_expr(expr):
-            result: Sequence[EagerSeriesT_co] = expr(self)
+            result: Sequence[EagerSeriesT] = expr(self)
             if len(result) > 1:
                 msg = (
                     "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) "
@@ -73,6 +74,30 @@ class EagerDataFrame(CompliantDataFrame[EagerSeriesT_co], Protocol[EagerSeriesT_
                 raise ValueError(msg)
             return result[0]
         return expr
+
+    def _evaluate_into_exprs(
+        self, *exprs: EagerExpr[Self, EagerSeriesT]
+    ) -> Sequence[EagerSeriesT]:
+        return list(chain.from_iterable(self._evaluate_into_expr(expr) for expr in exprs))
+
+    def _evaluate_into_expr(
+        self, expr: EagerExpr[Self, EagerSeriesT], /
+    ) -> Sequence[EagerSeriesT]:
+        """Return list of raw columns.
+
+        For eager backends we alias operations at each step.
+
+        As a safety precaution, here we can check that the expected result names match those
+        we were expecting from the various `evaluate_output_names` / `alias_output_names` calls.
+
+        Note that for PySpark / DuckDB, we are less free to liberally set aliases whenever we want.
+        """
+        _, aliases = evaluate_output_names_and_aliases(expr, self, [])
+        result = expr(self)
+        if list(aliases) != [s.name for s in result]:
+            msg = f"Safety assertion failed, expected {aliases}, got {result}"
+            raise AssertionError(msg)
+        return result
 
 
 # NOTE: `mypy` is requiring the gymnastics here and is very fragile
