@@ -621,8 +621,6 @@ class EagerExpr(
     def arg_true(self) -> Self:
         return self._reuse_series("arg_true")
 
-    # NOTE: `ewm_mean` not implemented `pyarrow`
-
     def filter(self, *predicates: Self) -> Self:
         plx = self.__narwhals_namespace__()
         predicate = plx.all_horizontal(*predicates)
@@ -653,8 +651,6 @@ class EagerExpr(
 
     def diff(self) -> Self:
         return self._reuse_series("diff")
-
-    # NOTE: `shift` differs
 
     def sample(
         self,
@@ -688,8 +684,6 @@ class EagerExpr(
             version=self._version,
             call_kwargs=self._call_kwargs,
         )
-
-    # NOTE: `over` differs
 
     def is_unique(self) -> Self:
         return self._reuse_series("is_unique")
@@ -730,12 +724,8 @@ class EagerExpr(
     def mode(self) -> Self:
         return self._reuse_series("mode")
 
-    # NOTE: `map_batches` differs
-
     def is_finite(self) -> Self:
         return self._reuse_series("is_finite")
-
-    # NOTE: `cum_(sum|count|min|max|prod)` differ
 
     def rolling_mean(
         self, window_size: int, *, min_samples: int | None, center: bool
@@ -773,8 +763,6 @@ class EagerExpr(
             center=center,
             ddof=ddof,
         )
-
-    # NOTE: `rank` differs
 
     @property
     def cat(self) -> EagerExprCatNamespace[Self]:
