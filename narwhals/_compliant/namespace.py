@@ -40,5 +40,12 @@ class EagerNamespace(
     def _series(self) -> type[EagerSeriesT_co]: ...
     def all_horizontal(self, *exprs: EagerExprT) -> EagerExprT: ...
 
-    @deprecated("ref'd in untyped code")
+    @deprecated(
+        "Internally used for `numpy.ndarray` -> `CompliantSeries`\n"
+        "Also referenced in untyped `nw.dataframe.DataFrame._extract_compliant`\n"
+        "See Also:\n"
+        "  - https://github.com/narwhals-dev/narwhals/pull/2149#discussion_r1986283345\n"
+        "  - https://github.com/narwhals-dev/narwhals/issues/2116\n"
+        "  - https://github.com/narwhals-dev/narwhals/pull/2169"
+    )
     def _create_compliant_series(self, value: Any) -> EagerSeriesT_co: ...
