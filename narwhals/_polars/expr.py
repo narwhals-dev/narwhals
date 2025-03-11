@@ -38,6 +38,14 @@ class PolarsExpr:
             expr, version=self._version, backend_version=self._backend_version
         )
 
+    @classmethod
+    def _from_series(cls, series: Any) -> Self:
+        return cls(
+            series._native_series,
+            version=series._version,
+            backend_version=series._backend_version,
+        )
+
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         # Let Polars do its thing.
         return self

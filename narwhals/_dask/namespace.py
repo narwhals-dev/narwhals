@@ -14,6 +14,7 @@ from typing import Sequence
 import dask.dataframe as dd
 import pandas as pd
 
+from narwhals._compliant import CompliantNamespace
 from narwhals._dask.dataframe import DaskLazyFrame
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
@@ -24,7 +25,6 @@ from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals._dask.utils import validate_comparand
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
-from narwhals.typing import CompliantNamespace
 from narwhals.utils import Implementation
 from narwhals.utils import exclude_column_names
 from narwhals.utils import get_column_names
@@ -42,7 +42,7 @@ if TYPE_CHECKING:
         import dask_expr as dx
 
 
-class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):  # pyright: ignore[reportInvalidTypeArguments] (#2044)
+class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):
     _implementation: Implementation = Implementation.DASK
 
     @property

@@ -49,10 +49,10 @@ if TYPE_CHECKING:
     from typing_extensions import ParamSpec
     from typing_extensions import Self
 
+    from narwhals._compliant import IntoCompliantExpr
     from narwhals.group_by import GroupBy
     from narwhals.group_by import LazyGroupBy
     from narwhals.series import Series
-    from narwhals.typing import IntoCompliantExpr
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
@@ -429,7 +429,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         if isinstance(arg, BaseFrame):
             return arg._compliant_frame
         if isinstance(arg, Series):
-            return plx._create_expr_from_series(arg._compliant_series)
+            return arg._compliant_series._to_expr()
         if isinstance(arg, Expr):
             return arg._to_compliant_expr(self.__narwhals_namespace__())
         if isinstance(arg, str):
@@ -443,7 +443,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             )
             raise TypeError(msg)
         if is_numpy_array(arg):
-            return plx._create_expr_from_series(plx._create_compliant_series(arg))
+            return plx._create_compliant_series(arg)._to_expr()
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     @property

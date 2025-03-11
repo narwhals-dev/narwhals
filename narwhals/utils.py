@@ -52,13 +52,14 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
+    from narwhals._compliant import CompliantExpr
+    from narwhals._compliant import CompliantFrameT
+    from narwhals._compliant import CompliantSeriesOrNativeExprT_co
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.series import Series
     from narwhals.typing import CompliantDataFrame
-    from narwhals.typing import CompliantExpr
-    from narwhals.typing import CompliantFrameT
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import CompliantSeries
     from narwhals.typing import DataFrameLike
@@ -1461,8 +1462,8 @@ def is_compliant_series(obj: Any) -> TypeIs[CompliantSeries]:
 
 
 def is_compliant_expr(
-    obj: CompliantExpr[CompliantFrameT, CompliantSeriesT_co] | Any,
-) -> TypeIs[CompliantExpr[CompliantFrameT, CompliantSeriesT_co]]:
+    obj: CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | Any,
+) -> TypeIs[CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co]]:
     return hasattr(obj, "__narwhals_expr__")
 
 

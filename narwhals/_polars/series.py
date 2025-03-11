@@ -23,6 +23,8 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._polars.dataframe import PolarsDataFrame
+    from narwhals._polars.expr import PolarsExpr
+    from narwhals._polars.namespace import PolarsNamespace
     from narwhals.dtypes import DType
     from narwhals.typing import _1DArray
     from narwhals.utils import Version
@@ -46,6 +48,13 @@ class PolarsSeries:
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         return "PolarsSeries"
+
+    def __narwhals_namespace__(self) -> PolarsNamespace:
+        from narwhals._polars.namespace import PolarsNamespace
+
+        return PolarsNamespace(
+            backend_version=self._backend_version, version=self._version
+        )
 
     def __narwhals_series__(self: Self) -> Self:
         return self
@@ -89,6 +98,9 @@ class PolarsSeries:
             )
         # scalar
         return series
+
+    def _to_expr(self) -> PolarsExpr:
+        return self.__narwhals_namespace__()._expr._from_series(self)
 
     def __getattr__(self: Self, attr: str) -> Any:
         if attr == "as_py":  # pragma: no cover
