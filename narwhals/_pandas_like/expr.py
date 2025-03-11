@@ -17,6 +17,7 @@ from narwhals._pandas_like.expr_dt import PandasLikeExprDateTimeNamespace
 from narwhals._pandas_like.expr_list import PandasLikeExprListNamespace
 from narwhals._pandas_like.expr_name import PandasLikeExprNameNamespace
 from narwhals._pandas_like.expr_str import PandasLikeExprStringNamespace
+from narwhals._pandas_like.expr_struct import PandasLikeExprStructNamespace
 from narwhals._pandas_like.group_by import AGGREGATIONS_TO_PANDAS_EQUIVALENT
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals.dependencies import get_numpy
@@ -753,3 +754,7 @@ class PandasLikeExpr(CompliantExpr["PandasLikeDataFrame", PandasLikeSeries]):
     @property
     def list(self: Self) -> PandasLikeExprListNamespace:
         return PandasLikeExprListNamespace(self)
+
+    @property
+    def struct(self: Self) -> PandasLikeExprStructNamespace:
+        return PandasLikeExprStructNamespace(self)

@@ -652,3 +652,4 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
 
     cat = not_implemented()  # pyright: ignore[reportAssignmentType]
     list = not_implemented()  # pyright: ignore[reportAssignmentType]
+    struct = not_implemented()  # pyright: ignore[reportAssignmentType]
