@@ -110,11 +110,18 @@ def test_cast_to_enum() -> None:
     # backwards-incompatible
     df_pl = pl.DataFrame({"a": ["a", "b"]}, schema={"a": pl.Categorical})
     with pytest.raises(
-        NotImplementedError, match=r"Converting to Enum is not \(yet\) supported"
+        ValueError, match="Can not cast / initialize Enum without categories present"
     ):
         nw.from_native(df_pl).select(nw.col("a").cast(nw.Enum))
+
+    df_nw_pl = nw.from_native(df_pl).select(nw.col("a").cast(nw.Enum(["a", "b"])))
+    assert df_nw_pl.schema == {"a": nw.Enum(["a", "b"])}
+
     df_pd = pd.DataFrame({"a": ["a", "b"]}, dtype="category")
     with pytest.raises(
-        NotImplementedError, match=r"Converting to Enum is not \(yet\) supported"
+        ValueError, match="Can not cast / initialize Enum without categories present"
     ):
         nw.from_native(df_pd).select(nw.col("a").cast(nw.Enum))
+
+    df_nw_pd = nw.from_native(df_pd).select(nw.col("a").cast(nw.Enum(["a", "b"])))
+    assert df_nw_pd.schema == {"a": nw.Enum(["a", "b"])}
