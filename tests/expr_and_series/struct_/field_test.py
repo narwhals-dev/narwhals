@@ -15,7 +15,7 @@ def test_get_field_expr(
     request: pytest.FixtureRequest,
     constructor: Constructor,
 ) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "modin", "sqlframe")):
+    if any(backend in str(constructor) for backend in ("dask", "modin")):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2, 0):
         pytest.skip()
