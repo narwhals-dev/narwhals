@@ -207,6 +207,26 @@ then their tests will run too.
 
 We can't currently test in CI against cuDF, but you can test it manually in Kaggle using GPUs. Please follow this [Kaggle notebook](https://www.kaggle.com/code/marcogorelli/testing-cudf-in-narwhals) to run the tests.
 
+### Static typing
+
+We run both `mypy` and `pyright` in CI. To run them locally, make sure to install
+
+```terminal
+uv pip install -U -e ".[typing]"
+```
+
+You can then run
+- `mypy narwhals tests`
+- `pyright narwhals tests`
+
+to verify type completeness / correctness.
+
+Note that:
+- In `_pandas_like`, we type all native objects as if they are pandas ones, though
+  in reality this folder is shared between pandas, Modin, and cuDF.
+- In `_spark_like`, we type all native objects as if they are SQLFrame ones, though
+  in reality this folder is shared between SQLFrame and PySpark.
+
 ### 8. Writing the doc(strings)
 
 If you are adding a new feature or changing an existing one, you should also update the documentation and the docstrings
