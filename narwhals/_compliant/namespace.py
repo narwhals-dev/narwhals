@@ -34,19 +34,10 @@ class EagerNamespace(
     CompliantNamespace[EagerDataFrameT, EagerSeriesT_co],
     Protocol[EagerDataFrameT, EagerSeriesT_co, EagerExprT],
 ):
-    # NOTE: Supporting moved ops
-    # - `self_create_expr_from_callable` -> `self._expr._from_callable`
-    # - `self_create_expr_from_series` -> `self._expr._from_series`
     @property
     def _expr(self) -> type[EagerExprT]: ...
-
-    # NOTE: Supporting moved ops
-    # - `self._create_series_from_scalar` -> `EagerSeries()._from_scalar`
-    #   - Was dependent on a `reference_series`, so is now an instance method
-    # - `<class>._from_iterable` -> `self._series._from_iterable`
     @property
     def _series(self) -> type[EagerSeriesT_co]: ...
-
     def all_horizontal(self, *exprs: EagerExprT) -> EagerExprT: ...
 
     @deprecated("ref'd in untyped code")
