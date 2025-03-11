@@ -12,7 +12,6 @@ from typing import overload
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from narwhals.utils import _ExprNamespace
 from narwhals.utils import _SeriesNamespace
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
@@ -24,7 +23,6 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
-    from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import ArrowArray
     from narwhals._arrow.typing import ArrowChunkedArray
@@ -548,8 +546,3 @@ def pad_series(
 class ArrowSeriesNamespace(_SeriesNamespace["ArrowSeries", "ArrowChunkedArray"]):
     def __init__(self: Self, series: ArrowSeries, /) -> None:
         self._compliant_series = series
-
-
-class ArrowExprNamespace(_ExprNamespace["ArrowExpr"]):
-    def __init__(self: Self, expr: ArrowExpr, /) -> None:
-        self._compliant_expr = expr

@@ -2,19 +2,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._compliant import CompliantSelector
+from narwhals._compliant import EagerSelectorNamespace
 from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.series import PandasLikeSeries
-from narwhals._selectors import CompliantSelector
-from narwhals._selectors import EagerSelectorNamespace
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals._compliant import EvalNames
+    from narwhals._compliant import EvalSeries
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
-    from narwhals._selectors import EvalNames
-    from narwhals._selectors import EvalSeries
     from narwhals.utils import _FullContext
 
 

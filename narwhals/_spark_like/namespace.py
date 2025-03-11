@@ -12,6 +12,7 @@ from typing import Literal
 from typing import Sequence
 from typing import cast
 
+from narwhals._compliant import CompliantNamespace
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals._spark_like.dataframe import SparkLikeLazyFrame
@@ -19,7 +20,6 @@ from narwhals._spark_like.expr import SparkLikeExpr
 from narwhals._spark_like.selectors import SparkLikeSelectorNamespace
 from narwhals._spark_like.utils import maybe_evaluate_expr
 from narwhals._spark_like.utils import narwhals_to_native_dtype
-from narwhals.typing import CompliantNamespace
 from narwhals.utils import exclude_column_names
 from narwhals.utils import get_column_names
 from narwhals.utils import passthrough_column_names
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):  # type: ignore[type-var] # (#2044)
+class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):
     def __init__(
         self: Self,
         *,

@@ -230,6 +230,8 @@ omit = [
   'narwhals/_spark_like/*',
   # we don't run these in every environment
   'tests/ibis_test.py',
+  # Remove after finishing eager sub-protocols
+  'narwhals/_compliant/*',
 ]
 exclude_also = [
   "if sys.version_info() <",

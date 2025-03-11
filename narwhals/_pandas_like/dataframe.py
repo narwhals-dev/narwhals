@@ -10,7 +10,7 @@ from typing import overload
 
 import numpy as np
 
-from narwhals._expression_parsing import evaluate_into_exprs
+from narwhals._compliant import EagerDataFrame
 from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_series_full_broadcast
@@ -26,6 +26,8 @@ from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError
+from narwhals.typing import CompliantDataFrame
+from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
 from narwhals.utils import generate_temporary_column_name
@@ -54,8 +56,6 @@ if TYPE_CHECKING:
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
 
-from narwhals.typing import CompliantDataFrame
-from narwhals.typing import CompliantLazyFrame
 
 CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
     [
@@ -83,7 +83,7 @@ CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
 )
 
 
-class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyFrame):
+class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame):
     # --- not in the spec ---
     def __init__(
         self: Self,
@@ -404,7 +404,7 @@ class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyF
         return self.select(*exprs)
 
     def select(self: PandasLikeDataFrame, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
-        new_series = evaluate_into_exprs(self, *exprs)
+        new_series = self._evaluate_into_exprs(*exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_frame(
@@ -458,7 +458,7 @@ class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyF
             mask_native: pd.Series[Any] | list[bool] = predicate
         else:
             # `[0]` is safe as the predicate's expression only returns a single column
-            mask = evaluate_into_exprs(self, predicate)[0]
+            mask = self._evaluate_into_exprs(predicate)[0]
             mask_native = extract_dataframe_comparand(self._native_frame.index, mask)
 
         return self._from_native_frame(
@@ -469,7 +469,7 @@ class PandasLikeDataFrame(CompliantDataFrame["PandasLikeSeries"], CompliantLazyF
         self: PandasLikeDataFrame, *exprs: PandasLikeExpr
     ) -> PandasLikeDataFrame:
         index = self._native_frame.index
-        new_columns = evaluate_into_exprs(self, *exprs)
+        new_columns = self._evaluate_into_exprs(*exprs)
         if not new_columns and len(self) == 0:
             return self
 

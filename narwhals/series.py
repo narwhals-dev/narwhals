@@ -77,6 +77,8 @@ class Series(Generic[IntoSeriesT]):
     ) -> None:
         self._level: Literal["full", "lazy", "interchange"] = level
         if hasattr(series, "__narwhals_series__"):
+            # TODO @dangotbanned: Repeat (#2119) for `CompliantSeries` to support typing
+            # morally: `CompliantSeries`
             self._compliant_series = series.__narwhals_series__()
         else:  # pragma: no cover
             msg = f"Expected Polars Series or an object which implements `__narwhals_series__`, got: {type(series)}."
