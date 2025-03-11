@@ -453,7 +453,7 @@ class Enum(DType):
         # TODO(Unassigned): pandas errors on NaN, NA, NaT OR duplicated value category
         #       Polars errors on Null, NaN OR duplicated OR any non-string category
         #       should the intersection of the above be caught at the narwhals layer?
-        if isinstance(categories, enum.Enum):
+        if isinstance(categories, type) and issubclass(categories, enum.Enum):
             categories = (getattr(v, "value", v) for v in categories.__members__.values())
         self.categories = [*categories]
 
