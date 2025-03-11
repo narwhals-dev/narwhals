@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from pyspark.sql import Column
+    from sqlframe.base.column import Column
     from typing_extensions import Self
 
     from narwhals._spark_like.expr import SparkLikeExpr

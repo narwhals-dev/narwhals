@@ -24,8 +24,8 @@ from narwhals.utils import not_implemented
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
-    from pyspark.sql import Column
-    from pyspark.sql import Window
+    from sqlframe.base.column import Column
+    from sqlframe.base.window import Window
     from typing_extensions import Self
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
@@ -84,7 +84,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     @property
     def _F(self: Self):  # type: ignore[no-untyped-def] # noqa: ANN202, N802
         if TYPE_CHECKING:
-            from pyspark.sql import functions
+            from sqlframe.base import functions
 
             return functions
         if self._implementation is Implementation.SQLFRAME:
@@ -94,14 +94,14 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
                 f"sqlframe.{_BaseSession().execution_dialect_name}.functions"
             )
 
-        from pyspark.sql import functions
+        from pyspark.sql import functions  # type: ignore[no-redef]
 
         return functions
 
     @property
     def _native_dtypes(self: Self):  # type: ignore[no-untyped-def] # noqa: ANN202
         if TYPE_CHECKING:
-            from pyspark.sql import types
+            from sqlframe.base import types
 
             return types
         if self._implementation is Implementation.SQLFRAME:
@@ -111,7 +111,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
                 f"sqlframe.{_BaseSession().execution_dialect_name}.types"
             )
 
-        from pyspark.sql import types
+        from pyspark.sql import types  # type: ignore[no-redef]
 
         return types
 

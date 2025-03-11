@@ -4,7 +4,7 @@ from functools import partial
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from pyspark.sql import Column
+    from sqlframe.base.column import Column
     from typing_extensions import Self
 
     from narwhals._spark_like.expr import SparkLikeExpr
@@ -28,8 +28,8 @@ class SparkLikeExprStringNamespace:
             )
             return replace_all_func(
                 _input,
-                self._compliant_expr._F.lit(pattern),
-                self._compliant_expr._F.lit(value),
+                pattern,
+                value,
             )
 
         return self._compliant_expr._from_call(func, "replace")

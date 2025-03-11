@@ -172,7 +172,7 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
             index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
             _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
 
-            return (
+            return (  # type: ignore[no-any-return]
                 session.createDataFrame([*zip(*_obj.values())], schema=[*_obj.keys()])
                 .repartition(2)
                 .orderBy(index_col_name)
@@ -188,9 +188,7 @@ def sqlframe_pyspark_lazy_constructor(
     from sqlframe.duckdb import DuckDBSession
 
     session = DuckDBSession()
-    return (  # type: ignore[no-any-return]
-        session.createDataFrame([*zip(*obj.values())], schema=[*obj.keys()])
-    )
+    return session.createDataFrame([*zip(*obj.values())], schema=[*obj.keys()])
 
 
 EAGER_CONSTRUCTORS: dict[str, Callable[[Any], IntoDataFrame]] = {

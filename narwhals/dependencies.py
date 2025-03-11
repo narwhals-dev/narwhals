@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
     from narwhals._arrow.typing import ArrowChunkedArray
-    from narwhals._spark_like.dataframe import SQLFrameDataFrame
+    from narwhals._spark_like.dataframe import NativeFrame
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
@@ -231,7 +231,7 @@ def is_pyspark_dataframe(df: Any) -> TypeIs[pyspark_sql.DataFrame]:
     )
 
 
-def is_sqlframe_dataframe(df: Any) -> TypeIs[SQLFrameDataFrame]:
+def is_sqlframe_dataframe(df: Any) -> TypeIs[NativeFrame]:
     """Check whether `df` is a SQLFrame DataFrame without importing SQLFrame."""
     return bool(
         (sqlframe := get_sqlframe()) is not None

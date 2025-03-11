@@ -11,9 +11,8 @@ from narwhals.utils import isinstance_or_issubclass
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import pyspark.sql.types as pyspark_types
     import sqlframe.base.types as sqlframe_types
-    from pyspark.sql import Column
+    from sqlframe.base.column import Column
     from typing_extensions import TypeAlias
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
@@ -21,7 +20,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
-    _NativeDType: TypeAlias = "pyspark_types.DataType | sqlframe_types.DataType"
+    _NativeDType: TypeAlias = sqlframe_types.DataType
 
 
 # NOTE: don't lru_cache this as `ModuleType` isn't hashable
@@ -30,7 +29,7 @@ def native_to_narwhals_dtype(
 ) -> DType:  # pragma: no cover
     dtypes = import_dtypes_module(version=version)
     if TYPE_CHECKING:
-        native = pyspark_types
+        native = sqlframe_types
     else:
         native = spark_types
 
@@ -83,10 +82,10 @@ def native_to_narwhals_dtype(
 
 def narwhals_to_native_dtype(
     dtype: DType | type[DType], version: Version, spark_types: ModuleType
-) -> pyspark_types.DataType:
+) -> sqlframe_types.DataType:
     dtypes = import_dtypes_module(version)
     if TYPE_CHECKING:
-        native = pyspark_types
+        native = sqlframe_types
     else:
         native = spark_types
 

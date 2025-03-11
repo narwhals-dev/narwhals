@@ -7,7 +7,6 @@ from typing import Any
 from typing import Iterator
 from typing import Literal
 from typing import Sequence
-from typing import cast
 
 from narwhals._spark_like.utils import evaluate_exprs
 from narwhals._spark_like.utils import native_to_narwhals_dtype
@@ -26,11 +25,10 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     import pyarrow as pa
-    from pyspark.sql import Column
-    from pyspark.sql import DataFrame
-    from pyspark.sql import Window
-    from pyspark.sql.session import SparkSession
-    from sqlframe.base.dataframe import BaseDataFrame as _SQLFrameDataFrame
+    from sqlframe.base.column import Column
+    from sqlframe.base.dataframe import BaseDataFrame
+    from sqlframe.base.session import _BaseSession
+    from sqlframe.base.window import Window
     from typing_extensions import Self
     from typing_extensions import TypeAlias
 
@@ -40,8 +38,8 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
-    SQLFrameDataFrame: TypeAlias = _SQLFrameDataFrame[Any, Any, Any, Any, Any]
-    _NativeDataFrame: TypeAlias = "DataFrame | SQLFrameDataFrame"
+    NativeFrame = BaseDataFrame[Any, Any, Any, Any, Any]
+    NativeSession = _BaseSession[Any, Any, Any, Any, Any, Any, Any]
 
 Incomplete: TypeAlias = Any  # pragma: no cover
 """Marker for working code that fails type checking."""
@@ -50,7 +48,7 @@ Incomplete: TypeAlias = Any  # pragma: no cover
 class SparkLikeLazyFrame(CompliantLazyFrame):
     def __init__(
         self: Self,
-        native_dataframe: _NativeDataFrame,
+        native_dataframe: NativeFrame,
         *,
         backend_version: tuple[int, ...],
         version: Version,
@@ -68,7 +66,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
     @property
     def _F(self: Self):  # type: ignore[no-untyped-def] # noqa: ANN202, N802
         if TYPE_CHECKING:
-            from pyspark.sql import functions
+            from sqlframe.base import functions
 
             return functions
         if self._implementation is Implementation.SQLFRAME:
@@ -78,14 +76,14 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                 f"sqlframe.{_BaseSession().execution_dialect_name}.functions"
             )
 
-        from pyspark.sql import functions
+        from pyspark.sql import functions  # type: ignore[no-redef]
 
         return functions
 
     @property
     def _native_dtypes(self: Self):  # type: ignore[no-untyped-def] # noqa: ANN202
         if TYPE_CHECKING:
-            from pyspark.sql import types
+            from sqlframe.base import types
 
             return types
 
@@ -96,7 +94,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                 f"sqlframe.{_BaseSession().execution_dialect_name}.types"
             )
 
-        from pyspark.sql import types
+        from pyspark.sql import types  # type: ignore[no-redef]
 
         return types
 
@@ -115,11 +113,11 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         return Window
 
     @property
-    def _session(self: Self) -> SparkSession:
+    def _session(self: Self) -> NativeSession:
         if self._implementation is Implementation.SQLFRAME:
-            return cast("SQLFrameDataFrame", self._native_frame).session
+            return self._native_frame.session
 
-        return cast("DataFrame", self._native_frame).sparkSession
+        return self._native_frame.sparkSession  # type: ignore[return-value]
 
     def __native_namespace__(self: Self) -> ModuleType:  # pragma: no cover
         return self._implementation.to_native_namespace()
@@ -144,7 +142,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             implementation=self._implementation,
         )
 
-    def _from_native_frame(self: Self, df: DataFrame) -> Self:
+    def _from_native_frame(self: Self, df: NativeFrame) -> Self:
         return self.__class__(
             df,
             backend_version=self._backend_version,
@@ -158,7 +156,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         ):
             import pyarrow as pa  # ignore-banned-import
 
-            native_frame = cast("DataFrame", self._native_frame)
+            native_frame = self._native_frame
             try:
                 return pa.Table.from_batches(native_frame._collect_as_arrow())
             except ValueError as exc:
@@ -174,13 +172,12 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                         try:
                             native_dtype = narwhals_to_native_dtype(value, self._version)
                         except Exception as exc:  # noqa: BLE001
-                            native_spark_dtype = native_frame.schema[key].dataType
+                            native_spark_dtype = native_frame.schema[key].dataType  # type: ignore[index]
                             # If we can't convert the type, just set it to `pa.null`, and warn.
                             # Avoid the warning if we're starting from PySpark's void type.
                             # We can avoid the check when we introduce `nw.Null` dtype.
-                            if not isinstance(
-                                native_spark_dtype, self._native_dtypes.NullType
-                            ):
+                            null_type = self._native_dtypes.NullType  # pyright: ignore[reportAttributeAccessIssue]
+                            if not isinstance(native_spark_dtype, null_type):
                                 warnings.warn(
                                     f"Could not convert dtype {native_spark_dtype} to PyArrow dtype, {exc!r}",
                                     stacklevel=find_stacklevel(),

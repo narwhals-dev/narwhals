@@ -259,7 +259,7 @@ module = [
   "modin.*",
   "numpy.*",
   "sklearn.*",
-  "sqlframe.*",
+  "pyspark.*",
 ]
 # TODO: remove follow_imports
 follow_imports = "skip"
