@@ -28,8 +28,8 @@ class SparkLikeExprStringNamespace:
             )
             return replace_all_func(
                 _input,
-                pattern,
-                value,
+                self._compliant_expr._F.lit(pattern),  # pyright: ignore[reportArgumentType]
+                self._compliant_expr._F.lit(value),  # pyright: ignore[reportArgumentType]
             )
 
         return self._compliant_expr._from_call(func, "replace")
