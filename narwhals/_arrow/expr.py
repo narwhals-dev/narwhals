@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from functools import partial
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -14,8 +13,6 @@ from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._expression_parsing import is_scalar_like
-from narwhals.dependencies import get_numpy
-from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
@@ -26,7 +23,6 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
-    from narwhals.dtypes import DType
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -198,39 +194,6 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
             func,
             depth=self._depth + 1,
             function_name=self._function_name + "->over",
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-
-    def map_batches(
-        self: Self,
-        function: Callable[[Any], Any],
-        return_dtype: DType | type[DType] | None,
-    ) -> Self:
-        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            input_series_list = self(df)
-            output_names = [input_series.name for input_series in input_series_list]
-            result = [function(series) for series in input_series_list]
-            if is_numpy_array(result[0]) or (
-                (np := get_numpy()) is not None and np.isscalar(result[0])
-            ):
-                from_numpy = partial(
-                    self.__narwhals_namespace__()._series.from_numpy, context=self
-                )
-                result = [
-                    from_numpy(array).alias(output_name)
-                    for array, output_name in zip(result, output_names)
-                ]
-            if return_dtype is not None:
-                result = [series.cast(return_dtype) for series in result]
-            return result
-
-        return self.__class__(
-            func,
-            depth=self._depth + 1,
-            function_name=self._function_name + "->map_batches",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,

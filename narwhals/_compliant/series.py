@@ -68,3 +68,5 @@ class EagerSeries(CompliantSeries, Protocol[NativeSeriesT_co]):
 
     def _to_expr(self) -> EagerExpr[Any, Any]:
         return self.__narwhals_namespace__()._expr._from_series(self)  # type: ignore[no-any-return]
+
+    def cast(self, dtype: DType | type[DType]) -> Self: ...

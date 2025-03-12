@@ -29,6 +29,8 @@ from narwhals._compliant.typing import EagerExprT
 from narwhals._compliant.typing import EagerSeriesT
 from narwhals._compliant.typing import NativeExprT_co
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals.dependencies import get_numpy
+from narwhals.dependencies import is_numpy_array
 from narwhals.dtypes import DType
 from narwhals.utils import _ExprNamespace
 from narwhals.utils import deprecated
@@ -762,6 +764,38 @@ class EagerExpr(
             min_samples=min_samples,
             center=center,
             ddof=ddof,
+        )
+
+    def map_batches(
+        self: Self,
+        function: Callable[[Any], Any],
+        return_dtype: DType | type[DType] | None,
+    ) -> Self:
+        def func(df: EagerDataFrameT) -> Sequence[EagerSeriesT]:
+            input_series_list = self(df)
+            output_names = [input_series.name for input_series in input_series_list]
+            result = [function(series) for series in input_series_list]
+            if is_numpy_array(result[0]) or (
+                (np := get_numpy()) is not None and np.isscalar(result[0])
+            ):
+                from_numpy = partial(
+                    self.__narwhals_namespace__()._series.from_numpy, context=self
+                )
+                result = [
+                    from_numpy(array).alias(output_name)
+                    for array, output_name in zip(result, output_names)
+                ]
+            if return_dtype is not None:
+                result = [series.cast(return_dtype) for series in result]
+            return result
+
+        return self._from_callable(
+            func,
+            depth=self._depth + 1,
+            function_name=self._function_name + "->map_batches",
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            context=self,
         )
 
     @property
