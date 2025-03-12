@@ -234,20 +234,18 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         if (
             constructor in {"pandas[nullable]", "pandas[pyarrow]"}
             and MIN_PANDAS_NULLABLE_VERSION > PANDAS_VERSION
-        ):  # pragma: no cover
-            continue
+        ) or (constructor == "sqlframe" and sys.version_info < (3, 9)):
+            continue  # pragma: no cover
+        if constructor == "pyspark" and sys.version_info >= (3, 12):
+            continue  # pragma: no cover
+
         if constructor in EAGER_CONSTRUCTORS:
             eager_constructors.append(EAGER_CONSTRUCTORS[constructor])
             eager_constructors_ids.append(constructor)
             constructors.append(EAGER_CONSTRUCTORS[constructor])
             constructors_ids.append(constructor)
         elif constructor in LAZY_CONSTRUCTORS:
-            if constructor == "pyspark":
-                if sys.version_info >= (3, 12):  # pragma: no cover
-                    continue
-                constructors.append(pyspark_lazy_constructor())  # pragma: no cover
-            else:
-                constructors.append(LAZY_CONSTRUCTORS[constructor])
+            constructors.append(LAZY_CONSTRUCTORS[constructor])
             constructors_ids.append(constructor)
         else:  # pragma: no cover
             msg = f"Expected one of {EAGER_CONSTRUCTORS.keys()} or {LAZY_CONSTRUCTORS.keys()}, got {constructor}"
