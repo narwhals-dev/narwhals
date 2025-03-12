@@ -589,6 +589,10 @@ class PolarsSeries:
     def to_polars(self: Self) -> pl.Series:
         return self._native_series
 
+    # TODO @dangotbanned: review converting `copy` to a version compat argument
+    def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
+        return self.native.to_numpy()
+
     @property
     def dt(self: Self) -> PolarsSeriesDateTimeNamespace:
         return PolarsSeriesDateTimeNamespace(self)
