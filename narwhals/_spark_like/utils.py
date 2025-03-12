@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from importlib import import_module
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import cast
@@ -246,3 +247,40 @@ def _var_pyspark(col: Any, ddof: int, /) -> Column:
     from pyspark.pandas.spark.functions import var
 
     return cast("Column", var(col, ddof=ddof))
+
+
+def import_functions(implementation: Implementation, /) -> ModuleType:
+    if implementation is Implementation.SQLFRAME:
+        from sqlframe.base.session import _BaseSession
+
+        return import_module(
+            f"sqlframe.{_BaseSession().execution_dialect_name}.functions"
+        )
+
+    from pyspark.sql import functions
+
+    return functions
+
+
+def import_native_dtypes(implementation: Implementation, /) -> ModuleType:
+    if implementation is Implementation.SQLFRAME:
+        from sqlframe.base.session import _BaseSession
+
+        return import_module(f"sqlframe.{_BaseSession().execution_dialect_name}.types")
+
+    from pyspark.sql import types
+
+    return types
+
+
+def import_window(implementation: Implementation, /) -> type[Any]:
+    if implementation is Implementation.SQLFRAME:
+        from sqlframe.base.session import _BaseSession
+
+        return import_module(
+            f"sqlframe.{_BaseSession().execution_dialect_name}.window"
+        ).Window
+
+    from pyspark.sql import Window
+
+    return Window

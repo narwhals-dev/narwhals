@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import warnings
-from importlib import import_module
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
@@ -9,6 +8,9 @@ from typing import Literal
 from typing import Sequence
 
 from narwhals._spark_like.utils import evaluate_exprs
+from narwhals._spark_like.utils import import_functions
+from narwhals._spark_like.utils import import_native_dtypes
+from narwhals._spark_like.utils import import_window
 from narwhals._spark_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantDataFrame
@@ -70,16 +72,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
 
             return functions
         else:
-            if self._implementation is Implementation.SQLFRAME:
-                from sqlframe.base.session import _BaseSession
-
-                return import_module(
-                    f"sqlframe.{_BaseSession().execution_dialect_name}.functions"
-                )
-
-            from pyspark.sql import functions
-
-            return functions
+            return import_functions(self._implementation)
 
     @property
     def _native_dtypes(self: Self):  # type: ignore[no-untyped-def] # noqa: ANN202
@@ -87,34 +80,22 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             from sqlframe.base import types
 
             return types
-
-        if self._implementation is Implementation.SQLFRAME:
-            from sqlframe.base.session import _BaseSession
-
-            return import_module(
-                f"sqlframe.{_BaseSession().execution_dialect_name}.types"
-            )
-
-        from pyspark.sql import types  # type: ignore[no-redef]
-
-        return types
+        else:
+            return import_native_dtypes(self._implementation)
 
     @property
     def _Window(self: Self) -> type[Window]:  # noqa: N802
-        if self._implementation is Implementation.SQLFRAME:
-            from sqlframe.base.session import _BaseSession
+        if TYPE_CHECKING:
+            from sqlframe.base.window import Window
 
-            _window = import_module(
-                f"sqlframe.{_BaseSession().execution_dialect_name}.window"
-            )
-            return _window.Window
-
-        from pyspark.sql import Window
-
-        return Window
+            return Window
+        else:
+            return import_window(self._implementation)
 
     @property
     def _session(self: Self) -> SQLFrameSession:
+        if TYPE_CHECKING:
+            return self._native_frame.session
         if self._implementation is Implementation.SQLFRAME:
             return self._native_frame.session
 
