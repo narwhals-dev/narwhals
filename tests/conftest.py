@@ -243,7 +243,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             eager_constructors.append(EAGER_CONSTRUCTORS[constructor])
             eager_constructors_ids.append(constructor)
             constructors.append(EAGER_CONSTRUCTORS[constructor])
-        elif constructor == "pyspark":
+        elif constructor == "pyspark":  # pragma: no cover
             constructors.append(pyspark_lazy_constructor())
         elif constructor in LAZY_CONSTRUCTORS:
             constructors.append(LAZY_CONSTRUCTORS[constructor])
