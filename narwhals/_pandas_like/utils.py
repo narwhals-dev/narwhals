@@ -614,16 +614,17 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
             msg = "PyArrow>=11.0.0 is required for `Date` dtype."
         return "date32[pyarrow]"
     if isinstance_or_issubclass(dtype, dtypes.Enum):
-        if dtype is dtypes.Enum:
+        if isinstance(dtype, dtypes.Enum):
+            try:
+                import pandas as pd  # ignore-banned-import
+            except ImportError as exc:  # pragma: no cover
+                msg = f"Unable to convert to {dtype} to to the following exception: {exc.msg}"
+                raise ImportError(msg) from exc
+            return pd.CategoricalDtype(categories=dtype.categories, ordered=True)
+        else:
             msg = "Can not cast / initialize Enum without categories present"
             raise ValueError(msg)
 
-        try:
-            import pandas as pd  # ignore-banned-import
-        except ImportError as exc:  # pragma: no cover
-            msg = f"Unable to convert to {dtype} to to the following exception: {exc.msg}"
-            raise ImportError(msg) from exc
-        return pd.CategoricalDtype(categories=dtype.categories, ordered=True)
     if isinstance_or_issubclass(dtype, (dtypes.Struct, dtypes.Array, dtypes.List)):
         if implementation is Implementation.PANDAS and backend_version >= (2, 2):
             try:
