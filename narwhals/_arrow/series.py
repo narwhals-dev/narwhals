@@ -437,7 +437,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def __array__(self: Self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
         return self.native.__array__(dtype=dtype, copy=copy)
 
-    def to_numpy(self: Self) -> _1DArray:
+    def to_numpy(self: Self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
         return self.native.to_numpy()
 
     def alias(self: Self, name: str) -> Self:
