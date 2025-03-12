@@ -355,6 +355,9 @@ def test_group_by_shift_raises(constructor: Constructor) -> None:
 def test_double_same_aggregation(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    # bugged in dask https://github.com/dask/dask/issues/11612
+    # and modin lol https://github.com/modin-project/modin/issues/7414
+    # and cudf https://github.com/rapidsai/cudf/issues/17649
     if any(x in str(constructor) for x in ("dask", "modin", "cudf")):
         request.applymarker(
             pytest.mark.xfail(
@@ -374,6 +377,9 @@ def test_double_same_aggregation(
 def test_all_kind_of_aggs(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    # bugged in dask https://github.com/dask/dask/issues/11612
+    # and modin lol https://github.com/modin-project/modin/issues/7414
+    # and cudf https://github.com/rapidsai/cudf/issues/17649
     if any(x in str(constructor) for x in ("dask", "cudf", "modin")):
         request.applymarker(
             pytest.mark.xfail(
