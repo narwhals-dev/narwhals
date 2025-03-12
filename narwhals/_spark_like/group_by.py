@@ -50,7 +50,7 @@ class SparkLikeLazyGroupBy:
 
         if not agg_columns:
             return self._compliant_frame._from_native_frame(
-                self._compliant_frame._native_frame.select(*self._keys).dropDuplicates()  # pyright: ignore[reportArgumentType]
+                self._compliant_frame._native_frame.select(*self._keys).dropDuplicates()
             )
         return self._compliant_frame._from_native_frame(
             self._compliant_frame._native_frame.groupBy(*self._keys).agg(*agg_columns)

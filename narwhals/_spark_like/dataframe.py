@@ -171,9 +171,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                 else:  # pragma: no cover
                     raise
         else:
-            # NOTE: See https://github.com/narwhals-dev/narwhals/pull/2051#discussion_r1969224309
-            to_arrow: Incomplete = self._native_frame.toArrow
-            return to_arrow()
+            return self._native_frame.toArrow()
 
     def _iter_columns(self) -> Iterator[Column]:
         for col in self.columns:
@@ -229,7 +227,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         raise ValueError(msg)  # pragma: no cover
 
     def simple_select(self: Self, *column_names: str) -> Self:
-        return self._from_native_frame(self._native_frame.select(*column_names))  # pyright: ignore[reportArgumentType]
+        return self._from_native_frame(self._native_frame.select(*column_names))
 
     def aggregate(
         self: Self,
@@ -238,7 +236,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         new_columns = evaluate_exprs(self, *exprs)
 
         new_columns_list = [col.alias(col_name) for col_name, col in new_columns]
-        return self._from_native_frame(self._native_frame.agg(*new_columns_list))  # pyright: ignore[reportArgumentType]
+        return self._from_native_frame(self._native_frame.agg(*new_columns_list))
 
     def select(
         self: Self,
@@ -253,17 +251,17 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             return self._from_native_frame(spark_df)
 
         new_columns_list = [col.alias(col_name) for (col_name, col) in new_columns]
-        return self._from_native_frame(self._native_frame.select(*new_columns_list))  # pyright: ignore[reportArgumentType]
+        return self._from_native_frame(self._native_frame.select(*new_columns_list))
 
     def with_columns(self: Self, *exprs: SparkLikeExpr) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
-        return self._from_native_frame(self._native_frame.withColumns(dict(new_columns)))  # pyright: ignore[reportArgumentType]
+        return self._from_native_frame(self._native_frame.withColumns(dict(new_columns)))
 
     def filter(self: Self, predicate: SparkLikeExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
         condition = predicate._call(self)[0]
-        spark_df = self._native_frame.where(condition)  # pyright: ignore[reportArgumentType]
-        return self._from_native_frame(spark_df)  # pyright: ignore[reportArgumentType]
+        spark_df = self._native_frame.where(condition)
+        return self._from_native_frame(spark_df)
 
     @property
     def schema(self: Self) -> dict[str, DType]:
@@ -272,8 +270,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                 field.name: native_to_narwhals_dtype(
                     dtype=field.dataType,
                     version=self._version,
-                    # NOTE: Unclear if this is an unsafe hash (https://github.com/narwhals-dev/narwhals/pull/2051#discussion_r1970074662)
-                    spark_types=self._native_dtypes,  # pyright: ignore[reportArgumentType]
+                    spark_types=self._native_dtypes,
                 )
                 for field in self._native_frame.schema
             }
@@ -286,10 +283,10 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         columns_to_drop = parse_columns_to_drop(
             compliant_frame=self, columns=columns, strict=strict
         )
-        return self._from_native_frame(self._native_frame.drop(*columns_to_drop))  # pyright: ignore[reportArgumentType]
+        return self._from_native_frame(self._native_frame.drop(*columns_to_drop))
 
     def head(self: Self, n: int) -> Self:
-        return self._from_native_frame(self._native_frame.limit(num=n))  # pyright: ignore[reportArgumentType]
+        return self._from_native_frame(self._native_frame.limit(num=n))
 
     def group_by(self: Self, *keys: str, drop_null_keys: bool) -> SparkLikeLazyGroupBy:
         from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
@@ -319,10 +316,10 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             )
 
         sort_cols = [sort_f(col) for col, sort_f in zip(by, sort_funcs)]
-        return self._from_native_frame(self._native_frame.sort(*sort_cols))  # pyright: ignore[reportArgumentType]
+        return self._from_native_frame(self._native_frame.sort(*sort_cols))
 
     def drop_nulls(self: Self, subset: list[str] | None) -> Self:
-        return self._from_native_frame(self._native_frame.dropna(subset=subset))  # pyright: ignore[reportArgumentType]
+        return self._from_native_frame(self._native_frame.dropna(subset=subset))
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
         rename_mapping = {
@@ -330,7 +327,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         }
         return self._from_native_frame(
             self._native_frame.select(
-                [self._F.col(old).alias(new) for old, new in rename_mapping.items()]  # pyright: ignore[reportArgumentType]
+                [self._F.col(old).alias(new) for old, new in rename_mapping.items()]
             )
         )
 
@@ -344,7 +341,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             msg = "`LazyFrame.unique` with PySpark backend only supports `keep='any'`."
             raise ValueError(msg)
         check_column_exists(self.columns, subset)
-        return self._from_native_frame(self._native_frame.dropDuplicates(subset=subset))  # pyright: ignore[reportArgumentType]
+        return self._from_native_frame(self._native_frame.dropDuplicates(subset=subset))
 
     def join(
         self: Self,
@@ -388,7 +385,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                 ]
             )
         return self._from_native_frame(
-            self_native.join(other_native, on=left_on, how=how).select(col_order)  # pyright: ignore[reportArgumentType]
+            self_native.join(other_native, on=left_on, how=how).select(col_order)
         )
 
     def explode(self: Self, columns: list[str]) -> Self:
@@ -424,7 +421,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                         else self._F.explode_outer(col_name).alias(col_name)
                         for col_name in column_names
                     ]
-                ),  # pyright: ignore[reportArgumentType]
+                )
             )
         elif self._implementation.is_sqlframe():
             # Not every sqlframe dialect supports `explode_outer` function
@@ -445,14 +442,14 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                         for col_name in column_names
                     ]
                 ).union(
-                    native_frame.filter(null_condition(columns[0])).select(  # pyright: ignore[reportArgumentType]
+                    native_frame.filter(null_condition(columns[0])).select(
                         *[
                             self._F.col(col_name).alias(col_name)
                             if col_name != columns[0]
                             else self._F.lit(None).alias(col_name)
                             for col_name in column_names
                         ]
-                    )  # pyright: ignore[reportArgumentType]
+                    )
                 ),
             )
         else:  # pragma: no cover
@@ -487,4 +484,4 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         )
         if index is None:
             unpivoted_native_frame = unpivoted_native_frame.drop(*ids)
-        return self._from_native_frame(unpivoted_native_frame)  # pyright: ignore[reportArgumentType]
+        return self._from_native_frame(unpivoted_native_frame)
