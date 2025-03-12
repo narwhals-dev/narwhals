@@ -38,8 +38,8 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
-    NativeFrame = BaseDataFrame[Any, Any, Any, Any, Any]
-    NativeSession = _BaseSession[Any, Any, Any, Any, Any, Any, Any]
+    SQLFrameDataFrame = BaseDataFrame[Any, Any, Any, Any, Any]
+    SQLFrameSession = _BaseSession[Any, Any, Any, Any, Any, Any, Any]
 
 Incomplete: TypeAlias = Any  # pragma: no cover
 """Marker for working code that fails type checking."""
@@ -48,7 +48,7 @@ Incomplete: TypeAlias = Any  # pragma: no cover
 class SparkLikeLazyFrame(CompliantLazyFrame):
     def __init__(
         self: Self,
-        native_dataframe: NativeFrame,
+        native_dataframe: SQLFrameDataFrame,
         *,
         backend_version: tuple[int, ...],
         version: Version,
@@ -69,16 +69,17 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             from sqlframe.base import functions
 
             return functions
-        if self._implementation is Implementation.SQLFRAME:
-            from sqlframe.base.session import _BaseSession
+        else:
+            if self._implementation is Implementation.SQLFRAME:
+                from sqlframe.base.session import _BaseSession
 
-            return import_module(
-                f"sqlframe.{_BaseSession().execution_dialect_name}.functions"
-            )
+                return import_module(
+                    f"sqlframe.{_BaseSession().execution_dialect_name}.functions"
+                )
 
-        from pyspark.sql import functions  # type: ignore[no-redef]
+            from pyspark.sql import functions
 
-        return functions
+            return functions
 
     @property
     def _native_dtypes(self: Self):  # type: ignore[no-untyped-def] # noqa: ANN202
@@ -113,7 +114,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         return Window
 
     @property
-    def _session(self: Self) -> NativeSession:
+    def _session(self: Self) -> SQLFrameSession:
         if self._implementation is Implementation.SQLFRAME:
             return self._native_frame.session
 
@@ -142,7 +143,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             implementation=self._implementation,
         )
 
-    def _from_native_frame(self: Self, df: NativeFrame) -> Self:
+    def _from_native_frame(self: Self, df: SQLFrameDataFrame) -> Self:
         return self.__class__(
             df,
             backend_version=self._backend_version,

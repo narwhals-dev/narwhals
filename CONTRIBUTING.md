@@ -223,9 +223,9 @@ to verify type completeness / correctness.
 
 Note that:
 - In `_pandas_like`, we type all native objects as if they are pandas ones, though
-  in reality this folder is shared between pandas, Modin, and cuDF.
+  in reality this package is shared between pandas, Modin, and cuDF.
 - In `_spark_like`, we type all native objects as if they are SQLFrame ones, though
-  in reality this folder is shared between SQLFrame and PySpark.
+  in reality this package is shared between SQLFrame and PySpark.
 
 ### 8. Writing the doc(strings)
 
