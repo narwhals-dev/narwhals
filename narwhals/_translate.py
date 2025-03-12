@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeVar
 
 
-else:
+else:  # pragma: no cover
     import sys
     from importlib.util import find_spec
 
