@@ -446,7 +446,7 @@ class Enum(DType):
        >>> data = ["beluga", "narwhal", "orca"]
        >>> s_native = pl.Series(data, dtype=pl.Enum(data))
        >>> nw.from_native(s_native, series_only=True).dtype
-       Enum
+       Enum(categories=['beluga', 'narwhal', 'orca'])
     """
 
     def __init__(self, categories: Iterable[Hashable] | type[enum.Enum]) -> None:
