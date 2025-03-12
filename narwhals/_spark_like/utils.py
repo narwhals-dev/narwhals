@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import cast
 
 from narwhals.exceptions import UnsupportedDTypeError
 from narwhals.utils import Implementation
@@ -11,6 +12,7 @@ from narwhals.utils import isinstance_or_issubclass
 if TYPE_CHECKING:
     from types import ModuleType
 
+    import sqlframe.base.functions as sqlframe_functions
     import sqlframe.base.types as sqlframe_types
     from sqlframe.base.column import Column
     from typing_extensions import TypeAlias
@@ -186,43 +188,61 @@ def _std(
     _input: Column | str,
     ddof: int,
     np_version: tuple[int, ...],
-    functions: Any,
+    functions: ModuleType,
     implementation: Implementation,
 ) -> Column:
+    if TYPE_CHECKING:
+        F = sqlframe_functions  # noqa: N806
+    else:
+        F = functions  # noqa: N806
+    column = F.col(_input) if isinstance(_input, str) else _input
     if implementation is Implementation.SQLFRAME or np_version > (2, 0):
         if ddof == 0:
-            return functions.stddev_pop(_input)
+            return F.stddev_pop(column)
         if ddof == 1:
-            return functions.stddev_samp(_input)
+            return F.stddev_samp(column)
+        n_rows = F.count(column)
+        return F.stddev_samp(column) * F.sqrt((n_rows - 1) / (n_rows - ddof))
+    if TYPE_CHECKING:
+        return F.stddev(column)
 
-        n_rows = functions.count(_input)
-        return functions.stddev_samp(_input) * functions.sqrt(
-            (n_rows - 1) / (n_rows - ddof)
-        )
-
-    from pyspark.pandas.spark.functions import stddev
-
-    input_col = functions.col(_input) if isinstance(_input, str) else _input
-    return stddev(input_col, ddof=ddof)
+    return _stddev_pyspark(column, ddof)
 
 
 def _var(
     _input: Column | str,
     ddof: int,
     np_version: tuple[int, ...],
-    functions: Any,
+    functions: ModuleType,
     implementation: Implementation,
 ) -> Column:
+    if TYPE_CHECKING:
+        F = sqlframe_functions  # noqa: N806
+    else:
+        F = functions  # noqa: N806
+    column = F.col(_input) if isinstance(_input, str) else _input
     if implementation is Implementation.SQLFRAME or np_version > (2, 0):
         if ddof == 0:
-            return functions.var_pop(_input)
+            return F.var_pop(column)
         if ddof == 1:
-            return functions.var_samp(_input)
+            return F.var_samp(column)
 
-        n_rows = functions.count(_input)
-        return functions.var_samp(_input) * (n_rows - 1) / (n_rows - ddof)
+        n_rows = F.count(column)
+        return F.var_samp(column) * (n_rows - 1) / (n_rows - ddof)
 
+    if TYPE_CHECKING:
+        return F.var_samp(column)
+
+    return _var_pyspark(column, ddof)
+
+
+def _stddev_pyspark(col: Any, ddof: int, /) -> Column:
+    from pyspark.pandas.spark.functions import stddev
+
+    return cast("Column", stddev(col, ddof=ddof))
+
+
+def _var_pyspark(col: Any, ddof: int, /) -> Column:
     from pyspark.pandas.spark.functions import var
 
-    input_col = functions.col(_input) if isinstance(_input, str) else _input
-    return var(input_col, ddof=ddof)
+    return cast("Column", var(col, ddof=ddof))
