@@ -84,7 +84,7 @@ def native_to_narwhals_dtype(
 
 def narwhals_to_native_dtype(
     dtype: DType | type[DType], version: Version, spark_types: ModuleType
-) -> sqlframe_types.DataType:
+) -> _NativeDType:
     dtypes = import_dtypes_module(version)
     if TYPE_CHECKING:
         native = sqlframe_types
