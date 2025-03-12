@@ -252,7 +252,7 @@ def test_key_with_nulls(
     request: pytest.FixtureRequest,
 ) -> None:
     if "modin" in str(constructor):
-        request.applymarker(pytest.mark.xfail(reason="Modin flaky here"))
+        request.applymarker(pytest.mark.xfail(reason="Modin flaky here", strict=False))
 
     context = (
         pytest.raises(NotImplementedError, match="null values")
