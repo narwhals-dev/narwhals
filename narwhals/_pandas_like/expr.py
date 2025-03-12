@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from functools import partial
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -305,16 +306,17 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         return_dtype: DType | type[DType] | None,
     ) -> Self:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            input_series_list = self._call(df)
+            input_series_list = self(df)
             output_names = [input_series.name for input_series in input_series_list]
             result = [function(series) for series in input_series_list]
             if is_numpy_array(result[0]) or (
                 (np := get_numpy()) is not None and np.isscalar(result[0])
             ):
+                from_numpy = partial(
+                    self.__narwhals_namespace__()._series.from_numpy, context=self
+                )
                 result = [
-                    df.__narwhals_namespace__()
-                    ._create_compliant_series(array)
-                    .alias(output_name)
+                    from_numpy(array).alias(output_name)
                     for array, output_name in zip(result, output_names)
                 ]
             if return_dtype is not None:

@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.expr import CompliantExpr
     from narwhals._compliant.expr import EagerExpr
     from narwhals._compliant.expr import NativeExpr
+    from narwhals._compliant.namespace import EagerNamespace
     from narwhals._compliant.series import CompliantSeries
     from narwhals._compliant.series import EagerSeries
 
@@ -47,5 +48,9 @@ EagerDataFrameT = TypeVar("EagerDataFrameT", bound="EagerDataFrame[Any]")
 EagerSeriesT = TypeVar("EagerSeriesT", bound="EagerSeries[Any]")
 EagerSeriesT_co = TypeVar("EagerSeriesT_co", bound="EagerSeries[Any]", covariant=True)
 EagerExprT = TypeVar("EagerExprT", bound="EagerExpr[Any, Any]")
+EagerNamespaceAny: TypeAlias = (
+    "EagerNamespace[EagerDataFrame[Any], EagerSeries[Any], EagerExpr[Any, Any]]"
+)
+
 AliasNames: TypeAlias = Callable[[Sequence[str]], Sequence[str]]
 AliasName: TypeAlias = Callable[[str], str]

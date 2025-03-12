@@ -147,31 +147,6 @@ def extract_dataframe_comparand(
     return other._native_series
 
 
-def create_compliant_series(
-    iterable: Any,
-    index: Any = None,
-    *,
-    implementation: Implementation,
-    backend_version: tuple[int, ...],
-    version: Version,
-) -> PandasLikeSeries:
-    from narwhals._pandas_like.series import PandasLikeSeries
-
-    if implementation in PANDAS_LIKE_IMPLEMENTATION:
-        series = implementation.to_native_namespace().Series(
-            iterable, index=index, name=""
-        )
-        return PandasLikeSeries(
-            series,
-            implementation=implementation,
-            backend_version=backend_version,
-            version=version,
-        )
-    else:  # pragma: no cover
-        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
-        raise TypeError(msg)
-
-
 def horizontal_concat(
     dfs: list[Any], *, implementation: Implementation, backend_version: tuple[int, ...]
 ) -> Any:

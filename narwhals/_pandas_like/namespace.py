@@ -19,7 +19,6 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_series_full_broadcast
-from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import diagonal_concat
 from narwhals._pandas_like.utils import extract_dataframe_comparand
 from narwhals._pandas_like.utils import horizontal_concat
@@ -65,14 +64,6 @@ class PandasLikeNamespace(
         self._implementation = implementation
         self._backend_version = backend_version
         self._version = version
-
-    def _create_compliant_series(self: Self, value: Any) -> PandasLikeSeries:
-        return create_compliant_series(
-            value,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
 
     # --- selection ---
     def col(self: Self, *column_names: str) -> PandasLikeExpr:
