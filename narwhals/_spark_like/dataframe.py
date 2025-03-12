@@ -118,7 +118,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         if self._implementation is Implementation.SQLFRAME:
             return self._native_frame.session
 
-        return self._native_frame.sparkSession  # type: ignore[return-value]
+        return self._native_frame.sparkSession
 
     def __native_namespace__(self: Self) -> ModuleType:  # pragma: no cover
         return self._implementation.to_native_namespace()
