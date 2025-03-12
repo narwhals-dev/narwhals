@@ -203,6 +203,7 @@ _NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
 _1DArray: TypeAlias = "_NDArray[tuple[int]]"  # noqa: PYI042, PYI047
 _2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI042, PYI047
 _AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
+_NumpyScalar: TypeAlias = "np.generic[Any]"  # noqa: PYI047
 
 
 class DTypes:
