@@ -33,9 +33,7 @@ if default_constructors := os.environ.get(
 ):  # pragma: no cover
     DEFAULT_CONSTRUCTORS = default_constructors
 else:
-    DEFAULT_CONSTRUCTORS = (
-        "pandas,pandas[nullable],pandas[pyarrow],polars[eager],polars[lazy],pyarrow"
-    )
+    DEFAULT_CONSTRUCTORS = "pandas,pandas[pyarrow],polars[eager],pyarrow,duckdb,sqlframe"
 
 
 def pytest_addoption(parser: Any) -> None:
@@ -232,24 +230,27 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
 
     for constructor in selected_constructors:
         if (
-            constructor in {"pandas[nullable]", "pandas[pyarrow]"}
-            and MIN_PANDAS_NULLABLE_VERSION > PANDAS_VERSION
-        ) or (constructor == "sqlframe" and sys.version_info < (3, 9)):
-            continue  # pragma: no cover
-        if constructor == "pyspark" and sys.version_info >= (3, 12):
+            (
+                constructor in {"pandas[nullable]", "pandas[pyarrow]"}
+                and MIN_PANDAS_NULLABLE_VERSION > PANDAS_VERSION
+            )
+            or (constructor == "sqlframe" and sys.version_info < (3, 9))
+            or (constructor == "pyspark" and sys.version_info >= (3, 12))
+        ):
             continue  # pragma: no cover
 
         if constructor in EAGER_CONSTRUCTORS:
             eager_constructors.append(EAGER_CONSTRUCTORS[constructor])
             eager_constructors_ids.append(constructor)
             constructors.append(EAGER_CONSTRUCTORS[constructor])
-            constructors_ids.append(constructor)
+        elif constructor == "pyspark":
+            constructors.append(pyspark_lazy_constructor())
         elif constructor in LAZY_CONSTRUCTORS:
             constructors.append(LAZY_CONSTRUCTORS[constructor])
-            constructors_ids.append(constructor)
         else:  # pragma: no cover
             msg = f"Expected one of {EAGER_CONSTRUCTORS.keys()} or {LAZY_CONSTRUCTORS.keys()}, got {constructor}"
             raise ValueError(msg)
+        constructors_ids.append(constructor)
 
     if "constructor_eager" in metafunc.fixturenames:
         metafunc.parametrize(
