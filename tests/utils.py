@@ -5,6 +5,7 @@ import os
 import sys
 import warnings
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterator
@@ -21,10 +22,8 @@ from narwhals.typing import IntoFrame
 from narwhals.utils import Implementation
 from narwhals.utils import parse_version
 
-if sys.version_info >= (3, 10):
-    from typing import TypeAlias  # pragma: no cover
-else:
-    from typing_extensions import TypeAlias  # pragma: no cover
+if TYPE_CHECKING:
+    from typing_extensions import TypeAlias
 
 
 def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
