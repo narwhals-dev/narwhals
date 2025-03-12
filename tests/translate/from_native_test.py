@@ -237,6 +237,7 @@ def test_eager_only_lazy_dask(eager_only: Any, context: Any) -> None:
         assert nw.from_native(dframe, eager_only=eager_only, strict=False) is dframe
 
 
+@pytest.mark.skipif(sys.version_info < (3, 9), reason="too old for sqlframe")
 def test_series_only_sqlframe() -> None:  # pragma: no cover
     pytest.importorskip("sqlframe")
     from sqlframe.duckdb import DuckDBSession
