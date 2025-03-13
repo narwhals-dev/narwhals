@@ -10,7 +10,6 @@ from typing import Container
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
-from typing import cast
 
 from narwhals._compliant import CompliantNamespace
 from narwhals._expression_parsing import combine_alias_output_names
@@ -25,8 +24,7 @@ from narwhals.utils import get_column_names
 from narwhals.utils import passthrough_column_names
 
 if TYPE_CHECKING:
-    from pyspark.sql import Column
-    from pyspark.sql import DataFrame
+    from sqlframe.base.column import Column
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
@@ -232,7 +230,7 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):
         *,
         how: Literal["horizontal", "vertical", "diagonal"],
     ) -> SparkLikeLazyFrame:
-        dfs = cast("Sequence[DataFrame]", [item._native_frame for item in items])
+        dfs = [item._native_frame for item in items]
         if how == "horizontal":
             msg = (
                 "Horizontal concatenation is not supported for LazyFrame backed by "

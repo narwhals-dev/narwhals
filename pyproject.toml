@@ -45,13 +45,15 @@ tests = [
   "pytest-randomly",
   "pytest-env",
   "hypothesis",
-  "typing_extensions",
 ]
 typing = [
+  "hypothesis",
+  "pytest",
   "pandas-stubs",
   "typing_extensions",
   "mypy~=1.15.0",
-  "pyright"
+  "pyright",
+  "pyarrow-stubs",
 ]
 dev = [
   "pre-commit",
@@ -63,7 +65,7 @@ core = [
   "pandas",
   "polars",
   "pyarrow",
-  "pyarrow-stubs",
+  "sqlframe"
 ]
 extra = [  # heavier dependencies we don't necessarily need in every testing job
   "scikit-learn",
@@ -259,7 +261,7 @@ module = [
   "modin.*",
   "numpy.*",
   "sklearn.*",
-  "sqlframe.*",
+  "pyspark.*",
 ]
 # TODO: remove follow_imports
 follow_imports = "skip"
