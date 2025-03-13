@@ -195,7 +195,7 @@ def _std(
         F = sqlframe_functions  # noqa: N806
     else:
         F = functions  # noqa: N806
-    if implementation is Implementation.PYSPARK and np_version <= (2, 0):
+    if implementation is Implementation.PYSPARK and np_version < (2, 0):
         from pyspark.pandas.spark.functions import stddev
 
         return stddev(column, ddof)  # pyright: ignore[reportReturnType, reportArgumentType]
@@ -218,7 +218,7 @@ def _var(
         F = sqlframe_functions  # noqa: N806
     else:
         F = functions  # noqa: N806
-    if implementation is Implementation.PYSPARK and np_version <= (2, 0):
+    if implementation is Implementation.PYSPARK and np_version < (2, 0):
         from pyspark.pandas.spark.functions import var
 
         return var(column, ddof)  # pyright: ignore[reportReturnType, reportArgumentType]
