@@ -729,9 +729,9 @@ def _from_native_impl(  # noqa: PLR0915
             raise TypeError(msg)
         return LazyFrame(
             SparkLikeLazyFrame(
-                native_object,  # NOTE: this is leaking the internal lie
-                # error: Argument of type "DataFrame" cannot be assigned to parameter "native_dataframe" of type "SQLFrameDataFrame" in function "__init__"
-                #    "DataFrame" is not assignable to "BaseDataFrame[Any, Any, Any, Any, Any]" (reportArgumentType)
+                # NOTE: In `_spark_like`, we type all native objects as if they are SQLFrame ones, though
+                # in reality we accept both SQLFrame and PySpark
+                native_object,  # pyright: ignore[reportArgumentType]
                 backend_version=parse_version(get_pyspark()),
                 version=version,
                 implementation=Implementation.PYSPARK,
