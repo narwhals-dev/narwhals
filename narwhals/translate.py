@@ -729,7 +729,9 @@ def _from_native_impl(  # noqa: PLR0915
             raise TypeError(msg)
         return LazyFrame(
             SparkLikeLazyFrame(
-                native_object,
+                # NOTE: In `_spark_like`, we type all native objects as if they are SQLFrame ones, though
+                # in reality we accept both SQLFrame and PySpark
+                native_object,  # pyright: ignore[reportArgumentType]
                 backend_version=parse_version(get_pyspark()),
                 version=version,
                 implementation=Implementation.PYSPARK,
