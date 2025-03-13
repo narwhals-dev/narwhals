@@ -196,19 +196,13 @@ class PandasLikeSeries(EagerSeries[Any]):
     @classmethod
     def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
         implementation = context._implementation
-        if implementation.is_pandas_like():
-            arr = data if is_numpy_array_1d(data) else [data]
-            return cls(
-                implementation.to_native_namespace().Series(arr, name=""),
-                implementation=implementation,
-                backend_version=context._backend_version,
-                version=context._version,
-            )
-        else:  # pragma: no cover
-            from narwhals._pandas_like.utils import PANDAS_LIKE_IMPLEMENTATION
-
-            msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
-            raise TypeError(msg)
+        arr = data if is_numpy_array_1d(data) else [data]
+        return cls(
+            implementation.to_native_namespace().Series(arr, name=""),
+            implementation=implementation,
+            backend_version=context._backend_version,
+            version=context._version,
+        )
 
     def __len__(self: Self) -> int:
         return len(self.native)
