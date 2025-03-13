@@ -57,7 +57,7 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
         return DuckDBExpr
 
     def all(self: Self) -> DuckDBExpr:
-        return DuckDBExpr.from_column_names(
+        return self._expr.from_column_names(
             get_column_names,
             function_name="all",
             backend_version=self._backend_version,
@@ -131,7 +131,7 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
 
             return [result]
 
-        return DuckDBExpr(
+        return self._expr(
             call=func,
             function_name="concat_str",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
@@ -145,7 +145,7 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
             cols = (c for _expr in exprs for c in _expr(df))
             return [reduce(operator.and_, cols)]
 
-        return DuckDBExpr(
+        return self._expr(
             call=func,
             function_name="all_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
@@ -159,7 +159,7 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
             cols = (c for _expr in exprs for c in _expr(df))
             return [reduce(operator.or_, cols)]
 
-        return DuckDBExpr(
+        return self._expr(
             call=func,
             function_name="or_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
@@ -173,7 +173,7 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
             cols = (c for _expr in exprs for c in _expr(df))
             return [FunctionExpression("greatest", *cols)]
 
-        return DuckDBExpr(
+        return self._expr(
             call=func,
             function_name="max_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
@@ -187,7 +187,7 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
             cols = (c for _expr in exprs for c in _expr(df))
             return [FunctionExpression("least", *cols)]
 
-        return DuckDBExpr(
+        return self._expr(
             call=func,
             function_name="min_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
@@ -201,7 +201,7 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
             cols = (CoalesceOperator(col, lit(0)) for _expr in exprs for col in _expr(df))
             return [reduce(operator.add, cols)]
 
-        return DuckDBExpr(
+        return self._expr(
             call=func,
             function_name="sum_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
@@ -237,7 +237,7 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
         )
 
     def col(self: Self, *column_names: str) -> DuckDBExpr:
-        return DuckDBExpr.from_column_names(
+        return self._expr.from_column_names(
             passthrough_column_names(column_names),
             function_name="col",
             backend_version=self._backend_version,
@@ -245,7 +245,7 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
         )
 
     def exclude(self: Self, excluded_names: Container[str]) -> DuckDBExpr:
-        return DuckDBExpr.from_column_names(
+        return self._expr.from_column_names(
             partial(exclude_column_names, names=excluded_names),
             function_name="exclude",
             backend_version=self._backend_version,
@@ -253,7 +253,7 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
         )
 
     def nth(self: Self, *column_indices: int) -> DuckDBExpr:
-        return DuckDBExpr.from_column_indices(
+        return self._expr.from_column_indices(
             *column_indices, backend_version=self._backend_version, version=self._version
         )
 
@@ -267,7 +267,7 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
                 ]
             return [lit(value)]
 
-        return DuckDBExpr(
+        return self._expr(
             func,
             function_name="lit",
             evaluate_output_names=lambda _df: ["literal"],
@@ -280,7 +280,7 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
         def func(_df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             return [FunctionExpression("count")]
 
-        return DuckDBExpr(
+        return self._expr(
             call=func,
             function_name="len",
             evaluate_output_names=lambda _df: ["len"],

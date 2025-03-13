@@ -60,7 +60,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
         self._version = version
 
     def all(self: Self) -> DaskExpr:
-        return DaskExpr.from_column_names(
+        return self._expr.from_column_names(
             get_column_names,
             function_name="all",
             backend_version=self._backend_version,
@@ -68,7 +68,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
         )
 
     def col(self: Self, *column_names: str) -> DaskExpr:
-        return DaskExpr.from_column_names(
+        return self._expr.from_column_names(
             passthrough_column_names(column_names),
             function_name="col",
             backend_version=self._backend_version,
@@ -76,7 +76,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
         )
 
     def exclude(self: Self, excluded_names: Container[str]) -> DaskExpr:
-        return DaskExpr.from_column_names(
+        return self._expr.from_column_names(
             partial(exclude_column_names, names=excluded_names),
             function_name="exclude",
             backend_version=self._backend_version,
@@ -84,7 +84,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
         )
 
     def nth(self: Self, *column_indices: int) -> DaskExpr:
-        return DaskExpr.from_column_indices(
+        return self._expr.from_column_indices(
             *column_indices, backend_version=self._backend_version, version=self._version
         )
 
@@ -99,7 +99,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
             dask_series = dd.from_pandas(native_pd_series, npartitions=npartitions)
             return [dask_series[0].to_series()]
 
-        return DaskExpr(
+        return self._expr(
             func,
             depth=0,
             function_name="lit",
@@ -121,7 +121,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
             return [df._native_frame[df.columns[0]].size.to_series()]
 
         # coverage bug? this is definitely hit
-        return DaskExpr(  # pragma: no cover
+        return self._expr(  # pragma: no cover
             func,
             depth=0,
             function_name="len",
@@ -138,7 +138,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
             )
             return [reduce(operator.and_, series)]
 
-        return DaskExpr(
+        return self._expr(
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="all_horizontal",
@@ -155,7 +155,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
             )
             return [reduce(operator.or_, series)]
 
-        return DaskExpr(
+        return self._expr(
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="any_horizontal",
@@ -172,7 +172,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
             )
             return [dd.concat(series, axis=1).sum(axis=1)]
 
-        return DaskExpr(
+        return self._expr(
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="sum_horizontal",
@@ -251,7 +251,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
                 )
             ]
 
-        return DaskExpr(
+        return self._expr(
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="mean_horizontal",
@@ -269,7 +269,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
 
             return [dd.concat(series, axis=1).min(axis=1)]
 
-        return DaskExpr(
+        return self._expr(
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="min_horizontal",
@@ -287,7 +287,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
 
             return [dd.concat(series, axis=1).max(axis=1)]
 
-        return DaskExpr(
+        return self._expr(
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="max_horizontal",
@@ -335,7 +335,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
 
             return [result]
 
-        return DaskExpr(
+        return self._expr(
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="concat_str",
