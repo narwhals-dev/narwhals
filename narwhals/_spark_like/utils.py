@@ -185,7 +185,7 @@ def maybe_evaluate_expr(df: SparkLikeLazyFrame, obj: SparkLikeExpr | object) -> 
 
 
 def _std(
-    _input: Column | str,
+    column: Column,
     ddof: int,
     np_version: tuple[int, ...],
     functions: ModuleType,
@@ -195,7 +195,6 @@ def _std(
         F = sqlframe_functions  # noqa: N806
     else:
         F = functions  # noqa: N806
-    column = F.col(_input) if isinstance(_input, str) else _input
     if implementation is Implementation.PYSPARK and np_version <= (2, 0):
         from pyspark.pandas.spark.functions import stddev
 
@@ -209,7 +208,7 @@ def _std(
 
 
 def _var(
-    _input: Column | str,
+    column: Column,
     ddof: int,
     np_version: tuple[int, ...],
     functions: ModuleType,
@@ -219,7 +218,6 @@ def _var(
         F = sqlframe_functions  # noqa: N806
     else:
         F = functions  # noqa: N806
-    column = F.col(_input) if isinstance(_input, str) else _input
     if implementation is Implementation.PYSPARK and np_version <= (2, 0):
         from pyspark.pandas.spark.functions import var
 
