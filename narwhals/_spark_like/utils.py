@@ -3,7 +3,6 @@ from __future__ import annotations
 from importlib import import_module
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import cast
 
 from narwhals.exceptions import UnsupportedDTypeError
 from narwhals.utils import Implementation
@@ -197,17 +196,16 @@ def _std(
     else:
         F = functions  # noqa: N806
     column = F.col(_input) if isinstance(_input, str) else _input
-    if implementation is Implementation.SQLFRAME or np_version > (2, 0):
-        if ddof == 0:
-            return F.stddev_pop(column)
-        if ddof == 1:
-            return F.stddev_samp(column)
-        n_rows = F.count(column)
-        return F.stddev_samp(column) * F.sqrt((n_rows - 1) / (n_rows - ddof))
-    if TYPE_CHECKING:
-        return F.stddev(column)
+    if implementation is Implementation.PYSPARK and np_version <= (2, 0):
+        from pyspark.pandas.spark.functions import stddev
 
-    return _stddev_pyspark(column, ddof)
+        return stddev(column, ddof)  # pyright: ignore[reportReturnType, reportArgumentType]
+    if ddof == 0:
+        return F.stddev_pop(column)
+    if ddof == 1:
+        return F.stddev_samp(column)
+    n_rows = F.count(column)
+    return F.stddev_samp(column) * F.sqrt((n_rows - 1) / (n_rows - ddof))
 
 
 def _var(
@@ -222,65 +220,46 @@ def _var(
     else:
         F = functions  # noqa: N806
     column = F.col(_input) if isinstance(_input, str) else _input
-    if implementation is Implementation.SQLFRAME or np_version > (2, 0):
-        if ddof == 0:
-            return F.var_pop(column)
-        if ddof == 1:
-            return F.var_samp(column)
+    if implementation is Implementation.PYSPARK and np_version <= (2, 0):
+        from pyspark.pandas.spark.functions import var
 
-        n_rows = F.count(column)
-        return F.var_samp(column) * (n_rows - 1) / (n_rows - ddof)
-
-    if TYPE_CHECKING:
+        return var(column, ddof)  # pyright: ignore[reportReturnType, reportArgumentType]
+    if ddof == 0:
+        return F.var_pop(column)
+    if ddof == 1:
         return F.var_samp(column)
 
-    return _var_pyspark(column, ddof)
-
-
-def _stddev_pyspark(col: Any, ddof: int, /) -> Column:
-    from pyspark.pandas.spark.functions import stddev
-
-    return cast("Column", stddev(col, ddof=ddof))
-
-
-def _var_pyspark(col: Any, ddof: int, /) -> Column:
-    from pyspark.pandas.spark.functions import var
-
-    return cast("Column", var(col, ddof=ddof))
+    n_rows = F.count(column)
+    return F.var_samp(column) * (n_rows - 1) / (n_rows - ddof)
 
 
 def import_functions(implementation: Implementation, /) -> ModuleType:
-    if implementation is Implementation.SQLFRAME:
-        from sqlframe.base.session import _BaseSession
+    if implementation is Implementation.PYSPARK:
+        from pyspark.sql import functions
 
-        return import_module(
-            f"sqlframe.{_BaseSession().execution_dialect_name}.functions"
-        )
+        return functions
+    from sqlframe.base.session import _BaseSession
 
-    from pyspark.sql import functions
-
-    return functions
+    return import_module(f"sqlframe.{_BaseSession().execution_dialect_name}.functions")
 
 
 def import_native_dtypes(implementation: Implementation, /) -> ModuleType:
-    if implementation is Implementation.SQLFRAME:
-        from sqlframe.base.session import _BaseSession
+    if implementation is Implementation.PYSPARK:
+        from pyspark.sql import types
 
-        return import_module(f"sqlframe.{_BaseSession().execution_dialect_name}.types")
+        return types
+    from sqlframe.base.session import _BaseSession
 
-    from pyspark.sql import types
-
-    return types
+    return import_module(f"sqlframe.{_BaseSession().execution_dialect_name}.types")
 
 
 def import_window(implementation: Implementation, /) -> type[Any]:
-    if implementation is Implementation.SQLFRAME:
-        from sqlframe.base.session import _BaseSession
+    if implementation is Implementation.PYSPARK:
+        from pyspark.sql import Window
 
-        return import_module(
-            f"sqlframe.{_BaseSession().execution_dialect_name}.window"
-        ).Window
+        return Window
+    from sqlframe.base.session import _BaseSession
 
-    from pyspark.sql import Window
-
-    return Window
+    return import_module(
+        f"sqlframe.{_BaseSession().execution_dialect_name}.window"
+    ).Window

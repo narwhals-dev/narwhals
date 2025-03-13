@@ -229,10 +229,9 @@ omit = [
   'narwhals/stable/v1/typing.py',
   'narwhals/this.py',
   'narwhals/_arrow/typing.py',
+  'narwhals/_spark_like/typing.py',
   # we can't run this in every environment that we measure coverage on due to upper-bound constraits
   'narwhals/_ibis/*',
-  # the latest pyspark (3.5) doesn't officially support Python 3.12 and 3.13
-  'narwhals/_spark_like/*',
   # we don't run these in every environment
   'tests/ibis_test.py',
   # Remove after finishing eager sub-protocols
@@ -241,7 +240,9 @@ omit = [
 exclude_also = [
   "if sys.version_info() <",
   "if .*implementation is Implementation.CUDF",
+  "if .*implementation is Implementation.PYSPARK",
   "if .*implementation.is_cudf",
+  "if .*implementation.is_pyspark",
   'request.applymarker\(pytest.mark.xfail',
   'backend_version <',
   'if "cudf" in str\(constructor',
