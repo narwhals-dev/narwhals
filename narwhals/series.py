@@ -18,7 +18,6 @@ from narwhals.series_dt import SeriesDateTimeNamespace
 from narwhals.series_list import SeriesListNamespace
 from narwhals.series_str import SeriesStringNamespace
 from narwhals.series_struct import SeriesStructNamespace
-from narwhals.translate import to_native
 from narwhals.typing import IntoSeriesT
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import generate_repr
@@ -156,6 +155,8 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
+        from narwhals.translate import to_native
+
         if isinstance(idx, int) or (
             is_numpy_scalar(idx) and idx.dtype.kind in {"i", "u"}
         ):
@@ -807,6 +808,8 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
+        from narwhals.translate import to_native
+
         return self._from_compliant_series(
             self._compliant_series.is_in(to_native(other, pass_through=True))
         )

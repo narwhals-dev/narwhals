@@ -4,6 +4,7 @@ import os
 import re
 from datetime import timezone
 from enum import Enum
+from enum import Flag
 from enum import auto
 from inspect import getattr_static
 from secrets import token_hex
@@ -187,7 +188,7 @@ class _ExprNamespace(  # type: ignore[misc] # noqa: PYI046
         return self._compliant_expr
 
 
-class Version(Enum):
+class Version(Flag):
     V1 = auto()
     MAIN = auto()
 
