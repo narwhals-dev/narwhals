@@ -206,7 +206,7 @@ def test_pyarrow_infer_datetime_raise_inconsistent_date_fmt(
 def test_to_datetime_tz_aware(
     constructor: Constructor,
     request: pytest.FixtureRequest,
-    format: str | None,  # noqa: A002
+    format: str | None,
 ) -> None:
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (13,):
         # bugged

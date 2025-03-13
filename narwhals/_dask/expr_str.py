@@ -88,9 +88,9 @@ class DaskExprStringNamespace:
             by=by,
         )
 
-    def to_datetime(self: Self, format: str | None) -> DaskExpr:  # noqa: A002
+    def to_datetime(self: Self, format: str | None) -> DaskExpr:
         return self._compliant_expr._from_call(
-            lambda _input, format: dd.to_datetime(_input, format=format),  # noqa: A006
+            lambda _input, format: dd.to_datetime(_input, format=format),
             "to_datetime",
             format=format,
         )
