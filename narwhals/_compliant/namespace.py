@@ -58,10 +58,7 @@ class EagerNamespace(
     Protocol[EagerDataFrameT, EagerSeriesT_co, EagerExprT],
 ):
     @property
-    def _expr(self) -> type[EagerExprT]: ...
-    @property
     def _series(self) -> type[EagerSeriesT_co]: ...
-    def all_horizontal(self, *exprs: EagerExprT) -> EagerExprT: ...
 
     @deprecated(
         "Internally used for `numpy.ndarray` -> `CompliantSeries`\n"
