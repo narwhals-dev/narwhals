@@ -30,7 +30,7 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
     def time_zone(self) -> str | None:  # NOTE: Unsafe (narwhals).
         return cast("Datetime", self.compliant.dtype).time_zone
 
-    def to_string(self: Self, format: str) -> ArrowSeries:  # noqa: A002
+    def to_string(self: Self, format: str) -> ArrowSeries:
         # PyArrow differs from other libraries in that %S also prints out
         # the fractional part of the second...:'(
         # https://arrow.apache.org/docs/python/generated/pyarrow.compute.strftime.html

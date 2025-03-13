@@ -158,6 +158,9 @@ ignore = [
   "TD004",   # missing-todo-colon
 ]
 
+[tool.ruff.lint.flake8-builtins]
+builtins-ignorelist = ["format"]
+
 [tool.ruff.lint.per-file-ignores]
 "narwhals/expr_dt.py" = ["RUF002"]
 "tests/*" = ["S101"]

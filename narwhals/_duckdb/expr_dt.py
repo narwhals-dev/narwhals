@@ -67,7 +67,7 @@ class DuckDBExprDateTimeNamespace:
             "nanosecond",
         )
 
-    def to_string(self: Self, format: str) -> DuckDBExpr:  # noqa: A002
+    def to_string(self: Self, format: str) -> DuckDBExpr:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("strftime", _input, lit(format)),
             "to_string",

@@ -106,7 +106,7 @@ class SparkLikeExprStringNamespace:
             self._compliant_expr._F.lower, "to_lowercase"
         )
 
-    def to_datetime(self: Self, format: str | None) -> SparkLikeExpr:  # noqa: A002
+    def to_datetime(self: Self, format: str | None) -> SparkLikeExpr:
         F = self._compliant_expr._F  # noqa: N806
         if not format:
             function = F.to_timestamp
@@ -123,11 +123,11 @@ class SparkLikeExprStringNamespace:
         )
 
 
-def is_naive_format(format: str) -> bool:  # noqa: A002
+def is_naive_format(format: str) -> bool:
     return not any(x in format for x in ("%s", "%z", "Z"))
 
 
-def strptime_to_pyspark_format(format: str) -> str:  # noqa: A002
+def strptime_to_pyspark_format(format: str) -> str:
     """Converts a Python strptime datetime format string to a PySpark datetime format string."""
     # Mapping from Python strptime format to PySpark format
 
