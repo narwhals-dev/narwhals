@@ -861,7 +861,7 @@ class EagerExprCatNamespace(
 class EagerExprDateTimeNamespace(
     EagerExprNamespace[EagerExprT], DateTimeNamespace[EagerExprT], Generic[EagerExprT]
 ):
-    def to_string(self, format: str) -> EagerExprT:  # noqa: A002
+    def to_string(self, format: str) -> EagerExprT:
         return self.compliant._reuse_series_namespace("dt", "to_string", format=format)
 
     def replace_time_zone(self, time_zone: str | None) -> EagerExprT:
@@ -1024,7 +1024,7 @@ class EagerExprStringNamespace(
     def split(self, by: str) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "split", by=by)
 
-    def to_datetime(self, format: str | None) -> EagerExprT:  # noqa: A002
+    def to_datetime(self, format: str | None) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "to_datetime", format=format)
 
     def to_lowercase(self) -> EagerExprT:
