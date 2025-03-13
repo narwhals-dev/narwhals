@@ -27,8 +27,8 @@ if TYPE_CHECKING:
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import Into1DArray
     from narwhals.typing import _1DArray
-    from narwhals.typing import _NumpyScalar
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -75,9 +75,7 @@ class PolarsSeries:
         )
 
     @classmethod
-    def from_numpy(
-        cls, data: _1DArray | _NumpyScalar, /, *, context: _FullContext
-    ) -> Self:
+    def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
         return cls(
             pl.Series(data if is_numpy_array_1d(data) else [data]),
             backend_version=context._backend_version,

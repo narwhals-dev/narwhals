@@ -46,9 +46,9 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import Into1DArray
     from narwhals.typing import _1DArray
     from narwhals.typing import _AnyDArray
-    from narwhals.typing import _NumpyScalar
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -194,9 +194,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         )
 
     @classmethod
-    def from_numpy(
-        cls, data: _1DArray | _NumpyScalar, /, *, context: _FullContext
-    ) -> Self:
+    def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
         implementation = context._implementation
         if implementation.is_pandas_like():
             arr = data if is_numpy_array_1d(data) else [data]

@@ -53,9 +53,9 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import _AsPyType
     from narwhals._arrow.typing import _BasicDataType
     from narwhals.dtypes import DType
+    from narwhals.typing import Into1DArray
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
-    from narwhals.typing import _NumpyScalar
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -159,9 +159,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         return super()._from_scalar(value)
 
     @classmethod
-    def from_numpy(
-        cls, data: _1DArray | _NumpyScalar, /, *, context: _FullContext
-    ) -> Self:
+    def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
         return cls._from_iterable(
             data if is_numpy_array_1d(data) else [data], name="", context=context
         )

@@ -16,9 +16,9 @@ if TYPE_CHECKING:
     from narwhals._compliant.namespace import CompliantNamespace  # noqa: F401
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import Into1DArray
     from narwhals.typing import NativeSeries
-    from narwhals.typing import _1DArray
-    from narwhals.typing import _NumpyScalar
+    from narwhals.typing import _1DArray  # noqa: F401
     from narwhals.utils import Implementation
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -28,7 +28,7 @@ __all__ = ["CompliantSeries", "EagerSeries"]
 NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=True)
 
 
-class CompliantSeries(NumpyConvertible["_1DArray", "_1DArray | _NumpyScalar"], Protocol):
+class CompliantSeries(NumpyConvertible["_1DArray", "Into1DArray"], Protocol):
     @property
     def dtype(self) -> DType: ...
     @property
@@ -41,9 +41,7 @@ class CompliantSeries(NumpyConvertible["_1DArray", "_1DArray | _NumpyScalar"], P
     def _from_native_series(self, series: Any) -> Self: ...
     def _to_expr(self) -> Any: ...  # CompliantExpr[Any, Self]: ...
     @classmethod
-    def from_numpy(
-        cls, data: _1DArray | _NumpyScalar, /, *, context: _FullContext
-    ) -> Self: ...
+    def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self: ...
 
 
 class EagerSeries(CompliantSeries, Protocol[NativeSeriesT_co]):
