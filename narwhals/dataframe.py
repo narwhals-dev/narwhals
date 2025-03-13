@@ -432,7 +432,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         if isinstance(arg, Series):
             return arg._compliant_series._to_expr()
         if isinstance(arg, Expr):
-            return arg._to_compliant_expr(self.__narwhals_namespace__())
+            return arg._to_compliant_expr(self.__narwhals_namespace__())  # comment
         if isinstance(arg, str):
             return plx.col(arg)
         if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
