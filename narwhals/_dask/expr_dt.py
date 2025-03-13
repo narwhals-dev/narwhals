@@ -72,9 +72,9 @@ class DaskExprDateTimeNamespace:
             "weekday",
         )
 
-    def to_string(self: Self, format: str) -> DaskExpr:  # noqa: A002
+    def to_string(self: Self, format: str) -> DaskExpr:
         return self._compliant_expr._from_call(
-            lambda _input, format: _input.dt.strftime(format.replace("%.f", ".%f")),  # noqa: A006
+            lambda _input, format: _input.dt.strftime(format.replace("%.f", ".%f")),
             "strftime",
             format=format,
         )

@@ -487,7 +487,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.dt.total_nanoseconds()
         )
 
-    def to_string(self: Self, format: str) -> SeriesT:  # noqa: A002
+    def to_string(self: Self, format: str) -> SeriesT:
         """Convert a Date/Time/Datetime series into a String series with the given format.
 
         Arguments:
