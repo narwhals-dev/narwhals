@@ -40,7 +40,6 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._arrow.typing import Incomplete
-    from narwhals._arrow.typing import IntoArrowExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
@@ -166,7 +165,7 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
             context=self,
         )
 
-    def mean_horizontal(self: Self, *exprs: ArrowExpr) -> IntoArrowExpr:
+    def mean_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
         dtypes = import_dtypes_module(self._version)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:

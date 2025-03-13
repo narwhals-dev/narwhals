@@ -42,12 +42,16 @@ if TYPE_CHECKING:
         import dask_expr as dx
 
 
-class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):
+class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
     _implementation: Implementation = Implementation.DASK
 
     @property
     def selectors(self: Self) -> DaskSelectorNamespace:
         return DaskSelectorNamespace(self)
+
+    @property
+    def _expr(self) -> type[DaskExpr]:
+        return DaskExpr
 
     def __init__(
         self: Self, *, backend_version: tuple[int, ...], version: Version

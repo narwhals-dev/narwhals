@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Container
+from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
@@ -38,7 +39,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "duckdb.Expression"]):
+class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
     _implementation: Implementation = Implementation.DUCKDB
 
     def __init__(
@@ -51,6 +52,10 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "duckdb.Expression"]
     def selectors(self: Self) -> DuckDBSelectorNamespace:
         return DuckDBSelectorNamespace(self)
 
+    @property
+    def _expr(self) -> type[DuckDBExpr]:
+        return DuckDBExpr
+
     def all(self: Self) -> DuckDBExpr:
         return DuckDBExpr.from_column_names(
             get_column_names,
@@ -61,7 +66,7 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "duckdb.Expression"]
 
     def concat(
         self: Self,
-        items: Sequence[DuckDBLazyFrame],
+        items: Iterable[DuckDBLazyFrame],
         *,
         how: Literal["horizontal", "vertical", "diagonal"],
     ) -> DuckDBLazyFrame:
@@ -71,6 +76,7 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "duckdb.Expression"]
         if how == "diagonal":
             msg = "Not implemented yet"
             raise NotImplementedError(msg)
+        items = list(items)
         first = items[0]
         schema = first.schema
         if how == "vertical" and not all(x.schema == schema for x in items[1:]):

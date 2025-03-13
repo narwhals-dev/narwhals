@@ -26,7 +26,6 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantExpr
     from narwhals._compliant import CompliantFrameT
     from narwhals._compliant import CompliantNamespace
-    from narwhals._compliant import CompliantSeriesOrNativeExprT_co
     from narwhals.expr import Expr
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
@@ -91,11 +90,11 @@ def combine_alias_output_names(
 
 
 def extract_compliant(
-    plx: CompliantNamespace[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
+    plx: CompliantNamespace[CompliantFrameT, Any],
     other: Any,
     *,
     str_as_lit: bool,
-) -> CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | object:
+) -> CompliantExpr[CompliantFrameT, Any] | object:
     if is_expr(other):
         return other._to_compliant_expr(plx)
     if isinstance(other, str) and not str_as_lit:

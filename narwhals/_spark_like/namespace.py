@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):
+class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "SparkLikeExpr"]):
     def __init__(
         self: Self,
         *,
@@ -47,6 +47,10 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):
     @property
     def selectors(self: Self) -> SparkLikeSelectorNamespace:
         return SparkLikeSelectorNamespace(self)
+
+    @property
+    def _expr(self) -> type[SparkLikeExpr]:
+        return SparkLikeExpr
 
     def all(self: Self) -> SparkLikeExpr:
         return SparkLikeExpr.from_column_names(
