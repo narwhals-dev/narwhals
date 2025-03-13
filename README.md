@@ -110,6 +110,7 @@ for an up-to-date plan of future work.
 Join the party!
 
 - [altair](https://github.com/vega/altair/)
+- [bokeh](https://github.com/bokeh/bokeh)
 - [darts](https://github.com/unit8co/darts)
 - [hierarchicalforecast](https://github.com/Nixtla/hierarchicalforecast)
 - [marimo](https://github.com/marimo-team/marimo)
