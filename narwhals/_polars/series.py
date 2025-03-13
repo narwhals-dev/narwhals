@@ -174,6 +174,9 @@ class PolarsSeries:
             raise NotImplementedError(msg)
         return self._from_native_series(ser.replace_strict(old, new, return_dtype=dtype))
 
+    def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
+        return self.__array__(dtype, copy=copy)
+
     def __array__(self: Self, dtype: Any, *, copy: bool | None) -> _1DArray:
         if self._backend_version < (0, 20, 29):
             return self._native_series.__array__(dtype=dtype)
@@ -586,10 +589,6 @@ class PolarsSeries:
 
     def to_polars(self: Self) -> pl.Series:
         return self._native_series
-
-    # TODO @dangotbanned: review converting `copy` to a version compat argument
-    def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
-        return self.native.to_numpy()
 
     @property
     def dt(self: Self) -> PolarsSeriesDateTimeNamespace:
