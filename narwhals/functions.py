@@ -53,6 +53,8 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrameT
     from narwhals.typing import IntoSeriesT
+    from narwhals.typing import NativeFrame
+    from narwhals.typing import NativeLazyFrame
     from narwhals.typing import _2DArray
 
     class ArrowStreamExportable(Protocol):
@@ -851,6 +853,7 @@ def _scan_csv_impl(
     source: str, *, native_namespace: ModuleType, **kwargs: Any
 ) -> LazyFrame[Any]:
     implementation = Implementation.from_native_namespace(native_namespace)
+    native_frame: NativeFrame | NativeLazyFrame
     if implementation is Implementation.POLARS:
         native_frame = native_namespace.scan_csv(source, **kwargs)
     elif implementation in {
@@ -980,6 +983,7 @@ def _scan_parquet_impl(
     source: str, *, native_namespace: ModuleType, **kwargs: Any
 ) -> LazyFrame[Any]:
     implementation = Implementation.from_native_namespace(native_namespace)
+    native_frame: NativeFrame | NativeLazyFrame
     if implementation is Implementation.POLARS:
         native_frame = native_namespace.scan_parquet(source, **kwargs)
     elif implementation in {
