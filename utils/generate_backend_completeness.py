@@ -42,10 +42,12 @@ MODULES = [
     "expr_str",
     "expr_list",
     "expr_name",
+    "expr_struct",
     "series_dt",
     "series_cat",
     "series_str",
     "series_list",
+    "series_struct",
 ]
 
 BACKENDS = [

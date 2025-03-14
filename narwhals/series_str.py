@@ -188,20 +188,16 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> import pyarrow as pa
-            >>> import narwhals as nw
             >>> s_native = pa.chunked_array([["cat", "dog", "rabbit and parrot"]])
             >>> s = nw.from_native(s_native, series_only=True)
-            >>> s.str.contains(
-            ...     "cat|parrot"
-            ... ).to_native()  # doctest: +ELLIPSIS  +NORMALIZE_WHITESPACE
+            >>> s.str.contains("cat|parrot").to_native()  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
-            [
+              [
                 true,
                 false,
                 true
-            ]
+              ]
             ]
         """
         return self._narwhals_series._from_compliant_series(
@@ -281,14 +277,14 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> import narwhals as nw
             >>> s_native = pa.chunked_array([["taata", "taatatata", "zukkyun"]])
             >>> s = nw.from_native(s_native, series_only=True)
-            >>> s.str.head().to_native()  # doctest: +ELLIPSIS  +NORMALIZE_WHITESPACE
+            >>> s.str.head().to_native()  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
-            [
+              [
                 "taata",
                 "taata",
                 "zukky"
-            ]
+              ]
             ]
         """
         return self._narwhals_series._from_compliant_series(
@@ -314,14 +310,14 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> import narwhals as nw
             >>> s_native = pa.chunked_array([["taata", "taatatata", "zukkyun"]])
             >>> s = nw.from_native(s_native, series_only=True)
-            >>> s.str.tail().to_native()  # doctest: +ELLIPSIS  +NORMALIZE_WHITESPACE
+            >>> s.str.tail().to_native()  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
             [
-            [
+              [
                 "taata",
                 "atata",
                 "kkyun"
-            ]
+              ]
             ]
         """
         return self._narwhals_series._from_compliant_series(
@@ -373,14 +369,15 @@ class SeriesStringNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.str.to_lowercase()
         )
 
-    def to_datetime(self: Self, format: str | None = None) -> SeriesT:  # noqa: A002
+    def to_datetime(self: Self, format: str | None = None) -> SeriesT:
         """Parse Series with strings to a Series with Datetime dtype.
 
         Notes:
-            pandas defaults to nanosecond time unit, Polars to microsecond.
-            Prior to pandas 2.0, nanoseconds were the only time unit supported
-            in pandas, with no ability to set any other one. The ability to
-            set the time unit in pandas, if the version permits, will arrive.
+            - pandas defaults to nanosecond time unit, Polars to microsecond.
+              Prior to pandas 2.0, nanoseconds were the only time unit supported
+              in pandas, with no ability to set any other one. The ability to
+              set the time unit in pandas, if the version permits, will arrive.
+            - timezone-aware strings are all converted to and parsed as UTC.
 
         Warning:
             As different backends auto-infer format in different ways, if `format=None`

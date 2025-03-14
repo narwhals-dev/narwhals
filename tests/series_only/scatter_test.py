@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -25,6 +26,13 @@ def test_scatter(
         "b": [142, 132, 124],
     }
     assert_equal_data(result, expected)
+
+
+def test_scatter_indices() -> None:
+    s = nw.from_native(pd.Series([2, 3, 6], index=[1, 0, 2]), series_only=True)
+    result = s.scatter([1, 0, 2], s)
+    expected = pd.Series([3, 2, 6], index=[1, 0, 2])
+    pd.testing.assert_series_equal(result.to_native(), expected)
 
 
 def test_scatter_unchanged(constructor_eager: ConstructorEager) -> None:

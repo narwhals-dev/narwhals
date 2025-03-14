@@ -10,6 +10,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import LengthChangingExprError
 from tests.utils import PANDAS_VERSION
+from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -247,7 +248,7 @@ def test_over_anonymous_cumulative(
     if "cudf" in str(constructor_eager):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    df = nw.from_native(constructor_eager({"": [1, 1, 2], "b": [4, 5, 6]}))
     context = (
         pytest.raises(NotImplementedError)
         if df.implementation.is_pyarrow()
@@ -260,12 +261,12 @@ def test_over_anonymous_cumulative(
     )
     with context:
         result = df.with_columns(
-            nw.all().cum_sum().over("a").name.suffix("_cum_sum")
-        ).sort("a", "b")
+            nw.all().cum_sum().over("").name.suffix("_cum_sum")
+        ).sort("", "b")
         expected = {
-            "a": [1, 1, 2],
+            "": [1, 1, 2],
             "b": [4, 5, 6],
-            "a_cum_sum": [1, 2, 2],
+            "_cum_sum": [1, 2, 2],
             "b_cum_sum": [4, 9, 6],
         }
         assert_equal_data(result, expected)
@@ -413,3 +414,24 @@ def test_unsupported_over() -> None:
     tbl = pa.table(data)  # type: ignore[arg-type]
     with pytest.raises(NotImplementedError, match="aggregation or literal"):
         nw.from_native(tbl).select(nw.col("a").shift(1).cum_sum().over("b"))
+
+
+def test_over_without_partition_by(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+        pytest.skip()
+    if "duckdb" in str(constructor):
+        # windows not yet supported
+        request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor):
+        # probably bugged
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor({"a": [1, -1, 2], "i": [0, 2, 1]}))
+    result = (
+        df.with_columns(b=nw.col("a").abs().cum_sum().over(_order_by="i"))
+        .sort("i")
+        .select("a", "b", "i")
+    )
+    expected = {"a": [1, 2, -1], "b": [1, 3, 4], "i": [0, 1, 2]}
+    assert_equal_data(result, expected)

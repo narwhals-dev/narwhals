@@ -140,7 +140,7 @@ def test_maybe_set_index_pandas_direct_index(
         native_df_or_series.index = pandas_index  # type: ignore[assignment]
         assert_series_equal(nw.to_native(result), native_df_or_series)
     else:
-        expected = native_df_or_series.set_index(pandas_index)  # type: ignore[type-var]
+        expected = native_df_or_series.set_index(pandas_index)  # type: ignore[arg-type]
         assert_frame_equal(nw.to_native(result), expected)
 
 

@@ -30,7 +30,7 @@ DATA = {
     "i": [1],
     "j": [1],
     "k": ["1"],
-    "l": [1],
+    "l": [datetime(1970, 1, 1)],
     "m": [True],
     "n": [True],
     "o": ["a"],
@@ -55,7 +55,7 @@ SCHEMA = {
     "p": nw.Int64,
 }
 
-SPARK_LIKE_INCOMPATIBLE_COLUMNS = {"e", "f", "g", "h", "l", "o", "p"}
+SPARK_LIKE_INCOMPATIBLE_COLUMNS = {"e", "f", "g", "h", "o", "p"}
 DUCKDB_INCOMPATIBLE_COLUMNS = {"l", "o", "p"}
 
 
@@ -67,7 +67,7 @@ def test_cast(
     if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
         15,
     ):  # pragma: no cover
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     if "modin_constructor" in str(constructor):
         # TODO(unassigned): in modin, we end up with `'<U0'` dtype
         request.applymarker(pytest.mark.xfail)
@@ -230,6 +230,37 @@ def test_cast_datetime_tz_aware(
     result = df.select(
         nw.col("date")
         .cast(nw.Datetime("ms", time_zone="Europe/Rome"))
+        .cast(nw.String())
+        .str.slice(offset=0, length=19)
+    )
+    assert_equal_data(result, expected)
+
+
+def test_cast_datetime_utc(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if (
+        "dask" in str(constructor)
+        or "duckdb" in str(constructor)
+        or "cudf" in str(constructor)  # https://github.com/rapidsai/cudf/issues/16973
+        or ("pyarrow_table" in str(constructor) and is_windows())
+    ):
+        request.applymarker(pytest.mark.xfail)
+
+    data = {
+        "date": [
+            datetime(2024, 1, 1, tzinfo=timezone.utc) + timedelta(days=i)
+            for i in range(3)
+        ]
+    }
+    expected = {
+        "date": ["2024-01-01 00:00:00", "2024-01-02 00:00:00", "2024-01-03 00:00:00"]
+    }
+
+    df = nw.from_native(constructor(data))
+    result = df.select(
+        nw.col("date")
+        .cast(nw.Datetime("ms", time_zone="UTC"))
         .cast(nw.String())
         .str.slice(offset=0, length=19)
     )

@@ -17,6 +17,7 @@ from narwhals.series_cat import SeriesCatNamespace
 from narwhals.series_dt import SeriesDateTimeNamespace
 from narwhals.series_list import SeriesListNamespace
 from narwhals.series_str import SeriesStringNamespace
+from narwhals.series_struct import SeriesStructNamespace
 from narwhals.translate import to_native
 from narwhals.typing import IntoSeriesT
 from narwhals.utils import _validate_rolling_arguments
@@ -76,6 +77,8 @@ class Series(Generic[IntoSeriesT]):
     ) -> None:
         self._level: Literal["full", "lazy", "interchange"] = level
         if hasattr(series, "__narwhals_series__"):
+            # TODO @dangotbanned: Repeat (#2119) for `CompliantSeries` to support typing
+            # morally: `CompliantSeries`
             self._compliant_series = series.__narwhals_series__()
         else:  # pragma: no cover
             msg = f"Expected Polars Series or an object which implements `__narwhals_series__`, got: {type(series)}."
@@ -1578,7 +1581,7 @@ class Series(Generic[IntoSeriesT]):
     def __invert__(self: Self) -> Self:
         return self._from_compliant_series(self._compliant_series.__invert__())
 
-    def filter(self: Self, other: Any) -> Self:
+    def filter(self: Self, predicate: Any) -> Self:
         """Filter elements in the Series based on a condition.
 
         Returns:
@@ -1597,7 +1600,7 @@ class Series(Generic[IntoSeriesT]):
             dtype: int64
         """
         return self._from_compliant_series(
-            self._compliant_series.filter(self._extract_native(other))
+            self._compliant_series.filter(self._extract_native(predicate))
         )
 
     # --- descriptive ---
@@ -2287,7 +2290,7 @@ class Series(Generic[IntoSeriesT]):
             3    7.0
             dtype: float64
         """
-        window_size, min_samples = _validate_rolling_arguments(
+        window_size, min_samples_int = _validate_rolling_arguments(
             window_size=window_size, min_samples=min_samples
         )
 
@@ -2297,7 +2300,7 @@ class Series(Generic[IntoSeriesT]):
         return self._from_compliant_series(
             self._compliant_series.rolling_sum(
                 window_size=window_size,
-                min_samples=min_samples,
+                min_samples=min_samples_int,
                 center=center,
             )
         )
@@ -2631,3 +2634,7 @@ class Series(Generic[IntoSeriesT]):
     @property
     def list(self: Self) -> SeriesListNamespace[Self]:
         return SeriesListNamespace(self)
+
+    @property
+    def struct(self: Self) -> SeriesStructNamespace[Self]:
+        return SeriesStructNamespace(self)
