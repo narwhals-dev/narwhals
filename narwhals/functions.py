@@ -304,12 +304,13 @@ def _new_series_impl(
     return from_native(native_series, series_only=True).alias(name)
 
 
+@deprecate_native_namespace(warn_version="1.26.0")
 def from_dict(
     data: Mapping[str, Any],
     schema: Mapping[str, DType] | Schema | None = None,
     *,
     backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,
+    native_namespace: ModuleType | None = None,  # noqa: ARG001
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
 
@@ -356,9 +357,6 @@ def from_dict(
         |     1  2  4      |
         └──────────────────┘
     """
-    backend = validate_native_namespace_and_backend(
-        backend, native_namespace, emit_deprecation_warning=True
-    )
     return _from_dict_impl(data, schema, backend=backend)
 
 

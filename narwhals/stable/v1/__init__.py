@@ -2222,12 +2222,13 @@ def from_arrow(
     )
 
 
+@deprecate_native_namespace()
 def from_dict(
     data: Mapping[str, Any],
     schema: Mapping[str, DType] | Schema | None = None,
     *,
     backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,
+    native_namespace: ModuleType | None = None,  # noqa: ARG001
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
 
@@ -2261,9 +2262,6 @@ def from_dict(
     Returns:
         A new DataFrame.
     """
-    backend = validate_native_namespace_and_backend(
-        backend, native_namespace, emit_deprecation_warning=False
-    )
     return _stableify(  # type: ignore[no-any-return]
         _from_dict_impl(data, schema, backend=backend)
     )
