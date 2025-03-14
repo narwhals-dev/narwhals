@@ -30,8 +30,8 @@ def test_select(constructor: Constructor) -> None:
 
 
 def test_empty_select(constructor_eager: ConstructorEager) -> None:
-    result = nw.from_native(constructor_eager({"a": [1, 2, 3]})).lazy().select()
-    assert result.collect().shape == (0, 0)
+    result = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True).select()
+    assert result.shape == (0, 0)
 
 
 def test_non_string_select() -> None:

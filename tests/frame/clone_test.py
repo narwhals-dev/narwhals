@@ -14,7 +14,7 @@ def test_clone(
         request.applymarker(pytest.mark.xfail)
 
     expected = {"a": [1, 2], "b": [3, 4]}
-    df = nw.from_native(constructor_eager(expected))
+    df = nw.from_native(constructor_eager(expected), eager_only=True)
     df_clone = df.clone()
     assert df is not df_clone
     assert df._compliant_frame is not df_clone._compliant_frame
