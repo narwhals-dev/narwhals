@@ -55,8 +55,6 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         backend_version: tuple[int, ...],
         version: Version,
         implementation: Implementation,
-        # Unused, just for compatibility. We only validate when collecting.
-        validate_column_names: bool = False,
     ) -> None:
         self._native_frame: SQLFrameDataFrame = native_dataframe
         self._backend_version = backend_version
