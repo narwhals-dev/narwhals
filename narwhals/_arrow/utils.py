@@ -549,12 +549,12 @@ def cast_to_comparable_string_types(
     separator: str,
 ) -> tuple[Iterator[ArrowChunkedArray], pa.Scalar[Any]]:
     # Ensure `chunked_arrays` are either all `string` or all `large_string`.
-    if not any(pa.types.is_large_string(ca.type) for ca in chunked_arrays):
-        # Cast all to `string` (PyArrow default)
-        it = (ca.cast(pa.string()) for ca in chunked_arrays)
-        return it, pa.scalar(separator, type=pa.string())
-    it = (ca.cast(pa.large_string()) for ca in chunked_arrays)  # type: ignore[arg-type]
-    return it, pa.scalar(separator, type=pa.large_string())
+    dtype = (
+        pa.string()  # (PyArrow default)
+        if not any(pa.types.is_large_string(ca.type) for ca in chunked_arrays)
+        else pa.large_string()
+    )
+    return (ca.cast(dtype) for ca in chunked_arrays), lit(separator, dtype)
 
 
 class ArrowSeriesNamespace(_SeriesNamespace["ArrowSeries", "ArrowChunkedArray"]):
