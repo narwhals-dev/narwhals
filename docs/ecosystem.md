@@ -6,9 +6,11 @@ The following is a non-exhaustive list of libraries and tools that choose to use
 for their dataframe interoperability needs:
 
 * [altair](https://github.com/vega/altair/)
+* [bokeh](https://github.com/bokeh/bokeh)
 * [darts](https://github.com/unit8co/darts)
 * [hierarchicalforecast](https://github.com/Nixtla/hierarchicalforecast)
 * [marimo](https://github.com/marimo-team/marimo)
+* [metalearners](https://github.com/Quantco/metalearners)
 * [panel-graphic-walker](https://github.com/panel-extensions/panel-graphic-walker)
 * [plotly](https://github.com/plotly/plotly.py)
 * [pointblank](https://github.com/posit-dev/pointblank)
