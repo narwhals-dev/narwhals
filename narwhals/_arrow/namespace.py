@@ -297,7 +297,7 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
                 "skip" if ignore_nulls else "emit_null"
             )
             it, separator_scalar = cast_to_comparable_string_types(
-                *(s._native_series for s in compliant_series_list), separator=separator
+                *(s.native for s in compliant_series_list), separator=separator
             )
             # NOTE: stubs indicate `separator` must also be a `ChunkedArray`
             # Reality: `str` is fine
