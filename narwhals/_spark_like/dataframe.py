@@ -96,10 +96,9 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
     def _session(self: Self) -> SQLFrameSession:
         if TYPE_CHECKING:
             return self._native_frame.session
-        if self._implementation is Implementation.SQLFRAME:
-            return self._native_frame.session
-
-        return self._native_frame.sparkSession
+        if self._implementation is Implementation.PYSPARK:
+            return self._native_frame.sparkSession
+        return self._native_frame.session
 
     def __native_namespace__(self: Self) -> ModuleType:  # pragma: no cover
         return self._implementation.to_native_namespace()
@@ -471,6 +470,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             if value_name == "":
                 msg = "`value_name` cannot be empty string for sqlframe backend."
                 raise NotImplementedError(msg)
+        else:  # pragma: no cover
+            pass
 
         ids = tuple(self.columns) if index is None else tuple(index)
         values = (
