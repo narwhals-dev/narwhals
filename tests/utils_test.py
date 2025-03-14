@@ -477,3 +477,5 @@ def test_deprecate_native_namespace() -> None:
         ValueError, match=r"Can't pass both `native_namespace` and `backend`"
     ):
         func3(param, backend=pl, native_namespace=pl)
+
+    assert func3(param, backend=Implementation.POLARS) is Implementation.POLARS
