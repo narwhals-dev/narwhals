@@ -21,12 +21,16 @@ from pandas.testing import assert_series_equal
 import narwhals as unstable_nw
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
+from narwhals.utils import deprecate_native_namespace
 from narwhals.utils import parse_version
 from tests.utils import PANDAS_VERSION
 from tests.utils import get_module_version_as_tuple
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from typing_extensions import Self
 
     from narwhals.series import Series
@@ -427,3 +431,49 @@ def test_not_implemented() -> None:
 
     assert isinstance(DummyExpr._list, not_implemented)
     assert repr(DummyExpr._list) == "<not_implemented>: DummyExpr.list"
+
+
+def test_deprecate_native_namespace() -> None:
+    @deprecate_native_namespace()
+    def func1(
+        arg: str,  # noqa: ARG001
+        *,
+        backend: ModuleType | Implementation | str | None = None,  # noqa: ARG001
+        native_namespace: ModuleType | None = None,
+    ) -> Any:
+        return native_namespace
+
+    @deprecate_native_namespace(warn_version="3.0.0")
+    def func2(
+        arg: str,  # noqa: ARG001
+        *,
+        backend: ModuleType | Implementation | str | None = None,
+        native_namespace: ModuleType | None = None,  # noqa: ARG001
+    ) -> Any:
+        return backend
+
+    @deprecate_native_namespace(required=True)
+    def func3(
+        arg: str,  # noqa: ARG001
+        *,
+        backend: ModuleType | Implementation | str | None = None,
+        native_namespace: ModuleType | None = None,  # noqa: ARG001
+    ) -> Any:
+        return backend
+
+    param = "hello"
+    non_default = cast("ModuleType", "non_default")
+
+    assert func1(param, native_namespace=non_default) is None
+    with pytest.warns(DeprecationWarning):
+        result = func2(param, native_namespace=pl)
+    assert result is pl
+    assert func2(param, backend=pl) is pl
+
+    with pytest.raises(ValueError, match=r"`backend` must be specified in `func3`"):
+        func3(param)
+
+    with pytest.raises(
+        ValueError, match=r"Can't pass both `native_namespace` and `backend`"
+    ):
+        func3(param, backend=pl, native_namespace=pl)
