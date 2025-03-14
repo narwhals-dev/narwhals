@@ -50,8 +50,6 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         *,
         backend_version: tuple[int, ...],
         version: Version,
-        # Unused, just for compatibility. We only validate when collecting.
-        validate_column_names: bool = False,
     ) -> None:
         self._native_frame: duckdb.DuckDBPyRelation = df
         self._version = version
