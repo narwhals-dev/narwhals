@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -71,3 +72,17 @@ def test_concat_str_with_lit(constructor: Constructor) -> None:
     result = df.with_columns(b=nw.concat_str("a", nw.lit("ab")))
     expected = {"a": ["cat", "dog", "pig"], "b": ["catab", "dogab", "pigab"]}
     assert_equal_data(result, expected)
+
+
+def test_pyarrow_string_type() -> None:
+    df = pa.table(
+        {"store": ["foo", "bar"], "item": ["axe", "saw"]},
+        schema=pa.schema([("store", pa.large_string()), ("item", pa.large_string())]),
+    )
+    result = (
+        nw.from_native(df)
+        .with_columns(store_item=nw.concat_str("store", "item", separator="-"))
+        .to_native()
+        .schema
+    )
+    assert pa.types.is_large_string(result.field("store_item").type)
