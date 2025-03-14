@@ -792,6 +792,7 @@ def _read_csv_impl(
 ) -> DataFrame[Any]:
     eager_backend = Implementation.from_backend(backend)
     native_namespace = eager_backend.to_native_namespace()
+    native_frame: NativeFrame
     if eager_backend in {
         Implementation.POLARS,
         Implementation.PANDAS,
@@ -920,6 +921,7 @@ def _read_parquet_impl(
     source: str, *, native_namespace: ModuleType, **kwargs: Any
 ) -> DataFrame[Any]:
     implementation = Implementation.from_native_namespace(native_namespace)
+    native_frame: NativeFrame
     if implementation in {
         Implementation.POLARS,
         Implementation.PANDAS,
