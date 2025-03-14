@@ -2520,6 +2520,9 @@ class LazyFrame(BaseFrame[FrameT]):
             |└───────┴──────────────┴───────┘|
             └────────────────────────────────┘
         """
+        if not exprs and not named_exprs:
+            msg = "At least one expression must be passed to LazyFrame.with_columns"
+            raise ValueError(msg)
         return super().with_columns(*exprs, **named_exprs)
 
     def select(
@@ -2561,6 +2564,9 @@ class LazyFrame(BaseFrame[FrameT]):
             |└───────┴──────────┘|
             └────────────────────┘
         """
+        if not exprs and not named_exprs:
+            msg = "At least one expression must be passed to LazyFrame.select"
+            raise ValueError(msg)
         return super().select(*exprs, **named_exprs)
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
@@ -3054,14 +3060,6 @@ class LazyFrame(BaseFrame[FrameT]):
             strategy=strategy,
             suffix=suffix,
         )
-
-    def clone(self: Self) -> Self:
-        r"""Create a copy of this DataFrame.
-
-        Returns:
-            An identical copy of the original LazyFrame.
-        """
-        return super().clone()
 
     def lazy(self: Self) -> Self:
         """Restrict available API methods to lazy-only ones.
