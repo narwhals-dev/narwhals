@@ -1316,6 +1316,16 @@ def validate_native_namespace_and_backend(
 def deprecate_native_namespace(
     *, warn_version: str = "", required: bool = False
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    """Decorator to transition from `native_namespace` to `backend` argument.
+
+    Arguments:
+        warn_version: Emit a deprecation warning from this version.
+        required: Raise when both `native_namespace`, `backend` are `None`.
+
+    Returns:
+        Wrapped function, with `native_namespace` **removed**.
+    """
+
     def decorate(fn: Callable[P, R], /) -> Callable[P, R]:
         @wraps(fn)
         def wrapper(*args: P.args, **kwds: P.kwargs) -> R:
