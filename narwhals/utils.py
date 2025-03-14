@@ -1288,6 +1288,24 @@ def validate_strict_and_pass_though(
     return pass_through
 
 
+@overload
+def validate_native_namespace_and_backend(
+    backend: ModuleType | Implementation | str,
+    native_namespace: ModuleType | None = None,
+    *,
+    emit_deprecation_warning: bool,
+) -> ModuleType | Implementation | str: ...
+
+
+@overload
+def validate_native_namespace_and_backend(
+    backend: ModuleType | Implementation | str | None,
+    native_namespace: ModuleType | None = None,
+    *,
+    emit_deprecation_warning: bool,
+) -> ModuleType | Implementation | str | None: ...
+
+
 def validate_native_namespace_and_backend(
     backend: ModuleType | Implementation | str | None = None,
     native_namespace: ModuleType | None = None,
