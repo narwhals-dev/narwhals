@@ -35,7 +35,6 @@ from narwhals.utils import is_compliant_expr
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_version
 from narwhals.utils import validate_laziness
-from narwhals.utils import validate_native_namespace_and_backend
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -745,11 +744,12 @@ def get_level(
     return obj._level
 
 
+@deprecate_native_namespace(warn_version="1.27.2", required=True)
 def read_csv(
     source: str,
     *,
     backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,
+    native_namespace: ModuleType | None = None,  # noqa: ARG001
     **kwargs: Any,
 ) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
@@ -787,12 +787,7 @@ def read_csv(
         |     1  2   5     |
         └──────────────────┘
     """
-    backend = validate_native_namespace_and_backend(
-        backend, native_namespace, emit_deprecation_warning=True
-    )
-    if backend is None:  # pragma: no cover
-        msg = "`backend` must be specified in `read_csv`."
-        raise ValueError(msg)
+    backend = cast("ModuleType | Implementation | str", backend)
     return _read_csv_impl(source, backend=backend, **kwargs)
 
 

@@ -79,7 +79,6 @@ from narwhals.utils import maybe_convert_dtypes
 from narwhals.utils import maybe_get_index
 from narwhals.utils import maybe_reset_index
 from narwhals.utils import maybe_set_index
-from narwhals.utils import validate_native_namespace_and_backend
 from narwhals.utils import validate_strict_and_pass_though
 
 if TYPE_CHECKING:
@@ -2292,11 +2291,12 @@ def from_numpy(
     return _stableify(_from_numpy_impl(data, schema, native_namespace=native_namespace))  # type: ignore[no-any-return]
 
 
+@deprecate_native_namespace(required=True)
 def read_csv(
     source: str,
     *,
     backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,
+    native_namespace: ModuleType | None = None,  # noqa: ARG001
     **kwargs: Any,
 ) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
@@ -2323,11 +2323,7 @@ def read_csv(
     Returns:
         DataFrame.
     """
-    backend = validate_native_namespace_and_backend(
-        backend, native_namespace, emit_deprecation_warning=True
-    )
-    if backend is None:  # pragma: no cover
-        raise AssertionError
+    backend = cast("ModuleType | Implementation | str", backend)
     return _stableify(  # type: ignore[no-any-return]
         _read_csv_impl(source, backend=backend, **kwargs)
     )
