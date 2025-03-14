@@ -46,6 +46,7 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoFrame
     from narwhals.typing import IntoFrameT
+    from narwhals.typing import IntoLazyFrameT
     from narwhals.typing import IntoSeries
     from narwhals.typing import IntoSeriesT
 
@@ -194,13 +195,13 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoFrameT | IntoSeriesT,
+    native_object: IntoFrameT | IntoLazyFrameT | IntoSeriesT,
     *,
     pass_through: Literal[True],
     eager_only: Literal[False] = ...,
     series_only: Literal[False] = ...,
     allow_series: Literal[True],
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT]: ...
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT]: ...
 
 
 @overload
@@ -214,6 +215,18 @@ def from_native(
 ) -> Series[IntoSeriesT]: ...
 
 
+@overload
+def from_native(
+    native_object: IntoLazyFrameT,
+    *,
+    pass_through: Literal[False] = ...,
+    eager_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
+    allow_series: None = ...,
+) -> LazyFrame[IntoLazyFrameT]: ...
+
+
+# NOTE: `pl.LazyFrame` orignally matched here
 @overload
 def from_native(
     native_object: IntoDataFrameT,
@@ -260,13 +273,13 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoFrameT,
+    native_object: IntoFrameT | IntoLazyFrameT,
     *,
     pass_through: Literal[False] = ...,
     eager_only: Literal[False] = ...,
     series_only: Literal[False] = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoLazyFrameT]: ...
 
 
 # All params passed in as variables
@@ -282,14 +295,14 @@ def from_native(
 
 
 def from_native(
-    native_object: IntoFrameT | IntoSeriesT | IntoFrame | IntoSeries | T,
+    native_object: IntoLazyFrameT | IntoFrameT | IntoSeriesT | IntoFrame | IntoSeries | T,
     *,
     strict: bool | None = None,
     pass_through: bool | None = None,
     eager_only: bool = False,
     series_only: bool = False,
     allow_series: bool | None = None,
-) -> LazyFrame[IntoFrameT] | DataFrame[IntoFrameT] | Series[IntoSeriesT] | T:
+) -> LazyFrame[IntoLazyFrameT] | DataFrame[IntoFrameT] | Series[IntoSeriesT] | T:
     """Convert `native_object` to Narwhals Dataframe, Lazyframe, or Series.
 
     Arguments:

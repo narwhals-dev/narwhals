@@ -91,6 +91,7 @@ if TYPE_CHECKING:
     from narwhals.functions import ArrowStreamExportable
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
+    from narwhals.typing import IntoLazyFrameT
     from narwhals.typing import IntoSeries
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
@@ -1326,6 +1327,19 @@ def from_native(
 ) -> Series[IntoSeriesT]: ...
 
 
+@overload
+def from_native(
+    native_object: IntoLazyFrameT,
+    *,
+    strict: Literal[True] = ...,
+    eager_only: Literal[False] = ...,
+    eager_or_interchange_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
+    allow_series: None = ...,
+) -> LazyFrame[IntoLazyFrameT]: ...
+
+
+# NOTE: `pl.LazyFrame` orignally matched here
 @overload
 def from_native(
     native_object: IntoFrameT,
