@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Callable
+
 import pyarrow as pa
 import pytest
 
@@ -74,10 +76,30 @@ def test_concat_str_with_lit(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_pyarrow_string_type() -> None:
+@pytest.mark.parametrize(
+    ("input_schema", "input_values", "expected_function"),
+    [
+        (
+            [("store", pa.large_string()), ("item", pa.large_string())],
+            ["a", "b"],
+            pa.types.is_large_string,
+        ),
+        (
+            [("store", pa.large_string()), ("item", pa.int32())],
+            [0, 1],
+            pa.types.is_large_string,
+        ),
+        ([("store", pa.string()), ("item", pa.int32())], [0, 1], pa.types.is_string),
+        ([("store", pa.string()), ("item", pa.string())], ["a", "b"], pa.types.is_string),
+    ],
+)
+def test_pyarrow_string_type(
+    input_schema: list[tuple[str, pa.DataType]],
+    input_values: list[object],
+    expected_function: Callable[[pa.DataType], bool],
+) -> None:
     df = pa.table(
-        {"store": ["foo", "bar"], "item": ["axe", "saw"]},
-        schema=pa.schema([("store", pa.large_string()), ("item", pa.large_string())]),
+        {"store": ["foo", "bar"], "item": input_values}, schema=pa.schema(input_schema)
     )
     result = (
         nw.from_native(df)
@@ -85,4 +107,4 @@ def test_pyarrow_string_type() -> None:
         .to_native()
         .schema
     )
-    assert pa.types.is_large_string(result.field("store_item").type)
+    assert expected_function(result.field("store_item").type)
