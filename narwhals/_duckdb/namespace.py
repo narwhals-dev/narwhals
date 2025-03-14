@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import operator
-from functools import partial
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
-from typing import Container
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
@@ -26,9 +24,6 @@ from narwhals._duckdb.utils import narwhals_to_native_dtype
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.utils import Implementation
-from narwhals.utils import exclude_column_names
-from narwhals.utils import get_column_names
-from narwhals.utils import passthrough_column_names
 
 if TYPE_CHECKING:
     import duckdb
@@ -55,14 +50,6 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
     @property
     def _expr(self) -> type[DuckDBExpr]:
         return DuckDBExpr
-
-    def all(self: Self) -> DuckDBExpr:
-        return self._expr.from_column_names(
-            get_column_names,
-            function_name="all",
-            backend_version=self._backend_version,
-            version=self._version,
-        )
 
     def concat(
         self: Self,
@@ -234,27 +221,6 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
             predicate,
             self._backend_version,
             version=self._version,
-        )
-
-    def col(self: Self, *column_names: str) -> DuckDBExpr:
-        return self._expr.from_column_names(
-            passthrough_column_names(column_names),
-            function_name="col",
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-
-    def exclude(self: Self, excluded_names: Container[str]) -> DuckDBExpr:
-        return self._expr.from_column_names(
-            partial(exclude_column_names, names=excluded_names),
-            function_name="exclude",
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-
-    def nth(self: Self, *column_indices: int) -> DuckDBExpr:
-        return self._expr.from_column_indices(
-            *column_indices, backend_version=self._backend_version, version=self._version
         )
 
     def lit(self: Self, value: Any, dtype: DType | None) -> DuckDBExpr:
