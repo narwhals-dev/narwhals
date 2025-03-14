@@ -647,7 +647,7 @@ def _from_native_impl(  # noqa: PLR0915
                 native_object,
                 backend_version=parse_version(get_dask()),
                 version=version,
-                validate_column_names=True,
+                validate_column_names=False,
             ),
             level="lazy",
         )
@@ -674,7 +674,7 @@ def _from_native_impl(  # noqa: PLR0915
                     native_object,
                     backend_version=backend_version,
                     version=version,
-                    validate_column_names=True,
+                    validate_column_names=False,
                 ),
                 level="interchange",
             )
@@ -683,7 +683,7 @@ def _from_native_impl(  # noqa: PLR0915
                 native_object,
                 backend_version=backend_version,
                 version=version,
-                validate_column_names=True,
+                validate_column_names=False,
             ),
             level="lazy",
         )
@@ -735,7 +735,7 @@ def _from_native_impl(  # noqa: PLR0915
                 backend_version=parse_version(get_pyspark()),
                 version=version,
                 implementation=Implementation.PYSPARK,
-                validate_column_names=True,
+                validate_column_names=False,
             ),
             level="lazy",
         )
@@ -758,7 +758,7 @@ def _from_native_impl(  # noqa: PLR0915
                 backend_version=backend_version,
                 version=version,
                 implementation=Implementation.SQLFRAME,
-                validate_column_names=True,
+                validate_column_names=False,
             ),
             level="lazy",
         )
