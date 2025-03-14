@@ -1869,7 +1869,7 @@ def lit(value: Any, dtype: DType | type[DType] | None = None) -> Expr:
     Arguments:
         value: The value to use as literal.
         dtype: The data type of the literal value. If not provided, the data type will
-            be inferred.
+            be inferred by the native library.
 
     Returns:
         A new expression.
@@ -2228,7 +2228,8 @@ def from_dict(
 
     Arguments:
         data: Dictionary to create DataFrame from.
-        schema: The DataFrame schema as Schema or dict of {name: type}.
+        schema: The DataFrame schema as Schema or dict of {name: type}. If not
+            specified, the schema will be inferred by the native library.
         backend: specifies which eager backend instantiate to. Only
             necessary if inputs are not Narwhals Series.
 
