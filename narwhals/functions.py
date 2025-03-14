@@ -190,7 +190,8 @@ def new_series(
     values: Any,
     dtype: DType | type[DType] | None = None,
     *,
-    native_namespace: ModuleType,
+    backend: ModuleType | Implementation | str,
+    native_namespace: ModuleType | None = None,
 ) -> Series[Any]:
     """Instantiate Narwhals Series from iterable (e.g. list or array).
 
@@ -220,13 +221,10 @@ def new_series(
         |Name: a, dtype: int32|
         └─────────────────────┘
     """
-    return _new_series_impl(
-        name,
-        values,
-        dtype,
-        native_namespace=native_namespace,
-        version=Version.MAIN,
+    backend = validate_native_namespace_and_backend(
+        backend, native_namespace, emit_deprecation_warning=True
     )
+    return _new_series_impl(name, values, dtype, backend=backend, version=Version.MAIN)
 
 
 def _new_series_impl(
@@ -234,10 +232,11 @@ def _new_series_impl(
     values: Any,
     dtype: DType | type[DType] | None = None,
     *,
-    native_namespace: ModuleType,
+    backend: ModuleType | Implementation | str,
     version: Version,
 ) -> Series[Any]:
-    implementation = Implementation.from_native_namespace(native_namespace)
+    implementation = Implementation.from_backend(backend)
+    native_namespace = implementation.to_native_namespace()
 
     if implementation is Implementation.POLARS:
         if dtype:
