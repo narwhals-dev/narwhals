@@ -1339,7 +1339,7 @@ def from_native(
 ) -> LazyFrame[IntoLazyFrameT]: ...
 
 
-# NOTE: `pl.LazyFrame` orignally matched here
+# NOTE: `pl.LazyFrame` originally matched here
 @overload
 def from_native(
     native_object: IntoFrameT,

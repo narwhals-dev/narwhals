@@ -229,7 +229,7 @@ def from_native(  # type: ignore[overload-overlap]
 ) -> LazyFrame[IntoLazyFrameT]: ...
 
 
-# NOTE: `pl.LazyFrame` orignally matched here
+# NOTE: `pl.LazyFrame` originally matched here
 @overload
 def from_native(
     native_object: IntoDataFrameT,
