@@ -9,6 +9,7 @@ from typing import Literal
 from typing import Mapping
 from typing import Protocol
 from typing import Sequence
+from typing import cast
 from typing import overload
 
 from narwhals._expression_parsing import ExprKind
@@ -28,6 +29,7 @@ from narwhals.translate import from_native
 from narwhals.translate import to_native
 from narwhals.utils import Implementation
 from narwhals.utils import Version
+from narwhals.utils import deprecate_native_namespace
 from narwhals.utils import flatten
 from narwhals.utils import is_compliant_expr
 from narwhals.utils import is_sequence_but_not_str
@@ -185,13 +187,14 @@ def concat(
     )
 
 
+@deprecate_native_namespace(warn_version="1.31.0", required=True)
 def new_series(
     name: str,
     values: Any,
     dtype: DType | type[DType] | None = None,
     *,
-    backend: ModuleType | Implementation | str,
-    native_namespace: ModuleType | None = None,
+    backend: ModuleType | Implementation | str | None = None,
+    native_namespace: ModuleType | None = None,  # noqa: ARG001
 ) -> Series[Any]:
     """Instantiate Narwhals Series from iterable (e.g. list or array).
 
@@ -234,9 +237,7 @@ def new_series(
         |Name: a, dtype: int32|
         └─────────────────────┘
     """
-    backend = validate_native_namespace_and_backend(
-        backend, native_namespace, emit_deprecation_warning=True
-    )
+    backend = cast("ModuleType | Implementation | str", backend)
     return _new_series_impl(name, values, dtype, backend=backend, version=Version.MAIN)
 
 
