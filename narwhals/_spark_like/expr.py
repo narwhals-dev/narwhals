@@ -367,7 +367,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
                 self._implementation.is_pyspark()
                 and (pyspark := get_pyspark()) is not None
                 and parse_version(pyspark) < (3, 4)
-            ):
+            ):  # pragma: no cover
                 # Use percentile_approx with default accuracy parameter (10000)
                 return self._F.percentile_approx(_input.cast("double"), 0.5)
 
@@ -426,22 +426,27 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         lower_bound: Any | None = None,
         upper_bound: Any | None = None,
     ) -> Self:
-        def _clip(_input: Column, lower_bound: Any, upper_bound: Any) -> Column:
+        def _clip_lower(_input: Column, lower_bound: Column) -> Column:
             result = _input
-            if lower_bound is not None:
-                # Convert lower_bound to a literal Column
-                result = self._F.when(
-                    result < lower_bound, self._F.lit(lower_bound)
-                ).otherwise(result)
-            if upper_bound is not None:
-                # Convert upper_bound to a literal Column
-                result = self._F.when(
-                    result > upper_bound, self._F.lit(upper_bound)
-                ).otherwise(result)
-            return result
+            return self._F.when(result < lower_bound, lower_bound).otherwise(result)
 
+        def _clip_upper(_input: Column, upper_bound: Column) -> Column:
+            result = _input
+            return self._F.when(result > upper_bound, upper_bound).otherwise(result)
+
+        def _clip_both(
+            _input: Column, lower_bound: Column, upper_bound: Column
+        ) -> Column:
+            result = _input
+            result = self._F.when(result < lower_bound, lower_bound).otherwise(result)
+            return self._F.when(result > upper_bound, upper_bound).otherwise(result)
+
+        if lower_bound is None:
+            return self._from_call(_clip_upper, "clip", upper_bound=upper_bound)
+        if upper_bound is None:
+            return self._from_call(_clip_lower, "clip", lower_bound=lower_bound)
         return self._from_call(
-            _clip, "clip", lower_bound=lower_bound, upper_bound=upper_bound
+            _clip_both, "clip", lower_bound=lower_bound, upper_bound=upper_bound
         )
 
     def is_finite(self: Self) -> Self:
