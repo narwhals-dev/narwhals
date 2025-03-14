@@ -223,7 +223,7 @@ def new_series(
         >>> import narwhals as nw
         >>>
         >>> values = [4, 1, 2, 3]
-        >>> nw.new_series(name="a", values=values, dtype=nw.Int32, native_namespace=pd)
+        >>> nw.new_series(name="a", values=values, dtype=nw.Int32, backend=pd)
         ┌─────────────────────┐
         |   Narwhals Series   |
         |---------------------|
