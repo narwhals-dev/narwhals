@@ -293,6 +293,7 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
             compliant_series_list = align_series_full_broadcast(
                 *(chain.from_iterable(expr(df) for expr in exprs))
             )
+            name = compliant_series_list[0].name
             null_handling: Literal["skip", "emit_null"] = (
                 "skip" if ignore_nulls else "emit_null"
             )
@@ -302,18 +303,13 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
             # NOTE: stubs indicate `separator` must also be a `ChunkedArray`
             # Reality: `str` is fine
             concat_str: Incomplete = pc.binary_join_element_wise
-            return [
-                ArrowSeries(
-                    native_series=concat_str(
-                        *it,
-                        separator_scalar,
-                        null_handling=null_handling,
-                    ),
-                    name=compliant_series_list[0].name,
-                    backend_version=self._backend_version,
-                    version=self._version,
-                )
-            ]
+            compliant = self._series(
+                concat_str(*it, separator_scalar, null_handling=null_handling),
+                name=name,
+                backend_version=self._backend_version,
+                version=self._version,
+            )
+            return [compliant]
 
         return self._expr._from_callable(
             func=func,
