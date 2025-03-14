@@ -5,6 +5,7 @@ from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Iterator
 from typing import Sequence
 from typing import cast
 from typing import overload
@@ -541,6 +542,19 @@ def pad_series(
     pad_right = pa.array([None] * offset_right, type=series._type)
     concat = pa.concat_arrays([pad_left, *series.native.chunks, pad_right])
     return series._from_native_series(concat), offset_left + offset_right
+
+
+def cast_to_comparable_string_types(
+    *chunked_arrays: ArrowChunkedArray,
+    separator: str,
+) -> tuple[Iterator[ArrowChunkedArray], pa.Scalar[Any]]:
+    # Ensure `chunked_arrays` are either all `string` or all `large_string`.
+    dtype = (
+        pa.string()  # (PyArrow default)
+        if not any(pa.types.is_large_string(ca.type) for ca in chunked_arrays)
+        else pa.large_string()
+    )
+    return (ca.cast(dtype) for ca in chunked_arrays), lit(separator, dtype)
 
 
 class ArrowSeriesNamespace(_SeriesNamespace["ArrowSeries", "ArrowChunkedArray"]):
