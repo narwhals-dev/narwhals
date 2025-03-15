@@ -659,5 +659,4 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     cum_min = not_implemented()
     cum_max = not_implemented()
     cum_prod = not_implemented()
-    fill_null = not_implemented()
     quantile = not_implemented()
