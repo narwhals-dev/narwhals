@@ -118,8 +118,8 @@ def test_read_parquet(
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)
     df = nw.from_native(constructor_eager(data))
-    native_namespace = nw.get_native_namespace(df)
-    result = nw.read_parquet(filepath, native_namespace=native_namespace)
+    backend = nw.get_native_namespace(df)
+    result = nw.read_parquet(filepath, backend=backend)
     assert_equal_data(result, data)
     assert isinstance(result, nw.DataFrame)
 
@@ -132,8 +132,8 @@ def test_read_parquet_v1(
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)
     df = nw_v1.from_native(constructor_eager(data))
-    native_namespace = nw_v1.get_native_namespace(df)
-    result = nw_v1.read_parquet(filepath, native_namespace=native_namespace)
+    backend = nw_v1.get_native_namespace(df)
+    result = nw_v1.read_parquet(filepath, backend=backend)
     assert_equal_data(result, data)
     assert isinstance(result, nw_v1.DataFrame)
 
@@ -143,7 +143,7 @@ def test_read_parquet_kwargs(tmpdir: pytest.TempdirFactory) -> None:
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)
-    result = nw.read_parquet(filepath, native_namespace=pd, engine="pyarrow")
+    result = nw.read_parquet(filepath, backend=pd, engine="pyarrow")
     assert_equal_data(result, data)
 
 
