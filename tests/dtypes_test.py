@@ -11,6 +11,7 @@ import pandas as pd
 import polars as pl
 import pyarrow as pa
 import pytest
+from typing_extensions import reveal_type
 
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
@@ -41,7 +42,7 @@ def test_datetime_valid(
 @pytest.mark.parametrize("time_unit", ["abc"])
 def test_datetime_invalid(time_unit: str) -> None:
     with pytest.raises(ValueError, match="invalid `time_unit`"):
-        nw.Datetime(time_unit=time_unit)  # type: ignore[arg-type]
+        nw.Datetime(time_unit=time_unit)  # type: ignore[call-overload]
 
 
 @pytest.mark.parametrize("time_unit", ["us", "ns", "ms"])
@@ -372,3 +373,46 @@ def test_cast_decimal_to_native() -> None:
                 .with_columns(a=nw.col("a").cast(nw.Decimal()))
                 .to_native()
             )
+
+
+def test_datetime_generic() -> None:
+    import narwhals as unstable_nw
+
+    dt_1 = unstable_nw.Datetime()
+    dt_21 = unstable_nw.Datetime("ns")
+    dt_22 = unstable_nw.Datetime(time_unit="ns")
+    dt_3 = unstable_nw.Datetime("s", time_zone="zone")
+    dt_4 = unstable_nw.Datetime("ns", timezone.utc)
+    dt_5 = unstable_nw.Datetime(time_zone="Asia/Kathmandu")
+    dt_6 = unstable_nw.Datetime(time_zone=timezone.utc)
+    reveal_type(dt_1)
+    reveal_type(dt_21)
+    reveal_type(dt_22)
+    reveal_type(dt_3)
+    reveal_type(dt_4)
+    reveal_type(dt_5)
+    reveal_type(dt_6)
+    reveal_type(dt_3.time_unit)
+    assert dt_3.time_unit
+
+    # ruff: noqa: F841
+
+    dtype = unstable_nw.Datetime("s")
+    bad = unstable_nw.Datetime("us", "USA")
+
+    matches_2 = dtype == unstable_nw.Datetime
+    matches_1 = dtype == unstable_nw.Datetime("s", None)
+    matches_3 = dtype == bad
+    matches_none = dtype == unstable_nw.Duration
+
+    if dtype == unstable_nw.Duration:
+        what = dtype
+
+    if dtype != unstable_nw.Datetime:
+        what_again = dtype
+
+    # NOTE: These **not** matching is a positive outcome
+    # - Omitting the overload is one way to enforce it
+    # - `Literal[False]` makes sense, but
+    if dtype == bad:
+        what3 = dtype
