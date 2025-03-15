@@ -445,11 +445,13 @@ def _from_dict_impl(
     return from_native(native_frame, eager_only=True)
 
 
+@deprecate_native_namespace(warn_version="1.31.0", required=True)
 def from_numpy(
     data: _2DArray,
     schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
     *,
-    native_namespace: ModuleType,
+    backend: ModuleType | Implementation | str | None = None,
+    native_namespace: ModuleType | None = None,  # noqa: ARG001
 ) -> DataFrame[Any]:
     """Construct a DataFrame from a NumPy ndarray.
 
@@ -462,7 +464,20 @@ def from_numpy(
     Arguments:
         data: Two-dimensional data represented as a NumPy ndarray.
         schema: The DataFrame schema as Schema, dict of {name: type}, or a sequence of str.
+        backend: specifies which eager backend instantiate to.
+
+            `backend` can be specified in various ways:
+
+            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                `POLARS`, `MODIN` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
+
+            **Deprecated** (v1.31.0):
+                Please use `backend` instead. Note that `native_namespace` is still available
+                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+                see [perfect backwards compatibility policy](../backcompat.md/).
 
     Returns:
         A new DataFrame.
@@ -474,7 +489,7 @@ def from_numpy(
         >>>
         >>> arr = np.array([[5, 2, 1], [1, 4, 3]])
         >>> schema = {"c": nw.Int16(), "d": nw.Float32(), "e": nw.Int8()}
-        >>> nw.from_numpy(arr, schema=schema, native_namespace=pa)
+        >>> nw.from_numpy(arr, schema=schema, backend="pyarrow")
         ┌──────────────────┐
         |Narwhals DataFrame|
         |------------------|
@@ -488,16 +503,20 @@ def from_numpy(
         |  e: [[1,3]]      |
         └──────────────────┘
     """
-    return _from_numpy_impl(data, schema, native_namespace=native_namespace)
+    backend = cast("ModuleType | Implementation | str", backend)
+    return _from_numpy_impl(data, schema, backend=backend)
 
 
 def _from_numpy_impl(
     data: _2DArray,
     schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
     *,
-    native_namespace: ModuleType,
+    backend: ModuleType | Implementation | str,
 ) -> DataFrame[Any]:
     from narwhals.schema import Schema
+
+    implementation = Implementation.from_backend(backend)
+    native_namespace = implementation.to_native_namespace()
 
     if not is_numpy_array_2d(data):
         msg = "`from_numpy` only accepts 2D numpy arrays"
