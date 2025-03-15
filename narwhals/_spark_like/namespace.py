@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import operator
-from functools import partial
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
-from typing import Container
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
@@ -19,9 +17,6 @@ from narwhals._spark_like.expr import SparkLikeExpr
 from narwhals._spark_like.selectors import SparkLikeSelectorNamespace
 from narwhals._spark_like.utils import maybe_evaluate_expr
 from narwhals._spark_like.utils import narwhals_to_native_dtype
-from narwhals.utils import exclude_column_names
-from narwhals.utils import get_column_names
-from narwhals.utils import passthrough_column_names
 
 if TYPE_CHECKING:
     from sqlframe.base.column import Column
@@ -32,7 +27,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):
+class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "SparkLikeExpr"]):
     def __init__(
         self: Self,
         *,
@@ -48,40 +43,9 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):
     def selectors(self: Self) -> SparkLikeSelectorNamespace:
         return SparkLikeSelectorNamespace(self)
 
-    def all(self: Self) -> SparkLikeExpr:
-        return SparkLikeExpr.from_column_names(
-            get_column_names,
-            function_name="all",
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-
-    def col(self: Self, *column_names: str) -> SparkLikeExpr:
-        return SparkLikeExpr.from_column_names(
-            passthrough_column_names(column_names),
-            function_name="col",
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-
-    def exclude(self: Self, excluded_names: Container[str]) -> SparkLikeExpr:
-        return SparkLikeExpr.from_column_names(
-            partial(exclude_column_names, names=excluded_names),
-            function_name="exclude",
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-
-    def nth(self: Self, *column_indices: int) -> SparkLikeExpr:
-        return SparkLikeExpr.from_column_indices(
-            *column_indices,
-            backend_version=self._backend_version,
-            version=self._version,
-            implementation=self._implementation,
-        )
+    @property
+    def _expr(self) -> type[SparkLikeExpr]:
+        return SparkLikeExpr
 
     def lit(self: Self, value: object, dtype: DType | None) -> SparkLikeExpr:
         def _lit(df: SparkLikeLazyFrame) -> list[Column]:
@@ -94,7 +58,7 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):
 
             return [column]
 
-        return SparkLikeExpr(
+        return self._expr(
             call=_lit,
             function_name="lit",
             evaluate_output_names=lambda _df: ["literal"],
@@ -108,7 +72,7 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             return [df._F.count("*")]
 
-        return SparkLikeExpr(
+        return self._expr(
             func,
             function_name="len",
             evaluate_output_names=lambda _df: ["len"],
@@ -123,7 +87,7 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):
             cols = (c for _expr in exprs for c in _expr(df))
             return [reduce(operator.and_, cols)]
 
-        return SparkLikeExpr(
+        return self._expr(
             call=func,
             function_name="all_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
@@ -138,7 +102,7 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):
             cols = (c for _expr in exprs for c in _expr(df))
             return [reduce(operator.or_, cols)]
 
-        return SparkLikeExpr(
+        return self._expr(
             call=func,
             function_name="any_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
@@ -155,7 +119,7 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):
             )
             return [reduce(operator.add, cols)]
 
-        return SparkLikeExpr(
+        return self._expr(
             call=func,
             function_name="sum_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
@@ -184,7 +148,7 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):
                 )
             ]
 
-        return SparkLikeExpr(
+        return self._expr(
             call=func,
             function_name="mean_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
@@ -199,7 +163,7 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):
             cols = (c for _expr in exprs for c in _expr(df))
             return [df._F.greatest(*cols)]
 
-        return SparkLikeExpr(
+        return self._expr(
             call=func,
             function_name="max_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
@@ -214,7 +178,7 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):
             cols = (c for _expr in exprs for c in _expr(df))
             return [df._F.least(*cols)]
 
-        return SparkLikeExpr(
+        return self._expr(
             call=func,
             function_name="min_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
@@ -309,7 +273,7 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "Column"]):
 
             return [result]
 
-        return SparkLikeExpr(
+        return self._expr(
             call=func,
             function_name="concat_str",
             evaluate_output_names=combine_evaluate_output_names(*exprs),

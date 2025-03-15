@@ -16,6 +16,7 @@ from narwhals._compliant.selectors import EvalSeries
 from narwhals._compliant.selectors import LazySelectorNamespace
 from narwhals._compliant.series import CompliantSeries
 from narwhals._compliant.series import EagerSeries
+from narwhals._compliant.typing import CompliantExprT
 from narwhals._compliant.typing import CompliantFrameT
 from narwhals._compliant.typing import CompliantSeriesOrNativeExprT_co
 from narwhals._compliant.typing import CompliantSeriesT_co
@@ -26,6 +27,7 @@ from narwhals._compliant.typing import IntoCompliantExpr
 __all__ = [
     "CompliantDataFrame",
     "CompliantExpr",
+    "CompliantExprT",
     "CompliantFrameT",
     "CompliantLazyFrame",
     "CompliantNamespace",
