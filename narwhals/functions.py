@@ -599,7 +599,7 @@ def from_arrow(
     *,
     backend: ModuleType | Implementation | str | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
-) -> DataFrame[Any]:
+) -> DataFrame[Any]:  # pragma: no cover
     """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
     Arguments:
