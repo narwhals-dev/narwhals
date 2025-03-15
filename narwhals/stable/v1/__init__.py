@@ -23,6 +23,7 @@ from narwhals.exceptions import InvalidIntoExprError
 from narwhals.expr import Expr as NwExpr
 from narwhals.functions import Then as NwThen
 from narwhals.functions import When as NwWhen
+from narwhals.functions import _from_arrow_impl
 from narwhals.functions import _from_dict_impl
 from narwhals.functions import _from_numpy_impl
 from narwhals.functions import _new_series_impl
@@ -30,7 +31,6 @@ from narwhals.functions import _read_csv_impl
 from narwhals.functions import _read_parquet_impl
 from narwhals.functions import _scan_csv_impl
 from narwhals.functions import _scan_parquet_impl
-from narwhals.functions import from_arrow as nw_from_arrow
 from narwhals.functions import get_level
 from narwhals.functions import show_versions
 from narwhals.functions import when as nw_when
@@ -2218,11 +2218,12 @@ def new_series(
     )
 
 
+@deprecate_native_namespace(required=True)
 def from_arrow(
     native_frame: ArrowStreamExportable,
     *,
     backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,
+    native_namespace: ModuleType | None = None,  # noqa: ARG001
 ) -> DataFrame[Any]:
     """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
@@ -2246,8 +2247,9 @@ def from_arrow(
     Returns:
         A new DataFrame.
     """
+    backend = cast("ModuleType | Implementation | str", backend)
     return _stableify(  # type: ignore[no-any-return]
-        nw_from_arrow(native_frame, backend=backend, native_namespace=native_namespace)
+        _from_arrow_impl(native_frame, backend=backend)
     )
 
 
