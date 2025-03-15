@@ -29,7 +29,6 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from sqlframe.base.column import Column
     from sqlframe.base.dataframe import BaseDataFrame
-    from sqlframe.base.session import _BaseSession
     from sqlframe.base.window import Window
     from typing_extensions import Self
     from typing_extensions import TypeAlias
@@ -41,7 +40,6 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
     SQLFrameDataFrame = BaseDataFrame[Any, Any, Any, Any, Any]
-    SQLFrameSession = _BaseSession[Any, Any, Any, Any, Any, Any, Any]
 
 Incomplete: TypeAlias = Any  # pragma: no cover
 """Marker for working code that fails type checking."""
@@ -91,14 +89,6 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             return Window
         else:
             return import_window(self._implementation)
-
-    @property
-    def _session(self: Self) -> SQLFrameSession:
-        if TYPE_CHECKING:
-            return self._native_frame.session
-        if self._implementation is Implementation.PYSPARK:
-            return self._native_frame.sparkSession
-        return self._native_frame.session
 
     def __native_namespace__(self: Self) -> ModuleType:  # pragma: no cover
         return self._implementation.to_native_namespace()
