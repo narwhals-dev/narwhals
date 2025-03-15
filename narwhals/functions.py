@@ -593,14 +593,31 @@ def _from_numpy_impl(
     return from_native(native_frame, eager_only=True)
 
 
+@deprecate_native_namespace(warn_version="1.31.0", required=True)
 def from_arrow(
-    native_frame: ArrowStreamExportable, *, native_namespace: ModuleType
+    native_frame: ArrowStreamExportable,
+    *,
+    backend: ModuleType | Implementation | str | None = None,
+    native_namespace: ModuleType | None = None,
 ) -> DataFrame[Any]:
     """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
     Arguments:
         native_frame: Object which implements `__arrow_c_stream__`.
+        backend: specifies which eager backend instantiate to.
+
+            `backend` can be specified in various ways:
+
+            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                `POLARS`, `MODIN` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
+
+            **Deprecated** (v1.31.0):
+                Please use `backend` instead. Note that `native_namespace` is still available
+                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+                see [perfect backwards compatibility policy](../backcompat.md/).
 
     Returns:
         A new DataFrame.
@@ -611,7 +628,7 @@ def from_arrow(
         >>> import narwhals as nw
         >>>
         >>> df_native = pd.DataFrame({"a": [1, 2], "b": [4.2, 5.1]})
-        >>> nw.from_arrow(df_native, native_namespace=pl)
+        >>> nw.from_arrow(df_native, backend="polars")
         ┌──────────────────┐
         |Narwhals DataFrame|
         |------------------|
@@ -629,7 +646,9 @@ def from_arrow(
     if not hasattr(native_frame, "__arrow_c_stream__"):
         msg = f"Given object of type {type(native_frame)} does not support PyCapsule interface"
         raise TypeError(msg)
-    implementation = Implementation.from_native_namespace(native_namespace)
+    backend = cast("ModuleType | Implementation | str", backend)
+    implementation = Implementation.from_backend(backend)
+    native_namespace = implementation.to_native_namespace()
 
     if implementation.is_polars() and parse_version(native_namespace) >= (1, 3):
         native_frame = native_namespace.DataFrame(native_frame)

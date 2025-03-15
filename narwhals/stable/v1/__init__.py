@@ -2219,19 +2219,35 @@ def new_series(
 
 
 def from_arrow(
-    native_frame: ArrowStreamExportable, *, native_namespace: ModuleType
+    native_frame: ArrowStreamExportable,
+    *,
+    backend: ModuleType | Implementation | str | None = None,
+    native_namespace: ModuleType | None = None,
 ) -> DataFrame[Any]:
     """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
     Arguments:
         native_frame: Object which implements `__arrow_c_stream__`.
+        backend: specifies which eager backend instantiate to.
+
+            `backend` can be specified in various ways:
+
+            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                `POLARS`, `MODIN` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
+
+            **Deprecated** (v1.31.0):
+                Please use `backend` instead. Note that `native_namespace` is still available
+                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+                see [perfect backwards compatibility policy](../backcompat.md/).
 
     Returns:
         A new DataFrame.
     """
     return _stableify(  # type: ignore[no-any-return]
-        nw_from_arrow(native_frame, native_namespace=native_namespace)
+        nw_from_arrow(native_frame, backend=backend, native_namespace=native_namespace)
     )
 
 
