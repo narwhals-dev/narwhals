@@ -977,7 +977,7 @@ def read_parquet(
                 see [perfect backwards compatibility policy](../backcompat.md/).
         kwargs: Extra keyword arguments which are passed to the native parquet reader.
             For example, you could use
-            `nw.read_parquet('file.parquet', native_namespace=pd, engine='pyarrow')`.
+            `nw.read_parquet('file.parquet', backend=pd, engine='pyarrow')`.
 
     Returns:
         DataFrame.
@@ -1061,7 +1061,7 @@ def scan_parquet(
                 see [perfect backwards compatibility policy](../backcompat.md/).
         kwargs: Extra keyword arguments which are passed to the native parquet reader.
             For example, you could use
-            `nw.scan_parquet('file.parquet', native_namespace=pd, engine='pyarrow')`.
+            `nw.scan_parquet('file.parquet', backend=pd, engine='pyarrow')`.
 
     Returns:
         LazyFrame.

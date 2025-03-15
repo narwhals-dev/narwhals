@@ -126,7 +126,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             ```py
             narwhals.from_dict(
                 data={"a": [1, 2, 3]},
-                native_namespace=narwhals.get_native_namespace(another_object),
+                backend=narwhals.get_native_namespace(another_object),
             )
             ```
     """
@@ -385,7 +385,7 @@ class Series(NwSeries[IntoSeriesT]):
             narwhals.new_series(
                 name=name,
                 values=values,
-                native_namespace=narwhals.get_native_namespace(another_object),
+                backend=narwhals.get_native_namespace(another_object),
             )
             ```
     """
@@ -2445,7 +2445,7 @@ def read_parquet(
                 see [perfect backwards compatibility policy](../backcompat.md/).
         kwargs: Extra keyword arguments which are passed to the native parquet reader.
             For example, you could use
-            `nw.read_parquet('file.parquet', native_namespace=pd, engine='pyarrow')`.
+            `nw.read_parquet('file.parquet', backend=pd, engine='pyarrow')`.
 
     Returns:
         DataFrame.
@@ -2486,7 +2486,7 @@ def scan_parquet(
                 see [perfect backwards compatibility policy](../backcompat.md/).
         kwargs: Extra keyword arguments which are passed to the native parquet reader.
             For example, you could use
-            `nw.scan_parquet('file.parquet', native_namespace=pd, engine='pyarrow')`.
+            `nw.scan_parquet('file.parquet', backend=pd, engine='pyarrow')`.
 
     Returns:
         LazyFrame.
