@@ -29,11 +29,9 @@ def test_select(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_empty_select(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "duckdb" in str(constructor) or "sqlframe" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    result = nw.from_native(constructor({"a": [1, 2, 3]})).lazy().select()
-    assert result.collect().shape == (0, 0)
+def test_empty_select(constructor_eager: ConstructorEager) -> None:
+    result = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True).select()
+    assert result.shape == (0, 0)
 
 
 def test_non_string_select() -> None:
