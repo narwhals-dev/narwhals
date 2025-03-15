@@ -590,7 +590,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             msg = "cannot specify both `value` and `strategy`"
             raise ValueError(msg)
 
-        def _fill_null(_input: Column, value: Any | None = None) -> Column:
+        def _fill_null(_input: Column, value: Any | None) -> Column:
             if strategy == "forward":
                 lower_limit = (
                     self._Window().unboundedPreceding if limit is None else -limit
