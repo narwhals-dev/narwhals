@@ -276,7 +276,9 @@ jobs:
       - name: Run pytest
         run: |
           cd tubular
-          pytest tests --config-file=pyproject.toml
+          # temporarily ignoring warnings until they address
+          # `new_series` deprecation
+          pytest tests --config-file=pyproject.toml -W ignore
 
   plotly:
     strategy:
