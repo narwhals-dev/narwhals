@@ -5,6 +5,7 @@ import re
 from datetime import timezone
 from enum import Enum
 from enum import auto
+from functools import wraps
 from inspect import getattr_static
 from secrets import token_hex
 from typing import TYPE_CHECKING
@@ -48,6 +49,7 @@ if TYPE_CHECKING:
     from typing import AbstractSet as Set
 
     import pandas as pd
+    from typing_extensions import ParamSpec
     from typing_extensions import Self
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
@@ -77,6 +79,8 @@ if TYPE_CHECKING:
     _T2 = TypeVar("_T2")
     _T3 = TypeVar("_T3")
     _Fn = TypeVar("_Fn", bound="Callable[..., Any]")
+    P = ParamSpec("P")
+    R = TypeVar("R")
 
     _TracksDepth: TypeAlias = "Literal[Implementation.DASK,Implementation.CUDF,Implementation.MODIN,Implementation.PANDAS,Implementation.PYSPARK]"
 
@@ -1288,25 +1292,45 @@ def validate_strict_and_pass_though(
     return pass_through
 
 
-def validate_native_namespace_and_backend(
-    backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,
-    *,
-    emit_deprecation_warning: bool,
-) -> ModuleType | Implementation | str | None:
-    if native_namespace is not None and backend is None:  # pragma: no cover
-        if emit_deprecation_warning:
-            msg = (
-                "`native_namespace` is deprecated, please use `backend` instead.\n\n"
-                "Note: `native_namespace` will remain available in `narwhals.stable.v1`.\n"
-                "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
-            )
-            issue_deprecation_warning(msg, _version="1.25.1")
-        backend = native_namespace
-    elif native_namespace is not None and backend is not None:
-        msg = "Can't pass both `native_namespace` and `backend`"
-        raise ValueError(msg)
-    return backend
+def deprecate_native_namespace(
+    *, warn_version: str = "", required: bool = False
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    """Decorator to transition from `native_namespace` to `backend` argument.
+
+    Arguments:
+        warn_version: Emit a deprecation warning from this version.
+        required: Raise when both `native_namespace`, `backend` are `None`.
+
+    Returns:
+        Wrapped function, with `native_namespace` **removed**.
+    """
+
+    def decorate(fn: Callable[P, R], /) -> Callable[P, R]:
+        @wraps(fn)
+        def wrapper(*args: P.args, **kwds: P.kwargs) -> R:
+            backend = kwds.pop("backend", None)
+            native_namespace = kwds.pop("native_namespace", None)
+            if native_namespace is not None and backend is None:
+                if warn_version:
+                    msg = (
+                        "`native_namespace` is deprecated, please use `backend` instead.\n\n"
+                        "Note: `native_namespace` will remain available in `narwhals.stable.v1`.\n"
+                        "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+                    )
+                    issue_deprecation_warning(msg, _version=warn_version)
+                backend = native_namespace
+            elif native_namespace is not None and backend is not None:
+                msg = "Can't pass both `native_namespace` and `backend`"
+                raise ValueError(msg)
+            elif native_namespace is None and backend is None and required:
+                msg = f"`backend` must be specified in `{fn.__name__}`."
+                raise ValueError(msg)
+            kwds["backend"] = backend
+            return fn(*args, **kwds)
+
+        return wrapper
+
+    return decorate
 
 
 def _validate_rolling_arguments(

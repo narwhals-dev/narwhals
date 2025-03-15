@@ -9,6 +9,7 @@ from typing import Literal
 from typing import Mapping
 from typing import Protocol
 from typing import Sequence
+from typing import cast
 from typing import overload
 
 from narwhals._expression_parsing import ExprKind
@@ -28,12 +29,12 @@ from narwhals.translate import from_native
 from narwhals.translate import to_native
 from narwhals.utils import Implementation
 from narwhals.utils import Version
+from narwhals.utils import deprecate_native_namespace
 from narwhals.utils import flatten
 from narwhals.utils import is_compliant_expr
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_version
 from narwhals.utils import validate_laziness
-from narwhals.utils import validate_native_namespace_and_backend
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -187,12 +188,14 @@ def concat(
     )
 
 
+@deprecate_native_namespace(warn_version="1.31.0", required=True)
 def new_series(
     name: str,
     values: Any,
     dtype: DType | type[DType] | None = None,
     *,
-    native_namespace: ModuleType,
+    backend: ModuleType | Implementation | str | None = None,
+    native_namespace: ModuleType | None = None,  # noqa: ARG001
 ) -> Series[Any]:
     """Instantiate Narwhals Series from iterable (e.g. list or array).
 
@@ -201,7 +204,20 @@ def new_series(
         values: Values of make Series from.
         dtype: (Narwhals) dtype. If not provided, the native library
             may auto-infer it from `values`.
+        backend: specifies which eager backend instantiate to.
+
+            `backend` can be specified in various ways:
+
+            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                `POLARS`, `MODIN` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
+
+            **Deprecated** (v1.31.0):
+                Please use `backend` instead. Note that `native_namespace` is still available
+                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+                see [perfect backwards compatibility policy](../backcompat.md/).
 
     Returns:
         A new Series
@@ -211,7 +227,7 @@ def new_series(
         >>> import narwhals as nw
         >>>
         >>> values = [4, 1, 2, 3]
-        >>> nw.new_series(name="a", values=values, dtype=nw.Int32, native_namespace=pd)
+        >>> nw.new_series(name="a", values=values, dtype=nw.Int32, backend=pd)
         ┌─────────────────────┐
         |   Narwhals Series   |
         |---------------------|
@@ -222,13 +238,8 @@ def new_series(
         |Name: a, dtype: int32|
         └─────────────────────┘
     """
-    return _new_series_impl(
-        name,
-        values,
-        dtype,
-        native_namespace=native_namespace,
-        version=Version.MAIN,
-    )
+    backend = cast("ModuleType | Implementation | str", backend)
+    return _new_series_impl(name, values, dtype, backend=backend, version=Version.MAIN)
 
 
 def _new_series_impl(
@@ -236,10 +247,11 @@ def _new_series_impl(
     values: Any,
     dtype: DType | type[DType] | None = None,
     *,
-    native_namespace: ModuleType,
+    backend: ModuleType | Implementation | str,
     version: Version,
 ) -> Series[Any]:
-    implementation = Implementation.from_native_namespace(native_namespace)
+    implementation = Implementation.from_backend(backend)
+    native_namespace = implementation.to_native_namespace()
 
     if implementation is Implementation.POLARS:
         if dtype:
@@ -293,12 +305,13 @@ def _new_series_impl(
     return from_native(native_series, series_only=True).alias(name)
 
 
+@deprecate_native_namespace(warn_version="1.26.0")
 def from_dict(
     data: Mapping[str, Any],
     schema: Mapping[str, DType] | Schema | None = None,
     *,
     backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,
+    native_namespace: ModuleType | None = None,  # noqa: ARG001
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
 
@@ -345,9 +358,6 @@ def from_dict(
         |     1  2  4      |
         └──────────────────┘
     """
-    backend = validate_native_namespace_and_backend(
-        backend, native_namespace, emit_deprecation_warning=True
-    )
     return _from_dict_impl(data, schema, backend=backend)
 
 
@@ -736,11 +746,12 @@ def get_level(
     return obj._level
 
 
+@deprecate_native_namespace(warn_version="1.27.2", required=True)
 def read_csv(
     source: str,
     *,
     backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,
+    native_namespace: ModuleType | None = None,  # noqa: ARG001
     **kwargs: Any,
 ) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
@@ -778,12 +789,7 @@ def read_csv(
         |     1  2   5     |
         └──────────────────┘
     """
-    backend = validate_native_namespace_and_backend(
-        backend, native_namespace, emit_deprecation_warning=True
-    )
-    if backend is None:  # pragma: no cover
-        msg = "`backend` must be specified in `read_csv`."
-        raise ValueError(msg)
+    backend = cast("ModuleType | Implementation | str", backend)
     return _read_csv_impl(source, backend=backend, **kwargs)
 
 
