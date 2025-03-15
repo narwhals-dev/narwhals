@@ -593,14 +593,31 @@ def _from_numpy_impl(
     return from_native(native_frame, eager_only=True)
 
 
+@deprecate_native_namespace(warn_version="1.31.0", required=True)
 def from_arrow(
-    native_frame: ArrowStreamExportable, *, native_namespace: ModuleType
-) -> DataFrame[Any]:
+    native_frame: ArrowStreamExportable,
+    *,
+    backend: ModuleType | Implementation | str | None = None,
+    native_namespace: ModuleType | None = None,  # noqa: ARG001
+) -> DataFrame[Any]:  # pragma: no cover
     """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
     Arguments:
         native_frame: Object which implements `__arrow_c_stream__`.
+        backend: specifies which eager backend instantiate to.
+
+            `backend` can be specified in various ways:
+
+            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                `POLARS`, `MODIN` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
+
+            **Deprecated** (v1.31.0):
+                Please use `backend` instead. Note that `native_namespace` is still available
+                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+                see [perfect backwards compatibility policy](../backcompat.md/).
 
     Returns:
         A new DataFrame.
@@ -611,7 +628,7 @@ def from_arrow(
         >>> import narwhals as nw
         >>>
         >>> df_native = pd.DataFrame({"a": [1, 2], "b": [4.2, 5.1]})
-        >>> nw.from_arrow(df_native, native_namespace=pl)
+        >>> nw.from_arrow(df_native, backend="polars")
         ┌──────────────────┐
         |Narwhals DataFrame|
         |------------------|
@@ -626,13 +643,22 @@ def from_arrow(
         |  └─────┴─────┘   |
         └──────────────────┘
     """
-    if not hasattr(native_frame, "__arrow_c_stream__"):
-        msg = f"Given object of type {type(native_frame)} does not support PyCapsule interface"
+    backend = cast("ModuleType | Implementation | str", backend)
+    return _from_arrow_impl(native_frame, backend=backend)
+
+
+def _from_arrow_impl(
+    data: ArrowStreamExportable, *, backend: ModuleType | Implementation | str
+) -> DataFrame[Any]:
+    if not hasattr(data, "__arrow_c_stream__"):
+        msg = f"Given object of type {type(data)} does not support PyCapsule interface"
         raise TypeError(msg)
-    implementation = Implementation.from_native_namespace(native_namespace)
+
+    implementation = Implementation.from_backend(backend)
+    native_namespace = implementation.to_native_namespace()
 
     if implementation.is_polars() and parse_version(native_namespace) >= (1, 3):
-        native_frame = native_namespace.DataFrame(native_frame)
+        native_frame = native_namespace.DataFrame(data)
     elif implementation in {
         Implementation.PANDAS,
         Implementation.MODIN,
@@ -650,7 +676,7 @@ def from_arrow(
             msg = f"PyArrow>=14.0.0 is required for `from_arrow` for object of type {native_namespace}"
             raise ModuleNotFoundError(msg) from None
 
-        tbl = pa.table(native_frame)
+        tbl = pa.table(data)
         if implementation is Implementation.PANDAS:
             native_frame = tbl.to_pandas()
         elif implementation is Implementation.MODIN:  # pragma: no cover
@@ -665,12 +691,12 @@ def from_arrow(
             msg = "congratulations, you entered unrecheable code - please report a bug"
             raise AssertionError(msg)
     elif implementation is Implementation.PYARROW:
-        native_frame = native_namespace.table(native_frame)
+        native_frame = native_namespace.table(data)
     else:  # pragma: no cover
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement PyCapsule support
-            native_frame = native_namespace.DataFrame(native_frame)
+            native_frame = native_namespace.DataFrame(data)
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `DataFrame` class which accepts object which supports PyCapsule Interface."
             raise AttributeError(msg) from e
