@@ -575,14 +575,13 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             return self._F.sum(_input).over(window)
 
         return self._with_window_function(func)
-    
+
     def fill_null(
         self,
         value: Any | None = None,
         strategy: Literal["forward", "backward"] | None = None,
-        limit: int | None = None
+        limit: int | None = None,
     ) -> Self:
-        
         if (value is None) and (strategy is None):
             raise ValueError("must specify either a fill `value` or `strategy`")
 
@@ -592,17 +591,29 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         def _fill_null(_input: Column, value=value) -> Column:
             match strategy:
                 case "forward":
-                    lower_limit = self._Window().unboundedPreceding if limit is None else -limit
-                    window_spec = self._Window().orderBy(self._F.monotonically_increasing_id()).rowsBetween(lower_limit, 0)
+                    lower_limit = (
+                        self._Window().unboundedPreceding if limit is None else -limit
+                    )
+                    window_spec = (
+                        self._Window()
+                        .orderBy(self._F.monotonically_increasing_id())
+                        .rowsBetween(lower_limit, 0)
+                    )
                     value = self._F.last(_input, ignorenulls=True).over(window_spec)
                 case "backward":
-                    upper_limit = self._Window().unboundedFollowing if limit is None else limit
-                    window_spec = self._Window().orderBy(self._F.monotonically_increasing_id()).rowsBetween(0, upper_limit)
+                    upper_limit = (
+                        self._Window().unboundedFollowing if limit is None else limit
+                    )
+                    window_spec = (
+                        self._Window()
+                        .orderBy(self._F.monotonically_increasing_id())
+                        .rowsBetween(0, upper_limit)
+                    )
                     value = self._F.first(_input, ignorenulls=True).over(window_spec)
             if not isinstance(value, SparkLikeExpr):
                 value = self._F.lit(value)
             return self._F.ifnull(_input, value)
-        
+
         return self._from_call(_fill_null, "fill_null", value=value)
 
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
