@@ -107,17 +107,10 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):
 
     def len(self: Self) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            if not df.columns:
-                return [
-                    dd.from_pandas(
-                        pd.Series([0], name="len"),
-                        npartitions=df._native_frame.npartitions,
-                    )
-                ]
+            # We don't allow dataframes with 0 columns, so `[0]` is safe.
             return [df._native_frame[df.columns[0]].size.to_series()]
 
-        # coverage bug? this is definitely hit
-        return DaskExpr(  # pragma: no cover
+        return DaskExpr(
             func,
             depth=0,
             function_name="len",
