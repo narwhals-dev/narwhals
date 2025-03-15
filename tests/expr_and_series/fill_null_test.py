@@ -12,9 +12,7 @@ from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-def test_fill_null(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_fill_null(constructor: Constructor) -> None:
     data = {
         "a": [0.0, None, 2.0, 3.0, 4.0],
         "b": [1.0, None, None, 5.0, 3.0],
@@ -31,11 +29,7 @@ def test_fill_null(request: pytest.FixtureRequest, constructor: Constructor) -> 
     assert_equal_data(result, expected)
 
 
-def test_fill_null_series_expression(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_fill_null_series_expression(constructor: Constructor) -> None:
     data = {
         "a": [0.0, None, 2.0, 3.0, 4.0],
         "b": [1.0, None, None, 5.0, 3.0],
@@ -73,7 +67,7 @@ def test_fill_null_exceptions(constructor: Constructor) -> None:
 def test_fill_null_strategies_with_limit_as_none(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data_limits = {
         "a": [1, None, None, None, 5, 6, None, None, None, 10],
@@ -143,7 +137,7 @@ def test_fill_null_strategies_with_limit_as_none(
 def test_fill_null_limits(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     context: Any = (
         pytest.raises(NotImplementedError, match="The limit keyword is not supported")
