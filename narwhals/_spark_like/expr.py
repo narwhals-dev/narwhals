@@ -589,22 +589,21 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         if (value is not None) and (strategy is not None):
             raise ValueError("cannot specify both `value` and `strategy`")
 
-        def _fill_null(_input: Column) -> Column:
-            fill_value = value
+        def _fill_null(_input: Column, value=value) -> Column:
             match strategy:
                 case "forward":
                     lower_limit = self._Window().unboundedPreceding if limit is None else -limit
                     window_spec = self._Window().orderBy(self._F.monotonically_increasing_id()).rowsBetween(lower_limit, 0)
-                    fill_value = self._F.last(_input, ignorenulls=True).over(window_spec)
+                    value = self._F.last(_input, ignorenulls=True).over(window_spec)
                 case "backward":
                     upper_limit = self._Window().unboundedFollowing if limit is None else limit
                     window_spec = self._Window().orderBy(self._F.monotonically_increasing_id()).rowsBetween(0, upper_limit)
-                    fill_value = self._F.first(_input, ignorenulls=True).over(window_spec)
-                case _:
-                    fill_value = self._F.lit(fill_value)
-            return self._F.ifnull(_input, fill_value)
+                    value = self._F.first(_input, ignorenulls=True).over(window_spec)
+            if not isinstance(value, SparkLikeExpr):
+                value = self._F.lit(value)
+            return self._F.ifnull(_input, value)
         
-        return self._from_call(_fill_null, "fill_null")
+        return self._from_call(_fill_null, "fill_null", value=value)
 
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         if center:
