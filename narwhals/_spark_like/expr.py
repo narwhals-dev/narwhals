@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from narwhals._spark_like.typing import WindowFunction
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
 
 class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
@@ -129,9 +130,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         /,
         *,
         function_name: str,
-        implementation: Implementation,
-        backend_version: tuple[int, ...],
-        version: Version,
+        context: _FullContext,
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             return [df._F.col(col_name) for col_name in evaluate_column_names(df)]
@@ -141,18 +140,14 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             function_name=function_name,
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
-            backend_version=backend_version,
-            version=version,
-            implementation=implementation,
+            backend_version=context._backend_version,
+            version=context._version,
+            implementation=context._implementation,
         )
 
     @classmethod
     def from_column_indices(
-        cls: type[Self],
-        *column_indices: int,
-        backend_version: tuple[int, ...],
-        version: Version,
-        implementation: Implementation,
+        cls: type[Self], *column_indices: int, context: _FullContext
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             columns = df.columns
@@ -163,9 +158,9 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             function_name="nth",
             evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
             alias_output_names=None,
-            backend_version=backend_version,
-            version=version,
-            implementation=implementation,
+            backend_version=context._backend_version,
+            version=context._version,
+            implementation=context._implementation,
         )
 
     def _from_call(

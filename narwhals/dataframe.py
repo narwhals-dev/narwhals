@@ -279,9 +279,6 @@ class BaseFrame(Generic[_FrameT]):
             )
         )
 
-    def clone(self: Self) -> Self:
-        return self._from_compliant_dataframe(self._compliant_frame.clone())
-
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         return self._from_compliant_dataframe(
             self._compliant_frame.gather_every(n=n, offset=offset)
@@ -1876,7 +1873,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         Returns:
             An identical copy of the original dataframe.
         """
-        return super().clone()
+        return self._from_compliant_dataframe(self._compliant_frame.clone())
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         r"""Take every nth row in the DataFrame and return as a new DataFrame.
@@ -2521,6 +2518,9 @@ class LazyFrame(BaseFrame[FrameT]):
             |└───────┴──────────────┴───────┘|
             └────────────────────────────────┘
         """
+        if not exprs and not named_exprs:
+            msg = "At least one expression must be passed to LazyFrame.with_columns"
+            raise ValueError(msg)
         return super().with_columns(*exprs, **named_exprs)
 
     def select(
@@ -2562,6 +2562,9 @@ class LazyFrame(BaseFrame[FrameT]):
             |└───────┴──────────┘|
             └────────────────────┘
         """
+        if not exprs and not named_exprs:
+            msg = "At least one expression must be passed to LazyFrame.select"
+            raise ValueError(msg)
         return super().select(*exprs, **named_exprs)
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
@@ -3055,14 +3058,6 @@ class LazyFrame(BaseFrame[FrameT]):
             strategy=strategy,
             suffix=suffix,
         )
-
-    def clone(self: Self) -> Self:
-        r"""Create a copy of this DataFrame.
-
-        Returns:
-            An identical copy of the original LazyFrame.
-        """
-        return super().clone()
 
     def lazy(self: Self) -> Self:
         """Restrict available API methods to lazy-only ones.

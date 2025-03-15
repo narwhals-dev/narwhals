@@ -312,3 +312,16 @@ def test_from_native_strict_native_series() -> None:
 
     with pytest.raises(TypeError, match="got.+numpy.ndarray"):
         nw.from_native(np_array, series_only=True)  # type: ignore[call-overload]
+
+
+def test_from_native_lazyframe() -> None:
+    stable_lazy = nw.from_native(lf_pl)
+    unstable_lazy = unstable_nw.from_native(lf_pl)
+    if TYPE_CHECKING:
+        from typing_extensions import assert_type
+
+        assert_type(stable_lazy, nw.LazyFrame[pl.LazyFrame])
+        assert_type(unstable_lazy, unstable_nw.LazyFrame[pl.LazyFrame])
+
+    assert isinstance(stable_lazy, nw.LazyFrame)
+    assert isinstance(unstable_lazy, unstable_nw.LazyFrame)

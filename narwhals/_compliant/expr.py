@@ -91,7 +91,19 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def __narwhals_expr__(self) -> None: ...
     def __narwhals_namespace__(
         self,
-    ) -> CompliantNamespace[CompliantFrameT, CompliantSeriesOrNativeExprT_co]: ...
+    ) -> CompliantNamespace[CompliantFrameT, Self]: ...
+    @classmethod
+    def from_column_names(
+        cls,
+        evaluate_column_names: Callable[[CompliantFrameT], Sequence[str]],
+        /,
+        *,
+        function_name: str,
+        context: _FullContext,
+    ) -> Self: ...
+    @classmethod
+    def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self: ...
+
     def is_null(self) -> Self: ...
     def abs(self) -> Self: ...
     def all(self) -> Self: ...
@@ -331,22 +343,6 @@ class EagerExpr(
             backend_version=series._backend_version,
             version=series._version,
         )
-
-    @classmethod
-    def from_column_names(
-        cls,
-        evaluate_column_names: Callable[[EagerDataFrameT], Sequence[str]],
-        /,
-        *,
-        function_name: str,
-        context: _FullContext,
-    ) -> Self: ...
-    @classmethod
-    def from_column_indices(
-        cls,
-        *column_indices: int,
-        context: _FullContext,
-    ) -> Self: ...
 
     def _reuse_series(
         self: Self,

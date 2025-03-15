@@ -29,7 +29,6 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from sqlframe.base.column import Column
     from sqlframe.base.dataframe import BaseDataFrame
-    from sqlframe.base.session import _BaseSession
     from sqlframe.base.window import Window
     from typing_extensions import Self
     from typing_extensions import TypeAlias
@@ -41,7 +40,6 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
     SQLFrameDataFrame = BaseDataFrame[Any, Any, Any, Any, Any]
-    SQLFrameSession = _BaseSession[Any, Any, Any, Any, Any, Any, Any]
 
 Incomplete: TypeAlias = Any  # pragma: no cover
 """Marker for working code that fails type checking."""
@@ -89,14 +87,6 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             return Window
         else:
             return import_window(self._implementation)
-
-    @property
-    def _session(self: Self) -> SQLFrameSession:
-        if TYPE_CHECKING:
-            return self._native_frame.session
-        if self._implementation is Implementation.PYSPARK:
-            return self._native_frame.sparkSession
-        return self._native_frame.session
 
     def __native_namespace__(self: Self) -> ModuleType:  # pragma: no cover
         return self._implementation.to_native_namespace()
@@ -240,13 +230,6 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         *exprs: SparkLikeExpr,
     ) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
-
-        if not new_columns:
-            # return empty dataframe, like Polars does
-            schema = self._native_dtypes.StructType([])
-            spark_df = self._session.createDataFrame([], schema)
-            return self._from_native_frame(spark_df)
-
         new_columns_list = [col.alias(col_name) for (col_name, col) in new_columns]
         return self._from_native_frame(self._native_frame.select(*new_columns_list))
 
