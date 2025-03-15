@@ -242,13 +242,6 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         *exprs: SparkLikeExpr,
     ) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
-
-        if not new_columns:
-            # return empty dataframe, like Polars does
-            schema = self._native_dtypes.StructType([])
-            spark_df = self._session.createDataFrame([], schema)
-            return self._from_native_frame(spark_df)
-
         new_columns_list = [col.alias(col_name) for (col_name, col) in new_columns]
         return self._from_native_frame(self._native_frame.select(*new_columns_list))
 

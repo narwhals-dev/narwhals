@@ -96,8 +96,6 @@ class DaskLazyFrame(CompliantLazyFrame):
         backend: Implementation | None,
         **kwargs: Any,
     ) -> CompliantDataFrame[Any]:
-        import pandas as pd
-
         result = self._native_frame.compute(**kwargs)
 
         if backend is None or backend is Implementation.PANDAS:
@@ -164,15 +162,6 @@ class DaskLazyFrame(CompliantLazyFrame):
 
     def select(self: Self, *exprs: DaskExpr) -> Self:
         new_series = evaluate_exprs(self, *exprs)
-
-        if not new_series:
-            # return empty dataframe, like Polars does
-            return self._from_native_frame(
-                dd.from_pandas(
-                    pd.DataFrame(), npartitions=self._native_frame.npartitions
-                ),
-            )
-
         df = select_columns_by_name(
             self._native_frame.assign(**dict(new_series)),
             [s[0] for s in new_series],

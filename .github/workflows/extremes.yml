@@ -142,8 +142,7 @@ jobs:
       - name: install-reqs
         run: uv pip install -e ".[tests]" --system
       - name: install-kaggle
-        # https://github.com/Kaggle/kaggle-api/issues/718
-        run: uv pip install "kaggle<1.7.4" --system
+        run: uv pip install kaggle --system
       - name: Download Kaggle notebook artifact
         env:
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
