@@ -589,19 +589,20 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         if (value is not None) and (strategy is not None):
             raise ValueError("cannot specify both `value` and `strategy`")
 
-        value = self._F.lit(value)
-
         def _fill_null(_input: Column) -> Column:
+            fill_value = value
             match strategy:
                 case "forward":
                     lower_limit = self._Window().unboundedPreceding if limit is None else -limit
                     window_spec = self._Window().orderBy(self._F.monotonically_increasing_id()).rowsBetween(lower_limit, 0)
-                    value = self._F.last(_input, ignorenulls=True).over(window_spec)
+                    fill_value = self._F.last(_input, ignorenulls=True).over(window_spec)
                 case "backward":
                     upper_limit = self._Window().unboundedFollowing if limit is None else limit
                     window_spec = self._Window().orderBy(self._F.monotonically_increasing_id()).rowsBetween(0, upper_limit)
-                    value = self._F.first(_input, ignorenulls=True).over(window_spec)
-            return self._F.ifnull(_input, value)
+                    fill_value = self._F.first(_input, ignorenulls=True).over(window_spec)
+                case _:
+                    fill_value = self._F.lit(fill_value)
+            return self._F.ifnull(_input, fill_value)
         
         return self._from_call(_fill_null, "fill_null")
 
