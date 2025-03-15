@@ -886,17 +886,31 @@ def _scan_csv_impl(
     return from_native(native_frame).lazy()
 
 
+@deprecate_native_namespace(warn_version="1.31.0", required=True)
 def read_parquet(
     source: str,
     *,
-    native_namespace: ModuleType,
+    backend: ModuleType | Implementation | str | None = None,
+    native_namespace: ModuleType | None = None,  # noqa: ARG001
     **kwargs: Any,
 ) -> DataFrame[Any]:
     """Read into a DataFrame from a parquet file.
 
     Arguments:
         source: Path to a file.
+        backend: The eager backend for DataFrame creation.
+            `backend` can be specified in various ways:
+
+            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                `POLARS`, `MODIN` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
+
+            **Deprecated** (v1.31.0):
+                Please use `backend` instead. Note that `native_namespace` is still available
+                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+                see [perfect backwards compatibility policy](../backcompat.md/).
         kwargs: Extra keyword arguments which are passed to the native parquet reader.
             For example, you could use
             `nw.read_parquet('file.parquet', native_namespace=pd, engine='pyarrow')`.
@@ -908,7 +922,7 @@ def read_parquet(
         >>> import pyarrow as pa
         >>> import narwhals as nw
         >>>
-        >>> nw.read_parquet("file.parquet", native_namespace=pa)  # doctest:+SKIP
+        >>> nw.read_parquet("file.parquet", backend="pyarrow")  # doctest:+SKIP
         ┌──────────────────┐
         |Narwhals DataFrame|
         |------------------|
@@ -920,13 +934,15 @@ def read_parquet(
         |c: [[0.2,0.1]]    |
         └──────────────────┘
     """
-    return _read_parquet_impl(source, native_namespace=native_namespace, **kwargs)
+    backend = cast("ModuleType | Implementation | str", backend)
+    return _read_parquet_impl(source, backend=backend, **kwargs)
 
 
 def _read_parquet_impl(
-    source: str, *, native_namespace: ModuleType, **kwargs: Any
+    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
 ) -> DataFrame[Any]:
-    implementation = Implementation.from_native_namespace(native_namespace)
+    implementation = Implementation.from_backend(backend)
+    native_namespace = implementation.to_native_namespace()
     native_frame: NativeFrame
     if implementation in {
         Implementation.POLARS,
