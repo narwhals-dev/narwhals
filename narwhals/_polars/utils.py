@@ -113,7 +113,7 @@ def native_to_narwhals_dtype(
     if dtype == pl.Categorical:
         return dtypes.Categorical()
     if dtype == pl.Enum:
-        return dtypes.Enum()
+        return dtypes.Enum(dtype.categories)  # type: ignore[attr-defined]
     if dtype == pl.Date:
         return dtypes.Date()
     if dtype == pl.Datetime:
@@ -184,8 +184,10 @@ def narwhals_to_native_dtype(
     if dtype == dtypes.Categorical:
         return pl.Categorical()
     if dtype == dtypes.Enum:
-        msg = "Converting to Enum is not (yet) supported"
-        raise NotImplementedError(msg)
+        if dtype is dtypes.Enum:
+            msg = "Can not cast / initialize Enum without categories present"
+            raise ValueError(msg)
+        return pl.Enum(dtype.categories)  # type: ignore[union-attr]
     if dtype == dtypes.Date:
         return pl.Date()
     if dtype == dtypes.Decimal:
