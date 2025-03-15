@@ -27,6 +27,7 @@ from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import nulls_like
 from narwhals._arrow.utils import pad_series
 from narwhals._compliant import EagerSeries
+from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
@@ -52,6 +53,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import _AsPyType
     from narwhals._arrow.typing import _BasicDataType
     from narwhals.dtypes import DType
+    from narwhals.typing import Into1DArray
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
@@ -155,6 +157,12 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         if self._backend_version < (13,) and hasattr(value, "as_py"):
             value = value.as_py()
         return super()._from_scalar(value)
+
+    @classmethod
+    def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
+        return cls._from_iterable(
+            data if is_numpy_array_1d(data) else [data], name="", context=context
+        )
 
     def __narwhals_namespace__(self: Self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
@@ -437,7 +445,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def __array__(self: Self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
         return self.native.__array__(dtype=dtype, copy=copy)
 
-    def to_numpy(self: Self) -> _1DArray:
+    def to_numpy(self: Self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
         return self.native.to_numpy()
 
     def alias(self: Self, name: str) -> Self:

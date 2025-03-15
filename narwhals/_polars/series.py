@@ -13,6 +13,7 @@ from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
 from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals._polars.utils import native_to_narwhals_dtype
+from narwhals.dependencies import is_numpy_array_1d
 from narwhals.utils import Implementation
 from narwhals.utils import validate_backend_version
 
@@ -26,8 +27,10 @@ if TYPE_CHECKING:
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import Into1DArray
     from narwhals.typing import _1DArray
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
     T = TypeVar("T")
 
@@ -69,6 +72,14 @@ class PolarsSeries:
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
             self._native_series, backend_version=self._backend_version, version=version
+        )
+
+    @classmethod
+    def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
+        return cls(
+            pl.Series(data if is_numpy_array_1d(data) else [data]),
+            backend_version=context._backend_version,
+            version=context._version,
         )
 
     def _from_native_series(self: Self, series: pl.Series) -> Self:
@@ -162,6 +173,9 @@ class PolarsSeries:
             msg = f"`replace_strict` is only available in Polars>=1.0, found version {self._backend_version}"
             raise NotImplementedError(msg)
         return self._from_native_series(ser.replace_strict(old, new, return_dtype=dtype))
+
+    def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
+        return self.__array__(dtype, copy=copy)
 
     def __array__(self: Self, dtype: Any, *, copy: bool | None) -> _1DArray:
         if self._backend_version < (0, 20, 29):
