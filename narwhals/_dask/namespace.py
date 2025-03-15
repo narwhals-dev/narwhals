@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import operator
-from functools import partial
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
-from typing import Container
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
@@ -26,9 +24,6 @@ from narwhals._dask.utils import validate_comparand
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.utils import Implementation
-from narwhals.utils import exclude_column_names
-from narwhals.utils import get_column_names
-from narwhals.utils import passthrough_column_names
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -42,47 +37,22 @@ if TYPE_CHECKING:
         import dask_expr as dx
 
 
-class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):
+class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
     _implementation: Implementation = Implementation.DASK
 
     @property
     def selectors(self: Self) -> DaskSelectorNamespace:
         return DaskSelectorNamespace(self)
 
+    @property
+    def _expr(self) -> type[DaskExpr]:
+        return DaskExpr
+
     def __init__(
         self: Self, *, backend_version: tuple[int, ...], version: Version
     ) -> None:
         self._backend_version = backend_version
         self._version = version
-
-    def all(self: Self) -> DaskExpr:
-        return DaskExpr.from_column_names(
-            get_column_names,
-            function_name="all",
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-
-    def col(self: Self, *column_names: str) -> DaskExpr:
-        return DaskExpr.from_column_names(
-            passthrough_column_names(column_names),
-            function_name="col",
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-
-    def exclude(self: Self, excluded_names: Container[str]) -> DaskExpr:
-        return DaskExpr.from_column_names(
-            partial(exclude_column_names, names=excluded_names),
-            function_name="exclude",
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-
-    def nth(self: Self, *column_indices: int) -> DaskExpr:
-        return DaskExpr.from_column_indices(
-            *column_indices, backend_version=self._backend_version, version=self._version
-        )
 
     def lit(self: Self, value: Any, dtype: DType | None) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
@@ -95,7 +65,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):
             dask_series = dd.from_pandas(native_pd_series, npartitions=npartitions)
             return [dask_series[0].to_series()]
 
-        return DaskExpr(
+        return self._expr(
             func,
             depth=0,
             function_name="lit",
@@ -107,17 +77,10 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):
 
     def len(self: Self) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            if not df.columns:
-                return [
-                    dd.from_pandas(
-                        pd.Series([0], name="len"),
-                        npartitions=df._native_frame.npartitions,
-                    )
-                ]
+            # We don't allow dataframes with 0 columns, so `[0]` is safe.
             return [df._native_frame[df.columns[0]].size.to_series()]
 
-        # coverage bug? this is definitely hit
-        return DaskExpr(  # pragma: no cover
+        return self._expr(
             func,
             depth=0,
             function_name="len",
@@ -134,7 +97,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):
             )
             return [reduce(operator.and_, series)]
 
-        return DaskExpr(
+        return self._expr(
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="all_horizontal",
@@ -151,7 +114,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):
             )
             return [reduce(operator.or_, series)]
 
-        return DaskExpr(
+        return self._expr(
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="any_horizontal",
@@ -168,7 +131,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):
             )
             return [dd.concat(series, axis=1).sum(axis=1)]
 
-        return DaskExpr(
+        return self._expr(
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="sum_horizontal",
@@ -247,7 +210,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):
                 )
             ]
 
-        return DaskExpr(
+        return self._expr(
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="mean_horizontal",
@@ -265,7 +228,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):
 
             return [dd.concat(series, axis=1).min(axis=1)]
 
-        return DaskExpr(
+        return self._expr(
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="min_horizontal",
@@ -283,7 +246,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):
 
             return [dd.concat(series, axis=1).max(axis=1)]
 
-        return DaskExpr(
+        return self._expr(
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="max_horizontal",
@@ -331,7 +294,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "dx.Series"]):
 
             return [result]
 
-        return DaskExpr(
+        return self._expr(
             call=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="concat_str",

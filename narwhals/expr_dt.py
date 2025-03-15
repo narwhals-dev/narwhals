@@ -575,7 +575,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def to_string(self: Self, format: str) -> ExprT:  # noqa: A002
+    def to_string(self: Self, format: str) -> ExprT:
         """Convert a Date/Time/Datetime column into a String column with the given format.
 
         Arguments:

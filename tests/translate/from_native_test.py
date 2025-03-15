@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING
 from typing import Any
@@ -236,6 +237,7 @@ def test_eager_only_lazy_dask(eager_only: Any, context: Any) -> None:
         assert nw.from_native(dframe, eager_only=eager_only, strict=False) is dframe
 
 
+@pytest.mark.skipif(sys.version_info < (3, 9), reason="too old for sqlframe")
 def test_series_only_sqlframe() -> None:  # pragma: no cover
     pytest.importorskip("sqlframe")
     from sqlframe.duckdb import DuckDBSession
@@ -254,6 +256,7 @@ def test_series_only_sqlframe() -> None:  # pragma: no cover
         (True, pytest.raises(TypeError, match="Cannot only use `eager_only`")),
     ],
 )
+@pytest.mark.skipif(sys.version_info < (3, 9), reason="too old for sqlframe")
 def test_eager_only_sqlframe(eager_only: Any, context: Any) -> None:  # pragma: no cover
     pytest.importorskip("sqlframe")
     from sqlframe.duckdb import DuckDBSession
@@ -309,3 +312,16 @@ def test_from_native_strict_native_series() -> None:
 
     with pytest.raises(TypeError, match="got.+numpy.ndarray"):
         nw.from_native(np_array, series_only=True)  # type: ignore[call-overload]
+
+
+def test_from_native_lazyframe() -> None:
+    stable_lazy = nw.from_native(lf_pl)
+    unstable_lazy = unstable_nw.from_native(lf_pl)
+    if TYPE_CHECKING:
+        from typing_extensions import assert_type
+
+        assert_type(stable_lazy, nw.LazyFrame[pl.LazyFrame])
+        assert_type(unstable_lazy, unstable_nw.LazyFrame[pl.LazyFrame])
+
+    assert isinstance(stable_lazy, nw.LazyFrame)
+    assert isinstance(unstable_lazy, unstable_nw.LazyFrame)

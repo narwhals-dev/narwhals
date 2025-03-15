@@ -84,7 +84,7 @@ class PandasLikeSeriesStringNamespace:
             self._compliant_series._native_series.str.split(pat=by),
         )
 
-    def to_datetime(self: Self, format: str | None) -> PandasLikeSeries:  # noqa: A002
+    def to_datetime(self: Self, format: str | None) -> PandasLikeSeries:
         if format is not None and any(x in format for x in ("%z", "Z")):
             # We know that the inputs are timezone-aware, so we can directly pass
             # `utc=True` for better performance.

@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import warnings
-from importlib import import_module
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
 from typing import Literal
 from typing import Sequence
-from typing import cast
 
 from narwhals._spark_like.utils import evaluate_exprs
+from narwhals._spark_like.utils import import_functions
+from narwhals._spark_like.utils import import_native_dtypes
+from narwhals._spark_like.utils import import_window
 from narwhals._spark_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantDataFrame
@@ -26,11 +27,9 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     import pyarrow as pa
-    from pyspark.sql import Column
-    from pyspark.sql import DataFrame
-    from pyspark.sql import Window
-    from pyspark.sql.session import SparkSession
-    from sqlframe.base.dataframe import BaseDataFrame as _SQLFrameDataFrame
+    from sqlframe.base.column import Column
+    from sqlframe.base.dataframe import BaseDataFrame
+    from sqlframe.base.window import Window
     from typing_extensions import Self
     from typing_extensions import TypeAlias
 
@@ -40,8 +39,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
-    SQLFrameDataFrame: TypeAlias = _SQLFrameDataFrame[Any, Any, Any, Any, Any]
-    _NativeDataFrame: TypeAlias = "DataFrame | SQLFrameDataFrame"
+    SQLFrameDataFrame = BaseDataFrame[Any, Any, Any, Any, Any]
 
 Incomplete: TypeAlias = Any  # pragma: no cover
 """Marker for working code that fails type checking."""
@@ -50,15 +48,13 @@ Incomplete: TypeAlias = Any  # pragma: no cover
 class SparkLikeLazyFrame(CompliantLazyFrame):
     def __init__(
         self: Self,
-        native_dataframe: _NativeDataFrame,
+        native_dataframe: SQLFrameDataFrame,
         *,
         backend_version: tuple[int, ...],
         version: Version,
         implementation: Implementation,
-        # Unused, just for compatibility. We only validate when collecting.
-        validate_column_names: bool = False,
     ) -> None:
-        self._native_frame = native_dataframe
+        self._native_frame: SQLFrameDataFrame = native_dataframe
         self._backend_version = backend_version
         self._implementation = implementation
         self._version = version
@@ -68,58 +64,29 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
     @property
     def _F(self: Self):  # type: ignore[no-untyped-def] # noqa: ANN202, N802
         if TYPE_CHECKING:
-            from pyspark.sql import functions
+            from sqlframe.base import functions
 
             return functions
-        if self._implementation is Implementation.SQLFRAME:
-            from sqlframe.base.session import _BaseSession
-
-            return import_module(
-                f"sqlframe.{_BaseSession().execution_dialect_name}.functions"
-            )
-
-        from pyspark.sql import functions
-
-        return functions
+        else:
+            return import_functions(self._implementation)
 
     @property
     def _native_dtypes(self: Self):  # type: ignore[no-untyped-def] # noqa: ANN202
         if TYPE_CHECKING:
-            from pyspark.sql import types
+            from sqlframe.base import types
 
             return types
-
-        if self._implementation is Implementation.SQLFRAME:
-            from sqlframe.base.session import _BaseSession
-
-            return import_module(
-                f"sqlframe.{_BaseSession().execution_dialect_name}.types"
-            )
-
-        from pyspark.sql import types
-
-        return types
+        else:
+            return import_native_dtypes(self._implementation)
 
     @property
     def _Window(self: Self) -> type[Window]:  # noqa: N802
-        if self._implementation is Implementation.SQLFRAME:
-            from sqlframe.base.session import _BaseSession
+        if TYPE_CHECKING:
+            from sqlframe.base.window import Window
 
-            _window = import_module(
-                f"sqlframe.{_BaseSession().execution_dialect_name}.window"
-            )
-            return _window.Window
-
-        from pyspark.sql import Window
-
-        return Window
-
-    @property
-    def _session(self: Self) -> SparkSession:
-        if self._implementation is Implementation.SQLFRAME:
-            return cast("SQLFrameDataFrame", self._native_frame).session
-
-        return cast("DataFrame", self._native_frame).sparkSession
+            return Window
+        else:
+            return import_window(self._implementation)
 
     def __native_namespace__(self: Self) -> ModuleType:  # pragma: no cover
         return self._implementation.to_native_namespace()
@@ -144,7 +111,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             implementation=self._implementation,
         )
 
-    def _from_native_frame(self: Self, df: DataFrame) -> Self:
+    def _from_native_frame(self: Self, df: SQLFrameDataFrame) -> Self:
         return self.__class__(
             df,
             backend_version=self._backend_version,
@@ -158,7 +125,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         ):
             import pyarrow as pa  # ignore-banned-import
 
-            native_frame = cast("DataFrame", self._native_frame)
+            native_frame = self._native_frame
             try:
                 return pa.Table.from_batches(native_frame._collect_as_arrow())
             except ValueError as exc:
@@ -174,13 +141,12 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                         try:
                             native_dtype = narwhals_to_native_dtype(value, self._version)
                         except Exception as exc:  # noqa: BLE001
-                            native_spark_dtype = native_frame.schema[key].dataType
+                            native_spark_dtype = native_frame.schema[key].dataType  # type: ignore[index]
                             # If we can't convert the type, just set it to `pa.null`, and warn.
                             # Avoid the warning if we're starting from PySpark's void type.
                             # We can avoid the check when we introduce `nw.Null` dtype.
-                            if not isinstance(
-                                native_spark_dtype, self._native_dtypes.NullType
-                            ):
+                            null_type = self._native_dtypes.NullType  # pyright: ignore[reportAttributeAccessIssue]
+                            if not isinstance(native_spark_dtype, null_type):
                                 warnings.warn(
                                     f"Could not convert dtype {native_spark_dtype} to PyArrow dtype, {exc!r}",
                                     stacklevel=find_stacklevel(),
@@ -192,9 +158,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                 else:  # pragma: no cover
                     raise
         else:
-            # NOTE: See https://github.com/narwhals-dev/narwhals/pull/2051#discussion_r1969224309
-            to_arrow: Incomplete = self._native_frame.toArrow
-            return to_arrow()
+            return self._native_frame.toArrow()
 
     def _iter_columns(self) -> Iterator[Column]:
         for col in self.columns:
@@ -250,7 +214,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         raise ValueError(msg)  # pragma: no cover
 
     def simple_select(self: Self, *column_names: str) -> Self:
-        return self._from_native_frame(self._native_frame.select(*column_names))  # pyright: ignore[reportArgumentType]
+        return self._from_native_frame(self._native_frame.select(*column_names))
 
     def aggregate(
         self: Self,
@@ -259,32 +223,25 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         new_columns = evaluate_exprs(self, *exprs)
 
         new_columns_list = [col.alias(col_name) for col_name, col in new_columns]
-        return self._from_native_frame(self._native_frame.agg(*new_columns_list))  # pyright: ignore[reportArgumentType]
+        return self._from_native_frame(self._native_frame.agg(*new_columns_list))
 
     def select(
         self: Self,
         *exprs: SparkLikeExpr,
     ) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
-
-        if not new_columns:
-            # return empty dataframe, like Polars does
-            schema = self._native_dtypes.StructType([])
-            spark_df = self._session.createDataFrame([], schema)
-            return self._from_native_frame(spark_df)
-
         new_columns_list = [col.alias(col_name) for (col_name, col) in new_columns]
-        return self._from_native_frame(self._native_frame.select(*new_columns_list))  # pyright: ignore[reportArgumentType]
+        return self._from_native_frame(self._native_frame.select(*new_columns_list))
 
     def with_columns(self: Self, *exprs: SparkLikeExpr) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
-        return self._from_native_frame(self._native_frame.withColumns(dict(new_columns)))  # pyright: ignore[reportArgumentType]
+        return self._from_native_frame(self._native_frame.withColumns(dict(new_columns)))
 
     def filter(self: Self, predicate: SparkLikeExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
         condition = predicate._call(self)[0]
-        spark_df = self._native_frame.where(condition)  # pyright: ignore[reportArgumentType]
-        return self._from_native_frame(spark_df)  # pyright: ignore[reportArgumentType]
+        spark_df = self._native_frame.where(condition)
+        return self._from_native_frame(spark_df)
 
     @property
     def schema(self: Self) -> dict[str, DType]:
@@ -293,8 +250,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                 field.name: native_to_narwhals_dtype(
                     dtype=field.dataType,
                     version=self._version,
-                    # NOTE: Unclear if this is an unsafe hash (https://github.com/narwhals-dev/narwhals/pull/2051#discussion_r1970074662)
-                    spark_types=self._native_dtypes,  # pyright: ignore[reportArgumentType]
+                    spark_types=self._native_dtypes,
                 )
                 for field in self._native_frame.schema
             }
@@ -307,10 +263,10 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         columns_to_drop = parse_columns_to_drop(
             compliant_frame=self, columns=columns, strict=strict
         )
-        return self._from_native_frame(self._native_frame.drop(*columns_to_drop))  # pyright: ignore[reportArgumentType]
+        return self._from_native_frame(self._native_frame.drop(*columns_to_drop))
 
     def head(self: Self, n: int) -> Self:
-        return self._from_native_frame(self._native_frame.limit(num=n))  # pyright: ignore[reportArgumentType]
+        return self._from_native_frame(self._native_frame.limit(num=n))
 
     def group_by(self: Self, *keys: str, drop_null_keys: bool) -> SparkLikeLazyGroupBy:
         from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
@@ -340,10 +296,10 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             )
 
         sort_cols = [sort_f(col) for col, sort_f in zip(by, sort_funcs)]
-        return self._from_native_frame(self._native_frame.sort(*sort_cols))  # pyright: ignore[reportArgumentType]
+        return self._from_native_frame(self._native_frame.sort(*sort_cols))
 
     def drop_nulls(self: Self, subset: list[str] | None) -> Self:
-        return self._from_native_frame(self._native_frame.dropna(subset=subset))  # pyright: ignore[reportArgumentType]
+        return self._from_native_frame(self._native_frame.dropna(subset=subset))
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
         rename_mapping = {
@@ -351,7 +307,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         }
         return self._from_native_frame(
             self._native_frame.select(
-                [self._F.col(old).alias(new) for old, new in rename_mapping.items()]  # pyright: ignore[reportArgumentType]
+                [self._F.col(old).alias(new) for old, new in rename_mapping.items()]
             )
         )
 
@@ -365,7 +321,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             msg = "`LazyFrame.unique` with PySpark backend only supports `keep='any'`."
             raise ValueError(msg)
         check_column_exists(self.columns, subset)
-        return self._from_native_frame(self._native_frame.dropDuplicates(subset=subset))  # pyright: ignore[reportArgumentType]
+        return self._from_native_frame(self._native_frame.dropDuplicates(subset=subset))
 
     def join(
         self: Self,
@@ -409,7 +365,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                 ]
             )
         return self._from_native_frame(
-            self_native.join(other_native, on=left_on, how=how).select(col_order)  # pyright: ignore[reportArgumentType]
+            self_native.join(other_native, on=left_on, how=how).select(col_order)
         )
 
     def explode(self: Self, columns: list[str]) -> Self:
@@ -445,7 +401,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                         else self._F.explode_outer(col_name).alias(col_name)
                         for col_name in column_names
                     ]
-                ),  # pyright: ignore[reportArgumentType]
+                )
             )
         elif self._implementation.is_sqlframe():
             # Not every sqlframe dialect supports `explode_outer` function
@@ -466,14 +422,14 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                         for col_name in column_names
                     ]
                 ).union(
-                    native_frame.filter(null_condition(columns[0])).select(  # pyright: ignore[reportArgumentType]
+                    native_frame.filter(null_condition(columns[0])).select(
                         *[
                             self._F.col(col_name).alias(col_name)
                             if col_name != columns[0]
                             else self._F.lit(None).alias(col_name)
                             for col_name in column_names
                         ]
-                    )  # pyright: ignore[reportArgumentType]
+                    )
                 ),
             )
         else:  # pragma: no cover
@@ -495,6 +451,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             if value_name == "":
                 msg = "`value_name` cannot be empty string for sqlframe backend."
                 raise NotImplementedError(msg)
+        else:  # pragma: no cover
+            pass
 
         ids = tuple(self.columns) if index is None else tuple(index)
         values = (
@@ -508,4 +466,4 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         )
         if index is None:
             unpivoted_native_frame = unpivoted_native_frame.drop(*ids)
-        return self._from_native_frame(unpivoted_native_frame)  # pyright: ignore[reportArgumentType]
+        return self._from_native_frame(unpivoted_native_frame)

@@ -89,7 +89,19 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def __narwhals_expr__(self) -> None: ...
     def __narwhals_namespace__(
         self,
-    ) -> CompliantNamespace[CompliantFrameT, CompliantSeriesOrNativeExprT_co]: ...
+    ) -> CompliantNamespace[CompliantFrameT, Self]: ...
+    @classmethod
+    def from_column_names(
+        cls,
+        evaluate_column_names: Callable[[CompliantFrameT], Sequence[str]],
+        /,
+        *,
+        function_name: str,
+        context: _FullContext,
+    ) -> Self: ...
+    @classmethod
+    def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self: ...
+
     def is_null(self) -> Self: ...
     def abs(self) -> Self: ...
     def all(self) -> Self: ...
@@ -329,22 +341,6 @@ class EagerExpr(
             backend_version=series._backend_version,
             version=series._version,
         )
-
-    @classmethod
-    def from_column_names(
-        cls,
-        evaluate_column_names: Callable[[EagerDataFrameT], Sequence[str]],
-        /,
-        *,
-        function_name: str,
-        context: _FullContext,
-    ) -> Self: ...
-    @classmethod
-    def from_column_indices(
-        cls,
-        *column_indices: int,
-        context: _FullContext,
-    ) -> Self: ...
 
     def _reuse_series(
         self: Self,
@@ -827,7 +823,7 @@ class EagerExprCatNamespace(
 class EagerExprDateTimeNamespace(
     EagerExprNamespace[EagerExprT], DateTimeNamespace[EagerExprT], Generic[EagerExprT]
 ):
-    def to_string(self, format: str) -> EagerExprT:  # noqa: A002
+    def to_string(self, format: str) -> EagerExprT:
         return self.compliant._reuse_series_namespace("dt", "to_string", format=format)
 
     def replace_time_zone(self, time_zone: str | None) -> EagerExprT:
@@ -990,7 +986,7 @@ class EagerExprStringNamespace(
     def split(self, by: str) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "split", by=by)
 
-    def to_datetime(self, format: str | None) -> EagerExprT:  # noqa: A002
+    def to_datetime(self, format: str | None) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "to_datetime", format=format)
 
     def to_lowercase(self) -> EagerExprT:

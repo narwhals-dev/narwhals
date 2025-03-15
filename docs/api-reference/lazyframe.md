@@ -4,7 +4,6 @@
     handler: python
     options:
       members:
-        - clone
         - collect
         - collect_schema
         - columns

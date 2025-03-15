@@ -5,11 +5,11 @@ import re
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
-from typing import cast
 
 import pyarrow as pa
 import pyarrow.compute as pc
 
+from narwhals._arrow.utils import cast_to_comparable_string_types
 from narwhals._arrow.utils import extract_py_scalar
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._expression_parsing import is_elementary_expression
@@ -146,15 +146,17 @@ class ArrowGroupBy:
 
         table = self._df._native_frame
         # NOTE: stubs fail in multiple places for `ChunkedArray`
-        it = cast(
-            "Iterator[pa.StringArray]",
-            (table[key].cast(pa.string()) for key in self._keys),
+        it, separator_scalar = cast_to_comparable_string_types(
+            *(table[key] for key in self._keys), separator=""
         )
         # NOTE: stubs indicate `separator` must also be a `ChunkedArray`
         # Reality: `str` is fine
         concat_str: Incomplete = pc.binary_join_element_wise
         key_values = concat_str(
-            *it, "", null_handling="replace", null_replacement=null_token
+            *it,
+            separator_scalar,
+            null_handling="replace",
+            null_replacement=null_token,
         )
         table = table.add_column(i=0, field_=col_token, column=key_values)
         for v in pc.unique(key_values):

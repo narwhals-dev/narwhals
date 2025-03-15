@@ -274,7 +274,6 @@ class PolarsDataFrame:
                 df=duckdb.table("df"),
                 backend_version=parse_version(duckdb),
                 version=self._version,
-                validate_column_names=False,
             )
         elif backend is Implementation.DASK:
             import dask  # ignore-banned-import
@@ -286,7 +285,6 @@ class PolarsDataFrame:
                 native_dataframe=dd.from_pandas(self._native_frame.to_pandas()),
                 backend_version=parse_version(dask),
                 version=self._version,
-                validate_column_names=False,
             )
         raise AssertionError  # pragma: no cover
 

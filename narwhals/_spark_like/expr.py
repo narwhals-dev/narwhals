@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import operator
-from importlib import import_module
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -16,6 +15,9 @@ from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
 from narwhals._spark_like.expr_name import SparkLikeExprNameNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
 from narwhals._spark_like.expr_struct import SparkLikeExprStructNamespace
+from narwhals._spark_like.utils import import_functions
+from narwhals._spark_like.utils import import_native_dtypes
+from narwhals._spark_like.utils import import_window
 from narwhals._spark_like.utils import maybe_evaluate_expr
 from narwhals._spark_like.utils import narwhals_to_native_dtype
 from narwhals.dependencies import get_pyspark
@@ -24,8 +26,8 @@ from narwhals.utils import not_implemented
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
-    from pyspark.sql import Column
-    from pyspark.sql import Window
+    from sqlframe.base.column import Column
+    from sqlframe.base.window import Window
     from typing_extensions import Self
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
@@ -33,6 +35,7 @@ if TYPE_CHECKING:
     from narwhals._spark_like.typing import WindowFunction
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
 
 class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
@@ -84,50 +87,29 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     @property
     def _F(self: Self):  # type: ignore[no-untyped-def] # noqa: ANN202, N802
         if TYPE_CHECKING:
-            from pyspark.sql import functions
+            from sqlframe.base import functions
 
             return functions
-        if self._implementation is Implementation.SQLFRAME:
-            from sqlframe.base.session import _BaseSession
-
-            return import_module(
-                f"sqlframe.{_BaseSession().execution_dialect_name}.functions"
-            )
-
-        from pyspark.sql import functions
-
-        return functions
+        else:
+            return import_functions(self._implementation)
 
     @property
     def _native_dtypes(self: Self):  # type: ignore[no-untyped-def] # noqa: ANN202
         if TYPE_CHECKING:
-            from pyspark.sql import types
+            from sqlframe.base import types
 
             return types
-        if self._implementation is Implementation.SQLFRAME:
-            from sqlframe.base.session import _BaseSession
-
-            return import_module(
-                f"sqlframe.{_BaseSession().execution_dialect_name}.types"
-            )
-
-        from pyspark.sql import types
-
-        return types
+        else:
+            return import_native_dtypes(self._implementation)
 
     @property
     def _Window(self: Self) -> type[Window]:  # noqa: N802
-        if self._implementation is Implementation.SQLFRAME:
-            from sqlframe.base.session import _BaseSession
+        if TYPE_CHECKING:
+            from sqlframe.base.window import Window
 
-            _window = import_module(
-                f"sqlframe.{_BaseSession().execution_dialect_name}.window"
-            )
-            return _window.Window
-
-        from pyspark.sql import Window
-
-        return Window
+            return Window
+        else:
+            return import_window(self._implementation)
 
     def __narwhals_expr__(self: Self) -> None: ...
 
@@ -148,9 +130,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         /,
         *,
         function_name: str,
-        implementation: Implementation,
-        backend_version: tuple[int, ...],
-        version: Version,
+        context: _FullContext,
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             return [df._F.col(col_name) for col_name in evaluate_column_names(df)]
@@ -160,18 +140,14 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             function_name=function_name,
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
-            backend_version=backend_version,
-            version=version,
-            implementation=implementation,
+            backend_version=context._backend_version,
+            version=context._version,
+            implementation=context._implementation,
         )
 
     @classmethod
     def from_column_indices(
-        cls: type[Self],
-        *column_indices: int,
-        backend_version: tuple[int, ...],
-        version: Version,
-        implementation: Implementation,
+        cls: type[Self], *column_indices: int, context: _FullContext
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             columns = df.columns
@@ -182,9 +158,9 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             function_name="nth",
             evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
             alias_output_names=None,
-            backend_version=backend_version,
-            version=version,
-            implementation=implementation,
+            backend_version=context._backend_version,
+            version=context._version,
+            implementation=context._implementation,
         )
 
     def _from_call(
@@ -386,7 +362,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
                 self._implementation.is_pyspark()
                 and (pyspark := get_pyspark()) is not None
                 and parse_version(pyspark) < (3, 4)
-            ):
+            ):  # pragma: no cover
                 # Use percentile_approx with default accuracy parameter (10000)
                 return self._F.percentile_approx(_input.cast("double"), 0.5)
 
@@ -445,22 +421,27 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         lower_bound: Any | None = None,
         upper_bound: Any | None = None,
     ) -> Self:
-        def _clip(_input: Column, lower_bound: Any, upper_bound: Any) -> Column:
+        def _clip_lower(_input: Column, lower_bound: Column) -> Column:
             result = _input
-            if lower_bound is not None:
-                # Convert lower_bound to a literal Column
-                result = self._F.when(
-                    result < lower_bound, self._F.lit(lower_bound)
-                ).otherwise(result)
-            if upper_bound is not None:
-                # Convert upper_bound to a literal Column
-                result = self._F.when(
-                    result > upper_bound, self._F.lit(upper_bound)
-                ).otherwise(result)
-            return result
+            return self._F.when(result < lower_bound, lower_bound).otherwise(result)
 
+        def _clip_upper(_input: Column, upper_bound: Column) -> Column:
+            result = _input
+            return self._F.when(result > upper_bound, upper_bound).otherwise(result)
+
+        def _clip_both(
+            _input: Column, lower_bound: Column, upper_bound: Column
+        ) -> Column:
+            result = _input
+            result = self._F.when(result < lower_bound, lower_bound).otherwise(result)
+            return self._F.when(result > upper_bound, upper_bound).otherwise(result)
+
+        if lower_bound is None:
+            return self._from_call(_clip_upper, "clip", upper_bound=upper_bound)
+        if upper_bound is None:
+            return self._from_call(_clip_lower, "clip", lower_bound=lower_bound)
         return self._from_call(
-            _clip, "clip", lower_bound=lower_bound, upper_bound=upper_bound
+            _clip_both, "clip", lower_bound=lower_bound, upper_bound=upper_bound
         )
 
     def is_finite(self: Self) -> Self:

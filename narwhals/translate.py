@@ -46,6 +46,7 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoFrame
     from narwhals.typing import IntoFrameT
+    from narwhals.typing import IntoLazyFrameT
     from narwhals.typing import IntoSeries
     from narwhals.typing import IntoSeriesT
 
@@ -194,13 +195,13 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoFrameT | IntoSeriesT,
+    native_object: IntoFrameT | IntoLazyFrameT | IntoSeriesT,
     *,
     pass_through: Literal[True],
     eager_only: Literal[False] = ...,
     series_only: Literal[False] = ...,
     allow_series: Literal[True],
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT]: ...
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT]: ...
 
 
 @overload
@@ -214,6 +215,21 @@ def from_native(
 ) -> Series[IntoSeriesT]: ...
 
 
+# NOTE: Seems like `mypy` is giving a false positive
+# Following this advice will introduce overlapping overloads?
+# > note: Flipping the order of overloads will fix this error
+@overload
+def from_native(  # type: ignore[overload-overlap]
+    native_object: IntoLazyFrameT,
+    *,
+    pass_through: Literal[False] = ...,
+    eager_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
+    allow_series: None = ...,
+) -> LazyFrame[IntoLazyFrameT]: ...
+
+
+# NOTE: `pl.LazyFrame` originally matched here
 @overload
 def from_native(
     native_object: IntoDataFrameT,
@@ -260,13 +276,13 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoFrameT,
+    native_object: IntoFrameT | IntoLazyFrameT,
     *,
     pass_through: Literal[False] = ...,
     eager_only: Literal[False] = ...,
     series_only: Literal[False] = ...,
     allow_series: None = ...,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoLazyFrameT]: ...
 
 
 # All params passed in as variables
@@ -282,14 +298,14 @@ def from_native(
 
 
 def from_native(
-    native_object: IntoFrameT | IntoSeriesT | IntoFrame | IntoSeries | T,
+    native_object: IntoLazyFrameT | IntoFrameT | IntoSeriesT | IntoFrame | IntoSeries | T,
     *,
     strict: bool | None = None,
     pass_through: bool | None = None,
     eager_only: bool = False,
     series_only: bool = False,
     allow_series: bool | None = None,
-) -> LazyFrame[IntoFrameT] | DataFrame[IntoFrameT] | Series[IntoSeriesT] | T:
+) -> LazyFrame[IntoLazyFrameT] | DataFrame[IntoFrameT] | Series[IntoSeriesT] | T:
     """Convert `native_object` to Narwhals Dataframe, Lazyframe, or Series.
 
     Arguments:
@@ -647,7 +663,6 @@ def _from_native_impl(  # noqa: PLR0915
                 native_object,
                 backend_version=parse_version(get_dask()),
                 version=version,
-                validate_column_names=True,
             ),
             level="lazy",
         )
@@ -674,7 +689,6 @@ def _from_native_impl(  # noqa: PLR0915
                     native_object,
                     backend_version=backend_version,
                     version=version,
-                    validate_column_names=True,
                 ),
                 level="interchange",
             )
@@ -683,7 +697,6 @@ def _from_native_impl(  # noqa: PLR0915
                 native_object,
                 backend_version=backend_version,
                 version=version,
-                validate_column_names=True,
             ),
             level="lazy",
         )
@@ -729,11 +742,12 @@ def _from_native_impl(  # noqa: PLR0915
             raise TypeError(msg)
         return LazyFrame(
             SparkLikeLazyFrame(
-                native_object,
+                # NOTE: In `_spark_like`, we type all native objects as if they are SQLFrame ones, though
+                # in reality we accept both SQLFrame and PySpark
+                native_object,  # pyright: ignore[reportArgumentType]
                 backend_version=parse_version(get_pyspark()),
                 version=version,
                 implementation=Implementation.PYSPARK,
-                validate_column_names=True,
             ),
             level="lazy",
         )
@@ -756,7 +770,6 @@ def _from_native_impl(  # noqa: PLR0915
                 backend_version=backend_version,
                 version=version,
                 implementation=Implementation.SQLFRAME,
-                validate_column_names=True,
             ),
             level="lazy",
         )

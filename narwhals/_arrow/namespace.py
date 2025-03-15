@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import operator
-from functools import partial
 from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
-from typing import Container
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
@@ -19,6 +17,7 @@ from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import align_series_full_broadcast
+from narwhals._arrow.utils import cast_to_comparable_string_types
 from narwhals._arrow.utils import diagonal_concat
 from narwhals._arrow.utils import extract_dataframe_comparand
 from narwhals._arrow.utils import horizontal_concat
@@ -28,10 +27,7 @@ from narwhals._compliant import EagerNamespace
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.utils import Implementation
-from narwhals.utils import exclude_column_names
-from narwhals.utils import get_column_names
 from narwhals.utils import import_dtypes_module
-from narwhals.utils import passthrough_column_names
 
 if TYPE_CHECKING:
     from typing import Callable
@@ -40,7 +36,6 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._arrow.typing import Incomplete
-    from narwhals._arrow.typing import IntoArrowExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
@@ -68,20 +63,6 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
         self._version = version
 
     # --- selection ---
-    def col(self: Self, *column_names: str) -> ArrowExpr:
-        return self._expr.from_column_names(
-            passthrough_column_names(column_names), function_name="col", context=self
-        )
-
-    def exclude(self: Self, excluded_names: Container[str]) -> ArrowExpr:
-        return self._expr.from_column_names(
-            partial(exclude_column_names, names=excluded_names),
-            function_name="exclude",
-            context=self,
-        )
-
-    def nth(self: Self, *column_indices: int) -> ArrowExpr:
-        return self._expr.from_column_indices(*column_indices, context=self)
 
     def len(self: Self) -> ArrowExpr:
         # coverage bug? this is definitely hit
@@ -97,11 +78,6 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
             alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
-        )
-
-    def all(self: Self) -> ArrowExpr:
-        return self._expr.from_column_names(
-            get_column_names, function_name="all", context=self
         )
 
     def lit(self: Self, value: Any, dtype: DType | None) -> ArrowExpr:
@@ -166,7 +142,7 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
             context=self,
         )
 
-    def mean_horizontal(self: Self, *exprs: ArrowExpr) -> IntoArrowExpr:
+    def mean_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
         dtypes = import_dtypes_module(self._version)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
@@ -288,27 +264,27 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
         separator: str,
         ignore_nulls: bool,
     ) -> ArrowExpr:
-        dtypes = import_dtypes_module(self._version)
-
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             compliant_series_list = align_series_full_broadcast(
-                *(chain.from_iterable(expr.cast(dtypes.String())(df) for expr in exprs))
+                *(chain.from_iterable(expr(df) for expr in exprs))
             )
+            name = compliant_series_list[0].name
             null_handling: Literal["skip", "emit_null"] = (
                 "skip" if ignore_nulls else "emit_null"
             )
-            it = (s._native_series for s in compliant_series_list)
+            it, separator_scalar = cast_to_comparable_string_types(
+                *(s.native for s in compliant_series_list), separator=separator
+            )
             # NOTE: stubs indicate `separator` must also be a `ChunkedArray`
             # Reality: `str` is fine
             concat_str: Incomplete = pc.binary_join_element_wise
-            return [
-                ArrowSeries(
-                    native_series=concat_str(*it, separator, null_handling=null_handling),
-                    name=compliant_series_list[0].name,
-                    backend_version=self._backend_version,
-                    version=self._version,
-                )
-            ]
+            compliant = self._series(
+                concat_str(*it, separator_scalar, null_handling=null_handling),
+                name=name,
+                backend_version=self._backend_version,
+                version=self._version,
+            )
+            return [compliant]
 
         return self._expr._from_callable(
             func=func,
