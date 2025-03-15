@@ -582,7 +582,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         strategy: Literal["forward", "backward"] | None = None,
         limit: int | None = None
     ) -> Self:
-
+        
         if (value is None) and (strategy is None):
             raise ValueError("must specify either a fill `value` or `strategy`")
 
@@ -601,7 +601,10 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             case _:
                 value = self._F.lit(value)
 
-        return self._F.ifnull(self, value)
+        def _fill_null(_input: Column) -> Column:
+            return self._F.ifnull(_input, value)
+        
+        return self._from_call(_fill_null, "fill_null")
 
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         if center:
