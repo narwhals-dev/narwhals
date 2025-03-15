@@ -16,7 +16,6 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_series_full_broadcast
 from narwhals._pandas_like.utils import check_column_names_are_unique
 from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
-from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import extract_dataframe_comparand
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
@@ -433,16 +432,14 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
         return scale_bytes(sz, unit=unit)
 
     def with_row_index(self: Self, name: str) -> Self:
-        row_index = create_compliant_series(
-            range(len(self._native_frame)),
-            index=self._native_frame.index,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
+        frame = self._native_frame
+        namespace = self.__narwhals_namespace__()
+        row_index = namespace._series._from_iterable(
+            range(len(frame)), name="", context=self, index=frame.index
         ).alias(name)
         return self._from_native_frame(
             horizontal_concat(
-                [row_index._native_series, self._native_frame],
+                [row_index.native, frame],
                 implementation=self._implementation,
                 backend_version=self._backend_version,
             )

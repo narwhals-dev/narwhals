@@ -51,9 +51,6 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
     def _series(self) -> type[ArrowSeries]:
         return ArrowSeries
 
-    def _create_compliant_series(self: Self, value: Any) -> ArrowSeries:
-        return self._series._from_iterable(value, name="", context=self)
-
     # --- not in spec ---
     def __init__(
         self: Self, *, backend_version: tuple[int, ...], version: Version

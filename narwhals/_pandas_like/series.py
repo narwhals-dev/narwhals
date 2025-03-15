@@ -26,6 +26,7 @@ from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_index
+from narwhals.dependencies import is_numpy_array_1d
 from narwhals.dependencies import is_numpy_scalar
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
@@ -45,6 +46,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import Into1DArray
     from narwhals.typing import _1DArray
     from narwhals.typing import _AnyDArray
     from narwhals.utils import Version
@@ -187,6 +189,17 @@ class PandasLikeSeries(EagerSeries[Any]):
                 implementation=context._implementation,
             ),
             implementation=context._implementation,
+            backend_version=context._backend_version,
+            version=context._version,
+        )
+
+    @classmethod
+    def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
+        implementation = context._implementation
+        arr = data if is_numpy_array_1d(data) else [data]
+        return cls(
+            implementation.to_native_namespace().Series(arr, name=""),
+            implementation=implementation,
             backend_version=context._backend_version,
             version=context._version,
         )
