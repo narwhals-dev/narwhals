@@ -405,7 +405,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries"], CompliantLazyFrame):
         self: Self,
         other: Self,
         *,
-        how: Literal["left", "inner", "cross", "anti", "semi"],
+        how: Literal["left", "inner", "full", "cross", "anti", "semi"],
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
         suffix: str,
@@ -415,6 +415,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries"], CompliantLazyFrame):
             "semi": "left semi",
             "inner": "inner",
             "left": "left outer",
+            "full": "full outer",
         }
 
         if how == "cross":
@@ -439,6 +440,9 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries"], CompliantLazyFrame):
                 .drop([key_token]),
             )
 
+        coalesce_keys = True
+        if how == "full":  # polars full join does not coalesce keys
+            coalesce_keys = False
         return self._from_native_frame(
             self._native_frame.join(
                 other._native_frame,
@@ -446,6 +450,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries"], CompliantLazyFrame):
                 right_keys=right_on,  # type: ignore[arg-type]
                 join_type=how_to_join_map[how],
                 right_suffix=suffix,
+                coalesce_keys=coalesce_keys,
             ),
         )
 
