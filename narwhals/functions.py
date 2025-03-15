@@ -986,8 +986,13 @@ def _read_parquet_impl(
     return from_native(native_frame, eager_only=True)
 
 
+@deprecate_native_namespace(warn_version="1.31.0", required=True)
 def scan_parquet(
-    source: str, *, native_namespace: ModuleType, **kwargs: Any
+    source: str,
+    *,
+    backend: ModuleType | Implementation | str | None = None,
+    native_namespace: ModuleType | None = None,  # noqa: ARG001
+    **kwargs: Any,
 ) -> LazyFrame[Any]:
     """Lazily read from a parquet file.
 
@@ -996,7 +1001,19 @@ def scan_parquet(
 
     Arguments:
         source: Path to a file.
+        backend: The eager backend for DataFrame creation.
+            `backend` can be specified in various ways:
+
+            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                `POLARS`, `MODIN` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
+
+            **Deprecated** (v1.31.0):
+                Please use `backend` instead. Note that `native_namespace` is still available
+                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+                see [perfect backwards compatibility policy](../backcompat.md/).
         kwargs: Extra keyword arguments which are passed to the native parquet reader.
             For example, you could use
             `nw.scan_parquet('file.parquet', native_namespace=pd, engine='pyarrow')`.
@@ -1008,9 +1025,7 @@ def scan_parquet(
         >>> import dask.dataframe as dd
         >>> import narwhals as nw
         >>>
-        >>> nw.scan_parquet(
-        ...     "file.parquet", native_namespace=dd
-        ... ).collect()  # doctest:+SKIP
+        >>> nw.scan_parquet("file.parquet", backend="dask").collect()  # doctest:+SKIP
         ┌──────────────────┐
         |Narwhals DataFrame|
         |------------------|
@@ -1019,13 +1034,15 @@ def scan_parquet(
         |     1  2   5     |
         └──────────────────┘
     """
-    return _scan_parquet_impl(source, native_namespace=native_namespace, **kwargs)
+    backend = cast("ModuleType | Implementation | str", backend)
+    return _scan_parquet_impl(source, backend=backend, **kwargs)
 
 
 def _scan_parquet_impl(
-    source: str, *, native_namespace: ModuleType, **kwargs: Any
+    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
 ) -> LazyFrame[Any]:
-    implementation = Implementation.from_native_namespace(native_namespace)
+    implementation = Implementation.from_backend(backend)
+    native_namespace = implementation.to_native_namespace()
     native_frame: NativeFrame | NativeLazyFrame
     if implementation is Implementation.POLARS:
         native_frame = native_namespace.scan_parquet(source, **kwargs)
