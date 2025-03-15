@@ -12,7 +12,7 @@ from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-def test_fill_null(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+def test_fill_null(constructor: Constructor) -> None:
     data = {
         "a": [0.0, None, 2.0, 3.0, 4.0],
         "b": [1.0, None, None, 5.0, 3.0],
@@ -29,9 +29,7 @@ def test_fill_null(request: pytest.FixtureRequest, constructor: Constructor) -> 
     assert_equal_data(result, expected)
 
 
-def test_fill_null_series_expression(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
+def test_fill_null_series_expression(constructor: Constructor) -> None:
     data = {
         "a": [0.0, None, 2.0, 3.0, 4.0],
         "b": [1.0, None, None, 5.0, 3.0],
