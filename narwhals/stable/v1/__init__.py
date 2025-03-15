@@ -23,6 +23,7 @@ from narwhals.exceptions import InvalidIntoExprError
 from narwhals.expr import Expr as NwExpr
 from narwhals.functions import Then as NwThen
 from narwhals.functions import When as NwWhen
+from narwhals.functions import _from_arrow_impl
 from narwhals.functions import _from_dict_impl
 from narwhals.functions import _from_numpy_impl
 from narwhals.functions import _new_series_impl
@@ -30,7 +31,6 @@ from narwhals.functions import _read_csv_impl
 from narwhals.functions import _read_parquet_impl
 from narwhals.functions import _scan_csv_impl
 from narwhals.functions import _scan_parquet_impl
-from narwhals.functions import from_arrow as nw_from_arrow
 from narwhals.functions import get_level
 from narwhals.functions import show_versions
 from narwhals.functions import when as nw_when
@@ -2218,20 +2218,38 @@ def new_series(
     )
 
 
+@deprecate_native_namespace(required=True)
 def from_arrow(
-    native_frame: ArrowStreamExportable, *, native_namespace: ModuleType
+    native_frame: ArrowStreamExportable,
+    *,
+    backend: ModuleType | Implementation | str | None = None,
+    native_namespace: ModuleType | None = None,  # noqa: ARG001
 ) -> DataFrame[Any]:
     """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
     Arguments:
         native_frame: Object which implements `__arrow_c_stream__`.
+        backend: specifies which eager backend instantiate to.
+
+            `backend` can be specified in various ways:
+
+            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                `POLARS`, `MODIN` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
+
+            **Deprecated** (v1.31.0):
+                Please use `backend` instead. Note that `native_namespace` is still available
+                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+                see [perfect backwards compatibility policy](../backcompat.md/).
 
     Returns:
         A new DataFrame.
     """
+    backend = cast("ModuleType | Implementation | str", backend)
     return _stableify(  # type: ignore[no-any-return]
-        nw_from_arrow(native_frame, native_namespace=native_namespace)
+        _from_arrow_impl(native_frame, backend=backend)
     )
 
 
