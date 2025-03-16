@@ -1399,13 +1399,13 @@ def generate_repr(header: str, native_repr: str) -> str:
     )
 
 
-def check_column_exists(columns: list[str], subset: list[str] | None) -> None:
+def check_column_exists(columns: Sequence[str], subset: Sequence[str] | None) -> None:
     if subset is not None and (missing := set(subset).difference(columns)):
         msg = f"Column(s) {sorted(missing)} not found in {columns}"
         raise ColumnNotFoundError(msg)
 
 
-def check_column_names_are_unique(columns: list[str]) -> None:
+def check_column_names_are_unique(columns: Sequence[str]) -> None:
     len_unique_columns = len(set(columns))
     if len(columns) != len_unique_columns:
         from collections import Counter
