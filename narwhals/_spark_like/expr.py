@@ -563,6 +563,10 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         strategy: Literal["forward", "backward"] | None,
         limit: int | None,
     ) -> Self:
+        if strategy is not None:
+            msg = "Support for strategies is not yet implemented."
+            raise NotImplementedError(msg)
+
         def _fill_null(_input: Column, value: Column) -> Column:
             return self._F.ifnull(_input, value)
 
