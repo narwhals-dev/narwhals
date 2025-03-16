@@ -44,8 +44,6 @@ class DaskLazyFrame(CompliantLazyFrame):
         *,
         backend_version: tuple[int, ...],
         version: Version,
-        # Unused, just for compatibility. We only validate when collecting.
-        validate_column_names: bool = False,
     ) -> None:
         self._native_frame: dd.DataFrame = native_dataframe
         self._backend_version = backend_version
@@ -97,9 +95,7 @@ class DaskLazyFrame(CompliantLazyFrame):
         self: Self,
         backend: Implementation | None,
         **kwargs: Any,
-    ) -> CompliantDataFrame[Any]:
-        import pandas as pd
-
+    ) -> CompliantDataFrame[Any, Any]:
         result = self._native_frame.compute(**kwargs)
 
         if backend is None or backend is Implementation.PANDAS:
@@ -166,15 +162,6 @@ class DaskLazyFrame(CompliantLazyFrame):
 
     def select(self: Self, *exprs: DaskExpr) -> Self:
         new_series = evaluate_exprs(self, *exprs)
-
-        if not new_series:
-            # return empty dataframe, like Polars does
-            return self._from_native_frame(
-                dd.from_pandas(
-                    pd.DataFrame(), npartitions=self._native_frame.npartitions
-                ),
-            )
-
         df = select_columns_by_name(
             self._native_frame.assign(**dict(new_series)),
             [s[0] for s in new_series],
@@ -364,15 +351,28 @@ class DaskLazyFrame(CompliantLazyFrame):
             return self._from_native_frame(result_native.drop(columns=extra))
 
         if how == "full":
-            ## dask does not retain keys post-join
-            ## we must append the suffix to each key before-hand
+            # dask does not retain keys post-join
+            # we must append the suffix to each key before-hand
+
+            # help mypy
             assert left_on is not None  # noqa: S101
             assert right_on is not None  # noqa: S101
+
             right_on_mapper = _remap_join_keys(left_on, right_on, suffix)
-            other._native_frame = other._native_frame.rename(columns=right_on_mapper)
-            check_column_names_are_unique(other._native_frame.columns)
+
+            other_native = other._native_frame
+            other_native = other_native.rename(columns=right_on_mapper)
+            check_column_names_are_unique(other_native.columns)
             right_on = list(right_on_mapper.values())  # we now have the suffixed keys
-            how = "outer"  # type: ignore[assignment]
+            return self._from_native_frame(
+                self._native_frame.merge(
+                    other_native,
+                    left_on=left_on,
+                    right_on=right_on,
+                    how="outer",
+                    suffixes=("", suffix),
+                ),
+            )
 
         return self._from_native_frame(
             self._native_frame.merge(

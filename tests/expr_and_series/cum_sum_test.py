@@ -54,6 +54,9 @@ def test_lazy_cum_sum_grouped(
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
         pytest.skip(reason="too old version")
+    if "cudf" in str(constructor):
+        # https://github.com/rapidsai/cudf/issues/18159
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
         constructor(
@@ -100,6 +103,9 @@ def test_lazy_cum_sum_ordered_by_nulls(
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
         pytest.skip(reason="too old version")
+    if "cudf" in str(constructor):
+        # https://github.com/rapidsai/cudf/issues/18159
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
         constructor(

@@ -100,9 +100,7 @@ def execute_query(query_id: str) -> None:
         result: pl.DataFrame = (
             query_module.query(
                 *(
-                    nw.scan_parquet(
-                        str(path), native_namespace=native_namespace, **kwargs
-                    )
+                    nw.scan_parquet(str(path), backend=native_namespace, **kwargs)
                     for path in data_paths
                 )
             )

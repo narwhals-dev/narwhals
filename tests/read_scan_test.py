@@ -77,8 +77,8 @@ def test_scan_csv(
     filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
     df_pl.write_csv(filepath)
     df = nw.from_native(constructor(data))
-    native_namespace = nw.get_native_namespace(df)
-    result = nw.scan_csv(filepath, native_namespace=native_namespace)
+    backend = nw.get_native_namespace(df)
+    result = nw.scan_csv(filepath, backend=backend)
     assert_equal_data(result, data)
     assert isinstance(result, nw.LazyFrame)
 
@@ -94,8 +94,8 @@ def test_scan_csv_v1(
     filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
     df_pl.write_csv(filepath)
     df = nw_v1.from_native(constructor(data))
-    native_namespace = nw_v1.get_native_namespace(df)
-    result = nw_v1.scan_csv(filepath, native_namespace=native_namespace)
+    backend = nw_v1.get_native_namespace(df)
+    result = nw_v1.scan_csv(filepath, backend=backend)
     assert_equal_data(result, data)
     assert isinstance(result, nw_v1.LazyFrame)
 
@@ -105,7 +105,7 @@ def test_scan_csv_kwargs(tmpdir: pytest.TempdirFactory) -> None:
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
     df_pl.write_csv(filepath)
-    result = nw.scan_csv(filepath, native_namespace=pd, engine="pyarrow")
+    result = nw.scan_csv(filepath, backend=pd, engine="pyarrow")
     assert_equal_data(result, data)
 
 
@@ -118,8 +118,8 @@ def test_read_parquet(
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)
     df = nw.from_native(constructor_eager(data))
-    native_namespace = nw.get_native_namespace(df)
-    result = nw.read_parquet(filepath, native_namespace=native_namespace)
+    backend = nw.get_native_namespace(df)
+    result = nw.read_parquet(filepath, backend=backend)
     assert_equal_data(result, data)
     assert isinstance(result, nw.DataFrame)
 
@@ -132,8 +132,8 @@ def test_read_parquet_v1(
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)
     df = nw_v1.from_native(constructor_eager(data))
-    native_namespace = nw_v1.get_native_namespace(df)
-    result = nw_v1.read_parquet(filepath, native_namespace=native_namespace)
+    backend = nw_v1.get_native_namespace(df)
+    result = nw_v1.read_parquet(filepath, backend=backend)
     assert_equal_data(result, data)
     assert isinstance(result, nw_v1.DataFrame)
 
@@ -143,7 +143,7 @@ def test_read_parquet_kwargs(tmpdir: pytest.TempdirFactory) -> None:
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)
-    result = nw.read_parquet(filepath, native_namespace=pd, engine="pyarrow")
+    result = nw.read_parquet(filepath, backend=pd, engine="pyarrow")
     assert_equal_data(result, data)
 
 
@@ -159,8 +159,8 @@ def test_scan_parquet(
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)
     df = nw.from_native(constructor(data))
-    native_namespace = nw.get_native_namespace(df)
-    result = nw.scan_parquet(filepath, native_namespace=native_namespace)
+    backend = nw.get_native_namespace(df)
+    result = nw.scan_parquet(filepath, backend=backend)
     assert_equal_data(result, data)
     assert isinstance(result, nw.LazyFrame)
 
@@ -177,8 +177,8 @@ def test_scan_parquet_v1(
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)
     df = nw_v1.from_native(constructor(data))
-    native_namespace = nw_v1.get_native_namespace(df)
-    result = nw_v1.scan_parquet(filepath, native_namespace=native_namespace)
+    backend = nw_v1.get_native_namespace(df)
+    result = nw_v1.scan_parquet(filepath, backend=backend)
     assert_equal_data(result, data)
     assert isinstance(result, nw_v1.LazyFrame)
 
@@ -188,5 +188,5 @@ def test_scan_parquet_kwargs(tmpdir: pytest.TempdirFactory) -> None:
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)
-    result = nw.scan_parquet(filepath, native_namespace=pd, engine="pyarrow")
+    result = nw.scan_parquet(filepath, backend=pd, engine="pyarrow")
     assert_equal_data(result, data)

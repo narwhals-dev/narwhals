@@ -2,26 +2,26 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._compliant import CompliantSelector
+from narwhals._compliant import LazySelectorNamespace
 from narwhals._duckdb.expr import DuckDBExpr
-from narwhals._selectors import CompliantSelector
-from narwhals._selectors import LazySelectorNamespace
 
 if TYPE_CHECKING:
     import duckdb
     from typing_extensions import Self
 
+    from narwhals._compliant import EvalNames
+    from narwhals._compliant import EvalSeries
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
-    from narwhals._selectors import EvalNames
-    from narwhals._selectors import EvalSeries
     from narwhals.utils import _FullContext
 
 
 class DuckDBSelectorNamespace(
-    LazySelectorNamespace["DuckDBLazyFrame", "duckdb.Expression"]  # type: ignore[type-var]
+    LazySelectorNamespace["DuckDBLazyFrame", "duckdb.Expression"]
 ):
     def _selector(
         self,
-        call: EvalSeries[DuckDBLazyFrame, duckdb.Expression],  # type: ignore[type-var]
+        call: EvalSeries[DuckDBLazyFrame, duckdb.Expression],
         evaluate_output_names: EvalNames[DuckDBLazyFrame],
         /,
     ) -> DuckDBSelector:
@@ -41,8 +41,7 @@ class DuckDBSelectorNamespace(
 
 
 class DuckDBSelector(  # type: ignore[misc]
-    CompliantSelector["DuckDBLazyFrame", "duckdb.Expression"],  # type: ignore[type-var]
-    DuckDBExpr,
+    CompliantSelector["DuckDBLazyFrame", "duckdb.Expression"], DuckDBExpr
 ):
     def _to_expr(self: Self) -> DuckDBExpr:
         return DuckDBExpr(

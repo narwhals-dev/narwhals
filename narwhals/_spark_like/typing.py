@@ -5,7 +5,7 @@ from typing import Protocol
 from typing import Sequence
 
 if TYPE_CHECKING:
-    from pyspark.sql import Column
+    from sqlframe.base.column import Column
 
     class WindowFunction(Protocol):
         def __call__(

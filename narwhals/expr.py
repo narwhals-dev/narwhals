@@ -20,6 +20,7 @@ from narwhals.expr_dt import ExprDateTimeNamespace
 from narwhals.expr_list import ExprListNamespace
 from narwhals.expr_name import ExprNameNamespace
 from narwhals.expr_str import ExprStringNamespace
+from narwhals.expr_struct import ExprStructNamespace
 from narwhals.translate import to_native
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import flatten
@@ -33,9 +34,9 @@ if TYPE_CHECKING:
     from typing_extensions import Self
     from typing_extensions import TypeAlias
 
+    from narwhals._compliant import CompliantExpr
+    from narwhals._compliant import CompliantNamespace
     from narwhals.dtypes import DType
-    from narwhals.typing import CompliantExpr
-    from narwhals.typing import CompliantNamespace
     from narwhals.typing import IntoExpr
 
     PS = ParamSpec("PS")
@@ -2191,14 +2192,14 @@ class Expr:
             |3  4.0            6.0|
             └─────────────────────┘
         """
-        window_size, min_samples = _validate_rolling_arguments(
+        window_size, min_samples_int = _validate_rolling_arguments(
             window_size=window_size, min_samples=min_samples
         )
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).rolling_sum(
                 window_size=window_size,
-                min_samples=min_samples,
+                min_samples=min_samples_int,
                 center=center,
             ),
             self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
@@ -2478,6 +2479,10 @@ class Expr:
     @property
     def list(self: Self) -> ExprListNamespace[Self]:
         return ExprListNamespace(self)
+
+    @property
+    def struct(self: Self) -> ExprStructNamespace[Self]:
+        return ExprStructNamespace(self)
 
 
 __all__ = [

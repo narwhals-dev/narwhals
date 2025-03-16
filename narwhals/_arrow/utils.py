@@ -5,6 +5,7 @@ from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Iterator
 from typing import Sequence
 from typing import cast
 from typing import overload
@@ -12,7 +13,7 @@ from typing import overload
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from narwhals.utils import _ExprNamespace
+from narwhals.exceptions import ShapeError
 from narwhals.utils import _SeriesNamespace
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
@@ -24,7 +25,6 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
-    from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import ArrowArray
     from narwhals._arrow.typing import ArrowChunkedArray
@@ -279,6 +279,9 @@ def extract_dataframe_comparand(
 ) -> ArrowChunkedArray:
     """Extract native Series, broadcasting to `length` if necessary."""
     if not other._broadcast:
+        if (len_other := len(other)) != length:
+            msg = f"Expected object of length {length}, got: {len_other}."
+            raise ShapeError(msg)
         return other.native
 
     import numpy as np  # ignore-banned-import
@@ -545,11 +548,19 @@ def pad_series(
     return series._from_native_series(concat), offset_left + offset_right
 
 
+def cast_to_comparable_string_types(
+    *chunked_arrays: ArrowChunkedArray,
+    separator: str,
+) -> tuple[Iterator[ArrowChunkedArray], pa.Scalar[Any]]:
+    # Ensure `chunked_arrays` are either all `string` or all `large_string`.
+    dtype = (
+        pa.string()  # (PyArrow default)
+        if not any(pa.types.is_large_string(ca.type) for ca in chunked_arrays)
+        else pa.large_string()
+    )
+    return (ca.cast(dtype) for ca in chunked_arrays), lit(separator, dtype)
+
+
 class ArrowSeriesNamespace(_SeriesNamespace["ArrowSeries", "ArrowChunkedArray"]):
     def __init__(self: Self, series: ArrowSeries, /) -> None:
         self._compliant_series = series
-
-
-class ArrowExprNamespace(_ExprNamespace["ArrowExpr"]):
-    def __init__(self: Self, expr: ArrowExpr, /) -> None:
-        self._compliant_expr = expr

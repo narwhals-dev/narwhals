@@ -206,7 +206,7 @@ def test_pyarrow_infer_datetime_raise_inconsistent_date_fmt(
 def test_to_datetime_tz_aware(
     constructor: Constructor,
     request: pytest.FixtureRequest,
-    format: str | None,  # noqa: A002
+    format: str | None,
 ) -> None:
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (13,):
         # bugged
@@ -218,6 +218,9 @@ def test_to_datetime_tz_aware(
         pytest.skip()
     if "sqlframe" in str(constructor):
         # https://github.com/eakmanrq/sqlframe/issues/325
+        request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor):
+        # cuDF does not yet support timezone-aware datetimes
         request.applymarker(pytest.mark.xfail)
     context = (
         pytest.raises(NotImplementedError)

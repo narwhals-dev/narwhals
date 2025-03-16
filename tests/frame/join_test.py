@@ -120,9 +120,6 @@ def test_full_join(
         df_left.join(df_right, on="foo", how="full")
 
 
-pytest.main([__file__, "--all-cpu-constructors"])
-
-
 def test_inner_join_two_keys(constructor: Constructor) -> None:
     data = {
         "antananarivo": [1, 3, 2],

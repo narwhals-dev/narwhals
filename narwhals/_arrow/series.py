@@ -16,6 +16,7 @@ from narwhals._arrow.series_cat import ArrowSeriesCatNamespace
 from narwhals._arrow.series_dt import ArrowSeriesDateTimeNamespace
 from narwhals._arrow.series_list import ArrowSeriesListNamespace
 from narwhals._arrow.series_str import ArrowSeriesStringNamespace
+from narwhals._arrow.series_struct import ArrowSeriesStructNamespace
 from narwhals._arrow.utils import cast_for_truediv
 from narwhals._arrow.utils import chunked_array
 from narwhals._arrow.utils import extract_native
@@ -25,10 +26,10 @@ from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import nulls_like
 from narwhals._arrow.utils import pad_series
+from narwhals._compliant import EagerSeries
+from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantSeries
 from narwhals.utils import Implementation
-from narwhals.utils import _StoresNative
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import validate_backend_version
@@ -52,9 +53,11 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import _AsPyType
     from narwhals._arrow.typing import _BasicDataType
     from narwhals.dtypes import DType
+    from narwhals.typing import Into1DArray
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
 
 # TODO @dangotbanned: move into `_arrow.utils`
@@ -95,7 +98,7 @@ def maybe_extract_py_scalar(value: Any, return_py_scalar: bool) -> Any:  # noqa:
     return value
 
 
-class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
+class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def __init__(
         self: Self,
         native_series: ArrowChunkedArray,
@@ -111,6 +114,10 @@ class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
         self._broadcast = False
+
+    @property
+    def native(self) -> ArrowChunkedArray:
+        return self._native_series
 
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
@@ -137,14 +144,24 @@ class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
         data: Iterable[Any],
         name: str,
         *,
-        backend_version: tuple[int, ...],
-        version: Version,
+        context: _FullContext,
     ) -> Self:
         return cls(
             chunked_array([data]),
             name=name,
-            backend_version=backend_version,
-            version=version,
+            backend_version=context._backend_version,
+            version=context._version,
+        )
+
+    def _from_scalar(self, value: Any) -> Self:
+        if self._backend_version < (13,) and hasattr(value, "as_py"):
+            value = value.as_py()
+        return super()._from_scalar(value)
+
+    @classmethod
+    def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
+        return cls._from_iterable(
+            data if is_numpy_array_1d(data) else [data], name="", context=context
         )
 
     def __narwhals_namespace__(self: Self) -> ArrowNamespace:
@@ -266,10 +283,6 @@ class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
     @property
     def _type(self: Self) -> pa.DataType:
         return self.native.type
-
-    @property
-    def native(self) -> ArrowChunkedArray:
-        return self._native_series
 
     def len(self: Self, *, _return_py_scalar: bool = True) -> int:
         return maybe_extract_py_scalar(len(self.native), _return_py_scalar)
@@ -432,7 +445,7 @@ class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
     def __array__(self: Self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
         return self.native.__array__(dtype=dtype, copy=copy)
 
-    def to_numpy(self: Self) -> _1DArray:
+    def to_numpy(self: Self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
         return self.native.to_numpy()
 
     def alias(self: Self, name: str) -> Self:
@@ -556,12 +569,7 @@ class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
         import numpy as np  # ignore-banned-import
 
         res = np.flatnonzero(self.native)
-        return self._from_iterable(
-            res,
-            name=self.name,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        return self._from_iterable(res, name=self.name, context=self)
 
     def item(self: Self, index: int | None = None) -> Any:
         if index is None:
@@ -898,7 +906,7 @@ class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
     ) -> Self:
         min_samples = min_samples if min_samples is not None else window_size
@@ -932,7 +940,7 @@ class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
     ) -> Self:
         min_samples = min_samples if min_samples is not None else window_size
@@ -969,7 +977,7 @@ class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -1022,7 +1030,7 @@ class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -1213,3 +1221,7 @@ class ArrowSeries(CompliantSeries, _StoresNative["ArrowChunkedArray"]):
     @property
     def list(self: Self) -> ArrowSeriesListNamespace:
         return ArrowSeriesListNamespace(self)
+
+    @property
+    def struct(self: Self) -> ArrowSeriesStructNamespace:
+        return ArrowSeriesStructNamespace(self)

@@ -8,6 +8,7 @@ from typing import Callable
 from typing import Literal
 from typing import Sequence
 
+from narwhals._compliant import LazyExpr
 from narwhals._dask.expr_dt import DaskExprDateTimeNamespace
 from narwhals._dask.expr_name import DaskExprNameNamespace
 from narwhals._dask.expr_str import DaskExprStringNamespace
@@ -20,7 +21,6 @@ from narwhals._expression_parsing import is_elementary_expression
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import not_implemented
@@ -39,9 +39,10 @@ if TYPE_CHECKING:
     from narwhals._dask.namespace import DaskNamespace
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
 
-class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[reportInvalidTypeArguments] (#2044)
+class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
     _implementation: Implementation = Implementation.DASK
 
     def __init__(
@@ -100,8 +101,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
         /,
         *,
         function_name: str,
-        backend_version: tuple[int, ...],
-        version: Version,
+        context: _FullContext,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             try:
@@ -124,16 +124,13 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
             function_name=function_name,
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
-            backend_version=backend_version,
-            version=version,
+            backend_version=context._backend_version,
+            version=context._version,
         )
 
     @classmethod
     def from_column_indices(
-        cls: type[Self],
-        *column_indices: int,
-        backend_version: tuple[int, ...],
-        version: Version,
+        cls: type[Self], *column_indices: int, context: _FullContext
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             return [
@@ -146,8 +143,8 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
             function_name="nth",
             evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
             alias_output_names=None,
-            backend_version=backend_version,
-            version=version,
+            backend_version=context._backend_version,
+            version=context._version,
         )
 
     def _from_call(
@@ -381,6 +378,16 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
 
         return self._from_call(lambda _input: _input.cumprod(), "cum_prod")
 
+    def rolling_sum(
+        self: Self, window_size: int, *, min_samples: int, center: bool
+    ) -> Self:
+        return self._from_call(
+            lambda _input: _input.rolling(
+                window=window_size, min_periods=min_samples, center=center
+            ).sum(),
+            "rolling_sum",
+        )
+
     def sum(self: Self) -> Self:
         return self._from_call(lambda _input: _input.sum().to_series(), "sum")
 
@@ -566,7 +573,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
             except KeyError:
                 # window functions are unsupported: https://github.com/dask/dask/issues/11806
                 msg = (
-                    f"Unsupported function: {function_name} in `over` context.\n\n."
+                    f"Unsupported function: {function_name} in `over` context.\n\n"
                     f"Supported functions are {', '.join(AGGREGATIONS_TO_PANDAS_EQUIVALENT)}\n"
                 )
                 raise NotImplementedError(msg) from None
@@ -623,23 +630,5 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
     def name(self: Self) -> DaskExprNameNamespace:
         return DaskExprNameNamespace(self)
 
-    arg_min = not_implemented()
-    arg_max = not_implemented()
-    arg_true = not_implemented()
-    head = not_implemented()
-    tail = not_implemented()
-    mode = not_implemented()
-    sort = not_implemented()
-    rank = not_implemented()
-    sample = not_implemented()
-    map_batches = not_implemented()
-    ewm_mean = not_implemented()
-    rolling_sum = not_implemented()
-    rolling_mean = not_implemented()
-    rolling_var = not_implemented()
-    rolling_std = not_implemented()
-    gather_every = not_implemented()
-    replace_strict = not_implemented()
-
-    cat = not_implemented()  # pyright: ignore[reportAssignmentType]
     list = not_implemented()  # pyright: ignore[reportAssignmentType]
+    struct = not_implemented()  # pyright: ignore[reportAssignmentType]

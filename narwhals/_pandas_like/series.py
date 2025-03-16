@@ -11,10 +11,12 @@ from typing import overload
 
 import numpy as np
 
+from narwhals._compliant import EagerSeries
 from narwhals._pandas_like.series_cat import PandasLikeSeriesCatNamespace
 from narwhals._pandas_like.series_dt import PandasLikeSeriesDateTimeNamespace
 from narwhals._pandas_like.series_list import PandasLikeSeriesListNamespace
 from narwhals._pandas_like.series_str import PandasLikeSeriesStringNamespace
+from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
 from narwhals._pandas_like.utils import align_and_extract_native
 from narwhals._pandas_like.utils import get_dtype_backend
 from narwhals._pandas_like.utils import narwhals_to_native_dtype
@@ -24,9 +26,9 @@ from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_index
+from narwhals.dependencies import is_numpy_array_1d
 from narwhals.dependencies import is_numpy_scalar
 from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantSeries
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_version
@@ -42,10 +44,13 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.typing import ArrowArray
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+    from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import Into1DArray
     from narwhals.typing import _1DArray
     from narwhals.typing import _AnyDArray
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
 PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
     "Int64": "int64",
@@ -93,7 +98,7 @@ PANDAS_TO_NUMPY_DTYPE_MISSING = {
 }
 
 
-class PandasLikeSeries(CompliantSeries):
+class PandasLikeSeries(EagerSeries[Any]):
     def __init__(
         self: Self,
         native_series: Any,
@@ -115,6 +120,10 @@ class PandasLikeSeries(CompliantSeries):
         # the length of the whole dataframe, we just extract the scalar.
         self._broadcast = False
 
+    @property
+    def native(self) -> Any:
+        return self._native_series
+
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation in {
             Implementation.PANDAS,
@@ -129,6 +138,13 @@ class PandasLikeSeries(CompliantSeries):
     def __narwhals_series__(self: Self) -> Self:
         return self
 
+    def __narwhals_namespace__(self) -> PandasLikeNamespace:
+        from narwhals._pandas_like.namespace import PandasLikeNamespace
+
+        return PandasLikeNamespace(
+            self._implementation, self._backend_version, self._version
+        )
+
     @overload
     def __getitem__(self: Self, idx: int) -> Any: ...
 
@@ -142,7 +158,7 @@ class PandasLikeSeries(CompliantSeries):
 
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
-            self._native_series,
+            self.native,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=version,
@@ -161,22 +177,31 @@ class PandasLikeSeries(CompliantSeries):
         cls: type[Self],
         data: Iterable[Any],
         name: str,
-        index: Any,
         *,
-        implementation: Implementation,
-        backend_version: tuple[int, ...],
-        version: Version,
+        context: _FullContext,
+        index: Any = None,  # NOTE: Originally a liskov substitution principle violation
     ) -> Self:
         return cls(
             native_series_from_iterable(
                 data,
                 name=name,
-                index=index,
-                implementation=implementation,
+                index=[] if index is None else index,
+                implementation=context._implementation,
             ),
+            implementation=context._implementation,
+            backend_version=context._backend_version,
+            version=context._version,
+        )
+
+    @classmethod
+    def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
+        implementation = context._implementation
+        arr = data if is_numpy_array_1d(data) else [data]
+        return cls(
+            implementation.to_native_namespace().Series(arr, name=""),
             implementation=implementation,
-            backend_version=backend_version,
-            version=version,
+            backend_version=context._backend_version,
+            version=context._version,
         )
 
     def __len__(self: Self) -> int:
@@ -196,10 +221,6 @@ class PandasLikeSeries(CompliantSeries):
                 self.native, self._version, self._implementation
             )
         )
-
-    @property
-    def native(self) -> Any:
-        return self._native_series
 
     def ewm_mean(
         self: Self,
@@ -922,7 +943,7 @@ class PandasLikeSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
     ) -> Self:
         result = self._native_series.rolling(
@@ -934,7 +955,7 @@ class PandasLikeSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
     ) -> Self:
         result = self._native_series.rolling(
@@ -946,7 +967,7 @@ class PandasLikeSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -959,7 +980,7 @@ class PandasLikeSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -1131,3 +1152,7 @@ class PandasLikeSeries(CompliantSeries):
     @property
     def list(self: Self) -> PandasLikeSeriesListNamespace:
         return PandasLikeSeriesListNamespace(self)
+
+    @property
+    def struct(self: Self) -> PandasLikeSeriesStructNamespace:
+        return PandasLikeSeriesStructNamespace(self)

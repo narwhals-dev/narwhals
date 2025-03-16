@@ -12,7 +12,7 @@ jobs:
   mypy:
     strategy:
       matrix:
-        python-version: ["3.11"]
+        python-version: ["3.12"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -32,7 +32,7 @@ jobs:
         # TODO: add more dependencies/backends incrementally
         run: |
           source .venv/bin/activate
-          uv pip install -e ".[tests, typing, core, pyspark, sqlframe]"
+          uv pip install -e ".[typing, core, pyspark]"
       - name: show-deps
         run: |
           source .venv/bin/activate

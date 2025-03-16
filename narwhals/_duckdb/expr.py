@@ -14,15 +14,16 @@ from duckdb import ColumnExpression
 from duckdb import FunctionExpression
 from duckdb.typing import DuckDBPyType
 
+from narwhals._compliant import LazyExpr
 from narwhals._duckdb.expr_dt import DuckDBExprDateTimeNamespace
 from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_name import DuckDBExprNameNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
+from narwhals._duckdb.expr_struct import DuckDBExprStructNamespace
 from narwhals._duckdb.utils import lit
 from narwhals._duckdb.utils import maybe_evaluate_expr
 from narwhals._duckdb.utils import narwhals_to_native_dtype
 from narwhals._expression_parsing import ExprKind
-from narwhals.typing import CompliantExpr
 from narwhals.utils import Implementation
 from narwhals.utils import not_implemented
 
@@ -34,9 +35,10 @@ if TYPE_CHECKING:
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
 
-class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type: ignore[type-var]
+class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     _implementation = Implementation.DUCKDB
     _depth = 0  # Unused, just for compatibility with CompliantExpr
 
@@ -84,8 +86,7 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
         /,
         *,
         function_name: str,
-        backend_version: tuple[int, ...],
-        version: Version,
+        context: _FullContext,
     ) -> Self:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             return [ColumnExpression(col_name) for col_name in evaluate_column_names(df)]
@@ -95,16 +96,13 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
             function_name=function_name,
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
-            backend_version=backend_version,
-            version=version,
+            backend_version=context._backend_version,
+            version=context._version,
         )
 
     @classmethod
     def from_column_indices(
-        cls: type[Self],
-        *column_indices: int,
-        backend_version: tuple[int, ...],
-        version: Version,
+        cls: type[Self], *column_indices: int, context: _FullContext
     ) -> Self:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             columns = df.columns
@@ -116,8 +114,8 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
             function_name="nth",
             evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
             alias_output_names=None,
-            backend_version=backend_version,
-            version=version,
+            backend_version=context._backend_version,
+            version=context._version,
         )
 
     def _from_call(
@@ -484,22 +482,10 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
     def list(self: Self) -> DuckDBExprListNamespace:
         return DuckDBExprListNamespace(self)
 
-    arg_min = not_implemented()
-    arg_max = not_implemented()
-    arg_true = not_implemented()
-    head = not_implemented()
-    tail = not_implemented()
-    mode = not_implemented()
-    sort = not_implemented()
-    rank = not_implemented()
-    sample = not_implemented()
-    map_batches = not_implemented()
-    ewm_mean = not_implemented()
-    rolling_sum = not_implemented()
-    rolling_mean = not_implemented()
-    rolling_var = not_implemented()
-    rolling_std = not_implemented()
-    gather_every = not_implemented()
+    @property
+    def struct(self: Self) -> DuckDBExprStructNamespace:
+        return DuckDBExprStructNamespace(self)
+
     drop_nulls = not_implemented()
     diff = not_implemented()
     unique = not_implemented()
@@ -512,7 +498,5 @@ class DuckDBExpr(CompliantExpr["DuckDBLazyFrame", "duckdb.Expression"]):  # type
     cum_min = not_implemented()
     cum_max = not_implemented()
     cum_prod = not_implemented()
-    replace_strict = not_implemented()
     over = not_implemented()
-
-    cat = not_implemented()  # pyright: ignore[reportAssignmentType]
+    rolling_sum = not_implemented()

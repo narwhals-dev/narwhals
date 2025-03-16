@@ -13,6 +13,7 @@ from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
 from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals._polars.utils import native_to_narwhals_dtype
+from narwhals.dependencies import is_numpy_array_1d
 from narwhals.utils import Implementation
 from narwhals.utils import validate_backend_version
 
@@ -23,9 +24,13 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._polars.dataframe import PolarsDataFrame
+    from narwhals._polars.expr import PolarsExpr
+    from narwhals._polars.namespace import PolarsNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import Into1DArray
     from narwhals.typing import _1DArray
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
     T = TypeVar("T")
 
@@ -47,6 +52,13 @@ class PolarsSeries:
     def __repr__(self: Self) -> str:  # pragma: no cover
         return "PolarsSeries"
 
+    def __narwhals_namespace__(self) -> PolarsNamespace:
+        from narwhals._polars.namespace import PolarsNamespace
+
+        return PolarsNamespace(
+            backend_version=self._backend_version, version=self._version
+        )
+
     def __narwhals_series__(self: Self) -> Self:
         return self
 
@@ -60,6 +72,14 @@ class PolarsSeries:
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
             self._native_series, backend_version=self._backend_version, version=version
+        )
+
+    @classmethod
+    def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
+        return cls(
+            pl.Series(data if is_numpy_array_1d(data) else [data]),
+            backend_version=context._backend_version,
+            version=context._version,
         )
 
     def _from_native_series(self: Self, series: pl.Series) -> Self:
@@ -89,6 +109,9 @@ class PolarsSeries:
             )
         # scalar
         return series
+
+    def _to_expr(self) -> PolarsExpr:
+        return self.__narwhals_namespace__()._expr._from_series(self)
 
     def __getattr__(self: Self, attr: str) -> Any:
         if attr == "as_py":  # pragma: no cover
@@ -150,6 +173,9 @@ class PolarsSeries:
             msg = f"`replace_strict` is only available in Polars>=1.0, found version {self._backend_version}"
             raise NotImplementedError(msg)
         return self._from_native_series(ser.replace_strict(old, new, return_dtype=dtype))
+
+    def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
+        return self.__array__(dtype, copy=copy)
 
     def __array__(self: Self, dtype: Any, *, copy: bool | None) -> _1DArray:
         if self._backend_version < (0, 20, 29):
@@ -309,7 +335,7 @@ class PolarsSeries:
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -336,7 +362,7 @@ class PolarsSeries:
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -363,7 +389,7 @@ class PolarsSeries:
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
     ) -> Self:
         extra_kwargs = (
@@ -384,7 +410,7 @@ class PolarsSeries:
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
     ) -> Self:
         extra_kwargs = (
@@ -580,6 +606,10 @@ class PolarsSeries:
     def list(self: Self) -> PolarsSeriesListNamespace:
         return PolarsSeriesListNamespace(self)
 
+    @property
+    def struct(self: Self) -> PolarsSeriesStructNamespace:
+        return PolarsSeriesStructNamespace(self)
+
 
 class PolarsSeriesDateTimeNamespace:
     def __init__(self: Self, series: PolarsSeries) -> None:
@@ -647,6 +677,22 @@ class PolarsSeriesListNamespace:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._series._from_native_series(
                 getattr(self._series._native_series.list, attr)(*args, **kwargs)
+            )
+
+        return func
+
+
+class PolarsSeriesStructNamespace:
+    def __init__(self: Self, series: PolarsSeries) -> None:
+        self._compliant_series = series
+
+    def __getattr__(self: Self, attr: str) -> Any:
+        def func(*args: Any, **kwargs: Any) -> Any:
+            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
+            return self._compliant_series._from_native_series(
+                getattr(self._compliant_series._native_series.struct, attr)(
+                    *args, **kwargs
+                )
             )
 
         return func

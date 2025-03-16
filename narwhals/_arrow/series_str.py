@@ -61,7 +61,7 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
         split_series = pc.split_pattern(self.native, by)  # type: ignore[call-overload]
         return self.from_native(split_series)
 
-    def to_datetime(self: Self, format: str | None) -> ArrowSeries:  # noqa: A002
+    def to_datetime(self: Self, format: str | None) -> ArrowSeries:
         format = parse_datetime_format(self.native) if format is None else format
         strptime: Incomplete = pc.strptime
         timestamp_array: pa.Array[pa.TimestampScalar[Any, Any]] = strptime(

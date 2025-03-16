@@ -38,6 +38,14 @@ class PolarsExpr:
             expr, version=self._version, backend_version=self._backend_version
         )
 
+    @classmethod
+    def _from_series(cls, series: Any) -> Self:
+        return cls(
+            series._native_series,
+            version=series._version,
+            backend_version=series._backend_version,
+        )
+
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         # Let Polars do its thing.
         return self
@@ -118,7 +126,7 @@ class PolarsExpr:
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -144,7 +152,7 @@ class PolarsExpr:
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -167,11 +175,7 @@ class PolarsExpr:
         )
 
     def rolling_sum(
-        self: Self,
-        window_size: int,
-        *,
-        min_samples: int | None,
-        center: bool,
+        self: Self, window_size: int, *, min_samples: int, center: bool
     ) -> Self:
         extra_kwargs = (
             {"min_periods": min_samples}
@@ -191,7 +195,7 @@ class PolarsExpr:
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
     ) -> Self:
         extra_kwargs = (
@@ -320,6 +324,10 @@ class PolarsExpr:
     def list(self: Self) -> PolarsExprListNamespace:
         return PolarsExprListNamespace(self)
 
+    @property
+    def struct(self: Self) -> PolarsExprStructNamespace:
+        return PolarsExprStructNamespace(self)
+
 
 class PolarsExprDateTimeNamespace:
     def __init__(self: Self, expr: PolarsExpr) -> None:
@@ -402,6 +410,22 @@ class PolarsExprListNamespace:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._expr._from_native_expr(
                 getattr(self._expr._native_expr.list, attr)(*args, **kwargs)
+            )
+
+        return func
+
+
+class PolarsExprStructNamespace:
+    def __init__(self: Self, expr: PolarsExpr) -> None:
+        self._expr = expr
+
+    def __getattr__(
+        self: Self, attr: str
+    ) -> Callable[[Any], PolarsExpr]:  # pragma: no cover
+        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
+            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
+            return self._expr._from_native_expr(
+                getattr(self._expr._native_expr.struct, attr)(*args, **kwargs)
             )
 
         return func

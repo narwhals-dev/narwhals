@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 from typing import cast
 from typing import overload
@@ -17,8 +18,8 @@ from narwhals._arrow.utils import convert_str_slice_to_int_slice
 from narwhals._arrow.utils import extract_dataframe_comparand
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import select_rows
+from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
-from narwhals._expression_parsing import evaluate_into_exprs
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.utils import Implementation
 from narwhals.utils import Version
@@ -26,6 +27,7 @@ from narwhals.utils import check_column_exists
 from narwhals.utils import check_column_names_are_unique
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_sequence_but_not_str
+from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import scale_bytes
@@ -71,7 +73,7 @@ from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 
 
-class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
+class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr"], CompliantLazyFrame):
     # --- not in the spec ---
     def __init__(
         self: Self,
@@ -356,11 +358,8 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
             self._native_frame.select(list(column_names)), validate_column_names=False
         )
 
-    def aggregate(self: ArrowDataFrame, *exprs: ArrowExpr) -> ArrowDataFrame:
-        return self.select(*exprs)
-
     def select(self: ArrowDataFrame, *exprs: ArrowExpr) -> ArrowDataFrame:
-        new_series = evaluate_into_exprs(self, *exprs)
+        new_series = self._evaluate_into_exprs(*exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_frame(
@@ -373,7 +372,7 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
 
     def with_columns(self: ArrowDataFrame, *exprs: ArrowExpr) -> ArrowDataFrame:
         native_frame = self._native_frame
-        new_columns = evaluate_into_exprs(self, *exprs)
+        new_columns = self._evaluate_into_exprs(*exprs)
 
         length = len(self)
         columns = self.columns
@@ -440,9 +439,7 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
                 .drop([key_token]),
             )
 
-        coalesce_keys = True
-        if how == "full":  # polars full join does not coalesce keys
-            coalesce_keys = False
+        coalesce_keys = how != "full"  # polars full join does not coalesce keys
         return self._from_native_frame(
             self._native_frame.join(
                 other._native_frame,
@@ -454,21 +451,9 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
             ),
         )
 
-    def join_asof(
-        self: Self,
-        other: Self,
-        *,
-        left_on: str | None,
-        right_on: str | None,
-        by_left: list[str] | None,
-        by_right: list[str] | None,
-        strategy: Literal["backward", "forward", "nearest"],
-        suffix: str,
-    ) -> Self:
-        msg = "join_asof is not yet supported on PyArrow tables"  # pragma: no cover
-        raise NotImplementedError(msg)
+    join_asof = not_implemented()
 
-    def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
+    def drop(self: Self, columns: Sequence[str], *, strict: bool) -> Self:
         to_drop = parse_columns_to_drop(
             compliant_frame=self, columns=columns, strict=strict
         )
@@ -476,7 +461,7 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
             self._native_frame.drop(to_drop), validate_column_names=False
         )
 
-    def drop_nulls(self: ArrowDataFrame, subset: list[str] | None) -> ArrowDataFrame:
+    def drop_nulls(self: ArrowDataFrame, subset: Sequence[str] | None) -> ArrowDataFrame:
         if subset is None:
             return self._from_native_frame(
                 self._native_frame.drop_null(), validate_column_names=False
@@ -565,7 +550,7 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
             mask_native: Mask | ArrowChunkedArray = predicate
         else:
             # `[0]` is safe as the predicate's expression only returns a single column
-            mask_native = evaluate_into_exprs(self, predicate)[0]._native_series
+            mask_native = self._evaluate_into_exprs(predicate)[0]._native_series
         return self._from_native_frame(
             self._native_frame.filter(mask_native),  # pyright: ignore[reportArgumentType]
             validate_column_names=False,
@@ -606,7 +591,6 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
                 df=duckdb.table("df"),
                 backend_version=parse_version(duckdb),
                 version=self._version,
-                validate_column_names=False,
             )
         elif backend is Implementation.POLARS:
             import polars as pl  # ignore-banned-import
@@ -628,7 +612,6 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
                 native_dataframe=dd.from_pandas(self._native_frame.to_pandas()),
                 backend_version=parse_version(dask),
                 version=self._version,
-                validate_column_names=False,
             )
         raise AssertionError  # pragma: no cover
 
@@ -636,7 +619,7 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
         self: Self,
         backend: Implementation | None,
         **kwargs: Any,
-    ) -> CompliantDataFrame[Any]:
+    ) -> CompliantDataFrame[Any, Any]:
         if backend is Implementation.PYARROW or backend is None:
             from narwhals._arrow.dataframe import ArrowDataFrame
 
@@ -674,9 +657,7 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
         msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
         raise AssertionError(msg)  # pragma: no cover
 
-    def clone(self: Self) -> Self:
-        msg = "clone is not yet supported on PyArrow tables"
-        raise NotImplementedError(msg)
+    clone = not_implemented()
 
     def item(self: Self, row: int | None, column: int | str | None) -> Any:
         from narwhals._arrow.series import maybe_extract_py_scalar
@@ -702,7 +683,7 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
             self._native_frame[_col][row], return_py_scalar=True
         )
 
-    def rename(self: Self, mapping: dict[str, str]) -> Self:
+    def rename(self: Self, mapping: Mapping[str, str]) -> Self:
         df = self._native_frame
         new_cols = [mapping.get(c, c) for c in df.column_names]
         return self._from_native_frame(df.rename_columns(new_cols))
@@ -753,7 +734,7 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
 
     def unique(
         self: ArrowDataFrame,
-        subset: list[str] | None,
+        subset: Sequence[str] | None,
         *,
         keep: Literal["any", "first", "last", "none"],
         maintain_order: bool | None = None,
@@ -764,7 +745,7 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
 
         df = self._native_frame
         check_column_exists(self.columns, subset)
-        subset = subset or self.columns
+        subset = list(subset or self.columns)
 
         if keep in {"any", "first", "last"}:
             agg_func_map = {"any": "min", "first": "min", "last": "max"}
@@ -782,7 +763,7 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
 
         keep_idx = self.simple_select(*subset).is_unique()
         plx = self.__narwhals_namespace__()
-        return self.filter(plx._create_expr_from_series(keep_idx))
+        return self.filter(plx._expr._from_series(keep_idx))
 
     def gather_every(self: Self, n: int, offset: int) -> Self:
         return self._from_native_frame(
@@ -815,18 +796,15 @@ class ArrowDataFrame(CompliantDataFrame["ArrowSeries"], CompliantLazyFrame):
 
     def unpivot(
         self: Self,
-        on: list[str] | None,
-        index: list[str] | None,
+        on: Sequence[str] | None,
+        index: Sequence[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:
         native_frame = self._native_frame
         n_rows = len(self)
-
-        index_: list[str] = [] if index is None else index
-        on_: list[str] = (
-            [c for c in self.columns if c not in index_] if on is None else on
-        )
+        index_ = [] if index is None else index
+        on_ = [c for c in self.columns if c not in index_] if on is None else on
         concat = (
             partial(pa.concat_tables, promote_options="permissive")
             if self._backend_version >= (14, 0, 0)

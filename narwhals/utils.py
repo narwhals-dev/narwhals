@@ -5,6 +5,7 @@ import re
 from datetime import timezone
 from enum import Enum
 from enum import auto
+from functools import wraps
 from inspect import getattr_static
 from secrets import token_hex
 from typing import TYPE_CHECKING
@@ -48,17 +49,19 @@ if TYPE_CHECKING:
     from typing import AbstractSet as Set
 
     import pandas as pd
+    from typing_extensions import ParamSpec
     from typing_extensions import Self
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
+    from narwhals._compliant import CompliantExpr
+    from narwhals._compliant import CompliantFrameT
+    from narwhals._compliant import CompliantSeriesOrNativeExprT_co
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.series import Series
     from narwhals.typing import CompliantDataFrame
-    from narwhals.typing import CompliantExpr
-    from narwhals.typing import CompliantFrameT
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import CompliantSeries
     from narwhals.typing import DataFrameLike
@@ -76,6 +79,8 @@ if TYPE_CHECKING:
     _T2 = TypeVar("_T2")
     _T3 = TypeVar("_T3")
     _Fn = TypeVar("_Fn", bound="Callable[..., Any]")
+    P = ParamSpec("P")
+    R = TypeVar("R")
 
     _TracksDepth: TypeAlias = "Literal[Implementation.DASK,Implementation.CUDF,Implementation.MODIN,Implementation.PANDAS,Implementation.PYSPARK]"
 
@@ -984,9 +989,9 @@ def _has_default_index(
     index = native_frame_or_series.index
     return (
         _is_range_index(index, native_namespace)
-        and index.start == 0  # type: ignore[comparison-overlap]
-        and index.stop == len(index)  # type: ignore[comparison-overlap]
-        and index.step == 1  # type: ignore[comparison-overlap]
+        and index.start == 0
+        and index.stop == len(index)
+        and index.step == 1
     )
 
 
@@ -1287,25 +1292,45 @@ def validate_strict_and_pass_though(
     return pass_through
 
 
-def validate_native_namespace_and_backend(
-    backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,
-    *,
-    emit_deprecation_warning: bool,
-) -> ModuleType | Implementation | str | None:
-    if native_namespace is not None and backend is None:  # pragma: no cover
-        if emit_deprecation_warning:
-            msg = (
-                "`native_namespace` is deprecated, please use `backend` instead.\n\n"
-                "Note: `native_namespace` will remain available in `narwhals.stable.v1`.\n"
-                "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
-            )
-            issue_deprecation_warning(msg, _version="1.25.1")
-        backend = native_namespace
-    elif native_namespace is not None and backend is not None:
-        msg = "Can't pass both `native_namespace` and `backend`"
-        raise ValueError(msg)
-    return backend
+def deprecate_native_namespace(
+    *, warn_version: str = "", required: bool = False
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    """Decorator to transition from `native_namespace` to `backend` argument.
+
+    Arguments:
+        warn_version: Emit a deprecation warning from this version.
+        required: Raise when both `native_namespace`, `backend` are `None`.
+
+    Returns:
+        Wrapped function, with `native_namespace` **removed**.
+    """
+
+    def decorate(fn: Callable[P, R], /) -> Callable[P, R]:
+        @wraps(fn)
+        def wrapper(*args: P.args, **kwds: P.kwargs) -> R:
+            backend = kwds.pop("backend", None)
+            native_namespace = kwds.pop("native_namespace", None)
+            if native_namespace is not None and backend is None:
+                if warn_version:
+                    msg = (
+                        "`native_namespace` is deprecated, please use `backend` instead.\n\n"
+                        "Note: `native_namespace` will remain available in `narwhals.stable.v1`.\n"
+                        "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+                    )
+                    issue_deprecation_warning(msg, _version=warn_version)
+                backend = native_namespace
+            elif native_namespace is not None and backend is not None:
+                msg = "Can't pass both `native_namespace` and `backend`"
+                raise ValueError(msg)
+            elif native_namespace is None and backend is None and required:
+                msg = f"`backend` must be specified in `{fn.__name__}`."
+                raise ValueError(msg)
+            kwds["backend"] = backend
+            return fn(*args, **kwds)
+
+        return wrapper
+
+    return decorate
 
 
 def _validate_rolling_arguments(
@@ -1374,13 +1399,13 @@ def generate_repr(header: str, native_repr: str) -> str:
     )
 
 
-def check_column_exists(columns: list[str], subset: list[str] | None) -> None:
+def check_column_exists(columns: Sequence[str], subset: Sequence[str] | None) -> None:
     if subset is not None and (missing := set(subset).difference(columns)):
         msg = f"Column(s) {sorted(missing)} not found in {columns}"
         raise ColumnNotFoundError(msg)
 
 
-def check_column_names_are_unique(columns: list[str]) -> None:
+def check_column_names_are_unique(columns: Sequence[str]) -> None:
     len_unique_columns = len(set(columns))
     if len(columns) != len_unique_columns:
         from collections import Counter
@@ -1447,8 +1472,8 @@ def _hasattr_static(obj: Any, attr: str) -> bool:
 
 
 def is_compliant_dataframe(
-    obj: CompliantDataFrame[CompliantSeriesT_co] | Any,
-) -> TypeIs[CompliantDataFrame[CompliantSeriesT_co]]:
+    obj: CompliantDataFrame[CompliantSeriesT_co, CompliantExprT_co] | Any,
+) -> TypeIs[CompliantDataFrame[CompliantSeriesT_co, CompliantExprT_co]]:
     return _hasattr_static(obj, "__narwhals_dataframe__")
 
 
@@ -1461,8 +1486,8 @@ def is_compliant_series(obj: Any) -> TypeIs[CompliantSeries]:
 
 
 def is_compliant_expr(
-    obj: CompliantExpr[CompliantFrameT, CompliantSeriesT_co] | Any,
-) -> TypeIs[CompliantExpr[CompliantFrameT, CompliantSeriesT_co]]:
+    obj: CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | Any,
+) -> TypeIs[CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co]]:
     return hasattr(obj, "__narwhals_expr__")
 
 
@@ -1480,29 +1505,24 @@ def is_tracks_depth(obj: Implementation, /) -> TypeIs[_TracksDepth]:  # pragma: 
 
 
 def _remap_join_keys(
-    left_on: list[str], right_on: list[str], suffix: str
+    left_on: Sequence[str], right_on: Sequence[str], suffix: str
 ) -> dict[str, str]:
     """Remap join keys to avoid collisions.
 
     If left keys collide with the right keys, append the suffix.
     If there's no collision, let the right keys be.
 
-    Args:
-        left_on (list[str]): Left keys.
-        right_on (list[str]): Right keys.
-        suffix (str): Suffix to append to right keys.
+    Arguments:
+        left_on: Left keys.
+        right_on: Right keys.
+        suffix: Suffix to append to right keys.
 
     Returns:
-        dict[str, str]: A map of old to new right keys..
+        A map of old to new right keys.
     """
-    right_keys_suffixed: list[str] = []
-    for key in right_on:
-        if key in left_on:
-            suffixed = f"{key}{suffix}"
-            right_keys_suffixed.append(suffixed)
-            continue
-        right_keys_suffixed.append(key)
-
+    right_keys_suffixed = (
+        f"{key}{suffix}" if key in left_on else key for key in right_on
+    )
     return dict(zip(right_on, right_keys_suffixed))
 
 
