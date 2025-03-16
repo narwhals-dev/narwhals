@@ -557,7 +557,8 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_window_function(func)
 
-    def fill_null(self, value: Any | None = None) -> Self:
+    def fill_null(self, value: Any | None = None, strategy: Literal["forward", "backward"] | None = None, limit: int | None = None) -> Self:
+
         def _fill_null(_input: Column, value: Any | None) -> Column:
             return self._F.ifnull(_input, value)
 
