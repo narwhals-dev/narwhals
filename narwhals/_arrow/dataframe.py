@@ -73,7 +73,7 @@ from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 
 
-class ArrowDataFrame(EagerDataFrame["ArrowSeries"], CompliantLazyFrame):
+class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr"], CompliantLazyFrame):
     # --- not in the spec ---
     def __init__(
         self: Self,
@@ -616,7 +616,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries"], CompliantLazyFrame):
         self: Self,
         backend: Implementation | None,
         **kwargs: Any,
-    ) -> CompliantDataFrame[Any]:
+    ) -> CompliantDataFrame[Any, Any]:
         if backend is Implementation.PYARROW or backend is None:
             from narwhals._arrow.dataframe import ArrowDataFrame
 

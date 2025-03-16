@@ -12,7 +12,9 @@ from typing import Sized
 from typing import TypeVar
 from typing import overload
 
+from narwhals._compliant.typing import CompliantExprT_contra
 from narwhals._compliant.typing import CompliantSeriesT
+from narwhals._compliant.typing import EagerExprT_contra
 from narwhals._compliant.typing import EagerSeriesT
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 
@@ -37,7 +39,7 @@ __all__ = ["CompliantDataFrame", "CompliantLazyFrame", "EagerDataFrame"]
 T = TypeVar("T")
 
 
-class CompliantDataFrame(Sized, Protocol[CompliantSeriesT]):
+class CompliantDataFrame(Sized, Protocol[CompliantSeriesT, CompliantExprT_contra]):
     def __narwhals_dataframe__(self) -> Self: ...
     def __narwhals_namespace__(self) -> Any: ...
     def __array__(self, dtype: Any, *, copy: bool | None) -> _2DArray: ...
@@ -46,7 +48,7 @@ class CompliantDataFrame(Sized, Protocol[CompliantSeriesT]):
         """`select` where all args are column names."""
         ...
 
-    def aggregate(self, *exprs: Any) -> Self:  # pragma: no cover
+    def aggregate(self, *exprs: CompliantExprT_contra) -> Self:  # pragma: no cover
         """`select` where all args are aggregations or literals.
 
         (so, no broadcasting is necessary).
@@ -62,12 +64,12 @@ class CompliantDataFrame(Sized, Protocol[CompliantSeriesT]):
     def clone(self) -> Self: ...
     def collect(
         self, backend: Implementation | None, **kwargs: Any
-    ) -> CompliantDataFrame[Any]: ...
+    ) -> CompliantDataFrame[Any, Any]: ...
     def collect_schema(self) -> Mapping[str, DType]: ...
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self: ...
     def drop_nulls(self, subset: Sequence[str] | None) -> Self: ...
     def estimated_size(self, unit: SizeUnit) -> int | float: ...
-    def filter(self, predicate: Any) -> Self: ...
+    def filter(self, predicate: CompliantExprT_contra | Any) -> Self: ...
     def gather_every(self, n: int, offset: int) -> Self: ...
     def get_column(self, name: str) -> CompliantSeriesT: ...
     def group_by(self, *keys: str, drop_null_keys: bool) -> Any: ...
@@ -112,7 +114,7 @@ class CompliantDataFrame(Sized, Protocol[CompliantSeriesT]):
         with_replacement: bool,
         seed: int | None,
     ) -> Self: ...
-    def select(self, *exprs: Any) -> Self: ...
+    def select(self, *exprs: CompliantExprT_contra) -> Self: ...
     def sort(
         self, *by: str, descending: bool | Sequence[bool], nulls_last: bool
     ) -> Self: ...
@@ -142,7 +144,7 @@ class CompliantDataFrame(Sized, Protocol[CompliantSeriesT]):
         variable_name: str,
         value_name: str,
     ) -> Self: ...
-    def with_columns(self, *exprs: Any) -> Self: ...
+    def with_columns(self, *exprs: CompliantExprT_contra) -> Self: ...
     def with_row_index(self, name: str) -> Self: ...
     @overload
     def write_csv(self, file: None) -> str: ...
@@ -169,10 +171,11 @@ class CompliantLazyFrame(Protocol):
     def _iter_columns(self) -> Iterator[Any]: ...
 
 
-class EagerDataFrame(CompliantDataFrame[EagerSeriesT], Protocol[EagerSeriesT]):
-    def _maybe_evaluate_expr(
-        self, expr: EagerExpr[Self, EagerSeriesT] | T, /
-    ) -> EagerSeriesT | T:
+class EagerDataFrame(
+    CompliantDataFrame[EagerSeriesT, EagerExprT_contra],
+    Protocol[EagerSeriesT, EagerExprT_contra],
+):
+    def _maybe_evaluate_expr(self, expr: EagerExprT_contra | T, /) -> EagerSeriesT | T:
         if is_eager_expr(expr):
             result: Sequence[EagerSeriesT] = expr(self)
             if len(result) > 1:
@@ -184,14 +187,10 @@ class EagerDataFrame(CompliantDataFrame[EagerSeriesT], Protocol[EagerSeriesT]):
             return result[0]
         return expr
 
-    def _evaluate_into_exprs(
-        self, *exprs: EagerExpr[Self, EagerSeriesT]
-    ) -> Sequence[EagerSeriesT]:
+    def _evaluate_into_exprs(self, *exprs: EagerExprT_contra) -> Sequence[EagerSeriesT]:
         return list(chain.from_iterable(self._evaluate_into_expr(expr) for expr in exprs))
 
-    def _evaluate_into_expr(
-        self, expr: EagerExpr[Self, EagerSeriesT], /
-    ) -> Sequence[EagerSeriesT]:
+    def _evaluate_into_expr(self, expr: EagerExprT_contra, /) -> Sequence[EagerSeriesT]:
         """Return list of raw columns.
 
         For eager backends we alias operations at each step.
