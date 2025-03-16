@@ -39,7 +39,34 @@ if TYPE_CHECKING:
     T = TypeVar("T")
 
 
+# TODO @dangotbanned: Want to tell the type checker that `__getattr__` will satisfy specfic methods
+# - Could these have a narrower annotation?
 class PolarsDataFrame:
+    clone: Any
+    collect: Any
+    drop_nulls: Any
+    estimated_size: Any
+    filter: Any
+    gather_every: Any
+    item: Any
+    iter_rows: Any
+    is_unique: Any
+    join: Any
+    join_asof: Any
+    rename: Any
+    row: Any
+    rows: Any
+    sample: Any
+    select: Any
+    sort: Any
+    to_arrow: Any
+    to_numpy: Any
+    to_pandas: Any
+    unique: Any
+    with_columns: Any
+    write_csv: Any
+    write_parquet: Any
+
     def __init__(
         self: Self,
         df: pl.DataFrame,
@@ -321,7 +348,7 @@ class PolarsDataFrame:
             return self._from_native_frame(self._native_frame.with_row_count(name))
         return self._from_native_frame(self._native_frame.with_row_index(name))
 
-    def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
+    def drop(self: Self, columns: Sequence[str], strict: bool) -> Self:  # noqa: FBT001
         to_drop = parse_columns_to_drop(
             compliant_frame=self, columns=columns, strict=strict
         )
@@ -329,8 +356,8 @@ class PolarsDataFrame:
 
     def unpivot(
         self: Self,
-        on: list[str] | None,
-        index: list[str] | None,
+        on: Sequence[str] | None,
+        index: Sequence[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:
