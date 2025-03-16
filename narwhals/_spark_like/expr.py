@@ -557,43 +557,8 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_window_function(func)
 
-    def fill_null(
-        self,
-        value: Any | None = None,
-        strategy: Literal["forward", "backward"] | None = None,
-        limit: int | None = None,
-    ) -> Self:
-        if (value is None) and (strategy is None):
-            msg = "must specify either a fill `value` or `strategy`"
-            raise ValueError(msg)
-
-        if (value is not None) and (strategy is not None):
-            msg = "cannot specify both `value` and `strategy`"
-            raise ValueError(msg)
-
+    def fill_null(self, value: Any | None = None) -> Self:
         def _fill_null(_input: Column, value: Any | None) -> Column:
-            if strategy == "forward":
-                lower_limit = (
-                    self._Window().unboundedPreceding if limit is None else -limit
-                )
-                window_spec = (
-                    self._Window()
-                    .orderBy(self._F.monotonically_increasing_id())
-                    .rowsBetween(lower_limit, 0)
-                )
-                value = self._F.last(_input, ignorenulls=True).over(window_spec)
-            if strategy == "backward":
-                upper_limit = (
-                    self._Window().unboundedFollowing if limit is None else limit
-                )
-                window_spec = (
-                    self._Window()
-                    .orderBy(self._F.monotonically_increasing_id())
-                    .rowsBetween(0, upper_limit)
-                )
-                value = self._F.first(_input, ignorenulls=True).over(window_spec)
-            if not isinstance(value, SparkLikeExpr):
-                value = self._F.lit(value)
             return self._F.ifnull(_input, value)
 
         return self._from_call(_fill_null, "fill_null", value=value)
