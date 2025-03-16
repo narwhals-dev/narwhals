@@ -49,7 +49,7 @@ class CompliantDataFrame(Sized, Protocol[CompliantSeriesT, CompliantExprT_contra
         """`select` where all args are column names."""
         ...
 
-    def aggregate(self, *exprs: CompliantExprT_contra) -> Self:  # pragma: no cover
+    def aggregate(self, *exprs: CompliantExprT_contra) -> Self:
         """`select` where all args are aggregations or literals.
 
         (so, no broadcasting is necessary).
