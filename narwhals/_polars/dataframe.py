@@ -348,7 +348,7 @@ class PolarsDataFrame:
             return self._from_native_frame(self._native_frame.with_row_count(name))
         return self._from_native_frame(self._native_frame.with_row_index(name))
 
-    def drop(self: Self, columns: Sequence[str], strict: bool) -> Self:  # noqa: FBT001
+    def drop(self: Self, columns: Sequence[str], *, strict: bool) -> Self:
         to_drop = parse_columns_to_drop(
             compliant_frame=self, columns=columns, strict=strict
         )

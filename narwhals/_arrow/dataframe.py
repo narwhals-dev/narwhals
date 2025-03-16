@@ -453,7 +453,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries"], CompliantLazyFrame):
 
     join_asof = not_implemented()
 
-    def drop(self: Self, columns: Sequence[str], strict: bool) -> Self:  # noqa: FBT001
+    def drop(self: Self, columns: Sequence[str], *, strict: bool) -> Self:
         to_drop = parse_columns_to_drop(
             compliant_frame=self, columns=columns, strict=strict
         )
