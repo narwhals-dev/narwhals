@@ -396,11 +396,6 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
             validate_column_names=False,
         )
 
-    def aggregate(
-        self: PandasLikeDataFrame, *exprs: PandasLikeExpr
-    ) -> PandasLikeDataFrame:
-        return self.select(*exprs)
-
     def select(self: PandasLikeDataFrame, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
         new_series = self._evaluate_into_exprs(*exprs)
         if not new_series:
