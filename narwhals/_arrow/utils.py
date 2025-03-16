@@ -13,6 +13,7 @@ from typing import overload
 import pyarrow as pa
 import pyarrow.compute as pc
 
+from narwhals.exceptions import ShapeError
 from narwhals.utils import _SeriesNamespace
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
@@ -278,6 +279,9 @@ def extract_dataframe_comparand(
 ) -> ArrowChunkedArray:
     """Extract native Series, broadcasting to `length` if necessary."""
     if not other._broadcast:
+        if (len_other := len(other)) != length:
+            msg = f"Expected object of length {length}, got: {len_other}."
+            raise ShapeError(msg)
         return other.native
 
     import numpy as np  # ignore-banned-import
