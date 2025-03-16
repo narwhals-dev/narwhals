@@ -46,6 +46,8 @@ class CompliantDataFrame(Sized, Protocol[CompliantSeriesT]):
         """`select` where all args are column names."""
         ...
 
+    # NOTE: Can we remove this now?
+    # `DaskLazyFrame` is the only one not the same as `select`
     def aggregate(self, *exprs: Any) -> Self:  # pragma: no cover
         """`select` where all args are aggregations or literals.
 
