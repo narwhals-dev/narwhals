@@ -275,9 +275,9 @@ def set_index(
     We can set `copy` / `inplace` based on implementation/version.
     """
     if implementation is Implementation.CUDF:  # pragma: no cover
-        obj = obj.copy(deep=False)
-        obj.index = index
-        return obj
+        cudf_frame = obj.copy(deep=False)
+        cudf_frame.index = index
+        return cast("NDFrameT", cudf_frame)
     if implementation is Implementation.PANDAS and (
         backend_version < (1,)
     ):  # pragma: no cover
@@ -290,7 +290,8 @@ def set_index(
         kwargs["copy"] = False
     else:  # pragma: no cover
         pass
-    return obj.set_axis(index, axis=0, **kwargs)
+    nd_frame = obj.set_axis(index, axis=0, **kwargs)
+    return cast("NDFrameT", nd_frame)
 
 
 def set_columns(
@@ -305,9 +306,9 @@ def set_columns(
     We can set `copy` / `inplace` based on implementation/version.
     """
     if implementation is Implementation.CUDF:  # pragma: no cover
-        obj = obj.copy(deep=False)
-        obj.columns = cast("pd.Index[str]", columns)
-        return obj
+        cudf_frame = obj.copy(deep=False)
+        cudf_frame.columns = cast("pd.Index[str]", columns)
+        return cast("NDFrameT", cudf_frame)
     if implementation is Implementation.PANDAS and (
         backend_version < (1,)
     ):  # pragma: no cover
@@ -320,7 +321,8 @@ def set_columns(
         kwargs["copy"] = False
     else:  # pragma: no cover
         pass
-    return obj.set_axis(columns, axis=1, **kwargs)
+    nd_frame = obj.set_axis(columns, axis=1, **kwargs)
+    return cast("NDFrameT", nd_frame)
 
 
 def rename(
@@ -331,11 +333,12 @@ def rename(
     **kwargs: Any,
 ) -> NDFrameT:
     """Wrapper around pandas' rename so that we can set `copy` based on implementation/version."""
-    if implementation is Implementation.PANDAS and (
-        backend_version >= (3,)
-    ):  # pragma: no cover
-        return obj.rename(*args, **kwargs)
-    return obj.rename(*args, **kwargs, copy=False)
+    nd_frame = (
+        obj.rename(*args, **kwargs, inplace=False)
+        if implementation.is_pandas() and (backend_version >= (3,))
+        else obj.rename(*args, **kwargs, copy=False, inplace=False)
+    )
+    return cast("NDFrameT", nd_frame)
 
 
 @functools.lru_cache(maxsize=16)
@@ -760,7 +763,7 @@ def select_columns_by_name(
     if len(column_names) == df.shape[1] and (df.columns == column_names).all():
         return df
     if (df.columns.dtype.kind == "b") or (
-        implementation is Implementation.PANDAS and backend_version < (1, 5)
+        implementation.is_pandas() and backend_version < (1, 5)
     ):
         # See https://github.com/narwhals-dev/narwhals/issues/1349#issuecomment-2470118122
         # for why we need this
@@ -770,7 +773,7 @@ def select_columns_by_name(
             raise ColumnNotFoundError.from_missing_and_available_column_names(
                 missing_columns, available_columns
             )
-        return df.loc[:, column_names]
+        return cast("DataFrameT", df.loc[:, column_names])
     try:
         return df[column_names]
     except KeyError as e:
