@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     T = TypeVar("T")
 
 
-# TODO @dangotbanned: Want to tell the type checker that `__getattr__` will satisfy specfic methods
+# TODO @dangotbanned: Want to tell the type checker that `__getattr__` will satisfy specific methods
 # - Could these have a narrower annotation?
 class PolarsDataFrame:
     clone: Any
