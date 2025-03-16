@@ -25,13 +25,11 @@ __all__ = [
     "CompliantDataFrameT",
     "CompliantFrameT",
     "CompliantLazyFrameT",
-    "CompliantSeriesT_co",
+    "CompliantSeriesT",
     "IntoCompliantExpr",
 ]
 NativeExprT_co = TypeVar("NativeExprT_co", bound="NativeExpr", covariant=True)
-CompliantSeriesT_co = TypeVar(
-    "CompliantSeriesT_co", bound="CompliantSeries", covariant=True
-)
+CompliantSeriesT = TypeVar("CompliantSeriesT", bound="CompliantSeries")
 CompliantSeriesOrNativeExprT_co = TypeVar(
     "CompliantSeriesOrNativeExprT_co",
     bound="CompliantSeries | NativeExpr",
