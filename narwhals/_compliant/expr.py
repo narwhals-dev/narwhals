@@ -393,7 +393,7 @@ class EagerExpr(
 
     @classmethod
     def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:
-        return isinstance(obj, cls)
+        return hasattr(obj, "__narwhals_expr__")
 
     def _reuse_series_inner(
         self,
