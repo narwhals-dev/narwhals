@@ -51,6 +51,7 @@ if TYPE_CHECKING:
     from typing import Mapping
 
     from typing_extensions import Self
+    from typing_extensions import TypeIs
 
     from narwhals._compliant.namespace import CompliantNamespace
     from narwhals._compliant.namespace import EagerNamespace
@@ -390,6 +391,10 @@ class EagerExpr(
     ) -> dict[str, Any]:
         return {}
 
+    @classmethod
+    def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:
+        return isinstance(obj, cls)
+
     def _reuse_series_inner(
         self,
         df: EagerDataFrameT,
@@ -402,8 +407,8 @@ class EagerExpr(
         kwargs = {
             **call_kwargs,
             **{
-                arg_name: df._maybe_evaluate_expr(arg_value)
-                for arg_name, arg_value in expressifiable_args.items()
+                name: df._evaluate_expr(value) if self._is_expr(value) else value
+                for name, value in expressifiable_args.items()
             },
         }
         method = methodcaller(

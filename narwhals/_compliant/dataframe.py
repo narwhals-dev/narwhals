@@ -27,9 +27,7 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
     from typing_extensions import TypeAlias
-    from typing_extensions import TypeIs
 
-    from narwhals._compliant.expr import EagerExpr
     from narwhals.dtypes import DType
     from narwhals.typing import SizeUnit
     from narwhals.typing import _2DArray
@@ -178,17 +176,16 @@ class EagerDataFrame(
     CompliantDataFrame[EagerSeriesT, EagerExprT_contra],
     Protocol[EagerSeriesT, EagerExprT_contra],
 ):
-    def _maybe_evaluate_expr(self, expr: EagerExprT_contra | T, /) -> EagerSeriesT | T:
-        if is_eager_expr(expr):
-            result: Sequence[EagerSeriesT] = expr(self)
-            if len(result) > 1:
-                msg = (
-                    "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) "
-                    "are not supported in this context"
-                )
-                raise ValueError(msg)
-            return result[0]
-        return expr
+    def _evaluate_expr(self, expr: EagerExprT_contra, /) -> EagerSeriesT:
+        """Evaluate `expr` and ensure it has a **single** output."""
+        result: Sequence[EagerSeriesT] = expr(self)
+        if len(result) > 1:
+            msg = (
+                "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) "
+                "are not supported in this context"
+            )
+            raise ValueError(msg)
+        return result[0]
 
     def _evaluate_into_exprs(self, *exprs: EagerExprT_contra) -> Sequence[EagerSeriesT]:
         return list(chain.from_iterable(self._evaluate_into_expr(expr) for expr in exprs))
@@ -209,11 +206,3 @@ class EagerDataFrame(
             msg = f"Safety assertion failed, expected {aliases}, got {result}"
             raise AssertionError(msg)
         return result
-
-
-# NOTE: `mypy` is requiring the gymnastics here and is very fragile
-# DON'T CHANGE THIS or `EagerDataFrame._maybe_evaluate_expr`
-def is_eager_expr(
-    obj: EagerExpr[Any, EagerSeriesT] | Any,
-) -> TypeIs[EagerExpr[Any, EagerSeriesT]]:
-    return hasattr(obj, "__narwhals_expr__")
