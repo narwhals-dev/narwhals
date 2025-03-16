@@ -277,7 +277,7 @@ def set_index(
     if implementation is Implementation.CUDF:  # pragma: no cover
         cudf_frame = obj.copy(deep=False)
         cudf_frame.index = index
-        return cast("NDFrameT", cudf_frame)
+        return cast("NDFrameT", cudf_frame)  # type: ignore[redundant-cast]
     if implementation is Implementation.PANDAS and (
         backend_version < (1,)
     ):  # pragma: no cover
@@ -291,7 +291,7 @@ def set_index(
     else:  # pragma: no cover
         pass
     nd_frame = obj.set_axis(index, axis=0, **kwargs)
-    return cast("NDFrameT", nd_frame)
+    return cast("NDFrameT", nd_frame)  # type: ignore[redundant-cast]
 
 
 def set_columns(
@@ -308,7 +308,7 @@ def set_columns(
     if implementation is Implementation.CUDF:  # pragma: no cover
         cudf_frame = obj.copy(deep=False)
         cudf_frame.columns = cast("pd.Index[str]", columns)
-        return cast("NDFrameT", cudf_frame)
+        return cast("NDFrameT", cudf_frame)  # type: ignore[redundant-cast]
     if implementation is Implementation.PANDAS and (
         backend_version < (1,)
     ):  # pragma: no cover
@@ -322,7 +322,7 @@ def set_columns(
     else:  # pragma: no cover
         pass
     nd_frame = obj.set_axis(columns, axis=1, **kwargs)
-    return cast("NDFrameT", nd_frame)
+    return cast("NDFrameT", nd_frame)  # type: ignore[redundant-cast]
 
 
 def rename(
@@ -338,7 +338,7 @@ def rename(
         if implementation.is_pandas() and (backend_version >= (3,))
         else obj.rename(*args, **kwargs, copy=False, inplace=False)
     )
-    return cast("NDFrameT", nd_frame)
+    return cast("NDFrameT", nd_frame)  # type: ignore[redundant-cast]
 
 
 @functools.lru_cache(maxsize=16)
@@ -773,7 +773,7 @@ def select_columns_by_name(
             raise ColumnNotFoundError.from_missing_and_available_column_names(
                 missing_columns, available_columns
             )
-        return cast("DataFrameT", df.loc[:, column_names])
+        return cast("DataFrameT", df.loc[:, column_names])  # type: ignore[redundant-cast]
     try:
         return df[column_names]
     except KeyError as e:
