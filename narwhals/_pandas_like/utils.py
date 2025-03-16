@@ -7,6 +7,7 @@ from contextlib import suppress
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Sized
 from typing import TypeVar
 from typing import cast
 
@@ -14,12 +15,13 @@ import pandas as pd
 
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import DuplicateError
+from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
-T = TypeVar("T")
+T = TypeVar("T", bound=Sized)
 
 if TYPE_CHECKING:
     from pandas._typing import Dtype as PandasDtype
@@ -137,6 +139,9 @@ def extract_dataframe_comparand(
     if other._broadcast:
         s = other._native_series
         return s.__class__(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
+    if (len_other := len(other)) != (len_idx := len(index)):
+        msg = f"Expected object of length {len_idx}, got: {len_other}."
+        raise ShapeError(msg)
     if other._native_series.index is not index:
         return set_index(
             other._native_series,
@@ -145,31 +150,6 @@ def extract_dataframe_comparand(
             backend_version=other._backend_version,
         )
     return other._native_series
-
-
-def create_compliant_series(
-    iterable: Any,
-    index: Any = None,
-    *,
-    implementation: Implementation,
-    backend_version: tuple[int, ...],
-    version: Version,
-) -> PandasLikeSeries:
-    from narwhals._pandas_like.series import PandasLikeSeries
-
-    if implementation in PANDAS_LIKE_IMPLEMENTATION:
-        series = implementation.to_native_namespace().Series(
-            iterable, index=index, name=""
-        )
-        return PandasLikeSeries(
-            series,
-            implementation=implementation,
-            backend_version=backend_version,
-            version=version,
-        )
-    else:  # pragma: no cover
-        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
-        raise TypeError(msg)
 
 
 def horizontal_concat(

@@ -23,6 +23,7 @@ from narwhals.exceptions import InvalidIntoExprError
 from narwhals.expr import Expr as NwExpr
 from narwhals.functions import Then as NwThen
 from narwhals.functions import When as NwWhen
+from narwhals.functions import _from_arrow_impl
 from narwhals.functions import _from_dict_impl
 from narwhals.functions import _from_numpy_impl
 from narwhals.functions import _new_series_impl
@@ -30,7 +31,6 @@ from narwhals.functions import _read_csv_impl
 from narwhals.functions import _read_parquet_impl
 from narwhals.functions import _scan_csv_impl
 from narwhals.functions import _scan_parquet_impl
-from narwhals.functions import from_arrow as nw_from_arrow
 from narwhals.functions import get_level
 from narwhals.functions import show_versions
 from narwhals.functions import when as nw_when
@@ -126,7 +126,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             ```py
             narwhals.from_dict(
                 data={"a": [1, 2, 3]},
-                native_namespace=narwhals.get_native_namespace(another_object),
+                backend=narwhals.get_native_namespace(another_object),
             )
             ```
     """
@@ -385,7 +385,7 @@ class Series(NwSeries[IntoSeriesT]):
             narwhals.new_series(
                 name=name,
                 values=values,
-                native_namespace=narwhals.get_native_namespace(another_object),
+                backend=narwhals.get_native_namespace(another_object),
             )
             ```
     """
@@ -2218,20 +2218,38 @@ def new_series(
     )
 
 
+@deprecate_native_namespace(required=True)
 def from_arrow(
-    native_frame: ArrowStreamExportable, *, native_namespace: ModuleType
+    native_frame: ArrowStreamExportable,
+    *,
+    backend: ModuleType | Implementation | str | None = None,
+    native_namespace: ModuleType | None = None,  # noqa: ARG001
 ) -> DataFrame[Any]:
     """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
     Arguments:
         native_frame: Object which implements `__arrow_c_stream__`.
+        backend: specifies which eager backend instantiate to.
+
+            `backend` can be specified in various ways:
+
+            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                `POLARS`, `MODIN` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
+
+            **Deprecated** (v1.31.0):
+                Please use `backend` instead. Note that `native_namespace` is still available
+                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+                see [perfect backwards compatibility policy](../backcompat.md/).
 
     Returns:
         A new DataFrame.
     """
+    backend = cast("ModuleType | Implementation | str", backend)
     return _stableify(  # type: ignore[no-any-return]
-        nw_from_arrow(native_frame, native_namespace=native_namespace)
+        _from_arrow_impl(native_frame, backend=backend)
     )
 
 
@@ -2359,8 +2377,13 @@ def read_csv(
     )
 
 
+@deprecate_native_namespace(required=True)
 def scan_csv(
-    source: str, *, native_namespace: ModuleType, **kwargs: Any
+    source: str,
+    *,
+    backend: ModuleType | Implementation | str | None = None,
+    native_namespace: ModuleType | None = None,  # noqa: ARG001
+    **kwargs: Any,
 ) -> LazyFrame[Any]:
     """Lazily read from a CSV file.
 
@@ -2369,16 +2392,29 @@ def scan_csv(
 
     Arguments:
         source: Path to a file.
+        backend: The eager backend for DataFrame creation.
+            `backend` can be specified in various ways:
+
+            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                `POLARS`, `MODIN` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
+
+            **Deprecated** (v1.31.0):
+                Please use `backend` instead. Note that `native_namespace` is still available
+                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+                see [perfect backwards compatibility policy](../backcompat.md/).
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
-            `nw.scan_csv('file.csv', native_namespace=pd, engine='pyarrow')`.
+            `nw.scan_csv('file.csv', backend=pd, engine='pyarrow')`.
 
     Returns:
         LazyFrame.
     """
+    backend = cast("ModuleType | Implementation | str", backend)
     return _stableify(  # type: ignore[no-any-return]
-        _scan_csv_impl(source, native_namespace=native_namespace, **kwargs)
+        _scan_csv_impl(source, backend=backend, **kwargs)
     )
 
 
@@ -2409,7 +2445,7 @@ def read_parquet(
                 see [perfect backwards compatibility policy](../backcompat.md/).
         kwargs: Extra keyword arguments which are passed to the native parquet reader.
             For example, you could use
-            `nw.read_parquet('file.parquet', native_namespace=pd, engine='pyarrow')`.
+            `nw.read_parquet('file.parquet', backend=pd, engine='pyarrow')`.
 
     Returns:
         DataFrame.
@@ -2450,7 +2486,7 @@ def scan_parquet(
                 see [perfect backwards compatibility policy](../backcompat.md/).
         kwargs: Extra keyword arguments which are passed to the native parquet reader.
             For example, you could use
-            `nw.scan_parquet('file.parquet', native_namespace=pd, engine='pyarrow')`.
+            `nw.scan_parquet('file.parquet', backend=pd, engine='pyarrow')`.
 
     Returns:
         LazyFrame.

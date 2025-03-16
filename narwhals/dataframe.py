@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant import IntoCompliantExpr
+    from narwhals._compliant.typing import EagerNamespaceAny
     from narwhals.group_by import GroupBy
     from narwhals.group_by import LazyGroupBy
     from narwhals.series import Series
@@ -413,7 +414,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             ```py
             narwhals.from_dict(
                 data={"a": [1, 2, 3]},
-                native_namespace=narwhals.get_native_namespace(another_object),
+                backend=narwhals.get_native_namespace(another_object),
             )
             ```
     """
@@ -422,7 +423,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         from narwhals.expr import Expr
         from narwhals.series import Series
 
-        plx = self.__narwhals_namespace__()
+        plx: EagerNamespaceAny = self.__narwhals_namespace__()
         if isinstance(arg, BaseFrame):
             return arg._compliant_frame
         if isinstance(arg, Series):
@@ -440,7 +441,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             )
             raise TypeError(msg)
         if is_numpy_array(arg):
-            return plx._create_compliant_series(arg)._to_expr()
+            return plx._series.from_numpy(arg, context=plx)._to_expr()
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     @property

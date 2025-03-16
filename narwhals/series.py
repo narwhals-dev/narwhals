@@ -58,7 +58,7 @@ class Series(Generic[IntoSeriesT]):
             narwhals.new_series(
                 name=name,
                 values=values,
-                native_namespace=narwhals.get_native_namespace(another_object),
+                backend=narwhals.get_native_namespace(another_object),
             )
             ```
     """
