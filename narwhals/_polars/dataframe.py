@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 from typing import overload
 
@@ -23,9 +24,13 @@ from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
     from types import ModuleType
+    from typing import Callable
     from typing import TypeVar
 
+    import pandas as pd
+    import pyarrow as pa
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
 
     from narwhals._polars.group_by import PolarsGroupBy
     from narwhals._polars.group_by import PolarsLazyGroupBy
@@ -37,35 +42,42 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
     T = TypeVar("T")
+    R = TypeVar("R")
+
+Method: TypeAlias = "Callable[..., R]"
+"""Generic alias representing all methods implemented via `__getattr__`.
+
+Where `R` is the return type.
+"""
 
 
-# TODO @dangotbanned: Want to tell the type checker that `__getattr__` will satisfy specific methods
-# - Could these have a narrower annotation?
 class PolarsDataFrame:
-    clone: Any
-    collect: Any
-    drop_nulls: Any
-    estimated_size: Any
-    filter: Any
-    gather_every: Any
-    item: Any
-    iter_rows: Any
-    is_unique: Any
-    join: Any
-    join_asof: Any
-    rename: Any
-    row: Any
-    rows: Any
-    sample: Any
-    select: Any
-    sort: Any
-    to_arrow: Any
-    to_numpy: Any
-    to_pandas: Any
-    unique: Any
-    with_columns: Any
-    write_csv: Any
-    write_parquet: Any
+    clone: Method[Self]
+    collect: Method[CompliantDataFrame[Any, Any]]
+    drop_nulls: Method[Self]
+    estimated_size: Method[int | float]
+    filter: Method[Self]
+    gather_every: Method[Self]
+    item: Method[Any]
+    iter_rows: Method[Iterator[tuple[Any, ...]] | Iterator[Mapping[str, Any]]]
+    is_unique: Method[PolarsSeries]
+    join: Method[Self]
+    join_asof: Method[Self]
+    rename: Method[Self]
+    row: Method[tuple[Any, ...]]
+    rows: Method[Sequence[tuple[Any, ...]] | Sequence[Mapping[str, Any]]]
+    sample: Method[Self]
+    select: Method[Self]
+    sort: Method[Self]
+    to_arrow: Method[pa.Table]
+    to_numpy: Method[_2DArray]
+    to_pandas: Method[pd.DataFrame]
+    unique: Method[Self]
+    with_columns: Method[Self]
+    # NOTE: `write_csv` requires an `@overload` for `str | None`
+    # Can't do that here 😟
+    write_csv: Method[Any]
+    write_parquet: Method[None]
 
     def __init__(
         self: Self,
@@ -249,7 +261,7 @@ class PolarsDataFrame:
         return self._from_native_frame(self._native_frame.select(*column_names))
 
     def aggregate(self: Self, *exprs: Any) -> Self:
-        return self.select(*exprs)  # type: ignore[no-any-return]
+        return self.select(*exprs)
 
     def get_column(self: Self, name: str) -> PolarsSeries:
         from narwhals._polars.series import PolarsSeries
