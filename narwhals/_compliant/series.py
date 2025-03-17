@@ -6,6 +6,8 @@ from typing import Iterable
 from typing import Protocol
 from typing import TypeVar
 
+from narwhals._translate import NumpyConvertible
+
 if TYPE_CHECKING:
     from typing_extensions import Self
 
@@ -14,7 +16,9 @@ if TYPE_CHECKING:
     from narwhals._compliant.namespace import CompliantNamespace  # noqa: F401
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import Into1DArray
     from narwhals.typing import NativeSeries
+    from narwhals.typing import _1DArray  # noqa: F401
     from narwhals.utils import Implementation
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -24,7 +28,7 @@ __all__ = ["CompliantSeries", "EagerSeries"]
 NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=True)
 
 
-class CompliantSeries(Protocol):
+class CompliantSeries(NumpyConvertible["_1DArray", "Into1DArray"], Protocol):
     @property
     def dtype(self) -> DType: ...
     @property
@@ -36,6 +40,8 @@ class CompliantSeries(Protocol):
     def __narwhals_namespace__(self) -> Any: ...  # CompliantNamespace[Any, Self]: ...
     def _from_native_series(self, series: Any) -> Self: ...
     def _to_expr(self) -> Any: ...  # CompliantExpr[Any, Self]: ...
+    @classmethod
+    def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self: ...
 
 
 class EagerSeries(CompliantSeries, Protocol[NativeSeriesT_co]):
@@ -60,3 +66,5 @@ class EagerSeries(CompliantSeries, Protocol[NativeSeriesT_co]):
 
     def _to_expr(self) -> EagerExpr[Any, Any]:
         return self.__narwhals_namespace__()._expr._from_series(self)  # type: ignore[no-any-return]
+
+    def cast(self, dtype: DType | type[DType]) -> Self: ...

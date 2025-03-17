@@ -55,11 +55,6 @@ class PolarsNamespace:
     def _series(self) -> type[PolarsSeries]:
         return PolarsSeries
 
-    def _create_compliant_series(self, value: Any) -> PolarsSeries:
-        return self._series(
-            pl.Series(value), backend_version=self._backend_version, version=self._version
-        )
-
     def nth(self: Self, *indices: int) -> PolarsExpr:
         if self._backend_version < (1, 0, 0):
             msg = "`nth` is only supported for Polars>=1.0.0. Please use `col` for columns selection instead."

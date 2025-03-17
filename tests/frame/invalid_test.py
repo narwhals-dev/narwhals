@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import TypeVar
 
 import pandas as pd
 import polars as pl
@@ -14,6 +15,9 @@ from tests.utils import Constructor
 
 if TYPE_CHECKING:
     from narwhals.typing import Frame
+
+
+T = TypeVar("T")
 
 
 @pytest.mark.skipif(
@@ -70,12 +74,18 @@ def test_memmap() -> None:
     pytest.importorskip("sklearn")
     # the headache this caused me...
     from sklearn.utils import check_X_y
-    from sklearn.utils._testing import create_memmap_backed_data
+
+    if TYPE_CHECKING:
+
+        def create_memmap_backed_data(data: T) -> T:
+            return data
+    else:
+        from sklearn.utils._testing import create_memmap_backed_data
 
     x_any = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     y_any = create_memmap_backed_data(x_any["b"])
 
-    x_any, y_any = create_memmap_backed_data([x_any, y_any])
+    x_any, y_any = create_memmap_backed_data((x_any, y_any))
 
     x = nw.from_native(x_any)
     x = x.with_columns(y=nw.from_native(y_any, series_only=True))

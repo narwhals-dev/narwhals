@@ -50,8 +50,6 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         *,
         backend_version: tuple[int, ...],
         version: Version,
-        # Unused, just for compatibility. We only validate when collecting.
-        validate_column_names: bool = False,
     ) -> None:
         self._native_frame: duckdb.DuckDBPyRelation = df
         self._version = version
@@ -94,7 +92,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         self: Self,
         backend: ModuleType | Implementation | str | None,
         **kwargs: Any,
-    ) -> CompliantDataFrame[Any]:
+    ) -> CompliantDataFrame[Any, Any]:
         if backend is None or backend is Implementation.PYARROW:
             import pyarrow as pa  # ignore-banned-import
 
@@ -153,9 +151,6 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         *exprs: DuckDBExpr,
     ) -> Self:
         new_columns_map = evaluate_exprs(self, *exprs)
-        if not new_columns_map:
-            # TODO(marco): return empty relation with 0 columns?
-            return self._from_native_frame(self._native_frame.limit(0))
         return self._from_native_frame(
             self._native_frame.select(*(val.alias(col) for col, val in new_columns_map)),
         )

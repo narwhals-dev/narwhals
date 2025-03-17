@@ -31,7 +31,7 @@ def maybe_evaluate_expr(
             msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
             raise ValueError(msg)
         return column_results[0]
-    return duckdb.ConstantExpression(obj)
+    return lit(obj)
 
 
 def evaluate_exprs(

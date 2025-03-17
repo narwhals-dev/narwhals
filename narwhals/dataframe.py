@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant import IntoCompliantExpr
+    from narwhals._compliant.typing import EagerNamespaceAny
     from narwhals.group_by import GroupBy
     from narwhals.group_by import LazyGroupBy
     from narwhals.series import Series
@@ -278,9 +279,6 @@ class BaseFrame(Generic[_FrameT]):
             )
         )
 
-    def clone(self: Self) -> Self:
-        return self._from_compliant_dataframe(self._compliant_frame.clone())
-
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         return self._from_compliant_dataframe(
             self._compliant_frame.gather_every(n=n, offset=offset)
@@ -416,7 +414,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             ```py
             narwhals.from_dict(
                 data={"a": [1, 2, 3]},
-                native_namespace=narwhals.get_native_namespace(another_object),
+                backend=narwhals.get_native_namespace(another_object),
             )
             ```
     """
@@ -425,7 +423,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         from narwhals.expr import Expr
         from narwhals.series import Series
 
-        plx = self.__narwhals_namespace__()
+        plx: EagerNamespaceAny = self.__narwhals_namespace__()
         if isinstance(arg, BaseFrame):
             return arg._compliant_frame
         if isinstance(arg, Series):
@@ -443,7 +441,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             )
             raise TypeError(msg)
         if is_numpy_array(arg):
-            return plx._create_compliant_series(arg)._to_expr()
+            return plx._series.from_numpy(arg, context=plx)._to_expr()
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     @property
@@ -1875,7 +1873,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         Returns:
             An identical copy of the original dataframe.
         """
-        return super().clone()
+        return self._from_compliant_dataframe(self._compliant_frame.clone())
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         r"""Take every nth row in the DataFrame and return as a new DataFrame.
@@ -2520,6 +2518,9 @@ class LazyFrame(BaseFrame[FrameT]):
             |└───────┴──────────────┴───────┘|
             └────────────────────────────────┘
         """
+        if not exprs and not named_exprs:
+            msg = "At least one expression must be passed to LazyFrame.with_columns"
+            raise ValueError(msg)
         return super().with_columns(*exprs, **named_exprs)
 
     def select(
@@ -2561,6 +2562,9 @@ class LazyFrame(BaseFrame[FrameT]):
             |└───────┴──────────┘|
             └────────────────────┘
         """
+        if not exprs and not named_exprs:
+            msg = "At least one expression must be passed to LazyFrame.select"
+            raise ValueError(msg)
         return super().select(*exprs, **named_exprs)
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
@@ -3054,14 +3058,6 @@ class LazyFrame(BaseFrame[FrameT]):
             strategy=strategy,
             suffix=suffix,
         )
-
-    def clone(self: Self) -> Self:
-        r"""Create a copy of this DataFrame.
-
-        Returns:
-            An identical copy of the original LazyFrame.
-        """
-        return super().clone()
 
     def lazy(self: Self) -> Self:
         """Restrict available API methods to lazy-only ones.

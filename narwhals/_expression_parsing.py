@@ -12,6 +12,7 @@ from typing import Callable
 from typing import Literal
 from typing import Sequence
 from typing import TypeVar
+from typing import cast
 
 from narwhals.dependencies import is_narwhals_series
 from narwhals.dependencies import is_numpy_array
@@ -24,9 +25,10 @@ if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
     from narwhals._compliant import CompliantExpr
+    from narwhals._compliant import CompliantExprT
     from narwhals._compliant import CompliantFrameT
     from narwhals._compliant import CompliantNamespace
-    from narwhals._compliant import CompliantSeriesOrNativeExprT_co
+    from narwhals._compliant.typing import EagerNamespaceAny
     from narwhals.expr import Expr
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
@@ -91,11 +93,8 @@ def combine_alias_output_names(
 
 
 def extract_compliant(
-    plx: CompliantNamespace[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
-    other: Any,
-    *,
-    str_as_lit: bool,
-) -> CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | object:
+    plx: CompliantNamespace[Any, CompliantExprT], other: Any, *, str_as_lit: bool
+) -> CompliantExprT | object:
     if is_expr(other):
         return other._to_compliant_expr(plx)
     if isinstance(other, str) and not str_as_lit:
@@ -103,13 +102,14 @@ def extract_compliant(
     if is_narwhals_series(other):
         return other._compliant_series._to_expr()
     if is_numpy_array(other):
-        return plx._create_compliant_series(other)._to_expr()  # type: ignore[attr-defined]
+        ns = cast("EagerNamespaceAny", plx)
+        return ns._series.from_numpy(other, context=ns)._to_expr()
     return other
 
 
 def evaluate_output_names_and_aliases(
     expr: CompliantExpr[Any, Any],
-    df: CompliantDataFrame[Any] | CompliantLazyFrame,
+    df: CompliantDataFrame[Any, Any] | CompliantLazyFrame,
     exclude: Sequence[str],
 ) -> tuple[Sequence[str], Sequence[str]]:
     output_names = expr._evaluate_output_names(df)

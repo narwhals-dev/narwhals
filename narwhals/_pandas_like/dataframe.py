@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 from typing import cast
 from typing import overload
@@ -16,7 +17,6 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_series_full_broadcast
 from narwhals._pandas_like.utils import check_column_names_are_unique
 from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
-from narwhals._pandas_like.utils import create_compliant_series
 from narwhals._pandas_like.utils import extract_dataframe_comparand
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
@@ -83,7 +83,9 @@ CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
 )
 
 
-class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame):
+class PandasLikeDataFrame(
+    EagerDataFrame["PandasLikeSeries", "PandasLikeExpr"], CompliantLazyFrame
+):
     # --- not in the spec ---
     def __init__(
         self: Self,
@@ -357,17 +359,15 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
         *,
         named: bool,
         buffer_size: int,
-    ) -> Iterator[list[tuple[Any, ...]]] | Iterator[list[dict[str, Any]]]:
+    ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
         # The param ``buffer_size`` is only here for compatibility with the Polars API
         # and has no effect on the output.
         if not named:
             yield from self._native_frame.itertuples(index=False, name=None)
         else:
             col_names = self._native_frame.columns
-            yield from (
-                dict(zip(col_names, row))
-                for row in self._native_frame.itertuples(index=False)
-            )  # type: ignore[misc]
+            for row in self._native_frame.itertuples(index=False):
+                yield dict(zip(col_names, row))
 
     @property
     def schema(self: Self) -> dict[str, DType]:
@@ -398,11 +398,6 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
             validate_column_names=False,
         )
 
-    def aggregate(
-        self: PandasLikeDataFrame, *exprs: PandasLikeExpr
-    ) -> PandasLikeDataFrame:
-        return self.select(*exprs)
-
     def select(self: PandasLikeDataFrame, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
         new_series = self._evaluate_into_exprs(*exprs)
         if not new_series:
@@ -419,7 +414,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
         return self._from_native_frame(df, validate_column_names=True)
 
     def drop_nulls(
-        self: PandasLikeDataFrame, subset: list[str] | None
+        self: PandasLikeDataFrame, subset: Sequence[str] | None
     ) -> PandasLikeDataFrame:
         if subset is None:
             return self._from_native_frame(
@@ -433,23 +428,21 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
         return scale_bytes(sz, unit=unit)
 
     def with_row_index(self: Self, name: str) -> Self:
-        row_index = create_compliant_series(
-            range(len(self._native_frame)),
-            index=self._native_frame.index,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
+        frame = self._native_frame
+        namespace = self.__narwhals_namespace__()
+        row_index = namespace._series._from_iterable(
+            range(len(frame)), name="", context=self, index=frame.index
         ).alias(name)
         return self._from_native_frame(
             horizontal_concat(
-                [row_index._native_series, self._native_frame],
+                [row_index.native, frame],
                 implementation=self._implementation,
                 backend_version=self._backend_version,
             )
         )
 
-    def row(self: Self, row: int) -> tuple[Any, ...]:
-        return tuple(x for x in self._native_frame.iloc[row])
+    def row(self: Self, index: int) -> tuple[Any, ...]:
+        return tuple(x for x in self._native_frame.iloc[index])
 
     def filter(
         self: PandasLikeDataFrame, predicate: PandasLikeExpr | list[bool]
@@ -497,7 +490,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
         )
         return self._from_native_frame(df, validate_column_names=False)
 
-    def rename(self: Self, mapping: dict[str, str]) -> Self:
+    def rename(self: Self, mapping: Mapping[str, str]) -> Self:
         return self._from_native_frame(
             rename(
                 self._native_frame,
@@ -507,7 +500,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
             )
         )
 
-    def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
+    def drop(self: Self, columns: Sequence[str], *, strict: bool) -> Self:
         to_drop = parse_columns_to_drop(
             compliant_frame=self, columns=columns, strict=strict
         )
@@ -538,7 +531,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
         self: Self,
         backend: Implementation | None,
         **kwargs: Any,
-    ) -> CompliantDataFrame[Any]:
+    ) -> CompliantDataFrame[Any, Any]:
         if backend is None:
             return PandasLikeDataFrame(
                 self._native_frame,
@@ -600,8 +593,8 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
         other: Self,
         *,
         how: Literal["left", "inner", "cross", "anti", "semi"],
-        left_on: list[str] | None,
-        right_on: list[str] | None,
+        left_on: Sequence[str] | None,
+        right_on: Sequence[str] | None,
         suffix: str,
     ) -> Self:
         if how == "cross":
@@ -658,7 +651,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
                 other_native = rename(
                     select_columns_by_name(
                         other._native_frame,
-                        right_on,
+                        list(right_on),
                         self._backend_version,
                         self._implementation,
                     ),
@@ -687,7 +680,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
                 rename(
                     select_columns_by_name(
                         other._native_frame,
-                        right_on,
+                        list(right_on),
                         self._backend_version,
                         self._implementation,
                     ),
@@ -738,8 +731,8 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
         *,
         left_on: str | None,
         right_on: str | None,
-        by_left: list[str] | None,
-        by_right: list[str] | None,
+        by_left: Sequence[str] | None,
+        by_right: Sequence[str] | None,
         strategy: Literal["backward", "forward", "nearest"],
         suffix: str,
     ) -> Self:
@@ -771,7 +764,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
 
     def unique(
         self: Self,
-        subset: list[str] | None,
+        subset: Sequence[str] | None,
         *,
         keep: Literal["any", "first", "last", "none"],
         maintain_order: bool | None = None,
@@ -801,7 +794,6 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
                 df=duckdb.table("pandas_df"),
                 backend_version=parse_version(duckdb),
                 version=self._version,
-                validate_column_names=False,
             )
         elif backend is Implementation.POLARS:
             import polars as pl  # ignore-banned-import
@@ -823,7 +815,6 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
                 native_dataframe=dd.from_pandas(pandas_df),
                 backend_version=parse_version(dask),
                 version=self._version,
-                validate_column_names=False,
             )
         raise AssertionError  # pragma: no cover
 
@@ -1073,8 +1064,8 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
 
     def unpivot(
         self: Self,
-        on: list[str] | None,
-        index: list[str] | None,
+        on: Sequence[str] | None,
+        index: Sequence[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 from typing import overload
 
@@ -23,9 +24,13 @@ from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
     from types import ModuleType
+    from typing import Callable
     from typing import TypeVar
 
+    import pandas as pd
+    import pyarrow as pa
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
 
     from narwhals._polars.group_by import PolarsGroupBy
     from narwhals._polars.group_by import PolarsLazyGroupBy
@@ -37,9 +42,43 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
     T = TypeVar("T")
+    R = TypeVar("R")
+
+Method: TypeAlias = "Callable[..., R]"
+"""Generic alias representing all methods implemented via `__getattr__`.
+
+Where `R` is the return type.
+"""
 
 
 class PolarsDataFrame:
+    clone: Method[Self]
+    collect: Method[CompliantDataFrame[Any, Any]]
+    drop_nulls: Method[Self]
+    estimated_size: Method[int | float]
+    filter: Method[Self]
+    gather_every: Method[Self]
+    item: Method[Any]
+    iter_rows: Method[Iterator[tuple[Any, ...]] | Iterator[Mapping[str, Any]]]
+    is_unique: Method[PolarsSeries]
+    join: Method[Self]
+    join_asof: Method[Self]
+    rename: Method[Self]
+    row: Method[tuple[Any, ...]]
+    rows: Method[Sequence[tuple[Any, ...]] | Sequence[Mapping[str, Any]]]
+    sample: Method[Self]
+    select: Method[Self]
+    sort: Method[Self]
+    to_arrow: Method[pa.Table]
+    to_numpy: Method[_2DArray]
+    to_pandas: Method[pd.DataFrame]
+    unique: Method[Self]
+    with_columns: Method[Self]
+    # NOTE: `write_csv` requires an `@overload` for `str | None`
+    # Can't do that here 😟
+    write_csv: Method[Any]
+    write_parquet: Method[None]
+
     def __init__(
         self: Self,
         df: pl.DataFrame,
@@ -222,7 +261,7 @@ class PolarsDataFrame:
         return self._from_native_frame(self._native_frame.select(*column_names))
 
     def aggregate(self: Self, *exprs: Any) -> Self:
-        return self.select(*exprs)  # type: ignore[no-any-return]
+        return self.select(*exprs)
 
     def get_column(self: Self, name: str) -> PolarsSeries:
         from narwhals._polars.series import PolarsSeries
@@ -274,7 +313,6 @@ class PolarsDataFrame:
                 df=duckdb.table("df"),
                 backend_version=parse_version(duckdb),
                 version=self._version,
-                validate_column_names=False,
             )
         elif backend is Implementation.DASK:
             import dask  # ignore-banned-import
@@ -286,7 +324,6 @@ class PolarsDataFrame:
                 native_dataframe=dd.from_pandas(self._native_frame.to_pandas()),
                 backend_version=parse_version(dask),
                 version=self._version,
-                validate_column_names=False,
             )
         raise AssertionError  # pragma: no cover
 
@@ -323,7 +360,7 @@ class PolarsDataFrame:
             return self._from_native_frame(self._native_frame.with_row_count(name))
         return self._from_native_frame(self._native_frame.with_row_index(name))
 
-    def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
+    def drop(self: Self, columns: Sequence[str], *, strict: bool) -> Self:
         to_drop = parse_columns_to_drop(
             compliant_frame=self, columns=columns, strict=strict
         )
@@ -331,8 +368,8 @@ class PolarsDataFrame:
 
     def unpivot(
         self: Self,
-        on: list[str] | None,
-        index: list[str] | None,
+        on: Sequence[str] | None,
+        index: Sequence[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:
@@ -477,7 +514,7 @@ class PolarsLazyFrame:
         self: Self,
         backend: Implementation | None,
         **kwargs: Any,
-    ) -> CompliantDataFrame[Any]:
+    ) -> CompliantDataFrame[Any, Any]:
         try:
             result = self._native_frame.collect(**kwargs)
         except Exception as e:  # noqa: BLE001
