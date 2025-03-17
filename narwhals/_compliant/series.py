@@ -19,9 +19,9 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.typing import ArrowArray
     from narwhals._compliant.dataframe import CompliantDataFrame
-    from narwhals._compliant.expr import CompliantExpr  # noqa: F401
+    from narwhals._compliant.expr import CompliantExpr
     from narwhals._compliant.expr import EagerExpr
-    from narwhals._compliant.namespace import CompliantNamespace  # noqa: F401
+    from narwhals._compliant.namespace import CompliantNamespace
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals.dtypes import DType
     from narwhals.typing import Into1DArray
@@ -47,12 +47,12 @@ class CompliantSeries(
     def __narwhals_series__(self) -> Self:
         return self
 
-    def __narwhals_namespace__(self) -> Any: ...  # CompliantNamespace[Any, Self]: ...
+    def __narwhals_namespace__(self) -> CompliantNamespace[Any, Any]: ...
     def __len__(self) -> int:
         return len(self.native)
 
     def _from_native_series(self, series: Any) -> Self: ...
-    def _to_expr(self) -> Any: ...  # CompliantExpr[Any, Self]: ...
+    def _to_expr(self) -> CompliantExpr[Any, Self]: ...
     @classmethod
     def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self: ...
     @classmethod
