@@ -49,6 +49,7 @@ if TYPE_CHECKING:
     from typing import AbstractSet as Set
 
     import pandas as pd
+    from typing_extensions import LiteralString
     from typing_extensions import ParamSpec
     from typing_extensions import Self
     from typing_extensions import TypeAlias
@@ -1529,6 +1530,24 @@ def unstable(fn: _Fn, /) -> _Fn:
     return fn
 
 
+if TYPE_CHECKING:
+    import sys
+
+    if sys.version_info >= (3, 13):
+        # NOTE: avoids `mypy`
+        #     error: Module "narwhals.utils" does not explicitly export attribute "deprecated"  [attr-defined]
+        from warnings import deprecated as deprecated  # noqa: PLC0414
+    else:
+        from typing_extensions import deprecated as deprecated  # noqa: PLC0414
+else:
+
+    def deprecated(message: str, /) -> Callable[[_Fn], _Fn]:  # noqa: ARG001
+        def wrapper(func: _Fn, /) -> _Fn:
+            return func
+
+        return wrapper
+
+
 class not_implemented:  # noqa: N801
     """Mark some functionality as unsupported.
 
@@ -1597,6 +1616,21 @@ class not_implemented:  # noqa: N801
         # Wouldn't be reachable through *regular* attribute access
         return self.__get__("raise")
 
+    @classmethod
+    def deprecated(cls, message: LiteralString, /) -> Self:
+        """Alt constructor, wraps with `@deprecated`.
+
+        Arguments:
+            message: **Static-only** deprecation message, emitted in an IDE.
+
+        Returns:
+            An exception-raising [descriptor].
+
+        [descriptor]: https://docs.python.org/3/howto/descriptor.html
+        """
+        obj = cls()
+        return deprecated(message)(obj)
+
 
 def _not_implemented_error(what: str, who: str, /) -> NotImplementedError:
     msg = (
@@ -1605,21 +1639,3 @@ def _not_implemented_error(what: str, who: str, /) -> NotImplementedError:
         "please open an issue at: https://github.com/narwhals-dev/narwhals/issues"
     )
     return NotImplementedError(msg)
-
-
-if TYPE_CHECKING:
-    import sys
-
-    if sys.version_info >= (3, 13):
-        # NOTE: avoids `mypy`
-        #     error: Module "narwhals.utils" does not explicitly export attribute "deprecated"  [attr-defined]
-        from warnings import deprecated as deprecated  # noqa: PLC0414
-    else:
-        from typing_extensions import deprecated as deprecated  # noqa: PLC0414
-else:
-
-    def deprecated(message: str, /) -> Callable[[_Fn], _Fn]:  # noqa: ARG001
-        def wrapper(func: _Fn, /) -> _Fn:
-            return func
-
-        return wrapper
