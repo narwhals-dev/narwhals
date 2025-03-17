@@ -56,4 +56,6 @@ def test_is_ordered_categorical_pyarrow() -> None:
     tp = pa.dictionary(pa.int32(), pa.string(), ordered=True)
     arr = pa.array(["a", "b"], type=tp)
     s = pa.chunked_array([arr], type=tp)
-    assert nw.is_ordered_categorical(nw.from_native(s, series_only=True))
+    assert nw.is_ordered_categorical(
+        nw.from_native(s, series_only=True)
+    )  # pragma: no cover
