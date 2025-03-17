@@ -167,9 +167,6 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             backend_version=self._backend_version, version=self._version
         )
 
-    def __len__(self: Self) -> int:
-        return len(self.native)
-
     def __eq__(self: Self, other: object) -> Self:  # type: ignore[override]
         ser, other = extract_native(self, other)
         return self._from_native_series(pc.equal(ser, other))  # type: ignore[arg-type]

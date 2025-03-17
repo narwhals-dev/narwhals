@@ -201,9 +201,6 @@ class PandasLikeSeries(EagerSeries[Any]):
             version=context._version,
         )
 
-    def __len__(self: Self) -> int:
-        return len(self.native)
-
     @property
     def name(self: Self) -> str:
         return self._name

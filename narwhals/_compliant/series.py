@@ -28,7 +28,9 @@ __all__ = ["CompliantSeries", "EagerSeries"]
 
 
 class CompliantSeries(
-    NumpyConvertible["_1DArray", "Into1DArray"], FromIterable, Protocol[NativeSeriesT_co]
+    NumpyConvertible["_1DArray", "Into1DArray"],
+    FromIterable,
+    Protocol[NativeSeriesT_co],
 ):
     @property
     def dtype(self) -> DType: ...
@@ -39,8 +41,10 @@ class CompliantSeries(
     def __narwhals_series__(self) -> Self:
         return self
 
-    def alias(self, name: str) -> Self: ...
     def __narwhals_namespace__(self) -> Any: ...  # CompliantNamespace[Any, Self]: ...
+    def __len__(self) -> int:
+        return len(self.native)
+
     def _from_native_series(self, series: Any) -> Self: ...
     def _to_expr(self) -> Any: ...  # CompliantExpr[Any, Self]: ...
     @classmethod
@@ -60,6 +64,8 @@ class CompliantSeries(
         - Different to `.from_*` classmethods, which are usually called from outside the class
         """
         return self._from_native_series(series)
+
+    def alias(self, name: str) -> Self: ...
 
 
 class EagerSeries(CompliantSeries[NativeSeriesT_co], Protocol[NativeSeriesT_co]):
