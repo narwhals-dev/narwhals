@@ -732,7 +732,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)
 
-    def to_polars(self: Self) -> pl.DataFrame:
+    def to_polars(self: Self) -> pl.Series:
         import polars as pl  # ignore-banned-import
 
         if self._implementation is Implementation.PANDAS:
