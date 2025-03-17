@@ -1420,7 +1420,7 @@ class Series(Generic[IntoSeriesT]):
             >>> nw.from_native(s_native, series_only=True).to_numpy()
             array([1, 2, 3]...)
         """
-        return self.__array__()
+        return self._compliant_series.to_numpy(None, copy=None)
 
     def to_pandas(self: Self) -> pd.Series[Any]:
         """Convert to pandas Series.
