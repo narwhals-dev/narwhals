@@ -18,6 +18,7 @@ from narwhals._polars.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import is_sequence_but_not_str
+from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import validate_backend_version
@@ -423,6 +424,27 @@ class PolarsDataFrame:
 
 
 class PolarsLazyFrame:
+    drop_nulls: Method[Self]
+    explode: Method[Self]
+    filter: Method[Self]
+    gather_every: Method[Self]
+    head: Method[Self]
+    join: Method[Self]
+    join_asof: Method[Self]
+    lazy: Method[Self]
+    rename: Method[Self]
+    select: Method[Self]
+    sort: Method[Self]
+    tail: Method[Self]
+    unique: Method[Self]
+    with_columns: Method[Self]
+    to_arrow = not_implemented.deprecated(
+        "only if version is v1, keep around for backcompat"
+    )
+    to_pandas = not_implemented.deprecated(
+        "only if version is v1, keep around for backcompat"
+    )
+
     def __init__(
         self: Self,
         df: pl.LazyFrame,
@@ -568,15 +590,15 @@ class PolarsLazyFrame:
             return self._from_native_frame(self._native_frame.with_row_count(name))
         return self._from_native_frame(self._native_frame.with_row_index(name))
 
-    def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
+    def drop(self: Self, columns: Sequence[str], *, strict: bool) -> Self:
         if self._backend_version < (1, 0, 0):
             return self._from_native_frame(self._native_frame.drop(columns))
         return self._from_native_frame(self._native_frame.drop(columns, strict=strict))
 
     def unpivot(
         self: Self,
-        on: list[str] | None,
-        index: list[str] | None,
+        on: Sequence[str] | None,
+        index: Sequence[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:
@@ -599,4 +621,4 @@ class PolarsLazyFrame:
         return self._from_native_frame(self._native_frame.select(*column_names))
 
     def aggregate(self: Self, *exprs: Any) -> Self:
-        return self.select(*exprs)  # type: ignore[no-any-return]
+        return self.select(*exprs)
