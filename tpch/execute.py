@@ -9,8 +9,8 @@ import duckdb
 import pandas as pd
 import polars as pl
 import pyarrow as pa
+import sqlframe
 from polars.testing import assert_frame_equal
-from sqlframe.duckdb import DuckDBDataFrameReader
 from sqlframe.duckdb import DuckDBSession
 
 import narwhals as nw
@@ -35,7 +35,7 @@ BACKEND_NAMESPACE_KWARGS_MAP = {
     "pyarrow": (pa, {}),
     "duckdb": (duckdb, {}),
     "dask": (dd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
-    "sqlframe": (None, {}),
+    "sqlframe": (sqlframe, {"session": DuckDBSession()}),
 }
 
 DUCKDB_SKIPS = ["q15"]
@@ -104,10 +104,6 @@ def execute_query(query_id: str) -> None:
             query_module.query(
                 *(
                     nw.scan_parquet(str(path), backend=native_namespace, **kwargs)
-                    if native_namespace
-                    else nw.from_native(
-                        DuckDBDataFrameReader(DuckDBSession()).parquet(str(path))
-                    )
                     for path in data_paths
                 )
             )

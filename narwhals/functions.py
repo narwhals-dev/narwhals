@@ -1044,15 +1044,29 @@ def scan_parquet(
     For the libraries that do not support lazy dataframes, the function reads
     a parquet file eagerly and then converts the resulting dataframe to a lazyframe.
 
+    !!! note
+        Spark like backends require a session object to be passed in `kwargs`.
+
+        For instance:
+
+        ```py
+        import narwhals as nw
+        from sqlframe.duckdb import DuckDBSession
+
+        nw.scan_parquet(source, backend="sqlframe", session=DuckDBSession())
+        ```
+
     Arguments:
         source: Path to a file.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways:
 
             - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+                `POLARS`, `MODIN`, `CUDF`, `PYSPARK` or `SQLFRAME`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"cudf"`,
+                `"pyspark"` or `"sqlframe"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `cudf`,
+                `pyspark.sql` or `sqlframe`.
         native_namespace: The native library to use for DataFrame creation.
 
             **Deprecated** (v1.31.0):
@@ -1068,6 +1082,7 @@ def scan_parquet(
 
     Examples:
         >>> import dask.dataframe as dd
+        >>> from sqlframe.duckdb import DuckDBSession
         >>> import narwhals as nw
         >>>
         >>> nw.scan_parquet("file.parquet", backend="dask").collect()  # doctest:+SKIP
@@ -1077,6 +1092,17 @@ def scan_parquet(
         |        a   b     |
         |     0  1   4     |
         |     1  2   5     |
+        └──────────────────┘
+        >>> nw.scan_parquet("file.parquet", backend="sqlframe", session=DuckDBSession()).collect()  # doctest:+SKIP
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |  pyarrow.Table   |
+        |  a: int64        |
+        |  b: int64        |
+        |  ----            |
+        |  a: [[1,2]]      |
+        |  b: [[4,5]]      |
         └──────────────────┘
     """
     backend = cast("ModuleType | Implementation | str", backend)
@@ -1103,6 +1129,13 @@ def _scan_parquet_impl(
         import pyarrow.parquet as pq  # ignore-banned-import
 
         native_frame = pq.read_table(source, **kwargs)
+    elif implementation is Implementation.SQLFRAME:
+        session = kwargs.pop("session")
+        native_frame = session.read.format("parquet").load(source)
+    elif implementation is Implementation.PYSPARK:
+        session = kwargs.pop("session")
+        native_frame = session.read.format("parquet").options(**kwargs).load(source)
+
     else:  # pragma: no cover
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should

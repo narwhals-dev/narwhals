@@ -2470,15 +2470,29 @@ def scan_parquet(
     For the libraries that do not support lazy dataframes, the function reads
     a parquet file eagerly and then converts the resulting dataframe to a lazyframe.
 
+    !!! note
+        Spark like backends require a session object to be passed in `kwargs`.
+
+        For instance:
+
+        ```py
+        import narwhals as nw
+        from sqlframe.duckdb import DuckDBSession
+
+        nw.scan_parquet(source, backend="sqlframe", session=DuckDBSession())
+        ```
+
     Arguments:
         source: Path to a file.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways:
 
             - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+                `POLARS`, `MODIN`, `CUDF`, `PYSPARK` or `SQLFRAME`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"cudf"`,
+                `"pyspark"` or `"sqlframe"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `cudf`,
+                `pyspark.sql` or `sqlframe`.
         native_namespace: The native library to use for DataFrame creation.
 
             **Deprecated** (v1.31.0):
