@@ -8,6 +8,7 @@ from typing import Protocol
 from narwhals._compliant.typing import NativeSeriesT_co
 from narwhals._translate import FromIterable
 from narwhals._translate import NumpyConvertible
+from narwhals.utils import unstable
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -48,6 +49,17 @@ class CompliantSeries(
     def from_iterable(
         cls, data: Iterable[Any], /, *, context: _FullContext, name: str = ""
     ) -> Self: ...
+    @unstable
+    def _with_native(self, series: Any, /) -> Self:
+        """Equivalent to `._from_native_series`, eventually replacing.
+
+        - But can be the same method name for all protocols.
+        - New `Compliant*`,
+          - preserving all backend stuff
+          - replacing only `.native`
+        - Different to `.from_*` classmethods, which are usually called from outside the class
+        """
+        return self._from_native_series(series)
 
 
 class EagerSeries(CompliantSeries[NativeSeriesT_co], Protocol[NativeSeriesT_co]):
