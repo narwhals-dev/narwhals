@@ -57,6 +57,7 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantExpr
     from narwhals._compliant import CompliantFrameT
     from narwhals._compliant import CompliantSeriesOrNativeExprT_co
+    from narwhals._compliant import NativeSeriesT_co
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -128,7 +129,7 @@ CompliantExprT_co = TypeVar(
     "CompliantExprT_co", bound="CompliantExpr[Any, Any]", covariant=True
 )
 CompliantSeriesT_co = TypeVar(
-    "CompliantSeriesT_co", bound="CompliantSeries", covariant=True
+    "CompliantSeriesT_co", bound="CompliantSeries[Any]", covariant=True
 )
 
 
@@ -1481,7 +1482,9 @@ def is_compliant_lazyframe(obj: Any) -> TypeIs[CompliantLazyFrame]:
     return _hasattr_static(obj, "__narwhals_lazyframe__")
 
 
-def is_compliant_series(obj: Any) -> TypeIs[CompliantSeries]:
+def is_compliant_series(
+    obj: CompliantSeries[NativeSeriesT_co] | Any,
+) -> TypeIs[CompliantSeries[NativeSeriesT_co]]:
     return _hasattr_static(obj, "__narwhals_series__")
 
 

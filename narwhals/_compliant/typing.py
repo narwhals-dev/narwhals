@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals._compliant.series import CompliantSeries
     from narwhals._compliant.series import EagerSeries
+    from narwhals.typing import NativeSeries
 
 __all__ = [
     "AliasName",
@@ -27,12 +28,14 @@ __all__ = [
     "CompliantLazyFrameT",
     "CompliantSeriesT",
     "IntoCompliantExpr",
+    "NativeSeriesT_co",
 ]
 NativeExprT_co = TypeVar("NativeExprT_co", bound="NativeExpr", covariant=True)
-CompliantSeriesT = TypeVar("CompliantSeriesT", bound="CompliantSeries")
+NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=True)
+CompliantSeriesT = TypeVar("CompliantSeriesT", bound="CompliantSeries[Any]")
 CompliantSeriesOrNativeExprT_co = TypeVar(
     "CompliantSeriesOrNativeExprT_co",
-    bound="CompliantSeries | NativeExpr",
+    bound="CompliantSeries[Any] | NativeExpr",
     covariant=True,
 )
 CompliantFrameT = TypeVar(

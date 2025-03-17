@@ -430,8 +430,8 @@ class PandasLikeDataFrame(
     def with_row_index(self: Self, name: str) -> Self:
         frame = self._native_frame
         namespace = self.__narwhals_namespace__()
-        row_index = namespace._series._from_iterable(
-            range(len(frame)), name="", context=self, index=frame.index
+        row_index = namespace._series.from_iterable(
+            range(len(frame)), context=self, index=frame.index
         ).alias(name)
         return self._from_native_frame(
             horizontal_concat(

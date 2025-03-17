@@ -139,12 +139,8 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         )
 
     @classmethod
-    def _from_iterable(
-        cls: type[Self],
-        data: Iterable[Any],
-        name: str,
-        *,
-        context: _FullContext,
+    def from_iterable(
+        cls, data: Iterable[Any], *, context: _FullContext, name: str = ""
     ) -> Self:
         return cls(
             chunked_array([data]),
@@ -160,8 +156,8 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
 
     @classmethod
     def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
-        return cls._from_iterable(
-            data if is_numpy_array_1d(data) else [data], name="", context=context
+        return cls.from_iterable(
+            data if is_numpy_array_1d(data) else [data], context=context
         )
 
     def __narwhals_namespace__(self: Self) -> ArrowNamespace:
@@ -569,7 +565,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         import numpy as np  # ignore-banned-import
 
         res = np.flatnonzero(self.native)
-        return self._from_iterable(res, name=self.name, context=self)
+        return self.from_iterable(res, name=self.name, context=self)
 
     def item(self: Self, index: int | None = None) -> Any:
         if index is None:

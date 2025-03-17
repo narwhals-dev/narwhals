@@ -173,12 +173,12 @@ class PandasLikeSeries(EagerSeries[Any]):
         )
 
     @classmethod
-    def _from_iterable(
-        cls: type[Self],
+    def from_iterable(
+        cls,
         data: Iterable[Any],
-        name: str,
         *,
         context: _FullContext,
+        name: str = "",
         index: Any = None,  # NOTE: Originally a liskov substitution principle violation
     ) -> Self:
         return cls(

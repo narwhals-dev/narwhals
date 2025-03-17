@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
 from typing import Protocol
 
 if TYPE_CHECKING:
@@ -59,3 +60,13 @@ class NumpyConvertible(
     Protocol[ToNumpyT_co, FromNumpyDT_contra],
 ):
     def to_numpy(self, dtype: Any, *, copy: bool | None) -> ToNumpyT_co: ...
+
+
+FromIterableT_contra = TypeVar("FromIterableT_contra", contravariant=True, default=Any)
+
+
+class FromIterable(Protocol[FromIterableT_contra]):
+    @classmethod
+    def from_iterable(
+        cls, data: Iterable[FromIterableT_contra], *args: Any, **kwds: Any
+    ) -> Self: ...
