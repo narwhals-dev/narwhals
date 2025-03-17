@@ -54,5 +54,6 @@ def test_is_definitely_not_ordered_categorical(
 @pytest.mark.xfail(reason="https://github.com/apache/arrow/issues/41017")
 def test_is_ordered_categorical_pyarrow() -> None:
     tp = pa.dictionary(pa.int32(), pa.string(), ordered=True)
-    s = pa.chunked_array([pa.array(["a", "b"], type=tp)])  # type: ignore[list-item]
+    arr = pa.array(["a", "b"], type=tp)
+    s = pa.chunked_array([arr], type=tp)
     assert nw.is_ordered_categorical(nw.from_native(s, series_only=True))
