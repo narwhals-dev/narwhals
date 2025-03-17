@@ -1480,7 +1480,9 @@ def is_compliant_dataframe(
     return _hasattr_static(obj, "__narwhals_dataframe__")
 
 
-def is_compliant_lazyframe(obj: Any) -> TypeIs[CompliantLazyFrame]:
+def is_compliant_lazyframe(
+    obj: CompliantLazyFrame[CompliantExprT_co] | Any,
+) -> TypeIs[CompliantLazyFrame[CompliantExprT_co]]:
     return _hasattr_static(obj, "__narwhals_lazyframe__")
 
 

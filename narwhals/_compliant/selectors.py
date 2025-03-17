@@ -65,9 +65,9 @@ __all__ = [
 SeriesOrExprT = TypeVar("SeriesOrExprT", bound="CompliantSeries | NativeExpr")
 SeriesT = TypeVar("SeriesT", bound="CompliantSeries")
 ExprT = TypeVar("ExprT", bound="NativeExpr")
-FrameT = TypeVar("FrameT", bound="CompliantDataFrame[Any, Any] | CompliantLazyFrame")
+FrameT = TypeVar("FrameT", bound="CompliantDataFrame[Any, Any] | CompliantLazyFrame[Any]")
 DataFrameT = TypeVar("DataFrameT", bound="CompliantDataFrame[Any, Any]")
-LazyFrameT = TypeVar("LazyFrameT", bound="CompliantLazyFrame")
+LazyFrameT = TypeVar("LazyFrameT", bound="CompliantLazyFrame[Any]")
 SelectorOrExpr: TypeAlias = (
     "CompliantSelector[FrameT, SeriesOrExprT] | CompliantExpr[FrameT, SeriesOrExprT]"
 )
@@ -309,7 +309,7 @@ class CompliantSelector(
 
 
 def _eval_lhs_rhs(
-    df: CompliantDataFrame[Any, Any] | CompliantLazyFrame,
+    df: CompliantDataFrame[Any, Any] | CompliantLazyFrame[Any],
     lhs: CompliantExpr[Any, Any],
     rhs: CompliantExpr[Any, Any],
 ) -> tuple[Sequence[str], Sequence[str]]:

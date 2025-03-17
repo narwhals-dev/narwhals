@@ -84,7 +84,8 @@ CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
 
 
 class PandasLikeDataFrame(
-    EagerDataFrame["PandasLikeSeries", "PandasLikeExpr"], CompliantLazyFrame
+    EagerDataFrame["PandasLikeSeries", "PandasLikeExpr"],
+    CompliantLazyFrame["PandasLikeExpr"],
 ):
     # --- not in the spec ---
     def __init__(
@@ -779,7 +780,9 @@ class PandasLikeDataFrame(
         )
 
     # --- lazy-only ---
-    def lazy(self: Self, *, backend: Implementation | None = None) -> CompliantLazyFrame:
+    def lazy(
+        self: Self, *, backend: Implementation | None = None
+    ) -> CompliantLazyFrame[Any]:
         from narwhals.utils import parse_version
 
         pandas_df = self.to_pandas()

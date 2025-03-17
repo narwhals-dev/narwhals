@@ -73,7 +73,9 @@ from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 
 
-class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr"], CompliantLazyFrame):
+class ArrowDataFrame(
+    EagerDataFrame["ArrowSeries", "ArrowExpr"], CompliantLazyFrame["ArrowExpr"]
+):
     # --- not in the spec ---
     def __init__(
         self: Self,
@@ -575,7 +577,9 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr"], CompliantLazyFr
         else:
             return self._from_native_frame(df.slice(abs(n)), validate_column_names=False)
 
-    def lazy(self: Self, *, backend: Implementation | None = None) -> CompliantLazyFrame:
+    def lazy(
+        self: Self, *, backend: Implementation | None = None
+    ) -> CompliantLazyFrame[Any]:
         from narwhals.utils import parse_version
 
         if backend is None:

@@ -47,7 +47,7 @@ Incomplete: TypeAlias = Any  # pragma: no cover
 """Marker for working code that fails type checking."""
 
 
-class SparkLikeLazyFrame(CompliantLazyFrame):
+class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr"]):
     def __init__(
         self: Self,
         native_dataframe: SQLFrameDataFrame,
