@@ -387,9 +387,6 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def name(self: Self) -> str:
         return self._name
 
-    def __narwhals_series__(self: Self) -> Self:
-        return self
-
     @overload
     def __getitem__(self: Self, idx: int) -> Any: ...
 

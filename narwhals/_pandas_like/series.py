@@ -135,9 +135,6 @@ class PandasLikeSeries(EagerSeries[Any]):
         msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
-    def __narwhals_series__(self: Self) -> Self:
-        return self
-
     def __narwhals_namespace__(self) -> PandasLikeNamespace:
         from narwhals._pandas_like.namespace import PandasLikeNamespace
 
