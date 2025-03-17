@@ -216,7 +216,7 @@ class CompliantLazyFrame(Protocol):
         strategy: Literal["backward", "forward", "nearest"],
         suffix: str,
     ) -> Self: ...
-    def lazy(self, *, backend: Implementation | None = None) -> Self:
+    def lazy(self, *, backend: Implementation | None = None) -> Self | Incomplete:
         # The `backend`` argument has no effect but we keep it here for
         # backwards compatibility because in `narwhals.stable.v1`
         # function `.from_native()` will return a DataFrame for DuckDB.
