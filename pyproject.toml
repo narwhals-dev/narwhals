@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.30.0"
+version = "1.31.0"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
@@ -49,11 +49,14 @@ tests = [
 typing = [
   "hypothesis",
   "pytest",
-  "pandas-stubs",
+  "pandas-stubs==2.2.3.250308",
   "typing_extensions",
   "mypy~=1.15.0",
   "pyright",
-  "pyarrow-stubs",
+  "pyarrow-stubs==17.18",
+  "sqlframe==3.24.1",
+  "polars==1.25.2",
+  "uv",
 ]
 dev = [
   "pre-commit",
