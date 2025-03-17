@@ -323,7 +323,9 @@ def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
         request.applymarker(pytest.mark.xfail)
 
-    if any(backend in str(constructor) for backend in ("dask", "pyspark", "modin")):
+    if any(
+        backend in str(constructor) for backend in ("dask", "pyspark", "modin", "cudf")
+    ):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [time(12, 0, 0), time(12, 0, 5)]}
