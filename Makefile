@@ -20,4 +20,5 @@ help:  ## Display this help screen
 
 .PHONY: typing
 typing: ## Run typing checks
+	$(VENV_BIN)/uv pip install -e .[typing]
 	$(VENV_BIN)/mypy
