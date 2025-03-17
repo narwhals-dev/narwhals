@@ -349,6 +349,8 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr"], CompliantLazyFr
         sz = self._native_frame.nbytes
         return scale_bytes(sz, unit)
 
+    explode = not_implemented()
+
     @property
     def columns(self: Self) -> list[str]:
         return self._native_frame.schema.names

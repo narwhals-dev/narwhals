@@ -56,6 +56,7 @@ class PolarsDataFrame:
     collect: Method[CompliantDataFrame[Any, Any]]
     drop_nulls: Method[Self]
     estimated_size: Method[int | float]
+    explode: Method[Self]
     filter: Method[Self]
     gather_every: Method[Self]
     item: Method[Any]
