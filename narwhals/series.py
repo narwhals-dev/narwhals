@@ -23,6 +23,7 @@ from narwhals.typing import IntoSeriesT
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import generate_repr
 from narwhals.utils import parse_version
+from narwhals.utils import supports_arrow_c_stream
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -32,12 +33,17 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._arrow.typing import ArrowArray
+    from narwhals._compliant import CompliantSeries
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
     from narwhals.typing import _1DArray
     from narwhals.utils import Implementation
 
 
+# BUG: `IntoSeriesT` incorrectly includes `nw.Series`
+# - e.g: `nw.Series[nw.Series[nw.Series[nw.Series[...]]]]`
+# - But that isn't allowed at runtime, because this method doesn't exist
+#   - `nw.Series.__narwhals_series__`
 class Series(Generic[IntoSeriesT]):
     """Narwhals Series, backed by a native series.
 
@@ -79,7 +85,9 @@ class Series(Generic[IntoSeriesT]):
         if hasattr(series, "__narwhals_series__"):
             # TODO @dangotbanned: Repeat (#2119) for `CompliantSeries` to support typing
             # morally: `CompliantSeries`
-            self._compliant_series = series.__narwhals_series__()
+            self._compliant_series: CompliantSeries[IntoSeriesT] = (
+                series.__narwhals_series__()
+            )
         else:  # pragma: no cover
             msg = f"Expected Polars Series or an object which implements `__narwhals_series__`, got: {type(series)}."
             raise AssertionError(msg)
@@ -178,8 +186,8 @@ class Series(Generic[IntoSeriesT]):
         See [PyCapsule Interface](https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html)
         for more.
         """
-        native_series = self._compliant_series._native_series
-        if hasattr(native_series, "__arrow_c_stream__"):
+        native_series = self._compliant_series.native
+        if supports_arrow_c_stream(native_series):
             return native_series.__arrow_c_stream__(requested_schema=requested_schema)
         try:
             import pyarrow as pa  # ignore-banned-import

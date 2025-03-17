@@ -61,6 +61,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
+    from narwhals.functions import ArrowStreamExportable
     from narwhals.series import Series
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
@@ -1500,6 +1501,10 @@ def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
 
 def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
     return hasattr(obj, "__dataframe__")
+
+
+def supports_arrow_c_stream(obj: Any) -> TypeIs[ArrowStreamExportable]:
+    return _hasattr_static(obj, "__arrow_c_stream__")
 
 
 def is_tracks_depth(obj: Implementation, /) -> TypeIs[_TracksDepth]:  # pragma: no cover

@@ -3,7 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Iterator
 from typing import Literal
+from typing import Mapping
 from typing import Protocol
 from typing import Sequence
 
@@ -38,6 +40,10 @@ class CompliantSeries(
     FromIterable,
     Protocol[NativeSeriesT_co],
 ):
+    _implementation: Implementation
+    _backend_version: tuple[int, ...]
+    _version: Version
+
     @property
     def dtype(self) -> DType: ...
     @property
@@ -48,6 +54,8 @@ class CompliantSeries(
         return self
 
     def __narwhals_namespace__(self) -> CompliantNamespace[Any, Any]: ...
+    def __getitem__(self, item: Any) -> Any: ...
+    def __iter__(self) -> Iterator[Any]: ...
     def __len__(self) -> int:
         return len(self.native)
 
@@ -59,6 +67,7 @@ class CompliantSeries(
     def from_iterable(
         cls, data: Iterable[Any], /, *, context: _FullContext, name: str = ""
     ) -> Self: ...
+    def _change_version(self, version: Version) -> Self: ...
     @unstable
     def _with_native(self, series: Any, /) -> Self:
         """Equivalent to `._from_native_series`, eventually replacing.
@@ -91,6 +100,8 @@ class CompliantSeries(
     def __rfloordiv__(self, other: Any) -> Self: ...
     def __rmod__(self, other: Any) -> Self: ...
     def __rmul__(self, other: Any) -> Self: ...
+    def __ror__(self, other: Any) -> Self: ...
+    def __rpow__(self, other: Any) -> Self: ...
     def __rsub__(self, other: Any) -> Self: ...
     def __rtruediv__(self, other: Any) -> Self: ...
     def __sub__(self, other: Any) -> Self: ...
@@ -134,6 +145,14 @@ class CompliantSeries(
     def filter(self, predicate: Any) -> Self: ...
     # Is this deprecated for series?
     def gather_every(self, n: int, offset: int) -> Self: ...
+    @unstable
+    def hist(
+        self: Self,
+        bins: list[float | int] | None,
+        *,
+        bin_count: int | None,
+        include_breakpoint: bool,
+    ) -> CompliantDataFrame[Self, Any]: ...
     def head(self, n: int) -> Self: ...
     def is_between(
         self,
@@ -170,7 +189,11 @@ class CompliantSeries(
         descending: bool,
     ) -> Self: ...
     def replace_strict(
-        self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+        self,
+        old: Sequence[Any] | Mapping[Any, Any],
+        new: Sequence[Any],
+        *,
+        return_dtype: DType | type[DType] | None,
     ) -> Self: ...
     @unstable
     def rolling_mean(
