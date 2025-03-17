@@ -145,6 +145,8 @@ def native_to_narwhals_dtype(
         )
     if dtype == pl.Decimal:
         return dtypes.Decimal()
+    if dtype == pl.Time:
+        return dtypes.Time()
     return dtypes.Unknown()
 
 
@@ -188,6 +190,8 @@ def narwhals_to_native_dtype(
         raise NotImplementedError(msg)
     if dtype == dtypes.Date:
         return pl.Date()
+    if dtype == dtypes.Time:
+        return pl.Time()
     if dtype == dtypes.Decimal:
         msg = "Casting to Decimal is not supported yet."
         raise NotImplementedError(msg)
