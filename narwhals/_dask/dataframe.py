@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 
 import dask.dataframe as dd
@@ -18,6 +19,7 @@ from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
 from narwhals.utils import generate_temporary_column_name
+from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import validate_backend_version
@@ -168,7 +170,7 @@ class DaskLazyFrame(CompliantLazyFrame):
         )
         return self._from_native_frame(df)
 
-    def drop_nulls(self: Self, subset: list[str] | None) -> Self:
+    def drop_nulls(self: Self, subset: Sequence[str] | None) -> Self:
         if subset is None:
             return self._from_native_frame(self._native_frame.dropna())
         plx = self.__narwhals_namespace__()
@@ -189,7 +191,7 @@ class DaskLazyFrame(CompliantLazyFrame):
     def collect_schema(self: Self) -> dict[str, DType]:
         return self.schema
 
-    def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
+    def drop(self: Self, columns: Sequence[str], *, strict: bool) -> Self:
         to_drop = parse_columns_to_drop(
             compliant_frame=self, columns=columns, strict=strict
         )
@@ -205,7 +207,7 @@ class DaskLazyFrame(CompliantLazyFrame):
             )
         )
 
-    def rename(self: Self, mapping: dict[str, str]) -> Self:
+    def rename(self: Self, mapping: Mapping[str, str]) -> Self:
         return self._from_native_frame(self._native_frame.rename(columns=mapping))
 
     def head(self: Self, n: int) -> Self:
@@ -215,9 +217,9 @@ class DaskLazyFrame(CompliantLazyFrame):
 
     def unique(
         self: Self,
-        subset: list[str] | None,
+        subset: Sequence[str] | None,
         *,
-        keep: Literal["any", "none"] = "any",
+        keep: Literal["any", "first", "last", "none"] = "any",
     ) -> Self:
         check_column_exists(self.columns, subset)
         native_frame = self._native_frame
@@ -254,8 +256,8 @@ class DaskLazyFrame(CompliantLazyFrame):
         other: Self,
         *,
         how: Literal["left", "inner", "cross", "anti", "semi"],
-        left_on: list[str] | None,
-        right_on: list[str] | None,
+        left_on: Sequence[str] | None,
+        right_on: Sequence[str] | None,
         suffix: str,
     ) -> Self:
         if how == "cross":
@@ -286,7 +288,7 @@ class DaskLazyFrame(CompliantLazyFrame):
             other_native = (
                 select_columns_by_name(
                     other._native_frame,
-                    right_on,
+                    list(right_on),
                     self._backend_version,
                     self._implementation,
                 )
@@ -313,7 +315,7 @@ class DaskLazyFrame(CompliantLazyFrame):
             other_native = (
                 select_columns_by_name(
                     other._native_frame,
-                    right_on,
+                    list(right_on),
                     self._backend_version,
                     self._implementation,
                 )
@@ -364,8 +366,8 @@ class DaskLazyFrame(CompliantLazyFrame):
         *,
         left_on: str | None,
         right_on: str | None,
-        by_left: list[str] | None,
-        by_right: list[str] | None,
+        by_left: Sequence[str] | None,
+        by_right: Sequence[str] | None,
         strategy: Literal["backward", "forward", "nearest"],
         suffix: str,
     ) -> Self:
@@ -412,8 +414,8 @@ class DaskLazyFrame(CompliantLazyFrame):
 
     def unpivot(
         self: Self,
-        on: list[str] | None,
-        index: list[str] | None,
+        on: Sequence[str] | None,
+        index: Sequence[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:
@@ -425,3 +427,11 @@ class DaskLazyFrame(CompliantLazyFrame):
                 value_name=value_name,
             )
         )
+
+    explode = not_implemented()
+    to_arrow = not_implemented.deprecated(
+        "only if version is v1, keep around for backcompat"
+    )
+    to_pandas = not_implemented.deprecated(
+        "only if version is v1, keep around for backcompat"
+    )

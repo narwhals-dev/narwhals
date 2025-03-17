@@ -1146,7 +1146,9 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
     return False  # pragma: no cover
 
 
-def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: no cover
+def generate_unique_token(
+    n_bytes: int, columns: Sequence[str]
+) -> str:  # pragma: no cover
     msg = (
         "Use `generate_temporary_column_name` instead. `generate_unique_token` is "
         "deprecated and it will be removed in future versions"
@@ -1155,7 +1157,7 @@ def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: n
     return generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
 
 
-def generate_temporary_column_name(n_bytes: int, columns: list[str]) -> str:
+def generate_temporary_column_name(n_bytes: int, columns: Sequence[str]) -> str:
     """Generates a unique column name that is not present in the given list of columns.
 
     It relies on [python secrets token_hex](https://docs.python.org/3/library/secrets.html#secrets.token_hex)
