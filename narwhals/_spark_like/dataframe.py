@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 
 from narwhals._spark_like.utils import evaluate_exprs
@@ -19,6 +20,7 @@ from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
 from narwhals.utils import find_stacklevel
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import validate_backend_version
@@ -259,7 +261,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
     def collect_schema(self: Self) -> dict[str, DType]:
         return self.schema
 
-    def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
+    def drop(self: Self, columns: Sequence[str], *, strict: bool) -> Self:
         columns_to_drop = parse_columns_to_drop(
             compliant_frame=self, columns=columns, strict=strict
         )
@@ -298,10 +300,11 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         sort_cols = [sort_f(col) for col, sort_f in zip(by, sort_funcs)]
         return self._from_native_frame(self._native_frame.sort(*sort_cols))
 
-    def drop_nulls(self: Self, subset: list[str] | None) -> Self:
+    def drop_nulls(self: Self, subset: Sequence[str] | None) -> Self:
+        subset = list(subset) if subset else None
         return self._from_native_frame(self._native_frame.dropna(subset=subset))
 
-    def rename(self: Self, mapping: dict[str, str]) -> Self:
+    def rename(self: Self, mapping: Mapping[str, str]) -> Self:
         rename_mapping = {
             colname: mapping.get(colname, colname) for colname in self.columns
         }
@@ -313,22 +316,23 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
 
     def unique(
         self: Self,
-        subset: list[str] | None,
+        subset: Sequence[str] | None,
         *,
-        keep: Literal["any", "none"],
+        keep: Literal["any", "first", "last", "none"],
     ) -> Self:
         if keep != "any":
             msg = "`LazyFrame.unique` with PySpark backend only supports `keep='any'`."
             raise ValueError(msg)
         check_column_exists(self.columns, subset)
+        subset = list(subset) if subset else None
         return self._from_native_frame(self._native_frame.dropDuplicates(subset=subset))
 
     def join(
         self: Self,
         other: Self,
         how: Literal["inner", "left", "cross", "semi", "anti"],
-        left_on: list[str] | None,
-        right_on: list[str] | None,
+        left_on: Sequence[str] | None,
+        right_on: Sequence[str] | None,
         suffix: str,
     ) -> Self:
         self_native = self._native_frame
@@ -364,11 +368,12 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                     if colname not in (right_on or [])
                 ]
             )
+        on = list(left_on) if left_on else None
         return self._from_native_frame(
-            self_native.join(other_native, on=left_on, how=how).select(col_order)
+            self_native.join(other_native, on=on, how=how).select(col_order)
         )
 
-    def explode(self: Self, columns: list[str]) -> Self:
+    def explode(self: Self, columns: Sequence[str]) -> Self:
         dtypes = import_dtypes_module(self._version)
 
         schema = self.collect_schema()
@@ -438,8 +443,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
 
     def unpivot(
         self: Self,
-        on: list[str] | None,
-        index: list[str] | None,
+        on: Sequence[str] | None,
+        index: Sequence[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:
@@ -467,3 +472,18 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         if index is None:
             unpivoted_native_frame = unpivoted_native_frame.drop(*ids)
         return self._from_native_frame(unpivoted_native_frame)
+
+    gather_every = not_implemented.deprecated(
+        "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
+    )
+    join_asof = not_implemented()
+    tail = not_implemented.deprecated(
+        "`LazyFrame.tail` is deprecated and will be removed in a future version."
+    )
+    to_arrow = not_implemented.deprecated(
+        "only if version is v1, keep around for backcompat"
+    )
+    to_pandas = not_implemented.deprecated(
+        "only if version is v1, keep around for backcompat"
+    )
+    with_row_index = not_implemented()
