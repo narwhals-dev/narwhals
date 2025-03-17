@@ -5,6 +5,7 @@ from typing import Any
 from typing import Iterable
 from typing import Iterator
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 from typing import cast
 from typing import overload
@@ -630,7 +631,11 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._from_native_series(self._native_series.shift(n))
 
     def replace_strict(
-        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+        self: Self,
+        old: Sequence[Any] | Mapping[Any, Any],
+        new: Sequence[Any],
+        *,
+        return_dtype: DType | type[DType] | None,
     ) -> PandasLikeSeries:
         tmp_name = f"{self.name}_tmp"
         dtype_backend = get_dtype_backend(

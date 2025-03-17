@@ -15,6 +15,8 @@ from narwhals._translate import NumpyConvertible
 from narwhals.utils import unstable
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     import pandas as pd
     import polars as pl
     from typing_extensions import Self
@@ -27,7 +29,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals.dtypes import DType
     from narwhals.typing import Into1DArray
-    from narwhals.typing import _1DArray  # noqa: F401
+    from narwhals.typing import _1DArray
     from narwhals.utils import Implementation
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -54,6 +56,9 @@ class CompliantSeries(
         return self
 
     def __narwhals_namespace__(self) -> CompliantNamespace[Any, Any]: ...
+    def __native_namespace__(self) -> ModuleType: ...
+    def __array__(self, dtype: Any, *, copy: bool | None) -> _1DArray: ...
+    def __contains__(self, other: Any) -> bool: ...
     def __getitem__(self, item: Any) -> Any: ...
     def __iter__(self) -> Iterator[Any]: ...
     def __len__(self) -> int:

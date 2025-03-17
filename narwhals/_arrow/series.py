@@ -5,6 +5,7 @@ from typing import Any
 from typing import Iterable
 from typing import Iterator
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 from typing import cast
 from typing import overload
@@ -744,7 +745,11 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         return self._from_native_series(self.native.unique())
 
     def replace_strict(
-        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+        self: Self,
+        old: Sequence[Any] | Mapping[Any, Any],
+        new: Sequence[Any],
+        *,
+        return_dtype: DType | type[DType] | None,
     ) -> Self:
         # https://stackoverflow.com/a/79111029/4451315
         idxs = pc.index_in(self.native, pa.array(old))
