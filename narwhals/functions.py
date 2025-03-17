@@ -1093,7 +1093,9 @@ def scan_parquet(
         |     0  1   4     |
         |     1  2   5     |
         └──────────────────┘
-        >>> nw.scan_parquet("file.parquet", backend="sqlframe", session=DuckDBSession()).collect()  # doctest:+SKIP
+        >>> nw.scan_parquet(
+        ...     "file.parquet", backend="sqlframe", session=DuckDBSession()
+        ... ).collect()  # doctest:+SKIP
         ┌──────────────────┐
         |Narwhals DataFrame|
         |------------------|
