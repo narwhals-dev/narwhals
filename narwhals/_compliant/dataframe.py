@@ -17,6 +17,8 @@ from narwhals._compliant.typing import CompliantSeriesT
 from narwhals._compliant.typing import EagerExprT_contra
 from narwhals._compliant.typing import EagerSeriesT
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals.utils import Version
+from narwhals.utils import deprecated
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -70,6 +72,7 @@ class CompliantDataFrame(Sized, Protocol[CompliantSeriesT, CompliantExprT_contra
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self: ...
     def drop_nulls(self, subset: Sequence[str] | None) -> Self: ...
     def estimated_size(self, unit: SizeUnit) -> int | float: ...
+    def explode(self: Self, columns: Sequence[str]) -> Self: ...
     def filter(self, predicate: CompliantExprT_contra | Incomplete) -> Self: ...
     def gather_every(self, n: int, offset: int) -> Self: ...
     def get_column(self, name: str) -> CompliantSeriesT: ...
@@ -156,20 +159,99 @@ class CompliantDataFrame(Sized, Protocol[CompliantSeriesT, CompliantExprT_contra
 
 
 class CompliantLazyFrame(Protocol):
+    _implementation: Implementation
+    _backend_version: tuple[int, ...]
+    _version: Version
+
     def __narwhals_lazyframe__(self) -> Self: ...
     def __narwhals_namespace__(self) -> Any: ...
-    def simple_select(
-        self, *column_names: str
-    ) -> Self: ...  # `select` where all args are column names.
-    def aggregate(self, *exprs: Any) -> Self:  # pragma: no cover
-        ...  # `select` where all args are aggregations or literals
-        # (so, no broadcasting is necessary).
+
+    def simple_select(self, *column_names: str) -> Self:
+        """`select` where all args are column names."""
+        ...
+
+    def aggregate(self, *exprs: Incomplete) -> Self:
+        """`select` where all args are aggregations or literals.
+
+        (so, no broadcasting is necessary).
+        """
+        ...
 
     @property
     def columns(self) -> Sequence[str]: ...
     @property
     def schema(self) -> Mapping[str, DType]: ...
     def _iter_columns(self) -> Iterator[Any]: ...
+    def collect(
+        self, backend: Implementation | None, **kwargs: Any
+    ) -> CompliantDataFrame[Any, Any]: ...
+    def collect_schema(self) -> Mapping[str, DType]: ...
+    def drop(self, columns: Sequence[str], *, strict: bool) -> Self: ...
+    def drop_nulls(self, subset: Sequence[str] | None) -> Self: ...
+    def explode(self: Self, columns: Sequence[str]) -> Self: ...
+    def filter(self, predicate: Incomplete) -> Self: ...
+    @deprecated(
+        "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
+    )
+    def gather_every(self, n: int, offset: int) -> Self: ...
+    def group_by(self, *keys: str, drop_null_keys: bool) -> Incomplete: ...
+    def head(self, n: int) -> Self: ...
+    def join(
+        self: Self,
+        other: Self,
+        *,
+        how: Literal["left", "inner", "cross", "anti", "semi"],
+        left_on: Sequence[str] | None,
+        right_on: Sequence[str] | None,
+        suffix: str,
+    ) -> Self: ...
+    def join_asof(
+        self: Self,
+        other: Self,
+        *,
+        left_on: str | None,
+        right_on: str | None,
+        by_left: Sequence[str] | None,
+        by_right: Sequence[str] | None,
+        strategy: Literal["backward", "forward", "nearest"],
+        suffix: str,
+    ) -> Self: ...
+    def lazy(self: Self, *, backend: Implementation | None = None) -> Self:
+        # The `backend`` argument has no effect but we keep it here for
+        # backwards compatibility because in `narwhals.stable.v1`
+        # function `.from_native()` will return a DataFrame for DuckDB.
+
+        if backend is not None:  # pragma: no cover
+            msg = f"`backend` argument is not supported for {self._implementation!r}"
+            raise ValueError(msg)
+        return self
+
+    def rename(self, mapping: Mapping[str, str]) -> Self: ...
+    def select(self, *exprs: Incomplete) -> Self: ...
+    def sort(
+        self, *by: str, descending: bool | Sequence[bool], nulls_last: bool
+    ) -> Self: ...
+    @deprecated("`LazyFrame.tail` is deprecated and will be removed in a future version.")
+    def tail(self, n: int) -> Self: ...
+    @deprecated("only if version is v1, keep around for backcompat")
+    def to_arrow(self) -> pa.Table: ...
+    @deprecated("only if version is v1, keep around for backcompat")
+    def to_pandas(self) -> pd.DataFrame: ...
+    def unique(
+        self,
+        subset: Sequence[str] | None,
+        *,
+        keep: Literal["any", "first", "last", "none"],
+    ) -> Self: ...
+    def unpivot(
+        self,
+        on: Sequence[str] | None,
+        index: Sequence[str] | None,
+        variable_name: str,
+        value_name: str,
+    ) -> Self: ...
+    def with_columns(self, *exprs: Incomplete) -> Self: ...
+    def with_row_index(self, name: str) -> Self: ...
 
 
 class EagerDataFrame(
