@@ -54,7 +54,9 @@ core = [
 
 [dependency-groups]
 dev = [
-  "pre-commit"
+  "pre-commit",
+  {include-group = "tests"},
+  {include-group = "typing"},
 ]
 tests = [
   "covdefaults",
