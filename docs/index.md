@@ -5,11 +5,12 @@
 [![PyPI version](https://badge.fury.io/py/narwhals.svg)](https://badge.fury.io/py/narwhals)
 [![Downloads](https://static.pepy.tech/badge/narwhals/month)](https://pepy.tech/project/narwhals)
 [![Trusted publishing](https://img.shields.io/badge/Trusted_publishing-Provides_attestations-bright_green)](https://peps.python.org/pep-0740/)
+[![PYPI - Types](https://img.shields.io/pypi/types/narwhals)](https://pypi.org/project/narwhals)
 
 Extremely lightweight and extensible compatibility layer between dataframe libraries!
 
-- **Full API support**: cuDF, Modin, pandas, Polars, PyArrow
-- **Lazy-only support**: Dask. Work in progress: DuckDB, Ibis, PySpark.
+- **Full API support**: cuDF, Modin, pandas, Polars, PyArrow.
+- **Lazy-only support**: Dask, SQLFrame, PySpark. Work in progress: DuckDB, Ibis.
 
 Seamlessly support all, without depending on any!
 
