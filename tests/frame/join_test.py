@@ -109,7 +109,14 @@ def test_full_join_duplicate(constructor: Constructor) -> None:
     df_right = nw_main.from_native(constructor(df2)).lazy()
 
     # polars throws `NarwhalsError`, everything else should raise `DuplicateError`
-    with pytest.raises((DuplicateError, nw.exceptions.NarwhalsError)):
+    exceptions = [DuplicateError, nw.exceptions.NarwhalsError]
+
+    if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
+        from pyspark.errors import AnalysisException
+
+        exceptions.append(AnalysisException)
+
+    with pytest.raises(tuple(exceptions)):
         df_left.join(df_right, on="foo", how="full").collect()
 
 

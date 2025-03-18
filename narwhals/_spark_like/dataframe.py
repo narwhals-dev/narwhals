@@ -378,7 +378,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         elif how == "full":
             col_order.extend(rename_mapping.values())
 
-        right_on_remapped = [rename_mapping.get(c, c) for c in right_on_]
+        right_on_remapped = [rename_mapping[c] for c in right_on_]
         on_ = (
             reduce(
                 and_,
@@ -387,10 +387,12 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
                     for left_key, right_key in zip(left_on_, right_on_remapped)
                 ),
             )
-            if left_on_
+            if how == "full"
             else None
+            if how == "cross"
+            else left_on_
         )
-        how_native = "full outer" if how == "full" else how
+        how_native = "full_outer" if how == "full" else how
 
         return self._from_native_frame(
             self_native.join(other_native, on=on_, how=how_native).select(col_order)
