@@ -29,7 +29,7 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
-from narwhals.utils import _remap_join_keys
+from narwhals.utils import _remap_full_join_keys
 from narwhals.utils import check_column_exists
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
@@ -723,7 +723,7 @@ class PandasLikeDataFrame(
             assert left_on is not None  # noqa: S101
             assert right_on is not None  # noqa: S101
 
-            right_on_mapper = _remap_join_keys(left_on, right_on, suffix)
+            right_on_mapper = _remap_full_join_keys(left_on, right_on, suffix)
 
             other_native = other._native_frame
             other_native = other_native.rename(columns=right_on_mapper)

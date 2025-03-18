@@ -16,7 +16,7 @@ from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
-from narwhals.utils import _remap_join_keys
+from narwhals.utils import _remap_full_join_keys
 from narwhals.utils import check_column_exists
 from narwhals.utils import check_column_names_are_unique
 from narwhals.utils import generate_temporary_column_name
@@ -358,7 +358,7 @@ class DaskLazyFrame(CompliantLazyFrame):
             assert left_on is not None  # noqa: S101
             assert right_on is not None  # noqa: S101
 
-            right_on_mapper = _remap_join_keys(left_on, right_on, suffix)
+            right_on_mapper = _remap_full_join_keys(left_on, right_on, suffix)
 
             other_native = other._native_frame
             other_native = other_native.rename(columns=right_on_mapper)

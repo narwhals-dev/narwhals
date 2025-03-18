@@ -1504,7 +1504,7 @@ def is_tracks_depth(obj: Implementation, /) -> TypeIs[_TracksDepth]:  # pragma: 
     return obj.is_pandas_like() or obj in {Implementation.PYARROW, Implementation.DASK}
 
 
-def _remap_join_keys(
+def _remap_full_join_keys(
     left_on: Sequence[str], right_on: Sequence[str], suffix: str
 ) -> dict[str, str]:
     """Remap join keys to avoid collisions.

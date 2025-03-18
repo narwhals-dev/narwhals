@@ -96,7 +96,7 @@ def test_full_join(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    not_implemented = ("modin[pyarrow]", "sqlframe")
+    not_implemented = ("modin[pyarrow]",)
     if any(lib for lib in not_implemented if lib in str(constructor)):
         request.applymarker(pytest.mark.xfail)
 
