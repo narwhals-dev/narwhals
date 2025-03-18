@@ -52,9 +52,6 @@ core = [
   "sqlframe"
 ]
 
-[tool.uv]
-default-groups = ["dev", "tests", "typing"]
-
 [dependency-groups]
 dev = [
   "pre-commit"
