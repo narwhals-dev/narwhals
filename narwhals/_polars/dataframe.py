@@ -61,7 +61,6 @@ class PolarsDataFrame:
     item: Method[Any]
     iter_rows: Method[Iterator[tuple[Any, ...]] | Iterator[Mapping[str, Any]]]
     is_unique: Method[PolarsSeries]
-    join: Method[Self]
     join_asof: Method[Self]
     rename: Method[Self]
     row: Method[tuple[Any, ...]]
@@ -420,6 +419,29 @@ class PolarsDataFrame:
     def to_polars(self: Self) -> pl.DataFrame:
         return self._native_frame
 
+    def join(
+        self: Self,
+        other: Self,
+        *,
+        how: Literal["left", "inner", "full", "cross", "anti", "semi"],
+        left_on: list[str] | None,
+        right_on: list[str] | None,
+        suffix: str,
+    ) -> Self:
+        how_native = (
+            "outer" if (self._backend_version < (1, 0, 0) and how == "full") else how
+        )
+
+        return self._from_native_frame(
+            self._native_frame.join(
+                other=other._native_frame,
+                how=how_native,
+                left_on=left_on,
+                right_on=right_on,
+                suffix=suffix,
+            )
+        )
+
 
 class PolarsLazyFrame:
     def __init__(
@@ -599,3 +621,26 @@ class PolarsLazyFrame:
 
     def aggregate(self: Self, *exprs: Any) -> Self:
         return self.select(*exprs)  # type: ignore[no-any-return]
+
+    def join(
+        self: Self,
+        other: Self,
+        *,
+        how: Literal["left", "inner", "full", "cross", "anti", "semi"],
+        left_on: list[str] | None,
+        right_on: list[str] | None,
+        suffix: str,
+    ) -> Self:
+        how_native = (
+            "outer" if (self._backend_version < (1, 0, 0) and how == "full") else how
+        )
+
+        return self._from_native_frame(
+            self._native_frame.join(
+                other=other._native_frame,
+                how=how_native,
+                left_on=left_on,
+                right_on=right_on,
+                suffix=suffix,
+            )
+        )
