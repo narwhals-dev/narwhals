@@ -29,9 +29,11 @@ def test_lazy_to_default(constructor_eager: ConstructorEager) -> None:
     expected_cls: Any
     if "polars" in str(constructor_eager):
         import polars as pl
+
         expected_cls = pl.LazyFrame
     elif "pandas" in str(constructor_eager):
         import pandas as pd
+
         expected_cls = pd.DataFrame
     elif "modin" in str(constructor_eager):
         mpd = get_modin()
@@ -41,6 +43,7 @@ def test_lazy_to_default(constructor_eager: ConstructorEager) -> None:
         expected_cls = cudf.DataFrame
     else:  # pyarrow
         import pyarrow as pa
+
         expected_cls = pa.Table
 
     assert isinstance(result.to_native(), expected_cls)
