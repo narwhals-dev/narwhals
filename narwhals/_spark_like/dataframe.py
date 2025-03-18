@@ -328,7 +328,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
     def join(
         self: Self,
         other: Self,
-        how: Literal["inner", "left", "cross", "semi", "anti", "full"],
+        how: Literal["inner", "left", "full", "cross", "semi", "anti"],
         left_on: list[str] | None,
         right_on: list[str] | None,
         suffix: str,
@@ -379,12 +379,16 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
             col_order.extend(rename_mapping.values())
 
         right_on_remapped = [rename_mapping.get(c, c) for c in right_on_]
-        on_ = reduce(
-            and_,
-            (
-                getattr(self_native, left_key) == getattr(other_native, right_key)
-                for left_key, right_key in zip(left_on_, right_on_remapped)
-            ),
+        on_ = (
+            reduce(
+                and_,
+                (
+                    getattr(self_native, left_key) == getattr(other_native, right_key)
+                    for left_key, right_key in zip(left_on_, right_on_remapped)
+                ),
+            )
+            if left_on_
+            else None
         )
         how_native = "full outer" if how == "full" else how
 

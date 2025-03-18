@@ -251,7 +251,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         self: Self,
         other: Self,
         *,
-        how: Literal["left", "inner", "full", "cross", "anti", "semi"],
+        how: Literal["inner", "left", "full", "cross", "semi", "anti"],
         left_on: list[str] | None,
         right_on: list[str] | None,
         suffix: str,

@@ -85,7 +85,7 @@ class CompliantDataFrame(Sized, Protocol[CompliantSeriesT, CompliantExprT_contra
         self: Self,
         other: Self,
         *,
-        how: Literal["left", "inner", "cross", "anti", "semi"],
+        how: Literal["inner", "left", "full", "cross", "semi", "anti"],
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
         suffix: str,
