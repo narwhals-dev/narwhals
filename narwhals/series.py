@@ -22,6 +22,7 @@ from narwhals.translate import to_native
 from narwhals.typing import IntoSeriesT
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import generate_repr
+from narwhals.utils import is_compliant_series
 from narwhals.utils import parse_version
 from narwhals.utils import supports_arrow_c_stream
 
@@ -78,7 +79,7 @@ class Series(Generic[IntoSeriesT]):
         level: Literal["full", "lazy", "interchange"],
     ) -> None:
         self._level: Literal["full", "lazy", "interchange"] = level
-        if hasattr(series, "__narwhals_series__"):
+        if is_compliant_series(series):
             self._compliant_series: CompliantSeries[IntoSeriesT] = (
                 series.__narwhals_series__()
             )
