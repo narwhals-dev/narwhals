@@ -432,7 +432,6 @@ class PolarsLazyFrame:
     head: Method[Self]
     join: Method[Self]
     join_asof: Method[Self]
-    lazy: Method[Self]
     rename: Method[Self]
     select: Method[Self]
     sort: Method[Self]

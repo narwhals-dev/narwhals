@@ -227,16 +227,6 @@ class CompliantLazyFrame(
         strategy: Literal["backward", "forward", "nearest"],
         suffix: str,
     ) -> Self: ...
-    def lazy(self, *, backend: Implementation | None) -> Self | Incomplete:
-        # The `backend`` argument has no effect but we keep it here for
-        # backwards compatibility because in `narwhals.stable.v1`
-        # function `.from_native()` will return a DataFrame for DuckDB.
-
-        if backend is not None:  # pragma: no cover
-            msg = f"`backend` argument is not supported for {self._implementation!r}"
-            raise ValueError(msg)
-        return self
-
     def rename(self, mapping: Mapping[str, str]) -> Self: ...
     def select(self, *exprs: CompliantExprT_contra) -> Self: ...
     def sort(

@@ -164,6 +164,16 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
         selection = (col for col in self.columns if col not in columns_to_drop)
         return self._from_native_frame(self._native_frame.select(*selection))
 
+    def lazy(self: Self, *, backend: Implementation | None = None) -> Self:
+        # The `backend`` argument has no effect but we keep it here for
+        # backwards compatibility because in `narwhals.stable.v1`
+        # function `.from_native()` will return a DataFrame for DuckDB.
+
+        if backend is not None:  # pragma: no cover
+            msg = "`backend` argument is not supported for DuckDB"
+            raise ValueError(msg)
+        return self
+
     def with_columns(self: Self, *exprs: DuckDBExpr) -> Self:
         new_columns_map = dict(evaluate_exprs(self, *exprs))
         result = [
