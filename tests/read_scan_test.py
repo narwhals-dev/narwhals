@@ -188,6 +188,8 @@ def test_scan_parquet(
 def test_scan_fail_spark_like_without_session(
     tmpdir: pytest.TempdirFactory, spark_like_backend: str
 ) -> None:
+    _ = pytest.importorskip(spark_like_backend)
+
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)
