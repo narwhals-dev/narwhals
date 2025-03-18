@@ -429,9 +429,3 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr"]):
         )
 
     explode = not_implemented()
-    to_arrow = not_implemented.deprecated(
-        "only if version is v1, keep around for backcompat"
-    )
-    to_pandas = not_implemented.deprecated(
-        "only if version is v1, keep around for backcompat"
-    )

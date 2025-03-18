@@ -18,7 +18,6 @@ from narwhals._polars.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import is_sequence_but_not_str
-from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import validate_backend_version
@@ -440,12 +439,6 @@ class PolarsLazyFrame:
     tail: Method[Self]
     unique: Method[Self]
     with_columns: Method[Self]
-    to_arrow = not_implemented.deprecated(
-        "only if version is v1, keep around for backcompat"
-    )
-    to_pandas = not_implemented.deprecated(
-        "only if version is v1, keep around for backcompat"
-    )
 
     def __init__(
         self: Self,

@@ -480,10 +480,4 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr"]):
     tail = not_implemented.deprecated(
         "`LazyFrame.tail` is deprecated and will be removed in a future version."
     )
-    to_arrow = not_implemented.deprecated(
-        "only if version is v1, keep around for backcompat"
-    )
-    to_pandas = not_implemented.deprecated(
-        "only if version is v1, keep around for backcompat"
-    )
     with_row_index = not_implemented()
