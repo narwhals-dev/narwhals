@@ -182,6 +182,8 @@ class CompliantLazyFrame(
         """
         ...
 
+    def _change_version(self, version: Version) -> Self: ...
+
     @property
     def native(self) -> NativeFrameT_co:
         return self._native_frame  # type: ignore[no-any-return]
