@@ -114,7 +114,6 @@ If you want to run PySpark-related tests, you'll need to have Java installed. Re
 You should also install pre-commit:
 
 ```terminal
-uv pip install pre-commit
 pre-commit install
 ```
 
