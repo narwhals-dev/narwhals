@@ -58,6 +58,10 @@ dev = [
   {include-group = "tests"},
   {include-group = "typing"},
 ]
+dev-docs = [
+  {include-group = "dev"},
+  {include-group = "docs"}
+]
 tests = [
   "covdefaults",
   "pytest",
