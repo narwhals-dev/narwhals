@@ -557,6 +557,21 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_window_function(func)
 
+    def fill_null(
+        self,
+        value: Any | None,
+        strategy: Literal["forward", "backward"] | None,
+        limit: int | None,
+    ) -> Self:
+        if strategy is not None:
+            msg = "Support for strategies is not yet implemented."
+            raise NotImplementedError(msg)
+
+        def _fill_null(_input: Column, value: Column) -> Column:
+            return self._F.ifnull(_input, value)
+
+        return self._from_call(_fill_null, "fill_null", value=value)
+
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         if center:
             half = (window_size - 1) // 2
@@ -613,5 +628,4 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     cum_min = not_implemented()
     cum_max = not_implemented()
     cum_prod = not_implemented()
-    fill_null = not_implemented()
     quantile = not_implemented()

@@ -6,8 +6,6 @@ from typing import cast
 
 import numpy as np
 import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -47,6 +45,7 @@ def test_slice_rows_with_step(
 
 
 def test_slice_rows_with_step_pyarrow() -> None:
+    pa = pytest.importorskip("pyarrow")
     with pytest.raises(
         NotImplementedError,
         match="Slicing with step is not supported on PyArrow tables",
@@ -55,6 +54,7 @@ def test_slice_rows_with_step_pyarrow() -> None:
 
 
 def test_slice_lazy_fails() -> None:
+    pl = pytest.importorskip("polars")
     with pytest.raises(TypeError, match="Slicing is not supported on LazyFrame"):
         _ = nw.from_native(pl.LazyFrame(data))[1:]
 

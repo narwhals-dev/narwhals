@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime
+from datetime import time
 from datetime import timedelta
 from datetime import timezone
-from typing import Any
 
 import pandas as pd
-import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -311,8 +310,25 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
     assert result.schema == {"a": dtype}
 
 
-@pytest.mark.parametrize("dtype", [pl.String, pl.String()])
-def test_raise_if_polars_dtype(constructor: Constructor, dtype: Any) -> None:
-    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
-    with pytest.raises(TypeError, match="Expected Narwhals dtype, got:"):
-        df.select(nw.col("a").cast(dtype))
+def test_raise_if_polars_dtype(constructor: Constructor) -> None:
+    pl = pytest.importorskip("polars")
+
+    for dtype in [pl.String, pl.String()]:
+        df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+        with pytest.raises(TypeError, match="Expected Narwhals dtype, got:"):
+            df.select(nw.col("a").cast(dtype))
+
+
+def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
+        request.applymarker(pytest.mark.xfail)
+
+    if any(
+        backend in str(constructor) for backend in ("dask", "pyspark", "modin", "cudf")
+    ):
+        request.applymarker(pytest.mark.xfail)
+
+    data = {"a": [time(12, 0, 0), time(12, 0, 5)]}
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.col("a").cast(nw.Time()))
+    assert result.collect_schema() == {"a": nw.Time()}

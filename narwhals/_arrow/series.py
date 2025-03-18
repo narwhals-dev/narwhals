@@ -674,7 +674,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
 
         if value is not None:
             _, value = extract_native(self, value)
-            series = pc.fill_null(self.native, value)  # type: ignore[attr-defined]
+            series = pc.fill_null(self.native, value)
         elif limit is None:
             fill_func = (
                 pc.fill_null_forward if strategy == "forward" else pc.fill_null_backward
@@ -1100,19 +1100,11 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
                 range_ = pc.subtract(upper, lower)
                 width = pc.divide(pc.cast(range_, pa_float), lit(float(bin_count)))
 
-            bin_proportions = pc.divide(
-                pc.subtract(cast("pc.NumericOrTemporalArray", self.native), lower),
-                width,
-            )
-            bin_indices: ArrowChunkedArray = cast(
-                "ArrowChunkedArray", pc.floor(bin_proportions)
-            )
-
-            # NOTE: stubs leave unannotated
-            if_else: Incomplete = pc.if_else
+            bin_proportions = pc.divide(pc.subtract(self.native, lower), width)
+            bin_indices = pc.floor(bin_proportions)
 
             # shift bins so they are right-closed
-            bin_indices = if_else(
+            bin_indices = pc.if_else(
                 pc.and_(
                     pc.equal(bin_indices, bin_proportions),
                     pc.greater(bin_indices, 0),
