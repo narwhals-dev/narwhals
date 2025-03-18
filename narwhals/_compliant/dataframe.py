@@ -141,7 +141,7 @@ class CompliantDataFrame(Sized, Protocol[CompliantSeriesT, CompliantExprT_contra
         subset: Sequence[str] | None,
         *,
         keep: Literal["any", "first", "last", "none"],
-        maintain_order: bool | None,
+        maintain_order: bool | None = None,
     ) -> Self: ...
     def unpivot(
         self,
@@ -247,6 +247,7 @@ class CompliantLazyFrame(
         subset: Sequence[str] | None,
         *,
         keep: Literal["any", "first", "last", "none"],
+        maintain_order: bool | None = None,
     ) -> Self: ...
     def unpivot(
         self,

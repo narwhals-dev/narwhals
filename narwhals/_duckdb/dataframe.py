@@ -338,7 +338,13 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             )
         }
 
-    def unique(self: Self, subset: Sequence[str] | None, keep: str) -> Self:
+    def unique(
+        self: Self,
+        subset: Sequence[str] | None,
+        *,
+        keep: Literal["any", "first", "last", "none"],
+        maintain_order: bool | None = None,
+    ) -> Self:
         if subset is not None:
             rel = self._native_frame
             # Sanitise input
