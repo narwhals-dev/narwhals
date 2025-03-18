@@ -195,6 +195,9 @@ class ExprMetadata:
         msg = f"Cannot subclass {cls.__name__!r}"
         raise TypeError(msg)
 
+    def __repr__(self) -> str:
+        return f"ExprMetadata(kind: {self._kind}, n_open_windows: {self._n_open_windows})"
+
     @property
     def kind(self) -> ExprKind:
         return self._kind
@@ -320,9 +323,7 @@ def apply_n_ary_operation(
     broadcast = any(kind.preserves_length() for kind in kinds)
     compliant_exprs = (
         compliant_expr.broadcast(kind)
-        if broadcast
-        and (kind is ExprKind.LITERAL or kind is ExprKind.AGGREGATION)
-        and is_compliant_expr(compliant_expr)
+        if broadcast and is_compliant_expr(compliant_expr) and is_scalar_like(kind)
         else compliant_expr
         for compliant_expr, kind in zip(compliant_exprs, kinds)
     )
