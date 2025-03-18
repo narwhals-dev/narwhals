@@ -1131,12 +1131,16 @@ def _scan_parquet_impl(
         import pyarrow.parquet as pq  # ignore-banned-import
 
         native_frame = pq.read_table(source, **kwargs)
-    elif implementation is Implementation.SQLFRAME:
-        session = kwargs.pop("session")
-        native_frame = session.read.format("parquet").load(source)
-    elif implementation is Implementation.PYSPARK:
-        session = kwargs.pop("session")
-        native_frame = session.read.format("parquet").options(**kwargs).load(source)
+    elif implementation.is_spark_like():
+        if (session := kwargs.pop("session", None)) is None:
+            msg = "Spark like backends require a session object to be passed in `kwargs`."
+            raise ValueError(msg)
+
+        native_frame = (
+            session.read.format("parquet").load(source)
+            if implementation is Implementation.SQLFRAME
+            else session.read.format("parquet").options(**kwargs).load(source)
+        )
 
     else:  # pragma: no cover
         try:

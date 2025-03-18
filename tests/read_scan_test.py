@@ -184,6 +184,21 @@ def test_scan_parquet(
     assert isinstance(result, nw.LazyFrame)
 
 
+@pytest.mark.parametrize("spark_like_backend", ["pyspark", "sqlframe"])
+def test_scan_fail_spark_like_without_session(
+    tmpdir: pytest.TempdirFactory, spark_like_backend: str
+) -> None:
+    df_pl = pl.DataFrame(data)
+    filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
+    df_pl.write_parquet(filepath)
+
+    with pytest.raises(
+        ValueError,
+        match="Spark like backends require a session object to be passed in `kwargs`.",
+    ):
+        nw.scan_parquet("file.parquet", backend=spark_like_backend)
+
+
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_scan_parquet_v1(
     tmpdir: pytest.TempdirFactory,
