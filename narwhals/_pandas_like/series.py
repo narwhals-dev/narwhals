@@ -177,7 +177,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         *,
         context: _FullContext,
         name: str = "",
-        index: Any = None,  # NOTE: Originally a liskov substitution principle violation
+        index: Any = None,
     ) -> Self:
         return cls(
             native_series_from_iterable(

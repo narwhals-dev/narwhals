@@ -40,10 +40,6 @@ if TYPE_CHECKING:
     from narwhals.utils import Implementation
 
 
-# BUG: `IntoSeriesT` incorrectly includes `nw.Series`
-# - e.g: `nw.Series[nw.Series[nw.Series[nw.Series[...]]]]`
-# - But that isn't allowed at runtime, because this method doesn't exist
-#   - `nw.Series.__narwhals_series__`
 class Series(Generic[IntoSeriesT]):
     """Narwhals Series, backed by a native series.
 
@@ -83,8 +79,6 @@ class Series(Generic[IntoSeriesT]):
     ) -> None:
         self._level: Literal["full", "lazy", "interchange"] = level
         if hasattr(series, "__narwhals_series__"):
-            # TODO @dangotbanned: Repeat (#2119) for `CompliantSeries` to support typing
-            # morally: `CompliantSeries`
             self._compliant_series: CompliantSeries[IntoSeriesT] = (
                 series.__narwhals_series__()
             )
