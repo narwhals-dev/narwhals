@@ -63,13 +63,8 @@ dev = [
   "narwhals[tests]",
   "narwhals[typing]",
 ]
-core = [
-  "duckdb",
-  "pandas",
-  "polars",
-  "pyarrow",
-  "sqlframe"
-]
+core = ["narwhals[duckdb,pandas,polars,pyarrow,sqlframe]"]
+
 extra = [  # heavier dependencies we don't necessarily need in every testing job
   "scikit-learn",
 ]
