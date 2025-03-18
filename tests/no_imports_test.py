@@ -3,17 +3,16 @@ from __future__ import annotations
 import sys
 
 import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
 
 
 def test_polars(monkeypatch: pytest.MonkeyPatch) -> None:
+    pl = pytest.importorskip("polars")
     monkeypatch.delitem(sys.modules, "pandas")
     monkeypatch.delitem(sys.modules, "numpy")
-    monkeypatch.delitem(sys.modules, "pyarrow")
+    monkeypatch.delitem(sys.modules, "pyarrow", raising=False)
     monkeypatch.delitem(sys.modules, "duckdb", raising=False)
     monkeypatch.delitem(sys.modules, "dask", raising=False)
     monkeypatch.delitem(sys.modules, "ibis", raising=False)
@@ -33,8 +32,8 @@ def test_polars(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_pandas(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delitem(sys.modules, "polars")
-    monkeypatch.delitem(sys.modules, "pyarrow")
+    monkeypatch.delitem(sys.modules, "polars", raising=False)
+    monkeypatch.delitem(sys.modules, "pyarrow", raising=False)
     monkeypatch.delitem(sys.modules, "duckdb", raising=False)
     monkeypatch.delitem(sys.modules, "dask", raising=False)
     monkeypatch.delitem(sys.modules, "ibis", raising=False)
@@ -57,8 +56,8 @@ def test_dask(monkeypatch: pytest.MonkeyPatch) -> None:
     pytest.importorskip("dask")
     import dask.dataframe as dd
 
-    monkeypatch.delitem(sys.modules, "polars")
-    monkeypatch.delitem(sys.modules, "pyarrow")
+    monkeypatch.delitem(sys.modules, "polars", raising=False)
+    monkeypatch.delitem(sys.modules, "pyarrow", raising=False)
     monkeypatch.delitem(sys.modules, "duckdb", raising=False)
     monkeypatch.delitem(sys.modules, "pyspark", raising=False)
     df = dd.from_pandas(pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]}))
@@ -73,7 +72,8 @@ def test_dask(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_pyarrow(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delitem(sys.modules, "polars")
+    pa = pytest.importorskip("pyarrow")
+    monkeypatch.delitem(sys.modules, "polars", raising=False)
     monkeypatch.delitem(sys.modules, "pandas")
     monkeypatch.delitem(sys.modules, "duckdb", raising=False)
     monkeypatch.delitem(sys.modules, "dask", raising=False)

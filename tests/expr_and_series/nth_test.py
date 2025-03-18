@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 from typing import Mapping
 
-import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -40,6 +39,7 @@ def test_nth(
     reason="1.0.0",
 )
 def test_nth_not_supported() -> None:  # pragma: no cover
+    pl = pytest.importorskip("polars")
     df = nw.from_native(pl.DataFrame(data))
     with pytest.raises(
         AttributeError, match="`nth` is only supported for Polars>=1.0.0."
