@@ -4,10 +4,8 @@ from datetime import datetime
 from datetime import time
 from datetime import timedelta
 from datetime import timezone
-from typing import Any
 
 import pandas as pd
-import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -312,11 +310,13 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
     assert result.schema == {"a": dtype}
 
 
-@pytest.mark.parametrize("dtype", [pl.String, pl.String()])
-def test_raise_if_polars_dtype(constructor: Constructor, dtype: Any) -> None:
-    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
-    with pytest.raises(TypeError, match="Expected Narwhals dtype, got:"):
-        df.select(nw.col("a").cast(dtype))
+def test_raise_if_polars_dtype(constructor: Constructor) -> None:
+    pl = pytest.importorskip("polars")
+
+    for dtype in [pl.String, pl.String()]:
+        df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+        with pytest.raises(TypeError, match="Expected Narwhals dtype, got:"):
+            df.select(nw.col("a").cast(dtype))
 
 
 def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> None:

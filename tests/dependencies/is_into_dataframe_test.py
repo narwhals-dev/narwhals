@@ -5,15 +5,15 @@ from typing import Any
 from typing import Mapping
 
 import numpy as np
-import pandas as pd
-import polars as pl
-import pyarrow as pa
+import pytest
 
 import narwhals as nw
 from narwhals.stable.v1.dependencies import is_into_dataframe
 
 if TYPE_CHECKING:
     from typing_extensions import Self
+
+DATA: dict[str, Any] = {"a": [1, 2, 3], "b": [4, 5, 6]}
 
 
 class DictDataFrame:
@@ -27,12 +27,23 @@ class DictDataFrame:
         return self
 
 
-def test_is_into_dataframe() -> None:
-    data: dict[str, Any] = {"a": [1, 2, 3], "b": [4, 5, 6]}
-    assert is_into_dataframe(pa.table(data))
-    assert is_into_dataframe(pl.DataFrame(data))
-    assert is_into_dataframe(pd.DataFrame(data))
-    assert is_into_dataframe(nw.from_native(pd.DataFrame(data)))
-    assert is_into_dataframe(DictDataFrame(data))
+def test_is_into_dataframe_pyarrow() -> None:
+    pa = pytest.importorskip("pyarrow")
+    assert is_into_dataframe(pa.table(DATA))
+
+
+def test_is_into_dataframe_polars() -> None:
+    pl = pytest.importorskip("polars")
+    assert is_into_dataframe(pl.DataFrame(DATA))
+
+
+def test_is_into_dataframe_pandas() -> None:
+    pd = pytest.importorskip("pandas")
+    assert is_into_dataframe(pd.DataFrame(DATA))
+    assert is_into_dataframe(nw.from_native(pd.DataFrame(DATA)))
+
+
+def test_is_into_dataframe_other() -> None:
+    assert is_into_dataframe(DictDataFrame(DATA))
     assert not is_into_dataframe(np.array([[1, 4], [2, 5], [3, 6]]))
-    assert not is_into_dataframe(data)
+    assert not is_into_dataframe(DATA)
