@@ -4,7 +4,6 @@ from typing import Any
 from typing import Mapping
 
 import pandas as pd
-import polars as pl
 import pytest
 
 import narwhals as nw
@@ -14,6 +13,8 @@ from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
+
+pl = pytest.importorskip("polars")
 
 data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 TEST_EAGER_BACKENDS = [
