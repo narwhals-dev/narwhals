@@ -9,8 +9,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 
 import narwhals as nw_main
@@ -92,6 +90,7 @@ def test_actual_object(
 
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="too old")
 def test_dtypes() -> None:
+    pl = pytest.importorskip("polars")
     df_pl = pl.DataFrame(
         {
             "a": [1],
@@ -214,6 +213,7 @@ def test_validate_not_duplicated_columns_pandas_like() -> None:
 
 
 def test_validate_not_duplicated_columns_arrow() -> None:
+    pa = pytest.importorskip("pyarrow")
     table = pa.Table.from_arrays([pa.array([1, 2]), pa.array([4, 5])], names=["a", "a"])
     with pytest.raises(
         ValueError, match="Expected unique column names, got:\n- 'a' 2 times"
@@ -235,6 +235,7 @@ def test_validate_not_duplicated_columns_duckdb() -> None:
     reason="too old for pyarrow types",
 )
 def test_nested_dtypes() -> None:
+    pl = pytest.importorskip("polars")
     duckdb = pytest.importorskip("duckdb")
     df_pd = pl.DataFrame(
         {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
@@ -277,6 +278,7 @@ def test_nested_dtypes() -> None:
 
 
 def test_nested_dtypes_ibis(request: pytest.FixtureRequest) -> None:  # pragma: no cover
+    pl = pytest.importorskip("polars")
     ibis = pytest.importorskip("ibis")
     if PANDAS_VERSION < (1, 1):
         request.applymarker(pytest.mark.xfail)
@@ -294,6 +296,7 @@ def test_nested_dtypes_ibis(request: pytest.FixtureRequest) -> None:  # pragma: 
     reason="too old for pyarrow types",
 )
 def test_nested_dtypes_dask() -> None:
+    pl = pytest.importorskip("polars")
     pytest.importorskip("dask")
     import dask.dataframe as dd
 
