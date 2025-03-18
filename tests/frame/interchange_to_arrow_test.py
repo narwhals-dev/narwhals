@@ -3,13 +3,14 @@ from __future__ import annotations
 from typing import Any
 from typing import Mapping
 
-import polars as pl
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
 
 data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.1], "z": ["x", "y", "z"]}
+
+pa = pytest.importorskip("pyarrow")
+pl = pytest.importorskip("polars")
 
 
 def test_interchange_to_arrow() -> None:
