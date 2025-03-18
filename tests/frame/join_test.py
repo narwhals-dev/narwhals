@@ -10,7 +10,6 @@ import pytest
 
 import narwhals as nw_main  # use nw_main in some tests for coverage
 import narwhals.stable.v1 as nw
-from narwhals import LazyFrame
 from narwhals.exceptions import DuplicateError
 from narwhals.utils import Implementation
 from tests.utils import DUCKDB_VERSION
@@ -94,12 +93,7 @@ def test_full_join(
     left_on: None | str | list[str],
     right_on: None | str | list[str],
     constructor: Constructor,
-    request: pytest.FixtureRequest,
 ) -> None:
-    not_implemented = ("modin[pyarrow]",)
-    if any(lib for lib in not_implemented if lib in str(constructor)):
-        request.applymarker(pytest.mark.xfail)
-
     df_left = nw_main.from_native(constructor(df1))
     df_right = nw_main.from_native(constructor(df2))
     result = df_left.join(
@@ -107,17 +101,16 @@ def test_full_join(
     ).sort("id", nulls_last=True)
     assert_equal_data(result, expected)
 
-    # test duplication
-    if isinstance(df_left, LazyFrame):
-        return  # cannot materialize columns for a check
+
+def test_full_join_duplicate(constructor: Constructor) -> None:
     df1 = {"foo": [1, 2, 3], "val1": [1, 2, 3]}
     df2 = {"foo": [1, 2, 3], "foo_right": [1, 2, 3]}
-    df_left = nw_main.from_native(constructor(df1))
-    df_right = nw_main.from_native(constructor(df2))
+    df_left = nw_main.from_native(constructor(df1)).lazy()
+    df_right = nw_main.from_native(constructor(df2)).lazy()
 
     # polars throws `NarwhalsError`, everything else should raise `DuplicateError`
     with pytest.raises((DuplicateError, nw.exceptions.NarwhalsError)):
-        df_left.join(df_right, on="foo", how="full")
+        df_left.join(df_right, on="foo", how="full").collect()
 
 
 def test_inner_join_two_keys(constructor: Constructor) -> None:
