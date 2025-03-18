@@ -295,7 +295,7 @@ class PolarsDataFrame:
 
     def lazy(
         self: Self, *, backend: Implementation | None = None
-    ) -> CompliantLazyFrame[Any]:
+    ) -> CompliantLazyFrame[Any, Any]:
         from narwhals.utils import parse_version
 
         if backend is None or backend is Implementation.POLARS:
@@ -495,6 +495,10 @@ class PolarsLazyFrame:
 
     def _iter_columns(self) -> Iterator[PolarsSeries]:  # pragma: no cover
         yield from self.collect(self._implementation).iter_columns()
+
+    @property
+    def native(self) -> pl.LazyFrame:
+        return self._native_frame
 
     @property
     def columns(self: Self) -> list[str]:

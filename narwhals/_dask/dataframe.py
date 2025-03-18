@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class DaskLazyFrame(CompliantLazyFrame["DaskExpr"]):
+class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
     def __init__(
         self: Self,
         native_dataframe: dd.DataFrame,

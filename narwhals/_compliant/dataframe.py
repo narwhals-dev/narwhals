@@ -16,8 +16,10 @@ from narwhals._compliant.typing import CompliantExprT_contra
 from narwhals._compliant.typing import CompliantSeriesT
 from narwhals._compliant.typing import EagerExprT_contra
 from narwhals._compliant.typing import EagerSeriesT
+from narwhals._compliant.typing import NativeFrameT_co
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals.utils import Version
+from narwhals.utils import _StoresNative
 from narwhals.utils import deprecated
 
 if TYPE_CHECKING:
@@ -104,7 +106,7 @@ class CompliantDataFrame(Sized, Protocol[CompliantSeriesT, CompliantExprT_contra
         strategy: Literal["backward", "forward", "nearest"],
         suffix: str,
     ) -> Self: ...
-    def lazy(self, *, backend: Implementation | None) -> CompliantLazyFrame[Any]: ...
+    def lazy(self, *, backend: Implementation | None) -> CompliantLazyFrame[Any, Any]: ...
     def rename(self, mapping: Mapping[str, str]) -> Self: ...
     def row(self, index: int) -> tuple[Any, ...]: ...
     def rows(
@@ -158,7 +160,10 @@ class CompliantDataFrame(Sized, Protocol[CompliantSeriesT, CompliantExprT_contra
     def write_parquet(self, file: str | Path | BytesIO) -> None: ...
 
 
-class CompliantLazyFrame(Protocol[CompliantExprT_contra]):
+class CompliantLazyFrame(
+    _StoresNative[NativeFrameT_co], Protocol[CompliantExprT_contra, NativeFrameT_co]
+):
+    _native_frame: Any
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
@@ -176,6 +181,10 @@ class CompliantLazyFrame(Protocol[CompliantExprT_contra]):
         (so, no broadcasting is necessary).
         """
         ...
+
+    @property
+    def native(self) -> NativeFrameT_co:
+        return self._native_frame  # type: ignore[no-any-return]
 
     @property
     def columns(self) -> Sequence[str]: ...
@@ -252,7 +261,8 @@ class CompliantLazyFrame(Protocol[CompliantExprT_contra]):
 
 class EagerDataFrame(
     CompliantDataFrame[EagerSeriesT, EagerExprT_contra],
-    Protocol[EagerSeriesT, EagerExprT_contra],
+    CompliantLazyFrame[EagerExprT_contra, NativeFrameT_co],
+    Protocol[EagerSeriesT, EagerExprT_contra, NativeFrameT_co],
 ):
     def _evaluate_expr(self, expr: EagerExprT_contra, /) -> EagerSeriesT:
         """Evaluate `expr` and ensure it has a **single** output."""

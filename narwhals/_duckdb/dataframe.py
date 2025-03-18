@@ -43,7 +43,7 @@ if TYPE_CHECKING:
 from narwhals.typing import CompliantLazyFrame
 
 
-class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr"]):
+class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"]):
     _implementation = Implementation.DUCKDB
 
     def __init__(
