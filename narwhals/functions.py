@@ -1143,11 +1143,17 @@ def col(*names: str | Iterable[str]) -> Expr:
         |  └─────┴─────┘   |
         └──────────────────┘
     """
+    flat_names = flatten(names)
 
     def func(plx: Any) -> Any:
-        return plx.col(*flatten(names))
+        return plx.col(*flat_names)
 
-    return Expr(func, ExprMetadata.selector())
+    return Expr(
+        func,
+        ExprMetadata.simple_selector()
+        if len(flat_names) == 1
+        else ExprMetadata.multi_output_selector(),
+    )
 
 
 def exclude(*names: str | Iterable[str]) -> Expr:
@@ -1184,7 +1190,7 @@ def exclude(*names: str | Iterable[str]) -> Expr:
     def func(plx: Any) -> Any:
         return plx.exclude(exclude_names)
 
-    return Expr(func, ExprMetadata.selector())
+    return Expr(func, ExprMetadata.multi_output_selector())
 
 
 def nth(*indices: int | Sequence[int]) -> Expr:
@@ -1217,11 +1223,17 @@ def nth(*indices: int | Sequence[int]) -> Expr:
         |c: [[0.246,6.28]] |
         └──────────────────┘
     """
+    flat_indices = flatten(indices)
 
     def func(plx: Any) -> Any:
-        return plx.nth(*flatten(indices))
+        return plx.nth(*flat_indices)
 
-    return Expr(func, ExprMetadata.selector())
+    return Expr(
+        func,
+        ExprMetadata.simple_selector()
+        if len(flat_indices) == 1
+        else ExprMetadata.multi_output_selector(),
+    )
 
 
 # Add underscore so it doesn't conflict with builtin `all`
@@ -1245,7 +1257,7 @@ def all_() -> Expr:
         |   1  4  0.246    |
         └──────────────────┘
     """
-    return Expr(lambda plx: plx.all(), ExprMetadata.selector())
+    return Expr(lambda plx: plx.all(), ExprMetadata.multi_output_selector())
 
 
 # Add underscore so it doesn't conflict with builtin `len`

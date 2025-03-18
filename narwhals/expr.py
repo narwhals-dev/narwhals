@@ -202,7 +202,7 @@ class Expr:
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x + y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=True),
+            combine_metadata(self, other, str_as_lit=True, is_binary_op=True),
         )
 
     def __radd__(self: Self, other: Any) -> Self:

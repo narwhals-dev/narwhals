@@ -66,7 +66,8 @@ def by_dtype(*dtypes: DType | type[DType] | Iterable[DType | type[DType]]) -> Se
     """
     flattened = flatten(dtypes)
     return Selector(
-        lambda plx: plx.selectors.by_dtype(flattened), ExprMetadata.selector()
+        lambda plx: plx.selectors.by_dtype(flattened),
+        ExprMetadata.multi_output_selector(),
     )
 
 
@@ -99,7 +100,9 @@ def matches(pattern: str) -> Selector:
         0  123  2.0
         1  456  5.5
     """
-    return Selector(lambda plx: plx.selectors.matches(pattern), ExprMetadata.selector())
+    return Selector(
+        lambda plx: plx.selectors.matches(pattern), ExprMetadata.multi_output_selector()
+    )
 
 
 def numeric() -> Selector:
@@ -128,7 +131,9 @@ def numeric() -> Selector:
         │ 4   ┆ 4.6 │
         └─────┴─────┘
     """
-    return Selector(lambda plx: plx.selectors.numeric(), ExprMetadata.selector())
+    return Selector(
+        lambda plx: plx.selectors.numeric(), ExprMetadata.multi_output_selector()
+    )
 
 
 def boolean() -> Selector:
@@ -161,7 +166,9 @@ def boolean() -> Selector:
         |  └───────┘       |
         └──────────────────┘
     """
-    return Selector(lambda plx: plx.selectors.boolean(), ExprMetadata.selector())
+    return Selector(
+        lambda plx: plx.selectors.boolean(), ExprMetadata.multi_output_selector()
+    )
 
 
 def string() -> Selector:
@@ -190,7 +197,9 @@ def string() -> Selector:
         │ y   │
         └─────┘
     """
-    return Selector(lambda plx: plx.selectors.string(), ExprMetadata.selector())
+    return Selector(
+        lambda plx: plx.selectors.string(), ExprMetadata.multi_output_selector()
+    )
 
 
 def categorical() -> Selector:
@@ -221,7 +230,9 @@ def categorical() -> Selector:
         │ y   │
         └─────┘
     """
-    return Selector(lambda plx: plx.selectors.categorical(), ExprMetadata.selector())
+    return Selector(
+        lambda plx: plx.selectors.categorical(), ExprMetadata.multi_output_selector()
+    )
 
 
 def all() -> Selector:
@@ -244,7 +255,7 @@ def all() -> Selector:
         0  1  x  False
         1  2  y   True
     """
-    return Selector(lambda plx: plx.selectors.all(), ExprMetadata.selector())
+    return Selector(lambda plx: plx.selectors.all(), ExprMetadata.multi_output_selector())
 
 
 def datetime(
@@ -304,7 +315,7 @@ def datetime(
     """
     return Selector(
         lambda plx: plx.selectors.datetime(time_unit=time_unit, time_zone=time_zone),
-        ExprMetadata.selector(),
+        ExprMetadata.multi_output_selector(),
     )
 
 

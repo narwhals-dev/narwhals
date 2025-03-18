@@ -185,18 +185,21 @@ def is_scalar_like(
 
 
 class ExprMetadata:
-    __slots__ = ("_kind", "_n_open_windows")
+    __slots__ = ("_is_multi_output", "_kind", "_n_open_windows")
 
-    def __init__(self, kind: ExprKind, /, *, n_open_windows: int) -> None:
+    def __init__(
+        self, kind: ExprKind, /, *, n_open_windows: int, is_multi_output: bool = False
+    ) -> None:
         self._kind: ExprKind = kind
         self._n_open_windows = n_open_windows
+        self._is_multi_output = is_multi_output
 
     def __init_subclass__(cls, /, *args: Any, **kwds: Any) -> Never:  # pragma: no cover
         msg = f"Cannot subclass {cls.__name__!r}"
         raise TypeError(msg)
 
     def __repr__(self) -> str:
-        return f"ExprMetadata(kind: {self._kind}, n_open_windows: {self._n_open_windows})"
+        return f"ExprMetadata(kind: {self._kind}, n_open_windows: {self._n_open_windows}, is_multi_output: {self._is_multi_output})"
 
     @property
     def kind(self) -> ExprKind:
@@ -206,24 +209,48 @@ class ExprMetadata:
     def n_open_windows(self) -> int:
         return self._n_open_windows
 
+    @property
+    def is_multi_output(self) -> int:
+        return self._is_multi_output
+
     def with_kind(self, kind: ExprKind, /) -> ExprMetadata:
         """Change metadata kind, leaving all other attributes the same."""
-        return ExprMetadata(kind, n_open_windows=self._n_open_windows)
+        return ExprMetadata(
+            kind,
+            n_open_windows=self._n_open_windows,
+            is_multi_output=self._is_multi_output,
+        )
 
     def with_extra_open_window(self) -> ExprMetadata:
         """Increment `n_open_windows` leaving other attributes the same."""
-        return ExprMetadata(self.kind, n_open_windows=self._n_open_windows + 1)
+        return ExprMetadata(
+            self.kind,
+            n_open_windows=self._n_open_windows + 1,
+            is_multi_output=self._is_multi_output,
+        )
 
     def with_kind_and_extra_open_window(self, kind: ExprKind, /) -> ExprMetadata:
         """Change metadata kind and increment `n_open_windows`."""
-        return ExprMetadata(kind, n_open_windows=self._n_open_windows + 1)
+        return ExprMetadata(
+            kind,
+            n_open_windows=self._n_open_windows + 1,
+            is_multi_output=self._is_multi_output,
+        )
 
     @staticmethod
-    def selector() -> ExprMetadata:
-        return ExprMetadata(ExprKind.TRANSFORM, n_open_windows=0)
+    def simple_selector() -> ExprMetadata:
+        # e.g. nw.col('a'), nw.nth(0)  # noqa: ERA001
+        return ExprMetadata(ExprKind.TRANSFORM, n_open_windows=0, is_multi_output=False)
+
+    @staticmethod
+    def multi_output_selector() -> ExprMetadata:
+        # e.g. nw.col('a', 'b'), nw.nth(0, 1), nw.all(), nw.selectors.matches('foo')  # noqa: ERA001
+        return ExprMetadata(ExprKind.TRANSFORM, n_open_windows=0, is_multi_output=True)
 
 
-def combine_metadata(*args: IntoExpr | object | None, str_as_lit: bool) -> ExprMetadata:
+def combine_metadata(
+    *args: IntoExpr | object | None, str_as_lit: bool, is_binary_op: bool = False
+) -> ExprMetadata:
     # Combine metadata from `args`.
 
     n_filtrations = 0
@@ -231,8 +258,15 @@ def combine_metadata(*args: IntoExpr | object | None, str_as_lit: bool) -> ExprM
     has_aggregations = False
     has_literals = False
     result_n_open_windows = 0
+    result_is_multi_output = False
 
-    for arg in args:
+    for i, arg in enumerate(args):
+        if is_expr(arg) and arg._metadata.is_multi_output:
+            if i > 0 and is_binary_op:
+                msg = "Multi-output expressions cannot appear in right-hand-side of binary operations."
+                raise ValueError(msg)
+            if is_binary_op:
+                result_is_multi_output = True
         if isinstance(arg, str) and not str_as_lit:
             has_transforms_or_windows = True
         elif is_expr(arg):
@@ -270,7 +304,11 @@ def combine_metadata(*args: IntoExpr | object | None, str_as_lit: bool) -> ExprM
     else:
         result_kind = ExprKind.AGGREGATION
 
-    return ExprMetadata(result_kind, n_open_windows=result_n_open_windows)
+    return ExprMetadata(
+        result_kind,
+        n_open_windows=result_n_open_windows,
+        is_multi_output=result_is_multi_output,
+    )
 
 
 def check_expressions_preserve_length(*args: IntoExpr, function_name: str) -> None:
