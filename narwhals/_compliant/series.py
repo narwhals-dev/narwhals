@@ -73,17 +73,6 @@ class CompliantSeries(
         cls, data: Iterable[Any], /, *, context: _FullContext, name: str = ""
     ) -> Self: ...
     def _change_version(self, version: Version) -> Self: ...
-    @unstable
-    def _with_native(self, series: Any, /) -> Self:
-        """Equivalent to `._from_native_series`, eventually replacing.
-
-        - But can be the same method name for all protocols.
-        - New `Compliant*`,
-          - preserving all backend stuff
-          - replacing only `.native`
-        - Different to `.from_*` classmethods, which are usually called from outside the class
-        """
-        return self._from_native_series(series)
 
     # Operators
     def __add__(self, other: Any) -> Self: ...
