@@ -14,8 +14,8 @@
 
 Extremely lightweight and extensible compatibility layer between dataframe libraries!
 
-- **Full API support**: cuDF, Modin, pandas, Polars, PyArrow
-- **Lazy-only support**: Dask. Work in progress: DuckDB, Ibis, PySpark.
+- **Full API support**: cuDF, Modin, pandas, Polars, PyArrow.
+- **Lazy-only support**: Dask, SQLFrame, PySpark. Work in progress: DuckDB, Ibis.
 
 Seamlessly support all, without depending on any!
 
