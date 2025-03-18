@@ -236,6 +236,7 @@ jobs:
       - name: run-pytest
         run: |
           cd tea-tasting
+          export PYTEST_ADDOPTS="--rootdir=tea-tasting"
           pdm run test
 
   # temporarily commented out until they address the `new_series` deprecation
