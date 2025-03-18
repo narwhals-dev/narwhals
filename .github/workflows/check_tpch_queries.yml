@@ -31,7 +31,7 @@ jobs:
         run: |
           # once https://github.com/duckdb/duckdb/issues/16445
           # is addressed, try using `--pre`
-          uv pip install -U -e ".[core, dask]" --group tests --system
+          uv pip install -U -e ".[dask]" --group core-tests --system
       - name: generate-data
         run: cd tpch && python generate_data.py
       - name: tpch-tests 

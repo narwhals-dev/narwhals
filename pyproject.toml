@@ -44,13 +44,6 @@ dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.0"]
 ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
 sqlframe = ["sqlframe>=3.22.0"]
-core = [
-  "duckdb",
-  "pandas",
-  "polars",
-  "pyarrow",
-  "sqlframe"
-]
 
 [dependency-groups]
 dev = [
@@ -58,10 +51,22 @@ dev = [
   {include-group = "tests"},
   {include-group = "typing"},
 ]
-dev-docs = [
+dev-core = [
   {include-group = "dev"},
+  {include-group = "core"},
+]
+core-tests = [
+  {include-group = "core"},
+  {include-group = "tests"},
+]
+local-dev = [
+  {include-group = "dev"},
+  {include-group = "core"},
   {include-group = "docs"}
 ]
+core = [
+  "narwhals[duckdb,pandas,polars,pyarrow,sqlframe]"
+] 
 tests = [
   "covdefaults",
   "pytest",
