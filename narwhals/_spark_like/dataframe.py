@@ -329,8 +329,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         self: Self,
         other: Self,
         how: Literal["inner", "left", "full", "cross", "semi", "anti"],
-        left_on: list[str] | None,
-        right_on: list[str] | None,
+        left_on: Sequence[str] | None,
+        right_on: Sequence[str] | None,
         suffix: str,
     ) -> Self:
         self_native = self._native_frame
@@ -339,8 +339,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         left_columns = self.columns
         right_columns = other.columns
 
-        right_on_: list[str] = right_on or []
-        left_on_: list[str] = left_on or []
+        right_on_: Sequence[str] = right_on or []
+        left_on_: Sequence[str] = left_on or []
 
         # create a mapping for columns on other
         # `right_on` columns will be renamed as `left_on`
@@ -395,7 +395,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         how_native = "full_outer" if how == "full" else how
 
         return self._from_native_frame(
-            self_native.join(other_native, on=on_, how=how_native).select(col_order)
+            self_native.join(other_native, on=on_, how=how_native).select(col_order)  # type: ignore[arg-type]
         )
 
     def explode(self: Self, columns: list[str]) -> Self:

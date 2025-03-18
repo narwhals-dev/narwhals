@@ -256,8 +256,8 @@ class DaskLazyFrame(CompliantLazyFrame):
         other: Self,
         *,
         how: Literal["inner", "left", "full", "cross", "semi", "anti"],
-        left_on: list[str] | None,
-        right_on: list[str] | None,
+        left_on: Sequence[str] | None,
+        right_on: Sequence[str] | None,
         suffix: str,
     ) -> Self:
         if how == "cross":
@@ -288,7 +288,7 @@ class DaskLazyFrame(CompliantLazyFrame):
             other_native = (
                 select_columns_by_name(
                     other._native_frame,
-                    right_on,
+                    right_on,  # type: ignore[arg-type]
                     self._backend_version,
                     self._implementation,
                 )
@@ -315,7 +315,7 @@ class DaskLazyFrame(CompliantLazyFrame):
             other_native = (
                 select_columns_by_name(
                     other._native_frame,
-                    right_on,
+                    right_on,  # type: ignore[arg-type]
                     self._backend_version,
                     self._implementation,
                 )

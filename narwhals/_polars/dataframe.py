@@ -424,8 +424,8 @@ class PolarsDataFrame:
         other: Self,
         *,
         how: Literal["inner", "left", "full", "cross", "semi", "anti"],
-        left_on: list[str] | None,
-        right_on: list[str] | None,
+        left_on: Sequence[str] | None,
+        right_on: Sequence[str] | None,
         suffix: str,
     ) -> Self:
         how_native = (
@@ -435,7 +435,7 @@ class PolarsDataFrame:
         return self._from_native_frame(
             self._native_frame.join(
                 other=other._native_frame,
-                how=how_native,
+                how=how_native,  # type: ignore[arg-type]
                 left_on=left_on,
                 right_on=right_on,
                 suffix=suffix,
@@ -627,8 +627,8 @@ class PolarsLazyFrame:
         other: Self,
         *,
         how: Literal["inner", "left", "full", "cross", "semi", "anti"],
-        left_on: list[str] | None,
-        right_on: list[str] | None,
+        left_on: Sequence[str] | None,
+        right_on: Sequence[str] | None,
         suffix: str,
     ) -> Self:
         how_native = (
@@ -638,7 +638,7 @@ class PolarsLazyFrame:
         return self._from_native_frame(
             self._native_frame.join(
                 other=other._native_frame,
-                how=how_native,
+                how=how_native,  # type: ignore[arg-type]
                 left_on=left_on,
                 right_on=right_on,
                 suffix=suffix,
