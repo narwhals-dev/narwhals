@@ -3,10 +3,12 @@ from __future__ import annotations
 from typing import Any
 from typing import Mapping
 
-import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
+
+pytest.importorskip("polars")
+import polars as pl
 
 data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 
@@ -33,7 +35,9 @@ def test_interchange() -> None:
 def test_ibis(
     tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover
-    ibis = pytest.importorskip("ibis")
+    pytest.importorskip("ibis")
+    import ibis
+
     try:
         ibis.set_backend("duckdb")
     except ImportError:
@@ -51,7 +55,9 @@ def test_ibis(
 
 
 def test_duckdb() -> None:
-    duckdb = pytest.importorskip("duckdb")
+    pytest.importorskip("duckdb")
+    import duckdb
+
     df_pl = pl.DataFrame(data)  # noqa: F841
 
     rel = duckdb.sql("select * from df_pl")

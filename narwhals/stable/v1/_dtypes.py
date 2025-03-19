@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals.dtypes import Array
+from narwhals.dtypes import Binary
 from narwhals.dtypes import Boolean
 from narwhals.dtypes import Categorical
 from narwhals.dtypes import Date
@@ -73,6 +74,7 @@ class Duration(NwDuration):
 
 __all__ = [
     "Array",
+    "Binary",
     "Boolean",
     "Categorical",
     "DType",

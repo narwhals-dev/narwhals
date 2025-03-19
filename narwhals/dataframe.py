@@ -33,6 +33,7 @@ from narwhals.utils import Implementation
 from narwhals.utils import find_stacklevel
 from narwhals.utils import flatten
 from narwhals.utils import generate_repr
+from narwhals.utils import is_compliant_lazyframe
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import issue_deprecation_warning
 from narwhals.utils import parse_version
@@ -2209,8 +2210,10 @@ class LazyFrame(BaseFrame[FrameT]):
         level: Literal["full", "lazy", "interchange"],
     ) -> None:
         self._level = level
-        if hasattr(df, "__narwhals_lazyframe__"):
-            self._compliant_frame: Any = df.__narwhals_lazyframe__()
+        if is_compliant_lazyframe(df):
+            # NOTE: Blocked by (#2239)
+            # self._compliant_frame: CompliantLazyFrame[Any, FrameT] = df.__narwhals_lazyframe__()  # noqa: ERA001
+            self._compliant_frame = df.__narwhals_lazyframe__()
         else:  # pragma: no cover
             msg = f"Expected Polars LazyFrame or an object that implements `__narwhals_lazyframe__`, got: {type(df)}"
             raise AssertionError(msg)
@@ -2674,20 +2677,17 @@ class LazyFrame(BaseFrame[FrameT]):
         subset: str | list[str] | None = None,
         *,
         keep: Literal["any", "none"] = "any",
-        maintain_order: bool | None = None,
     ) -> Self:
         """Drop duplicate rows from this LazyFrame.
 
         Arguments:
             subset: Column name(s) to consider when identifying duplicate rows.
                      If set to `None`, use all columns.
-            keep: {'first', 'none'}
+            keep: {'any', 'none'}
                 Which of the duplicate rows to keep.
 
                 * 'any': Does not give any guarantee of which row is kept.
-                        This allows more optimizations.
                 * 'none': Don't keep duplicate rows.
-            maintain_order: Has no effect and is kept around only for backwards-compatibility.
 
         Returns:
             The LazyFrame with unique rows.
@@ -2715,15 +2715,6 @@ class LazyFrame(BaseFrame[FrameT]):
                 f"'any' and 'none' are supported for `keep` in `unique`. Got: {keep}."
             )
             raise ValueError(msg)
-        if maintain_order:
-            msg = "`maintain_order=True` is not supported for LazyFrame.unique."
-            raise ValueError(msg)
-        if maintain_order is not None:
-            msg = (
-                "`maintain_order` has no effect and is only kept around for backwards-compatibility. "
-                "You can safely remove this argument."
-            )
-            warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
         if isinstance(subset, str):
             subset = [subset]
         return self._from_compliant_dataframe(

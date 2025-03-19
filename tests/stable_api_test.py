@@ -4,7 +4,6 @@ from datetime import datetime
 from datetime import timedelta
 from typing import Any
 
-import polars as pl
 import pytest
 
 import narwhals as nw
@@ -103,6 +102,9 @@ def test_stable_api_docstrings() -> None:
 
 
 def test_dataframe_docstrings() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     stable_df = nw_v1.from_native(pl.DataFrame())
     df = nw.from_native(pl.DataFrame())
     api = [i for i in df.__dir__() if not i.startswith("_")]
@@ -115,6 +117,9 @@ def test_dataframe_docstrings() -> None:
 
 
 def test_lazyframe_docstrings() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     stable_df = nw_v1.from_native(pl.LazyFrame())
     df = nw.from_native(pl.LazyFrame())
     api = [i for i in df.__dir__() if not i.startswith("_")]
@@ -133,6 +138,9 @@ def test_lazyframe_docstrings() -> None:
 
 
 def test_series_docstrings() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     stable_df = nw_v1.from_native(pl.Series(), series_only=True)
     df = nw.from_native(pl.Series(), series_only=True)
     api = [i for i in df.__dir__() if not i.startswith("_")]

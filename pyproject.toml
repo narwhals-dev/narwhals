@@ -21,6 +21,12 @@ classifiers = [
   "Typing :: Typed",
 ]
 
+[project.urls]
+Homepage = "https://github.com/narwhals-dev/narwhals"
+Documentation = "https://narwhals-dev.github.io/narwhals/"
+Repository = "https://github.com/narwhals-dev/narwhals"
+"Bug Tracker" = "https://github.com/narwhals-dev/narwhals/issues"
+
 [project.optional-dependencies]
 # These should be aligned with MIN_VERSIONS in narwhals/utils.py
 # Exception: modin, because `modin.__version__` isn't aligned with
@@ -38,6 +44,29 @@ dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.0"]
 ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
 sqlframe = ["sqlframe>=3.22.0"]
+
+[dependency-groups]
+dev = [
+  "pre-commit",
+  {include-group = "tests"},
+  {include-group = "typing"},
+]
+dev-core = [
+  {include-group = "dev"},
+  {include-group = "core"},
+]
+core-tests = [
+  {include-group = "core"},
+  {include-group = "tests"},
+]
+local-dev = [
+  {include-group = "dev"},
+  {include-group = "core"},
+  {include-group = "docs"}
+]
+core = [
+  "narwhals[duckdb,pandas,polars,pyarrow,sqlframe]"
+] 
 tests = [
   "covdefaults",
   "pytest",
@@ -45,6 +74,9 @@ tests = [
   "pytest-randomly",
   "pytest-env",
   "hypothesis",
+]
+extra = [  # heavier dependencies we don't necessarily need in every testing job
+  "scikit-learn",
 ]
 typing = [
   "hypothesis",
@@ -57,16 +89,6 @@ typing = [
   "sqlframe==3.24.1",
   "polars==1.25.2",
   "uv",
-]
-dev = [
-  "pre-commit",
-  "narwhals[tests]",
-  "narwhals[typing]",
-]
-core = ["narwhals[duckdb,pandas,polars,pyarrow,sqlframe]"]
-
-extra = [  # heavier dependencies we don't necessarily need in every testing job
-  "scikit-learn",
 ]
 docs = [
   "black",  # required by mkdocstrings_handlers
@@ -83,12 +105,6 @@ docs = [
   "pyarrow",
 ]
 
-[project.urls]
-Homepage = "https://github.com/narwhals-dev/narwhals"
-Documentation = "https://narwhals-dev.github.io/narwhals/"
-Repository = "https://github.com/narwhals-dev/narwhals"
-"Bug Tracker" = "https://github.com/narwhals-dev/narwhals/issues"
-
 [tool.hatch.build]
 exclude = [
   "/.*",
@@ -101,7 +117,6 @@ exclude = [
   "mkdocs.yml",
   "noxfile.py",
 ]
-
 
 [tool.ruff]
 line-length = 90

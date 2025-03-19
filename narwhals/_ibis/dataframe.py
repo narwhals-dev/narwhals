@@ -71,6 +71,8 @@ def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
         return dtypes.Decimal()
     if ibis_dtype.is_time():
         return dtypes.Time()
+    if ibis_dtype.is_binary():
+        return dtypes.Binary()
     return dtypes.Unknown()  # pragma: no cover
 
 

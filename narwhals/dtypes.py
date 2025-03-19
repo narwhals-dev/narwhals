@@ -696,3 +696,27 @@ class Time(TemporalType):
        >>> nw.from_native(rel).schema["t"]
        Time
     """
+
+
+class Binary(DType):
+    """Binary type.
+
+    Examples:
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> import pyarrow as pa
+        >>> import duckdb
+        >>> data = [b"test1", b"test2"]
+        >>> ser_pl = pl.Series(data, dtype=pl.Binary)
+        >>> ser_pa = pa.chunked_array([pa.array(data, type=pa.binary())])
+        >>> rel = duckdb.sql(
+        ...     "SELECT * FROM (VALUES (BLOB 'test1'), (BLOB 'test2')) AS df(t)"
+        ... )
+
+        >>> nw.from_native(ser_pl, series_only=True).dtype
+        Binary
+        >>> nw.from_native(ser_pa, series_only=True).dtype
+        Binary
+        >>> nw.from_native(rel).schema["t"]
+        Binary
+    """

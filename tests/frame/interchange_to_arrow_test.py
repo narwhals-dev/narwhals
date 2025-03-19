@@ -3,16 +3,20 @@ from __future__ import annotations
 from typing import Any
 from typing import Mapping
 
-import polars as pl
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
 
 data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.1], "z": ["x", "y", "z"]}
 
+pytest.importorskip("polars")
+pytest.importorskip("pyarrow")
+
 
 def test_interchange_to_arrow() -> None:
+    import polars as pl
+    import pyarrow as pa
+
     df_pl = pl.DataFrame(data)
     df = nw.from_native(df_pl.__dataframe__(), eager_or_interchange_only=True)
     result = df.to_arrow()
@@ -23,7 +27,12 @@ def test_interchange_to_arrow() -> None:
 def test_interchange_ibis_to_arrow(
     tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover
-    ibis = pytest.importorskip("ibis")
+    pytest.importorskip("ibis")
+
+    import ibis
+    import polars as pl
+    import pyarrow as pa
+
     try:
         ibis.set_backend("duckdb")
     except ImportError:
@@ -41,7 +50,12 @@ def test_interchange_ibis_to_arrow(
 
 
 def test_interchange_duckdb_to_arrow() -> None:
-    duckdb = pytest.importorskip("duckdb")
+    pytest.importorskip("duckdb")
+
+    import duckdb
+    import polars as pl
+    import pyarrow as pa
+
     df_pl = pl.DataFrame(data)  # noqa: F841
     rel = duckdb.sql("select * from df_pl")
     df = nw.from_native(rel, eager_or_interchange_only=True)

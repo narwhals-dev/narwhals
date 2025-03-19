@@ -10,7 +10,6 @@ from typing import cast
 
 import hypothesis.strategies as st
 import pandas as pd
-import polars as pl
 import pyarrow as pa
 import pytest
 from hypothesis import given
@@ -77,6 +76,9 @@ def test_non_unique_index() -> None:
 
 
 def test_maybe_align_index_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
     s = nw.from_native(pl.Series([1, 2, 3]), series_only=True)
     result = nw.maybe_align_index(df, s)
@@ -108,6 +110,9 @@ def test_maybe_set_index_pandas_column_names(
 def test_maybe_set_index_polars_column_names(
     column_names: str | list[str] | None,
 ) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = nw.maybe_set_index(df, column_names)
     assert result is df
@@ -161,6 +166,9 @@ def test_maybe_set_index_pandas_direct_index(
 def test_maybe_set_index_polars_direct_index(
     index: Series[IntoSeries] | list[Series[IntoSeries]] | None,
 ) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = nw.maybe_set_index(df, index=index)
     assert result is df
@@ -201,6 +209,9 @@ def test_maybe_get_index_pandas() -> None:
 
 
 def test_maybe_get_index_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
     result = nw.maybe_get_index(df)
     assert result is None
@@ -235,6 +246,9 @@ def test_maybe_reset_index_pandas() -> None:
 
 
 def test_maybe_reset_index_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = nw.maybe_reset_index(df)
     assert result is df
@@ -260,6 +274,9 @@ def test_maybe_convert_dtypes_pandas() -> None:
 
 def test_maybe_convert_dtypes_polars() -> None:
     import numpy as np
+
+    pytest.importorskip("polars")
+    import polars as pl
 
     df = nw.from_native(pl.DataFrame({"a": [1.1, np.nan]}))
     result = nw.maybe_convert_dtypes(df)
@@ -324,6 +341,8 @@ def test_check_column_exists() -> None:
 
 
 def test_not_implemented() -> None:
+    pytest.importorskip("polars")
+
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.expr import PolarsExprStringNamespace
@@ -434,6 +453,9 @@ def test_not_implemented() -> None:
 
 
 def test_deprecate_native_namespace() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     @deprecate_native_namespace()
     def func1(
         arg: str,  # noqa: ARG001

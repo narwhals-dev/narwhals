@@ -109,7 +109,7 @@ def extract_compliant(
 
 def evaluate_output_names_and_aliases(
     expr: CompliantExpr[Any, Any],
-    df: CompliantDataFrame[Any, Any] | CompliantLazyFrame,
+    df: CompliantDataFrame[Any, Any, Any] | CompliantLazyFrame[Any, Any],
     exclude: Sequence[str],
 ) -> tuple[Sequence[str], Sequence[str]]:
     output_names = expr._evaluate_output_names(df)
@@ -194,6 +194,9 @@ class ExprMetadata:
     def __init_subclass__(cls, /, *args: Any, **kwds: Any) -> Never:  # pragma: no cover
         msg = f"Cannot subclass {cls.__name__!r}"
         raise TypeError(msg)
+
+    def __repr__(self) -> str:
+        return f"ExprMetadata(kind: {self._kind}, n_open_windows: {self._n_open_windows})"
 
     @property
     def kind(self) -> ExprKind:
@@ -320,9 +323,7 @@ def apply_n_ary_operation(
     broadcast = any(kind.preserves_length() for kind in kinds)
     compliant_exprs = (
         compliant_expr.broadcast(kind)
-        if broadcast
-        and (kind is ExprKind.LITERAL or kind is ExprKind.AGGREGATION)
-        and is_compliant_expr(compliant_expr)
+        if broadcast and is_compliant_expr(compliant_expr) and is_scalar_like(kind)
         else compliant_expr
         for compliant_expr, kind in zip(compliant_exprs, kinds)
     )
