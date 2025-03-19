@@ -6,7 +6,8 @@ import narwhals.stable.v1 as nw
 
 
 def test_implementation_pandas() -> None:
-    pd = pytest.importorskip("pandas")
+    pytest.importorskip("pandas")
+    import pandas as pd
 
     assert (
         nw.from_native(pd.DataFrame({"a": [1, 2, 3]})).implementation
@@ -21,7 +22,8 @@ def test_implementation_pandas() -> None:
 
 
 def test_implementation_polars() -> None:
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("polars")
+    import polars as pl
 
     assert not nw.from_native(pl.DataFrame({"a": [1, 2, 3]})).implementation.is_pandas()
     assert not nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))[

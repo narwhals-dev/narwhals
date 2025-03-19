@@ -48,7 +48,8 @@ def test_invalid_pyarrow() -> None:
 
 
 def test_invalid_polars() -> None:
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("polars")
+    import polars as pl
 
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df: Frame = nw.from_native(pd.DataFrame(data))
@@ -75,7 +76,8 @@ def test_native_vs_non_native_polars() -> None:
 
 
 def test_validate_laziness() -> None:
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("polars")
+    import polars as pl
 
     df = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     with pytest.raises(

@@ -16,7 +16,8 @@ class Foo:
 
 
 def test_dataclass_pandas() -> None:
-    pd = pytest.importorskip("pandas")
+    pytest.importorskip("pandas")
+    import pandas as pd
 
     # dry-run to check that none of these error
     asdict(Foo(pd.Series([1, 2, 3])))  # type: ignore[arg-type]
@@ -24,7 +25,8 @@ def test_dataclass_pandas() -> None:
 
 
 def test_dataclass_polars() -> None:
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("polars")
+    import polars as pl
 
     # dry-run to check that none of these error
     asdict(Foo(pl.Series([1, 2, 3])))  # type: ignore[arg-type]
