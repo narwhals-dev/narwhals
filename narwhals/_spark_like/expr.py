@@ -503,7 +503,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             default: ExprKind,
             return_dtype: DType,
         ) -> Column:
-            mapper = self._F.create_map([self._F.lit(x) for x in chain(*zip(old, new))])
+            mapper = self._F.create_map(chain(*zip(old, new)))
             mapping_expr = mapper[_input]
 
             if default is not None:
