@@ -19,16 +19,22 @@ if find_spec("polars") is not None:
         Implementation.POLARS,
         "polars",
     ]
+else:  # pragma: no cover
+    pass
 if find_spec("pandas") is not None:
     TEST_EAGER_BACKENDS += [
         Implementation.PANDAS,
         "pandas",
     ]
+else:  # pragma: no cover
+    pass
 if find_spec("pyarrow") is not None:
     TEST_EAGER_BACKENDS += [
         Implementation.PYARROW,
         "pyarrow",
     ]
+else:  # pragma: no cover
+    pass
 
 
 @pytest.mark.parametrize(
