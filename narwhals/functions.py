@@ -17,6 +17,7 @@ from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import check_expressions_preserve_length
 from narwhals._expression_parsing import combine_metadata
+from narwhals._expression_parsing import combine_metadata_horizontal_op
 from narwhals._expression_parsing import extract_compliant
 from narwhals._expression_parsing import infer_kind
 from narwhals._expression_parsing import is_scalar_like
@@ -1493,7 +1494,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.sum_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False, is_binary_op=True),
+        combine_metadata_horizontal_op(*flat_exprs),
     )
 
 
@@ -1537,7 +1538,7 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.min_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False, is_binary_op=True),
+        combine_metadata_horizontal_op(*flat_exprs),
     )
 
 
@@ -1583,7 +1584,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.max_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False, is_binary_op=True),
+        combine_metadata_horizontal_op(*flat_exprs),
     )
 
 
@@ -1601,7 +1602,13 @@ class When:
                 value,
                 str_as_lit=False,
             ),
-            combine_metadata(self._predicate, value, str_as_lit=False, is_binary_op=True),
+            combine_metadata(
+                self._predicate,
+                value,
+                str_as_lit=False,
+                allow_multi_output=False,
+                to_single_output=False,
+            ),
         )
 
 
@@ -1618,7 +1625,13 @@ class Then(Expr):
 
         return Expr(
             func,
-            combine_metadata(self, value, str_as_lit=False, is_binary_op=False),
+            combine_metadata(
+                self,
+                value,
+                str_as_lit=False,
+                allow_multi_output=False,
+                to_single_output=False,
+            ),
         )
 
 
@@ -1707,7 +1720,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.all_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False, is_binary_op=True),
+        combine_metadata_horizontal_op(*flat_exprs),
     )
 
 
@@ -1799,7 +1812,7 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.any_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False, is_binary_op=True),
+        combine_metadata_horizontal_op(*flat_exprs),
     )
 
 
@@ -1845,7 +1858,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.mean_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False, is_binary_op=True),
+        combine_metadata_horizontal_op(*flat_exprs),
     )
 
 
@@ -1912,5 +1925,7 @@ def concat_str(
             *flat_exprs,
             str_as_lit=False,
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False, is_binary_op=True),
+        combine_metadata(
+            *flat_exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
+        ),
     )

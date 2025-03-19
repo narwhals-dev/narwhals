@@ -250,19 +250,19 @@ class ExprMetadata:
 
 
 def combine_metadata(
-    *args: IntoExpr | object | None, str_as_lit: bool, is_binary_op: bool
+    *args: IntoExpr | object | None,
+    str_as_lit: bool,
+    allow_multi_output: bool,
+    to_single_output: bool,
 ) -> ExprMetadata:
     """Combine metadata from `args`.
 
     Arguments:
         args: Arguments, maybe expressions, literals, or Series.
         str_as_lit: Whether to interpret strings as literals or as column names.
-        is_binary_op: Whether operation is binary. This is important because:
-            - In binary operations (e.g. `nw.all() + nw.col('a')`), only the
-              left-hand-side is allowed to be multi-output. Furthermore, if the
-              left-hand-side is multi-output, the result is multi-output.
-            - In non-binary operations (e.g. `nw.sum_horizontal`), all inputs
-              are allowed to be multi-output, but the output is single-output.
+        allow_multi_output: Whether to allow multi-output inputs.
+        to_single_output: Whether the result is always single-output, regardless
+            of the inputs (e.g. `nw.sum_horizontal`).
     """
     n_filtrations = 0
     has_transforms_or_windows = False
@@ -275,10 +275,12 @@ def combine_metadata(
         if isinstance(arg, str) and not str_as_lit:
             has_transforms_or_windows = True
         elif is_expr(arg):
-            if arg._metadata.is_multi_output and is_binary_op:
-                if i > 0:  # Only the first argument is allowed to be multi-output.
+            if arg._metadata.is_multi_output:
+                if i > 0 and not allow_multi_output:
+                    # Left-most argument is always allowed to be multi-output.
                     ensure_is_single_output(arg._metadata)
-                result_is_multi_output = True
+                if not to_single_output:
+                    result_is_multi_output = True
             if arg._metadata.n_open_windows:
                 result_n_open_windows += 1
             kind = arg._metadata.kind
@@ -318,6 +320,22 @@ def combine_metadata(
         result_kind,
         n_open_windows=result_n_open_windows,
         is_multi_output=result_is_multi_output,
+    )
+
+
+def combine_metadata_binary_op(lhs: Expr, rhs: IntoExpr) -> ExprMetadata:
+    # We may be able to allow multi-output rhs in the future:
+    # https://github.com/narwhals-dev/narwhals/issues/2244.
+    return combine_metadata(
+        lhs, rhs, str_as_lit=True, allow_multi_output=False, to_single_output=False
+    )
+
+
+def combine_metadata_horizontal_op(*exprs: IntoExpr) -> ExprMetadata:
+    # We may be able to allow multi-output rhs in the future:
+    # https://github.com/narwhals-dev/narwhals/issues/2244.
+    return combine_metadata(
+        *exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
     )
 
 
