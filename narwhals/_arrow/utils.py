@@ -156,6 +156,8 @@ def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
         return dtypes.Decimal()
     if pa.types.is_time32(dtype) or pa.types.is_time64(dtype):
         return dtypes.Time()
+    if pa.types.is_binary(dtype):
+        return dtypes.Binary()
     return dtypes.Unknown()  # pragma: no cover
 
 
@@ -211,6 +213,8 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
         return pa.list_(inner, list_size=list_size)
     if isinstance_or_issubclass(dtype, dtypes.Time):
         return pa.time64("ns")
+    if isinstance_or_issubclass(dtype, dtypes.Binary):
+        return pa.binary()
 
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
