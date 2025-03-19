@@ -109,6 +109,8 @@ if find_spec("pyarrow") is not None:  # pragma: no cover
     all_series += [
         series_pa,
     ]
+else:  # pragma: no cover
+    pass
 
 all_frames = [*eager_frames, *lazy_frames]
 
