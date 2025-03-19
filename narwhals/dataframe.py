@@ -2674,20 +2674,17 @@ class LazyFrame(BaseFrame[FrameT]):
         subset: str | list[str] | None = None,
         *,
         keep: Literal["any", "none"] = "any",
-        maintain_order: bool | None = None,
     ) -> Self:
         """Drop duplicate rows from this LazyFrame.
 
         Arguments:
             subset: Column name(s) to consider when identifying duplicate rows.
                      If set to `None`, use all columns.
-            keep: {'first', 'none'}
+            keep: {'any', 'none'}
                 Which of the duplicate rows to keep.
 
                 * 'any': Does not give any guarantee of which row is kept.
-                        This allows more optimizations.
                 * 'none': Don't keep duplicate rows.
-            maintain_order: Has no effect and is kept around only for backwards-compatibility.
 
         Returns:
             The LazyFrame with unique rows.
@@ -2715,15 +2712,6 @@ class LazyFrame(BaseFrame[FrameT]):
                 f"'any' and 'none' are supported for `keep` in `unique`. Got: {keep}."
             )
             raise ValueError(msg)
-        if maintain_order:
-            msg = "`maintain_order=True` is not supported for LazyFrame.unique."
-            raise ValueError(msg)
-        if maintain_order is not None:
-            msg = (
-                "`maintain_order` has no effect and is only kept around for backwards-compatibility. "
-                "You can safely remove this argument."
-            )
-            warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
         if isinstance(subset, str):
             subset = [subset]
         return self._from_compliant_dataframe(
