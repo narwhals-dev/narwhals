@@ -27,7 +27,8 @@ def test_cast_253(
 
 
 def test_cast_date_datetime_polars() -> None:
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("polars")
+    import polars as pl
 
     from polars.testing import assert_frame_equal
 
@@ -50,7 +51,8 @@ def test_cast_date_datetime_polars() -> None:
 
 
 def test_cast_date_datetime_pyarrow() -> None:
-    pa = pytest.importorskip("pyarrow")
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
 
     # polars: date to datetime
     dfpa = pa.table({"a": [date(2020, 1, 1), date(2020, 1, 2)]})
@@ -74,7 +76,8 @@ def test_cast_date_datetime_pyarrow() -> None:
     reason="pyarrow dtype not available",
 )
 def test_cast_date_datetime_pandas() -> None:
-    pd = pytest.importorskip("pandas")
+    pytest.importorskip("pandas")
+    import pandas as pd
 
     # pandas: pyarrow date to datetime
     dfpd = pd.DataFrame({"a": [date(2020, 1, 1), date(2020, 1, 2)]}).astype(
@@ -104,14 +107,16 @@ def test_cast_date_datetime_pandas() -> None:
 
 @pytest.mark.filterwarnings("ignore: casting period")
 def test_unknown_to_int() -> None:
-    pd = pytest.importorskip("pandas")
+    pytest.importorskip("pandas")
+    import pandas as pd
 
     df = pd.DataFrame({"a": pd.period_range("2000", periods=3, freq="min")})
     assert nw.from_native(df).select(nw.col("a").cast(nw.Int64)).schema == {"a": nw.Int64}
 
 
 def test_cast_to_enum_polars() -> None:
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("polars")
+    import polars as pl
 
     # we don't yet support metadata in dtypes, so for now disallow this
     # seems like a very niche use case anyway, and allowing it later wouldn't be
@@ -124,7 +129,8 @@ def test_cast_to_enum_polars() -> None:
 
 
 def test_cast_to_enum_pandas() -> None:
-    pd = pytest.importorskip("pandas")
+    pytest.importorskip("pandas")
+    import pandas as pd
 
     # we don't yet support metadata in dtypes, so for now disallow this
     # seems like a very niche use case anyway, and allowing it later wouldn't be

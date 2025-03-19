@@ -10,8 +10,11 @@ from numpy.testing import assert_allclose
 
 import narwhals.stable.v1 as nw
 
-pd = pytest.importorskip("pandas")
-pl = pytest.importorskip("polars")
+pytest.importorskip("pandas")
+pytest.importorskip("polars")
+
+import pandas as pd
+import polars as pl
 
 
 @given(

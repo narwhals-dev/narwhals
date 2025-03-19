@@ -11,7 +11,8 @@ if TYPE_CHECKING:
 
 
 def test_native_namespace_polars() -> None:
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("polars")
+    import polars as pl
 
     df: Frame = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
     assert nw.get_native_namespace(df) is pl
@@ -22,7 +23,8 @@ def test_native_namespace_polars() -> None:
 
 
 def test_native_namespace_pandas() -> None:
-    pd = pytest.importorskip("pandas")
+    pytest.importorskip("pandas")
+    import pandas as pd
 
     df: Frame = nw.from_native(pd.DataFrame({"a": [1, 2, 3]}), eager_only=True)
     assert nw.get_native_namespace(df) is pd
@@ -32,7 +34,8 @@ def test_native_namespace_pandas() -> None:
 
 
 def test_native_namespace_pyarrow() -> None:
-    pa = pytest.importorskip("pyarrow")
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
 
     df: Frame = nw.from_native(pa.table({"a": [1, 2, 3]}), eager_only=True)
     assert nw.get_native_namespace(df) is pa
@@ -48,8 +51,11 @@ def test_get_native_namespace_invalid() -> None:
 
 
 def test_get_native_namespace_invalid_cross() -> None:
-    pd = pytest.importorskip("pandas")
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("pandas")
+    pytest.importorskip("polars")
+
+    import pandas as pd
+    import polars as pl
 
     with pytest.raises(ValueError, match="Found objects with different"):
         nw.get_native_namespace(pd.Series([1]), pl.Series([2]))

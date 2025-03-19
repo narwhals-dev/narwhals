@@ -14,7 +14,8 @@ if TYPE_CHECKING:
 
 
 def test_is_ordered_categorical_polars() -> None:
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("polars")
+    import polars as pl
 
     s: IntoSeries | Any
     s = pl.Series(["a", "b"], dtype=pl.Categorical)
@@ -26,7 +27,8 @@ def test_is_ordered_categorical_polars() -> None:
 
 
 def test_is_ordered_categorical_pandas() -> None:
-    pd = pytest.importorskip("pandas")
+    pytest.importorskip("pandas")
+    import pandas as pd
 
     s = pd.Series(["a", "b"], dtype=pd.CategoricalDtype(ordered=True))
     assert nw.is_ordered_categorical(nw.from_native(s, series_only=True))
@@ -35,7 +37,8 @@ def test_is_ordered_categorical_pandas() -> None:
 
 
 def test_is_ordered_categorical_pyarrow_string() -> None:
-    pa = pytest.importorskip("pyarrow")
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
 
     tp = pa.dictionary(pa.int32(), pa.string())
     s = pa.chunked_array([pa.array(["a", "b"], type=tp)], type=tp)
@@ -44,7 +47,8 @@ def test_is_ordered_categorical_pyarrow_string() -> None:
 
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="requires interchange protocol")
 def test_is_ordered_categorical_interchange_protocol() -> None:
-    pd = pytest.importorskip("pandas")
+    pytest.importorskip("pandas")
+    import pandas as pd
 
     df = pd.DataFrame(
         {"a": ["a", "b"]}, dtype=pd.CategoricalDtype(ordered=True)
@@ -64,7 +68,8 @@ def test_is_definitely_not_ordered_categorical(
 
 @pytest.mark.xfail(reason="https://github.com/apache/arrow/issues/41017")
 def test_is_ordered_categorical_pyarrow() -> None:
-    pa = pytest.importorskip("pyarrow")
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
 
     tp = pa.dictionary(pa.int32(), pa.string(), ordered=True)
     arr = pa.array(["a", "b"], type=tp)

@@ -6,9 +6,13 @@ import narwhals.stable.v1 as nw
 from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
 
-pl = pytest.importorskip("polars")
-pa = pytest.importorskip("pyarrow")
-pc = pytest.importorskip("pyarrow.compute")
+pytest.importorskip("polars")
+pytest.importorskip("pyarrow")
+pytest.importorskip("pyarrow.compute")
+
+import polars as pl
+import pyarrow as pa
+import pyarrow.compute as pc
 
 
 @pytest.mark.skipif(POLARS_VERSION < (1, 3), reason="too old for pycapsule in Polars")

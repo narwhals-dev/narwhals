@@ -40,7 +40,8 @@ def test_invalid() -> None:
 
 
 def test_invalid_pyarrow() -> None:
-    pa = pytest.importorskip("pyarrow")
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
 
     df: Frame = nw.from_native(pa.table({"a": [1, 2], "b": [3, 4]}))
     with pytest.raises(ValueError, match="Multi-output"):
@@ -67,7 +68,8 @@ def test_native_vs_non_native() -> None:
 
 
 def test_native_vs_non_native_polars() -> None:
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("polars")
+    import polars as pl
 
     s_pl = pl.Series([1, 2, 3])
     df_pl = pl.DataFrame({"a": [2, 2, 3], "b": [4, 5, 6]})

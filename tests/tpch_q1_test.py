@@ -30,7 +30,9 @@ def test_q1(library: str, request: pytest.FixtureRequest) -> None:
     elif library == "pandas":
         df_raw: IntoFrame = pd.read_csv("tests/data/lineitem.csv")
     elif library == "polars":
-        pl = pytest.importorskip("polars")
+        pytest.importorskip("polars")
+        import polars as pl
+
         df_raw = pl.scan_csv("tests/data/lineitem.csv")
     elif library == "dask":
         pytest.importorskip("dask")
@@ -111,7 +113,9 @@ def test_q1_w_generic_funcs(library: str, request: pytest.FixtureRequest) -> Non
     elif library == "pandas":
         df_raw: IntoFrame = pd.read_csv("tests/data/lineitem.csv")
     else:
-        pl = pytest.importorskip("polars")
+        pytest.importorskip("polars")
+        import polars as pl
+
         df_raw = pl.read_csv("tests/data/lineitem.csv")
     var_1 = datetime(1998, 9, 2)
     df = nw.from_native(df_raw, eager_only=True)

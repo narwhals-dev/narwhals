@@ -14,7 +14,8 @@ if TYPE_CHECKING:
 else:
     ibis = pytest.importorskip("ibis")
 
-pl = pytest.importorskip("polars")
+pytest.importorskip("polars")
+import polars as pl
 
 
 @pytest.fixture

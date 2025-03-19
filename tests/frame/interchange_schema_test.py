@@ -9,7 +9,8 @@ import pytest
 import narwhals.stable.v1 as nw
 from tests.utils import IBIS_VERSION
 
-pl = pytest.importorskip("polars")
+pytest.importorskip("polars")
+import polars as pl
 
 
 def test_interchange_schema() -> None:

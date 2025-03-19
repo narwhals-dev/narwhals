@@ -37,7 +37,8 @@ def test_group_by_complex() -> None:
 
 
 def test_group_by_complex_polars() -> None:
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("polars")
+    import polars as pl
 
     expected = {"a": [1, 3], "b": [-3.5, -3.0]}
 

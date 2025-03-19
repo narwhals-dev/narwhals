@@ -16,7 +16,8 @@ data = {"a": [2, 3, 4]}
 
 
 def test_narwhalify() -> None:
-    pd = pytest.importorskip("pandas")
+    pytest.importorskip("pandas")
+    import pandas as pd
 
     @nw.narwhalify
     def func(df: nw.DataFrame[IntoDataFrameT]) -> nw.DataFrame[IntoDataFrameT]:
@@ -30,7 +31,8 @@ def test_narwhalify() -> None:
 
 
 def test_narwhalify_method() -> None:
-    pd = pytest.importorskip("pandas")
+    pytest.importorskip("pandas")
+    import pandas as pd
 
     class Foo:
         @nw.narwhalify
@@ -47,7 +49,8 @@ def test_narwhalify_method() -> None:
 
 
 def test_narwhalify_method_called() -> None:
-    pd = pytest.importorskip("pandas")
+    pytest.importorskip("pandas")
+    import pandas as pd
 
     class Foo:
         @nw.narwhalify
@@ -89,7 +92,8 @@ def test_narwhalify_invalid() -> None:
 
 
 def test_narwhalify_backends_pandas() -> None:
-    pd = pytest.importorskip("pandas")
+    pytest.importorskip("pandas")
+    import pandas as pd
 
     @nw.narwhalify
     def func(
@@ -101,7 +105,8 @@ def test_narwhalify_backends_pandas() -> None:
 
 
 def test_narwhalify_backends_polars() -> None:
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("polars")
+    import polars as pl
 
     @nw.narwhalify
     def func(
@@ -113,8 +118,11 @@ def test_narwhalify_backends_polars() -> None:
 
 
 def test_narwhalify_backends_cross() -> None:
-    pd = pytest.importorskip("pandas")
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("pandas")
+    pytest.importorskip("polars")
+
+    import pandas as pd
+    import polars as pl
 
     @nw.narwhalify
     def func(
@@ -130,8 +138,11 @@ def test_narwhalify_backends_cross() -> None:
 
 
 def test_narwhalify_backends_cross2() -> None:
-    pd = pytest.importorskip("pandas")
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("pandas")
+    pytest.importorskip("polars")
+
+    import pandas as pd
+    import polars as pl
 
     @nw.narwhalify
     def func(

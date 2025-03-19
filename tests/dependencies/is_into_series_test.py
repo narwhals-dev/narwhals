@@ -26,17 +26,23 @@ class ListBackedSeries:
 
 
 def test_is_into_series_pyarrow() -> None:
-    pa = pytest.importorskip("pyarrow")
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     assert is_into_series(pa.chunked_array([["a", "b"]]))
 
 
 def test_is_into_series_polars() -> None:
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("polars")
+    import polars as pl
+
     assert is_into_series(pl.Series([1, 2, 3]))
 
 
 def test_is_into_series_pandas() -> None:
-    pd = pytest.importorskip("pandas")
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     assert is_into_series(pd.Series([1, 2, 3]))
     assert is_into_series(nw.from_native(pd.Series([1, 2, 3]), series_only=True))
 

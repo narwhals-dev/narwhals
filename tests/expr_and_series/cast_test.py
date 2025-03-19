@@ -311,7 +311,8 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
 
 
 def test_raise_if_polars_dtype(constructor: Constructor) -> None:
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("polars")
+    import polars as pl
 
     for dtype in [pl.String, pl.String()]:
         df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))

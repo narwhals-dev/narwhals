@@ -22,7 +22,8 @@ if TYPE_CHECKING:
 
     from narwhals.typing import IntoDataFrame
 
-pl = pytest.importorskip("polars")
+pytest.importorskip("polars")
+import polars as pl
 
 
 @pytest.fixture(

@@ -11,7 +11,8 @@ import narwhals.stable.v1 as nw
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
 
-pl = pytest.importorskip("polars")
+pytest.importorskip("polars")
+import polars as pl
 
 
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")

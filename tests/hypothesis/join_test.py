@@ -15,9 +15,13 @@ from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import assert_equal_data
 
-pd = pytest.importorskip("pandas")
-pl = pytest.importorskip("polars")
-pa = pytest.importorskip("pyarrow")
+pytest.importorskip("pandas")
+pytest.importorskip("polars")
+pytest.importorskip("pyarrow")
+
+import pandas as pd
+import polars as pl
+import pyarrow as pa
 
 
 @given(

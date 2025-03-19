@@ -11,5 +11,7 @@ def test_is_pandas_dataframe() -> None:
 
 
 def test_not_is_pandas_dataframe() -> None:
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("polars")
+    import polars as pl
+
     assert not is_pandas_dataframe(pl.DataFrame())

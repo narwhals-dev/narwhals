@@ -221,7 +221,9 @@ def test_pandas_fixed_offset_1302() -> None:
 
 def test_huge_int() -> None:
     duckdb = pytest.importorskip("duckdb")
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = pl.DataFrame({"a": [1, 2, 3]})
 
     if POLARS_VERSION >= (1, 18):
@@ -252,7 +254,9 @@ def test_huge_int() -> None:
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_decimal() -> None:
     duckdb = pytest.importorskip("duckdb")
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = pl.DataFrame({"a": [1]}, schema={"a": pl.Decimal})
     result = nw.from_native(df).schema
     assert result["a"] == nw.Decimal
@@ -326,7 +330,9 @@ def test_dtype_is_x() -> None:
 @pytest.mark.skipif(POLARS_VERSION < (1, 18), reason="too old for Int128")
 def test_huge_int_to_native() -> None:
     duckdb = pytest.importorskip("duckdb")
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = pl.DataFrame({"a": [1, 2, 3]})
     df_casted = (
         nw.from_native(df).with_columns(a_int=nw.col("a").cast(nw.Int128())).to_native()
@@ -352,7 +358,9 @@ def test_huge_int_to_native() -> None:
 
 def test_cast_decimal_to_native() -> None:
     duckdb = pytest.importorskip("duckdb")
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("polars")
+    import polars as pl
+
     data = {"a": [1, 2, 3]}
 
     df = pl.DataFrame(data)
