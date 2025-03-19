@@ -292,11 +292,7 @@ class PolarsDataFrame:
         }
 
     def lazy(self: Self, *, backend: Implementation | None = None) -> CompliantLazyFrame:
-        from narwhals.utils import parse_version
-
         if backend is None or backend is Implementation.POLARS:
-            from narwhals._polars.dataframe import PolarsLazyFrame
-
             return PolarsLazyFrame(
                 self.native.lazy(),
                 backend_version=self._backend_version,
@@ -307,6 +303,7 @@ class PolarsDataFrame:
 
             from narwhals._duckdb.dataframe import DuckDBLazyFrame
 
+            # NOTE: (F841) is a false positive
             df = self._native_frame  # noqa: F841
             return DuckDBLazyFrame(
                 duckdb.table("df"),
