@@ -1290,7 +1290,9 @@ def len_() -> Expr:
     def func(plx: Any) -> Any:
         return plx.len()
 
-    return Expr(func, ExprMetadata(ExprKind.AGGREGATION, n_open_windows=0))
+    return Expr(
+        func, ExprMetadata(ExprKind.AGGREGATION, n_open_windows=0, is_multi_output=False)
+    )
 
 
 def sum(*columns: str) -> Expr:
@@ -1749,7 +1751,7 @@ def lit(value: Any, dtype: DType | type[DType] | None = None) -> Expr:
 
     return Expr(
         lambda plx: plx.lit(value, dtype),
-        ExprMetadata(ExprKind.LITERAL, n_open_windows=0),
+        ExprMetadata(ExprKind.LITERAL, n_open_windows=0, is_multi_output=False),
     )
 
 

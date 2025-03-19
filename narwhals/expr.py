@@ -12,6 +12,7 @@ from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import combine_metadata
+from narwhals._expression_parsing import ensure_is_single_output
 from narwhals._expression_parsing import extract_compliant
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import LengthChangingExprError
@@ -1236,11 +1237,7 @@ class Expr:
         metadata = combine_metadata(
             self, *flat_predicates, str_as_lit=False, allow_expansion=False
         ).with_kind(ExprKind.FILTRATION)
-        if metadata.is_multi_output:
-            msg = (
-                "Multi-output expressions cannot be passed as predicates to `Expr.filter`"
-            )
-            raise ValueError(msg)
+        ensure_is_single_output(metadata)
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx,
@@ -1571,7 +1568,11 @@ class Expr:
         n_open_windows = self._metadata.n_open_windows
         if _order_by is not None and self._metadata.kind.is_window():
             n_open_windows -= 1
-        metadata = ExprMetadata(kind, n_open_windows=n_open_windows)
+        metadata = ExprMetadata(
+            kind,
+            n_open_windows=n_open_windows,
+            is_multi_output=self._metadata.is_multi_output,
+        )
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).over(

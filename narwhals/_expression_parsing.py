@@ -189,7 +189,7 @@ class ExprMetadata:
     __slots__ = ("_is_multi_output", "_kind", "_n_open_windows")
 
     def __init__(
-        self, kind: ExprKind, /, *, n_open_windows: int, is_multi_output: bool = False
+        self, kind: ExprKind, /, *, n_open_windows: int, is_multi_output: bool
     ) -> None:
         self._kind: ExprKind = kind
         self._n_open_windows = n_open_windows
@@ -211,7 +211,7 @@ class ExprMetadata:
         return self._n_open_windows
 
     @property
-    def is_multi_output(self) -> int:
+    def is_multi_output(self) -> bool:
         return self._is_multi_output
 
     def with_kind(self, kind: ExprKind, /) -> ExprMetadata:
@@ -274,7 +274,7 @@ def combine_metadata(
         elif is_expr(arg):
             if arg._metadata.is_multi_output and allow_expansion:
                 if i > 0:  # Only the first argument is allowed to be multi-output.
-                    ensure_is_single_output(arg)
+                    ensure_is_single_output(arg._metadata)
                 result_is_multi_output = True
             if arg._metadata.n_open_windows:
                 result_n_open_windows += 1
@@ -333,8 +333,8 @@ def check_expressions_preserve_length(*args: IntoExpr, function_name: str) -> No
         raise ShapeError(msg)
 
 
-def ensure_is_single_output(expr: Expr) -> None:
-    if expr._metadata.is_multi_output:
+def ensure_is_single_output(metadata: ExprMetadata) -> None:
+    if metadata.is_multi_output:
         msg = "Multi-output expressions (e.g. nw.col('a', 'b'), nw.all()) are not supported in this context."
         raise MultiOutputExpressionError(msg)
 
