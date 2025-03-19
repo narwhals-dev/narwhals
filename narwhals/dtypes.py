@@ -713,11 +713,10 @@ class Binary(DType):
         ...     "SELECT * FROM (VALUES (BLOB 'test1'), (BLOB 'test2')) AS df(t)"
         ... )
 
-
         >>> nw.from_native(ser_pl, series_only=True).dtype
         Binary
         >>> nw.from_native(ser_pa, series_only=True).dtype
         Binary
         >>> nw.from_native(rel).schema["t"]
-        Binary"
+        Binary
     """
