@@ -319,7 +319,6 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
         subset: Sequence[str] | None,
         *,
         keep: Literal["any", "first", "last", "none"],
-        maintain_order: bool | None = None,
     ) -> Self:
         if keep != "any":
             msg = "`LazyFrame.unique` with PySpark backend only supports `keep='any'`."

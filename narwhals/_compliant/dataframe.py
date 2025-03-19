@@ -239,7 +239,6 @@ class CompliantLazyFrame(
         subset: Sequence[str] | None,
         *,
         keep: Literal["any", "first", "last", "none"],
-        maintain_order: bool | None = None,
     ) -> Self: ...
     def unpivot(
         self,
