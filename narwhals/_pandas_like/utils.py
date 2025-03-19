@@ -394,6 +394,8 @@ def non_object_native_to_narwhals_dtype(dtype: str, version: Version) -> DType:
         return dtypes.Decimal()
     if dtype.startswith("time") and dtype.endswith("[pyarrow]"):
         return dtypes.Time()
+    if dtype.startswith("binary") and dtype.endswith("[pyarrow]"):
+        return dtypes.Binary()
     return dtypes.Unknown()  # pragma: no cover
 
 
@@ -593,7 +595,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
         msg = "Converting to Enum is not (yet) supported"
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(
-        dtype, (dtypes.Struct, dtypes.Array, dtypes.List, dtypes.Time)
+        dtype, (dtypes.Struct, dtypes.Array, dtypes.List, dtypes.Time, dtypes.Binary)
     ):
         if implementation is Implementation.PANDAS and backend_version >= (2, 2):
             try:
