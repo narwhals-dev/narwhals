@@ -296,6 +296,7 @@ def test_dtype_is_x() -> None:
         nw.UInt64,
         nw.UInt128,
         nw.Unknown,
+        nw.Binary,
     )
 
     is_signed_integer = {nw.Int8, nw.Int16, nw.Int32, nw.Int64, nw.Int128}

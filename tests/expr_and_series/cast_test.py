@@ -332,3 +332,16 @@ def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> 
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").cast(nw.Time()))
     assert result.collect_schema() == {"a": nw.Time()}
+
+
+def test_cast_binary(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
+        request.applymarker(pytest.mark.xfail)
+
+    if any(backend in str(constructor) for backend in ("dask", "pyspark", "modin")):
+        request.applymarker(pytest.mark.xfail)
+
+    data = {"a": [b"test1", b"test2"]}
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.col("a").cast(nw.Binary()))
+    assert result.collect_schema() == {"a": nw.Binary()}
