@@ -249,11 +249,6 @@ class ExprMetadata:
         return ExprMetadata(ExprKind.TRANSFORM, n_open_windows=0, is_multi_output=True)
 
 
-# binary: don't allow expansion, but preserve multi-output
-# concat_str: allow expansion, make it single-output
-# filter: all_horizontal should take care of it?
-
-
 def combine_metadata(
     *args: IntoExpr | object | None, str_as_lit: bool, is_binary_op: bool
 ) -> ExprMetadata:
