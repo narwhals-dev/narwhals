@@ -3,9 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 import hypothesis.strategies as st
-import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 from hypothesis import assume
 from hypothesis import given
@@ -161,7 +158,10 @@ def test_truediv_same_dims(
 @pytest.mark.slow
 @given(left=st.integers(-100, 100), right=st.integers(-100, 100))
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
-def test_floordiv(left: int, right: int) -> None:
+def test_floordiv_pandas(left: int, right: int) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     # hypothesis complains if we add `constructor` as an argument, so this
     # test is a bit manual unfortunately
     assume(right != 0)
@@ -183,10 +183,36 @@ def test_floordiv(left: int, right: int) -> None:
         pd.DataFrame({"a": [left]}).convert_dtypes(), eager_only=True
     ).select(nw.col("a") // right)
     assert_equal_data(result, expected)
+
+
+@pytest.mark.slow
+@given(left=st.integers(-100, 100), right=st.integers(-100, 100))
+@pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
+def test_floordiv_polars(left: int, right: int) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    # hypothesis complains if we add `constructor` as an argument, so this
+    # test is a bit manual unfortunately
+    assume(right != 0)
+    expected = {"a": [left // right]}
     result = nw.from_native(pl.DataFrame({"a": [left]}), eager_only=True).select(
         nw.col("a") // right
     )
     assert_equal_data(result, expected)
+
+
+@pytest.mark.slow
+@given(left=st.integers(-100, 100), right=st.integers(-100, 100))
+@pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
+def test_floordiv_pyarrow(left: int, right: int) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    # hypothesis complains if we add `constructor` as an argument, so this
+    # test is a bit manual unfortunately
+    assume(right != 0)
+    expected = {"a": [left // right]}
     result = nw.from_native(pa.table({"a": [left]}), eager_only=True).select(
         nw.col("a") // right
     )
@@ -196,7 +222,10 @@ def test_floordiv(left: int, right: int) -> None:
 @pytest.mark.slow
 @given(left=st.integers(-100, 100), right=st.integers(-100, 100))
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
-def test_mod(left: int, right: int) -> None:
+def test_mod_pandas(left: int, right: int) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     # hypothesis complains if we add `constructor` as an argument, so this
     # test is a bit manual unfortunately
     assume(right != 0)
@@ -209,10 +238,36 @@ def test_mod(left: int, right: int) -> None:
         pd.DataFrame({"a": [left]}).convert_dtypes(), eager_only=True
     ).select(nw.col("a") % right)
     assert_equal_data(result, expected)
+
+
+@pytest.mark.slow
+@given(left=st.integers(-100, 100), right=st.integers(-100, 100))
+@pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
+def test_mod_polars(left: int, right: int) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    # hypothesis complains if we add `constructor` as an argument, so this
+    # test is a bit manual unfortunately
+    assume(right != 0)
+    expected = {"a": [left % right]}
     result = nw.from_native(pl.DataFrame({"a": [left]}), eager_only=True).select(
         nw.col("a") % right
     )
     assert_equal_data(result, expected)
+
+
+@pytest.mark.slow
+@given(left=st.integers(-100, 100), right=st.integers(-100, 100))
+@pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
+def test_mod_pyarrow(left: int, right: int) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    # hypothesis complains if we add `constructor` as an argument, so this
+    # test is a bit manual unfortunately
+    assume(right != 0)
+    expected = {"a": [left % right]}
     result = nw.from_native(pa.table({"a": [left]}), eager_only=True).select(
         nw.col("a") % right
     )

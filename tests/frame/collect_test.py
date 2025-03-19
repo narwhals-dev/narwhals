@@ -3,9 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
@@ -33,8 +30,14 @@ def test_collect_to_default_backend(constructor: Constructor) -> None:
 
     expected_cls: Any
     if "polars" in str(constructor):
+        pytest.importorskip("polars")
+        import polars as pl
+
         expected_cls = pl.DataFrame
     elif any(x in str(constructor) for x in ("pandas", "dask")):
+        pytest.importorskip("pandas")
+        import pandas as pd
+
         expected_cls = pd.DataFrame
     elif "modin" in str(constructor):
         mpd = get_modin()
@@ -43,6 +46,9 @@ def test_collect_to_default_backend(constructor: Constructor) -> None:
         cudf = get_cudf()
         expected_cls = cudf.DataFrame
     else:  # pyarrow, duckdb, and PySpark
+        pytest.importorskip("pyarrow")
+        import pyarrow as pa
+
         expected_cls = pa.Table
 
     assert isinstance(result, expected_cls)
@@ -51,28 +57,91 @@ def test_collect_to_default_backend(constructor: Constructor) -> None:
 @pytest.mark.filterwarnings(
     "ignore:is_sparse is deprecated and will be removed in a future version."
 )
-@pytest.mark.parametrize(
-    ("backend", "expected_cls"),
-    [
-        ("pyarrow", pa.Table),
-        ("polars", pl.DataFrame),
-        ("pandas", pd.DataFrame),
-        (Implementation.PYARROW, pa.Table),
-        (Implementation.POLARS, pl.DataFrame),
-        (Implementation.PANDAS, pd.DataFrame),
-        (pa, pa.Table),
-        (pl, pl.DataFrame),
-        (pd, pd.DataFrame),
-    ],
-)
-def test_collect_to_valid_backend(
+@pytest.mark.parametrize("backend", ["pandas", Implementation.PANDAS])
+def test_collect_to_valid_backend_pandas(
     constructor: Constructor,
-    backend: ModuleType | Implementation | str | None,
-    expected_cls: type,
+    backend: Implementation | str | None,
 ) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw.from_native(constructor(data))
     result = df.lazy().collect(backend=backend).to_native()
-    assert isinstance(result, expected_cls)
+    assert isinstance(result, pd.DataFrame)
+
+
+@pytest.mark.filterwarnings(
+    "ignore:is_sparse is deprecated and will be removed in a future version."
+)
+@pytest.mark.parametrize("backend", ["polars", Implementation.POLARS])
+def test_collect_to_valid_backend_polars(
+    constructor: Constructor,
+    backend: Implementation | str | None,
+) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = nw.from_native(constructor(data))
+    result = df.lazy().collect(backend=backend).to_native()
+    assert isinstance(result, pl.DataFrame)
+
+
+@pytest.mark.filterwarnings(
+    "ignore:is_sparse is deprecated and will be removed in a future version."
+)
+@pytest.mark.parametrize("backend", ["pyarrow", Implementation.PYARROW])
+def test_collect_to_valid_backend_pyarrow(
+    constructor: Constructor,
+    backend: Implementation | str | None,
+) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    df = nw.from_native(constructor(data))
+    result = df.lazy().collect(backend=backend).to_native()
+    assert isinstance(result, pa.Table)
+
+
+@pytest.mark.filterwarnings(
+    "ignore:is_sparse is deprecated and will be removed in a future version."
+)
+def test_collect_to_valid_backend_pandas_mod(
+    constructor: Constructor,
+) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw.from_native(constructor(data))
+    result = df.lazy().collect(backend=pd).to_native()
+    assert isinstance(result, pd.DataFrame)
+
+
+@pytest.mark.filterwarnings(
+    "ignore:is_sparse is deprecated and will be removed in a future version."
+)
+def test_collect_to_valid_backend_polars_mod(
+    constructor: Constructor,
+) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = nw.from_native(constructor(data))
+    result = df.lazy().collect(backend=pl).to_native()
+    assert isinstance(result, pl.DataFrame)
+
+
+@pytest.mark.filterwarnings(
+    "ignore:is_sparse is deprecated and will be removed in a future version."
+)
+def test_collect_to_valid_backend_pyarrow_mod(
+    constructor: Constructor,
+) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    df = nw.from_native(constructor(data))
+    result = df.lazy().collect(backend=pa).to_native()
+    assert isinstance(result, pa.Table)
 
 
 @pytest.mark.parametrize(
