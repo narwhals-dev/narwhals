@@ -75,7 +75,7 @@ if find_spec("pandas") is not None:
         series_pd,
         series_mpd,
     ]
-else:
+else:  # pragma: no cover
     df_pd = None
 
 if find_spec("polars") is not None:
@@ -94,7 +94,7 @@ if find_spec("polars") is not None:
     lazy_frames += [
         lf_pl,
     ]
-else:
+else:  # pragma: no cover
     lf_pl = None
 
 if find_spec("pyarrow") is not None:
@@ -109,6 +109,8 @@ if find_spec("pyarrow") is not None:
     all_series += [
         series_pa,
     ]
+else:  # pragma: no cover
+    pass
 
 all_frames = [*eager_frames, *lazy_frames]
 
