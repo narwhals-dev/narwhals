@@ -35,6 +35,7 @@ def test_group_by_complex() -> None:
             (nw.col("b") - nw.col("c").mean()).mean()
         )
 
+
 def test_group_by_complex_polars() -> None:
     pl = pytest.importorskip("polars")
 
