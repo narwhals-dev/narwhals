@@ -52,6 +52,8 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import Mask  # type: ignore[attr-defined]
     from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
     from narwhals.dtypes import DType
+    from narwhals.typing import CompliantDataFrame
+    from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import SizeUnit
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
@@ -69,11 +71,8 @@ if TYPE_CHECKING:
     ]
     PromoteOptions: TypeAlias = Literal["none", "default", "permissive"]
 
-from narwhals.typing import CompliantDataFrame
-from narwhals.typing import CompliantLazyFrame
 
-
-class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr"], CompliantLazyFrame):
+class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
     # --- not in the spec ---
     def __init__(
         self: Self,
@@ -349,6 +348,8 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr"], CompliantLazyFr
         sz = self._native_frame.nbytes
         return scale_bytes(sz, unit)
 
+    explode = not_implemented()
+
     @property
     def columns(self: Self) -> list[str]:
         return self._native_frame.schema.names
@@ -573,7 +574,9 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr"], CompliantLazyFr
         else:
             return self._from_native_frame(df.slice(abs(n)), validate_column_names=False)
 
-    def lazy(self: Self, *, backend: Implementation | None = None) -> CompliantLazyFrame:
+    def lazy(
+        self: Self, *, backend: Implementation | None = None
+    ) -> CompliantLazyFrame[Any, Any]:
         from narwhals.utils import parse_version
 
         if backend is None:
