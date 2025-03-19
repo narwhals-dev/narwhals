@@ -172,7 +172,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame):
         self: Self,
         backend: ModuleType | Implementation | str | None,
         **kwargs: Any,
-    ) -> CompliantDataFrame[Any, Any]:
+    ) -> CompliantDataFrame[Any, Any, Any]:
         if backend is Implementation.PANDAS:
             import pandas as pd  # ignore-banned-import
 

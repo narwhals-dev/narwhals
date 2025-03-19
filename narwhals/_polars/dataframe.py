@@ -53,7 +53,7 @@ Where `R` is the return type.
 
 class PolarsDataFrame:
     clone: Method[Self]
-    collect: Method[CompliantDataFrame[Any, Any]]
+    collect: Method[CompliantDataFrame[Any, Any, Any]]
     drop_nulls: Method[Self]
     estimated_size: Method[int | float]
     filter: Method[Self]
@@ -91,6 +91,10 @@ class PolarsDataFrame:
         self._implementation = Implementation.POLARS
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
+
+    @property
+    def native(self) -> pl.DataFrame:
+        return self._native_frame
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         return "PolarsDataFrame"
@@ -514,7 +518,7 @@ class PolarsLazyFrame:
         self: Self,
         backend: Implementation | None,
         **kwargs: Any,
-    ) -> CompliantDataFrame[Any, Any]:
+    ) -> CompliantDataFrame[Any, Any, Any]:
         try:
             result = self._native_frame.collect(**kwargs)
         except Exception as e:  # noqa: BLE001

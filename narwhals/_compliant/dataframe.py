@@ -16,7 +16,9 @@ from narwhals._compliant.typing import CompliantExprT_contra
 from narwhals._compliant.typing import CompliantSeriesT
 from narwhals._compliant.typing import EagerExprT_contra
 from narwhals._compliant.typing import EagerSeriesT
+from narwhals._compliant.typing import NativeFrameT_co
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals.utils import _StoresNative
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -40,7 +42,13 @@ __all__ = ["CompliantDataFrame", "CompliantLazyFrame", "EagerDataFrame"]
 T = TypeVar("T")
 
 
-class CompliantDataFrame(Sized, Protocol[CompliantSeriesT, CompliantExprT_contra]):
+class CompliantDataFrame(
+    _StoresNative[NativeFrameT_co],
+    Sized,
+    Protocol[CompliantSeriesT, CompliantExprT_contra, NativeFrameT_co],
+):
+    _native_frame: Any
+
     def __narwhals_dataframe__(self) -> Self: ...
     def __narwhals_namespace__(self) -> Any: ...
     def __array__(self, dtype: Any, *, copy: bool | None) -> _2DArray: ...
@@ -57,6 +65,10 @@ class CompliantDataFrame(Sized, Protocol[CompliantSeriesT, CompliantExprT_contra
         return self.select(*exprs)
 
     @property
+    def native(self) -> NativeFrameT_co:
+        return self._native_frame  # type: ignore[no-any-return]
+
+    @property
     def columns(self) -> Sequence[str]: ...
     @property
     def schema(self) -> Mapping[str, DType]: ...
@@ -65,7 +77,7 @@ class CompliantDataFrame(Sized, Protocol[CompliantSeriesT, CompliantExprT_contra
     def clone(self) -> Self: ...
     def collect(
         self, backend: Implementation | None, **kwargs: Any
-    ) -> CompliantDataFrame[Any, Any]: ...
+    ) -> CompliantDataFrame[Any, Any, Any]: ...
     def collect_schema(self) -> Mapping[str, DType]: ...
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self: ...
     def drop_nulls(self, subset: Sequence[str] | None) -> Self: ...
@@ -173,8 +185,8 @@ class CompliantLazyFrame(Protocol):
 
 
 class EagerDataFrame(
-    CompliantDataFrame[EagerSeriesT, EagerExprT_contra],
-    Protocol[EagerSeriesT, EagerExprT_contra],
+    CompliantDataFrame[EagerSeriesT, EagerExprT_contra, NativeFrameT_co],
+    Protocol[EagerSeriesT, EagerExprT_contra, NativeFrameT_co],
 ):
     def _evaluate_expr(self, expr: EagerExprT_contra, /) -> EagerSeriesT:
         """Evaluate `expr` and ensure it has a **single** output."""

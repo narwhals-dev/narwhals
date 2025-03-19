@@ -93,7 +93,7 @@ class DaskLazyFrame(CompliantLazyFrame):
         self: Self,
         backend: Implementation | None,
         **kwargs: Any,
-    ) -> CompliantDataFrame[Any, Any]:
+    ) -> CompliantDataFrame[Any, Any, Any]:
         result = self._native_frame.compute(**kwargs)
 
         if backend is None or backend is Implementation.PANDAS:

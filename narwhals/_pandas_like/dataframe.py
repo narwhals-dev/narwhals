@@ -84,7 +84,7 @@ CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
 
 
 class PandasLikeDataFrame(
-    EagerDataFrame["PandasLikeSeries", "PandasLikeExpr"], CompliantLazyFrame
+    EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "Any"], CompliantLazyFrame
 ):
     # --- not in the spec ---
     def __init__(
@@ -531,7 +531,7 @@ class PandasLikeDataFrame(
         self: Self,
         backend: Implementation | None,
         **kwargs: Any,
-    ) -> CompliantDataFrame[Any, Any]:
+    ) -> CompliantDataFrame[Any, Any, Any]:
         if backend is None:
             return PandasLikeDataFrame(
                 self._native_frame,
