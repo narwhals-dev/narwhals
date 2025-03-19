@@ -42,7 +42,9 @@ def test_q1(library: str, request: pytest.FixtureRequest) -> None:
             pd.read_csv("tests/data/lineitem.csv", dtype_backend="pyarrow")
         )
     else:
-        pa_csv = pytest.importorskip("pyarrow.csv")
+        pytest.importorskip("pyarrow.csv")
+        import pyarrow.csv as pa_csv
+
         df_raw = pa_csv.read_csv("tests/data/lineitem.csv")
     var_1 = datetime(1998, 9, 2)
     df = nw.from_native(df_raw).lazy()
