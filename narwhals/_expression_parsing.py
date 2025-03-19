@@ -248,6 +248,9 @@ class ExprMetadata:
         # e.g. nw.col('a', 'b'), nw.nth(0, 1), nw.all(), nw.selectors.matches('foo')  # noqa: ERA001
         return ExprMetadata(ExprKind.TRANSFORM, n_open_windows=0, is_multi_output=True)
 
+# binary: don't allow expansion, but preserve multi-output
+# concat_str: allow expansion, make it single-output
+# filter: all_horizontal should take care of it?
 
 def combine_metadata(
     *args: IntoExpr | object | None, str_as_lit: bool, allow_expansion: bool
@@ -272,8 +275,8 @@ def combine_metadata(
         if isinstance(arg, str) and not str_as_lit:
             has_transforms_or_windows = True
         elif is_expr(arg):
-            if arg._metadata.is_multi_output and allow_expansion:
-                if i > 0:  # Only the first argument is allowed to be multi-output.
+            if arg._metadata.is_multi_output:
+                if i > 0 and not allow_expansion:  # Only the first argument is allowed to be multi-output.
                     ensure_is_single_output(arg._metadata)
                 result_is_multi_output = True
             if arg._metadata.n_open_windows:
