@@ -109,7 +109,7 @@ def extract_compliant(
 
 def evaluate_output_names_and_aliases(
     expr: CompliantExpr[Any, Any],
-    df: CompliantDataFrame[Any, Any, Any] | CompliantLazyFrame,
+    df: CompliantDataFrame[Any, Any, Any] | CompliantLazyFrame[Any, Any],
     exclude: Sequence[str],
 ) -> tuple[Sequence[str], Sequence[str]]:
     output_names = expr._evaluate_output_names(df)

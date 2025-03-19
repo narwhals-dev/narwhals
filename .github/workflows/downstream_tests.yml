@@ -228,7 +228,7 @@ jobs:
         run: |
           cd tea-tasting
           pdm remove narwhals
-          pdm add ./..[tests]
+          pdm add ./..
       - name: show-deps
         run: |
           cd tea-tasting
@@ -236,6 +236,8 @@ jobs:
       - name: run-pytest
         run: |
           cd tea-tasting
+          # empty pytest.ini to avoid pytest using narwhals configs
+          touch pytest.ini
           pdm run test
 
   # temporarily commented out until they address the `new_series` deprecation

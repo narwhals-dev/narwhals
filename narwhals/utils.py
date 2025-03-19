@@ -49,6 +49,7 @@ if TYPE_CHECKING:
     from typing import AbstractSet as Set
 
     import pandas as pd
+    from typing_extensions import LiteralString
     from typing_extensions import ParamSpec
     from typing_extensions import Self
     from typing_extensions import TypeAlias
@@ -1146,7 +1147,9 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
     return False  # pragma: no cover
 
 
-def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: no cover
+def generate_unique_token(
+    n_bytes: int, columns: Sequence[str]
+) -> str:  # pragma: no cover
     msg = (
         "Use `generate_temporary_column_name` instead. `generate_unique_token` is "
         "deprecated and it will be removed in future versions"
@@ -1155,7 +1158,7 @@ def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: n
     return generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
 
 
-def generate_temporary_column_name(n_bytes: int, columns: list[str]) -> str:
+def generate_temporary_column_name(n_bytes: int, columns: Sequence[str]) -> str:
     """Generates a unique column name that is not present in the given list of columns.
 
     It relies on [python secrets token_hex](https://docs.python.org/3/library/secrets.html#secrets.token_hex)
@@ -1479,7 +1482,9 @@ def is_compliant_dataframe(
     return _hasattr_static(obj, "__narwhals_dataframe__")
 
 
-def is_compliant_lazyframe(obj: Any) -> TypeIs[CompliantLazyFrame]:
+def is_compliant_lazyframe(
+    obj: CompliantLazyFrame[CompliantExprT_co, NativeFrameT_co] | Any,
+) -> TypeIs[CompliantLazyFrame[CompliantExprT_co, NativeFrameT_co]]:
     return _hasattr_static(obj, "__narwhals_lazyframe__")
 
 
@@ -1529,6 +1534,24 @@ def unstable(fn: _Fn, /) -> _Fn:
         (1, 2, 3)
     """
     return fn
+
+
+if TYPE_CHECKING:
+    import sys
+
+    if sys.version_info >= (3, 13):
+        # NOTE: avoids `mypy`
+        #     error: Module "narwhals.utils" does not explicitly export attribute "deprecated"  [attr-defined]
+        from warnings import deprecated as deprecated  # noqa: PLC0414
+    else:
+        from typing_extensions import deprecated as deprecated  # noqa: PLC0414
+else:
+
+    def deprecated(message: str, /) -> Callable[[_Fn], _Fn]:  # noqa: ARG001
+        def wrapper(func: _Fn, /) -> _Fn:
+            return func
+
+        return wrapper
 
 
 class not_implemented:  # noqa: N801
@@ -1599,6 +1622,21 @@ class not_implemented:  # noqa: N801
         # Wouldn't be reachable through *regular* attribute access
         return self.__get__("raise")
 
+    @classmethod
+    def deprecated(cls, message: LiteralString, /) -> Self:
+        """Alt constructor, wraps with `@deprecated`.
+
+        Arguments:
+            message: **Static-only** deprecation message, emitted in an IDE.
+
+        Returns:
+            An exception-raising [descriptor].
+
+        [descriptor]: https://docs.python.org/3/howto/descriptor.html
+        """
+        obj = cls()
+        return deprecated(message)(obj)
+
 
 def _not_implemented_error(what: str, who: str, /) -> NotImplementedError:
     msg = (
@@ -1607,21 +1645,3 @@ def _not_implemented_error(what: str, who: str, /) -> NotImplementedError:
         "please open an issue at: https://github.com/narwhals-dev/narwhals/issues"
     )
     return NotImplementedError(msg)
-
-
-if TYPE_CHECKING:
-    import sys
-
-    if sys.version_info >= (3, 13):
-        # NOTE: avoids `mypy`
-        #     error: Module "narwhals.utils" does not explicitly export attribute "deprecated"  [attr-defined]
-        from warnings import deprecated as deprecated  # noqa: PLC0414
-    else:
-        from typing_extensions import deprecated as deprecated  # noqa: PLC0414
-else:
-
-    def deprecated(message: str, /) -> Callable[[_Fn], _Fn]:  # noqa: ARG001
-        def wrapper(func: _Fn, /) -> _Fn:
-            return func
-
-        return wrapper

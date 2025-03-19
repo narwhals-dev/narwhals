@@ -26,8 +26,6 @@ from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantDataFrame
-from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
 from narwhals.utils import generate_temporary_column_name
@@ -51,6 +49,8 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import CompliantDataFrame
+    from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import SizeUnit
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
@@ -83,9 +83,7 @@ CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
 )
 
 
-class PandasLikeDataFrame(
-    EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "Any"], CompliantLazyFrame
-):
+class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "Any"]):
     # --- not in the spec ---
     def __init__(
         self: Self,
@@ -775,7 +773,9 @@ class PandasLikeDataFrame(
         )
 
     # --- lazy-only ---
-    def lazy(self: Self, *, backend: Implementation | None = None) -> CompliantLazyFrame:
+    def lazy(
+        self: Self, *, backend: Implementation | None = None
+    ) -> CompliantLazyFrame[Any, Any]:
         from narwhals.utils import parse_version
 
         pandas_df = self.to_pandas()
@@ -1070,7 +1070,7 @@ class PandasLikeDataFrame(
             )
         )
 
-    def explode(self: Self, columns: list[str]) -> Self:
+    def explode(self: Self, columns: Sequence[str]) -> Self:
         dtypes = import_dtypes_module(self._version)
 
         schema = self.collect_schema()

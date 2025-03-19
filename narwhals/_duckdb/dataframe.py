@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 
 import duckdb
@@ -21,6 +22,7 @@ from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import validate_backend_version
@@ -41,7 +43,7 @@ if TYPE_CHECKING:
 from narwhals.typing import CompliantLazyFrame
 
 
-class DuckDBLazyFrame(CompliantLazyFrame):
+class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"]):
     _implementation = Implementation.DUCKDB
 
     def __init__(
@@ -155,7 +157,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             self._native_frame.select(*(val.alias(col) for col, val in new_columns_map)),
         )
 
-    def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
+    def drop(self: Self, columns: Sequence[str], *, strict: bool) -> Self:
         columns_to_drop = parse_columns_to_drop(
             compliant_frame=self, columns=columns, strict=strict
         )
@@ -240,7 +242,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             compliant_frame=self, keys=list(keys), drop_null_keys=drop_null_keys
         )
 
-    def rename(self: Self, mapping: dict[str, str]) -> Self:
+    def rename(self: Self, mapping: Mapping[str, str]) -> Self:
         df = self._native_frame
         selection = [
             f"{col} as {mapping[col]}" if col in mapping else col for col in df.columns
@@ -252,8 +254,8 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         other: Self,
         *,
         how: Literal["left", "inner", "cross", "anti", "semi"],
-        left_on: list[str] | None,
-        right_on: list[str] | None,
+        left_on: Sequence[str] | None,
+        right_on: Sequence[str] | None,
         suffix: str,
     ) -> Self:
         original_alias = self._native_frame.alias
@@ -299,8 +301,8 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         *,
         left_on: str | None,
         right_on: str | None,
-        by_left: list[str] | None,
-        by_right: list[str] | None,
+        by_left: Sequence[str] | None,
+        by_right: Sequence[str] | None,
         strategy: Literal["backward", "forward", "nearest"],
         suffix: str,
     ) -> Self:
@@ -347,7 +349,7 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         }
 
     def unique(
-        self: Self, subset: Sequence[str] | None, keep: Literal["any", "none"]
+        self: Self, subset: Sequence[str] | None, *, keep: Literal["any", "none"]
     ) -> Self:
         if subset is not None:
             rel = self._native_frame
@@ -399,14 +401,14 @@ class DuckDBLazyFrame(CompliantLazyFrame):
         )
         return self._from_native_frame(result)
 
-    def drop_nulls(self: Self, subset: list[str] | None) -> Self:
+    def drop_nulls(self: Self, subset: Sequence[str] | None) -> Self:
         rel = self._native_frame
         subset_ = subset if subset is not None else rel.columns
         keep_condition = " and ".join(f'"{col}" is not null' for col in subset_)
         query = f"select * from rel where {keep_condition}"  # noqa: S608
         return self._from_native_frame(duckdb.sql(query))
 
-    def explode(self: Self, columns: list[str]) -> Self:
+    def explode(self: Self, columns: Sequence[str]) -> Self:
         dtypes = import_dtypes_module(self._version)
         schema = self.collect_schema()
         for col in columns:
@@ -450,15 +452,13 @@ class DuckDBLazyFrame(CompliantLazyFrame):
 
     def unpivot(
         self: Self,
-        on: list[str] | None,
-        index: list[str] | None,
+        on: Sequence[str] | None,
+        index: Sequence[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:
-        index_: list[str] = [] if index is None else index
-        on_: list[str] = (
-            [c for c in self.columns if c not in index_] if on is None else on
-        )
+        index_ = [] if index is None else index
+        on_ = [c for c in self.columns if c not in index_] if on is None else on
 
         if variable_name == "":
             msg = "`variable_name` cannot be empty string for duckdb backend."
@@ -486,3 +486,11 @@ class DuckDBLazyFrame(CompliantLazyFrame):
             from unpivot_cte;
             """  # noqa: S608
         return self._from_native_frame(duckdb.sql(query))
+
+    gather_every = not_implemented.deprecated(
+        "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
+    )
+    tail = not_implemented.deprecated(
+        "`LazyFrame.tail` is deprecated and will be removed in a future version."
+    )
+    with_row_index = not_implemented()

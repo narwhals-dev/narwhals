@@ -9,12 +9,15 @@ import narwhals.stable.v1 as nw
 from tests.utils import PYARROW_VERSION
 from tests.utils import assert_equal_data
 
-pa = pytest.importorskip("pyarrow")
+pytest.importorskip("pyarrow")
+import pyarrow as pa
 
 
 @pytest.mark.xfail(PYARROW_VERSION < (14,), reason="too old")
 def test_from_arrow_to_arrow() -> None:
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = nw.from_native(pl.DataFrame({"ab": [1, 2, 3], "ba": [4, 5, 6]}), eager_only=True)
     result = nw.from_arrow(df, backend=pa)
     assert isinstance(result.to_native(), pa.Table)
@@ -24,7 +27,9 @@ def test_from_arrow_to_arrow() -> None:
 
 @pytest.mark.xfail(PYARROW_VERSION < (14,), reason="too old")
 def test_from_arrow_to_polars(monkeypatch: pytest.MonkeyPatch) -> None:
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("polars")
+    import polars as pl
+
     tbl = pa.table({"ab": [1, 2, 3], "ba": [4, 5, 6]})
     monkeypatch.delitem(sys.modules, "pandas")
     df = nw.from_native(tbl, eager_only=True)

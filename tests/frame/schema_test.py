@@ -90,7 +90,9 @@ def test_actual_object(
 
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="too old")
 def test_dtypes() -> None:
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("polars")
+    import polars as pl
+
     df_pl = pl.DataFrame(
         {
             "a": [1],
@@ -213,7 +215,9 @@ def test_validate_not_duplicated_columns_pandas_like() -> None:
 
 
 def test_validate_not_duplicated_columns_arrow() -> None:
-    pa = pytest.importorskip("pyarrow")
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     table = pa.Table.from_arrays([pa.array([1, 2]), pa.array([4, 5])], names=["a", "a"])
     with pytest.raises(
         ValueError, match="Expected unique column names, got:\n- 'a' 2 times"
@@ -222,7 +226,9 @@ def test_validate_not_duplicated_columns_arrow() -> None:
 
 
 def test_validate_not_duplicated_columns_duckdb() -> None:
-    duckdb = pytest.importorskip("duckdb")
+    pytest.importorskip("duckdb")
+    import duckdb
+
     rel = duckdb.sql("SELECT 1 AS a, 2 AS a")
     with pytest.raises(
         ValueError, match="Expected unique column names, got:\n- 'a' 2 times"
@@ -235,8 +241,12 @@ def test_validate_not_duplicated_columns_duckdb() -> None:
     reason="too old for pyarrow types",
 )
 def test_nested_dtypes() -> None:
-    pl = pytest.importorskip("polars")
-    duckdb = pytest.importorskip("duckdb")
+    pytest.importorskip("duckdb")
+    pytest.importorskip("polars")
+
+    import duckdb
+    import polars as pl
+
     df_pd = pl.DataFrame(
         {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
         schema_overrides={"b": pl.Array(pl.Int64, 2)},
@@ -278,8 +288,12 @@ def test_nested_dtypes() -> None:
 
 
 def test_nested_dtypes_ibis(request: pytest.FixtureRequest) -> None:  # pragma: no cover
-    pl = pytest.importorskip("polars")
-    ibis = pytest.importorskip("ibis")
+    pytest.importorskip("ibis")
+    pytest.importorskip("polars")
+
+    import ibis
+    import polars as pl
+
     if PANDAS_VERSION < (1, 1):
         request.applymarker(pytest.mark.xfail)
     df = pl.DataFrame(
@@ -296,9 +310,11 @@ def test_nested_dtypes_ibis(request: pytest.FixtureRequest) -> None:  # pragma: 
     reason="too old for pyarrow types",
 )
 def test_nested_dtypes_dask() -> None:
-    pl = pytest.importorskip("polars")
     pytest.importorskip("dask")
+    pytest.importorskip("polars")
+
     import dask.dataframe as dd
+    import polars as pl
 
     df = dd.from_pandas(
         pl.DataFrame(

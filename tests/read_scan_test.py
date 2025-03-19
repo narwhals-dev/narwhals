@@ -14,7 +14,8 @@ from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-pl = pytest.importorskip("polars")
+pytest.importorskip("polars")
+import polars as pl
 
 data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 TEST_EAGER_BACKENDS = [
