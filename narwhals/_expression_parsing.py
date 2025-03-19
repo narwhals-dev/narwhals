@@ -278,7 +278,11 @@ def combine_metadata(
             if arg._metadata.is_multi_output:
                 if i > 0 and not allow_multi_output:
                     # Left-most argument is always allowed to be multi-output.
-                    ensure_is_single_output(arg._metadata)
+                    msg = (
+                        "Multi-output expressions (e.g. nw.col('a', 'b'), nw.all()) "
+                        "are not supported in this context."
+                    )
+                    raise MultiOutputExpressionError(msg)
                 if not to_single_output:
                     result_is_multi_output = True
             if arg._metadata.n_open_windows:
@@ -350,12 +354,6 @@ def check_expressions_preserve_length(*args: IntoExpr, function_name: str) -> No
     ):
         msg = f"Expressions which aggregate or change length cannot be passed to '{function_name}'."
         raise ShapeError(msg)
-
-
-def ensure_is_single_output(metadata: ExprMetadata) -> None:
-    if metadata.is_multi_output:
-        msg = "Multi-output expressions (e.g. nw.col('a', 'b'), nw.all()) are not supported in this context."
-        raise MultiOutputExpressionError(msg)
 
 
 def all_exprs_are_scalar_like(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
