@@ -33,7 +33,7 @@ class Selector(Expr):
         if isinstance(other, Selector):
             return self.__class__(
                 lambda plx: self._to_compliant_expr(plx) | other._to_compliant_expr(plx),
-                combine_metadata(self, other, str_as_lit=False, allow_expansion=False),
+                combine_metadata(self, other, str_as_lit=False, is_binary_op=False),
             )
         return self._to_expr() | other  # type: ignore[no-any-return]
 
@@ -41,7 +41,7 @@ class Selector(Expr):
         if isinstance(other, Selector):
             return self.__class__(
                 lambda plx: self._to_compliant_expr(plx) & other._to_compliant_expr(plx),
-                combine_metadata(self, other, str_as_lit=False, allow_expansion=False),
+                combine_metadata(self, other, str_as_lit=False, is_binary_op=False),
             )
         return self._to_expr() & other  # type: ignore[no-any-return]
 

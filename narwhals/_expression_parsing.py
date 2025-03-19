@@ -248,21 +248,26 @@ class ExprMetadata:
         # e.g. nw.col('a', 'b'), nw.nth(0, 1), nw.all(), nw.selectors.matches('foo')  # noqa: ERA001
         return ExprMetadata(ExprKind.TRANSFORM, n_open_windows=0, is_multi_output=True)
 
+
 # binary: don't allow expansion, but preserve multi-output
 # concat_str: allow expansion, make it single-output
 # filter: all_horizontal should take care of it?
 
+
 def combine_metadata(
-    *args: IntoExpr | object | None, str_as_lit: bool, allow_expansion: bool
+    *args: IntoExpr | object | None, str_as_lit: bool, is_binary_op: bool
 ) -> ExprMetadata:
     """Combine metadata from `args`.
 
     Arguments:
         args: Arguments, maybe expressions, literals, or Series.
         str_as_lit: Whether to interpret strings as literals or as column names.
-        allow_expansion: Whether to allow for multi-output expressions beyond
-            the first argument. For example, `nw.all() + nw.all()` is not allowed,
-            but `nw.all() + nw.col('a')` is.
+        is_binary_op: Whether operation is binary. This is important because:
+            - In binary operations (e.g. `nw.all() + nw.col('a')`), only the
+              left-hand-side is allowed to be multi-output. Furthermore, if the
+              left-hand-side is multi-output, the result is multi-output.
+            - In non-binary operations (e.g. `nw.sum_horizontal`), all inputs
+              are allowed to be multi-output, but the output is single-output.
     """
     n_filtrations = 0
     has_transforms_or_windows = False
@@ -275,8 +280,8 @@ def combine_metadata(
         if isinstance(arg, str) and not str_as_lit:
             has_transforms_or_windows = True
         elif is_expr(arg):
-            if arg._metadata.is_multi_output:
-                if i > 0 and not allow_expansion:  # Only the first argument is allowed to be multi-output.
+            if arg._metadata.is_multi_output and is_binary_op:
+                if i > 0:  # Only the first argument is allowed to be multi-output.
                     ensure_is_single_output(arg._metadata)
                 result_is_multi_output = True
             if arg._metadata.n_open_windows:
