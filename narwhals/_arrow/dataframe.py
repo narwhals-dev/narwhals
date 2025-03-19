@@ -115,7 +115,7 @@ class ArrowDataFrame(
 
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
-            self._native_frame,
+            self.native,
             backend_version=self._backend_version,
             version=version,
             validate_column_names=False,
@@ -133,13 +133,13 @@ class ArrowDataFrame(
 
     @property
     def shape(self: Self) -> tuple[int, int]:
-        return self._native_frame.shape
+        return self.native.shape
 
     def __len__(self: Self) -> int:
-        return len(self._native_frame)
+        return len(self.native)
 
     def row(self: Self, index: int) -> tuple[Any, ...]:
-        return tuple(col[index] for col in self._native_frame.itercolumns())
+        return tuple(col[index] for col in self.native.itercolumns())
 
     @overload
     def rows(self: Self, *, named: Literal[True]) -> list[dict[str, Any]]: ...
@@ -155,12 +155,12 @@ class ArrowDataFrame(
     def rows(self: Self, *, named: bool) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         if not named:
             return list(self.iter_rows(named=False, buffer_size=512))  # type: ignore[return-value]
-        return self._native_frame.to_pylist()
+        return self.native.to_pylist()
 
     def iter_columns(self) -> Iterator[ArrowSeries]:
         from narwhals._arrow.series import ArrowSeries
 
-        for name, series in zip(self.columns, self._native_frame.itercolumns()):
+        for name, series in zip(self.columns, self.native.itercolumns()):
             yield ArrowSeries(
                 series,
                 name=name,
@@ -173,7 +173,7 @@ class ArrowDataFrame(
     def iter_rows(
         self: Self, *, named: bool, buffer_size: int
     ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
-        df = self._native_frame
+        df = self.native
         num_rows = df.num_rows
 
         if not named:
@@ -192,14 +192,14 @@ class ArrowDataFrame(
             raise TypeError(msg)
 
         return ArrowSeries(
-            self._native_frame[name],
+            self.native[name],
             name=name,
             backend_version=self._backend_version,
             version=self._version,
         )
 
     def __array__(self: Self, dtype: Any, *, copy: bool | None) -> _2DArray:
-        return self._native_frame.__array__(dtype, copy=copy)
+        return self.native.__array__(dtype, copy=copy)
 
     @overload
     def __getitem__(  # type: ignore[overload-overlap, unused-ignore]
@@ -241,7 +241,7 @@ class ArrowDataFrame(
             from narwhals._arrow.series import ArrowSeries
 
             return ArrowSeries(
-                self._native_frame[item],
+                self.native[item],
                 name=item,
                 backend_version=self._backend_version,
                 version=self._version,
@@ -254,8 +254,8 @@ class ArrowDataFrame(
         ):
             if len(item[1]) == 0:
                 # Return empty dataframe
-                return self._from_native_frame(self._native_frame.slice(0, 0).select([]))
-            selected_rows = select_rows(self._native_frame, item[0])
+                return self._from_native_frame(self.native.slice(0, 0).select([]))
+            selected_rows = select_rows(self.native, item[0])
             return self._from_native_frame(selected_rows.select(cast("Indices", item[1])))
 
         elif isinstance(item, tuple) and len(item) == 2:
@@ -264,16 +264,16 @@ class ArrowDataFrame(
                 indices = cast("Indices", item[0])
                 if item[1] == slice(None):
                     if isinstance(item[0], Sequence) and len(item[0]) == 0:
-                        return self._from_native_frame(self._native_frame.slice(0, 0))
-                    return self._from_native_frame(self._native_frame.take(indices))
+                        return self._from_native_frame(self.native.slice(0, 0))
+                    return self._from_native_frame(self.native.take(indices))
                 if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
                     start, stop, step = convert_str_slice_to_int_slice(item[1], columns)
                     return self._from_native_frame(
-                        self._native_frame.take(indices).select(columns[start:stop:step])
+                        self.native.take(indices).select(columns[start:stop:step])
                     )
                 if isinstance(item[1].start, int) or isinstance(item[1].stop, int):
                     return self._from_native_frame(
-                        self._native_frame.take(indices).select(
+                        self.native.take(indices).select(
                             columns[item[1].start : item[1].stop : item[1].step]
                         )
                     )
@@ -292,12 +292,12 @@ class ArrowDataFrame(
                 raise TypeError(msg)
             if (isinstance(item[0], slice)) and (item[0] == slice(None)):
                 return ArrowSeries(
-                    self._native_frame[col_name],
+                    self.native[col_name],
                     name=col_name,
                     backend_version=self._backend_version,
                     version=self._version,
                 )
-            selected_rows = select_rows(self._native_frame, item[0])
+            selected_rows = select_rows(self.native, item[0])
             return ArrowSeries(
                 selected_rows[col_name],
                 name=col_name,
@@ -313,11 +313,11 @@ class ArrowDataFrame(
             if isinstance(item.start, str) or isinstance(item.stop, str):
                 start, stop, step = convert_str_slice_to_int_slice(item, columns)
                 return self._from_native_frame(
-                    self._native_frame.select(columns[start:stop:step])
+                    self.native.select(columns[start:stop:step])
                 )
             start = item.start or 0
-            stop = item.stop if item.stop is not None else len(self._native_frame)
-            return self._from_native_frame(self._native_frame.slice(start, stop - start))
+            stop = item.stop if item.stop is not None else len(self.native)
+            return self._from_native_frame(self.native.slice(start, stop - start))
 
         elif isinstance(item, Sequence) or is_numpy_array_1d(item):
             if (
@@ -325,12 +325,10 @@ class ArrowDataFrame(
                 and all(isinstance(x, str) for x in item)
                 and len(item) > 0
             ):
-                return self._from_native_frame(
-                    self._native_frame.select(cast("Indices", item))
-                )
+                return self._from_native_frame(self.native.select(cast("Indices", item)))
             if isinstance(item, Sequence) and len(item) == 0:
-                return self._from_native_frame(self._native_frame.slice(0, 0))
-            return self._from_native_frame(self._native_frame.take(cast("Indices", item)))
+                return self._from_native_frame(self.native.slice(0, 0))
+            return self._from_native_frame(self.native.take(cast("Indices", item)))
 
         else:  # pragma: no cover
             msg = f"Expected str or slice, got: {type(item)}"
@@ -338,7 +336,7 @@ class ArrowDataFrame(
 
     @property
     def schema(self: Self) -> dict[str, DType]:
-        schema = self._native_frame.schema
+        schema = self.native.schema
         return {
             name: native_to_narwhals_dtype(dtype, self._version)
             for name, dtype in zip(schema.names, schema.types)
@@ -348,16 +346,16 @@ class ArrowDataFrame(
         return self.schema
 
     def estimated_size(self: Self, unit: SizeUnit) -> int | float:
-        sz = self._native_frame.nbytes
+        sz = self.native.nbytes
         return scale_bytes(sz, unit)
 
     @property
     def columns(self: Self) -> list[str]:
-        return self._native_frame.schema.names
+        return self.native.schema.names
 
     def simple_select(self, *column_names: str) -> Self:
         return self._from_native_frame(
-            self._native_frame.select(list(column_names)), validate_column_names=False
+            self.native.select(list(column_names)), validate_column_names=False
         )
 
     def select(self: ArrowDataFrame, *exprs: ArrowExpr) -> ArrowDataFrame:
@@ -365,7 +363,7 @@ class ArrowDataFrame(
         if not new_series:
             # return empty dataframe, like Polars does
             return self._from_native_frame(
-                self._native_frame.__class__.from_arrays([]), validate_column_names=False
+                self.native.__class__.from_arrays([]), validate_column_names=False
             )
         names = [s.name for s in new_series]
         reshaped = align_series_full_broadcast(*new_series)
@@ -373,7 +371,7 @@ class ArrowDataFrame(
         return self._from_native_frame(df, validate_column_names=True)
 
     def with_columns(self: ArrowDataFrame, *exprs: ArrowExpr) -> ArrowDataFrame:
-        native_frame = self._native_frame
+        native_frame = self.native
         new_columns = self._evaluate_into_exprs(*exprs)
 
         length = len(self)
@@ -441,7 +439,7 @@ class ArrowDataFrame(
             )
 
         return self._from_native_frame(
-            self._native_frame.join(
+            self.native.join(
                 other._native_frame,
                 keys=left_on or [],  # type: ignore[arg-type]
                 right_keys=right_on,  # type: ignore[arg-type]
@@ -457,13 +455,13 @@ class ArrowDataFrame(
             compliant_frame=self, columns=columns, strict=strict
         )
         return self._from_native_frame(
-            self._native_frame.drop(to_drop), validate_column_names=False
+            self.native.drop(to_drop), validate_column_names=False
         )
 
     def drop_nulls(self: ArrowDataFrame, subset: Sequence[str] | None) -> ArrowDataFrame:
         if subset is None:
             return self._from_native_frame(
-                self._native_frame.drop_null(), validate_column_names=False
+                self.native.drop_null(), validate_column_names=False
             )
         plx = self.__narwhals_namespace__()
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
@@ -474,7 +472,7 @@ class ArrowDataFrame(
         descending: bool | Sequence[bool],
         nulls_last: bool,
     ) -> Self:
-        df = self._native_frame
+        df = self.native
 
         if isinstance(descending, bool):
             order: Order = "descending" if descending else "ascending"
@@ -493,17 +491,17 @@ class ArrowDataFrame(
         )
 
     def to_pandas(self: Self) -> pd.DataFrame:
-        return self._native_frame.to_pandas()
+        return self.native.to_pandas()
 
     def to_polars(self: Self) -> pl.DataFrame:
         import polars as pl  # ignore-banned-import
 
-        return pl.from_arrow(self._native_frame)  # type: ignore[return-value]
+        return pl.from_arrow(self.native)  # type: ignore[return-value]
 
     def to_numpy(self: Self) -> _2DArray:
         import numpy as np  # ignore-banned-import
 
-        arr: Any = np.column_stack([col.to_numpy() for col in self._native_frame.columns])
+        arr: Any = np.column_stack([col.to_numpy() for col in self.native.columns])
         return arr
 
     @overload
@@ -515,7 +513,7 @@ class ArrowDataFrame(
     def to_dict(
         self: Self, *, as_series: bool
     ) -> dict[str, ArrowSeries] | dict[str, list[Any]]:
-        df = self._native_frame
+        df = self.native
 
         names_and_values = zip(df.column_names, df.columns)
         if as_series:
@@ -534,7 +532,7 @@ class ArrowDataFrame(
             return {name: col.to_pylist() for name, col in names_and_values}
 
     def with_row_index(self: Self, name: str) -> Self:
-        df = self._native_frame
+        df = self.native
         cols = self.columns
 
         row_indices = pa.array(range(df.num_rows))
@@ -551,12 +549,12 @@ class ArrowDataFrame(
             # `[0]` is safe as the predicate's expression only returns a single column
             mask_native = self._evaluate_into_exprs(predicate)[0]._native_series
         return self._from_native_frame(
-            self._native_frame.filter(mask_native),  # pyright: ignore[reportArgumentType]
+            self.native.filter(mask_native),  # pyright: ignore[reportArgumentType]
             validate_column_names=False,
         )
 
     def head(self: Self, n: int) -> Self:
-        df = self._native_frame
+        df = self.native
         if n >= 0:
             return self._from_native_frame(df.slice(0, n), validate_column_names=False)
         else:
@@ -566,7 +564,7 @@ class ArrowDataFrame(
             )
 
     def tail(self: Self, n: int) -> Self:
-        df = self._native_frame
+        df = self.native
         if n >= 0:
             num_rows = df.num_rows
             return self._from_native_frame(
@@ -585,7 +583,7 @@ class ArrowDataFrame(
 
             from narwhals._duckdb.dataframe import DuckDBLazyFrame
 
-            df = self._native_frame  # noqa: F841
+            df = self.native  # noqa: F841
             return DuckDBLazyFrame(
                 df=duckdb.table("df"),
                 backend_version=parse_version(duckdb),
@@ -597,7 +595,7 @@ class ArrowDataFrame(
             from narwhals._polars.dataframe import PolarsLazyFrame
 
             return PolarsLazyFrame(
-                df=pl.from_arrow(self._native_frame).lazy(),  # type: ignore[union-attr]
+                df=pl.from_arrow(self.native).lazy(),  # type: ignore[union-attr]
                 backend_version=parse_version(pl),
                 version=self._version,
             )
@@ -608,7 +606,7 @@ class ArrowDataFrame(
             from narwhals._dask.dataframe import DaskLazyFrame
 
             return DaskLazyFrame(
-                native_dataframe=dd.from_pandas(self._native_frame.to_pandas()),
+                native_dataframe=dd.from_pandas(self.native.to_pandas()),
                 backend_version=parse_version(dask),
                 version=self._version,
             )
@@ -623,7 +621,7 @@ class ArrowDataFrame(
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
-                native_dataframe=self._native_frame,
+                native_dataframe=self.native,
                 backend_version=self._backend_version,
                 version=self._version,
                 validate_column_names=False,
@@ -635,7 +633,7 @@ class ArrowDataFrame(
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
             return PandasLikeDataFrame(
-                native_dataframe=self._native_frame.to_pandas(),
+                native_dataframe=self.native.to_pandas(),
                 implementation=Implementation.PANDAS,
                 backend_version=parse_version(pd),
                 version=self._version,
@@ -648,7 +646,7 @@ class ArrowDataFrame(
             from narwhals._polars.dataframe import PolarsDataFrame
 
             return PolarsDataFrame(
-                df=pl.from_arrow(self._native_frame),  # type: ignore[arg-type]
+                df=pl.from_arrow(self.native),  # type: ignore[arg-type]
                 backend_version=parse_version(pl),
                 version=self._version,
             )
@@ -669,28 +667,24 @@ class ArrowDataFrame(
                     f" frame has shape {self.shape!r}"
                 )
                 raise ValueError(msg)
-            return maybe_extract_py_scalar(
-                self._native_frame[0][0], return_py_scalar=True
-            )
+            return maybe_extract_py_scalar(self.native[0][0], return_py_scalar=True)
 
         elif row is None or column is None:
             msg = "cannot call `.item()` with only one of `row` or `column`"
             raise ValueError(msg)
 
         _col = self.columns.index(column) if isinstance(column, str) else column
-        return maybe_extract_py_scalar(
-            self._native_frame[_col][row], return_py_scalar=True
-        )
+        return maybe_extract_py_scalar(self.native[_col][row], return_py_scalar=True)
 
     def rename(self: Self, mapping: Mapping[str, str]) -> Self:
-        df = self._native_frame
+        df = self.native
         new_cols = [mapping.get(c, c) for c in df.column_names]
         return self._from_native_frame(df.rename_columns(new_cols))
 
     def write_parquet(self: Self, file: str | Path | BytesIO) -> None:
         import pyarrow.parquet as pp
 
-        pp.write_table(self._native_frame, file)
+        pp.write_table(self.native, file)
 
     @overload
     def write_csv(self: Self, file: None) -> str: ...
@@ -701,7 +695,7 @@ class ArrowDataFrame(
     def write_csv(self: Self, file: str | Path | BytesIO | None) -> str | None:
         import pyarrow.csv as pa_csv
 
-        pa_table = self._native_frame
+        pa_table = self.native
         if file is None:
             csv_buffer = pa.BufferOutputStream()
             pa_csv.write_csv(pa_table, csv_buffer)
@@ -715,7 +709,7 @@ class ArrowDataFrame(
         col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
         row_index = pa.array(range(len(self)))
         keep_idx = (
-            self._native_frame.append_column(col_token, row_index)
+            self.native.append_column(col_token, row_index)
             .group_by(self.columns)
             .aggregate([(col_token, "min"), (col_token, "max")])
         )
@@ -742,7 +736,7 @@ class ArrowDataFrame(
         # and has no effect on the output.
         import numpy as np  # ignore-banned-import
 
-        df = self._native_frame
+        df = self.native
         check_column_exists(self.columns, subset)
         subset = list(subset or self.columns)
 
@@ -766,11 +760,11 @@ class ArrowDataFrame(
 
     def gather_every(self: Self, n: int, offset: int) -> Self:
         return self._from_native_frame(
-            self._native_frame[offset::n], validate_column_names=False
+            self.native[offset::n], validate_column_names=False
         )
 
     def to_arrow(self: Self) -> pa.Table:
-        return self._native_frame
+        return self.native
 
     def sample(
         self: Self,
@@ -782,7 +776,7 @@ class ArrowDataFrame(
     ) -> Self:
         import numpy as np  # ignore-banned-import
 
-        frame = self._native_frame
+        frame = self.native
         num_rows = len(self)
         if n is None and fraction is not None:
             n = int(num_rows * fraction)
@@ -800,7 +794,7 @@ class ArrowDataFrame(
         variable_name: str,
         value_name: str,
     ) -> Self:
-        native_frame = self._native_frame
+        native_frame = self.native
         n_rows = len(self)
         index_ = [] if index is None else index
         on_ = [c for c in self.columns if c not in index_] if on is None else on
