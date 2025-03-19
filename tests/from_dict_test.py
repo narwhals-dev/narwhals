@@ -13,28 +13,15 @@ from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
 TEST_EAGER_BACKENDS = []
-
-if find_spec("polars") is not None:
-    TEST_EAGER_BACKENDS += [
-        Implementation.POLARS,
-        "polars",
-    ]
-else:  # pragma: no cover
-    pass
-if find_spec("pandas") is not None:
-    TEST_EAGER_BACKENDS += [
-        Implementation.PANDAS,
-        "pandas",
-    ]
-else:  # pragma: no cover
-    pass
-if find_spec("pyarrow") is not None:
-    TEST_EAGER_BACKENDS += [
-        Implementation.PYARROW,
-        "pyarrow",
-    ]
-else:  # pragma: no cover
-    pass
+TEST_EAGER_BACKENDS.extend(
+    (Implementation.POLARS, "polars") if find_spec("polars") is not None else ()
+)
+TEST_EAGER_BACKENDS.extend(
+    (Implementation.PANDAS, "pandas") if find_spec("pandas") is not None else ()
+)
+TEST_EAGER_BACKENDS.extend(
+    (Implementation.PYARROW, "pyarrow") if find_spec("pyarrow") is not None else ()
+)
 
 
 @pytest.mark.parametrize(
