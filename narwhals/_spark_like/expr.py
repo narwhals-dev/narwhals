@@ -479,6 +479,18 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._from_call(_len, "len")
 
+    def replace_strict(
+        self: Self,
+        old: ExprKind | Sequence[Any] | dict[Any, Any],
+        new: ExprKind | Sequence[Any] | None = None,
+        default: ExprKind | None = None,
+        return_dtype: DType | None = None,
+    ) -> Self:
+        def _replace_strict(_input: Column) -> Column:
+            return _input
+        return self._from_call(_replace_strict, "replace_strict")
+
+
     def round(self: Self, decimals: int) -> Self:
         def _round(_input: Column) -> Column:
             return self._F.round(_input, decimals)
