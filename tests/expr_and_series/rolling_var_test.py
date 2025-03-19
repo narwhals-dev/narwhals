@@ -20,7 +20,6 @@ if TYPE_CHECKING:
 pytest.importorskip("pandas")
 import pandas as pd
 
-
 data = {"a": [1.0, 2.0, 1.0, 3.0, 1.0, 4.0, 1.0]}
 
 kwargs_and_expected = (
