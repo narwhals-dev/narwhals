@@ -29,7 +29,6 @@ def test_cast_253(
 def test_cast_date_datetime_polars() -> None:
     pytest.importorskip("polars")
     import polars as pl
-
     from polars.testing import assert_frame_equal
 
     # polars: date to datetime
