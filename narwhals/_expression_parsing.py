@@ -332,8 +332,6 @@ def combine_metadata_binary_op(lhs: Expr, rhs: IntoExpr) -> ExprMetadata:
 
 
 def combine_metadata_horizontal_op(*exprs: IntoExpr) -> ExprMetadata:
-    # We may be able to allow multi-output rhs in the future:
-    # https://github.com/narwhals-dev/narwhals/issues/2244.
     return combine_metadata(
         *exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
     )

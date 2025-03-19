@@ -1243,7 +1243,7 @@ class Expr:
             self,
             *flat_predicates,
             str_as_lit=False,
-            allow_multi_output=False,
+            allow_multi_output=True,
             to_single_output=False,
         ).with_kind(ExprKind.FILTRATION)
         return self.__class__(
