@@ -226,7 +226,9 @@ def test_validate_not_duplicated_columns_arrow() -> None:
 
 
 def test_validate_not_duplicated_columns_duckdb() -> None:
-    duckdb = pytest.importorskip("duckdb")
+    pytest.importorskip("duckdb")
+    import duckdb
+
     rel = duckdb.sql("SELECT 1 AS a, 2 AS a")
     with pytest.raises(
         ValueError, match="Expected unique column names, got:\n- 'a' 2 times"
@@ -239,10 +241,12 @@ def test_validate_not_duplicated_columns_duckdb() -> None:
     reason="too old for pyarrow types",
 )
 def test_nested_dtypes() -> None:
+    pytest.importorskip("duckdb")
     pytest.importorskip("polars")
+
+    import duckdb
     import polars as pl
 
-    duckdb = pytest.importorskip("duckdb")
     df_pd = pl.DataFrame(
         {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
         schema_overrides={"b": pl.Array(pl.Int64, 2)},
@@ -284,10 +288,12 @@ def test_nested_dtypes() -> None:
 
 
 def test_nested_dtypes_ibis(request: pytest.FixtureRequest) -> None:  # pragma: no cover
+    pytest.importorskip("ibis")
     pytest.importorskip("polars")
+
+    import ibis
     import polars as pl
 
-    ibis = pytest.importorskip("ibis")
     if PANDAS_VERSION < (1, 1):
         request.applymarker(pytest.mark.xfail)
     df = pl.DataFrame(
@@ -304,11 +310,11 @@ def test_nested_dtypes_ibis(request: pytest.FixtureRequest) -> None:  # pragma: 
     reason="too old for pyarrow types",
 )
 def test_nested_dtypes_dask() -> None:
-    pytest.importorskip("polars")
-    import polars as pl
-
     pytest.importorskip("dask")
+    pytest.importorskip("polars")
+
     import dask.dataframe as dd
+    import polars as pl
 
     df = dd.from_pandas(
         pl.DataFrame(

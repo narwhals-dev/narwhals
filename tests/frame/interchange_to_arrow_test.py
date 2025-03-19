@@ -27,7 +27,9 @@ def test_interchange_to_arrow() -> None:
 def test_interchange_ibis_to_arrow(
     tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover
-    ibis = pytest.importorskip("ibis")
+    pytest.importorskip("ibis")
+    import ibis
+
     try:
         ibis.set_backend("duckdb")
     except ImportError:
@@ -45,7 +47,9 @@ def test_interchange_ibis_to_arrow(
 
 
 def test_interchange_duckdb_to_arrow() -> None:
-    duckdb = pytest.importorskip("duckdb")
+    pytest.importorskip("duckdb")
+    import duckdb
+
     df_pl = pl.DataFrame(data)  # noqa: F841
     rel = duckdb.sql("select * from df_pl")
     df = nw.from_native(rel, eager_or_interchange_only=True)

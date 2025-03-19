@@ -50,9 +50,11 @@ def test_interchange_ibis(
     tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover
     pytest.importorskip("polars")
+    pytest.importorskip("ibis")
+
+    import ibis
     import polars as pl
 
-    ibis = pytest.importorskip("ibis")
     try:
         ibis.set_backend("duckdb")
     except ImportError:
@@ -72,9 +74,11 @@ def test_interchange_ibis(
 
 def test_interchange_duckdb() -> None:
     pytest.importorskip("polars")
+    pytest.importorskip("duckdb")
+
+    import duckdb
     import polars as pl
 
-    duckdb = pytest.importorskip("duckdb")
     df_pl = pl.DataFrame(data)  # noqa: F841
     rel = duckdb.sql("select * from df_pl")
     df = nw.from_native(rel, eager_or_interchange_only=True)

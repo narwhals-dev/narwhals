@@ -9,13 +9,12 @@ import narwhals as nw
 
 if TYPE_CHECKING:
     import ibis
+    import polars as pl
 
     from tests.utils import Constructor
 else:
-    ibis = pytest.importorskip("ibis")
-
-pytest.importorskip("polars")
-import polars as pl
+    pytest.importorskip("ibis")
+    pytest.importorskip("polars")
 
 
 @pytest.fixture
