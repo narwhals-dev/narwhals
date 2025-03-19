@@ -4,8 +4,6 @@ from typing import TYPE_CHECKING
 from typing import TypeVar
 
 import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -36,12 +34,24 @@ def test_all_vs_all(constructor: Constructor) -> None:
 
 def test_invalid() -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
+    df: Frame = nw.from_native(pd.DataFrame(data))
+    with pytest.raises(ValueError, match="Multi-output"):
+        df.select(nw.all() + nw.all())
+
+
+def test_invalid_pyarrow() -> None:
+    pa = pytest.importorskip("pyarrow")
+
     df: Frame = nw.from_native(pa.table({"a": [1, 2], "b": [3, 4]}))
     with pytest.raises(ValueError, match="Multi-output"):
         df.select(nw.all() + nw.all())
-    df = nw.from_native(pd.DataFrame(data))
-    with pytest.raises(ValueError, match="Multi-output"):
-        df.select(nw.all() + nw.all())
+
+
+def test_invalid_polars() -> None:
+    pl = pytest.importorskip("polars")
+
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
+    df: Frame = nw.from_native(pd.DataFrame(data))
     with pytest.raises(TypeError, match="Perhaps you"):
         df.select([pl.col("a")])  # type: ignore[list-item]
     with pytest.raises(TypeError, match="Expected Narwhals dtype"):
@@ -53,6 +63,11 @@ def test_native_vs_non_native() -> None:
     df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     with pytest.raises(TypeError, match="Perhaps you forgot"):
         nw.from_native(df_pd).filter(s_pd > 1)  # type: ignore[arg-type]
+
+
+def test_native_vs_non_native_polars() -> None:
+    pl = pytest.importorskip("polars")
+
     s_pl = pl.Series([1, 2, 3])
     df_pl = pl.DataFrame({"a": [2, 2, 3], "b": [4, 5, 6]})
     with pytest.raises(TypeError, match="Perhaps you\n- forgot"):
@@ -60,6 +75,8 @@ def test_native_vs_non_native() -> None:
 
 
 def test_validate_laziness() -> None:
+    pl = pytest.importorskip("polars")
+
     df = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     with pytest.raises(
         TypeError,

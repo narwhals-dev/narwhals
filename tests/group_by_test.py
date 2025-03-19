@@ -5,7 +5,6 @@ from typing import Any
 from typing import Mapping
 
 import pandas as pd
-import polars as pl
 import pyarrow as pa
 import pytest
 
@@ -20,7 +19,6 @@ from tests.utils import assert_equal_data
 data: Mapping[str, Any] = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
 
 df_pandas = pd.DataFrame(data)
-df_lazy = pl.LazyFrame(data)
 
 
 def test_group_by_complex() -> None:
@@ -37,6 +35,12 @@ def test_group_by_complex() -> None:
             (nw.col("b") - nw.col("c").mean()).mean()
         )
 
+def test_group_by_complex_polars() -> None:
+    pl = pytest.importorskip("polars")
+
+    expected = {"a": [1, 3], "b": [-3.5, -3.0]}
+
+    df_lazy = pl.LazyFrame(data)
     lf = nw.from_native(df_lazy).lazy()
     result_pl = lf.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
     assert_equal_data(result_pl, expected)
@@ -173,8 +177,6 @@ def test_group_by_n_unique_w_missing(constructor: Constructor) -> None:
 
 
 def test_group_by_same_name_twice() -> None:
-    import pandas as pd
-
     df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     with pytest.raises(ValueError, match="Expected unique output names"):
         nw.from_native(df).group_by("a").agg(nw.col("b").sum(), nw.col("b").n_unique())

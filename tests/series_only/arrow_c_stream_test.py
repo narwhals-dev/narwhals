@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-import polars as pl
-import pyarrow as pa
-import pyarrow.compute as pc
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
+
+pa = pytest.importorskip("pyarrow")
+pc = pytest.importorskip("pyarrow.compute")
+pl = pytest.importorskip("polars")
 
 
 @pytest.mark.skipif(POLARS_VERSION < (1, 3), reason="too old for pycapsule in Polars")

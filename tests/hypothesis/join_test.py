@@ -4,9 +4,6 @@ from typing import Any
 from typing import Mapping
 from typing import cast
 
-import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 from hypothesis import assume
 from hypothesis import given
@@ -17,6 +14,10 @@ import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import assert_equal_data
+
+pd = pytest.importorskip("pandas")
+pl = pytest.importorskip("polars")
+pa = pytest.importorskip("pyarrow")
 
 
 @given(
