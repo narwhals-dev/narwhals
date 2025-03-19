@@ -42,8 +42,16 @@ CompliantFrameT = TypeVar(
     "CompliantFrameT",
     bound="CompliantDataFrame[Any, Any, Any] | CompliantLazyFrame[Any, Any]",
 )
+CompliantFrameT_co = TypeVar(
+    "CompliantFrameT_co",
+    bound="CompliantDataFrame[Any, Any, Any] | CompliantLazyFrame[Any, Any]",
+    covariant=True,
+)
 CompliantDataFrameT = TypeVar(
     "CompliantDataFrameT", bound="CompliantDataFrame[Any, Any, Any]"
+)
+CompliantDataFrameT_co = TypeVar(
+    "CompliantDataFrameT_co", bound="CompliantDataFrame[Any, Any, Any]", covariant=True
 )
 CompliantLazyFrameT = TypeVar("CompliantLazyFrameT", bound="CompliantLazyFrame[Any, Any]")
 IntoCompliantExpr: TypeAlias = "CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | CompliantSeriesOrNativeExprT_co"

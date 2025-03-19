@@ -9,19 +9,10 @@ from typing import Iterator
 from typing import Mapping
 from typing import Sequence
 
-from narwhals._compliant.typing import CompliantDataFrameT
-from narwhals._compliant.typing import CompliantExprT
-from narwhals._compliant.typing import CompliantFrameT
-from narwhals._compliant.typing import NativeFrameT_co
+from narwhals._compliant.typing import CompliantDataFrameT_co
+from narwhals._compliant.typing import CompliantExprT_contra
+from narwhals._compliant.typing import CompliantFrameT_co
 from narwhals._expression_parsing import is_elementary_expression
-
-if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
-
-    from narwhals._compliant.dataframe import CompliantDataFrame
-    from narwhals._compliant.dataframe import CompliantLazyFrame
-
-    Frame: TypeAlias = "CompliantDataFrame[Any, Any, NativeFrameT_co] | CompliantLazyFrame[Any, NativeFrameT_co]"
 
 if not TYPE_CHECKING:  # pragma: no cover
     if sys.version_info >= (3, 9):
@@ -36,34 +27,25 @@ else:  # pragma: no cover
 __all__ = ["CompliantGroupBy", "EagerGroupBy"]
 
 
-# NOTE: Type checkers disagree
-# - `pyright` wants invariant `*Expr`
-# - `mypy` want contravariant `*Expr`
-class CompliantGroupBy(Protocol38[CompliantFrameT, CompliantExprT]):  # type: ignore[misc]
+class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     _NARWHALS_TO_NATIVE_AGGREGATIONS: ClassVar[Mapping[str, Any]]
-    _compliant_frame: CompliantFrameT
+    _compliant_frame: Any
     _keys: Sequence[str]
 
     def __init__(
         self,
-        compliant_frame: CompliantFrameT,
+        compliant_frame: CompliantFrameT_co,
         keys: Sequence[str],
         *,
         drop_null_keys: bool,
     ) -> None: ...
     @property
-    def compliant(self) -> CompliantFrameT:
-        return self._compliant_frame
+    def compliant(self) -> CompliantFrameT_co:
+        return self._compliant_frame  # type: ignore[no-any-return]
 
-    @property
-    def native(
-        self: CompliantGroupBy[Frame[NativeFrameT_co], CompliantExprT],
-    ) -> NativeFrameT_co:
-        return self.compliant.native
+    def agg(self, *exprs: CompliantExprT_contra) -> CompliantFrameT_co: ...
 
-    def agg(self, *exprs: CompliantExprT) -> CompliantFrameT: ...
-
-    def _ensure_all_simple(self, exprs: Sequence[CompliantExprT]) -> None:
+    def _ensure_all_simple(self, exprs: Sequence[CompliantExprT_contra]) -> None:
         for expr in exprs:
             if (
                 not is_elementary_expression(expr)
@@ -85,8 +67,8 @@ class CompliantGroupBy(Protocol38[CompliantFrameT, CompliantExprT]):  # type: ig
                 raise ValueError(msg)
 
 
-class EagerGroupBy(  # type: ignore[misc]
-    CompliantGroupBy[CompliantDataFrameT, CompliantExprT],
-    Protocol38[CompliantDataFrameT, CompliantExprT],
+class EagerGroupBy(
+    CompliantGroupBy[CompliantDataFrameT_co, CompliantExprT_contra],
+    Protocol38[CompliantDataFrameT_co, CompliantExprT_contra],
 ):
-    def __iter__(self) -> Iterator[tuple[Any, CompliantDataFrameT]]: ...
+    def __iter__(self) -> Iterator[tuple[Any, CompliantDataFrameT_co]]: ...
