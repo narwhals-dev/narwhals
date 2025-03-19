@@ -317,7 +317,7 @@ def test_raise_if_polars_dtype(constructor: Constructor) -> None:
     for dtype in [pl.String, pl.String()]:
         df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
         with pytest.raises(TypeError, match="Expected Narwhals dtype, got:"):
-            df.select(nw.col("a").cast(dtype))
+            df.select(nw.col("a").cast(dtype))  # type: ignore[arg-type]
 
 
 def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> None:

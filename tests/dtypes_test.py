@@ -388,7 +388,7 @@ def test_cast_decimal_to_native() -> None:
             NotImplementedError, match="Casting to Decimal is not supported yet."
         ):
             (
-                nw.from_native(obj)
+                nw.from_native(obj)  # type: ignore[call-overload]
                 .with_columns(a=nw.col("a").cast(nw.Decimal()))
                 .to_native()
             )
