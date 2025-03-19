@@ -12,7 +12,7 @@ from narwhals.utils import Implementation
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
-TEST_EAGER_BACKENDS = []
+TEST_EAGER_BACKENDS: list[Implementation | str] = []
 TEST_EAGER_BACKENDS.extend(
     (Implementation.POLARS, "polars") if find_spec("polars") is not None else ()
 )
