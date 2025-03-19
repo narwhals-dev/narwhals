@@ -371,7 +371,6 @@ class ArrowDataFrame(
         return self._from_native_frame(df, validate_column_names=True)
 
     def with_columns(self: ArrowDataFrame, *exprs: ArrowExpr) -> ArrowDataFrame:
-        native_frame = self.native
         new_columns = self._evaluate_into_exprs(*exprs)
 
         length = len(self)
@@ -384,13 +383,13 @@ class ArrowDataFrame(
                 length=length, other=col_value, backend_version=self._backend_version
             )
             native_frame = (
-                native_frame.set_column(
+                self.native.set_column(
                     columns.index(col_name),
                     field_=col_name,
                     column=column,  # type: ignore[arg-type]
                 )
                 if col_name in columns
-                else native_frame.append_column(field_=col_name, column=column)
+                else self.native.append_column(field_=col_name, column=column)
             )
 
         return self._from_native_frame(native_frame, validate_column_names=False)
@@ -472,8 +471,6 @@ class ArrowDataFrame(
         descending: bool | Sequence[bool],
         nulls_last: bool,
     ) -> Self:
-        df = self.native
-
         if isinstance(descending, bool):
             order: Order = "descending" if descending else "ascending"
             sorting: list[tuple[str, Order]] = [(key, order) for key in by]
@@ -486,7 +483,7 @@ class ArrowDataFrame(
         null_placement = "at_end" if nulls_last else "at_start"
 
         return self._from_native_frame(
-            df.sort_by(sorting, null_placement=null_placement),
+            self.native.sort_by(sorting, null_placement=null_placement),
             validate_column_names=False,
         )
 
@@ -547,10 +544,9 @@ class ArrowDataFrame(
             mask_native: Mask | ArrowChunkedArray = predicate
         else:
             # `[0]` is safe as the predicate's expression only returns a single column
-            mask_native = self._evaluate_into_exprs(predicate)[0]._native_series
+            mask_native = self._evaluate_into_exprs(predicate)[0].native
         return self._from_native_frame(
-            self.native.filter(mask_native),  # pyright: ignore[reportArgumentType]
-            validate_column_names=False,
+            self.native.filter(mask_native), validate_column_names=False
         )
 
     def head(self: Self, n: int) -> Self:
@@ -574,8 +570,6 @@ class ArrowDataFrame(
             return self._from_native_frame(df.slice(abs(n)), validate_column_names=False)
 
     def lazy(self: Self, *, backend: Implementation | None = None) -> CompliantLazyFrame:
-        from narwhals.utils import parse_version
-
         if backend is None:
             return self
         elif backend is Implementation.DUCKDB:
@@ -585,7 +579,7 @@ class ArrowDataFrame(
 
             df = self.native  # noqa: F841
             return DuckDBLazyFrame(
-                df=duckdb.table("df"),
+                duckdb.table("df"),
                 backend_version=parse_version(duckdb),
                 version=self._version,
             )
@@ -595,7 +589,7 @@ class ArrowDataFrame(
             from narwhals._polars.dataframe import PolarsLazyFrame
 
             return PolarsLazyFrame(
-                df=pl.from_arrow(self.native).lazy(),  # type: ignore[union-attr]
+                cast("pl.DataFrame", pl.from_arrow(self.native)).lazy(),
                 backend_version=parse_version(pl),
                 version=self._version,
             )
@@ -606,7 +600,7 @@ class ArrowDataFrame(
             from narwhals._dask.dataframe import DaskLazyFrame
 
             return DaskLazyFrame(
-                native_dataframe=dd.from_pandas(self.native.to_pandas()),
+                dd.from_pandas(self.native.to_pandas()),
                 backend_version=parse_version(dask),
                 version=self._version,
             )
@@ -621,7 +615,7 @@ class ArrowDataFrame(
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
-                native_dataframe=self.native,
+                self.native,
                 backend_version=self._backend_version,
                 version=self._version,
                 validate_column_names=False,
@@ -633,7 +627,7 @@ class ArrowDataFrame(
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
             return PandasLikeDataFrame(
-                native_dataframe=self.native.to_pandas(),
+                self.native.to_pandas(),
                 implementation=Implementation.PANDAS,
                 backend_version=parse_version(pd),
                 version=self._version,
@@ -646,7 +640,7 @@ class ArrowDataFrame(
             from narwhals._polars.dataframe import PolarsDataFrame
 
             return PolarsDataFrame(
-                df=pl.from_arrow(self.native),  # type: ignore[arg-type]
+                cast("pl.DataFrame", pl.from_arrow(self.native)),
                 backend_version=parse_version(pl),
                 version=self._version,
             )
@@ -695,12 +689,11 @@ class ArrowDataFrame(
     def write_csv(self: Self, file: str | Path | BytesIO | None) -> str | None:
         import pyarrow.csv as pa_csv
 
-        pa_table = self.native
         if file is None:
             csv_buffer = pa.BufferOutputStream()
-            pa_csv.write_csv(pa_table, csv_buffer)
+            pa_csv.write_csv(self.native, csv_buffer)
             return csv_buffer.getvalue().to_pybytes().decode()
-        pa_csv.write_csv(pa_table, file)
+        pa_csv.write_csv(self.native, file)
         return None
 
     def is_unique(self: Self) -> ArrowSeries:
@@ -736,7 +729,6 @@ class ArrowDataFrame(
         # and has no effect on the output.
         import numpy as np  # ignore-banned-import
 
-        df = self.native
         check_column_exists(self.columns, subset)
         subset = list(subset or self.columns)
 
@@ -746,13 +738,14 @@ class ArrowDataFrame(
             agg_func = agg_func_map[keep]
             col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
             keep_idx_native = (
-                df.append_column(col_token, pa.array(np.arange(len(self))))
+                self.native.append_column(col_token, pa.array(np.arange(len(self))))
                 .group_by(subset)
                 .aggregate([(col_token, agg_func)])
                 .column(f"{col_token}_{agg_func}")
             )
-            indices = cast("Indices", keep_idx_native)
-            return self._from_native_frame(df.take(indices), validate_column_names=False)
+            return self._from_native_frame(
+                self.native.take(keep_idx_native), validate_column_names=False
+            )
 
         keep_idx = self.simple_select(*subset).is_unique()
         plx = self.__narwhals_namespace__()
@@ -776,16 +769,15 @@ class ArrowDataFrame(
     ) -> Self:
         import numpy as np  # ignore-banned-import
 
-        frame = self.native
         num_rows = len(self)
         if n is None and fraction is not None:
             n = int(num_rows * fraction)
-
         rng = np.random.default_rng(seed=seed)
         idx = np.arange(0, num_rows)
         mask = rng.choice(idx, size=n, replace=with_replacement)
-
-        return self._from_native_frame(pc.take(frame, mask), validate_column_names=False)  # type: ignore[call-overload, unused-ignore]
+        return self._from_native_frame(
+            self.native.take(mask), validate_column_names=False
+        )
 
     def unpivot(
         self: Self,
@@ -794,7 +786,6 @@ class ArrowDataFrame(
         variable_name: str,
         value_name: str,
     ) -> Self:
-        native_frame = self.native
         n_rows = len(self)
         index_ = [] if index is None else index
         on_ = [c for c in self.columns if c not in index_] if on is None else on
@@ -809,12 +800,12 @@ class ArrowDataFrame(
                 [
                     pa.Table.from_arrays(
                         [
-                            *(native_frame.column(idx_col) for idx_col in index_),
+                            *(self.native.column(idx_col) for idx_col in index_),
                             cast(
                                 "ArrowChunkedArray",
                                 pa.array([on_col] * n_rows, pa.string()),
                             ),
-                            native_frame.column(on_col),
+                            self.native.column(on_col),
                         ],
                         names=names,
                     )
