@@ -4,15 +4,19 @@ import collections
 import re
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import ClassVar
 from typing import Iterator
+from typing import Mapping
+from typing import Sequence
 
 import pyarrow as pa
 import pyarrow.compute as pc
 
+from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.utils import cast_to_comparable_string_types
 from narwhals._arrow.utils import extract_py_scalar
+from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._expression_parsing import is_elementary_expression
 from narwhals.utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
@@ -22,62 +26,44 @@ if TYPE_CHECKING:
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.typing import Incomplete
 
-POLARS_TO_ARROW_AGGREGATIONS = {
-    "sum": "sum",
-    "mean": "mean",
-    "median": "approximate_median",
-    "max": "max",
-    "min": "min",
-    "std": "stddev",
-    "var": "variance",
-    "len": "count",
-    "n_unique": "count_distinct",
-    "count": "count",
-}
 
+class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
+    _NARWHALS_TO_NATIVE_AGGREGATIONS: ClassVar[Mapping[str, Any]] = {
+        "sum": "sum",
+        "mean": "mean",
+        "median": "approximate_median",
+        "max": "max",
+        "min": "min",
+        "std": "stddev",
+        "var": "variance",
+        "len": "count",
+        "n_unique": "count_distinct",
+        "count": "count",
+    }
 
-class ArrowGroupBy:
     def __init__(
-        self: Self, df: ArrowDataFrame, keys: list[str], *, drop_null_keys: bool
+        self,
+        compliant_frame: ArrowDataFrame,
+        keys: Sequence[str],
+        *,
+        drop_null_keys: bool,
     ) -> None:
         if drop_null_keys:
-            self._df = df.drop_nulls(keys)
+            self._compliant_frame = compliant_frame.drop_nulls(keys)
         else:
-            self._df = df
-        self._keys = keys.copy()
-        self._grouped = pa.TableGroupBy(self._df._native_frame, self._keys)
+            self._compliant_frame = compliant_frame
+        self._keys: list[str] = list(keys)
+        self._grouped = pa.TableGroupBy(self.compliant.native, self._keys)
 
     def agg(self: Self, *exprs: ArrowExpr) -> ArrowDataFrame:
-        all_simple_aggs = True
-        for expr in exprs:
-            if not (
-                is_elementary_expression(expr)
-                and re.sub(r"(\w+->)", "", expr._function_name)
-                in POLARS_TO_ARROW_AGGREGATIONS
-            ):
-                all_simple_aggs = False
-                break
-
-        if not all_simple_aggs:
-            msg = (
-                "Non-trivial complex aggregation found.\n\n"
-                "Hint: you were probably trying to apply a non-elementary aggregation with a "
-                "pyarrow table.\n"
-                "Please rewrite your query such that group-by aggregations "
-                "are elementary. For example, instead of:\n\n"
-                "    df.group_by('a').agg(nw.col('b').round(2).mean())\n\n"
-                "use:\n\n"
-                "    df.with_columns(nw.col('b').round(2)).group_by('a').agg(nw.col('b').mean())\n\n"
-            )
-            raise ValueError(msg)
-
+        self._ensure_all_simple(exprs)
         aggs: list[tuple[str, str, Any]] = []
         expected_pyarrow_column_names: list[str] = self._keys.copy()
         new_column_names: list[str] = self._keys.copy()
 
         for expr in exprs:
             output_names, aliases = evaluate_output_names_and_aliases(
-                expr, self._df, self._keys
+                expr, self.compliant, self._keys
             )
 
             if expr._depth == 0:
@@ -102,7 +88,7 @@ class ArrowGroupBy:
             else:
                 option = None
 
-            function_name = POLARS_TO_ARROW_AGGREGATIONS[function_name]
+            function_name = self._NARWHALS_TO_NATIVE_AGGREGATIONS[function_name]
 
             new_column_names.extend(aliases)
             expected_pyarrow_column_names.extend(
@@ -133,18 +119,20 @@ class ArrowGroupBy:
         ]
         new_column_names = [new_column_names[i] for i in index_map]
         result_simple = result_simple.rename_columns(new_column_names)
-        if self._df._backend_version < (12, 0, 0):
+        if self.compliant._backend_version < (12, 0, 0):
             columns = result_simple.column_names
             result_simple = result_simple.select(
                 [*self._keys, *[col for col in columns if col not in self._keys]]
             )
-        return self._df._from_native_frame(result_simple)
+        return self.compliant._from_native_frame(result_simple)
 
     def __iter__(self: Self) -> Iterator[tuple[Any, ArrowDataFrame]]:
-        col_token = generate_temporary_column_name(n_bytes=8, columns=self._df.columns)
+        col_token = generate_temporary_column_name(
+            n_bytes=8, columns=self.compliant.columns
+        )
         null_token: str = "__null_token_value__"  # noqa: S105
 
-        table = self._df._native_frame
+        table = self.compliant.native
         # NOTE: stubs fail in multiple places for `ChunkedArray`
         it, separator_scalar = cast_to_comparable_string_types(
             *(table[key] for key in self._keys), separator=""
@@ -160,7 +148,7 @@ class ArrowGroupBy:
         )
         table = table.add_column(i=0, field_=col_token, column=key_values)
         for v in pc.unique(key_values):
-            t = self._df._from_native_frame(
+            t = self.compliant._from_native_frame(
                 table.filter(pc.equal(table[col_token], v)).drop([col_token])
             )
             row = t.simple_select(*self._keys).row(0)
