@@ -550,7 +550,11 @@ class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
         order_by: Sequence[str] | None,
     ) -> Self:
         # pandas is a required dependency of dask so it's safe to import this
-        from narwhals._pandas_like.group_by import AGGREGATIONS_TO_PANDAS_EQUIVALENT
+        from narwhals._pandas_like.group_by import PandasLikeGroupBy
+
+        AGGREGATIONS_TO_PANDAS_EQUIVALENT = (  # noqa: N806
+            PandasLikeGroupBy._NARWHALS_TO_NATIVE_AGGREGATIONS
+        )
 
         if not partition_by:
             assert order_by is not None  # help type checkers  # noqa: S101

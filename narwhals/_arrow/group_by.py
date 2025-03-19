@@ -45,6 +45,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
         self,
         compliant_frame: ArrowDataFrame,
         keys: Sequence[str],
+        /,
         *,
         drop_null_keys: bool,
     ) -> None:

@@ -11,7 +11,7 @@ from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._expression_parsing import is_elementary_expression
-from narwhals._pandas_like.group_by import AGGREGATIONS_TO_PANDAS_EQUIVALENT
+from narwhals._pandas_like.group_by import PandasLikeGroupBy
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import generate_temporary_column_name
@@ -223,6 +223,9 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             )
             raise NotImplementedError(msg)
         else:
+            AGGREGATIONS_TO_PANDAS_EQUIVALENT = (  # noqa: N806
+                PandasLikeGroupBy._NARWHALS_TO_NATIVE_AGGREGATIONS
+            )
             function_name: str = re.sub(r"(\w+->)", "", self._function_name)
             pandas_function_name = WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT.get(
                 function_name,

@@ -36,6 +36,7 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
         self,
         compliant_frame: CompliantFrameT_co,
         keys: Sequence[str],
+        /,
         *,
         drop_null_keys: bool,
     ) -> None: ...
