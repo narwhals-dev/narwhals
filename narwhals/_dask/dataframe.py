@@ -219,7 +219,7 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
         self: Self,
         subset: Sequence[str] | None,
         *,
-        keep: Literal["any", "first", "last", "none"] = "any",
+        keep: Literal["any", "none"] = "any",
     ) -> Self:
         check_column_exists(self.columns, subset)
         native_frame = self._native_frame
