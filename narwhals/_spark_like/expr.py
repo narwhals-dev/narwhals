@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import operator
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 from typing import cast
 
@@ -481,15 +483,34 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
     def replace_strict(
         self: Self,
-        old: ExprKind | Sequence[Any] | dict[Any, Any],
+        old: ExprKind | Sequence[Any] | Mapping[Any, Any],
         new: ExprKind | Sequence[Any] | None = None,
         default: ExprKind | None = None,
         return_dtype: DType | None = None,
     ) -> Self:
-        def _replace_strict(_input: Column) -> Column:
-            return _input
-        return self._from_call(_replace_strict, "replace_strict")
+        if new is None:
+            if not isinstance(old, Mapping):
+                msg = "`new` argument is required if `old` argument is not a Mapping type"
+                raise TypeError(msg)
 
+            new = list(old.values())
+            old = list(old.keys())
+
+        def _replace_strict(
+            _input: Column, old: Sequence[Any], new: Sequence[Any]
+        ) -> Column:
+            mapper = self._F.create_map([self._F.lit(x) for x in chain(*zip(new, old))])
+            mapping_expr = mapper[_input]
+
+            if default is not None:
+                mapping_expr = self._F.ifnull(mapping_expr, default)
+
+            if return_dtype is not None:
+                mapping_expr = mapping_expr.cast(return_dtype)
+
+            return mapping_expr
+
+        return self._from_call(_replace_strict, "replace_strict", new=new, old=old)
 
     def round(self: Self, decimals: int) -> Self:
         def _round(_input: Column) -> Column:
