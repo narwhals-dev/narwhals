@@ -13,8 +13,8 @@ if TYPE_CHECKING:
 
     from tests.utils import Constructor
 else:
-    pytest.importorskip("ibis")
-    pytest.importorskip("polars")
+    ibis = pytest.importorskip("ibis")
+    pl = pytest.importorskip("polars")
 
 
 @pytest.fixture
