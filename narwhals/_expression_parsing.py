@@ -17,6 +17,7 @@ from typing import cast
 from narwhals.dependencies import is_narwhals_series
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import LengthChangingExprError
+from narwhals.exceptions import MultiOutputExpressionError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import is_compliant_expr
 
@@ -249,10 +250,17 @@ class ExprMetadata:
 
 
 def combine_metadata(
-    *args: IntoExpr | object | None, str_as_lit: bool, is_binary_op: bool = False
+    *args: IntoExpr | object | None, str_as_lit: bool, allow_expansion: bool
 ) -> ExprMetadata:
-    # Combine metadata from `args`.
+    """Combine metadata from `args`.
 
+    Arguments:
+        args: Arguments, maybe expressions, literals, or Series.
+        str_as_lit: Whether to interpret strings as literals or as column names.
+        allow_expansion: Whether to allow for multi-output expressions beyond
+            the first argument. For example, `nw.all() + nw.all()` is not allowed,
+            but `nw.all() + nw.col('a')` is.
+    """
     n_filtrations = 0
     has_transforms_or_windows = False
     has_aggregations = False
@@ -261,15 +269,13 @@ def combine_metadata(
     result_is_multi_output = False
 
     for i, arg in enumerate(args):
-        if is_expr(arg) and arg._metadata.is_multi_output:
-            if i > 0 and is_binary_op:
-                msg = "Multi-output expressions cannot appear in right-hand-side of binary operations."
-                raise ValueError(msg)
-            if is_binary_op:
-                result_is_multi_output = True
         if isinstance(arg, str) and not str_as_lit:
             has_transforms_or_windows = True
         elif is_expr(arg):
+            if arg._metadata.is_multi_output and allow_expansion:
+                if i > 0:  # Only the first argument is allowed to be multi-output.
+                    ensure_is_single_output(arg)
+                result_is_multi_output = True
             if arg._metadata.n_open_windows:
                 result_n_open_windows += 1
             kind = arg._metadata.kind
@@ -284,6 +290,7 @@ def combine_metadata(
             else:  # pragma: no cover
                 msg = "unreachable code"
                 raise AssertionError(msg)
+
     if (
         has_literals
         and not has_aggregations
@@ -324,6 +331,12 @@ def check_expressions_preserve_length(*args: IntoExpr, function_name: str) -> No
     ):
         msg = f"Expressions which aggregate or change length cannot be passed to '{function_name}'."
         raise ShapeError(msg)
+
+
+def ensure_is_single_output(expr: Expr) -> None:
+    if expr._metadata.is_multi_output:
+        msg = "Multi-output expressions (e.g. nw.col('a', 'b'), nw.all()) are not supported in this context."
+        raise MultiOutputExpressionError(msg)
 
 
 def all_exprs_are_scalar_like(*args: IntoExpr, **kwargs: IntoExpr) -> bool:

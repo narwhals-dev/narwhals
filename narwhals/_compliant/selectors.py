@@ -248,8 +248,7 @@ class CompliantSelector(
                 return [x for x in lhs_names if x not in rhs_names]
 
             return self.selectors._selector(series, names)
-        else:
-            return self._to_expr() - other
+        return self._to_expr() - other
 
     @overload
     def __or__(self: Self, other: Self) -> Self: ...
@@ -274,8 +273,7 @@ class CompliantSelector(
                 return [*(x for x in lhs_names if x not in rhs_names), *rhs_names]
 
             return self.selectors._selector(names, series)
-        else:
-            return self._to_expr() | other
+        return self._to_expr() | other
 
     @overload
     def __and__(self: Self, other: Self) -> Self: ...
@@ -297,8 +295,7 @@ class CompliantSelector(
                 return [x for x in lhs_names if x in rhs_names]
 
             return self.selectors._selector(series, names)
-        else:
-            return self._to_expr() & other
+        return self._to_expr() & other
 
     def __invert__(self: Self) -> CompliantSelector[FrameT, SeriesOrExprT]:
         return self.selectors.all() - self  # type: ignore[no-any-return]

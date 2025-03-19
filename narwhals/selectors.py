@@ -6,6 +6,7 @@ from typing import Iterable
 from typing import NoReturn
 
 from narwhals._expression_parsing import ExprMetadata
+from narwhals._expression_parsing import combine_metadata
 from narwhals.expr import Expr
 from narwhals.utils import flatten
 
@@ -27,6 +28,22 @@ class Selector(Expr):
             msg = "unsupported operand type(s) for op: ('Selector' + 'Selector')"
             raise TypeError(msg)
         return self._to_expr() + other  # type: ignore[no-any-return]
+
+    def __or__(self: Self, other: Any) -> Expr:  # type: ignore[override]
+        if isinstance(other, Selector):
+            return self.__class__(
+                lambda plx: self._to_compliant_expr(plx) | other._to_compliant_expr(plx),
+                combine_metadata(self, other, str_as_lit=False, allow_expansion=False),
+            )
+        return self._to_expr() | other  # type: ignore[no-any-return]
+
+    def __and__(self: Self, other: Any) -> Expr:  # type: ignore[override]
+        if isinstance(other, Selector):
+            return self.__class__(
+                lambda plx: self._to_compliant_expr(plx) & other._to_compliant_expr(plx),
+                combine_metadata(self, other, str_as_lit=False, allow_expansion=False),
+            )
+        return self._to_expr() & other  # type: ignore[no-any-return]
 
     def __rsub__(self: Self, other: Any) -> NoReturn:
         raise NotImplementedError

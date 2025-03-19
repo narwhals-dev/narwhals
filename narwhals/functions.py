@@ -1491,7 +1491,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.sum_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False),
+        combine_metadata(*flat_exprs, str_as_lit=False, allow_expansion=True),
     )
 
 
@@ -1535,7 +1535,7 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.min_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False),
+        combine_metadata(*flat_exprs, str_as_lit=False, allow_expansion=True),
     )
 
 
@@ -1581,7 +1581,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.max_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False),
+        combine_metadata(*flat_exprs, str_as_lit=False, allow_expansion=True),
     )
 
 
@@ -1599,7 +1599,9 @@ class When:
                 value,
                 str_as_lit=False,
             ),
-            combine_metadata(self._predicate, value, str_as_lit=False),
+            combine_metadata(
+                self._predicate, value, str_as_lit=False, allow_expansion=True
+            ),
         )
 
 
@@ -1616,7 +1618,7 @@ class Then(Expr):
 
         return Expr(
             func,
-            combine_metadata(self, value, str_as_lit=False),
+            combine_metadata(self, value, str_as_lit=False, allow_expansion=False),
         )
 
 
@@ -1705,7 +1707,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.all_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False),
+        combine_metadata(*flat_exprs, str_as_lit=False, allow_expansion=True),
     )
 
 
@@ -1797,7 +1799,7 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.any_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False),
+        combine_metadata(*flat_exprs, str_as_lit=False, allow_expansion=True),
     )
 
 
@@ -1843,7 +1845,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.mean_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False),
+        combine_metadata(*flat_exprs, str_as_lit=False, allow_expansion=True),
     )
 
 
@@ -1910,5 +1912,5 @@ def concat_str(
             *flat_exprs,
             str_as_lit=False,
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False),
+        combine_metadata(*flat_exprs, str_as_lit=False, allow_expansion=True),
     )
