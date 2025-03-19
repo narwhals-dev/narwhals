@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from nox.sessions import Session
 
 nox.options.default_venv_backend = "uv"
-nox.options.reuse_venv = True
+nox.options.reuse_venv = "yes"
 
 PYTHON_VERSIONS = ["3.8", "3.9", "3.10", "3.11", "3.12"]
 

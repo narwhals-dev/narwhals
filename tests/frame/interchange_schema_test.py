@@ -4,11 +4,13 @@ from datetime import date
 from datetime import datetime
 from datetime import timedelta
 
-import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import IBIS_VERSION
+
+pytest.importorskip("polars")
+import polars as pl
 
 
 def test_interchange_schema() -> None:
@@ -72,7 +74,9 @@ def test_interchange_schema() -> None:
 def test_interchange_schema_ibis(
     tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover
-    ibis = pytest.importorskip("ibis")
+    pytest.importorskip("ibis")
+    import ibis
+
     try:
         ibis.set_backend("duckdb")
     except ImportError:
@@ -163,7 +167,9 @@ def test_interchange_schema_ibis(
 
 
 def test_interchange_schema_duckdb() -> None:
-    duckdb = pytest.importorskip("duckdb")
+    pytest.importorskip("duckdb")
+    import duckdb
+
     df_pl = pl.DataFrame(  # noqa: F841
         {
             "a": [1, 1, 2],
