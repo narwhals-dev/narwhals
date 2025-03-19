@@ -371,6 +371,9 @@ class ArrowDataFrame(
         return self._from_native_frame(df, validate_column_names=True)
 
     def with_columns(self: ArrowDataFrame, *exprs: ArrowExpr) -> ArrowDataFrame:
+        # NOTE: We use a faux-mutable variable and repeatedly "overwrite" (native_frame)
+        # All `pyarrow` data is immutable, so this is fine
+        native_frame = self.native
         new_columns = self._evaluate_into_exprs(*exprs)
 
         length = len(self)
@@ -383,13 +386,13 @@ class ArrowDataFrame(
                 length=length, other=col_value, backend_version=self._backend_version
             )
             native_frame = (
-                self.native.set_column(
+                native_frame.set_column(
                     columns.index(col_name),
                     field_=col_name,
                     column=column,  # type: ignore[arg-type]
                 )
                 if col_name in columns
-                else self.native.append_column(field_=col_name, column=column)
+                else native_frame.append_column(field_=col_name, column=column)
             )
 
         return self._from_native_frame(native_frame, validate_column_names=False)
