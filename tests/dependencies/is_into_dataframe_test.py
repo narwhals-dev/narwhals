@@ -28,17 +28,23 @@ class DictDataFrame:
 
 
 def test_is_into_dataframe_pyarrow() -> None:
-    pa = pytest.importorskip("pyarrow")
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     assert is_into_dataframe(pa.table(DATA))
 
 
 def test_is_into_dataframe_polars() -> None:
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("polars")
+    import polars as pl
+
     assert is_into_dataframe(pl.DataFrame(DATA))
 
 
 def test_is_into_dataframe_pandas() -> None:
-    pd = pytest.importorskip("pandas")
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     assert is_into_dataframe(pd.DataFrame(DATA))
     assert is_into_dataframe(nw.from_native(pd.DataFrame(DATA)))
 
