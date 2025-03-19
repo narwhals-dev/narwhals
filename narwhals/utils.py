@@ -1478,8 +1478,9 @@ def _hasattr_static(obj: Any, attr: str) -> bool:
 
 
 def is_compliant_dataframe(
-    obj: CompliantDataFrame[CompliantSeriesT_co, CompliantExprT_co] | Any,
-) -> TypeIs[CompliantDataFrame[CompliantSeriesT_co, CompliantExprT_co]]:
+    obj: CompliantDataFrame[CompliantSeriesT_co, CompliantExprT_co, NativeFrameT_co]
+    | Any,
+) -> TypeIs[CompliantDataFrame[CompliantSeriesT_co, CompliantExprT_co, NativeFrameT_co]]:
     return _hasattr_static(obj, "__narwhals_dataframe__")
 
 

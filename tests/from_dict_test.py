@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from importlib.util import find_spec
 
 import pandas as pd
 import pytest
@@ -11,14 +12,16 @@ from narwhals.utils import Implementation
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
-TEST_EAGER_BACKENDS = [
-    Implementation.POLARS,
-    Implementation.PANDAS,
-    Implementation.PYARROW,
-    "polars",
-    "pandas",
-    "pyarrow",
-]
+TEST_EAGER_BACKENDS: list[Implementation | str] = []
+TEST_EAGER_BACKENDS.extend(
+    (Implementation.POLARS, "polars") if find_spec("polars") is not None else ()
+)
+TEST_EAGER_BACKENDS.extend(
+    (Implementation.PANDAS, "pandas") if find_spec("pandas") is not None else ()
+)
+TEST_EAGER_BACKENDS.extend(
+    (Implementation.PYARROW, "pyarrow") if find_spec("pyarrow") is not None else ()
+)
 
 
 @pytest.mark.parametrize(
@@ -56,6 +59,8 @@ def test_from_dict_schema(
 def test_from_dict_without_backend(
     constructor: Constructor, backend: Implementation | str
 ) -> None:
+    pytest.importorskip("polars")
+
     df = (
         nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
         .lazy()
@@ -115,6 +120,8 @@ def test_from_dict_both_backend_and_namespace_v1(
 def test_from_dict_one_native_one_narwhals(
     constructor: Constructor, backend: Implementation | str
 ) -> None:
+    pytest.importorskip("polars")
+
     df = (
         nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
         .lazy()
