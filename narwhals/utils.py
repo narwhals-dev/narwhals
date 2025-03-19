@@ -58,7 +58,7 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantExpr
     from narwhals._compliant import CompliantFrameT
     from narwhals._compliant import CompliantSeriesOrNativeExprT_co
-    from narwhals._compliant.typing import NativeFrameT_co
+    from narwhals._compliant import NativeFrameT_co
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -1476,8 +1476,9 @@ def _hasattr_static(obj: Any, attr: str) -> bool:
 
 
 def is_compliant_dataframe(
-    obj: CompliantDataFrame[CompliantSeriesT_co, CompliantExprT_co] | Any,
-) -> TypeIs[CompliantDataFrame[CompliantSeriesT_co, CompliantExprT_co]]:
+    obj: CompliantDataFrame[CompliantSeriesT_co, CompliantExprT_co, NativeFrameT_co]
+    | Any,
+) -> TypeIs[CompliantDataFrame[CompliantSeriesT_co, CompliantExprT_co, NativeFrameT_co]]:
     return _hasattr_static(obj, "__narwhals_dataframe__")
 
 
