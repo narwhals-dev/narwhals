@@ -217,7 +217,7 @@ class DaskLazyFrame(CompliantLazyFrame):
         self: Self,
         subset: list[str] | None,
         *,
-        keep: Literal["any", "none"] = "any",
+        keep: Literal["any", "none"],
     ) -> Self:
         check_column_exists(self.columns, subset)
         native_frame = self._native_frame
