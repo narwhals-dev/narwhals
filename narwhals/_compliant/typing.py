@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals._compliant.series import CompliantSeries
     from narwhals._compliant.series import EagerSeries
+    from narwhals.typing import NativeFrame
 
 __all__ = [
     "AliasName",
@@ -27,6 +28,7 @@ __all__ = [
     "CompliantLazyFrameT",
     "CompliantSeriesT",
     "IntoCompliantExpr",
+    "NativeFrameT_co",
 ]
 NativeExprT_co = TypeVar("NativeExprT_co", bound="NativeExpr", covariant=True)
 CompliantSeriesT = TypeVar("CompliantSeriesT", bound="CompliantSeries")
@@ -35,18 +37,22 @@ CompliantSeriesOrNativeExprT_co = TypeVar(
     bound="CompliantSeries | NativeExpr",
     covariant=True,
 )
+NativeFrameT_co = TypeVar("NativeFrameT_co", bound="NativeFrame", covariant=True)
 CompliantFrameT = TypeVar(
-    "CompliantFrameT", bound="CompliantDataFrame[Any, Any] | CompliantLazyFrame"
+    "CompliantFrameT",
+    bound="CompliantDataFrame[Any, Any, Any] | CompliantLazyFrame[Any, Any]",
 )
-CompliantDataFrameT = TypeVar("CompliantDataFrameT", bound="CompliantDataFrame[Any, Any]")
-CompliantLazyFrameT = TypeVar("CompliantLazyFrameT", bound="CompliantLazyFrame")
+CompliantDataFrameT = TypeVar(
+    "CompliantDataFrameT", bound="CompliantDataFrame[Any, Any, Any]"
+)
+CompliantLazyFrameT = TypeVar("CompliantLazyFrameT", bound="CompliantLazyFrame[Any, Any]")
 IntoCompliantExpr: TypeAlias = "CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | CompliantSeriesOrNativeExprT_co"
 CompliantExprT = TypeVar("CompliantExprT", bound="CompliantExpr[Any, Any]")
 CompliantExprT_contra = TypeVar(
     "CompliantExprT_contra", bound="CompliantExpr[Any, Any]", contravariant=True
 )
 
-EagerDataFrameT = TypeVar("EagerDataFrameT", bound="EagerDataFrame[Any, Any]")
+EagerDataFrameT = TypeVar("EagerDataFrameT", bound="EagerDataFrame[Any, Any, Any]")
 EagerSeriesT = TypeVar("EagerSeriesT", bound="EagerSeries[Any]")
 EagerSeriesT_co = TypeVar("EagerSeriesT_co", bound="EagerSeries[Any]", covariant=True)
 EagerExprT = TypeVar("EagerExprT", bound="EagerExpr[Any, Any]")
@@ -54,7 +60,7 @@ EagerExprT_contra = TypeVar(
     "EagerExprT_contra", bound="EagerExpr[Any, Any]", contravariant=True
 )
 EagerNamespaceAny: TypeAlias = (
-    "EagerNamespace[EagerDataFrame[Any, Any], EagerSeries[Any], EagerExpr[Any, Any]]"
+    "EagerNamespace[EagerDataFrame[Any, Any, Any], EagerSeries[Any], EagerExpr[Any, Any]]"
 )
 
 AliasNames: TypeAlias = Callable[[Sequence[str]], Sequence[str]]

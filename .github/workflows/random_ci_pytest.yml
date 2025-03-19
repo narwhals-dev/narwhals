@@ -30,7 +30,7 @@ jobs:
       - name: install-random-verions
         run: uv pip install -r random-requirements.txt --system
       - name: install-narwhals
-        run: uv pip install -e ".[tests]" --system
+        run: uv pip install -e . --group tests --system
       - name: show versions
         run: uv pip freeze
       - name: Run pytest

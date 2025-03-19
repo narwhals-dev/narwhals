@@ -147,6 +147,9 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> An
     if isinstance_or_issubclass(dtype, dtypes.Time):  # pragma: no cover
         msg = "Converting to Time dtype is not supported yet"
         return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Binary):  # pragma: no cover
+        msg = "Converting to Binary dtype is not supported yet"
+        return NotImplementedError(msg)
 
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)

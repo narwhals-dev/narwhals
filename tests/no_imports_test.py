@@ -9,7 +9,9 @@ import narwhals.stable.v1 as nw
 
 
 def test_polars(monkeypatch: pytest.MonkeyPatch) -> None:
-    pl = pytest.importorskip("polars")
+    pytest.importorskip("polars")
+    import polars as pl
+
     monkeypatch.delitem(sys.modules, "pandas")
     monkeypatch.delitem(sys.modules, "numpy")
     monkeypatch.delitem(sys.modules, "pyarrow", raising=False)
@@ -72,7 +74,9 @@ def test_dask(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_pyarrow(monkeypatch: pytest.MonkeyPatch) -> None:
-    pa = pytest.importorskip("pyarrow")
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     monkeypatch.delitem(sys.modules, "polars", raising=False)
     monkeypatch.delitem(sys.modules, "pandas")
     monkeypatch.delitem(sys.modules, "duckdb", raising=False)

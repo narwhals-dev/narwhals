@@ -7,7 +7,6 @@ from typing import cast
 
 import hypothesis.strategies as st
 import numpy as np
-import polars as pl
 import pytest
 from hypothesis import assume
 from hypothesis import given
@@ -22,6 +21,9 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from narwhals.typing import IntoDataFrame
+
+pytest.importorskip("polars")
+import polars as pl
 
 
 @pytest.fixture(

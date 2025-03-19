@@ -272,6 +272,7 @@ def test_hist_count_no_spread(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
 def test_hist_bin_and_bin_count() -> None:
+    pytest.importorskip("polars")
     import polars as pl
 
     s = nw.from_native(pl.Series([1, 2, 3]), series_only=True)
