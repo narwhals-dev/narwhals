@@ -1138,6 +1138,8 @@ def _scan_parquet_impl(
 
         native_frame = (
             session.read.format("parquet").load(source)
+            # passing `options` currently not possible in SQLFrame: see
+            # https://github.com/eakmanrq/sqlframe/issues/341
             if implementation is Implementation.SQLFRAME
             else session.read.format("parquet").options(**kwargs).load(source)
         )
