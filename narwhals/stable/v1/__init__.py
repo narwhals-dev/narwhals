@@ -38,6 +38,7 @@ from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.stable.v1 import dtypes
 from narwhals.stable.v1.dtypes import Array
+from narwhals.stable.v1.dtypes import Binary
 from narwhals.stable.v1.dtypes import Boolean
 from narwhals.stable.v1.dtypes import Categorical
 from narwhals.stable.v1.dtypes import Date
@@ -2500,6 +2501,7 @@ def scan_parquet(
 
 __all__ = [
     "Array",
+    "Binary",
     "Boolean",
     "Categorical",
     "DataFrame",

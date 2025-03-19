@@ -245,6 +245,7 @@ class DTypes:
     Array: type[dtypes.Array]
     Unknown: type[dtypes.Unknown]
     Time: type[dtypes.Time]
+    Binary: type[dtypes.Binary]
 
 
 __all__ = [
