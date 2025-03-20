@@ -39,17 +39,7 @@ NativeAggregationT_co = TypeVar(
 """Some backends *may* return a `Callable` instead of a `str` referring to one."""
 
 
-UNNAMED_PATTERN: re.Pattern[str] = re.compile(r"(\w+->)")
-"""I'm unsure what this should be called.
-
-Seems to be used as a way to get `thing_n`:
-
-    "thing_1->thing_2->...->thing_n"
-
-But with the assumption that `depth` is constrained below `2` (maybe?).
-
-**In isolation - the pattern doesn't mean any of that.** 🤔
-"""
+_RE_LEAF_NAME: re.Pattern[str] = re.compile(r"(\w+->)")
 
 
 class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
@@ -119,7 +109,7 @@ class DepthTrackingGroupBy(
     @classmethod
     def _leaf_name(cls, expr: CompliantExprAny, /) -> str:
         """Return the last function name in the chain defined by `expr`."""
-        return UNNAMED_PATTERN.sub("", expr._function_name)
+        return _RE_LEAF_NAME.sub("", expr._function_name)
 
 
 class EagerGroupBy(
