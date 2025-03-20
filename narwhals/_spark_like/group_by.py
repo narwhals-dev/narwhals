@@ -6,6 +6,7 @@ from typing import Sequence
 from narwhals._compliant import CompliantGroupBy
 
 if TYPE_CHECKING:
+    from sqlframe.base.column import Column
     from typing_extensions import Self
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
@@ -26,7 +27,7 @@ class SparkLikeLazyGroupBy(CompliantGroupBy["SparkLikeLazyFrame", "SparkLikeExpr
         self._keys = list(keys)
 
     def agg(self: Self, *exprs: SparkLikeExpr) -> SparkLikeLazyFrame:
-        agg_columns = []
+        agg_columns: list[Column] = []
         for expr in exprs:
             output_names = expr._evaluate_output_names(self.compliant)
             aliases = (
