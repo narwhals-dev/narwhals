@@ -11,7 +11,6 @@ from typing import Sequence
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.utils import cast_to_comparable_string_types
 from narwhals._arrow.utils import extract_py_scalar
 from narwhals._compliant import EagerGroupBy
