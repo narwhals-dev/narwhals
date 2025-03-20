@@ -473,16 +473,16 @@ jobs:
         run: |
           cd validoopsie
           uv sync --dev
-      - name: show-deps
-        run: |
-          cd validoopsie
-          which python
-          uv pip freeze
       - name: install-narwhals-dev
         run: |
           cd validoopsie
           uv remove narwhals
           uv add ./..
+      - name: show-deps
+        run: |
+          cd validoopsie
+          which python
+          uv pip freeze
       - name: Run tests
         run: |
           cd validoopsie
