@@ -481,15 +481,15 @@ jobs:
       - name: install-narwhals-dev
         run: |
           cd validoopsie
-          uv pip uninstall narwhals
-          uv pip install -e ./..
+          uv remove narwhals
+          uv add ./..
       - name: Run tests
         run: |
           cd validoopsie
           touch pytest.ini       
           touch tests/__init__.py
           touch tests/utils/__init__.py
-          pytest tests
+          uv run pytest tests
         timeout-minutes: 15
   
   darts:
