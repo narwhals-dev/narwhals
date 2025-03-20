@@ -50,6 +50,9 @@ class CompliantDataFrame(
     Protocol[CompliantSeriesT, CompliantExprT_contra, NativeFrameT_co],
 ):
     _native_frame: Any
+    _implementation: Implementation
+    _backend_version: tuple[int, ...]
+    _version: Version
 
     def __narwhals_dataframe__(self) -> Self: ...
     def __narwhals_namespace__(self) -> Any: ...
