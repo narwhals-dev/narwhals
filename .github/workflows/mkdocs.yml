@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-  pull_request:
 
 permissions:
   contents: write
@@ -31,7 +30,5 @@ jobs:
             mkdocs-material-
       - name: Install dependencies
         run: uv pip install -e ".[dask,duckdb]" --group docs --system
-      # - name: Deploy docs
-      #   run: mkdocs gh-deploy --force
-      - name: test
-        run: mkdocs --help
+      - name: Deploy docs
+        run: mkdocs gh-deploy --force
