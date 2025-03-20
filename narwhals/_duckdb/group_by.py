@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.expr import DuckDBExpr
 
 
+# NOTE: No depth-tracking
 class DuckDBGroupBy:
     def __init__(
         self: Self,

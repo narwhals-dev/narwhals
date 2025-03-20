@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from narwhals._spark_like.expr import SparkLikeExpr
 
 
+# NOTE: No depth-tracking
 class SparkLikeLazyGroupBy:
     def __init__(
         self: Self,

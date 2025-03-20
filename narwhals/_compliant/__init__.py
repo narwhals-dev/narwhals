@@ -7,6 +7,7 @@ from narwhals._compliant.expr import CompliantExpr
 from narwhals._compliant.expr import EagerExpr
 from narwhals._compliant.expr import LazyExpr
 from narwhals._compliant.group_by import CompliantGroupBy
+from narwhals._compliant.group_by import DepthTrackingGroupBy
 from narwhals._compliant.group_by import EagerGroupBy
 from narwhals._compliant.namespace import CompliantNamespace
 from narwhals._compliant.namespace import EagerNamespace
@@ -41,6 +42,7 @@ __all__ = [
     "CompliantSeries",
     "CompliantSeriesOrNativeExprT_co",
     "CompliantSeriesT",
+    "DepthTrackingGroupBy",
     "EagerDataFrame",
     "EagerDataFrameT",
     "EagerExpr",

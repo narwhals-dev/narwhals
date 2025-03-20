@@ -10,7 +10,7 @@ from typing import Sequence
 
 import dask.dataframe as dd
 
-from narwhals._compliant import CompliantGroupBy
+from narwhals._compliant import DepthTrackingGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 
 try:
@@ -56,7 +56,7 @@ def std(ddof: int) -> _AggFn:
     return partial(_DaskGroupBy.std, ddof=ddof)
 
 
-class DaskLazyGroupBy(CompliantGroupBy["DaskLazyFrame", "DaskExpr", Aggregation]):
+class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregation]):
     _NARWHALS_TO_NATIVE_AGGREGATIONS: ClassVar[Mapping[str, Aggregation]] = {
         "sum": "sum",
         "mean": "mean",

@@ -4,17 +4,18 @@ import re
 import sys
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import ClassVar
 from typing import Iterator
 from typing import Mapping
 from typing import Sequence
+from typing import TypeVar
 
 from narwhals._compliant.typing import CompliantDataFrameT_co
 from narwhals._compliant.typing import CompliantExprAny
 from narwhals._compliant.typing import CompliantExprT_contra
 from narwhals._compliant.typing import CompliantFrameT_co
 from narwhals._expression_parsing import is_elementary_expression
-from narwhals._translate import TypeVar  # type: ignore[attr-defined]
 
 if not TYPE_CHECKING:  # pragma: no cover
     if sys.version_info >= (3, 9):
@@ -26,9 +27,11 @@ else:  # pragma: no cover
     # - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
     from typing import Protocol as Protocol38
 
-__all__ = ["CompliantGroupBy", "EagerGroupBy"]
+__all__ = ["CompliantGroupBy", "DepthTrackingGroupBy", "EagerGroupBy"]
 
-NativeAggregationT_co = TypeVar("NativeAggregationT_co", covariant=True, default="str")
+NativeAggregationT_co = TypeVar(
+    "NativeAggregationT_co", bound="str | Callable[...,Any]", covariant=True
+)
 """Some backends *may* return a `Callable` instead of a `str` referring to one."""
 
 
@@ -45,12 +48,13 @@ But with the assumption that `depth` is constrained below `2` (maybe?).
 """
 
 
-class CompliantGroupBy(
-    Protocol38[CompliantFrameT_co, CompliantExprT_contra, NativeAggregationT_co]
-):
-    _NARWHALS_TO_NATIVE_AGGREGATIONS: ClassVar[Mapping[str, Any]]
+class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     _compliant_frame: Any
     _keys: Sequence[str]
+
+    @property
+    def compliant(self) -> CompliantFrameT_co:
+        return self._compliant_frame  # type: ignore[no-any-return]
 
     def __init__(
         self,
@@ -60,11 +64,17 @@ class CompliantGroupBy(
         *,
         drop_null_keys: bool,
     ) -> None: ...
-    @property
-    def compliant(self) -> CompliantFrameT_co:
-        return self._compliant_frame  # type: ignore[no-any-return]
 
     def agg(self, *exprs: CompliantExprT_contra) -> CompliantFrameT_co: ...
+
+
+class DepthTrackingGroupBy(
+    CompliantGroupBy[CompliantFrameT_co, CompliantExprT_contra],
+    Protocol38[CompliantFrameT_co, CompliantExprT_contra, NativeAggregationT_co],
+):
+    """`CompliantGroupBy` variant, deals with `Eager` and other backends that utilize `CompliantExpr._depth`."""
+
+    _NARWHALS_TO_NATIVE_AGGREGATIONS: ClassVar[Mapping[str, Any]]
 
     def _ensure_all_simple(self, exprs: Sequence[CompliantExprT_contra]) -> None:
         for expr in exprs:
@@ -109,7 +119,7 @@ class CompliantGroupBy(
 
 
 class EagerGroupBy(
-    CompliantGroupBy[CompliantDataFrameT_co, CompliantExprT_contra, str],
+    DepthTrackingGroupBy[CompliantDataFrameT_co, CompliantExprT_contra, str],
     Protocol38[CompliantDataFrameT_co, CompliantExprT_contra],
 ):
     def __iter__(self) -> Iterator[tuple[Any, CompliantDataFrameT_co]]: ...
