@@ -68,10 +68,7 @@ class CompliantGroupBy(
 
     def _ensure_all_simple(self, exprs: Sequence[CompliantExprT_contra]) -> None:
         for expr in exprs:
-            if (
-                not is_elementary_expression(expr)
-                and self._leaf_name(expr) in self._NARWHALS_TO_NATIVE_AGGREGATIONS
-            ):
+            if not self._is_simple(expr):
                 name = self.compliant._implementation.name.lower()
                 msg = (
                     f"Non-trivial complex aggregation found.\n\n"
@@ -84,6 +81,14 @@ class CompliantGroupBy(
                     "    df.with_columns(nw.col('b').round(2)).group_by('a').agg(nw.col('b').mean())\n\n"
                 )
                 raise ValueError(msg)
+
+    @classmethod
+    def _is_simple(cls, expr: CompliantExprAny, /) -> bool:
+        """Return `True` is we can efficiently use `expr` in a native `group_by` context."""
+        return (
+            is_elementary_expression(expr)
+            and cls._leaf_name(expr) in cls._NARWHALS_TO_NATIVE_AGGREGATIONS
+        )
 
     @classmethod
     def _remap_expr_name(cls, name: str, /) -> NativeAggregationT_co:

@@ -11,7 +11,6 @@ from typing import Sequence
 
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._expression_parsing import is_elementary_expression
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import select_columns_by_name
@@ -92,10 +91,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
                 expr, self.compliant, self._keys
             )
             new_names.extend(aliases)
-            if not (
-                is_elementary_expression(expr)
-                and self._leaf_name(expr) in self._NARWHALS_TO_NATIVE_AGGREGATIONS
-            ):
+            if not self._is_simple(expr):
                 all_aggs_are_simple = False
 
         # dict of {output_name: root_name} that we count n_unique on
