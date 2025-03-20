@@ -53,8 +53,7 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
                 and re.sub(r"(\w+->)", "", expr._function_name)
                 in self._NARWHALS_TO_NATIVE_AGGREGATIONS
             ):
-                # NOTE: Need to define `_implementation` in both protocols (#2251)
-                name = self.compliant._implementation.name.lower()  # type: ignore  # noqa: PGH003
+                name = self.compliant._implementation.name.lower()
                 msg = (
                     f"Non-trivial complex aggregation found.\n\n"
                     f"Hint: you were probably trying to apply a non-elementary aggregation with a"
