@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from functools import partial
 from typing import TYPE_CHECKING
 from typing import Any
@@ -105,8 +104,7 @@ class DaskLazyGroupBy(CompliantGroupBy["DaskLazyFrame", "DaskExpr", Aggregation]
                 continue
 
             # e.g. `agg(nw.mean('a'))`
-            function_name = re.sub(r"(\w+->)", "", expr._function_name)
-            agg_fn = self._remap_expr_name(function_name)
+            agg_fn = self._remap_expr_name(self._leaf_name(expr))
             # deal with n_unique case in a "lazy" mode to not depend on dask globally
             agg_fn = agg_fn(**expr._call_kwargs) if callable(agg_fn) else agg_fn
             simple_aggregations.update(

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 import warnings
 from typing import TYPE_CHECKING
 from typing import Any
@@ -571,7 +570,7 @@ class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
             )
             raise NotImplementedError(msg)
         else:
-            function_name = re.sub(r"(\w+->)", "", self._function_name)
+            function_name = PandasLikeGroupBy._leaf_name(self)
             try:
                 dask_function_name = AGGREGATIONS_TO_PANDAS_EQUIVALENT[function_name]
             except KeyError:

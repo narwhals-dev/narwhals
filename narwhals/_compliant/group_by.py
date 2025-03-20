@@ -10,6 +10,7 @@ from typing import Mapping
 from typing import Sequence
 
 from narwhals._compliant.typing import CompliantDataFrameT_co
+from narwhals._compliant.typing import CompliantExprAny
 from narwhals._compliant.typing import CompliantExprT_contra
 from narwhals._compliant.typing import CompliantFrameT_co
 from narwhals._expression_parsing import is_elementary_expression
@@ -31,8 +32,19 @@ NativeAggregationT_co = TypeVar("NativeAggregationT_co", covariant=True, default
 """Some backends *may* return a `Callable` instead of a `str` referring to one."""
 
 
-# TODO @dangotbanned: Compile and assign a name to `r"(\w+->)"`
-# - Then make `re.sub(r"(\w+->)", "", expr._function_name)` a method
+UNNAMED_PATTERN: re.Pattern[str] = re.compile(r"(\w+->)")
+"""I'm unsure what this should be called.
+
+Seems to be used as a way to get `thing_n`:
+
+    "thing_1->thing_2->...->thing_n"
+
+But with the assumption that `depth` is constrained below `2` (maybe?).
+
+**In isolation - the pattern doesn't mean any of that.** 🤔
+"""
+
+
 class CompliantGroupBy(
     Protocol38[CompliantFrameT_co, CompliantExprT_contra, NativeAggregationT_co]
 ):
@@ -58,8 +70,7 @@ class CompliantGroupBy(
         for expr in exprs:
             if (
                 not is_elementary_expression(expr)
-                and re.sub(r"(\w+->)", "", expr._function_name)
-                in self._NARWHALS_TO_NATIVE_AGGREGATIONS
+                and self._leaf_name(expr) in self._NARWHALS_TO_NATIVE_AGGREGATIONS
             ):
                 name = self.compliant._implementation.name.lower()
                 msg = (
@@ -85,6 +96,11 @@ class CompliantGroupBy(
             A native compatible representation.
         """
         return cls._NARWHALS_TO_NATIVE_AGGREGATIONS.get(name, name)
+
+    @classmethod
+    def _leaf_name(cls, expr: CompliantExprAny, /) -> str:
+        """Return the last function name in the chain defined by `expr`."""
+        return UNNAMED_PATTERN.sub("", expr._function_name)
 
 
 class EagerGroupBy(

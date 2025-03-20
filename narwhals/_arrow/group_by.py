@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import collections
-import re
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import ClassVar
@@ -78,7 +77,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
                 aggs.append((self._keys[0], "count", pc.CountOptions(mode="all")))
                 continue
 
-            function_name = re.sub(r"(\w+->)", "", expr._function_name)
+            function_name = self._leaf_name(expr)
             if function_name in {"std", "var"}:
                 option: Any = pc.VarianceOptions(ddof=expr._call_kwargs["ddof"])
             elif function_name in {"len", "n_unique"}:

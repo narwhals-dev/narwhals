@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -226,7 +225,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             AGGREGATIONS_TO_PANDAS_EQUIVALENT = (  # noqa: N806
                 PandasLikeGroupBy._NARWHALS_TO_NATIVE_AGGREGATIONS
             )
-            function_name: str = re.sub(r"(\w+->)", "", self._function_name)
+            function_name = PandasLikeGroupBy._leaf_name(self)
             pandas_function_name = WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT.get(
                 function_name,
                 AGGREGATIONS_TO_PANDAS_EQUIVALENT.get(function_name),

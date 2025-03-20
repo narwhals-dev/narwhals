@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import collections
-import re
 import warnings
 from typing import TYPE_CHECKING
 from typing import Any
@@ -93,11 +92,9 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
                 expr, self.compliant, self._keys
             )
             new_names.extend(aliases)
-
             if not (
                 is_elementary_expression(expr)
-                and re.sub(r"(\w+->)", "", expr._function_name)
-                in self._NARWHALS_TO_NATIVE_AGGREGATIONS
+                and self._leaf_name(expr) in self._NARWHALS_TO_NATIVE_AGGREGATIONS
             ):
                 all_aggs_are_simple = False
 
@@ -136,9 +133,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
                     continue
 
                 # e.g. `agg(nw.mean('a'))`
-                function_name = re.sub(r"(\w+->)", "", expr._function_name)
-                function_name = self._remap_expr_name(function_name)
-
+                function_name = self._remap_expr_name(self._leaf_name(expr))
                 is_n_unique = function_name == "nunique"
                 is_std = function_name == "std"
                 is_var = function_name == "var"
