@@ -15,7 +15,6 @@ from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_columns
-from narwhals.utils import Implementation
 from narwhals.utils import find_stacklevel
 
 if TYPE_CHECKING:
@@ -57,7 +56,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
         else:
             native_frame = df.native
         if (
-            self.compliant._implementation is Implementation.PANDAS
+            self.compliant._implementation.is_pandas()
             and self.compliant._backend_version < (1, 1)
         ):  # pragma: no cover
             if (
@@ -291,7 +290,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
                 implementation=implementation,
             )
 
-        if implementation is Implementation.PANDAS and backend_version >= (2, 2):
+        if implementation.is_pandas() and backend_version >= (2, 2):
             result_complex = self._grouped.apply(func, include_groups=False)
         else:  # pragma: no cover
             result_complex = self._grouped.apply(func)
