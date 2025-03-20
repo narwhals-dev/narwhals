@@ -79,6 +79,8 @@ def native_to_narwhals_dtype(
                 for field in dtype
             ]
         )
+    if isinstance(dtype, native.BinaryType):
+        return dtypes.Binary()
     return dtypes.Unknown()
 
 
@@ -135,6 +137,8 @@ def narwhals_to_native_dtype(
                 for field in dtype.fields
             ]
         )
+    if isinstance_or_issubclass(dtype, dtypes.Binary):
+        return native.BinaryType()
 
     if isinstance_or_issubclass(
         dtype,

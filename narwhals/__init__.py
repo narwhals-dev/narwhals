@@ -8,6 +8,7 @@ from narwhals import stable
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dtypes import Array
+from narwhals.dtypes import Binary
 from narwhals.dtypes import Boolean
 from narwhals.dtypes import Categorical
 from narwhals.dtypes import Date
@@ -85,6 +86,7 @@ __version__ = "1.31.0"
 
 __all__ = [
     "Array",
+    "Binary",
     "Boolean",
     "Categorical",
     "DataFrame",
