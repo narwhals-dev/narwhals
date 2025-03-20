@@ -270,6 +270,14 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def broadcast(
         self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]
     ) -> Self: ...
+    def _is_multi_output_agg(self) -> bool:
+        """Return `True` for multi-output aggregations.
+
+        Here we skip the keys, else they would appear duplicated in the output:
+
+            df.group_by("a").agg(nw.all().mean())
+        """
+        return self._function_name.split("->", maxsplit=1)[0] in {"all", "selector"}
 
 
 class EagerExpr(

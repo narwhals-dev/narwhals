@@ -347,10 +347,10 @@ class PolarsDataFrame:
         else:
             return self.native.to_dict(as_series=False)
 
-    def group_by(self: Self, *by: str, drop_null_keys: bool) -> PolarsGroupBy:
+    def group_by(self: Self, *keys: str, drop_null_keys: bool) -> PolarsGroupBy:
         from narwhals._polars.group_by import PolarsGroupBy
 
-        return PolarsGroupBy(self, list(by), drop_null_keys=drop_null_keys)
+        return PolarsGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
     def with_row_index(self: Self, name: str) -> Self:
         if self._backend_version < (0, 20, 4):
@@ -572,10 +572,10 @@ class PolarsLazyFrame:
         msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
         raise ValueError(msg)  # pragma: no cover
 
-    def group_by(self: Self, *by: str, drop_null_keys: bool) -> PolarsLazyGroupBy:
+    def group_by(self: Self, *keys: str, drop_null_keys: bool) -> PolarsLazyGroupBy:
         from narwhals._polars.group_by import PolarsLazyGroupBy
 
-        return PolarsLazyGroupBy(self, list(by), drop_null_keys=drop_null_keys)
+        return PolarsLazyGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
     def with_row_index(self: Self, name: str) -> Self:
         if self._backend_version < (0, 20, 4):

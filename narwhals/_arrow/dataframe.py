@@ -399,7 +399,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
     def group_by(self: Self, *keys: str, drop_null_keys: bool) -> ArrowGroupBy:
         from narwhals._arrow.group_by import ArrowGroupBy
 
-        return ArrowGroupBy(self, list(keys), drop_null_keys=drop_null_keys)
+        return ArrowGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
     def join(
         self: Self,
