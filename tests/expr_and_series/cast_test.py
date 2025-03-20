@@ -339,7 +339,7 @@ def test_cast_binary(request: pytest.FixtureRequest, constructor: Constructor) -
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
         request.applymarker(pytest.mark.xfail)
 
-    if any(backend in str(constructor) for backend in ("dask", "modin")):
+    if any(backend in str(constructor) for backend in ("cudf", "dask", "modin")):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": ["test1", "test2"]}
