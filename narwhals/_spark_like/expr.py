@@ -486,7 +486,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         old: ExprKind | Sequence[Any] | Mapping[Any, Any],
         new: ExprKind | Sequence[Any] | None = None,
         default: ExprKind | None = None,
-        return_dtype: DType | None = None,
+        return_dtype: DType | type[DType] | None = None,
     ) -> Self:
         if new is None:
             if not isinstance(old, Mapping):
@@ -501,9 +501,9 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             old: Sequence[Any],
             new: Sequence[Any],
             default: ExprKind,
-            return_dtype: DType,
+            return_dtype: DType | type[DType],
         ) -> Column:
-            mapper = self._F.create_map(chain(*zip(old, new)))
+            mapper = self._F.create_map(*chain(*zip(old, new)))
             mapping_expr = mapper[_input]
 
             if default is not None:
