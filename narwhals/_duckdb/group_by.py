@@ -1,20 +1,20 @@
 from __future__ import annotations
 
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Sequence
 
-from narwhals._compliant import CompliantGroupBy
+from narwhals._compliant import LazyGroupBy
 
 if TYPE_CHECKING:
-    from duckdb import Expression
+    from duckdb import Expression  # noqa: F401
     from typing_extensions import Self
 
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
 
 
-# NOTE: No depth-tracking
-class DuckDBGroupBy(CompliantGroupBy["DuckDBLazyFrame", "DuckDBExpr"]):
+class DuckDBGroupBy(LazyGroupBy["DuckDBLazyFrame", "DuckDBExpr", "Expression"]):
     def __init__(
         self: Self,
         df: DuckDBLazyFrame,
@@ -27,27 +27,7 @@ class DuckDBGroupBy(CompliantGroupBy["DuckDBLazyFrame", "DuckDBExpr"]):
         self._keys = list(keys)
 
     def agg(self: Self, *exprs: DuckDBExpr) -> DuckDBLazyFrame:
-        agg_columns: list[str | Expression] = list(self._keys)
-        for expr in exprs:
-            output_names = expr._evaluate_output_names(self.compliant)
-            aliases = (
-                output_names
-                if expr._alias_output_names is None
-                else expr._alias_output_names(output_names)
-            )
-            native_expressions = expr(self.compliant)
-            exclude = (
-                self._keys
-                if expr._function_name.split("->", maxsplit=1)[0] in {"all", "selector"}
-                else []
-            )
-            agg_columns.extend(
-                native_expression.alias(alias)
-                for native_expression, output_name, alias in zip(
-                    native_expressions, output_names, aliases
-                )
-                if output_name not in exclude
-            )
+        agg_columns = list(chain(self._keys, self._evaluate_exprs(exprs)))
         return self.compliant._from_native_frame(
             self.compliant.native.aggregate(agg_columns)  # type: ignore[arg-type]
         )

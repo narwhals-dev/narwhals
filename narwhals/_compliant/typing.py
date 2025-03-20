@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.dataframe import EagerDataFrame
     from narwhals._compliant.expr import CompliantExpr
     from narwhals._compliant.expr import EagerExpr
+    from narwhals._compliant.expr import LazyExpr
     from narwhals._compliant.expr import NativeExpr
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals._compliant.series import CompliantSeries
@@ -57,6 +58,9 @@ CompliantDataFrameT_co = TypeVar(
     "CompliantDataFrameT_co", bound="CompliantDataFrame[Any, Any, Any]", covariant=True
 )
 CompliantLazyFrameT = TypeVar("CompliantLazyFrameT", bound="CompliantLazyFrame[Any, Any]")
+CompliantLazyFrameT_co = TypeVar(
+    "CompliantLazyFrameT_co", bound="CompliantLazyFrame[Any, Any]", covariant=True
+)
 IntoCompliantExpr: TypeAlias = "CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | CompliantSeriesOrNativeExprT_co"
 CompliantExprAny: TypeAlias = "CompliantExpr[Any, Any]"
 CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExprAny)
@@ -73,6 +77,9 @@ EagerExprT_contra = TypeVar(
 )
 EagerNamespaceAny: TypeAlias = (
     "EagerNamespace[EagerDataFrame[Any, Any, Any], EagerSeries[Any], EagerExpr[Any, Any]]"
+)
+LazyExprT_contra = TypeVar(
+    "LazyExprT_contra", bound="LazyExpr[Any, Any]", contravariant=True
 )
 
 AliasNames: TypeAlias = Callable[[Sequence[str]], Sequence[str]]
