@@ -496,21 +496,17 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         def _replace_strict(
             _input: Column,
-            old: Column,  # should be Sequence[Any]
-            new: Column,  # should be Sequence[Any]
+            old: Column,  # or a Sequence[Column]
+            new: Column,  # or a Sequence[Column]
         ) -> Column:
-            mapper = self._F.create_map(old, new)
-            return mapper[_input]
+            mapping_expr = self._F.create_map(old, new)
+            return mapping_expr[_input]
 
-        result = self._from_call(
-            _replace_strict,
-            "replace_strict",
-            old=old,
-            new=new,
-        )
+        result = self._from_call(_replace_strict, "replace_strict", old=old, new=new)
 
         if return_dtype is not None:
             result = result.cast(return_dtype)
+
         return result
 
     def round(self: Self, decimals: int) -> Self:
