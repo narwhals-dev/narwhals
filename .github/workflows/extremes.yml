@@ -126,6 +126,9 @@ jobs:
       matrix:
         python-version: ["3.12"]
         os: [ubuntu-latest]
+    env:
+      KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+      KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ matrix.os }}
     steps:
