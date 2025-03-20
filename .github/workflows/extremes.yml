@@ -153,8 +153,9 @@ jobs:
           echo "Kaggle kernel status: $output"
           if echo "$output" | grep -q "running"; then
             echo "::set-output name=skip_install::true"
+            echo "skip_install=true" >> $GITHUB_OUTPUT
           else
-            echo "::set-output name=skip_install::false"
+            echo "skip_install=false" >> $GITHUB_OUTPUT
           fi
       - name: Install polars nightly
         if: steps.kaggle_status.outputs.skip_install == 'false'
