@@ -109,7 +109,7 @@ class CompliantGroupBy(
 
 
 class EagerGroupBy(
-    CompliantGroupBy[CompliantDataFrameT_co, CompliantExprT_contra],
+    CompliantGroupBy[CompliantDataFrameT_co, CompliantExprT_contra, str],
     Protocol38[CompliantDataFrameT_co, CompliantExprT_contra],
 ):
     def __iter__(self) -> Iterator[tuple[Any, CompliantDataFrameT_co]]: ...
