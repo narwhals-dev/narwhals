@@ -68,7 +68,8 @@ class CompliantDataFrame(
 
         (so, no broadcasting is necessary).
         """
-        return self.select(*exprs)
+        # NOTE: Ignore is to avoid an intermittent false positive
+        return self.select(*exprs)  # pyright: ignore[reportArgumentType]
 
     @property
     def native(self) -> NativeFrameT_co:
