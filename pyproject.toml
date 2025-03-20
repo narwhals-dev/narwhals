@@ -46,24 +46,6 @@ ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
 sqlframe = ["sqlframe>=3.22.0"]
 
 [dependency-groups]
-dev = [
-  "pre-commit",
-  {include-group = "tests"},
-  {include-group = "typing"},
-]
-dev-core = [
-  {include-group = "dev"},
-  {include-group = "core"},
-]
-core-tests = [
-  {include-group = "core"},
-  {include-group = "tests"},
-]
-local-dev = [
-  {include-group = "dev"},
-  {include-group = "core"},
-  {include-group = "docs"}
-]
 core = [
   "narwhals[duckdb,pandas,polars,pyarrow,sqlframe]"
 ] 
@@ -103,6 +85,24 @@ docs = [
   "pandas",
   "polars>=1.0.0",
   "pyarrow",
+]
+dev = [
+  "pre-commit",
+  {include-group = "tests"},
+  {include-group = "typing"},
+]
+dev-core = [
+  {include-group = "dev"},
+  {include-group = "core"},
+]
+core-tests = [
+  {include-group = "core"},
+  {include-group = "tests"},
+]
+local-dev = [
+  {include-group = "dev"},
+  {include-group = "core"},
+  {include-group = "docs"}
 ]
 
 [tool.hatch.build]

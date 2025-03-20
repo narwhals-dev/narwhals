@@ -63,7 +63,7 @@ class PandasLikeNamespace(
     # --- selection ---
     def lit(self: Self, value: Any, dtype: DType | None) -> PandasLikeExpr:
         def _lit_pandas_series(df: PandasLikeDataFrame) -> PandasLikeSeries:
-            pandas_series = self._series._from_iterable(
+            pandas_series = self._series.from_iterable(
                 data=[value],
                 name="literal",
                 index=df._native_frame.index[0:1],
@@ -87,7 +87,7 @@ class PandasLikeNamespace(
     def len(self: Self) -> PandasLikeExpr:
         return PandasLikeExpr(
             lambda df: [
-                self._series._from_iterable(
+                self._series.from_iterable(
                     [len(df._native_frame)], name="len", index=[0], context=self
                 )
             ],
@@ -293,7 +293,7 @@ class PandasLikeNamespace(
                     s.zip_with(~nm, "") for s, nm in zip(series, null_mask)
                 ]
 
-                sep_array = init_value._from_iterable(
+                sep_array = init_value.from_iterable(
                     data=[separator] * len(init_value),
                     name="sep",
                     index=init_value._native_series.index,

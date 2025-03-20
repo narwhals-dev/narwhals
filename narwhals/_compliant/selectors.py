@@ -62,8 +62,8 @@ __all__ = [
 ]
 
 
-SeriesOrExprT = TypeVar("SeriesOrExprT", bound="CompliantSeries | NativeExpr")
-SeriesT = TypeVar("SeriesT", bound="CompliantSeries")
+SeriesOrExprT = TypeVar("SeriesOrExprT", bound="CompliantSeries[Any] | NativeExpr")
+SeriesT = TypeVar("SeriesT", bound="CompliantSeries[Any]")
 ExprT = TypeVar("ExprT", bound="NativeExpr")
 FrameT = TypeVar(
     "FrameT", bound="CompliantDataFrame[Any, Any, Any] | CompliantLazyFrame[Any, Any]"
