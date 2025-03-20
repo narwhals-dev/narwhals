@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.series import CompliantSeries
     from narwhals._compliant.series import EagerSeries
     from narwhals.typing import NativeFrame
+    from narwhals.typing import NativeSeries
 
 __all__ = [
     "AliasName",
@@ -29,12 +30,14 @@ __all__ = [
     "CompliantSeriesT",
     "IntoCompliantExpr",
     "NativeFrameT_co",
+    "NativeSeriesT_co",
 ]
 NativeExprT_co = TypeVar("NativeExprT_co", bound="NativeExpr", covariant=True)
-CompliantSeriesT = TypeVar("CompliantSeriesT", bound="CompliantSeries")
+NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=True)
+CompliantSeriesT = TypeVar("CompliantSeriesT", bound="CompliantSeries[Any]")
 CompliantSeriesOrNativeExprT_co = TypeVar(
     "CompliantSeriesOrNativeExprT_co",
-    bound="CompliantSeries | NativeExpr",
+    bound="CompliantSeries[Any] | NativeExpr",
     covariant=True,
 )
 NativeFrameT_co = TypeVar("NativeFrameT_co", bound="NativeFrame", covariant=True)

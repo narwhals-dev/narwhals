@@ -45,6 +45,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant import CompliantExpr
     from narwhals._compliant import CompliantNamespace
+    from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -410,7 +411,7 @@ def _from_dict_impl(
                     native_series, series_only=True
                 )._compliant_series
                 if left_most_series is None:
-                    left_most_series = compliant_series
+                    left_most_series = cast("PandasLikeSeries", compliant_series)
                     aligned_data[key] = native_series
                 else:
                     aligned_data[key] = align_and_extract_native(

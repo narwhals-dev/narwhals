@@ -183,7 +183,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     ) -> Self: ...
     def map_batches(
         self,
-        function: Callable[[CompliantSeries], CompliantExpr[Any, Any]],
+        function: Callable[[CompliantSeries[Any]], CompliantExpr[Any, Any]],
         return_dtype: DType | type[DType] | None,
     ) -> Self: ...
 

@@ -5,6 +5,7 @@ from typing import Any
 from typing import Iterable
 from typing import Iterator
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 from typing import cast
 from typing import overload
@@ -32,6 +33,7 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import not_implemented
 from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
@@ -139,12 +141,8 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         )
 
     @classmethod
-    def _from_iterable(
-        cls: type[Self],
-        data: Iterable[Any],
-        name: str,
-        *,
-        context: _FullContext,
+    def from_iterable(
+        cls, data: Iterable[Any], *, context: _FullContext, name: str = ""
     ) -> Self:
         return cls(
             chunked_array([data]),
@@ -160,8 +158,8 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
 
     @classmethod
     def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
-        return cls._from_iterable(
-            data if is_numpy_array_1d(data) else [data], name="", context=context
+        return cls.from_iterable(
+            data if is_numpy_array_1d(data) else [data], context=context
         )
 
     def __narwhals_namespace__(self: Self) -> ArrowNamespace:
@@ -170,9 +168,6 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         return ArrowNamespace(
             backend_version=self._backend_version, version=self._version
         )
-
-    def __len__(self: Self) -> int:
-        return len(self.native)
 
     def __eq__(self: Self, other: object) -> Self:  # type: ignore[override]
         ser, other = extract_native(self, other)
@@ -391,9 +386,6 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def name(self: Self) -> str:
         return self._name
 
-    def __narwhals_series__(self: Self) -> Self:
-        return self
-
     @overload
     def __getitem__(self: Self, idx: int) -> Any: ...
 
@@ -569,7 +561,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         import numpy as np  # ignore-banned-import
 
         res = np.flatnonzero(self.native)
-        return self._from_iterable(res, name=self.name, context=self)
+        return self.from_iterable(res, name=self.name, context=self)
 
     def item(self: Self, index: int | None = None) -> Any:
         if index is None:
@@ -753,7 +745,11 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         return self._from_native_series(self.native.unique())
 
     def replace_strict(
-        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+        self: Self,
+        old: Sequence[Any] | Mapping[Any, Any],
+        new: Sequence[Any],
+        *,
+        return_dtype: DType | type[DType] | None,
     ) -> Self:
         # https://stackoverflow.com/a/79111029/4451315
         idxs = pc.index_in(self.native, pa.array(old))
@@ -1217,3 +1213,5 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     @property
     def struct(self: Self) -> ArrowSeriesStructNamespace:
         return ArrowSeriesStructNamespace(self)
+
+    ewm_mean = not_implemented()

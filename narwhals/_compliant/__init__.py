@@ -24,6 +24,7 @@ from narwhals._compliant.typing import EagerDataFrameT
 from narwhals._compliant.typing import EagerSeriesT
 from narwhals._compliant.typing import IntoCompliantExpr
 from narwhals._compliant.typing import NativeFrameT_co
+from narwhals._compliant.typing import NativeSeriesT_co
 
 __all__ = [
     "CompliantDataFrame",
@@ -50,4 +51,5 @@ __all__ = [
     "LazyExpr",
     "LazySelectorNamespace",
     "NativeFrameT_co",
+    "NativeSeriesT_co",
 ]
