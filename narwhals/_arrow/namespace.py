@@ -65,7 +65,7 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
         # coverage bug? this is definitely hit
         return self._expr(  # pragma: no cover
             lambda df: [
-                ArrowSeries._from_iterable(
+                ArrowSeries.from_iterable(
                     [len(df._native_frame)], name="len", context=self
                 )
             ],
@@ -79,7 +79,7 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
 
     def lit(self: Self, value: Any, dtype: DType | None) -> ArrowExpr:
         def _lit_arrow_series(_: ArrowDataFrame) -> ArrowSeries:
-            arrow_series = ArrowSeries._from_iterable(
+            arrow_series = ArrowSeries.from_iterable(
                 data=[value], name="literal", context=self
             )
             if dtype:

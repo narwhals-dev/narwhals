@@ -22,7 +22,9 @@ from narwhals.translate import to_native
 from narwhals.typing import IntoSeriesT
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import generate_repr
+from narwhals.utils import is_compliant_series
 from narwhals.utils import parse_version
+from narwhals.utils import supports_arrow_c_stream
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -32,6 +34,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._arrow.typing import ArrowArray
+    from narwhals._compliant import CompliantSeries
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
     from narwhals.typing import _1DArray
@@ -76,10 +79,10 @@ class Series(Generic[IntoSeriesT]):
         level: Literal["full", "lazy", "interchange"],
     ) -> None:
         self._level: Literal["full", "lazy", "interchange"] = level
-        if hasattr(series, "__narwhals_series__"):
-            # TODO @dangotbanned: Repeat (#2119) for `CompliantSeries` to support typing
-            # morally: `CompliantSeries`
-            self._compliant_series = series.__narwhals_series__()
+        if is_compliant_series(series):
+            self._compliant_series: CompliantSeries[IntoSeriesT] = (
+                series.__narwhals_series__()
+            )
         else:  # pragma: no cover
             msg = f"Expected Polars Series or an object which implements `__narwhals_series__`, got: {type(series)}."
             raise AssertionError(msg)
@@ -113,10 +116,10 @@ class Series(Generic[IntoSeriesT]):
             >>> s.implementation.is_polars()
             False
         """
-        return self._compliant_series._implementation  # type: ignore[no-any-return]
+        return self._compliant_series._implementation
 
     def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> _1DArray:  # noqa: FBT001
-        return self._compliant_series.__array__(dtype=dtype, copy=copy)  # type: ignore[no-any-return]
+        return self._compliant_series.__array__(dtype=dtype, copy=copy)
 
     @overload
     def __getitem__(self: Self, idx: int) -> Any: ...
@@ -165,7 +168,7 @@ class Series(Generic[IntoSeriesT]):
         )
 
     def __native_namespace__(self: Self) -> ModuleType:
-        return self._compliant_series.__native_namespace__()  # type: ignore[no-any-return]
+        return self._compliant_series.__native_namespace__()
 
     def __arrow_c_stream__(self: Self, requested_schema: object | None = None) -> object:
         """Export a Series via the Arrow PyCapsule Interface.
@@ -178,8 +181,8 @@ class Series(Generic[IntoSeriesT]):
         See [PyCapsule Interface](https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html)
         for more.
         """
-        native_series = self._compliant_series._native_series
-        if hasattr(native_series, "__arrow_c_stream__"):
+        native_series = self._compliant_series.native
+        if supports_arrow_c_stream(native_series):
             return native_series.__arrow_c_stream__(requested_schema=requested_schema)
         try:
             import pyarrow as pa  # ignore-banned-import
@@ -214,7 +217,7 @@ class Series(Generic[IntoSeriesT]):
               2
             ]
         """
-        return self._compliant_series._native_series  # type: ignore[no-any-return]
+        return self._compliant_series.native
 
     def scatter(self: Self, indices: int | Sequence[int], values: Any) -> Self:
         """Set value(s) at given position(s).
@@ -358,7 +361,7 @@ class Series(Generic[IntoSeriesT]):
             >>> nw.from_native(s_native, series_only=True).dtype
             Int64
         """
-        return self._compliant_series.dtype  # type: ignore[no-any-return]
+        return self._compliant_series.dtype
 
     @property
     def name(self: Self) -> str:
@@ -375,7 +378,7 @@ class Series(Generic[IntoSeriesT]):
             >>> nw.from_native(s_native, series_only=True).name
             'foo'
         """
-        return self._compliant_series.name  # type: ignore[no-any-return]
+        return self._compliant_series.name
 
     def ewm_mean(
         self: Self,
@@ -528,7 +531,7 @@ class Series(Generic[IntoSeriesT]):
             >>> nw.from_native(s_native, series_only=True).to_list()
             [1, 2, 3]
         """
-        return self._compliant_series.to_list()  # type: ignore[no-any-return]
+        return self._compliant_series.to_list()
 
     def mean(self: Self) -> float:
         """Reduce this Series to the mean value.
@@ -544,7 +547,7 @@ class Series(Generic[IntoSeriesT]):
             >>> nw.from_native(s_native, series_only=True).mean()
             np.float64(2.7)
         """
-        return self._compliant_series.mean()  # type: ignore[no-any-return]
+        return self._compliant_series.mean()
 
     def median(self: Self) -> float:
         """Reduce this Series to the median value.
@@ -563,7 +566,7 @@ class Series(Generic[IntoSeriesT]):
             >>> nw.from_native(s_native, series_only=True).median()
             5.0
         """
-        return self._compliant_series.median()  # type: ignore[no-any-return]
+        return self._compliant_series.median()
 
     def skew(self: Self) -> float | None:
         """Calculate the sample skewness of the Series.
@@ -583,7 +586,7 @@ class Series(Generic[IntoSeriesT]):
             The skewness is a measure of the asymmetry of the probability distribution.
             A perfectly symmetric distribution has a skewness of 0.
         """
-        return self._compliant_series.skew()  # type: ignore[no-any-return]
+        return self._compliant_series.skew()
 
     def count(self: Self) -> int:
         """Returns the number of non-null elements in the Series.
@@ -599,7 +602,7 @@ class Series(Generic[IntoSeriesT]):
             >>> nw.from_native(s_native, series_only=True).count()
             2
         """
-        return self._compliant_series.count()  # type: ignore[no-any-return]
+        return self._compliant_series.count()
 
     def any(self: Self) -> bool:
         """Return whether any of the values in the Series are True.
@@ -618,7 +621,7 @@ class Series(Generic[IntoSeriesT]):
             >>> nw.from_native(s_native, series_only=True).any()
             np.True_
         """
-        return self._compliant_series.any()  # type: ignore[no-any-return]
+        return self._compliant_series.any()
 
     def all(self: Self) -> bool:
         """Return whether all values in the Series are True.
@@ -634,7 +637,7 @@ class Series(Generic[IntoSeriesT]):
             >>> nw.from_native(s_native, series_only=True).all()
             False
         """
-        return self._compliant_series.all()  # type: ignore[no-any-return]
+        return self._compliant_series.all()
 
     def min(self: Self) -> Any:
         """Get the minimal value in this Series.
@@ -679,7 +682,7 @@ class Series(Generic[IntoSeriesT]):
             >>> nw.from_native(s_native, series_only=True).arg_min()
             0
         """
-        return self._compliant_series.arg_min()  # type: ignore[no-any-return]
+        return self._compliant_series.arg_min()
 
     def arg_max(self: Self) -> int:
         """Returns the index of the maximum value.
@@ -692,7 +695,7 @@ class Series(Generic[IntoSeriesT]):
             >>> nw.from_native(s_native, series_only=True).arg_max()
             2
         """
-        return self._compliant_series.arg_max()  # type: ignore[no-any-return]
+        return self._compliant_series.arg_max()
 
     def sum(self: Self) -> float:
         """Reduce this Series to the sum value.
@@ -708,7 +711,7 @@ class Series(Generic[IntoSeriesT]):
             >>> nw.from_native(s_native, series_only=True).sum()
             6
         """
-        return self._compliant_series.sum()  # type: ignore[no-any-return]
+        return self._compliant_series.sum()
 
     def std(self: Self, *, ddof: int = 1) -> float:
         """Get the standard deviation of this Series.
@@ -728,7 +731,7 @@ class Series(Generic[IntoSeriesT]):
             >>> nw.from_native(s_native, series_only=True).std()
             1.0
         """
-        return self._compliant_series.std(ddof=ddof)  # type: ignore[no-any-return]
+        return self._compliant_series.std(ddof=ddof)
 
     def var(self: Self, *, ddof: int = 1) -> float:
         """Get the variance of this Series.
@@ -745,7 +748,7 @@ class Series(Generic[IntoSeriesT]):
             >>> nw.from_native(s_native, series_only=True).var()
             1.0
         """
-        return self._compliant_series.var(ddof=ddof)  # type: ignore[no-any-return]
+        return self._compliant_series.var(ddof=ddof)
 
     def clip(
         self: Self,
@@ -1396,7 +1399,7 @@ class Series(Generic[IntoSeriesT]):
             >>> nw.from_native(s_native, series_only=True).n_unique()
             3
         """
-        return self._compliant_series.n_unique()  # type: ignore[no-any-return]
+        return self._compliant_series.n_unique()
 
     def to_numpy(self: Self) -> _1DArray:
         """Convert to numpy.
@@ -1412,7 +1415,7 @@ class Series(Generic[IntoSeriesT]):
             >>> nw.from_native(s_native, series_only=True).to_numpy()
             array([1, 2, 3]...)
         """
-        return self._compliant_series.to_numpy()  # type: ignore[no-any-return]
+        return self._compliant_series.to_numpy(None, copy=None)
 
     def to_pandas(self: Self) -> pd.Series[Any]:
         """Convert to pandas Series.
@@ -1431,7 +1434,7 @@ class Series(Generic[IntoSeriesT]):
             2    3
             Name: a, dtype: int64
         """
-        return self._compliant_series.to_pandas()  # type: ignore[no-any-return]
+        return self._compliant_series.to_pandas()
 
     def to_polars(self: Self) -> pl.Series:
         """Convert to polars Series.
@@ -1455,7 +1458,7 @@ class Series(Generic[IntoSeriesT]):
                 3
             ]
         """
-        return self._compliant_series.to_polars()  # type: ignore[no-any-return]
+        return self._compliant_series.to_polars()
 
     def __add__(self: Self, other: object) -> Self:
         return self._from_compliant_series(
@@ -1648,7 +1651,7 @@ class Series(Generic[IntoSeriesT]):
             >>> s_nw.filter(s_nw > 10).is_empty()
             True
         """
-        return self._compliant_series.len() == 0  # type: ignore[no-any-return]
+        return self._compliant_series.len() == 0
 
     def is_unique(self: Self) -> Self:
         r"""Get a mask of all unique rows in the Series.
@@ -1689,7 +1692,7 @@ class Series(Generic[IntoSeriesT]):
             >>> nw.from_native(s_native, series_only=True).null_count()
             2
         """
-        return self._compliant_series.null_count()  # type: ignore[no-any-return]
+        return self._compliant_series.null_count()
 
     def is_first_distinct(self: Self) -> Self:
         r"""Return a boolean mask indicating the first occurrence of each distinct value.
@@ -1760,7 +1763,7 @@ class Series(Generic[IntoSeriesT]):
             >>> s_nw.is_sorted(descending=True)
             True
         """
-        return self._compliant_series.is_sorted(descending=descending)  # type: ignore[no-any-return]
+        return self._compliant_series.is_sorted(descending=descending)
 
     def value_counts(
         self: Self,
@@ -1834,7 +1837,7 @@ class Series(Generic[IntoSeriesT]):
             ... ]
             [5.0, 12.0, 25.0, 37.0, 44.0]
         """
-        return self._compliant_series.quantile(  # type: ignore[no-any-return]
+        return self._compliant_series.quantile(
             quantile=quantile, interpolation=interpolation
         )
 
@@ -2076,7 +2079,7 @@ class Series(Generic[IntoSeriesT]):
                 4
             ]
         """
-        return self._compliant_series.to_arrow()  # type: ignore[no-any-return]
+        return self._compliant_series.to_arrow()
 
     def mode(self: Self) -> Self:
         r"""Compute the most occurring value(s).
@@ -2496,7 +2499,7 @@ class Series(Generic[IntoSeriesT]):
         yield from self._compliant_series.__iter__()
 
     def __contains__(self: Self, other: Any) -> bool:
-        return self._compliant_series.__contains__(other)  # type: ignore[no-any-return]
+        return self._compliant_series.__contains__(other)
 
     def rank(
         self: Self,

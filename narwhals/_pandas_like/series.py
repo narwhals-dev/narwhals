@@ -5,6 +5,7 @@ from typing import Any
 from typing import Iterable
 from typing import Iterator
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 from typing import cast
 from typing import overload
@@ -135,9 +136,6 @@ class PandasLikeSeries(EagerSeries[Any]):
         msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
-    def __narwhals_series__(self: Self) -> Self:
-        return self
-
     def __narwhals_namespace__(self) -> PandasLikeNamespace:
         from narwhals._pandas_like.namespace import PandasLikeNamespace
 
@@ -173,13 +171,13 @@ class PandasLikeSeries(EagerSeries[Any]):
         )
 
     @classmethod
-    def _from_iterable(
-        cls: type[Self],
+    def from_iterable(
+        cls,
         data: Iterable[Any],
-        name: str,
         *,
         context: _FullContext,
-        index: Any = None,  # NOTE: Originally a liskov substitution principle violation
+        name: str = "",
+        index: Any = None,
     ) -> Self:
         return cls(
             native_series_from_iterable(
@@ -203,9 +201,6 @@ class PandasLikeSeries(EagerSeries[Any]):
             backend_version=context._backend_version,
             version=context._version,
         )
-
-    def __len__(self: Self) -> int:
-        return len(self.native)
 
     @property
     def name(self: Self) -> str:
@@ -636,7 +631,11 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._from_native_series(self._native_series.shift(n))
 
     def replace_strict(
-        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+        self: Self,
+        old: Sequence[Any] | Mapping[Any, Any],
+        new: Sequence[Any],
+        *,
+        return_dtype: DType | type[DType] | None,
     ) -> PandasLikeSeries:
         tmp_name = f"{self.name}_tmp"
         dtype_backend = get_dtype_backend(
@@ -738,7 +737,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)
 
-    def to_polars(self: Self) -> pl.DataFrame:
+    def to_polars(self: Self) -> pl.Series:
         import polars as pl  # ignore-banned-import
 
         if self._implementation is Implementation.PANDAS:
