@@ -484,6 +484,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         self: Self,
         old: ExprKind | Sequence[Any] | Mapping[Any, Any],
         new: ExprKind | Sequence[Any] | None = None,
+        return_dtype: DType | type[DType] | None = None,
     ) -> Self:
         if new is None:
             if not isinstance(old, Mapping):
@@ -501,12 +502,16 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             mapper = self._F.create_map(old, new)
             return mapper[_input]
 
-        return self._from_call(
+        result = self._from_call(
             _replace_strict,
             "replace_strict",
             old=old,
             new=new,
         )
+
+        if return_dtype is not None:
+            result = result.cast(return_dtype)
+        return result
 
     def round(self: Self, decimals: int) -> Self:
         def _round(_input: Column) -> Column:
