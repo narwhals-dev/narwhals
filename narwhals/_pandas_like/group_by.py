@@ -203,27 +203,23 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
 
             if std_aggs:
                 result_aggs.extend(
-                    [
-                        set_columns(
-                            self._grouped[std_output_names].std(ddof=ddof),
-                            columns=std_aliases,
-                            implementation=implementation,
-                            backend_version=backend_version,
-                        )
-                        for ddof, (std_output_names, std_aliases) in std_aggs.items()
-                    ]
+                    set_columns(
+                        self._grouped[std_output_names].std(ddof=ddof),
+                        columns=std_aliases,
+                        implementation=implementation,
+                        backend_version=backend_version,
+                    )
+                    for ddof, (std_output_names, std_aliases) in std_aggs.items()
                 )
             if var_aggs:
                 result_aggs.extend(
-                    [
-                        set_columns(
-                            self._grouped[var_output_names].var(ddof=ddof),
-                            columns=var_aliases,
-                            implementation=implementation,
-                            backend_version=backend_version,
-                        )
-                        for ddof, (var_output_names, var_aliases) in var_aggs.items()
-                    ]
+                    set_columns(
+                        self._grouped[var_output_names].var(ddof=ddof),
+                        columns=var_aliases,
+                        implementation=implementation,
+                        backend_version=backend_version,
+                    )
+                    for ddof, (var_output_names, var_aliases) in var_aggs.items()
                 )
 
             if result_aggs:
