@@ -486,6 +486,7 @@ jobs:
       - name: Run tests
         run: |
           cd validoopsie
+          # empty pytest.ini to avoid pytest using narwhals configs
           touch pytest.ini       
           touch tests/__init__.py
           touch tests/utils/__init__.py
