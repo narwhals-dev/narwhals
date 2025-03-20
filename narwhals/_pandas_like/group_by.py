@@ -21,12 +21,13 @@ from narwhals.utils import find_stacklevel
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals._compliant.group_by import NarwhalsAggregation
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
 
 
 class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
-    _NARWHALS_TO_NATIVE_AGGREGATIONS: ClassVar[Mapping[str, Any]] = {
+    _REMAP_AGGS: ClassVar[Mapping[NarwhalsAggregation, Any]] = {
         "sum": "sum",
         "mean": "mean",
         "median": "median",

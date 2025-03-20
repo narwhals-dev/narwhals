@@ -222,19 +222,15 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             )
             raise NotImplementedError(msg)
         else:
-            AGGREGATIONS_TO_PANDAS_EQUIVALENT = (  # noqa: N806
-                PandasLikeGroupBy._NARWHALS_TO_NATIVE_AGGREGATIONS
-            )
             function_name = PandasLikeGroupBy._leaf_name(self)
             pandas_function_name = WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT.get(
-                function_name,
-                AGGREGATIONS_TO_PANDAS_EQUIVALENT.get(function_name),
+                function_name, PandasLikeGroupBy._REMAP_AGGS.get(function_name)
             )
             if pandas_function_name is None:
                 msg = (
                     f"Unsupported function: {function_name} in `over` context.\n\n"
                     f"Supported functions are {', '.join(WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT)}\n"
-                    f"and {', '.join(AGGREGATIONS_TO_PANDAS_EQUIVALENT)}."
+                    f"and {', '.join(PandasLikeGroupBy._REMAP_AGGS)}."
                 )
                 raise NotImplementedError(msg)
             pandas_kwargs = window_kwargs_to_pandas_equivalent(

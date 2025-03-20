@@ -8,6 +8,7 @@ from typing import Callable
 from typing import ClassVar
 from typing import Iterable
 from typing import Iterator
+from typing import Literal
 from typing import Mapping
 from typing import Sequence
 from typing import TypeVar
@@ -21,6 +22,9 @@ from narwhals._compliant.typing import LazyExprT_contra
 from narwhals._compliant.typing import NativeExprT_co
 from narwhals._expression_parsing import is_elementary_expression
 
+if TYPE_CHECKING:
+    from typing_extensions import TypeAlias
+
 if not TYPE_CHECKING:  # pragma: no cover
     if sys.version_info >= (3, 9):
         from typing import Protocol as Protocol38
@@ -31,12 +35,20 @@ else:  # pragma: no cover
     # - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
     from typing import Protocol as Protocol38
 
-__all__ = ["CompliantGroupBy", "DepthTrackingGroupBy", "EagerGroupBy", "LazyGroupBy"]
+__all__ = [
+    "CompliantGroupBy",
+    "DepthTrackingGroupBy",
+    "EagerGroupBy",
+    "LazyGroupBy",
+    "NarwhalsAggregation",
+]
 
 NativeAggregationT_co = TypeVar(
-    "NativeAggregationT_co", bound="str | Callable[...,Any]", covariant=True
+    "NativeAggregationT_co", bound="str | Callable[..., Any]", covariant=True
 )
-"""Some backends *may* return a `Callable` instead of a `str` referring to one."""
+NarwhalsAggregation: TypeAlias = Literal[
+    "sum", "mean", "median", "max", "min", "std", "var", "len", "n_unique", "count"
+]
 
 
 _RE_LEAF_NAME: re.Pattern[str] = re.compile(r"(\w+->)")
@@ -68,7 +80,12 @@ class DepthTrackingGroupBy(
 ):
     """`CompliantGroupBy` variant, deals with `Eager` and other backends that utilize `CompliantExpr._depth`."""
 
-    _NARWHALS_TO_NATIVE_AGGREGATIONS: ClassVar[Mapping[str, Any]]
+    _REMAP_AGGS: ClassVar[Mapping[NarwhalsAggregation, Any]]
+    """Mapping from `narwhals` to native representation.
+
+    Note:
+    - `Dask` *may* return a `Callable` instead of a `str` referring to one.
+    """
 
     def _ensure_all_simple(self, exprs: Sequence[CompliantExprT_contra]) -> None:
         for expr in exprs:
@@ -89,13 +106,12 @@ class DepthTrackingGroupBy(
     @classmethod
     def _is_simple(cls, expr: CompliantExprAny, /) -> bool:
         """Return `True` is we can efficiently use `expr` in a native `group_by` context."""
-        return (
-            is_elementary_expression(expr)
-            and cls._leaf_name(expr) in cls._NARWHALS_TO_NATIVE_AGGREGATIONS
-        )
+        return is_elementary_expression(expr) and cls._leaf_name(expr) in cls._REMAP_AGGS
 
     @classmethod
-    def _remap_expr_name(cls, name: str, /) -> NativeAggregationT_co:
+    def _remap_expr_name(
+        cls, name: NarwhalsAggregation | Any, /
+    ) -> NativeAggregationT_co:
         """Replace `name`, with some native representation.
 
         Arguments:
@@ -104,10 +120,10 @@ class DepthTrackingGroupBy(
         Returns:
             A native compatible representation.
         """
-        return cls._NARWHALS_TO_NATIVE_AGGREGATIONS.get(name, name)
+        return cls._REMAP_AGGS.get(name, name)
 
     @classmethod
-    def _leaf_name(cls, expr: CompliantExprAny, /) -> str:
+    def _leaf_name(cls, expr: CompliantExprAny, /) -> NarwhalsAggregation | Any:
         """Return the last function name in the chain defined by `expr`."""
         return _RE_LEAF_NAME.sub("", expr._function_name)
 

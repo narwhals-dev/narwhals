@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
     from typing_extensions import TypeAlias
 
+    from narwhals._compliant.group_by import NarwhalsAggregation
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.expr import DaskExpr
 
@@ -57,7 +58,7 @@ def std(ddof: int) -> _AggFn:
 
 
 class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregation]):
-    _NARWHALS_TO_NATIVE_AGGREGATIONS: ClassVar[Mapping[str, Aggregation]] = {
+    _REMAP_AGGS: ClassVar[Mapping[NarwhalsAggregation, Aggregation]] = {
         "sum": "sum",
         "mean": "mean",
         "median": "median",

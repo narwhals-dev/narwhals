@@ -24,10 +24,11 @@ if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.typing import Incomplete
+    from narwhals._compliant.group_by import NarwhalsAggregation
 
 
 class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
-    _NARWHALS_TO_NATIVE_AGGREGATIONS: ClassVar[Mapping[str, Any]] = {
+    _REMAP_AGGS: ClassVar[Mapping[NarwhalsAggregation, Any]] = {
         "sum": "sum",
         "mean": "mean",
         "median": "approximate_median",

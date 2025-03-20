@@ -551,10 +551,6 @@ class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
         # pandas is a required dependency of dask so it's safe to import this
         from narwhals._pandas_like.group_by import PandasLikeGroupBy
 
-        AGGREGATIONS_TO_PANDAS_EQUIVALENT = (  # noqa: N806
-            PandasLikeGroupBy._NARWHALS_TO_NATIVE_AGGREGATIONS
-        )
-
         if not partition_by:
             assert order_by is not None  # help type checkers  # noqa: S101
 
@@ -572,12 +568,12 @@ class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
         else:
             function_name = PandasLikeGroupBy._leaf_name(self)
             try:
-                dask_function_name = AGGREGATIONS_TO_PANDAS_EQUIVALENT[function_name]
+                dask_function_name = PandasLikeGroupBy._REMAP_AGGS[function_name]
             except KeyError:
                 # window functions are unsupported: https://github.com/dask/dask/issues/11806
                 msg = (
                     f"Unsupported function: {function_name} in `over` context.\n\n"
-                    f"Supported functions are {', '.join(AGGREGATIONS_TO_PANDAS_EQUIVALENT)}\n"
+                    f"Supported functions are {', '.join(PandasLikeGroupBy._REMAP_AGGS)}\n"
                 )
                 raise NotImplementedError(msg) from None
 
