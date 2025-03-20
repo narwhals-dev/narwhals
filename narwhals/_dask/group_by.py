@@ -30,11 +30,13 @@ if TYPE_CHECKING:
 
     PandasSeriesGroupBy: TypeAlias = _PandasSeriesGroupBy[Any, Any]
     _AggFn: TypeAlias = Callable[..., Any]
-    Aggregation: TypeAlias = "str | _AggFn"
 
     from dask_expr._groupby import GroupBy as _DaskGroupBy
 else:
     _DaskGroupBy = dx._groupby.GroupBy
+
+Aggregation: TypeAlias = "str | _AggFn"
+"""The name of an aggregation function, or the function itself."""
 
 
 def n_unique() -> dd.Aggregation:
@@ -55,7 +57,7 @@ def std(ddof: int) -> _AggFn:
     return partial(_DaskGroupBy.std, ddof=ddof)
 
 
-class DaskLazyGroupBy(CompliantGroupBy["DaskLazyFrame", "DaskExpr"]):
+class DaskLazyGroupBy(CompliantGroupBy["DaskLazyFrame", "DaskExpr", Aggregation]):
     _NARWHALS_TO_NATIVE_AGGREGATIONS: ClassVar[Mapping[str, Aggregation]] = {
         "sum": "sum",
         "mean": "mean",
@@ -90,33 +92,25 @@ class DaskLazyGroupBy(CompliantGroupBy["DaskLazyFrame", "DaskExpr"]):
         # This should be the fastpath, but cuDF is too far behind to use it.
         # - https://github.com/rapidsai/cudf/issues/15118
         # - https://github.com/rapidsai/cudf/issues/15084
-        POLARS_TO_DASK_AGGREGATIONS = self._NARWHALS_TO_NATIVE_AGGREGATIONS  # noqa: N806
         simple_aggregations: dict[str, tuple[str, Aggregation]] = {}
         for expr in exprs:
             output_names, aliases = evaluate_output_names_and_aliases(
                 expr, self.compliant, self._keys
             )
             if expr._depth == 0:
-                # e.g. agg(nw.len()) # noqa: ERA001
-                function_name = POLARS_TO_DASK_AGGREGATIONS.get(
-                    expr._function_name, expr._function_name
-                )
-                simple_aggregations.update(
-                    dict.fromkeys(aliases, (self._keys[0], function_name))
-                )
+                # e.g. `agg(nw.len())`
+                column = self._keys[0]
+                agg_fn = self._remap_expr_name(expr._function_name)
+                simple_aggregations.update(dict.fromkeys(aliases, (column, agg_fn)))
                 continue
 
-            # e.g. agg(nw.mean('a')) # noqa: ERA001
+            # e.g. `agg(nw.mean('a'))`
             function_name = re.sub(r"(\w+->)", "", expr._function_name)
-            agg_function = POLARS_TO_DASK_AGGREGATIONS.get(function_name, function_name)
+            agg_fn = self._remap_expr_name(function_name)
             # deal with n_unique case in a "lazy" mode to not depend on dask globally
-            agg_function = (
-                agg_function(**expr._call_kwargs)
-                if callable(agg_function)
-                else agg_function
-            )
+            agg_fn = agg_fn(**expr._call_kwargs) if callable(agg_fn) else agg_fn
             simple_aggregations.update(
-                (alias, (output_name, agg_function))
+                (alias, (output_name, agg_fn))
                 for alias, output_name in zip(aliases, output_names)
             )
         return DaskLazyFrame(

@@ -125,10 +125,8 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
                     expr, self.compliant, self._keys
                 )
                 if expr._depth == 0:
-                    # e.g. agg(nw.len()) # noqa: ERA001
-                    function_name = self._NARWHALS_TO_NATIVE_AGGREGATIONS.get(
-                        expr._function_name, expr._function_name
-                    )
+                    # e.g. `agg(nw.len())`
+                    function_name = self._remap_expr_name(expr._function_name)
                     simple_aggs_functions.add(function_name)
 
                     for alias in aliases:
@@ -137,11 +135,9 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
                         simple_agg_new_names.append(alias)
                     continue
 
-                # e.g. agg(nw.mean('a')) # noqa: ERA001
+                # e.g. `agg(nw.mean('a'))`
                 function_name = re.sub(r"(\w+->)", "", expr._function_name)
-                function_name = self._NARWHALS_TO_NATIVE_AGGREGATIONS.get(
-                    function_name, function_name
-                )
+                function_name = self._remap_expr_name(function_name)
 
                 is_n_unique = function_name == "nunique"
                 is_std = function_name == "std"

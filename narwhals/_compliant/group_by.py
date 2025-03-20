@@ -13,6 +13,7 @@ from narwhals._compliant.typing import CompliantDataFrameT_co
 from narwhals._compliant.typing import CompliantExprT_contra
 from narwhals._compliant.typing import CompliantFrameT_co
 from narwhals._expression_parsing import is_elementary_expression
+from narwhals._translate import TypeVar  # type: ignore[attr-defined]
 
 if not TYPE_CHECKING:  # pragma: no cover
     if sys.version_info >= (3, 9):
@@ -26,8 +27,15 @@ else:  # pragma: no cover
 
 __all__ = ["CompliantGroupBy", "EagerGroupBy"]
 
+NativeAggregationT_co = TypeVar("NativeAggregationT_co", covariant=True, default="str")
+"""Some backends *may* return a `Callable` instead of a `str` referring to one."""
 
-class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
+
+# TODO @dangotbanned: Compile and assign a name to `r"(\w+->)"`
+# - Then make `re.sub(r"(\w+->)", "", expr._function_name)` a method
+class CompliantGroupBy(
+    Protocol38[CompliantFrameT_co, CompliantExprT_contra, NativeAggregationT_co]
+):
     _NARWHALS_TO_NATIVE_AGGREGATIONS: ClassVar[Mapping[str, Any]]
     _compliant_frame: Any
     _keys: Sequence[str]
@@ -65,6 +73,18 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
                     "    df.with_columns(nw.col('b').round(2)).group_by('a').agg(nw.col('b').mean())\n\n"
                 )
                 raise ValueError(msg)
+
+    @classmethod
+    def _remap_expr_name(cls, name: str, /) -> NativeAggregationT_co:
+        """Replace `name`, with some native representation.
+
+        Arguments:
+            name: Name of a `nw.Expr` aggregation method.
+
+        Returns:
+            A native compatible representation.
+        """
+        return cls._NARWHALS_TO_NATIVE_AGGREGATIONS.get(name, name)
 
 
 class EagerGroupBy(

@@ -68,7 +68,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
             )
 
             if expr._depth == 0:
-                # e.g. agg(nw.len()) # noqa: ERA001
+                # e.g. `agg(nw.len())`
                 if expr._function_name != "len":  # pragma: no cover
                     msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
                     raise AssertionError(msg)
@@ -76,7 +76,6 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
                 new_column_names.append(aliases[0])
                 expected_pyarrow_column_names.append(f"{self._keys[0]}_count")
                 aggs.append((self._keys[0], "count", pc.CountOptions(mode="all")))
-
                 continue
 
             function_name = re.sub(r"(\w+->)", "", expr._function_name)
@@ -89,8 +88,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
             else:
                 option = None
 
-            function_name = self._NARWHALS_TO_NATIVE_AGGREGATIONS[function_name]
-
+            function_name = self._remap_expr_name(function_name)
             new_column_names.extend(aliases)
             expected_pyarrow_column_names.extend(
                 [f"{output_name}_{function_name}" for output_name in output_names]
