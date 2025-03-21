@@ -1576,17 +1576,18 @@ class Expr:
         n_open_windows = self._metadata.n_open_windows
         if _order_by is not None and self._metadata.kind.is_window():
             n_open_windows -= 1
-        metadata = ExprMetadata(
+        current_meta = self._metadata
+        next_meta = ExprMetadata(
             kind,
             n_open_windows=n_open_windows,
-            is_multi_output=self._metadata.is_multi_output,
+            is_multi_output=current_meta.is_multi_output,
         )
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx)
-            ._with_metadata(self._metadata)
+            ._with_metadata(current_meta)
             .over(flat_partition_by, order_by=order_by),
-            metadata,
+            next_meta,
         )
 
     def is_duplicated(self: Self) -> Self:
