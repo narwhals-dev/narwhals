@@ -52,6 +52,10 @@ class ShapeError(NarwhalsError):
     """Exception raised when trying to perform operations on data structures with incompatible shapes."""
 
 
+class MultiOutputExpressionError(NarwhalsError):
+    """Exception raised when using multi-output expression in unsupported context."""
+
+
 class DuplicateError(NarwhalsError):
     """Exception when duplicate column names are encountered."""
 

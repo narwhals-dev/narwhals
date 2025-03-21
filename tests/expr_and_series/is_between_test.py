@@ -6,6 +6,7 @@ from typing import Literal
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.exceptions import MultiOutputExpressionError
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -90,3 +91,9 @@ def test_is_between_datetimes(
     )
     expected_dict = {"a": expected}
     assert_equal_data(result, expected_dict)
+
+
+def test_is_between_invalid(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    with pytest.raises(MultiOutputExpressionError):
+        df.select(nw.col("a").is_between(nw.all(), nw.col("a", "b")))

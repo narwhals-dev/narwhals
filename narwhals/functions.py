@@ -17,6 +17,7 @@ from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import check_expressions_preserve_length
 from narwhals._expression_parsing import combine_metadata
+from narwhals._expression_parsing import combine_metadata_horizontal_op
 from narwhals._expression_parsing import extract_compliant
 from narwhals._expression_parsing import infer_kind
 from narwhals._expression_parsing import is_scalar_like
@@ -1185,11 +1186,17 @@ def col(*names: str | Iterable[str]) -> Expr:
         |  └─────┴─────┘   |
         └──────────────────┘
     """
+    flat_names = flatten(names)
 
     def func(plx: Any) -> Any:
-        return plx.col(*flatten(names))
+        return plx.col(*flat_names)
 
-    return Expr(func, ExprMetadata.selector())
+    return Expr(
+        func,
+        ExprMetadata.simple_selector()
+        if len(flat_names) == 1
+        else ExprMetadata.multi_output_selector(),
+    )
 
 
 def exclude(*names: str | Iterable[str]) -> Expr:
@@ -1226,7 +1233,7 @@ def exclude(*names: str | Iterable[str]) -> Expr:
     def func(plx: Any) -> Any:
         return plx.exclude(exclude_names)
 
-    return Expr(func, ExprMetadata.selector())
+    return Expr(func, ExprMetadata.multi_output_selector())
 
 
 def nth(*indices: int | Sequence[int]) -> Expr:
@@ -1259,11 +1266,17 @@ def nth(*indices: int | Sequence[int]) -> Expr:
         |c: [[0.246,6.28]] |
         └──────────────────┘
     """
+    flat_indices = flatten(indices)
 
     def func(plx: Any) -> Any:
-        return plx.nth(*flatten(indices))
+        return plx.nth(*flat_indices)
 
-    return Expr(func, ExprMetadata.selector())
+    return Expr(
+        func,
+        ExprMetadata.simple_selector()
+        if len(flat_indices) == 1
+        else ExprMetadata.multi_output_selector(),
+    )
 
 
 # Add underscore so it doesn't conflict with builtin `all`
@@ -1287,7 +1300,7 @@ def all_() -> Expr:
         |   1  4  0.246    |
         └──────────────────┘
     """
-    return Expr(lambda plx: plx.all(), ExprMetadata.selector())
+    return Expr(lambda plx: plx.all(), ExprMetadata.multi_output_selector())
 
 
 # Add underscore so it doesn't conflict with builtin `len`
@@ -1320,7 +1333,9 @@ def len_() -> Expr:
     def func(plx: Any) -> Any:
         return plx.len()
 
-    return Expr(func, ExprMetadata(ExprKind.AGGREGATION, n_open_windows=0))
+    return Expr(
+        func, ExprMetadata(ExprKind.AGGREGATION, n_open_windows=0, is_multi_output=False)
+    )
 
 
 def sum(*columns: str) -> Expr:
@@ -1521,7 +1536,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.sum_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False),
+        combine_metadata_horizontal_op(*flat_exprs),
     )
 
 
@@ -1565,7 +1580,7 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.min_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False),
+        combine_metadata_horizontal_op(*flat_exprs),
     )
 
 
@@ -1611,7 +1626,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.max_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False),
+        combine_metadata_horizontal_op(*flat_exprs),
     )
 
 
@@ -1629,7 +1644,13 @@ class When:
                 value,
                 str_as_lit=False,
             ),
-            combine_metadata(self._predicate, value, str_as_lit=False),
+            combine_metadata(
+                self._predicate,
+                value,
+                str_as_lit=False,
+                allow_multi_output=False,
+                to_single_output=False,
+            ),
         )
 
 
@@ -1646,7 +1667,13 @@ class Then(Expr):
 
         return Expr(
             func,
-            combine_metadata(self, value, str_as_lit=False),
+            combine_metadata(
+                self,
+                value,
+                str_as_lit=False,
+                allow_multi_output=False,
+                to_single_output=False,
+            ),
         )
 
 
@@ -1735,7 +1762,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.all_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False),
+        combine_metadata_horizontal_op(*flat_exprs),
     )
 
 
@@ -1777,7 +1804,7 @@ def lit(value: Any, dtype: DType | type[DType] | None = None) -> Expr:
 
     return Expr(
         lambda plx: plx.lit(value, dtype),
-        ExprMetadata(ExprKind.LITERAL, n_open_windows=0),
+        ExprMetadata(ExprKind.LITERAL, n_open_windows=0, is_multi_output=False),
     )
 
 
@@ -1827,7 +1854,7 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.any_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False),
+        combine_metadata_horizontal_op(*flat_exprs),
     )
 
 
@@ -1873,7 +1900,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.mean_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False),
+        combine_metadata_horizontal_op(*flat_exprs),
     )
 
 
@@ -1940,5 +1967,7 @@ def concat_str(
             *flat_exprs,
             str_as_lit=False,
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False),
+        combine_metadata(
+            *flat_exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
+        ),
     )

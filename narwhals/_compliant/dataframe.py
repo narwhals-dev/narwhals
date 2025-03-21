@@ -278,12 +278,7 @@ class EagerDataFrame(
     def _evaluate_expr(self, expr: EagerExprT_contra, /) -> EagerSeriesT:
         """Evaluate `expr` and ensure it has a **single** output."""
         result: Sequence[EagerSeriesT] = expr(self)
-        if len(result) > 1:
-            msg = (
-                "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) "
-                "are not supported in this context"
-            )
-            raise ValueError(msg)
+        assert len(result) == 1  # debug assertion  # noqa: S101
         return result[0]
 
     def _evaluate_into_exprs(self, *exprs: EagerExprT_contra) -> Sequence[EagerSeriesT]:
