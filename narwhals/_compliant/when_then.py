@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Sequence
 from typing import cast
 
@@ -71,7 +72,8 @@ class CompliantThen(
     CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT],
     Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT, CompliantExprT],
 ):
-    _call: CompliantWhen[CompliantFrameT, CompliantSeriesOrNativeExprT, CompliantExprT]
+    _call: Callable[[CompliantFrameT], Sequence[CompliantSeriesOrNativeExprT]]
+    _when: CompliantWhen[CompliantFrameT, CompliantSeriesOrNativeExprT, CompliantExprT]
     _function_name: str
     _implementation: Implementation
     _backend_version: tuple[int, ...]
@@ -90,6 +92,7 @@ class CompliantThen(
         when._then_value = then_value
         obj = cls.__new__(cls)
         obj._call = when
+        obj._when = when
         obj._depth = 0
         obj._function_name = "whenthen"
         obj._evaluate_output_names = getattr(
@@ -105,6 +108,6 @@ class CompliantThen(
     def otherwise(
         self, value: CompliantExprT | CompliantSeriesOrNativeExprT | _Scalar, /
     ) -> CompliantExprT:
-        self._call._otherwise_value = value
+        self._when._otherwise_value = value
         self._function_name = "whenotherwise"
         return cast("CompliantExprT", self)
