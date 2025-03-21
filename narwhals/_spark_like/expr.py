@@ -557,7 +557,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
     def cum_sum(self, *, reverse: bool) -> Self:
         def func(
-            _input: Column, partition_by: Sequence[str | Column], order_by: Sequence[str]
+            _input: Column, partition_by: Sequence[str], order_by: Sequence[str]
         ) -> Column:
             if reverse:
                 order_by_cols = [self._F.col(x).desc_nulls_last() for x in order_by]
