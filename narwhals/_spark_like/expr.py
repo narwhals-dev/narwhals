@@ -140,6 +140,22 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         expr._metadata = metadata
         return expr
 
+    def _with_window_function(
+        self: Self,
+        window_function: WindowFunction,
+    ) -> Self:
+        result = self.__class__(
+            self._call,
+            function_name=self._function_name,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
+        )
+        result._window_function = window_function
+        return result
+
     @classmethod
     def from_column_names(
         cls: type[Self],
@@ -206,22 +222,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             version=self._version,
             implementation=self._implementation,
         )
-
-    def _with_window_function(
-        self: Self,
-        window_function: WindowFunction,
-    ) -> Self:
-        result = self.__class__(
-            self._call,
-            function_name=self._function_name,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
-            version=self._version,
-            implementation=self._implementation,
-        )
-        result._window_function = window_function
-        return result
 
     def __eq__(self: Self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
         return self._from_call(
