@@ -57,6 +57,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals._compliant.series import CompliantSeries
     from narwhals._expression_parsing import ExprKind
+    from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
     from narwhals.utils import Implementation
@@ -85,6 +86,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     _alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None
     _depth: int
     _function_name: str
+    _metadata: ExprMetadata | None
 
     def __call__(
         self, df: CompliantFrameT
@@ -104,6 +106,8 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     ) -> Self: ...
     @classmethod
     def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self: ...
+
+    def with_metadata(self, metadata: ExprMetadata) -> Self: ...
 
     def is_null(self) -> Self: ...
     def abs(self) -> Self: ...
@@ -165,9 +169,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         *,
         return_dtype: DType | type[DType] | None,
     ) -> Self: ...
-    def over(
-        self: Self, keys: Sequence[str], kind: ExprKind, order_by: Sequence[str] | None
-    ) -> Self: ...
+    def over(self: Self, keys: Sequence[str], order_by: Sequence[str] | None) -> Self: ...
     def sample(
         self,
         n: int | None,

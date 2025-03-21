@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from sqlframe.base.window import Window
     from typing_extensions import Self
 
+    from narwhals._expression_parsing import ExprMetadata
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals._spark_like.typing import WindowFunction
@@ -60,6 +61,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         self._version = version
         self._implementation = implementation
         self._window_function: WindowFunction | None = None
+        self._metadata: ExprMetadata | None = None
 
     def __call__(self: Self, df: SparkLikeLazyFrame) -> Sequence[Column]:
         return self._call(df)
@@ -122,6 +124,21 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             version=self._version,
             implementation=self._implementation,
         )
+
+    def with_metadata(self, metadata: ExprMetadata) -> Self:
+        expr = self.__class__(
+            self._call,
+            function_name=self._function_name,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
+        )
+        if self._window_function is not None:
+            expr = expr._with_window_function(self._window_function)
+        expr._metadata = metadata
+        return expr
 
     @classmethod
     def from_column_names(
@@ -499,7 +516,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def over(
         self: Self,
         partition_by: Sequence[str],
-        kind: ExprKind,
         order_by: Sequence[str] | None,
     ) -> Self:
         if (window_function := self._window_function) is not None:
@@ -507,14 +523,14 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
             def func(df: SparkLikeLazyFrame) -> list[Column]:
                 return [
-                    window_function(expr, partition_by, order_by)
+                    window_function(expr, partition_by or [df._F.lit(1)], order_by)
                     for expr in self._call(df)
                 ]
         else:
 
             def func(df: SparkLikeLazyFrame) -> list[Column]:
                 return [
-                    expr.over(self._Window.partitionBy(*partition_by))
+                    expr.over(self._Window.partitionBy(*(partition_by or [df._F.lit(1)])))
                     for expr in self._call(df)
                 ]
 
