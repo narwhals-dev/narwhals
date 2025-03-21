@@ -523,14 +523,14 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
             def func(df: SparkLikeLazyFrame) -> list[Column]:
                 return [
-                    window_function(expr, partition_by or [df._F.lit(1)], order_by)
+                    window_function(expr, partition_by, order_by)
                     for expr in self._call(df)
                 ]
         else:
 
             def func(df: SparkLikeLazyFrame) -> list[Column]:
                 return [
-                    expr.over(self._Window.partitionBy(*(partition_by or [df._F.lit(1)])))
+                    expr.over(self._Window.partitionBy(*partition_by))
                     for expr in self._call(df)
                 ]
 
@@ -557,7 +557,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
     def cum_sum(self, *, reverse: bool) -> Self:
         def func(
-            _input: Column, partition_by: Sequence[str], order_by: Sequence[str]
+            _input: Column, partition_by: Sequence[str | Column], order_by: Sequence[str]
         ) -> Column:
             if reverse:
                 order_by_cols = [self._F.col(x).desc_nulls_last() for x in order_by]
