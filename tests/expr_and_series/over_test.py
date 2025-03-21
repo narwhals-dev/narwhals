@@ -31,8 +31,8 @@ data_cum = {
 
 
 def test_over_single(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+    # if "duckdb" in str(constructor):
+    #     request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
     expected = {
@@ -85,10 +85,7 @@ def test_over_std_var(request: pytest.FixtureRequest, constructor: Constructor) 
     assert_equal_data(result, expected)
 
 
-def test_over_multiple(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_over_multiple(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
@@ -275,9 +272,6 @@ def test_over_anonymous_cumulative(
 def test_over_anonymous_reduction(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor):
-        # TODO(unassigned): we should be able to support these
-        request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         # probably bugged
         request.applymarker(pytest.mark.xfail)

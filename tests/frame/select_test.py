@@ -121,8 +121,6 @@ def test_left_to_right_broadcasting(
 ) -> None:
     if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     result = df.select(nw.col("a") + nw.col("b").sum())
     expected = {"a": [16, 16, 17]}

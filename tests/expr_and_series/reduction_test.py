@@ -31,11 +31,7 @@ def test_scalar_reduction_select(
     constructor: Constructor,
     expr: list[Any],
     expected: dict[str, list[Any]],
-    request: pytest.FixtureRequest,
 ) -> None:
-    if "duckdb" in str(constructor) and request.node.callspec.id not in {"duckdb-0"}:
-        request.applymarker(pytest.mark.xfail)
-
     data = {"a": [1, 2, 3], "b": [4, 5, 6]}
     df = nw.from_native(constructor(data))
     result = df.select(*expr)
@@ -63,10 +59,7 @@ def test_scalar_reduction_with_columns(
     constructor: Constructor,
     expr: list[Any],
     expected: dict[str, list[Any]],
-    request: pytest.FixtureRequest,
 ) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2, 3], "b": [4, 5, 6]}
     df = nw.from_native(constructor(data))
     result = df.with_columns(*expr).select(*expected.keys())
@@ -108,10 +101,8 @@ def test_empty_scalar_reduction_select(
 
 
 def test_empty_scalar_reduction_with_columns(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor
 ) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     from itertools import chain
 
     data = {

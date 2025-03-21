@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import duckdb
 import operator
 from typing import TYPE_CHECKING
 from typing import Any
@@ -58,6 +59,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         self._alias_output_names = alias_output_names
         self._backend_version = backend_version
         self._version = version
+        self._window_function = None
 
     def __call__(self: Self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
         return self._call(df)
@@ -73,11 +75,20 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         )
 
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
-        if kind is ExprKind.AGGREGATION:
-            msg = "Broadcasting aggregations is not yet supported for DuckDB."
-            raise NotImplementedError(msg)
-        # For literals, DuckDB does its own broadcasting.
-        return self
+        if kind is ExprKind.LITERAL:
+            return self
+        def func(df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
+            return [
+                duckdb.SQLExpression(f'{result} over ()') for result in self(df)
+            ]
+        return self.__class__(
+            func,
+            function_name=self._function_name,
+            evaluate_output_names=self._evaluate_output_names, 
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+        )
 
     @classmethod
     def from_column_names(
@@ -423,6 +434,38 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             lambda _input: FunctionExpression("sum", _input.isnull().cast("int")),
             "null_count",
         )
+    
+    def over(
+        self: Self,
+        partition_by: Sequence[str],
+        kind: ExprKind,
+        order_by: Sequence[str] | None,
+    ) -> Self:
+        if (window_function := self._window_function) is not None:
+            assert order_by is not None  # noqa: S101
+
+            def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+                return [
+                    window_function(expr, partition_by, order_by)
+                    for expr in self._call(df)
+                ]
+        else:
+
+            def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+                return [
+                    duckdb.SQLExpression(f'{expr} over (partition by {",".join(partition_by)})')
+                    for expr in self._call(df)
+                ]
+
+        return self.__class__(
+            func,
+            function_name=self._function_name + "->over",
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+        )
+
 
     def is_null(self: Self) -> Self:
         return self._from_call(lambda _input: _input.isnull(), "is_null")
@@ -498,5 +541,4 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     cum_min = not_implemented()
     cum_max = not_implemented()
     cum_prod = not_implemented()
-    over = not_implemented()
     rolling_sum = not_implemented()

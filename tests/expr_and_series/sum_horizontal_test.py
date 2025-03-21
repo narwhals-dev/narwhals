@@ -60,9 +60,6 @@ def test_sumh_aggregations(constructor: Constructor) -> None:
 def test_sumh_transformations(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor):
-        # We don't yet support broadcasting for DuckDB.
-        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
     df = nw.from_native(constructor(data))
     result = df.select(d=nw.sum_horizontal("a", nw.col("b").sum(), "c"))
