@@ -100,21 +100,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
 
     def __narwhals_expr__(self) -> None: ...
 
-    def _with_metadata(self, metadata: ExprMetadata) -> Self:
-        expr = self.__class__(
-            self._call,
-            function_name=self._function_name,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
-            version=self._version,
-            depth=self._depth,
-            implementation=self._implementation,
-            call_kwargs=self._call_kwargs,
-        )
-        expr._metadata = metadata
-        return expr
-
     @classmethod
     def from_column_names(
         cls: type[Self],
