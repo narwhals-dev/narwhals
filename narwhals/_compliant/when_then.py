@@ -9,7 +9,7 @@ from typing import cast
 from narwhals._compliant.expr import CompliantExpr
 from narwhals._compliant.typing import CompliantExprT
 from narwhals._compliant.typing import CompliantFrameT
-from narwhals._compliant.typing import CompliantSeriesOrNativeExprT_co
+from narwhals._compliant.typing import CompliantSeriesOrNativeExprT
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -33,11 +33,11 @@ _Scalar: TypeAlias = Any
 
 
 class CompliantWhen(
-    Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co, CompliantExprT]
+    Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT, CompliantExprT]
 ):
     _condition: CompliantExprT
-    _then_value: CompliantExprT | CompliantSeriesOrNativeExprT_co | _Scalar
-    _otherwise_value: CompliantExprT | CompliantSeriesOrNativeExprT_co | _Scalar
+    _then_value: CompliantExprT | CompliantSeriesOrNativeExprT | _Scalar
+    _otherwise_value: CompliantExprT | CompliantSeriesOrNativeExprT | _Scalar
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
@@ -46,8 +46,17 @@ class CompliantWhen(
     def _then(
         self,
     ) -> type[
-        CompliantThen[CompliantFrameT, CompliantSeriesOrNativeExprT_co, CompliantExprT]
+        CompliantThen[CompliantFrameT, CompliantSeriesOrNativeExprT, CompliantExprT]
     ]: ...
+
+    def __call__(
+        self, compliant_frame: CompliantFrameT, /
+    ) -> Sequence[CompliantSeriesOrNativeExprT]: ...
+
+    def then(
+        self, value: CompliantExprT | CompliantSeriesOrNativeExprT | _Scalar, /
+    ) -> CompliantThen[CompliantFrameT, CompliantSeriesOrNativeExprT, CompliantExprT]:
+        return self._then.from_when(self, value)
 
     def __init__(self, condition: CompliantExprT, /, *, context: _FullContext) -> None:
         self._condition = condition
@@ -57,23 +66,12 @@ class CompliantWhen(
         self._backend_version = context._backend_version
         self._version = context._version
 
-    def __call__(
-        self, compliant_frame: CompliantFrameT, /
-    ) -> Sequence[CompliantSeriesOrNativeExprT_co]: ...
 
-    def then(
-        self, value: CompliantExprT | CompliantSeriesOrNativeExprT_co | _Scalar, /
-    ) -> CompliantThen[CompliantFrameT, CompliantSeriesOrNativeExprT_co, CompliantExprT]:
-        return self._then.from_when(self, value)
-
-
-# NOTE: error: Covariant type variable "CompliantSeriesOrNativeExprT_co" used in protocol where invariant one is expected [misc] (`mypy`)
-# - May need to adjust later
-class CompliantThen(  # type: ignore[misc]
-    CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
-    Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co, CompliantExprT],
+class CompliantThen(
+    CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT],
+    Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT, CompliantExprT],
 ):
-    _call: CompliantWhen[CompliantFrameT, CompliantSeriesOrNativeExprT_co, CompliantExprT]
+    _call: CompliantWhen[CompliantFrameT, CompliantSeriesOrNativeExprT, CompliantExprT]
     _function_name: str
     _implementation: Implementation
     _backend_version: tuple[int, ...]
@@ -84,9 +82,9 @@ class CompliantThen(  # type: ignore[misc]
     def from_when(
         cls,
         when: CompliantWhen[
-            CompliantFrameT, CompliantSeriesOrNativeExprT_co, CompliantExprT
+            CompliantFrameT, CompliantSeriesOrNativeExprT, CompliantExprT
         ],
-        then_value: CompliantExprT | CompliantSeriesOrNativeExprT_co | _Scalar,
+        then_value: CompliantExprT | CompliantSeriesOrNativeExprT | _Scalar,
         /,
     ) -> Self:
         when._then_value = then_value
@@ -105,7 +103,7 @@ class CompliantThen(  # type: ignore[misc]
         return obj
 
     def otherwise(
-        self, value: CompliantExprT | CompliantSeriesOrNativeExprT_co | _Scalar, /
+        self, value: CompliantExprT | CompliantSeriesOrNativeExprT | _Scalar, /
     ) -> CompliantExprT:
         self._call._otherwise_value = value
         self._function_name = "whenotherwise"

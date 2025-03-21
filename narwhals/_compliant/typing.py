@@ -36,6 +36,9 @@ __all__ = [
 NativeExprT_co = TypeVar("NativeExprT_co", bound="NativeExpr", covariant=True)
 NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=True)
 CompliantSeriesT = TypeVar("CompliantSeriesT", bound="CompliantSeries[Any]")
+CompliantSeriesOrNativeExprT = TypeVar(
+    "CompliantSeriesOrNativeExprT", bound="CompliantSeries[Any] | NativeExpr"
+)
 CompliantSeriesOrNativeExprT_co = TypeVar(
     "CompliantSeriesOrNativeExprT_co",
     bound="CompliantSeries[Any] | NativeExpr",
