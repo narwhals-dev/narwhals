@@ -17,6 +17,7 @@ from typing import cast
 from narwhals.dependencies import is_narwhals_series
 from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import LengthChangingExprError
+from narwhals.exceptions import MultiOutputExpressionError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import is_compliant_expr
 
@@ -183,18 +184,21 @@ def is_scalar_like(
 
 
 class ExprMetadata:
-    __slots__ = ("_kind", "_n_open_windows")
+    __slots__ = ("_is_multi_output", "_kind", "_n_open_windows")
 
-    def __init__(self, kind: ExprKind, /, *, n_open_windows: int) -> None:
+    def __init__(
+        self, kind: ExprKind, /, *, n_open_windows: int, is_multi_output: bool
+    ) -> None:
         self._kind: ExprKind = kind
         self._n_open_windows = n_open_windows
+        self._is_multi_output = is_multi_output
 
     def __init_subclass__(cls, /, *args: Any, **kwds: Any) -> Never:  # pragma: no cover
         msg = f"Cannot subclass {cls.__name__!r}"
         raise TypeError(msg)
 
     def __repr__(self) -> str:
-        return f"ExprMetadata(kind: {self._kind}, n_open_windows: {self._n_open_windows})"
+        return f"ExprMetadata(kind: {self._kind}, n_open_windows: {self._n_open_windows}, is_multi_output: {self._is_multi_output})"
 
     @property
     def kind(self) -> ExprKind:
@@ -204,36 +208,81 @@ class ExprMetadata:
     def n_open_windows(self) -> int:
         return self._n_open_windows
 
+    @property
+    def is_multi_output(self) -> bool:
+        return self._is_multi_output
+
     def with_kind(self, kind: ExprKind, /) -> ExprMetadata:
         """Change metadata kind, leaving all other attributes the same."""
-        return ExprMetadata(kind, n_open_windows=self._n_open_windows)
+        return ExprMetadata(
+            kind,
+            n_open_windows=self._n_open_windows,
+            is_multi_output=self._is_multi_output,
+        )
 
     def with_extra_open_window(self) -> ExprMetadata:
         """Increment `n_open_windows` leaving other attributes the same."""
-        return ExprMetadata(self.kind, n_open_windows=self._n_open_windows + 1)
+        return ExprMetadata(
+            self.kind,
+            n_open_windows=self._n_open_windows + 1,
+            is_multi_output=self._is_multi_output,
+        )
 
     def with_kind_and_extra_open_window(self, kind: ExprKind, /) -> ExprMetadata:
         """Change metadata kind and increment `n_open_windows`."""
-        return ExprMetadata(kind, n_open_windows=self._n_open_windows + 1)
+        return ExprMetadata(
+            kind,
+            n_open_windows=self._n_open_windows + 1,
+            is_multi_output=self._is_multi_output,
+        )
 
     @staticmethod
-    def selector() -> ExprMetadata:
-        return ExprMetadata(ExprKind.TRANSFORM, n_open_windows=0)
+    def simple_selector() -> ExprMetadata:
+        # e.g. nw.col('a'), nw.nth(0)  # noqa: ERA001
+        return ExprMetadata(ExprKind.TRANSFORM, n_open_windows=0, is_multi_output=False)
+
+    @staticmethod
+    def multi_output_selector() -> ExprMetadata:
+        # e.g. nw.col('a', 'b'), nw.nth(0, 1), nw.all(), nw.selectors.matches('foo')  # noqa: ERA001
+        return ExprMetadata(ExprKind.TRANSFORM, n_open_windows=0, is_multi_output=True)
 
 
-def combine_metadata(*args: IntoExpr | object | None, str_as_lit: bool) -> ExprMetadata:
-    # Combine metadata from `args`.
+def combine_metadata(
+    *args: IntoExpr | object | None,
+    str_as_lit: bool,
+    allow_multi_output: bool,
+    to_single_output: bool,
+) -> ExprMetadata:
+    """Combine metadata from `args`.
 
+    Arguments:
+        args: Arguments, maybe expressions, literals, or Series.
+        str_as_lit: Whether to interpret strings as literals or as column names.
+        allow_multi_output: Whether to allow multi-output inputs.
+        to_single_output: Whether the result is always single-output, regardless
+            of the inputs (e.g. `nw.sum_horizontal`).
+    """
     n_filtrations = 0
     has_transforms_or_windows = False
     has_aggregations = False
     has_literals = False
     result_n_open_windows = 0
+    result_is_multi_output = False
 
-    for arg in args:
+    for i, arg in enumerate(args):
         if isinstance(arg, str) and not str_as_lit:
             has_transforms_or_windows = True
         elif is_expr(arg):
+            if arg._metadata.is_multi_output:
+                if i > 0 and not allow_multi_output:
+                    # Left-most argument is always allowed to be multi-output.
+                    msg = (
+                        "Multi-output expressions (e.g. nw.col('a', 'b'), nw.all()) "
+                        "are not supported in this context."
+                    )
+                    raise MultiOutputExpressionError(msg)
+                if not to_single_output:
+                    result_is_multi_output = True
             if arg._metadata.n_open_windows:
                 result_n_open_windows += 1
             kind = arg._metadata.kind
@@ -248,6 +297,7 @@ def combine_metadata(*args: IntoExpr | object | None, str_as_lit: bool) -> ExprM
             else:  # pragma: no cover
                 msg = "unreachable code"
                 raise AssertionError(msg)
+
     if (
         has_literals
         and not has_aggregations
@@ -268,7 +318,25 @@ def combine_metadata(*args: IntoExpr | object | None, str_as_lit: bool) -> ExprM
     else:
         result_kind = ExprKind.AGGREGATION
 
-    return ExprMetadata(result_kind, n_open_windows=result_n_open_windows)
+    return ExprMetadata(
+        result_kind,
+        n_open_windows=result_n_open_windows,
+        is_multi_output=result_is_multi_output,
+    )
+
+
+def combine_metadata_binary_op(lhs: Expr, rhs: IntoExpr) -> ExprMetadata:
+    # We may be able to allow multi-output rhs in the future:
+    # https://github.com/narwhals-dev/narwhals/issues/2244.
+    return combine_metadata(
+        lhs, rhs, str_as_lit=True, allow_multi_output=False, to_single_output=False
+    )
+
+
+def combine_metadata_horizontal_op(*exprs: IntoExpr) -> ExprMetadata:
+    return combine_metadata(
+        *exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
+    )
 
 
 def check_expressions_preserve_length(*args: IntoExpr, function_name: str) -> None:

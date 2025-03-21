@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.exceptions import MultiOutputExpressionError
 from tests.utils import assert_equal_data
 
 data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
@@ -28,5 +29,5 @@ def test_reindex(df_raw: Any) -> None:
     result = df.with_columns(s.sort())
     expected = {"a": [1, 2, 3], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}  # type: ignore[list-item]
     assert_equal_data(result, expected)
-    with pytest.raises(ValueError, match="Multi-output expressions"):
+    with pytest.raises(MultiOutputExpressionError):
         nw.to_native(df.with_columns(nw.all() + nw.all()))

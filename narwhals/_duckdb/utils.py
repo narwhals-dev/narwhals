@@ -27,9 +27,7 @@ def maybe_evaluate_expr(
 
     if isinstance(obj, DuckDBExpr):
         column_results = obj._call(df)
-        if len(column_results) != 1:
-            msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
-            raise ValueError(msg)
+        assert len(column_results) == 1  # debug assertion  # noqa: S101
         return column_results[0]
     return lit(obj)
 
