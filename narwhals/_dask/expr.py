@@ -36,6 +36,7 @@ if TYPE_CHECKING:
 
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.namespace import DaskNamespace
+    from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -66,6 +67,7 @@ class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
         self._backend_version = backend_version
         self._version = version
         self._call_kwargs = call_kwargs or {}
+        self._metadata: ExprMetadata | None = None
 
     def __call__(self: Self, df: DaskLazyFrame) -> Sequence[dx.Series]:
         return self._call(df)
@@ -77,6 +79,20 @@ class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
         from narwhals._dask.namespace import DaskNamespace
 
         return DaskNamespace(backend_version=self._backend_version, version=self._version)
+
+    def _with_metadata(self, metadata: ExprMetadata) -> Self:
+        expr = self.__class__(
+            self._call,
+            function_name=self._function_name,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+            depth=self._depth,
+            call_kwargs=self._call_kwargs,
+        )
+        expr._metadata = metadata
+        return expr
 
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
@@ -545,7 +561,6 @@ class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
     def over(
         self: Self,
         partition_by: Sequence[str],
-        kind: ExprKind,
         order_by: Sequence[str] | None,
     ) -> Self:
         # pandas is a required dependency of dask so it's safe to import this
