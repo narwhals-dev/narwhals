@@ -12,6 +12,7 @@ from narwhals._compliant.typing import CompliantFrameT
 from narwhals._compliant.typing import CompliantSeriesOrNativeExprT_co
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
     from typing_extensions import TypeAlias
 
     from narwhals.utils import Implementation
@@ -41,6 +42,13 @@ class CompliantWhen(
     _backend_version: tuple[int, ...]
     _version: Version
 
+    @property
+    def _then(
+        self,
+    ) -> type[
+        CompliantThen[CompliantFrameT, CompliantSeriesOrNativeExprT_co, CompliantExprT]
+    ]: ...
+
     def __init__(self, condition: CompliantExprT, /, *, context: _FullContext) -> None:
         self._condition = condition
         self._then_value = None
@@ -55,9 +63,8 @@ class CompliantWhen(
 
     def then(
         self, value: CompliantExprT | CompliantSeriesOrNativeExprT_co | _Scalar, /
-    ) -> CompliantThen[
-        CompliantFrameT, CompliantSeriesOrNativeExprT_co, CompliantExprT
-    ]: ...
+    ) -> CompliantThen[CompliantFrameT, CompliantSeriesOrNativeExprT_co, CompliantExprT]:
+        return self._then.from_when(self, value)
 
 
 # NOTE: error: Covariant type variable "CompliantSeriesOrNativeExprT_co" used in protocol where invariant one is expected [misc] (`mypy`)
@@ -68,6 +75,34 @@ class CompliantThen(  # type: ignore[misc]
 ):
     _call: CompliantWhen[CompliantFrameT, CompliantSeriesOrNativeExprT_co, CompliantExprT]
     _function_name: str
+    _implementation: Implementation
+    _backend_version: tuple[int, ...]
+    _version: Version
+    _call_kwargs: dict[str, Any]
+
+    @classmethod
+    def from_when(
+        cls,
+        when: CompliantWhen[
+            CompliantFrameT, CompliantSeriesOrNativeExprT_co, CompliantExprT
+        ],
+        then_value: CompliantExprT | CompliantSeriesOrNativeExprT_co | _Scalar,
+        /,
+    ) -> Self:
+        when._then_value = then_value
+        obj = cls.__new__(cls)
+        obj._call = when
+        obj._depth = 0
+        obj._function_name = "whenthen"
+        obj._evaluate_output_names = getattr(
+            then_value, "_evaluate_output_names", lambda _df: ["literal"]
+        )
+        obj._alias_output_names = getattr(then_value, "_alias_output_names", None)
+        obj._implementation = when._implementation
+        obj._backend_version = when._backend_version
+        obj._version = when._version
+        obj._call_kwargs = {}
+        return obj
 
     def otherwise(
         self, value: CompliantExprT | CompliantSeriesOrNativeExprT_co | _Scalar, /
