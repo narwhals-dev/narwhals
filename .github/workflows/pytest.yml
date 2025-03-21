@@ -85,7 +85,7 @@ jobs:
       - name: install-reqs
         run: uv pip install -e ".[modin, dask]" --group core-tests --group extra --system
       - name: install duckdb nightly
-        run: uv pip install -U --pre duckdb
+        run: uv pip install -U --pre duckdb --system
       - name: install pyspark
         run: uv pip install -e ".[pyspark]" --system
         # PySpark is not yet available on Python3.12+
