@@ -77,6 +77,9 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         if kind is ExprKind.LITERAL:
             return self
+        if self._backend_version < (1, 3):
+            msg = "At least version 1.3 of DuckDB is required for binary operations between aggregates and columns."
+            raise NotImplementedError(msg)
 
         def func(df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
             return [duckdb.SQLExpression(f"{result} over ()") for result in self(df)]
@@ -456,6 +459,9 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         kind: ExprKind,
         order_by: Sequence[str] | None,
     ) -> Self:
+        if self._backend_version < (1, 3):
+            msg = "At least version 1.3 of DuckDB is required for `over` operation."
+            raise NotImplementedError(msg)
         if (window_function := self._window_function) is not None:
             assert order_by is not None  # noqa: S101
 
@@ -531,6 +537,36 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
         return self._with_window_function(func)
 
+    def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
+        if center:
+            half = (window_size - 1) // 2
+            remainder = (window_size - 1) % 2
+            start = f"{half + remainder} preceding"
+            end = f"{half} following"
+        else:
+            start = f"{window_size - 1} preceding"
+            end = "current row"
+
+        def func(
+            _input: duckdb.Expression,
+            partition_by: Sequence[str],
+            order_by: Sequence[str],
+        ) -> duckdb.Expression:
+            order_by_sql = "order by " + ", ".join(
+                f'"{x}" asc nulls first' for x in order_by
+            )
+            if partition_by:
+                partition_by_sql = "partition by " + ",".join(
+                    f'"{x}"' for x in partition_by
+                )
+            else:
+                partition_by_sql = ""
+            window = f"({partition_by_sql} {order_by_sql} rows between {start} and {end})"
+            sql = f"case when count({_input}) over {window} >= {min_samples} then sum({_input}) over {window} else null end"
+            return duckdb.SQLExpression(sql)
+
+        return self._with_window_function(func)
+
     def fill_null(
         self: Self, value: Self | Any, strategy: Any, limit: int | None
     ) -> Self:
@@ -581,4 +617,3 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     cum_min = not_implemented()
     cum_max = not_implemented()
     cum_prod = not_implemented()
-    rolling_sum = not_implemented()

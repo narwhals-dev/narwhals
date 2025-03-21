@@ -76,14 +76,11 @@ def test_rolling_sum_expr_lazy_ungrouped(
     expected_a: list[float],
     window_size: int,
     min_samples: int,
-    request: pytest.FixtureRequest,
     *,
     center: bool,
 ) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         # unreliable
         pytest.skip()
@@ -134,7 +131,7 @@ def test_rolling_sum_expr_lazy_grouped(
         pytest.skip()
     if "pandas" in str(constructor) and PANDAS_VERSION < (1, 2):
         pytest.skip()
-    if any(x in str(constructor) for x in ("dask", "pyarrow_table", "duckdb")):
+    if any(x in str(constructor) for x in ("dask", "pyarrow_table")):
         request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor) and center:
         # center is not implemented for offset-based windows
