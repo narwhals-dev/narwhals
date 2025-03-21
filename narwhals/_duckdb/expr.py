@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import duckdb
 import operator
 from typing import TYPE_CHECKING
 from typing import Any
@@ -9,6 +8,7 @@ from typing import Literal
 from typing import Sequence
 from typing import cast
 
+import duckdb
 from duckdb import CaseExpression
 from duckdb import CoalesceOperator
 from duckdb import ColumnExpression
@@ -29,11 +29,11 @@ from narwhals.utils import Implementation
 from narwhals.utils import not_implemented
 
 if TYPE_CHECKING:
-    import duckdb
     from typing_extensions import Self
 
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.namespace import DuckDBNamespace
+    from narwhals._duckdb.typing import WindowFunction
     from narwhals.dtypes import DType
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -59,7 +59,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         self._alias_output_names = alias_output_names
         self._backend_version = backend_version
         self._version = version
-        self._window_function = None
+        self._window_function: WindowFunction | None = None
 
     def __call__(self: Self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
         return self._call(df)
@@ -77,14 +77,14 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         if kind is ExprKind.LITERAL:
             return self
+
         def func(df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
-            return [
-                duckdb.SQLExpression(f'{result} over ()') for result in self(df)
-            ]
+            return [duckdb.SQLExpression(f"{result} over ()") for result in self(df)]
+
         return self.__class__(
             func,
             function_name=self._function_name,
-            evaluate_output_names=self._evaluate_output_names, 
+            evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
@@ -163,6 +163,21 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             backend_version=self._backend_version,
             version=self._version,
         )
+
+    def _with_window_function(
+        self: Self,
+        window_function: WindowFunction,
+    ) -> Self:
+        result = self.__class__(
+            self._call,
+            function_name=self._function_name,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+        )
+        result._window_function = window_function
+        return result
 
     def __and__(self: Self, other: DuckDBExpr) -> Self:
         return self._from_call(
@@ -434,7 +449,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             lambda _input: FunctionExpression("sum", _input.isnull().cast("int")),
             "null_count",
         )
-    
+
     def over(
         self: Self,
         partition_by: Sequence[str],
@@ -453,7 +468,9 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
             def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
                 return [
-                    duckdb.SQLExpression(f'{expr} over (partition by {",".join(partition_by)})')
+                    duckdb.SQLExpression(
+                        f"{expr} over (partition by {','.join(partition_by)})"
+                    )
                     for expr in self._call(df)
                 ]
 
@@ -465,7 +482,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             backend_version=self._backend_version,
             version=self._version,
         )
-
 
     def is_null(self: Self) -> Self:
         return self._from_call(lambda _input: _input.isnull(), "is_null")
@@ -489,6 +505,31 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         return self._from_call(
             lambda _input: FunctionExpression("round", _input, lit(decimals)), "round"
         )
+
+    def cum_sum(self, *, reverse: bool) -> Self:
+        def func(
+            _input: duckdb.Expression,
+            partition_by: Sequence[str],
+            order_by: Sequence[str],
+        ) -> duckdb.Expression:
+            if reverse:
+                order_by_sql = "order by " + ", ".join(
+                    f'"{x}" desc nulls last' for x in order_by
+                )
+            else:
+                order_by_sql = "order by " + ", ".join(
+                    f'"{x}" asc nulls first' for x in order_by
+                )
+            if partition_by:
+                partition_by_sql = "partition by " + ",".join(
+                    f'"{x}"' for x in partition_by
+                )
+            else:
+                partition_by_sql = ""
+            sql = f"sum ({_input}) over ({partition_by_sql} {order_by_sql} rows between unbounded preceding and current row)"
+            return duckdb.SQLExpression(sql)
+
+        return self._with_window_function(func)
 
     def fill_null(
         self: Self, value: Self | Any, strategy: Any, limit: int | None
@@ -536,7 +577,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     is_unique = not_implemented()
     is_first_distinct = not_implemented()
     is_last_distinct = not_implemented()
-    cum_sum = not_implemented()
     cum_count = not_implemented()
     cum_min = not_implemented()
     cum_max = not_implemented()
