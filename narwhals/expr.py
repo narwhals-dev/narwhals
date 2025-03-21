@@ -1586,7 +1586,7 @@ class Expr:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx)
             ._with_metadata(current_meta)
-            .over(flat_partition_by, order_by=order_by),
+            .over(flat_partition_by, order_by),
             next_meta,
         )
 
