@@ -9,6 +9,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import LengthChangingExprError
+from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
@@ -30,9 +31,9 @@ data_cum = {
 }
 
 
-def test_over_single(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    # if "duckdb" in str(constructor):
-    #     request.applymarker(pytest.mark.xfail)
+def test_over_single(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
 
     df = nw.from_native(constructor(data))
     expected = {
@@ -86,6 +87,8 @@ def test_over_std_var(request: pytest.FixtureRequest, constructor: Constructor) 
 
 
 def test_over_multiple(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
@@ -272,6 +275,8 @@ def test_over_anonymous_cumulative(
 def test_over_anonymous_reduction(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     if "modin" in str(constructor):
         # probably bugged
         request.applymarker(pytest.mark.xfail)
@@ -415,7 +420,7 @@ def test_over_without_partition_by(
 ) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
-    if "duckdb" in str(constructor):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         # windows not yet supported
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):

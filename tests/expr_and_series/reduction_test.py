@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import DUCKDB_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -32,6 +33,8 @@ def test_scalar_reduction_select(
     expr: list[Any],
     expected: dict[str, list[Any]],
 ) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     data = {"a": [1, 2, 3], "b": [4, 5, 6]}
     df = nw.from_native(constructor(data))
     result = df.select(*expr)
@@ -60,6 +63,8 @@ def test_scalar_reduction_with_columns(
     expr: list[Any],
     expected: dict[str, list[Any]],
 ) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     data = {"a": [1, 2, 3], "b": [4, 5, 6]}
     df = nw.from_native(constructor(data))
     result = df.with_columns(*expr).select(*expected.keys())
@@ -100,9 +105,9 @@ def test_empty_scalar_reduction_select(
     assert_equal_data(result, expected)
 
 
-def test_empty_scalar_reduction_with_columns(
-    constructor: Constructor
-) -> None:
+def test_empty_scalar_reduction_with_columns(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     from itertools import chain
 
     data = {

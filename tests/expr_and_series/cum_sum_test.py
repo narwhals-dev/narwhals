@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import DUCKDB_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -49,7 +50,9 @@ def test_lazy_cum_sum_grouped(
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    ):
         pytest.skip(reason="too old version")
     if "cudf" in str(constructor):
         # https://github.com/rapidsai/cudf/issues/18159
@@ -95,7 +98,9 @@ def test_lazy_cum_sum_ordered_by_nulls(
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    ):
         pytest.skip(reason="too old version")
     if "cudf" in str(constructor):
         # https://github.com/rapidsai/cudf/issues/18159
@@ -142,7 +147,9 @@ def test_lazy_cum_sum_ungrouped(
     if "modin" in str(constructor):
         # probably bugged
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    ):
         pytest.skip(reason="too old version")
 
     df = nw.from_native(
@@ -181,7 +188,9 @@ def test_lazy_cum_sum_ungrouped_ordered_by_nulls(
     if "modin" in str(constructor):
         # probably bugged
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    ):
         pytest.skip(reason="too old version")
 
     df = nw.from_native(

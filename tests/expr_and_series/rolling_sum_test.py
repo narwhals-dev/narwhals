@@ -11,6 +11,7 @@ from hypothesis import given
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import InvalidOperationError
+from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
@@ -79,7 +80,9 @@ def test_rolling_sum_expr_lazy_ungrouped(
     *,
     center: bool,
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    ):
         pytest.skip()
     if "modin" in str(constructor):
         # unreliable
@@ -127,7 +130,9 @@ def test_rolling_sum_expr_lazy_grouped(
     *,
     center: bool,
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    ):
         pytest.skip()
     if "pandas" in str(constructor) and PANDAS_VERSION < (1, 2):
         pytest.skip()

@@ -8,6 +8,7 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
+from tests.utils import DUCKDB_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -18,9 +19,9 @@ def remove_docstring_examples(doc: str) -> str:
     return doc.rstrip()
 
 
-def test_renamed_taxicab_norm(
-    constructor: Constructor
-) -> None:
+def test_renamed_taxicab_norm(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     # Suppose we need to rename `_l1_norm` to `_taxicab_norm`.
     # We need `narwhals.stable.v1` to stay stable. So, we
     # make the change in `narwhals`, and then add the new method
