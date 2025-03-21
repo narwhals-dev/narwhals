@@ -54,7 +54,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         self._call_kwargs = call_kwargs or {}
         self._metadata: ExprMetadata | None = None
 
-    def with_metadata(self, metadata: ExprMetadata) -> Self:
+    def _with_metadata(self, metadata: ExprMetadata) -> Self:
         expr = self.__class__(
             self._call,
             function_name=self._function_name,

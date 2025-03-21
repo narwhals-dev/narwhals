@@ -74,7 +74,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             backend_version=self._backend_version, version=self._version
         )
 
-    def with_metadata(self, metadata: ExprMetadata) -> Self:
+    def _with_metadata(self, metadata: ExprMetadata) -> Self:
         expr = self.__class__(
             self._call,
             function_name=self._function_name,

@@ -125,7 +125,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             implementation=self._implementation,
         )
 
-    def with_metadata(self, metadata: ExprMetadata) -> Self:
+    def _with_metadata(self, metadata: ExprMetadata) -> Self:
         expr = self.__class__(
             self._call,
             function_name=self._function_name,
