@@ -32,6 +32,8 @@ else:  # pragma: no cover
 
 _Scalar: TypeAlias = Any
 
+__all__ = ["CompliantThen", "CompliantWhen"]
+
 
 class CompliantWhen(
     Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT, CompliantExprT]

@@ -22,9 +22,9 @@ from narwhals._arrow.utils import extract_dataframe_comparand
 from narwhals._arrow.utils import horizontal_concat
 from narwhals._arrow.utils import nulls_like
 from narwhals._arrow.utils import vertical_concat
+from narwhals._compliant import CompliantThen
+from narwhals._compliant import CompliantWhen
 from narwhals._compliant import EagerNamespace
-from narwhals._compliant.when_then import CompliantThen
-from narwhals._compliant.when_then import CompliantWhen
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.utils import Implementation
