@@ -135,8 +135,8 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             version=self._version,
             implementation=self._implementation,
         )
-        if self._window_function is not None:
-            expr = expr._with_window_function(self._window_function)
+        if func := self._window_function:
+            expr = expr._with_window_function(func)
         expr._metadata = metadata
         return expr
 
