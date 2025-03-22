@@ -33,57 +33,62 @@ __all__ = [
     "NativeFrameT_co",
     "NativeSeriesT_co",
 ]
+CompliantExprAny: TypeAlias = "CompliantExpr[Any, Any]"
+CompliantSeriesAny: TypeAlias = "CompliantSeries[Any]"
+CompliantSeriesOrNativeExprAny: TypeAlias = "CompliantSeriesAny | NativeExpr"
+CompliantDataFrameAny: TypeAlias = "CompliantDataFrame[Any, Any, Any]"
+CompliantLazyFrameAny: TypeAlias = "CompliantLazyFrame[Any, Any]"
+CompliantFrameAny: TypeAlias = "CompliantDataFrameAny | CompliantLazyFrameAny"
+
+EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any, Any]"
+EagerSeriesAny: TypeAlias = "EagerSeries[Any]"
+EagerExprAny: TypeAlias = "EagerExpr[Any, Any]"
+EagerNamespaceAny: TypeAlias = (
+    "EagerNamespace[EagerDataFrameAny, EagerSeriesAny, EagerExprAny]"
+)
+
+LazyExprAny: TypeAlias = "LazyExpr[Any, Any]"
+
 NativeExprT_co = TypeVar("NativeExprT_co", bound="NativeExpr", covariant=True)
 NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=True)
-CompliantSeriesT = TypeVar("CompliantSeriesT", bound="CompliantSeries[Any]")
-CompliantSeriesOrNativeExprT = TypeVar(
-    "CompliantSeriesOrNativeExprT", bound="CompliantSeries[Any] | NativeExpr"
-)
-CompliantSeriesOrNativeExprT_co = TypeVar(
-    "CompliantSeriesOrNativeExprT_co",
-    bound="CompliantSeries[Any] | NativeExpr",
-    covariant=True,
-)
 NativeFrameT_co = TypeVar("NativeFrameT_co", bound="NativeFrame", covariant=True)
-CompliantFrameT = TypeVar(
-    "CompliantFrameT",
-    bound="CompliantDataFrame[Any, Any, Any] | CompliantLazyFrame[Any, Any]",
-)
-CompliantFrameT_co = TypeVar(
-    "CompliantFrameT_co",
-    bound="CompliantDataFrame[Any, Any, Any] | CompliantLazyFrame[Any, Any]",
-    covariant=True,
-)
-CompliantDataFrameT = TypeVar(
-    "CompliantDataFrameT", bound="CompliantDataFrame[Any, Any, Any]"
-)
-CompliantDataFrameT_co = TypeVar(
-    "CompliantDataFrameT_co", bound="CompliantDataFrame[Any, Any, Any]", covariant=True
-)
-CompliantLazyFrameT = TypeVar("CompliantLazyFrameT", bound="CompliantLazyFrame[Any, Any]")
-CompliantLazyFrameT_co = TypeVar(
-    "CompliantLazyFrameT_co", bound="CompliantLazyFrame[Any, Any]", covariant=True
-)
-IntoCompliantExpr: TypeAlias = "CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | CompliantSeriesOrNativeExprT_co"
-CompliantExprAny: TypeAlias = "CompliantExpr[Any, Any]"
+
 CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExprAny)
 CompliantExprT_contra = TypeVar(
     "CompliantExprT_contra", bound=CompliantExprAny, contravariant=True
 )
+CompliantSeriesT = TypeVar("CompliantSeriesT", bound=CompliantSeriesAny)
+CompliantSeriesOrNativeExprT = TypeVar(
+    "CompliantSeriesOrNativeExprT", bound=CompliantSeriesOrNativeExprAny
+)
+CompliantSeriesOrNativeExprT_co = TypeVar(
+    "CompliantSeriesOrNativeExprT_co",
+    bound=CompliantSeriesOrNativeExprAny,
+    covariant=True,
+)
+CompliantFrameT = TypeVar("CompliantFrameT", bound=CompliantFrameAny)
+CompliantFrameT_co = TypeVar(
+    "CompliantFrameT_co", bound=CompliantFrameAny, covariant=True
+)
+CompliantDataFrameT = TypeVar("CompliantDataFrameT", bound=CompliantDataFrameAny)
+CompliantDataFrameT_co = TypeVar(
+    "CompliantDataFrameT_co", bound=CompliantDataFrameAny, covariant=True
+)
+CompliantLazyFrameT = TypeVar("CompliantLazyFrameT", bound=CompliantLazyFrameAny)
+CompliantLazyFrameT_co = TypeVar(
+    "CompliantLazyFrameT_co", bound=CompliantLazyFrameAny, covariant=True
+)
+IntoCompliantExpr: TypeAlias = "CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | CompliantSeriesOrNativeExprT_co"
 
+EagerExprT = TypeVar("EagerExprT", bound=EagerExprAny)
+EagerExprT_contra = TypeVar("EagerExprT_contra", bound=EagerExprAny, contravariant=True)
+EagerSeriesT = TypeVar("EagerSeriesT", bound=EagerSeriesAny)
+EagerSeriesT_co = TypeVar("EagerSeriesT_co", bound=EagerSeriesAny, covariant=True)
+
+# NOTE: `pyright` gives false (8) positives if this uses `EagerDataFrameAny`?
 EagerDataFrameT = TypeVar("EagerDataFrameT", bound="EagerDataFrame[Any, Any, Any]")
-EagerSeriesT = TypeVar("EagerSeriesT", bound="EagerSeries[Any]")
-EagerSeriesT_co = TypeVar("EagerSeriesT_co", bound="EagerSeries[Any]", covariant=True)
-EagerExprT = TypeVar("EagerExprT", bound="EagerExpr[Any, Any]")
-EagerExprT_contra = TypeVar(
-    "EagerExprT_contra", bound="EagerExpr[Any, Any]", contravariant=True
-)
-EagerNamespaceAny: TypeAlias = (
-    "EagerNamespace[EagerDataFrame[Any, Any, Any], EagerSeries[Any], EagerExpr[Any, Any]]"
-)
-LazyExprT_contra = TypeVar(
-    "LazyExprT_contra", bound="LazyExpr[Any, Any]", contravariant=True
-)
+
+LazyExprT_contra = TypeVar("LazyExprT_contra", bound=LazyExprAny, contravariant=True)
 
 AliasNames: TypeAlias = Callable[[Sequence[str]], Sequence[str]]
 AliasName: TypeAlias = Callable[[str], str]
