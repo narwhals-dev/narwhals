@@ -21,8 +21,8 @@ from narwhals._compliant import CompliantWhen
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.selectors import DuckDBSelectorNamespace
 from narwhals._duckdb.utils import lit
-from narwhals._duckdb.utils import maybe_evaluate_expr
 from narwhals._duckdb.utils import narwhals_to_native_dtype
+from narwhals._duckdb.utils import when
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.utils import Implementation
@@ -259,12 +259,17 @@ class DuckDBWhen(CompliantWhen["DuckDBLazyFrame", duckdb.Expression, DuckDBExpr]
         return DuckDBThen
 
     def __call__(self: Self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
-        condition = maybe_evaluate_expr(df, self._condition)
-        then_value = maybe_evaluate_expr(df, self._then_value)
-        if self._otherwise_value is None:
-            return [CaseExpression(condition, then_value)]
-        otherwise_value = maybe_evaluate_expr(df, self._otherwise_value)
-        return [CaseExpression(condition, then_value).otherwise(otherwise_value)]
+        is_expr = self._condition._is_expr
+        condition = df._evaluate_expr(self._condition)
+        then_ = self._then_value
+        then = df._evaluate_expr(then_) if is_expr(then_) else lit(then_)
+        other_ = self._otherwise_value
+        if other_ is None:
+            result = when(condition, then)
+        else:
+            otherwise = df._evaluate_expr(other_) if is_expr(other_) else lit(other_)
+            result = when(condition, then).otherwise(otherwise)
+        return [result]
 
 
 class DuckDBThen(

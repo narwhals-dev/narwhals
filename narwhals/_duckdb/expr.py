@@ -24,7 +24,6 @@ from narwhals._duckdb.expr_struct import DuckDBExprStructNamespace
 from narwhals._duckdb.utils import generate_order_by_sql
 from narwhals._duckdb.utils import generate_partition_by_sql
 from narwhals._duckdb.utils import lit
-from narwhals._duckdb.utils import maybe_evaluate_expr
 from narwhals._duckdb.utils import narwhals_to_native_dtype
 from narwhals._expression_parsing import ExprKind
 from narwhals.utils import Implementation
@@ -172,9 +171,9 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         """
 
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            native_series_list = self._call(df)
+            native_series_list = self(df)
             other_native_series = {
-                key: maybe_evaluate_expr(df, value)
+                key: df._evaluate_expr(value) if self._is_expr(value) else lit(value)
                 for key, value in expressifiable_args.items()
             }
             return [

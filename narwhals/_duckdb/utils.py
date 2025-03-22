@@ -19,6 +19,9 @@ if TYPE_CHECKING:
 lit = duckdb.ConstantExpression
 """Alias for `duckdb.ConstantExpression`."""
 
+when = duckdb.CaseExpression
+"""Alias for `duckdb.CaseExpression`."""
+
 
 def maybe_evaluate_expr(
     df: DuckDBLazyFrame, obj: DuckDBExpr | object
