@@ -179,9 +179,10 @@ jobs:
         run: |
           uv pip uninstall dask dask-expr --system
           python -m pip install git+https://github.com/dask/distributed git+https://github.com/dask/dask
-      - name: install duckdb
+      - name: install duckdb nightly
         run: |
-          python -m pip install -U --pre duckdb
+          uv pip uninstall duckdb --system
+          uv pip install -U --pre duckdb --system
       - name: show-deps
         run: uv pip freeze
       - name: Assert nightlies dependencies
