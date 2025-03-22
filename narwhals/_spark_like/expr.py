@@ -564,6 +564,30 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_window_function(func)
 
+    def is_first_distinct(self) -> Self:
+        def func(
+            _input: Column, partition_by: Sequence[str], order_by: Sequence[str]
+        ) -> Column:
+            order_by_cols = [self._F.col(x).asc_nulls_first() for x in order_by]
+            window = (
+                self._Window().partitionBy([*partition_by, _input]).orderBy(order_by_cols)
+            )
+            return self._F.row_number().over(window) == 1
+
+        return self._with_window_function(func)
+
+    def is_last_distinct(self) -> Self:
+        def func(
+            _input: Column, partition_by: Sequence[str], order_by: Sequence[str]
+        ) -> Column:
+            order_by_cols = [self._F.col(x).desc_nulls_last() for x in order_by]
+            window = (
+                self._Window().partitionBy([*partition_by, _input]).orderBy(order_by_cols)
+            )
+            return self._F.row_number().over(window) == 1
+
+        return self._with_window_function(func)
+
     def diff(self) -> Self:
         def func(
             _input: Column, partition_by: Sequence[str], order_by: Sequence[str]
@@ -655,8 +679,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
     drop_nulls = not_implemented()
     unique = not_implemented()
-    is_first_distinct = not_implemented()
-    is_last_distinct = not_implemented()
     cum_count = not_implemented()
     cum_min = not_implemented()
     cum_max = not_implemented()

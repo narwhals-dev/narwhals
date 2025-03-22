@@ -547,6 +547,42 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
         return self._with_window_function(func)
 
+    def is_first_distinct(self) -> Self:
+        def func(
+            _input: duckdb.Expression,
+            partition_by: Sequence[str],
+            order_by: Sequence[str],
+        ) -> duckdb.Expression:
+            order_by_sql = generate_order_by_sql(*order_by, ascending=True)
+            if partition_by:
+                partition_by_sql = (
+                    generate_partition_by_sql(*partition_by) + f", {_input}"
+                )
+            else:
+                partition_by_sql = f"partition by {_input}"
+            sql = f"row_number() over({partition_by_sql} {order_by_sql}) == 1"
+            return SQLExpression(sql)
+
+        return self._with_window_function(func)
+
+    def is_last_distinct(self) -> Self:
+        def func(
+            _input: duckdb.Expression,
+            partition_by: Sequence[str],
+            order_by: Sequence[str],
+        ) -> duckdb.Expression:
+            order_by_sql = generate_order_by_sql(*order_by, ascending=True)
+            if partition_by:
+                partition_by_sql = (
+                    generate_partition_by_sql(*partition_by) + f", {_input}"
+                )
+            else:
+                partition_by_sql = f"partition by {_input}"
+            sql = f"row_number() over({partition_by_sql} {order_by_sql}) == count(*) over ({partition_by_sql})"
+            return SQLExpression(sql)
+
+        return self._with_window_function(func)
+
     def diff(self) -> Self:
         def func(
             _input: duckdb.Expression,
@@ -638,8 +674,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     drop_nulls = not_implemented()
     unique = not_implemented()
     is_unique = not_implemented()
-    is_first_distinct = not_implemented()
-    is_last_distinct = not_implemented()
     cum_count = not_implemented()
     cum_min = not_implemented()
     cum_max = not_implemented()
