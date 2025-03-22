@@ -24,7 +24,6 @@ from narwhals.dependencies import get_pyspark
 from narwhals.utils import Implementation
 from narwhals.utils import not_implemented
 from narwhals.utils import parse_version
-from narwhals._spark_like.utils import cum_window_func
 
 if TYPE_CHECKING:
     from sqlframe.base.column import Column
@@ -156,6 +155,26 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         )
         result._window_function = window_function
         return result
+
+    def _cum_window_func(
+        self: Self, *, reverse: bool, func_name: Literal["sum", "max"]
+    ) -> WindowFunction:
+        def func(
+            _input: Column, partition_by: Sequence[str], order_by: Sequence[str]
+        ) -> Column:
+            if reverse:
+                order_by_cols = [self._F.col(x).desc_nulls_last() for x in order_by]
+            else:
+                order_by_cols = [self._F.col(x).asc_nulls_first() for x in order_by]
+            window = (
+                self._Window()
+                .partitionBy(list(partition_by))
+                .orderBy(order_by_cols)
+                .rowsBetween(self._Window().unboundedPreceding, 0)
+            )
+            return getattr(self._F, func_name)(_input).over(window)
+
+        return func
 
     @classmethod
     def from_column_names(
@@ -557,7 +576,14 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._from_call(_is_nan, "is_nan")
 
     def cum_sum(self, *, reverse: bool) -> Self:
-        return self._with_window_function(cum_window_func(self=self, reverse=reverse, func_name='sum'))
+        return self._with_window_function(
+            self._cum_window_func(reverse=reverse, func_name="sum")
+        )
+
+    def cum_max(self, *, reverse: bool) -> Self:
+        return self._with_window_function(
+            self._cum_window_func(reverse=reverse, func_name="max")
+        )
 
     def fill_null(
         self,
@@ -628,6 +654,5 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     is_last_distinct = not_implemented()
     cum_count = not_implemented()
     cum_min = not_implemented()
-    cum_max = not_implemented()
     cum_prod = not_implemented()
     quantile = not_implemented()
