@@ -12,6 +12,10 @@ from narwhals._compliant.expr import CompliantExpr
 from narwhals._compliant.typing import CompliantExprAny
 from narwhals._compliant.typing import CompliantFrameAny
 from narwhals._compliant.typing import CompliantSeriesOrNativeExprAny
+from narwhals._compliant.typing import EagerDataFrameT
+from narwhals._compliant.typing import EagerExprT
+from narwhals._compliant.typing import EagerSeriesT
+from narwhals._compliant.typing import NativeSeriesT
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -31,7 +35,7 @@ else:  # pragma: no cover
     # - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
     from typing import Protocol as Protocol38
 
-__all__ = ["CompliantThen", "CompliantWhen"]
+__all__ = ["CompliantThen", "CompliantWhen", "EagerWhen"]
 
 ExprT = TypeVar("ExprT", bound=CompliantExprAny)
 SeriesT = TypeVar("SeriesT", bound=CompliantSeriesOrNativeExprAny)
@@ -109,3 +113,32 @@ class CompliantThen(CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, 
         self._when_value._otherwise_value = otherwise
         self._function_name = "whenotherwise"
         return cast("ExprT", self)
+
+
+class EagerWhen(
+    CompliantWhen[EagerDataFrameT, EagerSeriesT, EagerExprT],
+    Protocol38[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeSeriesT],
+):
+    def _if_then_else(
+        self,
+        when: NativeSeriesT,
+        then: NativeSeriesT,
+        otherwise: NativeSeriesT | Scalar | None,
+        /,
+    ) -> NativeSeriesT: ...
+
+    def __call__(self, df: EagerDataFrameT, /) -> Sequence[EagerSeriesT]:
+        is_expr = self._condition._is_expr
+        when: EagerSeriesT = self._condition(df)[0]
+        then: EagerSeriesT
+        if is_expr(self._then_value):
+            then = self._then_value(df)[0]
+        else:
+            then = when.alias("literal")._from_scalar(self._then_value)
+            then._broadcast = True
+        if is_expr(self._otherwise_value):
+            otherwise = df._extract_comparand(self._otherwise_value(df)[0])
+        else:
+            otherwise = self._otherwise_value
+        result = self._if_then_else(when.native, df._extract_comparand(then), otherwise)
+        return [then._from_native_series(result)]

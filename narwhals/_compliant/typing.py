@@ -50,6 +50,7 @@ EagerNamespaceAny: TypeAlias = (
 LazyExprAny: TypeAlias = "LazyExpr[Any, Any]"
 
 NativeExprT_co = TypeVar("NativeExprT_co", bound="NativeExpr", covariant=True)
+NativeSeriesT = TypeVar("NativeSeriesT", bound="NativeSeries")
 NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=True)
 NativeFrameT_co = TypeVar("NativeFrameT_co", bound="NativeFrame", covariant=True)
 

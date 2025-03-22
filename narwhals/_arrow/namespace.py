@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Literal
-from typing import Sequence
 
+import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.dataframe import ArrowDataFrame
@@ -19,11 +19,10 @@ from narwhals._arrow.utils import align_series_full_broadcast
 from narwhals._arrow.utils import cast_to_comparable_string_types
 from narwhals._arrow.utils import diagonal_concat
 from narwhals._arrow.utils import horizontal_concat
-from narwhals._arrow.utils import nulls_like
 from narwhals._arrow.utils import vertical_concat
 from narwhals._compliant import CompliantThen
-from narwhals._compliant import CompliantWhen
 from narwhals._compliant import EagerNamespace
+from narwhals._compliant import EagerWhen
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.utils import Implementation
@@ -32,6 +31,7 @@ from narwhals.utils import import_dtypes_module
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals._arrow.typing import ArrowChunkedArray
     from narwhals._arrow.typing import Incomplete
     from narwhals.dtypes import DType
     from narwhals.utils import Version
@@ -288,44 +288,16 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
         )
 
 
-class ArrowWhen(CompliantWhen[ArrowDataFrame, ArrowSeries, ArrowExpr]):
+class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ArrowChunkedArray"]):
     @property
     def _then(self) -> type[ArrowThen]:
         return ArrowThen
 
-    def __call__(self, df: ArrowDataFrame, /) -> Sequence[ArrowSeries]:
-        condition = self._condition(df)[0]
-        condition_native = condition.native
-
-        if isinstance(self._then_value, ArrowExpr):
-            value_series = self._then_value(df)[0]
-        else:
-            value_series = condition.alias("literal")._from_scalar(self._then_value)
-            value_series._broadcast = True
-
-        value_series_native = df._extract_comparand(value_series)
-
-        if self._otherwise_value is None:
-            otherwise_null = nulls_like(len(condition_native), value_series)
-            return [
-                value_series._from_native_series(
-                    pc.if_else(condition_native, value_series_native, otherwise_null)
-                )
-            ]
-        if isinstance(self._otherwise_value, ArrowExpr):
-            otherwise_series = self._otherwise_value(df)[0]
-        else:
-            native_result = pc.if_else(
-                condition_native, value_series_native, self._otherwise_value
-            )
-            return [value_series._from_native_series(native_result)]
-
-        otherwise_series_native = df._extract_comparand(otherwise_series)
-        return [
-            value_series._from_native_series(
-                pc.if_else(condition_native, value_series_native, otherwise_series_native)
-            )
-        ]
+    def _if_then_else(
+        self, when: ArrowChunkedArray, then: ArrowChunkedArray, otherwise: Any, /
+    ) -> ArrowChunkedArray:
+        otherwise = pa.nulls(len(when), then.type) if otherwise is None else otherwise
+        return pc.if_else(when, then, otherwise)
 
 
 class ArrowThen(CompliantThen[ArrowDataFrame, ArrowSeries, ArrowExpr], ArrowExpr): ...

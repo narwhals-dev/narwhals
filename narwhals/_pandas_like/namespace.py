@@ -6,11 +6,10 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Literal
-from typing import Sequence
 
 from narwhals._compliant import CompliantThen
-from narwhals._compliant import CompliantWhen
 from narwhals._compliant import EagerNamespace
+from narwhals._compliant import EagerWhen
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -24,6 +23,7 @@ from narwhals._pandas_like.utils import vertical_concat
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
+    import pandas as pd
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
@@ -313,43 +313,17 @@ class PandasLikeNamespace(
         )
 
 
-class PandasWhen(CompliantWhen[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr]):
+class PandasWhen(
+    EagerWhen[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr, "pd.Series[Any]"]
+):
     @property
     def _then(self) -> type[PandasThen]:
         return PandasThen
 
-    def __call__(self: Self, df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
-        condition = self._condition(df)[0]
-        condition_native = condition._native_series
-
-        if isinstance(self._then_value, PandasLikeExpr):
-            value_series = self._then_value(df)[0]
-        else:
-            value_series = condition.alias("literal")._from_scalar(self._then_value)
-            value_series._broadcast = True
-
-        value_series_native = df._extract_comparand(value_series)
-        if self._otherwise_value is None:
-            return [
-                value_series._from_native_series(
-                    value_series_native.where(condition_native)
-                )
-            ]
-
-        if isinstance(self._otherwise_value, PandasLikeExpr):
-            otherwise_series = self._otherwise_value(df)[0]
-        else:
-            native_result = value_series_native.where(
-                condition_native, self._otherwise_value
-            )
-            return [value_series._from_native_series(native_result)]
-
-        otherwise_series_native = df._extract_comparand(otherwise_series)
-        return [
-            value_series._from_native_series(
-                value_series_native.where(condition_native, otherwise_series_native)
-            )
-        ]
+    def _if_then_else(
+        self, when: pd.Series[Any], then: pd.Series[Any], otherwise: Any, /
+    ) -> pd.Series[Any]:
+        return then.where(when) if otherwise is None else then.where(when, otherwise)
 
 
 class PandasThen(
