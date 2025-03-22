@@ -86,6 +86,8 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             backend_version=self._backend_version,
             version=self._version,
         )
+        if func := self._window_function:
+            expr = expr._with_window_function(func)
         expr._metadata = metadata
         return expr
 
@@ -488,7 +490,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
             def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
                 return [
-                    SQLExpression(f"{expr} over (partition by {','.join(partition_by)})")
+                    SQLExpression(f"{expr} over partition by {','.join(partition_by)}")
                     for expr in self._call(df)
                 ]
 
