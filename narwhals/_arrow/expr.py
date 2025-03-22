@@ -159,7 +159,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                 df = df.with_row_index(token).sort(
                     *order_by, descending=False, nulls_last=False
                 )
-                result = self(df)
+                result = self(df.drop([token], strict=False))
                 # TODO(marco): is there a way to do this efficiently without
                 # doing 2 sorts? Here we're sorting the dataframe and then
                 # again calling `sort_indices`. `ArrowSeries.scatter` would also sort.

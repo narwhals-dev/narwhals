@@ -38,6 +38,19 @@ def test_is_last_distinct_expr_lazy(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_is_last_distinct_expr_all(constructor_eager: ConstructorEager) -> None:
+    # We can only run this test eagerly, as it relies on row order.
+    data = {"a": [1, 1, 2, 3, 2], "b": [1, 2, 3, 2, 1], "i": [0, 1, 2, 3, 4]}
+    df = nw.from_native(constructor_eager(data))
+    result = df.select(nw.all().is_last_distinct().over(_order_by="i"))
+    expected = {
+        "a": [False, True, False, True, True],
+        "b": [False, False, True, True, True],
+        "i": [True, True, True, True, True],
+    }
+    assert_equal_data(result, expected)
+
+
 def test_is_last_distinct_expr_lazy_grouped(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
