@@ -41,7 +41,7 @@ Scalar: TypeAlias = Any
 """A native or python literal value."""
 
 IntoExpr: TypeAlias = "SeriesT | ExprT | Scalar"
-"""Anything that is convertable into a `CompliantExpr`."""
+"""Anything that is convertible into a `CompliantExpr`."""
 
 
 class CompliantWhen(Protocol38[FrameT, SeriesT, ExprT]):
