@@ -55,8 +55,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         self: Self,
         call: Callable[[DuckDBLazyFrame], Sequence[duckdb.Expression]],
         *,
-        # Unused, just for compatibility with CompliantExpr
-        function_name: str = "",
         evaluate_output_names: Callable[[DuckDBLazyFrame], Sequence[str]],
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         backend_version: tuple[int, ...],
@@ -86,7 +84,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     def _with_metadata(self, metadata: ExprMetadata) -> Self:
         expr = self.__class__(
             self._call,
-            function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
@@ -111,7 +108,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
         return self.__class__(
             func,
-            function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
@@ -124,7 +120,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         evaluate_column_names: Callable[[DuckDBLazyFrame], Sequence[str]],
         /,
         *,
-        function_name: str,
         context: _FullContext,
     ) -> Self:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
@@ -132,7 +127,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
         return cls(
             func,
-            function_name=function_name,
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
             backend_version=context._backend_version,
@@ -150,7 +144,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
         return cls(
             func,
-            function_name="nth",
             evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
             alias_output_names=None,
             backend_version=context._backend_version,
@@ -196,7 +189,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     ) -> Self:
         result = self.__class__(
             self._call,
-            function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,

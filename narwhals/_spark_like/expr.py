@@ -47,7 +47,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         self: Self,
         call: Callable[[SparkLikeLazyFrame], Sequence[Column]],
         *,
-        function_name: str = "",
         evaluate_output_names: Callable[[SparkLikeLazyFrame], Sequence[str]],
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         backend_version: tuple[int, ...],
@@ -158,7 +157,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         evaluate_column_names: Callable[[SparkLikeLazyFrame], Sequence[str]],
         /,
         *,
-        function_name: str = "",  # noqa: ARG003
         context: _FullContext,
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
