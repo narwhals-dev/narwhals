@@ -320,15 +320,13 @@ def combine_metadata(
                         "are not supported in this context."
                     )
                     raise MultiOutputExpressionError(msg)
-                if not to_single_output:  # pragma: no cover
-                    if i != 0 and arg._metadata.expansion_kind != result_expansion_kind:
-                        msg = "Safety assertion failed, please report a bug."
-                        raise AssertionError(msg)
-                    # Preserve expansion kind. e.g.
-                    # - `nw.all() + nw.col('a')`
-                    # - `nw.selectors.datetime() - nw.selectors.numeric()
-                    # preserve the expansion kind of the left-hand-side.
-                    result_expansion_kind = arg._metadata.expansion_kind
+                if not to_single_output:
+                    if i == 0:
+                        result_expansion_kind = arg._metadata.expansion_kind
+                    else:
+                        result_expansion_kind = resolve_expansion_kind(
+                            result_expansion_kind, arg._metadata.expansion_kind
+                        )
             if arg._metadata.n_open_windows:
                 result_n_open_windows += 1
             kind = arg._metadata.kind
@@ -369,6 +367,15 @@ def combine_metadata(
         n_open_windows=result_n_open_windows,
         expansion_kind=result_expansion_kind,
     )
+
+
+def resolve_expansion_kind(lhs: ExpansionKind, rhs: ExpansionKind) -> ExpansionKind:
+    if lhs is ExpansionKind.MULTI_UNNAMED and rhs is ExpansionKind.MULTI_UNNAMED:
+        # e.g. nw.selectors.all() - nw.selectors.numeric().
+        return ExpansionKind.MULTI_UNNAMED
+    # Don't attempt anything more complex, keep it simple and raise in the face of ambiguity.
+    msg = f"Unsupported ExpansionKind combination, got {lhs} and {rhs}, please report a bug."  # pragma: no cover
+    raise AssertionError(msg)  # pragma: no cover
 
 
 def combine_metadata_binary_op(lhs: Expr, rhs: IntoExpr) -> ExprMetadata:
