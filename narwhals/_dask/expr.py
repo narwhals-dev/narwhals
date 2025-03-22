@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 import warnings
 from typing import TYPE_CHECKING
 from typing import Any
@@ -37,6 +36,7 @@ if TYPE_CHECKING:
 
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.namespace import DaskNamespace
+    from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -67,6 +67,7 @@ class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
         self._backend_version = backend_version
         self._version = version
         self._call_kwargs = call_kwargs or {}
+        self._metadata: ExprMetadata | None = None
 
     def __call__(self: Self, df: DaskLazyFrame) -> Sequence[dx.Series]:
         return self._call(df)
@@ -78,6 +79,20 @@ class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
         from narwhals._dask.namespace import DaskNamespace
 
         return DaskNamespace(backend_version=self._backend_version, version=self._version)
+
+    def _with_metadata(self, metadata: ExprMetadata) -> Self:
+        expr = self.__class__(
+            self._call,
+            function_name=self._function_name,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+            depth=self._depth,
+            call_kwargs=self._call_kwargs,
+        )
+        expr._metadata = metadata
+        return expr
 
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
@@ -546,11 +561,10 @@ class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
     def over(
         self: Self,
         partition_by: Sequence[str],
-        kind: ExprKind,
         order_by: Sequence[str] | None,
     ) -> Self:
         # pandas is a required dependency of dask so it's safe to import this
-        from narwhals._pandas_like.group_by import AGGREGATIONS_TO_PANDAS_EQUIVALENT
+        from narwhals._pandas_like.group_by import PandasLikeGroupBy
 
         if not partition_by:
             assert order_by is not None  # help type checkers  # noqa: S101
@@ -567,14 +581,14 @@ class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
             )
             raise NotImplementedError(msg)
         else:
-            function_name = re.sub(r"(\w+->)", "", self._function_name)
+            function_name = PandasLikeGroupBy._leaf_name(self)
             try:
-                dask_function_name = AGGREGATIONS_TO_PANDAS_EQUIVALENT[function_name]
+                dask_function_name = PandasLikeGroupBy._REMAP_AGGS[function_name]
             except KeyError:
                 # window functions are unsupported: https://github.com/dask/dask/issues/11806
                 msg = (
                     f"Unsupported function: {function_name} in `over` context.\n\n"
-                    f"Supported functions are {', '.join(AGGREGATIONS_TO_PANDAS_EQUIVALENT)}\n"
+                    f"Supported functions are {', '.join(PandasLikeGroupBy._REMAP_AGGS)}\n"
                 )
                 raise NotImplementedError(msg) from None
 

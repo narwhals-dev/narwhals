@@ -59,9 +59,11 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantFrameT
     from narwhals._compliant import CompliantSeriesOrNativeExprT_co
     from narwhals._compliant import NativeFrameT_co
+    from narwhals._compliant import NativeSeriesT_co
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
+    from narwhals.functions import ArrowStreamExportable
     from narwhals.series import Series
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
@@ -130,7 +132,7 @@ CompliantExprT_co = TypeVar(
     "CompliantExprT_co", bound="CompliantExpr[Any, Any]", covariant=True
 )
 CompliantSeriesT_co = TypeVar(
-    "CompliantSeriesT_co", bound="CompliantSeries", covariant=True
+    "CompliantSeriesT_co", bound="CompliantSeries[Any]", covariant=True
 )
 
 
@@ -1488,7 +1490,9 @@ def is_compliant_lazyframe(
     return _hasattr_static(obj, "__narwhals_lazyframe__")
 
 
-def is_compliant_series(obj: Any) -> TypeIs[CompliantSeries]:
+def is_compliant_series(
+    obj: CompliantSeries[NativeSeriesT_co] | Any,
+) -> TypeIs[CompliantSeries[NativeSeriesT_co]]:
     return _hasattr_static(obj, "__narwhals_series__")
 
 
@@ -1504,6 +1508,10 @@ def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
 
 def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
     return hasattr(obj, "__dataframe__")
+
+
+def supports_arrow_c_stream(obj: Any) -> TypeIs[ArrowStreamExportable]:
+    return _hasattr_static(obj, "__arrow_c_stream__")
 
 
 def is_tracks_depth(obj: Implementation, /) -> TypeIs[_TracksDepth]:  # pragma: no cover

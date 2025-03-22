@@ -435,7 +435,7 @@ jobs:
         run: |
           cd pointblank
           uv pip install --system ".[dev]"
-          uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas --system    
+          uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny --system    
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals --system
@@ -472,29 +472,25 @@ jobs:
       - name: install-validoopsie-dev
         run: |
           cd validoopsie
-          uv venv
-          . .venv/bin/activate
           uv sync --dev
-          uv pip install pytest-env
-          which python
-      - name: show-deps
-        run: |
-          cd validoopsie
-          . .venv/bin/activate
-          uv pip freeze
       - name: install-narwhals-dev
         run: |
           cd validoopsie
-          . .venv/bin/activate
-          uv pip uninstall narwhals
-          uv pip install -e ./..
+          uv remove narwhals
+          uv add ./..
+      - name: show-deps
+        run: |
+          cd validoopsie
+          which python
+          uv pip freeze
       - name: Run tests
         run: |
           cd validoopsie
-          . .venv/bin/activate
+          # empty pytest.ini to avoid pytest using narwhals configs
+          touch pytest.ini       
           touch tests/__init__.py
           touch tests/utils/__init__.py
-          pytest tests
+          uv run pytest tests
         timeout-minutes: 15
   
   darts:

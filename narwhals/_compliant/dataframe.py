@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
     from typing_extensions import TypeAlias
 
+    from narwhals._compliant.group_by import CompliantGroupBy
     from narwhals.dtypes import DType
     from narwhals.typing import SizeUnit
     from narwhals.typing import _2DArray
@@ -50,6 +51,9 @@ class CompliantDataFrame(
     Protocol[CompliantSeriesT, CompliantExprT_contra, NativeFrameT_co],
 ):
     _native_frame: Any
+    _implementation: Implementation
+    _backend_version: tuple[int, ...]
+    _version: Version
 
     def __narwhals_dataframe__(self) -> Self: ...
     def __narwhals_namespace__(self) -> Any: ...
@@ -64,7 +68,8 @@ class CompliantDataFrame(
 
         (so, no broadcasting is necessary).
         """
-        return self.select(*exprs)
+        # NOTE: Ignore is to avoid an intermittent false positive
+        return self.select(*exprs)  # pyright: ignore[reportArgumentType]
 
     @property
     def native(self) -> NativeFrameT_co:
@@ -88,7 +93,9 @@ class CompliantDataFrame(
     def filter(self, predicate: CompliantExprT_contra | Incomplete) -> Self: ...
     def gather_every(self, n: int, offset: int) -> Self: ...
     def get_column(self, name: str) -> CompliantSeriesT: ...
-    def group_by(self, *keys: str, drop_null_keys: bool) -> Incomplete: ...
+    def group_by(
+        self, *keys: str, drop_null_keys: bool
+    ) -> CompliantGroupBy[Self, Any]: ...
     def head(self, n: int) -> Self: ...
     def item(self, row: int | None, column: int | str | None) -> Any: ...
     def iter_columns(self) -> Iterator[CompliantSeriesT]: ...
@@ -215,7 +222,9 @@ class CompliantLazyFrame(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
     )
     def gather_every(self, n: int, offset: int) -> Self: ...
-    def group_by(self, *keys: str, drop_null_keys: bool) -> Incomplete: ...
+    def group_by(
+        self, *keys: str, drop_null_keys: bool
+    ) -> CompliantGroupBy[Self, Any]: ...
     def head(self, n: int) -> Self: ...
     def join(
         self: Self,
@@ -269,12 +278,7 @@ class EagerDataFrame(
     def _evaluate_expr(self, expr: EagerExprT_contra, /) -> EagerSeriesT:
         """Evaluate `expr` and ensure it has a **single** output."""
         result: Sequence[EagerSeriesT] = expr(self)
-        if len(result) > 1:
-            msg = (
-                "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) "
-                "are not supported in this context"
-            )
-            raise ValueError(msg)
+        assert len(result) == 1  # debug assertion  # noqa: S101
         return result[0]
 
     def _evaluate_into_exprs(self, *exprs: EagerExprT_contra) -> Sequence[EagerSeriesT]:

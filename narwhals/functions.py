@@ -17,6 +17,7 @@ from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import check_expressions_preserve_length
 from narwhals._expression_parsing import combine_metadata
+from narwhals._expression_parsing import combine_metadata_horizontal_op
 from narwhals._expression_parsing import extract_compliant
 from narwhals._expression_parsing import infer_kind
 from narwhals._expression_parsing import is_scalar_like
@@ -45,6 +46,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant import CompliantExpr
     from narwhals._compliant import CompliantNamespace
+    from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -410,7 +412,7 @@ def _from_dict_impl(
                     native_series, series_only=True
                 )._compliant_series
                 if left_most_series is None:
-                    left_most_series = compliant_series
+                    left_most_series = cast("PandasLikeSeries", compliant_series)
                     aligned_data[key] = native_series
                 else:
                     aligned_data[key] = align_and_extract_native(
@@ -1044,15 +1046,29 @@ def scan_parquet(
     For the libraries that do not support lazy dataframes, the function reads
     a parquet file eagerly and then converts the resulting dataframe to a lazyframe.
 
+    !!! note
+        Spark like backends require a session object to be passed in `kwargs`.
+
+        For instance:
+
+        ```py
+        import narwhals as nw
+        from sqlframe.duckdb import DuckDBSession
+
+        nw.scan_parquet(source, backend="sqlframe", session=DuckDBSession())
+        ```
+
     Arguments:
         source: Path to a file.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways:
 
             - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+                `POLARS`, `MODIN`, `CUDF`, `PYSPARK` or `SQLFRAME`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"cudf"`,
+                `"pyspark"` or `"sqlframe"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `cudf`,
+                `pyspark.sql` or `sqlframe`.
         native_namespace: The native library to use for DataFrame creation.
 
             **Deprecated** (v1.31.0):
@@ -1068,6 +1084,7 @@ def scan_parquet(
 
     Examples:
         >>> import dask.dataframe as dd
+        >>> from sqlframe.duckdb import DuckDBSession
         >>> import narwhals as nw
         >>>
         >>> nw.scan_parquet("file.parquet", backend="dask").collect()  # doctest:+SKIP
@@ -1077,6 +1094,19 @@ def scan_parquet(
         |        a   b     |
         |     0  1   4     |
         |     1  2   5     |
+        └──────────────────┘
+        >>> nw.scan_parquet(
+        ...     "file.parquet", backend="sqlframe", session=DuckDBSession()
+        ... ).collect()  # doctest:+SKIP
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |  pyarrow.Table   |
+        |  a: int64        |
+        |  b: int64        |
+        |  ----            |
+        |  a: [[1,2]]      |
+        |  b: [[4,5]]      |
         └──────────────────┘
     """
     backend = cast("ModuleType | Implementation | str", backend)
@@ -1103,6 +1133,19 @@ def _scan_parquet_impl(
         import pyarrow.parquet as pq  # ignore-banned-import
 
         native_frame = pq.read_table(source, **kwargs)
+    elif implementation.is_spark_like():
+        if (session := kwargs.pop("session", None)) is None:
+            msg = "Spark like backends require a session object to be passed in `kwargs`."
+            raise ValueError(msg)
+
+        native_frame = (
+            session.read.format("parquet").load(source)
+            # passing `options` currently not possible in SQLFrame: see
+            # https://github.com/eakmanrq/sqlframe/issues/341
+            if implementation is Implementation.SQLFRAME
+            else session.read.format("parquet").options(**kwargs).load(source)
+        )
+
     else:  # pragma: no cover
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
@@ -1143,11 +1186,17 @@ def col(*names: str | Iterable[str]) -> Expr:
         |  └─────┴─────┘   |
         └──────────────────┘
     """
+    flat_names = flatten(names)
 
     def func(plx: Any) -> Any:
-        return plx.col(*flatten(names))
+        return plx.col(*flat_names)
 
-    return Expr(func, ExprMetadata.selector())
+    return Expr(
+        func,
+        ExprMetadata.simple_selector()
+        if len(flat_names) == 1
+        else ExprMetadata.multi_output_selector(),
+    )
 
 
 def exclude(*names: str | Iterable[str]) -> Expr:
@@ -1184,7 +1233,7 @@ def exclude(*names: str | Iterable[str]) -> Expr:
     def func(plx: Any) -> Any:
         return plx.exclude(exclude_names)
 
-    return Expr(func, ExprMetadata.selector())
+    return Expr(func, ExprMetadata.multi_output_selector())
 
 
 def nth(*indices: int | Sequence[int]) -> Expr:
@@ -1217,11 +1266,17 @@ def nth(*indices: int | Sequence[int]) -> Expr:
         |c: [[0.246,6.28]] |
         └──────────────────┘
     """
+    flat_indices = flatten(indices)
 
     def func(plx: Any) -> Any:
-        return plx.nth(*flatten(indices))
+        return plx.nth(*flat_indices)
 
-    return Expr(func, ExprMetadata.selector())
+    return Expr(
+        func,
+        ExprMetadata.simple_selector()
+        if len(flat_indices) == 1
+        else ExprMetadata.multi_output_selector(),
+    )
 
 
 # Add underscore so it doesn't conflict with builtin `all`
@@ -1245,7 +1300,7 @@ def all_() -> Expr:
         |   1  4  0.246    |
         └──────────────────┘
     """
-    return Expr(lambda plx: plx.all(), ExprMetadata.selector())
+    return Expr(lambda plx: plx.all(), ExprMetadata.multi_output_selector())
 
 
 # Add underscore so it doesn't conflict with builtin `len`
@@ -1278,7 +1333,9 @@ def len_() -> Expr:
     def func(plx: Any) -> Any:
         return plx.len()
 
-    return Expr(func, ExprMetadata(ExprKind.AGGREGATION, n_open_windows=0))
+    return Expr(
+        func, ExprMetadata(ExprKind.AGGREGATION, n_open_windows=0, is_multi_output=False)
+    )
 
 
 def sum(*columns: str) -> Expr:
@@ -1479,7 +1536,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.sum_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False),
+        combine_metadata_horizontal_op(*flat_exprs),
     )
 
 
@@ -1523,7 +1580,7 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.min_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False),
+        combine_metadata_horizontal_op(*flat_exprs),
     )
 
 
@@ -1569,7 +1626,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.max_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False),
+        combine_metadata_horizontal_op(*flat_exprs),
     )
 
 
@@ -1587,7 +1644,13 @@ class When:
                 value,
                 str_as_lit=False,
             ),
-            combine_metadata(self._predicate, value, str_as_lit=False),
+            combine_metadata(
+                self._predicate,
+                value,
+                str_as_lit=False,
+                allow_multi_output=False,
+                to_single_output=False,
+            ),
         )
 
 
@@ -1604,7 +1667,13 @@ class Then(Expr):
 
         return Expr(
             func,
-            combine_metadata(self, value, str_as_lit=False),
+            combine_metadata(
+                self,
+                value,
+                str_as_lit=False,
+                allow_multi_output=False,
+                to_single_output=False,
+            ),
         )
 
 
@@ -1693,7 +1762,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.all_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False),
+        combine_metadata_horizontal_op(*flat_exprs),
     )
 
 
@@ -1735,7 +1804,7 @@ def lit(value: Any, dtype: DType | type[DType] | None = None) -> Expr:
 
     return Expr(
         lambda plx: plx.lit(value, dtype),
-        ExprMetadata(ExprKind.LITERAL, n_open_windows=0),
+        ExprMetadata(ExprKind.LITERAL, n_open_windows=0, is_multi_output=False),
     )
 
 
@@ -1785,7 +1854,7 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.any_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False),
+        combine_metadata_horizontal_op(*flat_exprs),
     )
 
 
@@ -1831,7 +1900,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.mean_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False),
+        combine_metadata_horizontal_op(*flat_exprs),
     )
 
 
@@ -1898,5 +1967,7 @@ def concat_str(
             *flat_exprs,
             str_as_lit=False,
         ),
-        combine_metadata(*flat_exprs, str_as_lit=False),
+        combine_metadata(
+            *flat_exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
+        ),
     )

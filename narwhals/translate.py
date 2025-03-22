@@ -119,7 +119,7 @@ def to_native(
     if isinstance(narwhals_object, BaseFrame):
         return narwhals_object._compliant_frame._native_frame
     if isinstance(narwhals_object, Series):
-        return narwhals_object._compliant_series._native_series
+        return narwhals_object._compliant_series.native
 
     if not pass_through:
         msg = f"Expected Narwhals object, got {type(narwhals_object)}."

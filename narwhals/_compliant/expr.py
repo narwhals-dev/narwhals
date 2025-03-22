@@ -57,6 +57,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals._compliant.series import CompliantSeries
     from narwhals._expression_parsing import ExprKind
+    from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
     from narwhals.utils import Implementation
@@ -85,6 +86,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     _alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None
     _depth: int
     _function_name: str
+    _metadata: ExprMetadata | None
 
     def __call__(
         self, df: CompliantFrameT
@@ -104,6 +106,8 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     ) -> Self: ...
     @classmethod
     def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self: ...
+
+    def _with_metadata(self, metadata: ExprMetadata) -> Self: ...
 
     def is_null(self) -> Self: ...
     def abs(self) -> Self: ...
@@ -165,9 +169,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         *,
         return_dtype: DType | type[DType] | None,
     ) -> Self: ...
-    def over(
-        self: Self, keys: Sequence[str], kind: ExprKind, order_by: Sequence[str] | None
-    ) -> Self: ...
+    def over(self: Self, keys: Sequence[str], order_by: Sequence[str] | None) -> Self: ...
     def sample(
         self,
         n: int | None,
@@ -183,7 +185,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     ) -> Self: ...
     def map_batches(
         self,
-        function: Callable[[CompliantSeries], CompliantExpr[Any, Any]],
+        function: Callable[[CompliantSeries[Any]], CompliantExpr[Any, Any]],
         return_dtype: DType | type[DType] | None,
     ) -> Self: ...
 
@@ -270,6 +272,14 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def broadcast(
         self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]
     ) -> Self: ...
+    def _is_multi_output_agg(self) -> bool:
+        """Return `True` for multi-output aggregations.
+
+        Here we skip the keys, else they would appear duplicated in the output:
+
+            df.group_by("a").agg(nw.all().mean())
+        """
+        return self._function_name.split("->", maxsplit=1)[0] in {"all", "selector"}
 
 
 class EagerExpr(
@@ -307,6 +317,21 @@ class EagerExpr(
         self,
     ) -> EagerNamespace[EagerDataFrameT, EagerSeriesT, Self]: ...
     def __narwhals_expr__(self) -> None: ...
+
+    def _with_metadata(self, metadata: ExprMetadata) -> Self:
+        expr = self.__class__(
+            self._call,
+            function_name=self._function_name,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+            depth=self._depth,
+            implementation=self._implementation,
+            call_kwargs=self._call_kwargs,
+        )
+        expr._metadata = metadata
+        return expr
 
     @classmethod
     def _from_callable(

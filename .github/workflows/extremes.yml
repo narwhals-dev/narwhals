@@ -124,8 +124,11 @@ jobs:
   nightlies:
     strategy:
       matrix:
-        python-version: ["3.13"]
+        python-version: ["3.12"]
         os: [ubuntu-latest]
+    env:
+      KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+      KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ matrix.os }}
     steps:
@@ -143,15 +146,22 @@ jobs:
         run: uv pip install -e . --group tests --system
       - name: install-kaggle
         run: uv pip install kaggle --system
-      - name: Download Kaggle notebook artifact
-        env:
-          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
-          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+      - name: Check Polars Kaggle kernel status
+        id: kaggle_status
         run: |
-          kaggle kernels output "marcogorelli/variable-brink-glacier"
-      - name: install-polars
+          output=$(kaggle kernels status marcogorelli/variable-brink-glacier)
+          echo "Kaggle kernel status: $output"
+          if echo "$output" | grep -q "running"; then
+            echo "::set-output name=skip_install::true"
+            echo "skip_install=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip_install=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Install polars nightly
+        if: steps.kaggle_status.outputs.skip_install == 'false'
         run: |
           uv pip uninstall polars --system
+          kaggle kernels output "marcogorelli/variable-brink-glacier"
           python -m pip install *.whl
       - name: install-pandas-nightly
         run: |
