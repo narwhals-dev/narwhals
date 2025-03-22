@@ -78,7 +78,9 @@ class CompliantThen(
     Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT, CompliantExprT],
 ):
     _call: Callable[[CompliantFrameT], Sequence[CompliantSeriesOrNativeExprT]]
-    _when: CompliantWhen[CompliantFrameT, CompliantSeriesOrNativeExprT, CompliantExprT]
+    _when_value: CompliantWhen[
+        CompliantFrameT, CompliantSeriesOrNativeExprT, CompliantExprT
+    ]
     _function_name: str
     _implementation: Implementation
     _backend_version: tuple[int, ...]
@@ -91,19 +93,19 @@ class CompliantThen(
         when: CompliantWhen[
             CompliantFrameT, CompliantSeriesOrNativeExprT, CompliantExprT
         ],
-        then_value: CompliantExprT | CompliantSeriesOrNativeExprT | _Scalar,
+        then: CompliantExprT | CompliantSeriesOrNativeExprT | _Scalar,
         /,
     ) -> Self:
-        when._then_value = then_value
+        when._then_value = then
         obj = cls.__new__(cls)
         obj._call = when
-        obj._when = when
+        obj._when_value = when
         obj._depth = 0
         obj._function_name = "whenthen"
         obj._evaluate_output_names = getattr(
-            then_value, "_evaluate_output_names", lambda _df: ["literal"]
+            then, "_evaluate_output_names", lambda _df: ["literal"]
         )
-        obj._alias_output_names = getattr(then_value, "_alias_output_names", None)
+        obj._alias_output_names = getattr(then, "_alias_output_names", None)
         obj._implementation = when._implementation
         obj._backend_version = when._backend_version
         obj._version = when._version
@@ -111,8 +113,8 @@ class CompliantThen(
         return obj
 
     def otherwise(
-        self, value: CompliantExprT | CompliantSeriesOrNativeExprT | _Scalar, /
+        self, otherwise: CompliantExprT | CompliantSeriesOrNativeExprT | _Scalar, /
     ) -> CompliantExprT:
-        self._when._otherwise_value = value
+        self._when_value._otherwise_value = otherwise
         self._function_name = "whenotherwise"
         return cast("CompliantExprT", self)
