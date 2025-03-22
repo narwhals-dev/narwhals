@@ -49,19 +49,20 @@ with contextlib.suppress(ImportError):  # requires duckdb>=1.3.0
 class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     _implementation = Implementation.DUCKDB
     _depth = 0  # Unused, just for compatibility with CompliantExpr
+    _function_name = ""  # Unused, just for compatibility with CompliantExpr
 
     def __init__(
         self: Self,
         call: Callable[[DuckDBLazyFrame], Sequence[duckdb.Expression]],
         *,
-        function_name: str,
+        # Unused, just for compatibility with CompliantExpr
+        function_name: str = "",
         evaluate_output_names: Callable[[DuckDBLazyFrame], Sequence[str]],
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         backend_version: tuple[int, ...],
         version: Version,
     ) -> None:
         self._call = call
-        self._function_name = function_name
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._backend_version = backend_version

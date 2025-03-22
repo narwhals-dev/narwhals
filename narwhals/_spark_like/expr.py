@@ -41,12 +41,13 @@ if TYPE_CHECKING:
 
 class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     _depth = 0  # Unused, just for compatibility with CompliantExpr
+    _function_name = ""  # Unused, just for compatibility with CompliantExpr
 
     def __init__(
         self: Self,
         call: Callable[[SparkLikeLazyFrame], Sequence[Column]],
         *,
-        function_name: str,
+        function_name: str = "",
         evaluate_output_names: Callable[[SparkLikeLazyFrame], Sequence[str]],
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         backend_version: tuple[int, ...],
@@ -54,7 +55,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         implementation: Implementation,
     ) -> None:
         self._call = call
-        self._function_name = function_name
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._backend_version = backend_version
@@ -77,7 +77,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         return self.__class__(
             func,
-            function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
@@ -127,7 +126,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def _with_metadata(self, metadata: ExprMetadata) -> Self:
         expr = self.__class__(
             self._call,
-            function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
@@ -145,7 +143,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     ) -> Self:
         result = self.__class__(
             self._call,
-            function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
@@ -161,7 +158,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         evaluate_column_names: Callable[[SparkLikeLazyFrame], Sequence[str]],
         /,
         *,
-        function_name: str,
+        function_name: str = "",  # noqa: ARG003
         context: _FullContext,
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
@@ -169,7 +166,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         return cls(
             func,
-            function_name=function_name,
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
             backend_version=context._backend_version,
@@ -187,7 +183,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         return cls(
             func,
-            function_name="nth",
             evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
             alias_output_names=None,
             backend_version=context._backend_version,
@@ -214,7 +209,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         return self.__class__(
             func,
-            function_name=f"{self._function_name}->{expr_name}",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
@@ -340,7 +334,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         return self.__class__(
             self._call,
-            function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=alias_output_names,
             backend_version=self._backend_version,
@@ -535,7 +528,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         return self.__class__(
             func,
-            function_name=self._function_name + "->over",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,

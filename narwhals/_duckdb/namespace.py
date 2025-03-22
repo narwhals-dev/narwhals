@@ -120,7 +120,6 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
 
         return self._expr(
             call=func,
-            function_name="concat_str",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             backend_version=self._backend_version,
@@ -134,7 +133,6 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
 
         return self._expr(
             call=func,
-            function_name="all_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             backend_version=self._backend_version,
@@ -148,7 +146,6 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
 
         return self._expr(
             call=func,
-            function_name="or_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             backend_version=self._backend_version,
@@ -162,7 +159,6 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
 
         return self._expr(
             call=func,
-            function_name="max_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             backend_version=self._backend_version,
@@ -176,7 +172,6 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
 
         return self._expr(
             call=func,
-            function_name="min_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             backend_version=self._backend_version,
@@ -190,7 +185,6 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
 
         return self._expr(
             call=func,
-            function_name="sum_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             backend_version=self._backend_version,
@@ -209,7 +203,6 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
 
         return DuckDBExpr(
             call=func,
-            function_name="mean_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             backend_version=self._backend_version,
@@ -235,7 +228,6 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
 
         return self._expr(
             func,
-            function_name="lit",
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
             backend_version=self._backend_version,
@@ -248,7 +240,6 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
 
         return self._expr(
             call=func,
-            function_name="len",
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
             backend_version=self._backend_version,
@@ -289,7 +280,6 @@ class DuckDBWhen:
 
         return DuckDBThen(
             self,
-            function_name="whenthen",
             evaluate_output_names=getattr(
                 value, "_evaluate_output_names", lambda _df: ["literal"]
             ),
@@ -304,7 +294,7 @@ class DuckDBThen(DuckDBExpr):
         self: Self,
         call: DuckDBWhen,
         *,
-        function_name: str,
+        function_name: str = '',
         evaluate_output_names: Callable[[DuckDBLazyFrame], Sequence[str]],
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         backend_version: tuple[int, ...],
@@ -313,7 +303,6 @@ class DuckDBThen(DuckDBExpr):
         self._backend_version = backend_version
         self._version = version
         self._call = call
-        self._function_name = function_name
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
 
@@ -322,5 +311,4 @@ class DuckDBThen(DuckDBExpr):
         # callable object of type `DuckDBWhen`, base class has the attribute as
         # only a `Callable`
         self._call._otherwise_value = value  # type: ignore[attr-defined]
-        self._function_name = "whenotherwise"
         return self
