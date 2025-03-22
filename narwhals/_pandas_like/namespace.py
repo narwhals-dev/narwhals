@@ -19,7 +19,6 @@ from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_series_full_broadcast
 from narwhals._pandas_like.utils import diagonal_concat
-from narwhals._pandas_like.utils import extract_dataframe_comparand
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import vertical_concat
 from narwhals.utils import import_dtypes_module
@@ -328,10 +327,8 @@ class PandasWhen(CompliantWhen[PandasLikeDataFrame, PandasLikeSeries, PandasLike
         else:
             value_series = condition.alias("literal")._from_scalar(self._then_value)
             value_series._broadcast = True
-        value_series_native = extract_dataframe_comparand(
-            df._native_frame.index, value_series
-        )
 
+        value_series_native = df._extract_comparand(value_series)
         if self._otherwise_value is None:
             return [
                 value_series._from_native_series(
@@ -346,9 +343,8 @@ class PandasWhen(CompliantWhen[PandasLikeDataFrame, PandasLikeSeries, PandasLike
                 condition_native, self._otherwise_value
             )
             return [value_series._from_native_series(native_result)]
-        otherwise_series_native = extract_dataframe_comparand(
-            df._native_frame.index, otherwise_series
-        )
+
+        otherwise_series_native = df._extract_comparand(otherwise_series)
         return [
             value_series._from_native_series(
                 value_series_native.where(condition_native, otherwise_series_native)

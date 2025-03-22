@@ -18,7 +18,6 @@ from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import align_series_full_broadcast
 from narwhals._arrow.utils import cast_to_comparable_string_types
 from narwhals._arrow.utils import diagonal_concat
-from narwhals._arrow.utils import extract_dataframe_comparand
 from narwhals._arrow.utils import horizontal_concat
 from narwhals._arrow.utils import nulls_like
 from narwhals._arrow.utils import vertical_concat
@@ -303,9 +302,8 @@ class ArrowWhen(CompliantWhen[ArrowDataFrame, ArrowSeries, ArrowExpr]):
         else:
             value_series = condition.alias("literal")._from_scalar(self._then_value)
             value_series._broadcast = True
-        value_series_native = extract_dataframe_comparand(
-            len(df), value_series, self._backend_version
-        )
+
+        value_series_native = df._extract_comparand(value_series)
 
         if self._otherwise_value is None:
             otherwise_null = nulls_like(len(condition_native), value_series)
@@ -322,9 +320,7 @@ class ArrowWhen(CompliantWhen[ArrowDataFrame, ArrowSeries, ArrowExpr]):
             )
             return [value_series._from_native_series(native_result)]
 
-        otherwise_series_native = extract_dataframe_comparand(
-            len(df), otherwise_series, self._backend_version
-        )
+        otherwise_series_native = df._extract_comparand(otherwise_series)
         return [
             value_series._from_native_series(
                 pc.if_else(condition_native, value_series_native, otherwise_series_native)
