@@ -20,5 +20,7 @@ help:  ## Display this help screen
 
 .PHONY: typing
 typing: ## Run typing checks
+    # install duckdb nightly so mypy recognises duckdb.SQLExpression
+	$(VENV_BIN)/uv pip install -U --pre duckdb
 	$(VENV_BIN)/uv pip install -e . --group typing
 	$(VENV_BIN)/mypy

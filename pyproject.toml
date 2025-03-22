@@ -242,6 +242,7 @@ omit = [
   'narwhals/stable/v1/typing.py',
   'narwhals/this.py',
   'narwhals/_arrow/typing.py',
+  'narwhals/_duckdb/typing.py',
   'narwhals/_spark_like/typing.py',
   # we can't run this in every environment that we measure coverage on due to upper-bound constraits
   'narwhals/_ibis/*',

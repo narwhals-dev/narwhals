@@ -216,15 +216,12 @@ def test_to_datetime_tz_aware(
         pytest.skip()
     if is_pyarrow_windows_no_tzdata(constructor):
         pytest.skip()
-    if "sqlframe" in str(constructor):
-        # https://github.com/eakmanrq/sqlframe/issues/325
-        request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor):
         # cuDF does not yet support timezone-aware datetimes
         request.applymarker(pytest.mark.xfail)
     context = (
         pytest.raises(NotImplementedError)
-        if any(x in str(constructor) for x in ("duckdb", "sqlframe")) and format is None
+        if any(x in str(constructor) for x in ("duckdb",)) and format is None
         else does_not_raise()
     )
     df = nw.from_native(constructor({"a": ["2020-01-01T01:02:03+0100"]}))
