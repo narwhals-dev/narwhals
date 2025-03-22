@@ -216,9 +216,6 @@ def test_to_datetime_tz_aware(
         pytest.skip()
     if is_pyarrow_windows_no_tzdata(constructor):
         pytest.skip()
-    if "sqlframe" in str(constructor):
-        # https://github.com/eakmanrq/sqlframe/issues/325
-        request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor):
         # cuDF does not yet support timezone-aware datetimes
         request.applymarker(pytest.mark.xfail)
