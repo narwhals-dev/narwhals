@@ -534,6 +534,19 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             lambda _input: FunctionExpression("round", _input, lit(decimals)), "round"
         )
 
+    def shift(self, n: int) -> Self:
+        def func(
+            _input: duckdb.Expression,
+            partition_by: Sequence[str],
+            order_by: Sequence[str],
+        ) -> duckdb.Expression:
+            order_by_sql = generate_order_by_sql(*order_by, ascending=True)
+            partition_by_sql = generate_partition_by_sql(*partition_by)
+            sql = f"lag({_input}, {n}) over ({partition_by_sql} {order_by_sql})"
+            return SQLExpression(sql)
+
+        return self._with_window_function(func)
+
     def diff(self) -> Self:
         def func(
             _input: duckdb.Expression,
@@ -542,7 +555,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         ) -> duckdb.Expression:
             order_by_sql = generate_order_by_sql(*order_by, ascending=True)
             partition_by_sql = generate_partition_by_sql(*partition_by)
-            sql = f"lag({_input}) over ({partition_by_sql} {order_by_sql} rows between unbounded preceding and current row)"
+            sql = f"lag({_input}) over ({partition_by_sql} {order_by_sql})"
             return _input - SQLExpression(sql)
 
         return self._with_window_function(func)
@@ -624,7 +637,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
     drop_nulls = not_implemented()
     unique = not_implemented()
-    shift = not_implemented()
     is_unique = not_implemented()
     is_first_distinct = not_implemented()
     is_last_distinct = not_implemented()
