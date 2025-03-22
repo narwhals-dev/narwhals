@@ -23,18 +23,6 @@ when = duckdb.CaseExpression
 """Alias for `duckdb.CaseExpression`."""
 
 
-def maybe_evaluate_expr(
-    df: DuckDBLazyFrame, obj: DuckDBExpr | object
-) -> duckdb.Expression:
-    from narwhals._duckdb.expr import DuckDBExpr
-
-    if isinstance(obj, DuckDBExpr):
-        column_results = obj._call(df)
-        assert len(column_results) == 1  # debug assertion  # noqa: S101
-        return column_results[0]
-    return lit(obj)
-
-
 def evaluate_exprs(
     df: DuckDBLazyFrame, /, *exprs: DuckDBExpr
 ) -> list[tuple[str, duckdb.Expression]]:
