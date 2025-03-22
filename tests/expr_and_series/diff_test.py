@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -20,7 +21,7 @@ def test_diff(
 ) -> None:
     if "pyarrow_table_constructor" in str(constructor_eager) and PYARROW_VERSION < (13,):
         # pc.pairwisediff is available since pyarrow 13.0.0
-        pytest.mark.skip()
+        pytest.skip()
     df = nw.from_native(constructor_eager(data))
     result = df.with_columns(c_diff=nw.col("c").diff()).filter(nw.col("i") > 0)
     expected = {
@@ -35,7 +36,9 @@ def test_diff(
 def test_diff_lazy(constructor: Constructor) -> None:
     if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION < (13,):
         # pc.pairwisediff is available since pyarrow 13.0.0
-        pytest.mark.skip()
+        pytest.skip()
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+        pytest.skip()
     df = nw.from_native(constructor(data))
     result = df.with_columns(c_diff=nw.col("c").diff().over(_order_by="i")).filter(
         nw.col("i") > 0

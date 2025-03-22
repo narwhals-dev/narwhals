@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import pyarrow as pa
+import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -28,6 +30,8 @@ def test_shift(constructor_eager: ConstructorEager) -> None:
 
 
 def test_shift_lazy(constructor: Constructor) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+        pytest.skip()
     df = nw.from_native(constructor(data))
     result = df.with_columns(nw.col("a", "b", "c").shift(2).over(_order_by="i")).filter(
         nw.col("i") > 1

@@ -45,6 +45,8 @@ def test_is_last_distinct_expr_lazy_grouped(
     if any(x in str(constructor) for x in ("pandas", "pyarrow", "dask")):
         # non-elementary group-by agg
         request.applymarker(pytest.mark.xfail)
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+        pytest.skip()
 
     data = {"a": [1, 1, 2, 2, 2], "b": [1, 2, 2, 2, 1], "i": [0, 1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
@@ -63,6 +65,8 @@ def test_is_last_distinct_expr_lazy_grouped_nulls(
     if any(x in str(constructor) for x in ("pandas", "pyarrow", "dask")):
         # non-elementary group-by agg
         request.applymarker(pytest.mark.xfail)
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+        pytest.skip()
     data = {"a": [1, 1, 2, 2, 2], "b": [1, 2, 2, 2, 1], "i": [None, 1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
     result = (
