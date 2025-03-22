@@ -21,6 +21,7 @@ from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_name import DuckDBExprNameNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
 from narwhals._duckdb.expr_struct import DuckDBExprStructNamespace
+from narwhals._duckdb.utils import generate_order_by_sql
 from narwhals._duckdb.utils import generate_partition_by_sql
 from narwhals._duckdb.utils import lit
 from narwhals._duckdb.utils import maybe_evaluate_expr
@@ -102,8 +103,10 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             msg = "At least version 1.3 of DuckDB is required for binary operations between aggregates and columns."
             raise NotImplementedError(msg)
 
+        template = "{expr} over ()"
+
         def func(df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
-            return [SQLExpression(f"{result} over ()") for result in self(df)]
+            return [SQLExpression(template.format(expr=expr)) for expr in self(df)]
 
         return self.__class__(
             func,
@@ -492,11 +495,11 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
                 ]
         else:
             partition_by_sql = generate_partition_by_sql(*partition_by)
+            template = f"{{expr}} over ({partition_by_sql})"
 
             def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
                 return [
-                    SQLExpression(f"{expr} over ({partition_by_sql})")
-                    for expr in self._call(df)
+                    SQLExpression(template.format(expr=expr)) for expr in self._call(df)
                 ]
 
         return self.__class__(
@@ -537,14 +540,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             partition_by: Sequence[str],
             order_by: Sequence[str],
         ) -> duckdb.Expression:
-            if reverse:
-                order_by_sql = "order by " + ", ".join(
-                    f'"{x}" desc nulls last' for x in order_by
-                )
-            else:
-                order_by_sql = "order by " + ", ".join(
-                    f'"{x}" asc nulls first' for x in order_by
-                )
+            order_by_sql = generate_order_by_sql(*order_by, ascending=not reverse)
             partition_by_sql = generate_partition_by_sql(*partition_by)
             sql = f"sum ({_input}) over ({partition_by_sql} {order_by_sql} rows between unbounded preceding and current row)"
             return SQLExpression(sql)
@@ -566,15 +562,8 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             partition_by: Sequence[str],
             order_by: Sequence[str],
         ) -> duckdb.Expression:
-            order_by_sql = "order by " + ", ".join(
-                f'"{x}" asc nulls first' for x in order_by
-            )
-            if partition_by:
-                partition_by_sql = "partition by " + ",".join(
-                    f'"{x}"' for x in partition_by
-                )
-            else:
-                partition_by_sql = ""
+            order_by_sql = generate_order_by_sql(*order_by, ascending=True)
+            partition_by_sql = generate_partition_by_sql(*partition_by)
             window = f"({partition_by_sql} {order_by_sql} rows between {start} and {end})"
             sql = f"case when count({_input}) over {window} >= {min_samples} then sum({_input}) over {window} else null end"
             return SQLExpression(sql)
