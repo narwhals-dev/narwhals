@@ -209,7 +209,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 df = df.with_row_index(token).sort(
                     *order_by, descending=False, nulls_last=False
                 )
-                results = self(df.drop([token], strict=False))
+                results = self(df.drop([token], strict=True))
                 sorting_indices = df[token]
                 for s in results:
                     s._scatter_in_place(sorting_indices, s)

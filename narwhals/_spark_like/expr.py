@@ -155,6 +155,26 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         result._window_function = window_function
         return result
 
+    def _cum_window_func(
+        self: Self, *, reverse: bool, func_name: Literal["sum", "max", "min"]
+    ) -> WindowFunction:
+        def func(
+            _input: Column, partition_by: Sequence[str], order_by: Sequence[str]
+        ) -> Column:
+            if reverse:
+                order_by_cols = [self._F.col(x).desc_nulls_last() for x in order_by]
+            else:
+                order_by_cols = [self._F.col(x).asc_nulls_first() for x in order_by]
+            window = (
+                self._Window()
+                .partitionBy(list(partition_by))
+                .orderBy(order_by_cols)
+                .rowsBetween(self._Window().unboundedPreceding, 0)
+            )
+            return getattr(self._F, func_name)(_input).over(window)
+
+        return func
+
     @classmethod
     def from_column_names(
         cls: type[Self],
@@ -599,22 +619,19 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_window_function(func)
 
     def cum_sum(self, *, reverse: bool) -> Self:
-        def func(
-            _input: Column, partition_by: Sequence[str], order_by: Sequence[str]
-        ) -> Column:
-            if reverse:
-                order_by_cols = [self._F.col(x).desc_nulls_last() for x in order_by]
-            else:
-                order_by_cols = [self._F.col(x).asc_nulls_first() for x in order_by]
-            window = (
-                self._Window()
-                .partitionBy(list(partition_by))
-                .orderBy(order_by_cols)
-                .rowsBetween(self._Window().unboundedPreceding, 0)
-            )
-            return self._F.sum(_input).over(window)
+        return self._with_window_function(
+            self._cum_window_func(reverse=reverse, func_name="sum")
+        )
 
-        return self._with_window_function(func)
+    def cum_max(self, *, reverse: bool) -> Self:
+        return self._with_window_function(
+            self._cum_window_func(reverse=reverse, func_name="max")
+        )
+
+    def cum_min(self, *, reverse: bool) -> Self:
+        return self._with_window_function(
+            self._cum_window_func(reverse=reverse, func_name="min")
+        )
 
     def fill_null(
         self,
@@ -680,7 +697,5 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     drop_nulls = not_implemented()
     unique = not_implemented()
     cum_count = not_implemented()
-    cum_min = not_implemented()
-    cum_max = not_implemented()
     cum_prod = not_implemented()
     quantile = not_implemented()
