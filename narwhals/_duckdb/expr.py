@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import operator
 from typing import TYPE_CHECKING
 from typing import Any
@@ -12,7 +13,6 @@ from duckdb import CaseExpression
 from duckdb import CoalesceOperator
 from duckdb import ColumnExpression
 from duckdb import FunctionExpression
-from duckdb import SQLExpression
 from duckdb.typing import DuckDBPyType
 
 from narwhals._compliant import LazyExpr
@@ -40,6 +40,9 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
+
+with contextlib.suppress(ImportError):  # requires duckdb>=1.3.0
+    from duckdb import SQLExpression
 
 
 class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
