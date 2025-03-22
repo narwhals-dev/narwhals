@@ -121,14 +121,16 @@ def evaluate_output_names_and_aliases(
         if expr._alias_output_names is None
         else expr._alias_output_names(output_names)
     )
-    if (
-        exclude
-        and expr._metadata is not None
-        and expr._metadata.expansion_kind.is_multi_unnamed()
-    ):
-        output_names, aliases = zip(
-            *[(x, alias) for x, alias in zip(output_names, aliases) if x not in exclude]
-        )
+    if exclude:
+        assert expr._metadata is not None  # noqa: S101
+        if expr._metadata.expansion_kind.is_multi_unnamed():
+            output_names, aliases = zip(
+                *[
+                    (x, alias)
+                    for x, alias in zip(output_names, aliases)
+                    if x not in exclude
+                ]
+            )
     return output_names, aliases
 
 
