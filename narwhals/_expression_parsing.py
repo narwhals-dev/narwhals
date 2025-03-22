@@ -195,20 +195,20 @@ class ExpansionKind(Enum):
     SINGLE = auto()
     """e.g. `nw.col('a'), nw.sum_horizontal(nw.all())`"""
 
-    MULTINAMED = auto()
+    MULTI_NAMED = auto()
     """e.g. `nw.col('a', 'b')`"""
 
-    MULTIUNNAMED = auto()
+    MULTI_UNNAMED = auto()
     """e.g. `nw.all()`, nw.nth(0, 1)"""
 
     def is_multi_unnamed(self) -> bool:
-        return self is ExpansionKind.MULTIUNNAMED
+        return self is ExpansionKind.MULTI_UNNAMED
 
 
 def is_multi_output(
     expansion_kind: ExpansionKind,
-) -> TypeIs[Literal[ExpansionKind.MULTINAMED, ExpansionKind.MULTIUNNAMED]]:
-    return expansion_kind in {ExpansionKind.MULTINAMED, ExpansionKind.MULTIUNNAMED}
+) -> TypeIs[Literal[ExpansionKind.MULTI_NAMED, ExpansionKind.MULTI_UNNAMED]]:
+    return expansion_kind in {ExpansionKind.MULTI_NAMED, ExpansionKind.MULTI_UNNAMED}
 
 
 class ExprMetadata:
@@ -273,7 +273,7 @@ class ExprMetadata:
     def multi_output_selector_named() -> ExprMetadata:
         # e.g. `nw.col('a', 'b')`
         return ExprMetadata(
-            ExprKind.TRANSFORM, n_open_windows=0, expansion_kind=ExpansionKind.MULTINAMED
+            ExprKind.TRANSFORM, n_open_windows=0, expansion_kind=ExpansionKind.MULTI_NAMED
         )
 
     @staticmethod
@@ -282,7 +282,7 @@ class ExprMetadata:
         return ExprMetadata(
             ExprKind.TRANSFORM,
             n_open_windows=0,
-            expansion_kind=ExpansionKind.MULTIUNNAMED,
+            expansion_kind=ExpansionKind.MULTI_UNNAMED,
         )
 
 
