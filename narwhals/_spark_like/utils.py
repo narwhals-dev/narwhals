@@ -21,6 +21,8 @@ if TYPE_CHECKING:
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+    from typing import Sequence
+    from sqlframe.base.column import Column
 
     _NativeDType: TypeAlias = sqlframe_types.DataType
 
@@ -264,3 +266,20 @@ def import_window(implementation: Implementation, /) -> type[Any]:
     return import_module(
         f"sqlframe.{_BaseSession().execution_dialect_name}.window"
     ).Window
+
+
+def cum_window_func(
+    self, *, reverse: bool, func_name: str):
+    def func(_input: Column, partition_by: Sequence[str], order_by: Sequence[str]) -> Column:
+        if reverse:
+            order_by_cols = [self._F.col(x).desc_nulls_last() for x in order_by]
+        else:
+            order_by_cols = [self._F.col(x).asc_nulls_first() for x in order_by]
+        window = (
+            self._Window()
+            .partitionBy(list(partition_by))
+            .orderBy(order_by_cols)
+            .rowsBetween(self._Window().unboundedPreceding, 0)
+        )
+        return getattr(self._F, func_name)(_input).over(window)
+    return func

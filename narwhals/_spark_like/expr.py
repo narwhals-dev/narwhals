@@ -24,6 +24,7 @@ from narwhals.dependencies import get_pyspark
 from narwhals.utils import Implementation
 from narwhals.utils import not_implemented
 from narwhals.utils import parse_version
+from narwhals._spark_like.utils import cum_window_func
 
 if TYPE_CHECKING:
     from sqlframe.base.column import Column
@@ -556,22 +557,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._from_call(_is_nan, "is_nan")
 
     def cum_sum(self, *, reverse: bool) -> Self:
-        def func(
-            _input: Column, partition_by: Sequence[str], order_by: Sequence[str]
-        ) -> Column:
-            if reverse:
-                order_by_cols = [self._F.col(x).desc_nulls_last() for x in order_by]
-            else:
-                order_by_cols = [self._F.col(x).asc_nulls_first() for x in order_by]
-            window = (
-                self._Window()
-                .partitionBy(list(partition_by))
-                .orderBy(order_by_cols)
-                .rowsBetween(self._Window().unboundedPreceding, 0)
-            )
-            return self._F.sum(_input).over(window)
-
-        return self._with_window_function(func)
+        return self._with_window_function(cum_window_func(self=self, reverse=reverse, func_name='sum'))
 
     def fill_null(
         self,
