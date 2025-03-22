@@ -554,6 +554,16 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._from_call(_is_nan, "is_nan")
 
+    def diff(self) -> Self:
+        def func(
+            _input: Column, partition_by: Sequence[str], order_by: Sequence[str]
+        ) -> Column:
+            order_by_cols = [self._F.col(x).asc_nulls_first() for x in order_by]
+            window = self._Window().partitionBy(list(partition_by)).orderBy(order_by_cols)
+            return _input - self._F.lag(_input).over(window)
+
+        return self._with_window_function(func)
+
     def cum_sum(self, *, reverse: bool) -> Self:
         def func(
             _input: Column, partition_by: Sequence[str], order_by: Sequence[str]
@@ -634,7 +644,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return SparkLikeExprStructNamespace(self)
 
     drop_nulls = not_implemented()
-    diff = not_implemented()
     unique = not_implemented()
     shift = not_implemented()
     is_first_distinct = not_implemented()

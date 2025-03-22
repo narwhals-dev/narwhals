@@ -534,6 +534,19 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             lambda _input: FunctionExpression("round", _input, lit(decimals)), "round"
         )
 
+    def diff(self) -> Self:
+        def func(
+            _input: duckdb.Expression,
+            partition_by: Sequence[str],
+            order_by: Sequence[str],
+        ) -> duckdb.Expression:
+            order_by_sql = generate_order_by_sql(*order_by, ascending=True)
+            partition_by_sql = generate_partition_by_sql(*partition_by)
+            sql = f"lag({_input}) over ({partition_by_sql} {order_by_sql} rows between unbounded preceding and current row)"
+            return _input - SQLExpression(sql)
+
+        return self._with_window_function(func)
+
     def cum_sum(self, *, reverse: bool) -> Self:
         def func(
             _input: duckdb.Expression,
@@ -610,7 +623,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         return DuckDBExprStructNamespace(self)
 
     drop_nulls = not_implemented()
-    diff = not_implemented()
     unique = not_implemented()
     shift = not_implemented()
     is_unique = not_implemented()
