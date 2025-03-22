@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from sqlframe.base.window import Window
     from typing_extensions import Self
 
+    from narwhals._expression_parsing import ExprMetadata
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals._spark_like.typing import WindowFunction
@@ -60,6 +61,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         self._version = version
         self._implementation = implementation
         self._window_function: WindowFunction | None = None
+        self._metadata: ExprMetadata | None = None
 
     def __call__(self: Self, df: SparkLikeLazyFrame) -> Sequence[Column]:
         return self._call(df)
@@ -121,6 +123,37 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             version=self._version,
             implementation=self._implementation,
         )
+
+    def _with_metadata(self, metadata: ExprMetadata) -> Self:
+        expr = self.__class__(
+            self._call,
+            function_name=self._function_name,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
+        )
+        if func := self._window_function:
+            expr = expr._with_window_function(func)
+        expr._metadata = metadata
+        return expr
+
+    def _with_window_function(
+        self: Self,
+        window_function: WindowFunction,
+    ) -> Self:
+        result = self.__class__(
+            self._call,
+            function_name=self._function_name,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
+        )
+        result._window_function = window_function
+        return result
 
     @classmethod
     def from_column_names(
@@ -188,22 +221,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             version=self._version,
             implementation=self._implementation,
         )
-
-    def _with_window_function(
-        self: Self,
-        window_function: WindowFunction,
-    ) -> Self:
-        result = self.__class__(
-            self._call,
-            function_name=self._function_name,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
-            version=self._version,
-            implementation=self._implementation,
-        )
-        result._window_function = window_function
-        return result
 
     def __eq__(self: Self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
         return self._from_call(
@@ -498,7 +515,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def over(
         self: Self,
         partition_by: Sequence[str],
-        kind: ExprKind,
         order_by: Sequence[str] | None,
     ) -> Self:
         if (window_function := self._window_function) is not None:
