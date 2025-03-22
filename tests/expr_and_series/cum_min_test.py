@@ -143,7 +143,7 @@ def test_lazy_cum_min_ordered_by_nulls(
     ("reverse", "expected_a"),
     [
         (False, [1, 2, 1]),
-        (True, [1, 3, 3]),
+        (True, [1, 1, 3]),
     ],
 )
 def test_lazy_cum_min_ungrouped(
