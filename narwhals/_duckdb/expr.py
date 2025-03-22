@@ -21,6 +21,7 @@ from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_name import DuckDBExprNameNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
 from narwhals._duckdb.expr_struct import DuckDBExprStructNamespace
+from narwhals._duckdb.utils import generate_partition_by_sql
 from narwhals._duckdb.utils import lit
 from narwhals._duckdb.utils import maybe_evaluate_expr
 from narwhals._duckdb.utils import narwhals_to_native_dtype
@@ -487,12 +488,11 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
                     for expr in self._call(df)
                 ]
         else:
+            partition_by_sql = generate_partition_by_sql(*partition_by)
 
             def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
                 return [
-                    SQLExpression(
-                        f"{expr} over (partition by {', '.join([f'"{x}"' for x in partition_by])})"
-                    )
+                    SQLExpression(f"{expr} over {partition_by_sql}")
                     for expr in self._call(df)
                 ]
 
@@ -542,12 +542,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
                 order_by_sql = "order by " + ", ".join(
                     f'"{x}" asc nulls first' for x in order_by
                 )
-            if partition_by:
-                partition_by_sql = "partition by " + ",".join(
-                    f'"{x}"' for x in partition_by
-                )
-            else:
-                partition_by_sql = ""
+            partition_by_sql = generate_partition_by_sql(*partition_by)
             sql = f"sum ({_input}) over ({partition_by_sql} {order_by_sql} rows between unbounded preceding and current row)"
             return SQLExpression(sql)
 

@@ -189,3 +189,10 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
         return f"{duckdb_inner}{duckdb_shape_fmt}"
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
+
+
+def generate_partition_by_sql(*partition_by: str) -> str:
+    if not partition_by:
+        return ""
+    by_sql = ", ".join([f'"{x}"' for x in partition_by])
+    return f"(partition by {by_sql})"
