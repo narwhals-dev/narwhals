@@ -492,7 +492,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
             def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
                 return [
-                    SQLExpression(f"{expr} over {partition_by_sql}")
+                    SQLExpression(f"{expr} over ({partition_by_sql})")
                     for expr in self._call(df)
                 ]
 

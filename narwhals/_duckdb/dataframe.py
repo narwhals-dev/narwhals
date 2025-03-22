@@ -368,8 +368,8 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             query = f"""
                 with cte as (
                     select *,
-                           row_number() over {partition_by_sql} as {idx_name},
-                           count(*) over {partition_by_sql} as {count_name}
+                           row_number() over ({partition_by_sql}) as {idx_name},
+                           count(*) over ({partition_by_sql}) as {count_name}
                     from rel
                 )
                 select * exclude ({idx_name}, {count_name}) from cte {keep_condition}

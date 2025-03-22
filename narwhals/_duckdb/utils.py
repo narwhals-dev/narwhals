@@ -195,4 +195,4 @@ def generate_partition_by_sql(*partition_by: str) -> str:
     if not partition_by:
         return ""
     by_sql = ", ".join([f'"{x}"' for x in partition_by])
-    return f"(partition by {by_sql})"
+    return f"partition by {by_sql}"
