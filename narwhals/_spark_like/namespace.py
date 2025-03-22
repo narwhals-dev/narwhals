@@ -3,13 +3,12 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
 from typing import Iterable
 from typing import Literal
-from typing import Sequence
 
 from narwhals._compliant import CompliantNamespace
+from narwhals._compliant import CompliantThen
+from narwhals._compliant import CompliantWhen
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals._spark_like.dataframe import SparkLikeLazyFrame
@@ -284,82 +283,23 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "SparkLikeExpr
         )
 
     def when(self: Self, predicate: SparkLikeExpr) -> SparkLikeWhen:
-        return SparkLikeWhen(
-            predicate,
-            self._backend_version,
-            version=self._version,
-            implementation=self._implementation,
-        )
+        return SparkLikeWhen.from_expr(predicate, context=self)
 
 
-class SparkLikeWhen:
-    def __init__(
-        self: Self,
-        condition: SparkLikeExpr,
-        backend_version: tuple[int, ...],
-        then_value: Any | None = None,
-        otherwise_value: Any | None = None,
-        *,
-        version: Version,
-        implementation: Implementation,
-    ) -> None:
-        self._backend_version = backend_version
-        self._condition = condition
-        self._then_value = then_value
-        self._otherwise_value = otherwise_value
-        self._version = version
-        self._implementation = implementation
+class SparkLikeWhen(CompliantWhen[SparkLikeLazyFrame, "Column", SparkLikeExpr]):
+    @property
+    def _then(self) -> type[SparkLikeThen]:
+        return SparkLikeThen
 
     def __call__(self: Self, df: SparkLikeLazyFrame) -> list[Column]:
         condition = maybe_evaluate_expr(df, self._condition)
         then_value = maybe_evaluate_expr(df, self._then_value)
         if self._otherwise_value is None:
-            return [df._F.when(condition=condition, value=then_value)]
+            return [df._F.when(condition, then_value)]
         otherwise_value = maybe_evaluate_expr(df, self._otherwise_value)
-        return [
-            df._F.when(condition=condition, value=then_value).otherwise(otherwise_value)
-        ]
-
-    def then(self: Self, value: SparkLikeExpr | Any) -> SparkLikeThen:
-        self._then_value = value
-
-        return SparkLikeThen(
-            self,
-            function_name="whenthen",
-            evaluate_output_names=getattr(
-                value, "_evaluate_output_names", lambda _df: ["literal"]
-            ),
-            alias_output_names=getattr(value, "_alias_output_names", None),
-            backend_version=self._backend_version,
-            version=self._version,
-            implementation=self._implementation,
-        )
+        return [df._F.when(condition, then_value).otherwise(otherwise_value)]
 
 
-class SparkLikeThen(SparkLikeExpr):
-    def __init__(
-        self: Self,
-        call: SparkLikeWhen,
-        *,
-        function_name: str,
-        evaluate_output_names: Callable[[SparkLikeLazyFrame], Sequence[str]],
-        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
-        backend_version: tuple[int, ...],
-        version: Version,
-        implementation: Implementation,
-    ) -> None:
-        self._backend_version = backend_version
-        self._version = version
-        self._call = call
-        self._function_name = function_name
-        self._evaluate_output_names = evaluate_output_names
-        self._alias_output_names = alias_output_names
-        self._implementation = implementation
-
-    def otherwise(self: Self, value: SparkLikeExpr | Any) -> SparkLikeExpr:
-        # type ignore because we are setting the `_call` attribute to a
-        # callable object of type `SparkLikeWhen`, base class has the attribute as
-        # only a `Callable`
-        self._call._otherwise_value = value  # type: ignore[attr-defined]
-        self._function_name = "whenotherwise"
-        return self
+class SparkLikeThen(
+    CompliantThen[SparkLikeLazyFrame, "Column", SparkLikeExpr], SparkLikeExpr
+): ...

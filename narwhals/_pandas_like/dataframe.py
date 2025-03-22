@@ -17,15 +17,16 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_series_full_broadcast
 from narwhals._pandas_like.utils import check_column_names_are_unique
 from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
-from narwhals._pandas_like.utils import extract_dataframe_comparand
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
 from narwhals._pandas_like.utils import pivot_table
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
+from narwhals._pandas_like.utils import set_index
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
 from narwhals.utils import generate_temporary_column_name
@@ -148,6 +149,23 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             version=self._version,
             validate_column_names=validate_column_names,
         )
+
+    def _extract_comparand(self, other: PandasLikeSeries) -> pd.Series[Any]:
+        index = self.native.index
+        if other._broadcast:
+            s = other.native
+            return type(s)(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
+        if (len_other := len(other)) != (len_idx := len(index)):
+            msg = f"Expected object of length {len_idx}, got: {len_other}."
+            raise ShapeError(msg)
+        if other.native.index is not index:
+            return set_index(
+                other.native,
+                index,
+                implementation=other._implementation,
+                backend_version=other._backend_version,
+            )
+        return other.native
 
     def get_column(self: Self, name: str) -> PandasLikeSeries:
         return PandasLikeSeries(
@@ -450,8 +468,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         else:
             # `[0]` is safe as the predicate's expression only returns a single column
             mask = self._evaluate_into_exprs(predicate)[0]
-            mask_native = extract_dataframe_comparand(self.native.index, mask)
-
+            mask_native = self._extract_comparand(mask)
         return self._from_native_frame(
             self.native.loc[mask_native], validate_column_names=False
         )
@@ -459,7 +476,6 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
     def with_columns(
         self: PandasLikeDataFrame, *exprs: PandasLikeExpr
     ) -> PandasLikeDataFrame:
-        index = self.native.index
         new_columns = self._evaluate_into_exprs(*exprs)
         if not new_columns and len(self) == 0:
             return self
@@ -470,14 +486,12 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         for name in self.native.columns:
             if name in new_column_name_to_new_column_map:
                 to_concat.append(
-                    extract_dataframe_comparand(
-                        index, new_column_name_to_new_column_map.pop(name)
-                    )
+                    self._extract_comparand(new_column_name_to_new_column_map.pop(name))
                 )
             else:
                 to_concat.append(self.native[name])
         to_concat.extend(
-            extract_dataframe_comparand(index, new_column_name_to_new_column_map[s])
+            self._extract_comparand(new_column_name_to_new_column_map[s])
             for s in new_column_name_to_new_column_map
         )
 

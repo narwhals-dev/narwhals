@@ -5,7 +5,6 @@ from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Callable
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
@@ -19,10 +18,11 @@ from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import align_series_full_broadcast
 from narwhals._arrow.utils import cast_to_comparable_string_types
 from narwhals._arrow.utils import diagonal_concat
-from narwhals._arrow.utils import extract_dataframe_comparand
 from narwhals._arrow.utils import horizontal_concat
 from narwhals._arrow.utils import nulls_like
 from narwhals._arrow.utils import vertical_concat
+from narwhals._compliant import CompliantThen
+from narwhals._compliant import CompliantWhen
 from narwhals._compliant import EagerNamespace
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
@@ -30,16 +30,11 @@ from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
-    from typing import Callable
-
     from typing_extensions import Self
-    from typing_extensions import TypeAlias
 
     from narwhals._arrow.typing import Incomplete
     from narwhals.dtypes import DType
     from narwhals.utils import Version
-
-    _Scalar: TypeAlias = Any
 
 
 class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
@@ -253,7 +248,7 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
         return ArrowSelectorNamespace(self)
 
     def when(self: Self, predicate: ArrowExpr) -> ArrowWhen:
-        return ArrowWhen(predicate, self._backend_version, version=self._version)
+        return ArrowWhen.from_expr(predicate, context=self)
 
     def concat_str(
         self: Self,
@@ -293,34 +288,22 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
         )
 
 
-class ArrowWhen:
-    def __init__(
-        self: Self,
-        condition: ArrowExpr,
-        backend_version: tuple[int, ...],
-        then_value: ArrowExpr | _Scalar = None,
-        otherwise_value: ArrowExpr | _Scalar = None,
-        *,
-        version: Version,
-    ) -> None:
-        self._backend_version = backend_version
-        self._condition: ArrowExpr = condition
-        self._then_value: ArrowExpr | _Scalar = then_value
-        self._otherwise_value: ArrowExpr | _Scalar = otherwise_value
-        self._version = version
+class ArrowWhen(CompliantWhen[ArrowDataFrame, ArrowSeries, ArrowExpr]):
+    @property
+    def _then(self) -> type[ArrowThen]:
+        return ArrowThen
 
-    def __call__(self: Self, df: ArrowDataFrame) -> Sequence[ArrowSeries]:
+    def __call__(self, df: ArrowDataFrame, /) -> Sequence[ArrowSeries]:
         condition = self._condition(df)[0]
-        condition_native = condition._native_series
+        condition_native = condition.native
 
         if isinstance(self._then_value, ArrowExpr):
             value_series = self._then_value(df)[0]
         else:
             value_series = condition.alias("literal")._from_scalar(self._then_value)
             value_series._broadcast = True
-        value_series_native = extract_dataframe_comparand(
-            len(df), value_series, self._backend_version
-        )
+
+        value_series_native = df._extract_comparand(value_series)
 
         if self._otherwise_value is None:
             otherwise_null = nulls_like(len(condition_native), value_series)
@@ -337,55 +320,12 @@ class ArrowWhen:
             )
             return [value_series._from_native_series(native_result)]
 
-        otherwise_series_native = extract_dataframe_comparand(
-            len(df), otherwise_series, self._backend_version
-        )
+        otherwise_series_native = df._extract_comparand(otherwise_series)
         return [
             value_series._from_native_series(
                 pc.if_else(condition_native, value_series_native, otherwise_series_native)
             )
         ]
 
-    def then(self: Self, value: ArrowExpr | ArrowSeries | _Scalar) -> ArrowThen:
-        self._then_value = value
 
-        return ArrowThen(
-            self,
-            depth=0,
-            function_name="whenthen",
-            evaluate_output_names=getattr(
-                value, "_evaluate_output_names", lambda _df: ["literal"]
-            ),
-            alias_output_names=getattr(value, "_alias_output_names", None),
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-
-
-class ArrowThen(ArrowExpr):
-    def __init__(
-        self: Self,
-        call: ArrowWhen,
-        *,
-        depth: int,
-        function_name: str,
-        evaluate_output_names: Callable[[ArrowDataFrame], Sequence[str]],
-        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
-        backend_version: tuple[int, ...],
-        version: Version,
-        call_kwargs: dict[str, Any] | None = None,
-        implementation: Implementation | None = None,
-    ) -> None:
-        self._backend_version = backend_version
-        self._version = version
-        self._call: ArrowWhen = call
-        self._depth = depth
-        self._function_name = function_name
-        self._evaluate_output_names = evaluate_output_names
-        self._alias_output_names = alias_output_names
-        self._call_kwargs = call_kwargs or {}
-
-    def otherwise(self: Self, value: ArrowExpr | ArrowSeries | _Scalar) -> ArrowExpr:
-        self._call._otherwise_value = value
-        self._function_name = "whenotherwise"
-        return self
+class ArrowThen(CompliantThen[ArrowDataFrame, ArrowSeries, ArrowExpr], ArrowExpr): ...

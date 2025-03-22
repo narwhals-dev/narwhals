@@ -13,7 +13,6 @@ from typing import overload
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from narwhals.exceptions import ShapeError
 from narwhals.utils import _SeriesNamespace
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
@@ -278,26 +277,6 @@ def align_series_full_broadcast(*series: ArrowSeries) -> Sequence[ArrowSeries]:
             reshaped.append(s)
 
     return reshaped
-
-
-def extract_dataframe_comparand(
-    length: int,
-    other: ArrowSeries,
-    backend_version: tuple[int, ...],
-) -> ArrowChunkedArray:
-    """Extract native Series, broadcasting to `length` if necessary."""
-    if not other._broadcast:
-        if (len_other := len(other)) != length:
-            msg = f"Expected object of length {length}, got: {len_other}."
-            raise ShapeError(msg)
-        return other.native
-
-    import numpy as np  # ignore-banned-import
-
-    value = other.native[0]
-    if backend_version < (13,) and hasattr(value, "as_py"):
-        value = value.as_py()
-    return pa.chunked_array([np.full(shape=length, fill_value=value)])
 
 
 def horizontal_concat(dfs: list[pa.Table]) -> pa.Table:

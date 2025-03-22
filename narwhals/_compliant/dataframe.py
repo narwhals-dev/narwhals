@@ -300,3 +300,7 @@ class EagerDataFrame(
             msg = f"Safety assertion failed, expected {aliases}, got {result}"
             raise AssertionError(msg)
         return result
+
+    def _extract_comparand(self, other: EagerSeriesT, /) -> Any:
+        """Extract native Series, broadcasting to `len(self)` if necessary."""
+        ...
