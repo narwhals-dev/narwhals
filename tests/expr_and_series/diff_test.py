@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import DUCKDB_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
@@ -38,6 +39,8 @@ def test_diff_lazy(constructor: Constructor) -> None:
         # pc.pairwisediff is available since pyarrow 13.0.0
         pytest.skip()
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+        pytest.skip()
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     df = nw.from_native(constructor(data))
     result = df.with_columns(c_diff=nw.col("c").diff().over(_order_by="i")).filter(
