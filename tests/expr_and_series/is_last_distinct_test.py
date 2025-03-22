@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -36,8 +38,31 @@ def test_is_last_distinct_expr_lazy(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_is_last_distinct_expr_lazy_grouped(constructor: Constructor) -> None:
+def test_is_last_distinct_expr_lazy_grouped(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("pandas", "pyarrow", "dask")):
+        # non-elementary group-by agg
+        request.applymarker(pytest.mark.xfail)
+
     data = {"a": [1, 1, 2, 2, 2], "b": [1, 2, 2, 2, 1], "i": [0, 1, 2, 3, 4]}
+    df = nw.from_native(constructor(data))
+    result = (
+        df.select(nw.col("b").is_last_distinct().over("a", _order_by="i"), "i")
+        .sort("i")
+        .drop("i")
+    )
+    expected = {"b": [True, True, False, True, True]}
+    assert_equal_data(result, expected)
+
+
+def test_is_last_distinct_expr_lazy_grouped_nulls(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("pandas", "pyarrow", "dask")):
+        # non-elementary group-by agg
+        request.applymarker(pytest.mark.xfail)
+    data = {"a": [1, 1, 2, 2, 2], "b": [1, 2, 2, 2, 1], "i": [None, 1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
     result = (
         df.select(nw.col("b").is_last_distinct().over("a", _order_by="i"), "i")
