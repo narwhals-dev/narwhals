@@ -8,11 +8,11 @@ from typing import Literal
 from typing import Sequence
 from typing import cast
 
-import duckdb
 from duckdb import CaseExpression
 from duckdb import CoalesceOperator
 from duckdb import ColumnExpression
 from duckdb import FunctionExpression
+from duckdb import SQLExpression
 from duckdb.typing import DuckDBPyType
 
 from narwhals._compliant import LazyExpr
@@ -29,6 +29,7 @@ from narwhals.utils import Implementation
 from narwhals.utils import not_implemented
 
 if TYPE_CHECKING:
+    import duckdb
     from typing_extensions import Self
 
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
@@ -96,7 +97,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             raise NotImplementedError(msg)
 
         def func(df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
-            return [duckdb.SQLExpression(f"{result} over ()") for result in self(df)]
+            return [SQLExpression(f"{result} over ()") for result in self(df)]
 
         return self.__class__(
             func,
@@ -470,7 +471,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     def over(
         self: Self,
         partition_by: Sequence[str],
-        kind: ExprKind,
         order_by: Sequence[str] | None,
     ) -> Self:
         if self._backend_version < (1, 3):
@@ -488,9 +488,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
             def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
                 return [
-                    duckdb.SQLExpression(
-                        f"{expr} over (partition by {','.join(partition_by)})"
-                    )
+                    SQLExpression(f"{expr} over (partition by {','.join(partition_by)})")
                     for expr in self._call(df)
                 ]
 
@@ -547,7 +545,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             else:
                 partition_by_sql = ""
             sql = f"sum ({_input}) over ({partition_by_sql} {order_by_sql} rows between unbounded preceding and current row)"
-            return duckdb.SQLExpression(sql)
+            return SQLExpression(sql)
 
         return self._with_window_function(func)
 
@@ -577,7 +575,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
                 partition_by_sql = ""
             window = f"({partition_by_sql} {order_by_sql} rows between {start} and {end})"
             sql = f"case when count({_input}) over {window} >= {min_samples} then sum({_input}) over {window} else null end"
-            return duckdb.SQLExpression(sql)
+            return SQLExpression(sql)
 
         return self._with_window_function(func)
 
