@@ -237,7 +237,7 @@ def is_sqlframe_dataframe(df: Any) -> TypeIs[SQLFrameDataFrame]:
         from sqlframe.base.dataframe import BaseDataFrame
 
         return isinstance(df, BaseDataFrame)
-    return False
+    return False  # pragma: no cover
 
 
 def is_numpy_array(arr: Any | _NDArray[_ShapeT]) -> TypeIs[_NDArray[_ShapeT]]:
