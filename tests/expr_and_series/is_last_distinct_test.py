@@ -39,6 +39,24 @@ def test_is_last_distinct_expr_all(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
+def test_is_last_distinct_expr_lazy(constructor: Constructor) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+        pytest.skip()
+
+    data = {"a": [1, 1, 2, 2, 2], "b": [1, 2, 2, 2, 1], "i": [0, 1, 2, 3, 4]}
+    df = nw.from_native(constructor(data))
+    result = (
+        df.select(nw.col("a", "b").is_last_distinct().over(_order_by="i"), "i")
+        .sort("i")
+        .drop("i")
+    )
+    expected = {
+        "a": [False, True, False, False, True],
+        "b": [False, False, False, True, True],
+    }
+    assert_equal_data(result, expected)
+
+
 def test_is_last_distinct_expr_lazy_grouped(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
