@@ -12,16 +12,22 @@ from narwhals._compliant.typing import CompliantExprT
 from narwhals._compliant.typing import CompliantFrameT
 from narwhals._compliant.typing import EagerDataFrameT
 from narwhals._compliant.typing import EagerExprT
-from narwhals._compliant.typing import EagerSeriesT_co
+from narwhals._compliant.typing import EagerSeriesT
 from narwhals.utils import exclude_column_names
 from narwhals.utils import get_column_names
 from narwhals.utils import passthrough_column_names
 
 if TYPE_CHECKING:
+    from typing_extensions import TypeAlias
+
     from narwhals._compliant.selectors import CompliantSelectorNamespace
+    from narwhals._compliant.when_then import CompliantWhen
+    from narwhals._compliant.when_then import EagerWhen
     from narwhals.dtypes import DType
     from narwhals.utils import Implementation
     from narwhals.utils import Version
+
+    Incomplete: TypeAlias = Any
 
 __all__ = ["CompliantNamespace", "EagerNamespace"]
 
@@ -65,7 +71,9 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
         *,
         how: Literal["horizontal", "vertical", "diagonal"],
     ) -> CompliantFrameT: ...
-    def when(self, predicate: CompliantExprT) -> Any: ...
+    def when(
+        self, predicate: CompliantExprT
+    ) -> CompliantWhen[CompliantFrameT, Incomplete, CompliantExprT]: ...
     def concat_str(
         self,
         *exprs: CompliantExprT,
@@ -80,7 +88,10 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
 
 class EagerNamespace(
     CompliantNamespace[EagerDataFrameT, EagerExprT],
-    Protocol[EagerDataFrameT, EagerSeriesT_co, EagerExprT],
+    Protocol[EagerDataFrameT, EagerSeriesT, EagerExprT],
 ):
     @property
-    def _series(self) -> type[EagerSeriesT_co]: ...
+    def _series(self) -> type[EagerSeriesT]: ...
+    def when(
+        self, predicate: EagerExprT
+    ) -> EagerWhen[EagerDataFrameT, EagerSeriesT, EagerExprT, Incomplete]: ...
