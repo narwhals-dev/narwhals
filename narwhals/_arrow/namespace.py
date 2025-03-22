@@ -36,7 +36,6 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import Incomplete
     from narwhals.dtypes import DType
     from narwhals.utils import Version
-    from narwhals.utils import _FullContext
 
 
 class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
@@ -250,7 +249,7 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
         return ArrowSelectorNamespace(self)
 
     def when(self: Self, predicate: ArrowExpr) -> ArrowWhen:
-        return ArrowWhen(predicate, context=self)
+        return ArrowWhen.from_expr(predicate, context=self)
 
     def concat_str(
         self: Self,
@@ -331,14 +330,6 @@ class ArrowWhen(CompliantWhen[ArrowDataFrame, ArrowSeries, ArrowExpr]):
                 pc.if_else(condition_native, value_series_native, otherwise_series_native)
             )
         ]
-
-    def __init__(self, condition: ArrowExpr, /, *, context: _FullContext) -> None:
-        self._condition = condition
-        self._then_value = None
-        self._otherwise_value = None
-        self._implementation = context._implementation
-        self._backend_version = context._backend_version
-        self._version = context._version
 
 
 class ArrowThen(CompliantThen[ArrowDataFrame, ArrowSeries, ArrowExpr], ArrowExpr): ...

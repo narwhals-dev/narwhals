@@ -31,7 +31,6 @@ if TYPE_CHECKING:
 
     from narwhals.dtypes import DType
     from narwhals.utils import Version
-    from narwhals.utils import _FullContext
 
     try:
         import dask.dataframe.dask_expr as dx
@@ -259,7 +258,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, DaskExpr]):
         )
 
     def when(self: Self, predicate: DaskExpr) -> DaskWhen:
-        return DaskWhen(predicate, context=self)
+        return DaskWhen.from_expr(predicate, context=self)
 
     def concat_str(
         self: Self,
@@ -334,14 +333,6 @@ class DaskWhen(CompliantWhen[DaskLazyFrame, "dx.Series", DaskExpr]):
         (otherwise_series,) = align_series_full_broadcast(df, otherwise_value)
         validate_comparand(condition, otherwise_series)
         return [then_series.where(condition, otherwise_series)]  # pyright: ignore[reportArgumentType]
-
-    def __init__(self, condition: DaskExpr, /, *, context: _FullContext) -> None:
-        self._condition = condition
-        self._then_value = None
-        self._otherwise_value = None
-        self._implementation = context._implementation
-        self._backend_version = context._backend_version
-        self._version = context._version
 
 
 class DaskThen(CompliantThen[DaskLazyFrame, "dx.Series", DaskExpr], DaskExpr): ...

@@ -61,13 +61,16 @@ class CompliantWhen(
     ) -> CompliantThen[CompliantFrameT, CompliantSeriesOrNativeExprT, CompliantExprT]:
         return self._then.from_when(self, value)
 
-    def __init__(self, condition: CompliantExprT, /, *, context: _FullContext) -> None:
-        self._condition = condition
-        self._then_value = None
-        self._otherwise_value = None
-        self._implementation = context._implementation
-        self._backend_version = context._backend_version
-        self._version = context._version
+    @classmethod
+    def from_expr(cls, condition: CompliantExprT, /, *, context: _FullContext) -> Self:
+        obj = cls.__new__(cls)
+        obj._condition = condition
+        obj._then_value = None
+        obj._otherwise_value = None
+        obj._implementation = context._implementation
+        obj._backend_version = context._backend_version
+        obj._version = context._version
+        return obj
 
 
 class CompliantThen(

@@ -30,7 +30,6 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.utils import Implementation
     from narwhals.utils import Version
-    from narwhals.utils import _FullContext
 
 
 class PandasLikeNamespace(
@@ -263,7 +262,7 @@ class PandasLikeNamespace(
         raise NotImplementedError
 
     def when(self: Self, predicate: PandasLikeExpr) -> PandasWhen:
-        return PandasWhen(predicate, context=self)
+        return PandasWhen.from_expr(predicate, context=self)
 
     def concat_str(
         self: Self,
@@ -355,14 +354,6 @@ class PandasWhen(CompliantWhen[PandasLikeDataFrame, PandasLikeSeries, PandasLike
                 value_series_native.where(condition_native, otherwise_series_native)
             )
         ]
-
-    def __init__(self, condition: PandasLikeExpr, /, *, context: _FullContext) -> None:
-        self._condition = condition
-        self._then_value = None
-        self._otherwise_value = None
-        self._implementation = context._implementation
-        self._backend_version = context._backend_version
-        self._version = context._version
 
 
 class PandasThen(
