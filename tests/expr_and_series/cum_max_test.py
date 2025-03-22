@@ -60,8 +60,7 @@ def test_lazy_cum_max_grouped(
         # grouped window functions not yet supported
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
-        # bugged
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip(reason="probably bugged")
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
@@ -109,8 +108,7 @@ def test_lazy_cum_max_ordered_by_nulls(
         # grouped window functions not yet supported
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
-        # bugged
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip(reason="probably bugged")
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
@@ -162,10 +160,11 @@ def test_lazy_cum_max_ungrouped(
         # https://github.com/dask/dask/issues/11802
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
-        # probably bugged
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip(reason="probably bugged")
     if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
         pytest.skip(reason="too old version")
+    if PYARROW_VERSION < (13, 0, 0) and "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
         constructor(
@@ -204,10 +203,11 @@ def test_lazy_cum_max_ungrouped_ordered_by_nulls(
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
-        # probably bugged
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip(reason="probably bugged")
     if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
         pytest.skip(reason="too old version")
+    if PYARROW_VERSION < (13, 0, 0) and "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
         constructor(
