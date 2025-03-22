@@ -1580,7 +1580,7 @@ class Expr:
         next_meta = ExprMetadata(
             kind,
             n_open_windows=n_open_windows,
-            is_multi_output=current_meta.is_multi_output,
+            expansion_kind=current_meta.expansion_kind,
         )
 
         return self.__class__(

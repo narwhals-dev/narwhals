@@ -12,6 +12,7 @@ from typing import Sequence
 from typing import cast
 from typing import overload
 
+from narwhals._expression_parsing import ExpansionKind
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import apply_n_ary_operation
@@ -1195,7 +1196,7 @@ def col(*names: str | Iterable[str]) -> Expr:
         func,
         ExprMetadata.simple_selector()
         if len(flat_names) == 1
-        else ExprMetadata.multi_output_selector(),
+        else ExprMetadata.multi_output_selector_named(),
     )
 
 
@@ -1233,7 +1234,7 @@ def exclude(*names: str | Iterable[str]) -> Expr:
     def func(plx: Any) -> Any:
         return plx.exclude(exclude_names)
 
-    return Expr(func, ExprMetadata.multi_output_selector())
+    return Expr(func, ExprMetadata.multi_output_selector_unnamed())
 
 
 def nth(*indices: int | Sequence[int]) -> Expr:
@@ -1275,7 +1276,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
         func,
         ExprMetadata.simple_selector()
         if len(flat_indices) == 1
-        else ExprMetadata.multi_output_selector(),
+        else ExprMetadata.multi_output_selector_unnamed(),
     )
 
 
@@ -1300,7 +1301,7 @@ def all_() -> Expr:
         |   1  4  0.246    |
         └──────────────────┘
     """
-    return Expr(lambda plx: plx.all(), ExprMetadata.multi_output_selector())
+    return Expr(lambda plx: plx.all(), ExprMetadata.multi_output_selector_unnamed())
 
 
 # Add underscore so it doesn't conflict with builtin `len`
@@ -1334,7 +1335,10 @@ def len_() -> Expr:
         return plx.len()
 
     return Expr(
-        func, ExprMetadata(ExprKind.AGGREGATION, n_open_windows=0, is_multi_output=False)
+        func,
+        ExprMetadata(
+            ExprKind.AGGREGATION, n_open_windows=0, expansion_kind=ExpansionKind.SINGLE
+        ),
     )
 
 
@@ -1804,7 +1808,9 @@ def lit(value: Any, dtype: DType | type[DType] | None = None) -> Expr:
 
     return Expr(
         lambda plx: plx.lit(value, dtype),
-        ExprMetadata(ExprKind.LITERAL, n_open_windows=0, is_multi_output=False),
+        ExprMetadata(
+            ExprKind.LITERAL, n_open_windows=0, expansion_kind=ExpansionKind.SINGLE
+        ),
     )
 
 

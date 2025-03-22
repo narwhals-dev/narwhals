@@ -15,7 +15,7 @@ class SparkLikeExprStringNamespace:
         self._compliant_expr = expr
 
     def len_chars(self: Self) -> SparkLikeExpr:
-        return self._compliant_expr._from_call(self._compliant_expr._F.char_length, "len")
+        return self._compliant_expr._from_call(self._compliant_expr._F.char_length)
 
     def replace_all(
         self: Self, pattern: str, value: str, *, literal: bool
@@ -32,7 +32,7 @@ class SparkLikeExprStringNamespace:
                 self._compliant_expr._F.lit(value),  # pyright: ignore[reportArgumentType]
             )
 
-        return self._compliant_expr._from_call(func, "replace")
+        return self._compliant_expr._from_call(func)
 
     def strip_chars(self: Self, characters: str | None) -> SparkLikeExpr:
         import string
@@ -43,22 +43,20 @@ class SparkLikeExprStringNamespace:
                 _input, self._compliant_expr._F.lit(to_remove)
             )
 
-        return self._compliant_expr._from_call(func, "strip")
+        return self._compliant_expr._from_call(func)
 
     def starts_with(self: Self, prefix: str) -> SparkLikeExpr:
         return self._compliant_expr._from_call(
             lambda _input: self._compliant_expr._F.startswith(
                 _input, self._compliant_expr._F.lit(prefix)
-            ),
-            "starts_with",
+            )
         )
 
     def ends_with(self: Self, suffix: str) -> SparkLikeExpr:
         return self._compliant_expr._from_call(
             lambda _input: self._compliant_expr._F.endswith(
                 _input, self._compliant_expr._F.lit(suffix)
-            ),
-            "ends_with",
+            )
         )
 
     def contains(self: Self, pattern: str, *, literal: bool) -> SparkLikeExpr:
@@ -70,7 +68,7 @@ class SparkLikeExprStringNamespace:
             )
             return contains_func(_input, self._compliant_expr._F.lit(pattern))
 
-        return self._compliant_expr._from_call(func, "contains")
+        return self._compliant_expr._from_call(func)
 
     def slice(self: Self, offset: int, length: int | None) -> SparkLikeExpr:
         # From the docs: https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.substring.html
@@ -88,23 +86,18 @@ class SparkLikeExprStringNamespace:
             )
             return _input.substr(_offset, _length)
 
-        return self._compliant_expr._from_call(func, "slice")
+        return self._compliant_expr._from_call(func)
 
     def split(self: Self, by: str) -> SparkLikeExpr:
         return self._compliant_expr._from_call(
-            lambda _input: self._compliant_expr._F.split(_input, by),
-            "split",
+            lambda _input: self._compliant_expr._F.split(_input, by)
         )
 
     def to_uppercase(self: Self) -> SparkLikeExpr:
-        return self._compliant_expr._from_call(
-            self._compliant_expr._F.upper, "to_uppercase"
-        )
+        return self._compliant_expr._from_call(self._compliant_expr._F.upper)
 
     def to_lowercase(self: Self) -> SparkLikeExpr:
-        return self._compliant_expr._from_call(
-            self._compliant_expr._F.lower, "to_lowercase"
-        )
+        return self._compliant_expr._from_call(self._compliant_expr._F.lower)
 
     def to_datetime(self: Self, format: str | None) -> SparkLikeExpr:
         F = self._compliant_expr._F  # noqa: N806
@@ -119,7 +112,6 @@ class SparkLikeExprStringNamespace:
             function = partial(F.to_timestamp, format=format)
         return self._compliant_expr._from_call(
             lambda _input: function(F.replace(_input, F.lit("T"), F.lit(" "))),
-            "to_datetime",
         )
 
 

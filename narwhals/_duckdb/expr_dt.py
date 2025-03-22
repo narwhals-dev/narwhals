@@ -18,85 +18,79 @@ class DuckDBExprDateTimeNamespace:
 
     def year(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("year", _input), "year"
+            lambda _input: FunctionExpression("year", _input)
         )
 
     def month(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("month", _input), "month"
+            lambda _input: FunctionExpression("month", _input)
         )
 
     def day(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("day", _input), "day"
+            lambda _input: FunctionExpression("day", _input)
         )
 
     def hour(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("hour", _input), "hour"
+            lambda _input: FunctionExpression("hour", _input)
         )
 
     def minute(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("minute", _input), "minute"
+            lambda _input: FunctionExpression("minute", _input)
         )
 
     def second(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("second", _input), "second"
+            lambda _input: FunctionExpression("second", _input)
         )
 
     def millisecond(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("millisecond", _input)
             - FunctionExpression("second", _input) * lit(1_000),
-            "millisecond",
         )
 
     def microsecond(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("microsecond", _input)
             - FunctionExpression("second", _input) * lit(1_000_000),
-            "microsecond",
         )
 
     def nanosecond(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("nanosecond", _input)
             - FunctionExpression("second", _input) * lit(1_000_000_000),
-            "nanosecond",
         )
 
     def to_string(self: Self, format: str) -> DuckDBExpr:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("strftime", _input, lit(format)),
-            "to_string",
         )
 
     def weekday(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("isodow", _input), "weekday"
+            lambda _input: FunctionExpression("isodow", _input)
         )
 
     def ordinal_day(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("dayofyear", _input), "ordinal_day"
+            lambda _input: FunctionExpression("dayofyear", _input)
         )
 
     def date(self: Self) -> DuckDBExpr:
-        return self._compliant_expr._from_call(lambda _input: _input.cast("date"), "date")
+        return self._compliant_expr._from_call(lambda _input: _input.cast("date"))
 
     def total_minutes(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
             lambda _input: FunctionExpression("datepart", lit("minute"), _input),
-            "total_minutes",
         )
 
     def total_seconds(self: Self) -> DuckDBExpr:
         return self._compliant_expr._from_call(
             lambda _input: lit(60) * FunctionExpression("datepart", lit("minute"), _input)
             + FunctionExpression("datepart", lit("second"), _input),
-            "total_seconds",
         )
 
     def total_milliseconds(self: Self) -> DuckDBExpr:
@@ -104,7 +98,6 @@ class DuckDBExprDateTimeNamespace:
             lambda _input: lit(60_000)
             * FunctionExpression("datepart", lit("minute"), _input)
             + FunctionExpression("datepart", lit("millisecond"), _input),
-            "total_milliseconds",
         )
 
     def total_microseconds(self: Self) -> DuckDBExpr:
@@ -112,7 +105,6 @@ class DuckDBExprDateTimeNamespace:
             lambda _input: lit(60_000_000)
             * FunctionExpression("datepart", lit("minute"), _input)
             + FunctionExpression("datepart", lit("microsecond"), _input),
-            "total_microseconds",
         )
 
     def total_nanoseconds(self: Self) -> DuckDBExpr:

@@ -25,7 +25,6 @@ class SparkLikeSelectorNamespace(LazySelectorNamespace["SparkLikeLazyFrame", "Co
     ) -> SparkLikeSelector:
         return SparkLikeSelector(
             call,
-            function_name="selector",
             evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
@@ -43,7 +42,6 @@ class SparkLikeSelector(CompliantSelector["SparkLikeLazyFrame", "Column"], Spark
     def _to_expr(self: Self) -> SparkLikeExpr:
         return SparkLikeExpr(
             self._call,
-            function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,

@@ -147,7 +147,11 @@ class LazyGroupBy(
             else output_names
         )
         native_exprs = expr(self.compliant)
-        if expr._is_multi_output_agg():
+        assert expr._metadata is not None  # noqa: S101
+        if expr._metadata.expansion_kind.is_multi_unnamed():
+            # Exclude keys from expansion. For example, in
+            # `df.group_by('a').agg(nw.all().sum())`, column 'a' only appears in the
+            # output as a grouping key - is does not get included in `nw.all().sum()`.
             for native_expr, name, alias in zip(native_exprs, output_names, aliases):
                 if name not in self._keys:
                     yield native_expr.alias(alias)
