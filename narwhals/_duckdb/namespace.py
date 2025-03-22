@@ -17,7 +17,7 @@ from duckdb.typing import VARCHAR
 
 from narwhals._compliant import CompliantNamespace
 from narwhals._compliant import CompliantThen
-from narwhals._compliant import CompliantWhen
+from narwhals._compliant.when_then import LazyWhen
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.selectors import DuckDBSelectorNamespace
 from narwhals._duckdb.utils import lit
@@ -253,23 +253,15 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
         )
 
 
-class DuckDBWhen(CompliantWhen["DuckDBLazyFrame", duckdb.Expression, DuckDBExpr]):
+class DuckDBWhen(LazyWhen["DuckDBLazyFrame", duckdb.Expression, DuckDBExpr]):
     @property
     def _then(self) -> type[DuckDBThen]:
         return DuckDBThen
 
     def __call__(self: Self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
-        is_expr = self._condition._is_expr
-        condition = df._evaluate_expr(self._condition)
-        then_ = self._then_value
-        then = df._evaluate_expr(then_) if is_expr(then_) else lit(then_)
-        other_ = self._otherwise_value
-        if other_ is None:
-            result = when(condition, then)
-        else:
-            otherwise = df._evaluate_expr(other_) if is_expr(other_) else lit(other_)
-            result = when(condition, then).otherwise(otherwise)
-        return [result]
+        self.when = when
+        self.lit = lit
+        return super().__call__(df)
 
 
 class DuckDBThen(

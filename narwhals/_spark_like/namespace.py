@@ -5,16 +5,16 @@ from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Iterable
 from typing import Literal
+from typing import Sequence
 
 from narwhals._compliant import CompliantNamespace
 from narwhals._compliant import CompliantThen
-from narwhals._compliant import CompliantWhen
+from narwhals._compliant.when_then import LazyWhen
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 from narwhals._spark_like.expr import SparkLikeExpr
 from narwhals._spark_like.selectors import SparkLikeSelectorNamespace
-from narwhals._spark_like.utils import maybe_evaluate_expr
 from narwhals._spark_like.utils import narwhals_to_native_dtype
 
 if TYPE_CHECKING:
@@ -286,18 +286,15 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "SparkLikeExpr
         return SparkLikeWhen.from_expr(predicate, context=self)
 
 
-class SparkLikeWhen(CompliantWhen[SparkLikeLazyFrame, "Column", SparkLikeExpr]):
+class SparkLikeWhen(LazyWhen[SparkLikeLazyFrame, "Column", SparkLikeExpr]):
     @property
     def _then(self) -> type[SparkLikeThen]:
         return SparkLikeThen
 
-    def __call__(self: Self, df: SparkLikeLazyFrame) -> list[Column]:
-        condition = maybe_evaluate_expr(df, self._condition)
-        then_value = maybe_evaluate_expr(df, self._then_value)
-        if self._otherwise_value is None:
-            return [df._F.when(condition, then_value)]
-        otherwise_value = maybe_evaluate_expr(df, self._otherwise_value)
-        return [df._F.when(condition, then_value).otherwise(otherwise_value)]
+    def __call__(self: Self, df: SparkLikeLazyFrame) -> Sequence[Column]:
+        self.when = df._F.when
+        self.lit = df._F.lit
+        return super().__call__(df)
 
 
 class SparkLikeThen(

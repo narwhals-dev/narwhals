@@ -11,10 +11,13 @@ from typing import cast
 from narwhals._compliant.expr import CompliantExpr
 from narwhals._compliant.typing import CompliantExprAny
 from narwhals._compliant.typing import CompliantFrameAny
+from narwhals._compliant.typing import CompliantLazyFrameT
 from narwhals._compliant.typing import CompliantSeriesOrNativeExprAny
 from narwhals._compliant.typing import EagerDataFrameT
 from narwhals._compliant.typing import EagerExprT
 from narwhals._compliant.typing import EagerSeriesT
+from narwhals._compliant.typing import LazyExprAny
+from narwhals._compliant.typing import NativeExprT
 from narwhals._compliant.typing import NativeSeriesT
 
 if TYPE_CHECKING:
@@ -38,6 +41,7 @@ else:  # pragma: no cover
 __all__ = ["CompliantThen", "CompliantWhen", "EagerWhen"]
 
 ExprT = TypeVar("ExprT", bound=CompliantExprAny)
+LazyExprT = TypeVar("LazyExprT", bound=LazyExprAny)
 SeriesT = TypeVar("SeriesT", bound=CompliantSeriesOrNativeExprAny)
 FrameT = TypeVar("FrameT", bound=CompliantFrameAny)
 
@@ -142,3 +146,26 @@ class EagerWhen(
             otherwise = self._otherwise_value
         result = self._if_then_else(when.native, df._extract_comparand(then), otherwise)
         return [then._from_native_series(result)]
+
+
+class LazyWhen(
+    CompliantWhen[CompliantLazyFrameT, NativeExprT, LazyExprT],
+    Protocol38[CompliantLazyFrameT, NativeExprT, LazyExprT],
+):
+    when: Callable[..., NativeExprT]
+    lit: Callable[..., NativeExprT]
+
+    def __call__(self: Self, df: CompliantLazyFrameT) -> Sequence[NativeExprT]:
+        is_expr = self._condition._is_expr
+        when = self.when
+        lit = self.lit
+        condition = df._evaluate_expr(self._condition)
+        then_ = self._then_value
+        then = df._evaluate_expr(then_) if is_expr(then_) else lit(then_)
+        other_ = self._otherwise_value
+        if other_ is None:
+            result = when(condition, then)
+        else:
+            otherwise = df._evaluate_expr(other_) if is_expr(other_) else lit(other_)
+            result = when(condition, then).otherwise(otherwise)  # type: ignore  # noqa: PGH003
+        return [result]
