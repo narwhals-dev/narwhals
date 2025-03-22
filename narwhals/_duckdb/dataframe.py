@@ -366,8 +366,8 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             query = f"""
                 with cte as (
                     select *,
-                           row_number() over (partition by {",".join(subset)}) as {idx_name},
-                           count(*) over (partition by {",".join(subset)}) as {count_name}
+                           row_number() over (partition by {",".join([f'"{x}"' for x in subset])}) as {idx_name},
+                           count(*) over (partition by {",".join([f'"{x}"' for x in subset])}) as {count_name}
                     from rel
                 )
                 select * exclude ({idx_name}, {count_name}) from cte {keep_condition}
