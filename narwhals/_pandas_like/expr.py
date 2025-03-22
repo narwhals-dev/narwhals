@@ -7,7 +7,6 @@ from typing import Literal
 from typing import Sequence
 
 from narwhals._compliant import EagerExpr
-from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._expression_parsing import is_elementary_expression
 from narwhals._pandas_like.group_by import PandasLikeGroupBy
@@ -18,6 +17,7 @@ from narwhals.utils import generate_temporary_column_name
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals._expression_parsing import ExprMetadata
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.utils import Implementation
@@ -89,6 +89,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         self._backend_version = backend_version
         self._version = version
         self._call_kwargs = call_kwargs or {}
+        self._metadata: ExprMetadata | None = None
 
     def __narwhals_namespace__(self: Self) -> PandasLikeNamespace:
         from narwhals._pandas_like.namespace import PandasLikeNamespace
@@ -196,7 +197,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
     def over(
         self: Self,
         partition_by: Sequence[str],
-        kind: ExprKind,
         order_by: Sequence[str] | None,
     ) -> Self:
         if not partition_by:
