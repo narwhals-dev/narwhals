@@ -294,7 +294,7 @@ class DuckDBThen(DuckDBExpr):
         self: Self,
         call: DuckDBWhen,
         *,
-        function_name: str = '',
+        function_name: str = "",
         evaluate_output_names: Callable[[DuckDBLazyFrame], Sequence[str]],
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
         backend_version: tuple[int, ...],
