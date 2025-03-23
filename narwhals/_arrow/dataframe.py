@@ -508,7 +508,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
 
         return pl.from_arrow(self.native)  # type: ignore[return-value]
 
-    def to_numpy(self: Self) -> _2DArray:
+    def to_numpy(self: Self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
         import numpy as np  # ignore-banned-import
 
         arr: Any = np.column_stack([col.to_numpy() for col in self.native.columns])
