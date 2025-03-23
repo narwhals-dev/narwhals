@@ -4,6 +4,7 @@ import re
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Sequence
 
 import duckdb
 
@@ -21,6 +22,32 @@ lit = duckdb.ConstantExpression
 
 when = duckdb.CaseExpression
 """Alias for `duckdb.CaseExpression`."""
+
+
+class WindowInputs:
+    __slots__ = ("expr", "order_by", "partition_by")
+
+    def __init__(
+        self,
+        expr: duckdb.Expression,
+        partition_by: Sequence[str],
+        order_by: Sequence[str],
+    ) -> None:
+        self.expr = expr
+        self.partition_by = partition_by
+        self.order_by = order_by
+
+
+def maybe_evaluate_expr(
+    df: DuckDBLazyFrame, obj: DuckDBExpr | object
+) -> duckdb.Expression:
+    from narwhals._duckdb.expr import DuckDBExpr
+
+    if isinstance(obj, DuckDBExpr):
+        column_results = obj._call(df)
+        assert len(column_results) == 1  # debug assertion  # noqa: S101
+        return column_results[0]
+    return lit(obj)
 
 
 def evaluate_exprs(

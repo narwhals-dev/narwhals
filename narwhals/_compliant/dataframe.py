@@ -300,8 +300,8 @@ class EagerDataFrame(
         """
         _, aliases = evaluate_output_names_and_aliases(expr, self, [])
         result = expr(self)
-        if list(aliases) != [s.name for s in result]:
-            msg = f"Safety assertion failed, expected {aliases}, got {result}"
+        if list(aliases) != (result_aliases := [s.name for s in result]):
+            msg = f"Safety assertion failed, expected {aliases}, got {result_aliases}"
             raise AssertionError(msg)
         return result
 
