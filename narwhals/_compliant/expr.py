@@ -93,6 +93,19 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def __narwhals_namespace__(
         self,
     ) -> CompliantNamespace[CompliantFrameT, Self]: ...
+    @classmethod
+    def from_column_names(
+        cls,
+        evaluate_column_names: Callable[[CompliantFrameT], Sequence[str]],
+        /,
+        *,
+        context: _FullContext,
+        **kwds: Any,
+    ) -> Self: ...
+    @classmethod
+    def from_column_indices(
+        cls: type[Self], *column_indices: int, context: _FullContext
+    ) -> Self: ...
 
     def _with_metadata(self, metadata: ExprMetadata) -> Self: ...
 
