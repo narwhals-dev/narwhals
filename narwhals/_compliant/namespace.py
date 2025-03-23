@@ -81,8 +81,6 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
     def _expr(self) -> type[CompliantExprT]: ...
 
 
-# Implement common to `Arrow`, `Dask`, `Pandas`
-# Use directly for `DaskNamespace`
 class DepthTrackingNamespace(
     CompliantNamespace[CompliantFrameT, DepthTrackingExprT],
     Protocol[CompliantFrameT, DepthTrackingExprT],
