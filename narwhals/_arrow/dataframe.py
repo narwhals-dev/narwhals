@@ -367,7 +367,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             )
         names = [s.name for s in new_series]
         reshaped = align_series_full_broadcast(*new_series)
-        df = pa.Table.from_arrays([s._native_series for s in reshaped], names=names)
+        df = pa.Table.from_arrays([s.native for s in reshaped], names=names)
         return self._from_native_frame(df, validate_column_names=True)
 
     def _extract_comparand(self, other: ArrowSeries) -> ArrowChunkedArray:

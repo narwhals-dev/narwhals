@@ -261,13 +261,13 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         return self._from_native_series(pc.divide(*cast_for_truediv(other, ser)))  # pyright: ignore[reportArgumentType]
 
     def __mod__(self: Self, other: Any) -> Self:
-        floor_div = (self // other)._native_series
+        floor_div = (self // other).native
         ser, other = extract_native(self, other)
         res = pc.subtract(ser, pc.multiply(floor_div, other))
         return self._from_native_series(res)
 
     def __rmod__(self: Self, other: Any) -> Self:
-        floor_div = (other // self)._native_series
+        floor_div = (other // self).native
         ser, other = extract_native(self, other)
         res = pc.subtract(other, pc.multiply(floor_div, ser))
         return self._from_native_series(res)
@@ -924,11 +924,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         )
 
         result = self._from_native_series(
-            pc.if_else(
-                (count_in_window >= min_samples)._native_series,
-                rolling_sum._native_series,
-                None,
-            )
+            pc.if_else((count_in_window >= min_samples).native, rolling_sum.native, None)
         )
         return result[offset:]
 
@@ -960,9 +956,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         result = (
             self._from_native_series(
                 pc.if_else(
-                    (count_in_window >= min_samples)._native_series,
-                    rolling_sum._native_series,
-                    None,
+                    (count_in_window >= min_samples).native, rolling_sum.native, None
                 )
             )
             / count_in_window
@@ -1012,13 +1006,11 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
 
         result = self._from_native_series(
             pc.if_else(
-                (count_in_window >= min_samples)._native_series,
-                (rolling_sum_sq - (rolling_sum**2 / count_in_window))._native_series,
+                (count_in_window >= min_samples).native,
+                (rolling_sum_sq - (rolling_sum**2 / count_in_window)).native,
                 None,
             )
-        ) / self._from_native_series(
-            max_element_wise((count_in_window - ddof)._native_series, 0)
-        )
+        ) / self._from_native_series(max_element_wise((count_in_window - ddof).native, 0))
 
         return result[offset:]
 
