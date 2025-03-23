@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import string
 from typing import TYPE_CHECKING
-from typing import Any
 
 import pyarrow.compute as pc
 
@@ -11,11 +10,9 @@ from narwhals._arrow.utils import lit
 from narwhals._arrow.utils import parse_datetime_format
 
 if TYPE_CHECKING:
-    import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals._arrow.series import ArrowSeries
-    from narwhals._arrow.typing import Incomplete
 
 
 class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
@@ -63,10 +60,7 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
 
     def to_datetime(self: Self, format: str | None) -> ArrowSeries:
         format = parse_datetime_format(self.native) if format is None else format
-        strptime: Incomplete = pc.strptime
-        timestamp_array: pa.Array[pa.TimestampScalar[Any, Any]] = strptime(
-            self.native, format=format, unit="us"
-        )
+        timestamp_array = pc.strptime(self.native, format=format, unit="us")
         return self.from_native(timestamp_array)
 
     def to_uppercase(self: Self) -> ArrowSeries:

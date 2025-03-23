@@ -27,8 +27,6 @@ if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import ArrowArray
     from narwhals._arrow.typing import ArrowChunkedArray
-    from narwhals._arrow.typing import Incomplete
-    from narwhals._arrow.typing import StringArray
     from narwhals.dtypes import DType
     from narwhals.typing import _AnyDArray
     from narwhals.utils import Version
@@ -90,8 +88,7 @@ def nulls_like(n: int, series: ArrowSeries) -> ArrowArray:
 
     Uses the type of `series`, without upseting `mypy`.
     """
-    nulls: Incomplete = pa.nulls
-    return nulls(n, series._type)
+    return pa.nulls(n, series.native.type)
 
 
 @lru_cache(maxsize=16)
@@ -344,7 +341,6 @@ def floordiv_compat(left: Any, right: Any) -> Any:
             )
             result = pc.if_else(
                 pc.and_(has_remainder, has_one_negative_operand),
-                # GH: 55561 ruff: ignore
                 pc.subtract(divided, lit(1, type=divided.type)),
                 divided,
             )
@@ -474,8 +470,8 @@ def parse_datetime_format(arr: ArrowChunkedArray) -> str:
         msg = "Found multiple timezone values while inferring datetime format."
         raise ValueError(msg)
 
-    date_value = _parse_date_format(cast("StringArray", matches.field("date")))
-    time_value = _parse_time_format(cast("StringArray", matches.field("time")))
+    date_value = _parse_date_format(cast("pc.StringArray", matches.field("date")))
+    time_value = _parse_time_format(cast("pc.StringArray", matches.field("time")))
 
     sep_value = separators[0].as_py()
     tz_value = "%z" if tz[0].as_py() else ""
@@ -483,7 +479,7 @@ def parse_datetime_format(arr: ArrowChunkedArray) -> str:
     return f"{date_value}{sep_value}{time_value}{tz_value}"
 
 
-def _parse_date_format(arr: StringArray) -> str:
+def _parse_date_format(arr: pc.StringArray) -> str:
     for date_rgx, date_fmt in DATE_FORMATS:
         matches = pc.extract_regex(arr, pattern=date_rgx)
         if date_fmt == "%Y%m%d" and pc.all(matches.is_valid()).as_py():
@@ -503,7 +499,7 @@ def _parse_date_format(arr: StringArray) -> str:
     raise ValueError(msg)
 
 
-def _parse_time_format(arr: StringArray) -> str:
+def _parse_time_format(arr: pc.StringArray) -> str:
     for time_rgx, time_fmt in TIME_FORMATS:
         matches = pc.extract_regex(arr, pattern=time_rgx)
         if pc.all(matches.is_valid()).as_py():
