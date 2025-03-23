@@ -592,7 +592,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             )
             partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
             sql = (
-                f"sum ({window_inputs.expr}) over ({partition_by_sql} {order_by_sql}"
+                f"sum ({window_inputs.expr}) over ({partition_by_sql} {order_by_sql} "
                 "rows between unbounded preceding and current row)"
             )
             return SQLExpression(sql)
