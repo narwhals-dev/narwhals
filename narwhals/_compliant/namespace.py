@@ -7,10 +7,10 @@ from typing import Container
 from typing import Iterable
 from typing import Literal
 from typing import Protocol
-from typing import TypeVar
 
 from narwhals._compliant.typing import CompliantExprT
 from narwhals._compliant.typing import CompliantFrameT
+from narwhals._compliant.typing import DepthTrackingExprT
 from narwhals._compliant.typing import EagerDataFrameT
 from narwhals._compliant.typing import EagerExprT
 from narwhals._compliant.typing import EagerSeriesT
@@ -21,7 +21,6 @@ from narwhals.utils import passthrough_column_names
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
-    from narwhals._compliant.expr import DepthTrackingExpr
     from narwhals._compliant.selectors import CompliantSelectorNamespace
     from narwhals._compliant.when_then import CompliantWhen
     from narwhals._compliant.when_then import EagerWhen
@@ -32,9 +31,6 @@ if TYPE_CHECKING:
     Incomplete: TypeAlias = Any
 
 __all__ = ["CompliantNamespace", "EagerNamespace"]
-
-DepthTrackingExprAny: TypeAlias = "DepthTrackingExpr[Any, Any]"
-DepthTrackingExprT = TypeVar("DepthTrackingExprT", bound=DepthTrackingExprAny)
 
 
 class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
