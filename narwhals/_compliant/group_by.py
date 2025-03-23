@@ -17,6 +17,8 @@ from narwhals._compliant.typing import CompliantDataFrameT_co
 from narwhals._compliant.typing import CompliantExprT_contra
 from narwhals._compliant.typing import CompliantFrameT_co
 from narwhals._compliant.typing import CompliantLazyFrameT_co
+from narwhals._compliant.typing import DepthTrackingExprAny
+from narwhals._compliant.typing import DepthTrackingExprT_contra
 from narwhals._compliant.typing import EagerExprT_contra
 from narwhals._compliant.typing import LazyExprT_contra
 from narwhals._compliant.typing import NativeExprT_co
@@ -24,7 +26,6 @@ from narwhals._compliant.typing import NativeExprT_co
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
-    from narwhals._compliant.expr import DepthTrackingExpr
 
 if not TYPE_CHECKING:  # pragma: no cover
     if sys.version_info >= (3, 9):
@@ -50,10 +51,6 @@ NativeAggregationT_co = TypeVar(
 NarwhalsAggregation: TypeAlias = Literal[
     "sum", "mean", "median", "max", "min", "std", "var", "len", "n_unique", "count"
 ]
-DepthTrackingExprAny: TypeAlias = "DepthTrackingExpr[Any, Any]"
-DepthTrackingExprT_contra = TypeVar(
-    "DepthTrackingExprT_contra", bound=DepthTrackingExprAny, contravariant=True
-)
 
 
 _RE_LEAF_NAME: re.Pattern[str] = re.compile(r"(\w+->)")
