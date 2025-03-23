@@ -20,6 +20,9 @@ if TYPE_CHECKING:
 lit = duckdb.ConstantExpression
 """Alias for `duckdb.ConstantExpression`."""
 
+when = duckdb.CaseExpression
+"""Alias for `duckdb.CaseExpression`."""
+
 
 class WindowInputs:
     __slots__ = ("expr", "order_by", "partition_by")
@@ -33,18 +36,6 @@ class WindowInputs:
         self.expr = expr
         self.partition_by = partition_by
         self.order_by = order_by
-
-
-def maybe_evaluate_expr(
-    df: DuckDBLazyFrame, obj: DuckDBExpr | object
-) -> duckdb.Expression:
-    from narwhals._duckdb.expr import DuckDBExpr
-
-    if isinstance(obj, DuckDBExpr):
-        column_results = obj._call(df)
-        assert len(column_results) == 1  # debug assertion  # noqa: S101
-        return column_results[0]
-    return lit(obj)
 
 
 def evaluate_exprs(

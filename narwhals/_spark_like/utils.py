@@ -192,16 +192,6 @@ def evaluate_exprs(
     return native_results
 
 
-def maybe_evaluate_expr(df: SparkLikeLazyFrame, obj: SparkLikeExpr | object) -> Column:
-    from narwhals._spark_like.expr import SparkLikeExpr
-
-    if isinstance(obj, SparkLikeExpr):
-        column_results = obj._call(df)
-        assert len(column_results) == 1  # debug assertion  # noqa: S101
-        return column_results[0]
-    return df._F.lit(obj)
-
-
 def _std(
     column: Column,
     ddof: int,

@@ -19,7 +19,6 @@ from narwhals._spark_like.utils import WindowInputs
 from narwhals._spark_like.utils import import_functions
 from narwhals._spark_like.utils import import_native_dtypes
 from narwhals._spark_like.utils import import_window
-from narwhals._spark_like.utils import maybe_evaluate_expr
 from narwhals._spark_like.utils import narwhals_to_native_dtype
 from narwhals.dependencies import get_pyspark
 from narwhals.utils import Implementation
@@ -214,9 +213,10 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         **expressifiable_args: Self | Any,
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            native_series_list = self._call(df)
+            native_series_list = self(df)
+            lit = df._F.lit
             other_native_series = {
-                key: maybe_evaluate_expr(df, value)
+                key: df._evaluate_expr(value) if self._is_expr(value) else lit(value)
                 for key, value in expressifiable_args.items()
             }
             return [
