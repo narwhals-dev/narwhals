@@ -48,7 +48,6 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import ArrowArray
     from narwhals._arrow.typing import ArrowChunkedArray
     from narwhals._arrow.typing import Incomplete
-    from narwhals._arrow.typing import Indices  # type: ignore[attr-defined]
     from narwhals._arrow.typing import NullPlacement
     from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
     from narwhals._arrow.typing import TieBreaker
@@ -421,7 +420,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         result = pc.replace_with_mask(
             self.native,
             cast("list[bool]", mask),
-            values_native.take(cast("Indices", indices_native)),
+            values_native.take(indices_native),
         )
         return self._from_native_series(result)
 
@@ -836,13 +835,10 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         if self._backend_version < (13, 0, 0):
             msg = "cum_min method is not supported for pyarrow < 13.0.0"
             raise NotImplementedError(msg)
-
-        native_series = cast("Any", self.native)
-
         result = (
-            pc.cumulative_min(native_series, skip_nulls=True)
+            pc.cumulative_min(self.native, skip_nulls=True)
             if not reverse
-            else pc.cumulative_min(native_series[::-1], skip_nulls=True)[::-1]
+            else pc.cumulative_min(self.native[::-1], skip_nulls=True)[::-1]
         )
         return self._from_native_series(result)
 
@@ -850,13 +846,10 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         if self._backend_version < (13, 0, 0):
             msg = "cum_max method is not supported for pyarrow < 13.0.0"
             raise NotImplementedError(msg)
-
-        native_series = cast("Any", self.native)
-
         result = (
-            pc.cumulative_max(native_series, skip_nulls=True)
+            pc.cumulative_max(self.native, skip_nulls=True)
             if not reverse
-            else pc.cumulative_max(native_series[::-1], skip_nulls=True)[::-1]
+            else pc.cumulative_max(self.native[::-1], skip_nulls=True)[::-1]
         )
         return self._from_native_series(result)
 
@@ -864,13 +857,10 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         if self._backend_version < (13, 0, 0):
             msg = "cum_max method is not supported for pyarrow < 13.0.0"
             raise NotImplementedError(msg)
-
-        native_series = cast("Any", self.native)
-
         result = (
-            pc.cumulative_prod(native_series, skip_nulls=True)
+            pc.cumulative_prod(self.native, skip_nulls=True)
             if not reverse
-            else pc.cumulative_prod(native_series[::-1], skip_nulls=True)[::-1]
+            else pc.cumulative_prod(self.native[::-1], skip_nulls=True)[::-1]
         )
         return self._from_native_series(result)
 
@@ -1092,8 +1082,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             )
             # empty bin intervals should have a 0 count
             counts_coalesce = cast(
-                "ArrowArray",
-                pc.coalesce(cast("ArrowArray", counts.column("counts")), lit(0)),
+                "ArrowArray", pc.coalesce(counts.column("counts"), lit(0))
             )
             counts = counts.set_column(0, "counts", counts_coalesce)
 
