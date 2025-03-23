@@ -35,7 +35,7 @@ result. To make them well-defined, you need to follow them with `over` in which
 you specify `order_by`. For example:
 
 - `nw.col('a').cum_sum()` can only be executed by a `DataFrame`.
-- `nw.col('a').cum_sum().order_by('i')` can only be executed by either a `DataFrame`
+- `nw.col('a').cum_sum().over(order_by="i")` can only be executed by either a `DataFrame`
   or a `LazyFrame`.
 
 ```python exec="1" result="python" session="order_dependence" source="above"
