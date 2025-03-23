@@ -84,8 +84,6 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     _version: Version
     _evaluate_output_names: Callable[[CompliantFrameT], Sequence[str]]
     _alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None
-    _depth: int
-    _function_name: str
     _metadata: ExprMetadata | None
 
     def __call__(
@@ -263,15 +261,39 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     ) -> Self: ...
 
 
+class DepthTrackingExpr(
+    CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
+    Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
+):
+    _depth: int
+    _function_name: str
+
+    def _is_elementary(self) -> bool:
+        """Check if expr is elementary.
+
+        Examples:
+            - nw.col('a').mean()  # depth 1
+            - nw.mean('a')  # depth 1
+            - nw.len()  # depth 0
+
+        as opposed to, say
+
+            - nw.col('a').filter(nw.col('b')>nw.col('c')).max()
+
+        Elementary expressions are the only ones supported properly in
+        pandas, PyArrow, and Dask.
+        """
+        return self._depth < 2
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"{type(self).__name__}(depth={self._depth}, function_name={self._function_name})"
+
+
 class EagerExpr(
-    CompliantExpr[EagerDataFrameT, EagerSeriesT],
+    DepthTrackingExpr[EagerDataFrameT, EagerSeriesT],
     Protocol38[EagerDataFrameT, EagerSeriesT],
 ):
     _call: Callable[[EagerDataFrameT], Sequence[EagerSeriesT]]
-    _depth: int
-    _function_name: str
-    _evaluate_output_names: Any
-    _alias_output_names: Any
     _call_kwargs: dict[str, Any]
 
     def __init__(
@@ -290,9 +312,6 @@ class EagerExpr(
 
     def __call__(self, df: EagerDataFrameT) -> Sequence[EagerSeriesT]:
         return self._call(df)
-
-    def __repr__(self) -> str:  # pragma: no cover
-        return f"{type(self).__name__}(depth={self._depth}, function_name={self._function_name})"
 
     def __narwhals_namespace__(
         self,

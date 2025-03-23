@@ -48,8 +48,6 @@ with contextlib.suppress(ImportError):  # requires duckdb>=1.3.0
 
 class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     _implementation = Implementation.DUCKDB
-    _depth = 0  # Unused, just for compatibility with CompliantExpr
-    _function_name = ""  # Unused, just for compatibility with CompliantExpr
 
     def __init__(
         self: Self,

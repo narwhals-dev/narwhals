@@ -46,24 +46,6 @@ def is_expr(obj: Any) -> TypeIs[Expr]:
     return isinstance(obj, Expr)
 
 
-def is_elementary_expression(expr: CompliantExpr[Any, Any]) -> bool:
-    """Check if expr is elementary.
-
-    Examples:
-        - nw.col('a').mean()  # depth 1
-        - nw.mean('a')  # depth 1
-        - nw.len()  # depth 0
-
-    as opposed to, say
-
-        - nw.col('a').filter(nw.col('b')>nw.col('c')).max()
-
-    Elementary expressions are the only ones supported properly in
-    pandas, PyArrow, and Dask.
-    """
-    return expr._depth < 2
-
-
 def combine_evaluate_output_names(
     *exprs: CompliantExpr[CompliantFrameT, Any],
 ) -> Callable[[CompliantFrameT], Sequence[str]]:

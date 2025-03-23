@@ -8,7 +8,6 @@ from typing import Sequence
 
 from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._expression_parsing import is_elementary_expression
 from narwhals._pandas_like.group_by import PandasLikeGroupBy
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals.exceptions import ColumnNotFoundError
@@ -214,7 +213,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 for s in results:
                     s._scatter_in_place(sorting_indices, s)
                 return results
-        elif not is_elementary_expression(self):
+        elif not self._is_elementary():
             msg = (
                 "Only elementary expressions are supported for `.over` in pandas-like backends.\n\n"
                 "Please see: "

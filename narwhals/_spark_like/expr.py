@@ -40,9 +40,6 @@ if TYPE_CHECKING:
 
 
 class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
-    _depth = 0  # Unused, just for compatibility with CompliantExpr
-    _function_name = ""  # Unused, just for compatibility with CompliantExpr
-
     def __init__(
         self: Self,
         call: Callable[[SparkLikeLazyFrame], Sequence[Column]],
