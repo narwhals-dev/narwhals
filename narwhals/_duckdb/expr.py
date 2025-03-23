@@ -563,7 +563,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
     def is_last_distinct(self) -> Self:
         def func(window_inputs: WindowInputs) -> duckdb.Expression:
-            order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=True)
+            order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=False)
             if window_inputs.partition_by:
                 partition_by_sql = (
                     generate_partition_by_sql(*window_inputs.partition_by)
@@ -571,7 +571,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
                 )
             else:
                 partition_by_sql = f"partition by {window_inputs.expr}"
-            sql = f"row_number() over({partition_by_sql} {order_by_sql}) == count(*) over ({partition_by_sql})"
+            sql = f"row_number() over({partition_by_sql} {order_by_sql}) == 1"
             return SQLExpression(sql)
 
         return self._with_window_function(func)
