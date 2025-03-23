@@ -13,18 +13,19 @@ from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 from narwhals.utils import parse_version
 
-try:
-    import dask.dataframe.dask_expr as dx
-except ModuleNotFoundError:  # pragma: no cover
-    import dask_expr as dx
-
 if TYPE_CHECKING:
     import dask.dataframe as dd
+import dask.dataframe.dask_expr as dx
 
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.expr import DaskExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+else:
+    try:
+        import dask.dataframe.dask_expr as dx
+    except ModuleNotFoundError:  # pragma: no cover
+        import dask_expr as dx
 
 
 def maybe_evaluate_expr(df: DaskLazyFrame, obj: DaskExpr | object) -> dx.Series | object:
@@ -75,11 +76,6 @@ def add_row_index(
 
 
 def validate_comparand(lhs: dx.Series, rhs: dx.Series) -> None:
-    try:
-        import dask.dataframe.dask_expr as dx
-    except ModuleNotFoundError:  # pragma: no cover
-        import dask_expr as dx
-
     if not dx.expr.are_co_aligned(lhs._expr, rhs._expr):  # pragma: no cover
         # are_co_aligned is a method which cheaply checks if two Dask expressions
         # have the same index, and therefore don't require index alignment.

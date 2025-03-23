@@ -27,15 +27,11 @@ from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
+    import dask.dataframe.dask_expr as dx
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
     from narwhals.utils import Version
-
-    try:
-        import dask.dataframe.dask_expr as dx
-    except ModuleNotFoundError:  # pragma: no cover
-        import dask_expr as dx
 
 
 class DaskNamespace(DepthTrackingNamespace[DaskLazyFrame, "DaskExpr"]):
