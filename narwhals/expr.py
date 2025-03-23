@@ -1520,16 +1520,18 @@ class Expr:
 
     def over(
         self: Self,
-        *partition_by: str | Iterable[str],
-        _order_by: str | None = None,
+        *partition_by: str | Sequence[str],
+        order_by: str | Sequence[str] | None = None,
     ) -> Self:
-        """Compute expressions over the given groups.
+        """Compute expressions over the given groups (optionally with given order).
 
         Arguments:
             partition_by: Names of columns to compute window expression over.
                 Must be names of columns, as opposed to expressions -
                 so, this is a bit less flexible than Polars' `Expr.over`.
-            _order_by: Unused, but this is building up to something.
+            order_by: Column(s) to order window functions by. For lazy-only
+                backends, this argument is required when applying `over` to
+                order-dependent expressions (such as `Expr.cum_sum` or `Expr.diff`).
 
         Returns:
             A new expression.
@@ -1567,14 +1569,14 @@ class Expr:
             raise LengthChangingExprError(msg)
 
         flat_partition_by = flatten(partition_by)
-        order_by = [_order_by] if isinstance(_order_by, str) else _order_by
-        if not flat_partition_by and not _order_by:  # pragma: no cover
+        flat_order_by = [order_by] if isinstance(order_by, str) else order_by
+        if not flat_partition_by and not flat_order_by:  # pragma: no cover
             msg = "At least one of `partition_by` or `order_by` must be specified."
             raise ValueError(msg)
 
         kind = ExprKind.TRANSFORM
         n_open_windows = self._metadata.n_open_windows
-        if _order_by is not None and self._metadata.kind.is_window():
+        if flat_order_by is not None and self._metadata.kind.is_window():
             n_open_windows -= 1
         current_meta = self._metadata
         next_meta = ExprMetadata(
@@ -1586,7 +1588,7 @@ class Expr:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx)
             ._with_metadata(current_meta)
-            .over(flat_partition_by, order_by),
+            .over(flat_partition_by, flat_order_by),
             next_meta,
         )
 

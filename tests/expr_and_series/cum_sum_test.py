@@ -69,7 +69,7 @@ def test_lazy_cum_sum_grouped(
         )
     )
     result = df.with_columns(
-        nw.col("arg entina").cum_sum(reverse=reverse).over("g", _order_by="ban gkock")
+        nw.col("arg entina").cum_sum(reverse=reverse).over("g", order_by="ban gkock")
     ).sort("i ran")
     expected = {"arg entina": expected_a, "ban gkock": [1, 0, 2], "i ran": [0, 1, 2]}
     assert_equal_data(result, expected)
@@ -117,7 +117,7 @@ def test_lazy_cum_sum_ordered_by_nulls(
         )
     )
     result = df.with_columns(
-        nw.col("arg entina").cum_sum(reverse=reverse).over("g", _order_by="ban gkock")
+        nw.col("arg entina").cum_sum(reverse=reverse).over("g", order_by="ban gkock")
     ).sort("i ran")
     expected = {
         "arg entina": expected_a,
@@ -162,7 +162,7 @@ def test_lazy_cum_sum_ungrouped(
         )
     ).sort("i ran")
     result = df.with_columns(
-        nw.col("arg entina").cum_sum(reverse=reverse).over(_order_by="ban gkock")
+        nw.col("arg entina").cum_sum(reverse=reverse).over(order_by="ban gkock")
     ).sort("i ran")
     expected = {"arg entina": expected_a, "ban gkock": [1, 0, 2], "i ran": [0, 1, 2]}
     assert_equal_data(result, expected)
@@ -203,7 +203,7 @@ def test_lazy_cum_sum_ungrouped_ordered_by_nulls(
         )
     ).sort("i ran")
     result = df.with_columns(
-        nw.col("arg entina").cum_sum(reverse=reverse).over(_order_by="ban gkock")
+        nw.col("arg entina").cum_sum(reverse=reverse).over(order_by="ban gkock")
     ).sort("i ran")
     expected = {
         "arg entina": expected_a,

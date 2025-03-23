@@ -81,7 +81,7 @@ def test_lazy_cum_min_grouped(
         )
     )
     result = df.with_columns(
-        nw.col("a").cum_min(reverse=reverse).over("g", _order_by="b")
+        nw.col("a").cum_min(reverse=reverse).over("g", order_by="b")
     ).sort("i")
     expected = {"a": expected_a, "b": [1, 0, 2], "i": [0, 1, 2]}
     assert_equal_data(result, expected)
@@ -129,7 +129,7 @@ def test_lazy_cum_min_ordered_by_nulls(
         )
     )
     result = df.with_columns(
-        nw.col("a").cum_min(reverse=reverse).over("g", _order_by="b")
+        nw.col("a").cum_min(reverse=reverse).over("g", order_by="b")
     ).sort("i")
     expected = {
         "a": expected_a,
@@ -176,7 +176,7 @@ def test_lazy_cum_min_ungrouped(
         )
     ).sort("i")
     result = df.with_columns(
-        nw.col("a").cum_min(reverse=reverse).over(_order_by="b")
+        nw.col("a").cum_min(reverse=reverse).over(order_by="b")
     ).sort("i")
     expected = {"a": expected_a, "b": [1, 0, 2], "i": [0, 1, 2]}
     assert_equal_data(result, expected)
@@ -219,7 +219,7 @@ def test_lazy_cum_min_ungrouped_ordered_by_nulls(
         )
     ).sort("i")
     result = df.with_columns(
-        nw.col("a").cum_min(reverse=reverse).over(_order_by="b")
+        nw.col("a").cum_min(reverse=reverse).over(order_by="b")
     ).sort("i")
     expected = {
         "a": expected_a,

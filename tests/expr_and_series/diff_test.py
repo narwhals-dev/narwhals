@@ -43,7 +43,7 @@ def test_diff_lazy(constructor: Constructor) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     df = nw.from_native(constructor(data))
-    result = df.with_columns(c_diff=nw.col("c").diff().over(_order_by="i")).filter(
+    result = df.with_columns(c_diff=nw.col("c").diff().over(order_by="i")).filter(
         nw.col("i") > 0
     )
     expected = {
