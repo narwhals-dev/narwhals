@@ -9,7 +9,7 @@ from typing import Sequence
 
 from narwhals._compliant import CompliantNamespace
 from narwhals._compliant import CompliantThen
-from narwhals._compliant.when_then import LazyWhen
+from narwhals._compliant import LazyWhen
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals._spark_like.dataframe import SparkLikeLazyFrame

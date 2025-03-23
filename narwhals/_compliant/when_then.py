@@ -38,7 +38,7 @@ else:  # pragma: no cover
     # - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
     from typing import Protocol as Protocol38
 
-__all__ = ["CompliantThen", "CompliantWhen", "EagerWhen"]
+__all__ = ["CompliantThen", "CompliantWhen", "EagerWhen", "LazyWhen"]
 
 ExprT = TypeVar("ExprT", bound=CompliantExprAny)
 LazyExprT = TypeVar("LazyExprT", bound=LazyExprAny)

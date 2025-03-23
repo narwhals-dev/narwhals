@@ -17,7 +17,7 @@ from duckdb.typing import VARCHAR
 
 from narwhals._compliant import CompliantNamespace
 from narwhals._compliant import CompliantThen
-from narwhals._compliant.when_then import LazyWhen
+from narwhals._compliant import LazyWhen
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.selectors import DuckDBSelectorNamespace
 from narwhals._duckdb.utils import lit
