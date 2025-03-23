@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import operator
-from functools import partial
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
-from typing import Container
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
@@ -19,9 +17,6 @@ from narwhals._spark_like.expr import SparkLikeExpr
 from narwhals._spark_like.selectors import SparkLikeSelectorNamespace
 from narwhals._spark_like.utils import maybe_evaluate_expr
 from narwhals._spark_like.utils import narwhals_to_native_dtype
-from narwhals.utils import exclude_column_names
-from narwhals.utils import get_column_names
-from narwhals.utils import passthrough_column_names
 
 if TYPE_CHECKING:
     from sqlframe.base.column import Column
@@ -51,23 +46,6 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "SparkLikeExpr
     @property
     def _expr(self) -> type[SparkLikeExpr]:
         return SparkLikeExpr
-
-    def col(self, *column_names: str) -> SparkLikeExpr:
-        return self._expr.from_column_names(
-            passthrough_column_names(column_names), context=self
-        )
-
-    def all(self) -> SparkLikeExpr:
-        return self._expr.from_column_names(get_column_names, context=self)
-
-    def exclude(self, excluded_names: Container[str]) -> SparkLikeExpr:
-        return self._expr.from_column_names(
-            partial(exclude_column_names, names=excluded_names),
-            context=self,
-        )
-
-    def nth(self, *column_indices: int) -> SparkLikeExpr:
-        return self._expr.from_column_indices(*column_indices, context=self)
 
     def lit(self: Self, value: object, dtype: DType | None) -> SparkLikeExpr:
         def _lit(df: SparkLikeLazyFrame) -> list[Column]:

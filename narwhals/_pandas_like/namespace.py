@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import operator
-from functools import partial
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
-from typing import Container
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
@@ -23,10 +21,7 @@ from narwhals._pandas_like.utils import diagonal_concat
 from narwhals._pandas_like.utils import extract_dataframe_comparand
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import vertical_concat
-from narwhals.utils import exclude_column_names
-from narwhals.utils import get_column_names
 from narwhals.utils import import_dtypes_module
-from narwhals.utils import passthrough_column_names
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -64,27 +59,6 @@ class PandasLikeNamespace(
         self._implementation = implementation
         self._backend_version = backend_version
         self._version = version
-
-    # --- selection ---
-    def all(self) -> PandasLikeExpr:
-        return self._expr.from_column_names(
-            get_column_names, function_name="all", context=self
-        )
-
-    def col(self, *column_names: str) -> PandasLikeExpr:
-        return self._expr.from_column_names(
-            passthrough_column_names(column_names), function_name="col", context=self
-        )
-
-    def exclude(self, excluded_names: Container[str]) -> PandasLikeExpr:
-        return self._expr.from_column_names(
-            partial(exclude_column_names, names=excluded_names),
-            function_name="exclude",
-            context=self,
-        )
-
-    def nth(self, *column_indices: int) -> PandasLikeExpr:
-        return self._expr.from_column_indices(*column_indices, context=self)
 
     def lit(self: Self, value: Any, dtype: DType | None) -> PandasLikeExpr:
         def _lit_pandas_series(df: PandasLikeDataFrame) -> PandasLikeSeries:
