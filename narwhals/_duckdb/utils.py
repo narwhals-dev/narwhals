@@ -4,6 +4,7 @@ import re
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Sequence
 
 import duckdb
 
@@ -18,6 +19,20 @@ if TYPE_CHECKING:
 
 lit = duckdb.ConstantExpression
 """Alias for `duckdb.ConstantExpression`."""
+
+
+class WindowInputs:
+    __slots__ = ("expr", "order_by", "partition_by")
+
+    def __init__(
+        self,
+        expr: duckdb.Expression,
+        partition_by: Sequence[str],
+        order_by: Sequence[str],
+    ) -> None:
+        self.expr = expr
+        self.partition_by = partition_by
+        self.order_by = order_by
 
 
 def maybe_evaluate_expr(

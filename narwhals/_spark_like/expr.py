@@ -15,6 +15,7 @@ from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
 from narwhals._spark_like.expr_name import SparkLikeExprNameNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
 from narwhals._spark_like.expr_struct import SparkLikeExprStructNamespace
+from narwhals._spark_like.utils import WindowInputs
 from narwhals._spark_like.utils import import_functions
 from narwhals._spark_like.utils import import_native_dtypes
 from narwhals._spark_like.utils import import_window
@@ -158,20 +159,22 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def _cum_window_func(
         self: Self, *, reverse: bool, func_name: Literal["sum", "max", "min"]
     ) -> WindowFunction:
-        def func(
-            _input: Column, partition_by: Sequence[str], order_by: Sequence[str]
-        ) -> Column:
+        def func(window_inputs: WindowInputs) -> Column:
             if reverse:
-                order_by_cols = [self._F.col(x).desc_nulls_last() for x in order_by]
+                order_by_cols = [
+                    self._F.col(x).desc_nulls_last() for x in window_inputs.order_by
+                ]
             else:
-                order_by_cols = [self._F.col(x).asc_nulls_first() for x in order_by]
+                order_by_cols = [
+                    self._F.col(x).asc_nulls_first() for x in window_inputs.order_by
+                ]
             window = (
                 self._Window()
-                .partitionBy(list(partition_by))
+                .partitionBy(list(window_inputs.partition_by))
                 .orderBy(order_by_cols)
                 .rowsBetween(self._Window().unboundedPreceding, 0)
             )
-            return getattr(self._F, func_name)(_input).over(window)
+            return getattr(self._F, func_name)(window_inputs.expr).over(window)
 
         return func
 
@@ -542,7 +545,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
             def func(df: SparkLikeLazyFrame) -> list[Column]:
                 return [
-                    window_function(expr, partition_by, order_by)
+                    window_function(WindowInputs(expr, partition_by, order_by))
                     for expr in self._call(df)
                 ]
         else:
@@ -573,6 +576,62 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             )
 
         return self._from_call(_is_nan, "is_nan")
+
+    def shift(self, n: int) -> Self:
+        def func(window_inputs: WindowInputs) -> Column:
+            order_by_cols = [
+                self._F.col(x).asc_nulls_first() for x in window_inputs.order_by
+            ]
+            window = (
+                self._Window()
+                .partitionBy(list(window_inputs.partition_by))
+                .orderBy(order_by_cols)
+            )
+            return self._F.lag(window_inputs.expr, n).over(window)
+
+        return self._with_window_function(func)
+
+    def is_first_distinct(self) -> Self:
+        def func(window_inputs: WindowInputs) -> Column:
+            order_by_cols = [
+                self._F.col(x).asc_nulls_first() for x in window_inputs.order_by
+            ]
+            window = (
+                self._Window()
+                .partitionBy([*window_inputs.partition_by, window_inputs.expr])
+                .orderBy(order_by_cols)
+            )
+            return self._F.row_number().over(window) == 1
+
+        return self._with_window_function(func)
+
+    def is_last_distinct(self) -> Self:
+        def func(window_inputs: WindowInputs) -> Column:
+            order_by_cols = [
+                self._F.col(x).desc_nulls_last() for x in window_inputs.order_by
+            ]
+            window = (
+                self._Window()
+                .partitionBy([*window_inputs.partition_by, window_inputs.expr])
+                .orderBy(order_by_cols)
+            )
+            return self._F.row_number().over(window) == 1
+
+        return self._with_window_function(func)
+
+    def diff(self) -> Self:
+        def func(window_inputs: WindowInputs) -> Column:
+            order_by_cols = [
+                self._F.col(x).asc_nulls_first() for x in window_inputs.order_by
+            ]
+            window = (
+                self._Window()
+                .partitionBy(list(window_inputs.partition_by))
+                .orderBy(order_by_cols)
+            )
+            return window_inputs.expr - self._F.lag(window_inputs.expr).over(window)
+
+        return self._with_window_function(func)
 
     def cum_sum(self, *, reverse: bool) -> Self:
         return self._with_window_function(
@@ -614,18 +673,18 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             start = self._Window().currentRow - window_size + 1
             end = self._Window().currentRow
 
-        def func(
-            _input: Column, partition_by: Sequence[str], order_by: Sequence[str]
-        ) -> Column:
+        def func(window_inputs: WindowInputs) -> Column:
             window = (
                 self._Window()
-                .partitionBy(list(partition_by))
-                .orderBy([self._F.col(x).asc_nulls_first() for x in order_by])
+                .partitionBy(list(window_inputs.partition_by))
+                .orderBy(
+                    [self._F.col(x).asc_nulls_first() for x in window_inputs.order_by]
+                )
                 .rowsBetween(start, end)
             )
             return self._F.when(
-                self._F.count(_input).over(window) >= min_samples,
-                self._F.sum(_input).over(window),
+                self._F.count(window_inputs.expr).over(window) >= min_samples,
+                self._F.sum(window_inputs.expr).over(window),
             )
 
         return self._with_window_function(func)
@@ -651,11 +710,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return SparkLikeExprStructNamespace(self)
 
     drop_nulls = not_implemented()
-    diff = not_implemented()
     unique = not_implemented()
-    shift = not_implemented()
-    is_first_distinct = not_implemented()
-    is_last_distinct = not_implemented()
     cum_count = not_implemented()
     cum_prod = not_implemented()
     quantile = not_implemented()
