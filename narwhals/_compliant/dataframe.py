@@ -18,6 +18,7 @@ from narwhals._compliant.typing import EagerExprT_contra
 from narwhals._compliant.typing import EagerSeriesT
 from narwhals._compliant.typing import NativeFrameT_co
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals._translate import NumpyConvertible
 from narwhals.utils import Version
 from narwhals.utils import _StoresNative
 from narwhals.utils import deprecated
@@ -34,9 +35,11 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.group_by import CompliantGroupBy
     from narwhals.dtypes import DType
+    from narwhals.schema import Schema
     from narwhals.typing import SizeUnit
     from narwhals.typing import _2DArray
     from narwhals.utils import Implementation
+    from narwhals.utils import _FullContext
 
     Incomplete: TypeAlias = Any
 
@@ -46,6 +49,7 @@ T = TypeVar("T")
 
 
 class CompliantDataFrame(
+    NumpyConvertible["_2DArray"],
     _StoresNative[NativeFrameT_co],
     Sized,
     Protocol[CompliantSeriesT, CompliantExprT_contra, NativeFrameT_co],
@@ -57,6 +61,15 @@ class CompliantDataFrame(
 
     def __narwhals_dataframe__(self) -> Self: ...
     def __narwhals_namespace__(self) -> Any: ...
+    @classmethod
+    def from_numpy(
+        cls,
+        data: _2DArray,
+        /,
+        *,
+        context: _FullContext,
+        schema: Mapping[str, DType] | Schema | Sequence[str] | None,
+    ) -> Self: ...
     def __array__(self, dtype: Any, *, copy: bool | None) -> _2DArray: ...
     def __getitem__(self, item: Any) -> CompliantSeriesT | Self: ...
     def simple_select(self, *column_names: str) -> Self:
@@ -286,7 +299,8 @@ class EagerDataFrame(
         return result[0]
 
     def _evaluate_into_exprs(self, *exprs: EagerExprT_contra) -> Sequence[EagerSeriesT]:
-        return list(chain.from_iterable(self._evaluate_into_expr(expr) for expr in exprs))
+        # NOTE: Ignore is to avoid an intermittent false positive
+        return list(chain.from_iterable(self._evaluate_into_expr(expr) for expr in exprs))  # pyright: ignore[reportArgumentType]
 
     def _evaluate_into_expr(self, expr: EagerExprT_contra, /) -> Sequence[EagerSeriesT]:
         """Return list of raw columns.
