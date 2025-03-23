@@ -100,7 +100,6 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         /,
         *,
         context: _FullContext,
-        **kwds: Any,
     ) -> Self: ...
     @classmethod
     def from_column_indices(
@@ -280,6 +279,16 @@ class DepthTrackingExpr(
 ):
     _depth: int
     _function_name: str
+
+    @classmethod
+    def from_column_names(
+        cls: type[Self],
+        evaluate_column_names: Callable[[CompliantFrameT], Sequence[str]],
+        /,
+        *,
+        context: _FullContext,
+        function_name: str = "",
+    ) -> Self: ...
 
     def _is_elementary(self) -> bool:
         """Check if expr is elementary.

@@ -118,8 +118,8 @@ class DaskExpr(
         evaluate_column_names: Callable[[DaskLazyFrame], Sequence[str]],
         /,
         *,
-        function_name: str,
         context: _FullContext,
+        function_name: str = "",
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             try:

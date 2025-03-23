@@ -105,8 +105,8 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         evaluate_column_names: Callable[[PandasLikeDataFrame], Sequence[str]],
         /,
         *,
-        function_name: str,
         context: _FullContext,
+        function_name: str = "",
     ) -> Self:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             try:
