@@ -323,6 +323,10 @@ class DepthTrackingExpr(
     def __repr__(self) -> str:  # pragma: no cover
         return f"{type(self).__name__}(depth={self._depth}, function_name={self._function_name})"
 
+    @classmethod
+    def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:
+        return hasattr(obj, "__narwhals_expr__")
+
 
 class EagerExpr(
     DepthTrackingExpr[EagerDataFrameT, EagerSeriesT],
@@ -450,10 +454,6 @@ class EagerExpr(
         self, *, returns_scalar: bool = False
     ) -> dict[str, Any]:
         return {}
-
-    @classmethod
-    def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:
-        return hasattr(obj, "__narwhals_expr__")
 
     def _reuse_series_inner(
         self,
