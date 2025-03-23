@@ -54,8 +54,6 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
         self._implementation = Implementation.PYARROW
         self._version = version
 
-    # --- selection ---
-
     def len(self: Self) -> ArrowExpr:
         # coverage bug? this is definitely hit
         return self._expr(  # pragma: no cover

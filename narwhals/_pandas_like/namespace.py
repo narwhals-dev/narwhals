@@ -57,7 +57,6 @@ class PandasLikeNamespace(
         self._backend_version = backend_version
         self._version = version
 
-    # --- selection ---
     def lit(self: Self, value: Any, dtype: DType | None) -> PandasLikeExpr:
         def _lit_pandas_series(df: PandasLikeDataFrame) -> PandasLikeSeries:
             pandas_series = self._series.from_iterable(

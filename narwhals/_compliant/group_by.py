@@ -14,16 +14,17 @@ from typing import Sequence
 from typing import TypeVar
 
 from narwhals._compliant.typing import CompliantDataFrameT_co
-from narwhals._compliant.typing import CompliantExprAny
 from narwhals._compliant.typing import CompliantExprT_contra
 from narwhals._compliant.typing import CompliantFrameT_co
 from narwhals._compliant.typing import CompliantLazyFrameT_co
+from narwhals._compliant.typing import EagerExprT_contra
 from narwhals._compliant.typing import LazyExprT_contra
 from narwhals._compliant.typing import NativeExprT_co
-from narwhals._expression_parsing import is_elementary_expression
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
+
+    from narwhals._compliant.expr import DepthTrackingExpr
 
 if not TYPE_CHECKING:  # pragma: no cover
     if sys.version_info >= (3, 9):
@@ -49,6 +50,10 @@ NativeAggregationT_co = TypeVar(
 NarwhalsAggregation: TypeAlias = Literal[
     "sum", "mean", "median", "max", "min", "std", "var", "len", "n_unique", "count"
 ]
+DepthTrackingExprAny: TypeAlias = "DepthTrackingExpr[Any, Any]"
+DepthTrackingExprT_contra = TypeVar(
+    "DepthTrackingExprT_contra", bound=DepthTrackingExprAny, contravariant=True
+)
 
 
 _RE_LEAF_NAME: re.Pattern[str] = re.compile(r"(\w+->)")
@@ -75,8 +80,8 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
 
 
 class DepthTrackingGroupBy(
-    CompliantGroupBy[CompliantFrameT_co, CompliantExprT_contra],
-    Protocol38[CompliantFrameT_co, CompliantExprT_contra, NativeAggregationT_co],
+    CompliantGroupBy[CompliantFrameT_co, DepthTrackingExprT_contra],
+    Protocol38[CompliantFrameT_co, DepthTrackingExprT_contra, NativeAggregationT_co],
 ):
     """`CompliantGroupBy` variant, deals with `Eager` and other backends that utilize `CompliantExpr._depth`."""
 
@@ -87,7 +92,7 @@ class DepthTrackingGroupBy(
     - `Dask` *may* return a `Callable` instead of a `str` referring to one.
     """
 
-    def _ensure_all_simple(self, exprs: Sequence[CompliantExprT_contra]) -> None:
+    def _ensure_all_simple(self, exprs: Sequence[DepthTrackingExprT_contra]) -> None:
         for expr in exprs:
             if not self._is_simple(expr):
                 name = self.compliant._implementation.name.lower()
@@ -104,9 +109,9 @@ class DepthTrackingGroupBy(
                 raise ValueError(msg)
 
     @classmethod
-    def _is_simple(cls, expr: CompliantExprAny, /) -> bool:
+    def _is_simple(cls, expr: DepthTrackingExprAny, /) -> bool:
         """Return `True` is we can efficiently use `expr` in a native `group_by` context."""
-        return is_elementary_expression(expr) and cls._leaf_name(expr) in cls._REMAP_AGGS
+        return expr._is_elementary() and cls._leaf_name(expr) in cls._REMAP_AGGS
 
     @classmethod
     def _remap_expr_name(
@@ -123,14 +128,14 @@ class DepthTrackingGroupBy(
         return cls._REMAP_AGGS.get(name, name)
 
     @classmethod
-    def _leaf_name(cls, expr: CompliantExprAny, /) -> NarwhalsAggregation | Any:
+    def _leaf_name(cls, expr: DepthTrackingExprAny, /) -> NarwhalsAggregation | Any:
         """Return the last function name in the chain defined by `expr`."""
         return _RE_LEAF_NAME.sub("", expr._function_name)
 
 
 class EagerGroupBy(
-    DepthTrackingGroupBy[CompliantDataFrameT_co, CompliantExprT_contra, str],
-    Protocol38[CompliantDataFrameT_co, CompliantExprT_contra],
+    DepthTrackingGroupBy[CompliantDataFrameT_co, EagerExprT_contra, str],
+    Protocol38[CompliantDataFrameT_co, EagerExprT_contra],
 ):
     def __iter__(self) -> Iterator[tuple[Any, CompliantDataFrameT_co]]: ...
 
@@ -147,7 +152,7 @@ class LazyGroupBy(
             else output_names
         )
         native_exprs = expr(self.compliant)
-        if expr._is_multi_output_agg():
+        if expr._is_multi_output_unnamed():
             for native_expr, name, alias in zip(native_exprs, output_names, aliases):
                 if name not in self._keys:
                     yield native_expr.alias(alias)

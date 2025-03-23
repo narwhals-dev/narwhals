@@ -7,6 +7,7 @@ from typing import Container
 from typing import Iterable
 from typing import Literal
 from typing import Protocol
+from typing import TypeVar
 
 from narwhals._compliant.typing import CompliantExprT
 from narwhals._compliant.typing import CompliantFrameT
@@ -20,6 +21,7 @@ from narwhals.utils import passthrough_column_names
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
+    from narwhals._compliant.expr import DepthTrackingExpr
     from narwhals._compliant.selectors import CompliantSelectorNamespace
     from narwhals._compliant.when_then import CompliantWhen
     from narwhals._compliant.when_then import EagerWhen
@@ -31,6 +33,9 @@ if TYPE_CHECKING:
 
 __all__ = ["CompliantNamespace", "EagerNamespace"]
 
+DepthTrackingExprAny: TypeAlias = "DepthTrackingExpr[Any, Any]"
+DepthTrackingExprT = TypeVar("DepthTrackingExprT", bound=DepthTrackingExprAny)
+
 
 class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
     _implementation: Implementation
@@ -38,20 +43,16 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
     _version: Version
 
     def all(self) -> CompliantExprT:
-        return self._expr.from_column_names(
-            get_column_names, function_name="all", context=self
-        )
+        return self._expr.from_column_names(get_column_names, context=self)
 
     def col(self, *column_names: str) -> CompliantExprT:
         return self._expr.from_column_names(
-            passthrough_column_names(column_names), function_name="col", context=self
+            passthrough_column_names(column_names), context=self
         )
 
     def exclude(self, excluded_names: Container[str]) -> CompliantExprT:
         return self._expr.from_column_names(
-            partial(exclude_column_names, names=excluded_names),
-            function_name="exclude",
-            context=self,
+            partial(exclude_column_names, names=excluded_names), context=self
         )
 
     def nth(self, *column_indices: int) -> CompliantExprT:
@@ -86,8 +87,30 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
     def _expr(self) -> type[CompliantExprT]: ...
 
 
+class DepthTrackingNamespace(
+    CompliantNamespace[CompliantFrameT, DepthTrackingExprT],
+    Protocol[CompliantFrameT, DepthTrackingExprT],
+):
+    def all(self) -> DepthTrackingExprT:
+        return self._expr.from_column_names(
+            get_column_names, function_name="all", context=self
+        )
+
+    def col(self, *column_names: str) -> DepthTrackingExprT:
+        return self._expr.from_column_names(
+            passthrough_column_names(column_names), function_name="col", context=self
+        )
+
+    def exclude(self, excluded_names: Container[str]) -> DepthTrackingExprT:
+        return self._expr.from_column_names(
+            partial(exclude_column_names, names=excluded_names),
+            function_name="exclude",
+            context=self,
+        )
+
+
 class EagerNamespace(
-    CompliantNamespace[EagerDataFrameT, EagerExprT],
+    DepthTrackingNamespace[EagerDataFrameT, EagerExprT],
     Protocol[EagerDataFrameT, EagerSeriesT, EagerExprT],
 ):
     @property

@@ -85,6 +85,7 @@ class CompliantThen(CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, 
     _call: Callable[[FrameT], Sequence[SeriesT]]
     _when_value: CompliantWhen[FrameT, SeriesT, ExprT]
     _function_name: str
+    _depth: int
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version

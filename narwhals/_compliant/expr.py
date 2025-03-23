@@ -84,8 +84,6 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     _version: Version
     _evaluate_output_names: Callable[[CompliantFrameT], Sequence[str]]
     _alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None
-    _depth: int
-    _function_name: str
     _metadata: ExprMetadata | None
 
     def __call__(
@@ -101,11 +99,12 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         evaluate_column_names: Callable[[CompliantFrameT], Sequence[str]],
         /,
         *,
-        function_name: str,
         context: _FullContext,
     ) -> Self: ...
     @classmethod
-    def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self: ...
+    def from_column_indices(
+        cls: type[Self], *column_indices: int, context: _FullContext
+    ) -> Self: ...
 
     def _with_metadata(self, metadata: ExprMetadata) -> Self: ...
 
@@ -272,25 +271,64 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def broadcast(
         self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]
     ) -> Self: ...
-    def _is_multi_output_agg(self) -> bool:
-        """Return `True` for multi-output aggregations.
+    def _is_multi_output_unnamed(self) -> bool:
+        """Return `True` for multi-output aggregations without names.
 
-        Here we skip the keys, else they would appear duplicated in the output:
+        For example, column `'a'` only appears in the output as a grouping key:
 
-            df.group_by("a").agg(nw.all().mean())
+            df.group_by('a').agg(nw.all().sum())
+
+        It does not get included in:
+
+            nw.all().sum().
         """
-        return self._function_name.split("->", maxsplit=1)[0] in {"all", "selector"}
+        assert self._metadata is not None  # noqa: S101
+        return self._metadata.expansion_kind.is_multi_unnamed()
+
+
+class DepthTrackingExpr(
+    CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
+    Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
+):
+    _depth: int
+    _function_name: str
+
+    @classmethod
+    def from_column_names(
+        cls: type[Self],
+        evaluate_column_names: Callable[[CompliantFrameT], Sequence[str]],
+        /,
+        *,
+        context: _FullContext,
+        function_name: str = "",
+    ) -> Self: ...
+
+    def _is_elementary(self) -> bool:
+        """Check if expr is elementary.
+
+        Examples:
+            - nw.col('a').mean()  # depth 1
+            - nw.mean('a')  # depth 1
+            - nw.len()  # depth 0
+
+        as opposed to, say
+
+            - nw.col('a').filter(nw.col('b')>nw.col('c')).max()
+
+        Elementary expressions are the only ones supported properly in
+        pandas, PyArrow, and Dask.
+        """
+        return self._depth < 2
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"{type(self).__name__}(depth={self._depth}, function_name={self._function_name})"
 
 
 class EagerExpr(
-    CompliantExpr[EagerDataFrameT, EagerSeriesT],
+    DepthTrackingExpr[EagerDataFrameT, EagerSeriesT],
     Protocol38[EagerDataFrameT, EagerSeriesT],
 ):
     _call: Callable[[EagerDataFrameT], Sequence[EagerSeriesT]]
-    _depth: int
-    _function_name: str
-    _evaluate_output_names: Any
-    _alias_output_names: Any
     _call_kwargs: dict[str, Any]
 
     def __init__(
@@ -309,9 +347,6 @@ class EagerExpr(
 
     def __call__(self, df: EagerDataFrameT) -> Sequence[EagerSeriesT]:
         return self._call(df)
-
-    def __repr__(self) -> str:  # pragma: no cover
-        return f"{type(self).__name__}(depth={self._depth}, function_name={self._function_name})"
 
     def __narwhals_namespace__(
         self,

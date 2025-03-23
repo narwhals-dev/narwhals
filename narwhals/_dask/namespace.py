@@ -11,9 +11,9 @@ from typing import Sequence
 import dask.dataframe as dd
 import pandas as pd
 
-from narwhals._compliant import CompliantNamespace
 from narwhals._compliant import CompliantThen
 from narwhals._compliant import CompliantWhen
+from narwhals._compliant.namespace import DepthTrackingNamespace
 from narwhals._dask.dataframe import DaskLazyFrame
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
@@ -38,7 +38,7 @@ if TYPE_CHECKING:
         import dask_expr as dx
 
 
-class DaskNamespace(CompliantNamespace[DaskLazyFrame, DaskExpr]):
+class DaskNamespace(DepthTrackingNamespace[DaskLazyFrame, "DaskExpr"]):
     _implementation: Implementation = Implementation.DASK
 
     @property
