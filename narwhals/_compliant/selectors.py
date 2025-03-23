@@ -20,7 +20,6 @@ from narwhals.utils import dtype_matches_time_unit_and_time_zone
 from narwhals.utils import get_column_names
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_compliant_dataframe
-from narwhals.utils import is_tracks_depth
 
 if not TYPE_CHECKING:  # pragma: no cover
     # TODO @dangotbanned: Remove after dropping `3.8` (#2084)
@@ -301,10 +300,6 @@ class CompliantSelector(
 
     def __invert__(self: Self) -> CompliantSelector[FrameT, SeriesOrExprT]:
         return self.selectors.all() - self  # type: ignore[no-any-return]
-
-    def __repr__(self: Self) -> str:  # pragma: no cover
-        s = f"depth={self._depth}, " if is_tracks_depth(self._implementation) else ""
-        return f"{type(self).__name__}({s}function_name={self._function_name})"
 
 
 def _eval_lhs_rhs(

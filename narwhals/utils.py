@@ -52,7 +52,6 @@ if TYPE_CHECKING:
     from typing_extensions import LiteralString
     from typing_extensions import ParamSpec
     from typing_extensions import Self
-    from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
     from narwhals._compliant import CompliantExpr
@@ -85,8 +84,6 @@ if TYPE_CHECKING:
     _Fn = TypeVar("_Fn", bound="Callable[..., Any]")
     P = ParamSpec("P")
     R = TypeVar("R")
-
-    _TracksDepth: TypeAlias = "Literal[Implementation.DASK,Implementation.CUDF,Implementation.MODIN,Implementation.PANDAS,Implementation.PYSPARK]"
 
     class _SupportsVersion(Protocol):
         __version__: str
@@ -1512,11 +1509,6 @@ def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
 
 def supports_arrow_c_stream(obj: Any) -> TypeIs[ArrowStreamExportable]:
     return _hasattr_static(obj, "__arrow_c_stream__")
-
-
-def is_tracks_depth(obj: Implementation, /) -> TypeIs[_TracksDepth]:  # pragma: no cover
-    # Return `True` for implementations that utilize `CompliantExpr._depth`.
-    return obj.is_pandas_like() or obj in {Implementation.PYARROW, Implementation.DASK}
 
 
 def _remap_full_join_keys(

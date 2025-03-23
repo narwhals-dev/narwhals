@@ -12,6 +12,7 @@ from duckdb import ColumnExpression
 from duckdb import FunctionExpression
 
 from narwhals._duckdb.utils import evaluate_exprs
+from narwhals._duckdb.utils import generate_partition_by_sql
 from narwhals._duckdb.utils import lit
 from narwhals._duckdb.utils import native_to_narwhals_dtype
 from narwhals.dependencies import get_duckdb
@@ -369,11 +370,12 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
                 keep_condition = f"where {count_name}=1"
             else:
                 keep_condition = f"where {idx_name}=1"
+            partition_by_sql = generate_partition_by_sql(*subset)
             query = f"""
                 with cte as (
                     select *,
-                           row_number() over (partition by {",".join(subset)}) as {idx_name},
-                           count(*) over (partition by {",".join(subset)}) as {count_name}
+                           row_number() over ({partition_by_sql}) as {idx_name},
+                           count(*) over ({partition_by_sql}) as {count_name}
                     from rel
                 )
                 select * exclude ({idx_name}, {count_name}) from cte {keep_condition}

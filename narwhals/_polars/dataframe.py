@@ -453,6 +453,8 @@ class PolarsLazyFrame:
     tail: Method[Self]
     unique: Method[Self]
     with_columns: Method[Self]
+    # NOTE: Temporary, just trying to factor out utils
+    _evaluate_expr: Any
 
     def __init__(
         self: Self,

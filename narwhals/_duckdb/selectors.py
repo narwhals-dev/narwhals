@@ -27,7 +27,6 @@ class DuckDBSelectorNamespace(
     ) -> DuckDBSelector:
         return DuckDBSelector(
             call,
-            function_name="selector",
             evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             backend_version=self._backend_version,
@@ -46,7 +45,6 @@ class DuckDBSelector(  # type: ignore[misc]
     def _to_expr(self: Self) -> DuckDBExpr:
         return DuckDBExpr(
             self._call,
-            function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,

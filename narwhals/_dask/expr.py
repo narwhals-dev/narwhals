@@ -8,6 +8,7 @@ from typing import Literal
 from typing import Sequence
 
 from narwhals._compliant import LazyExpr
+from narwhals._compliant.expr import DepthTrackingExpr
 from narwhals._dask.expr_dt import DaskExprDateTimeNamespace
 from narwhals._dask.expr_name import DaskExprNameNamespace
 from narwhals._dask.expr_str import DaskExprStringNamespace
@@ -16,7 +17,6 @@ from narwhals._dask.utils import maybe_evaluate_expr
 from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._expression_parsing import is_elementary_expression
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
@@ -42,7 +42,10 @@ if TYPE_CHECKING:
     from narwhals.utils import _FullContext
 
 
-class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
+class DaskExpr(
+    LazyExpr["DaskLazyFrame", "dx.Series"],
+    DepthTrackingExpr["DaskLazyFrame", "dx.Series"],
+):
     _implementation: Implementation = Implementation.DASK
 
     def __init__(
@@ -115,8 +118,8 @@ class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
         evaluate_column_names: Callable[[DaskLazyFrame], Sequence[str]],
         /,
         *,
-        function_name: str,
         context: _FullContext,
+        function_name: str = "",
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             try:
@@ -573,7 +576,7 @@ class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
             # which we can always easily support, as it doesn't require grouping.
             def func(df: DaskLazyFrame) -> Sequence[dx.Series]:
                 return self(df.sort(*order_by, descending=False, nulls_last=False))
-        elif not is_elementary_expression(self):  # pragma: no cover
+        elif not self._is_elementary():  # pragma: no cover
             msg = (
                 "Only elementary expressions are supported for `.over` in dask.\n\n"
                 "Please see: "

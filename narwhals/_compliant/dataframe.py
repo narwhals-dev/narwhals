@@ -268,6 +268,10 @@ class CompliantLazyFrame(
     ) -> Self: ...
     def with_columns(self, *exprs: CompliantExprT_contra) -> Self: ...
     def with_row_index(self, name: str) -> Self: ...
+    def _evaluate_expr(self, expr: CompliantExprT_contra, /) -> Any:
+        result = expr(self)
+        assert len(result) == 1  # debug assertion  # noqa: S101
+        return result[0]
 
 
 class EagerDataFrame(
@@ -296,7 +300,11 @@ class EagerDataFrame(
         """
         _, aliases = evaluate_output_names_and_aliases(expr, self, [])
         result = expr(self)
-        if list(aliases) != [s.name for s in result]:
-            msg = f"Safety assertion failed, expected {aliases}, got {result}"
+        if list(aliases) != (result_aliases := [s.name for s in result]):
+            msg = f"Safety assertion failed, expected {aliases}, got {result_aliases}"
             raise AssertionError(msg)
         return result
+
+    def _extract_comparand(self, other: EagerSeriesT, /) -> Any:
+        """Extract native Series, broadcasting to `len(self)` if necessary."""
+        ...

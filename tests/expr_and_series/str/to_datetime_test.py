@@ -14,6 +14,7 @@ from tests.utils import PANDAS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import assert_equal_data
 from tests.utils import is_pyarrow_windows_no_tzdata
+from tests.utils import is_windows
 
 if TYPE_CHECKING:
     from tests.utils import Constructor
@@ -214,17 +215,17 @@ def test_to_datetime_tz_aware(
     if "pandas" in str(constructor) and PANDAS_VERSION < (1,):
         # "Cannot pass a tz argument when parsing strings with timezone information."
         pytest.skip()
-    if is_pyarrow_windows_no_tzdata(constructor):
+    if is_pyarrow_windows_no_tzdata(constructor) or (
+        "sqlframe" in str(constructor) and format is not None and is_windows()
+    ):
+        # NOTE: For `sqlframe` see https://github.com/narwhals-dev/narwhals/pull/2263#discussion_r2009101659
         pytest.skip()
-    if "sqlframe" in str(constructor):
-        # https://github.com/eakmanrq/sqlframe/issues/325
-        request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor):
         # cuDF does not yet support timezone-aware datetimes
         request.applymarker(pytest.mark.xfail)
     context = (
         pytest.raises(NotImplementedError)
-        if any(x in str(constructor) for x in ("duckdb", "sqlframe")) and format is None
+        if any(x in str(constructor) for x in ("duckdb",)) and format is None
         else does_not_raise()
     )
     df = nw.from_native(constructor({"a": ["2020-01-01T01:02:03+0100"]}))

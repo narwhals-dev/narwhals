@@ -4,7 +4,6 @@ import operator
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Callable
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
@@ -12,7 +11,9 @@ from typing import Sequence
 import dask.dataframe as dd
 import pandas as pd
 
-from narwhals._compliant import CompliantNamespace
+from narwhals._compliant import CompliantThen
+from narwhals._compliant import CompliantWhen
+from narwhals._compliant.namespace import DepthTrackingNamespace
 from narwhals._dask.dataframe import DaskLazyFrame
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
@@ -37,7 +38,7 @@ if TYPE_CHECKING:
         import dask_expr as dx
 
 
-class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
+class DaskNamespace(DepthTrackingNamespace[DaskLazyFrame, "DaskExpr"]):
     _implementation: Implementation = Implementation.DASK
 
     @property
@@ -257,7 +258,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
         )
 
     def when(self: Self, predicate: DaskExpr) -> DaskWhen:
-        return DaskWhen(predicate, self._backend_version, version=self._version)
+        return DaskWhen.from_expr(predicate, context=self)
 
     def concat_str(
         self: Self,
@@ -307,21 +308,10 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
         )
 
 
-class DaskWhen:
-    def __init__(
-        self: Self,
-        condition: DaskExpr,
-        backend_version: tuple[int, ...],
-        then_value: Any = None,
-        otherwise_value: Any = None,
-        *,
-        version: Version,
-    ) -> None:
-        self._backend_version = backend_version
-        self._condition: DaskExpr = condition
-        self._then_value: DaskExpr | Any = then_value
-        self._otherwise_value: DaskExpr | Any = otherwise_value
-        self._version = version
+class DaskWhen(CompliantWhen[DaskLazyFrame, "dx.Series", DaskExpr]):
+    @property
+    def _then(self) -> type[DaskThen]:
+        return DaskThen
 
     def __call__(self: Self, df: DaskLazyFrame) -> Sequence[dx.Series]:
         condition = self._condition(df)[0]
@@ -339,50 +329,10 @@ class DaskWhen:
         if isinstance(self._otherwise_value, DaskExpr):
             otherwise_value = self._otherwise_value(df)[0]
         else:
-            return [then_series.where(condition, self._otherwise_value)]
+            return [then_series.where(condition, self._otherwise_value)]  # pyright: ignore[reportArgumentType]
         (otherwise_series,) = align_series_full_broadcast(df, otherwise_value)
         validate_comparand(condition, otherwise_series)
         return [then_series.where(condition, otherwise_series)]  # pyright: ignore[reportArgumentType]
 
-    def then(self: Self, value: DaskExpr | Any) -> DaskThen:
-        self._then_value = value
 
-        return DaskThen(
-            self,
-            depth=0,
-            function_name="whenthen",
-            evaluate_output_names=getattr(
-                value, "_evaluate_output_names", lambda _df: ["literal"]
-            ),
-            alias_output_names=getattr(value, "_alias_output_names", None),
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-
-
-class DaskThen(DaskExpr):
-    def __init__(
-        self: Self,
-        call: DaskWhen,
-        *,
-        depth: int,
-        function_name: str,
-        evaluate_output_names: Callable[[DaskLazyFrame], Sequence[str]],
-        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
-        backend_version: tuple[int, ...],
-        version: Version,
-        call_kwargs: dict[str, Any] | None = None,
-    ) -> None:
-        self._backend_version = backend_version
-        self._version = version
-        self._call: DaskWhen = call
-        self._depth = depth
-        self._function_name = function_name
-        self._evaluate_output_names = evaluate_output_names
-        self._alias_output_names = alias_output_names
-        self._call_kwargs = call_kwargs or {}
-
-    def otherwise(self: Self, value: DaskExpr | Any) -> DaskExpr:
-        self._call._otherwise_value = value
-        self._function_name = "whenotherwise"
-        return self
+class DaskThen(CompliantThen[DaskLazyFrame, "dx.Series", DaskExpr], DaskExpr): ...

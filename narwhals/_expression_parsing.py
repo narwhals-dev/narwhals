@@ -46,24 +46,6 @@ def is_expr(obj: Any) -> TypeIs[Expr]:
     return isinstance(obj, Expr)
 
 
-def is_elementary_expression(expr: CompliantExpr[Any, Any]) -> bool:
-    """Check if expr is elementary.
-
-    Examples:
-        - nw.col('a').mean()  # depth 1
-        - nw.mean('a')  # depth 1
-        - nw.len()  # depth 0
-
-    as opposed to, say
-
-        - nw.col('a').filter(nw.col('b')>nw.col('c')).max()
-
-    Elementary expressions are the only ones supported properly in
-    pandas, PyArrow, and Dask.
-    """
-    return expr._depth < 2
-
-
 def combine_evaluate_output_names(
     *exprs: CompliantExpr[CompliantFrameT, Any],
 ) -> Callable[[CompliantFrameT], Sequence[str]]:
@@ -121,10 +103,16 @@ def evaluate_output_names_and_aliases(
         if expr._alias_output_names is None
         else expr._alias_output_names(output_names)
     )
-    if expr._is_multi_output_agg():
-        output_names, aliases = zip(
-            *[(x, alias) for x, alias in zip(output_names, aliases) if x not in exclude]
-        )
+    if exclude:
+        assert expr._metadata is not None  # noqa: S101
+        if expr._metadata.expansion_kind.is_multi_unnamed():
+            output_names, aliases = zip(
+                *[
+                    (x, alias)
+                    for x, alias in zip(output_names, aliases)
+                    if x not in exclude
+                ]
+            )
     return output_names, aliases
 
 
@@ -183,22 +171,44 @@ def is_scalar_like(
     return kind in {ExprKind.AGGREGATION, ExprKind.LITERAL}
 
 
+class ExpansionKind(Enum):
+    """Describe what kind of expansion the expression performs."""
+
+    SINGLE = auto()
+    """e.g. `nw.col('a'), nw.sum_horizontal(nw.all())`"""
+
+    MULTI_NAMED = auto()
+    """e.g. `nw.col('a', 'b')`"""
+
+    MULTI_UNNAMED = auto()
+    """e.g. `nw.all()`, nw.nth(0, 1)"""
+
+    def is_multi_unnamed(self) -> bool:
+        return self is ExpansionKind.MULTI_UNNAMED
+
+
+def is_multi_output(
+    expansion_kind: ExpansionKind,
+) -> TypeIs[Literal[ExpansionKind.MULTI_NAMED, ExpansionKind.MULTI_UNNAMED]]:
+    return expansion_kind in {ExpansionKind.MULTI_NAMED, ExpansionKind.MULTI_UNNAMED}
+
+
 class ExprMetadata:
-    __slots__ = ("_is_multi_output", "_kind", "_n_open_windows")
+    __slots__ = ("_expansion_kind", "_kind", "_n_open_windows")
 
     def __init__(
-        self, kind: ExprKind, /, *, n_open_windows: int, is_multi_output: bool
+        self, kind: ExprKind, /, *, n_open_windows: int, expansion_kind: ExpansionKind
     ) -> None:
         self._kind: ExprKind = kind
         self._n_open_windows = n_open_windows
-        self._is_multi_output = is_multi_output
+        self._expansion_kind = expansion_kind
 
     def __init_subclass__(cls, /, *args: Any, **kwds: Any) -> Never:  # pragma: no cover
         msg = f"Cannot subclass {cls.__name__!r}"
         raise TypeError(msg)
 
     def __repr__(self) -> str:
-        return f"ExprMetadata(kind: {self._kind}, n_open_windows: {self._n_open_windows}, is_multi_output: {self._is_multi_output})"
+        return f"ExprMetadata(kind: {self._kind}, n_open_windows: {self._n_open_windows}, expansion_kind: {self._expansion_kind})"
 
     @property
     def kind(self) -> ExprKind:
@@ -209,15 +219,13 @@ class ExprMetadata:
         return self._n_open_windows
 
     @property
-    def is_multi_output(self) -> bool:
-        return self._is_multi_output
+    def expansion_kind(self) -> ExpansionKind:
+        return self._expansion_kind
 
     def with_kind(self, kind: ExprKind, /) -> ExprMetadata:
         """Change metadata kind, leaving all other attributes the same."""
         return ExprMetadata(
-            kind,
-            n_open_windows=self._n_open_windows,
-            is_multi_output=self._is_multi_output,
+            kind, n_open_windows=self._n_open_windows, expansion_kind=self._expansion_kind
         )
 
     def with_extra_open_window(self) -> ExprMetadata:
@@ -225,7 +233,7 @@ class ExprMetadata:
         return ExprMetadata(
             self.kind,
             n_open_windows=self._n_open_windows + 1,
-            is_multi_output=self._is_multi_output,
+            expansion_kind=self._expansion_kind,
         )
 
     def with_kind_and_extra_open_window(self, kind: ExprKind, /) -> ExprMetadata:
@@ -233,18 +241,31 @@ class ExprMetadata:
         return ExprMetadata(
             kind,
             n_open_windows=self._n_open_windows + 1,
-            is_multi_output=self._is_multi_output,
+            expansion_kind=self._expansion_kind,
         )
 
     @staticmethod
     def simple_selector() -> ExprMetadata:
-        # e.g. nw.col('a'), nw.nth(0)  # noqa: ERA001
-        return ExprMetadata(ExprKind.TRANSFORM, n_open_windows=0, is_multi_output=False)
+        # e.g. `nw.col('a')`, `nw.nth(0)`
+        return ExprMetadata(
+            ExprKind.TRANSFORM, n_open_windows=0, expansion_kind=ExpansionKind.SINGLE
+        )
 
     @staticmethod
-    def multi_output_selector() -> ExprMetadata:
-        # e.g. nw.col('a', 'b'), nw.nth(0, 1), nw.all(), nw.selectors.matches('foo')  # noqa: ERA001
-        return ExprMetadata(ExprKind.TRANSFORM, n_open_windows=0, is_multi_output=True)
+    def multi_output_selector_named() -> ExprMetadata:
+        # e.g. `nw.col('a', 'b')`
+        return ExprMetadata(
+            ExprKind.TRANSFORM, n_open_windows=0, expansion_kind=ExpansionKind.MULTI_NAMED
+        )
+
+    @staticmethod
+    def multi_output_selector_unnamed() -> ExprMetadata:
+        # e.g. `nw.all()`
+        return ExprMetadata(
+            ExprKind.TRANSFORM,
+            n_open_windows=0,
+            expansion_kind=ExpansionKind.MULTI_UNNAMED,
+        )
 
 
 def combine_metadata(
@@ -267,13 +288,13 @@ def combine_metadata(
     has_aggregations = False
     has_literals = False
     result_n_open_windows = 0
-    result_is_multi_output = False
+    result_expansion_kind = ExpansionKind.SINGLE
 
     for i, arg in enumerate(args):
         if isinstance(arg, str) and not str_as_lit:
             has_transforms_or_windows = True
         elif is_expr(arg):
-            if arg._metadata.is_multi_output:
+            if is_multi_output(arg._metadata.expansion_kind):
                 if i > 0 and not allow_multi_output:
                     # Left-most argument is always allowed to be multi-output.
                     msg = (
@@ -282,7 +303,12 @@ def combine_metadata(
                     )
                     raise MultiOutputExpressionError(msg)
                 if not to_single_output:
-                    result_is_multi_output = True
+                    if i == 0:
+                        result_expansion_kind = arg._metadata.expansion_kind
+                    else:
+                        result_expansion_kind = resolve_expansion_kind(
+                            result_expansion_kind, arg._metadata.expansion_kind
+                        )
             if arg._metadata.n_open_windows:
                 result_n_open_windows += 1
             kind = arg._metadata.kind
@@ -321,8 +347,17 @@ def combine_metadata(
     return ExprMetadata(
         result_kind,
         n_open_windows=result_n_open_windows,
-        is_multi_output=result_is_multi_output,
+        expansion_kind=result_expansion_kind,
     )
+
+
+def resolve_expansion_kind(lhs: ExpansionKind, rhs: ExpansionKind) -> ExpansionKind:
+    if lhs is ExpansionKind.MULTI_UNNAMED and rhs is ExpansionKind.MULTI_UNNAMED:
+        # e.g. nw.selectors.all() - nw.selectors.numeric().
+        return ExpansionKind.MULTI_UNNAMED
+    # Don't attempt anything more complex, keep it simple and raise in the face of ambiguity.
+    msg = f"Unsupported ExpansionKind combination, got {lhs} and {rhs}, please report a bug."  # pragma: no cover
+    raise AssertionError(msg)  # pragma: no cover
 
 
 def combine_metadata_binary_op(lhs: Expr, rhs: IntoExpr) -> ExprMetadata:
