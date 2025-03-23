@@ -675,10 +675,10 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def to_polars(self: Self) -> pl.Series:
         import polars as pl  # ignore-banned-import
 
-        return pl.from_arrow(self.native)  # type: ignore[return-value]
+        return cast("pl.Series", pl.from_arrow(self.native))
 
-    def is_unique(self: Self) -> Self:
-        return self.to_frame().is_unique().alias(self.name)  # type: ignore[return-value]
+    def is_unique(self: Self) -> ArrowSeries:
+        return self.to_frame().is_unique().alias(self.name)
 
     def is_first_distinct(self: Self) -> Self:
         import numpy as np  # ignore-banned-import
@@ -814,14 +814,11 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def to_arrow(self: Self) -> ArrowArray:
         return self.native.combine_chunks()
 
-    def mode(self: Self) -> Self:
+    def mode(self: Self) -> ArrowSeries:
         plx = self.__narwhals_namespace__()
         col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
-        return self.value_counts(  # type: ignore[return-value]
-            name=col_token,
-            normalize=False,
-            sort=False,
-            parallel=False,  # parallel is unused
+        return self.value_counts(
+            name=col_token, normalize=False, sort=False, parallel=False
         ).filter(plx.col(col_token) == plx.col(col_token).max())[self.name]
 
     def is_finite(self: Self) -> Self:
