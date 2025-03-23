@@ -39,11 +39,14 @@ you specify `order_by`. For example:
   or a `LazyFrame`.
 
 ```python exec="1" result="python" session="order_dependence" source="above"
-import duckdb
+from sqlframe.duckdb import DuckDBSession
 
-rel = duckdb.table("df_pd")
-df = nw.from_native(rel)
-print(df.with_columns(a_cum_sum=nw.col("a").cum_sum().over(order_by="i")))
+session = DuckDBSession()
+sqlframe_df = session.createDataFrame(df_pd)
+lf = nw.from_native(sqlframe_df)
+result = lf.with_columns(a_cum_sum=nw.col("a").cum_sum().over(order_by="i"))
+print(result)
+print(result.collect("pandas"))
 ```
 
 When writing an order-dependent function, if you want it to be executable by `LazyFrame`
