@@ -18,10 +18,10 @@ from narwhals._dask.dataframe import DaskLazyFrame
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
 from narwhals._dask.utils import align_series_full_broadcast
+from narwhals._dask.utils import extract_comparand
 from narwhals._dask.utils import name_preserving_div
 from narwhals._dask.utils import name_preserving_sum
 from narwhals._dask.utils import narwhals_to_native_dtype
-from narwhals._dask.utils import validate_comparand
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.utils import Implementation
@@ -309,26 +309,21 @@ class DaskWhen(CompliantWhen[DaskLazyFrame, "dx.Series", DaskExpr]):
     def _then(self) -> type[DaskThen]:
         return DaskThen
 
+    def _if_then_else(
+        self, when: dx.Series, then: dx.Series, otherwise: Any, /
+    ) -> dx.Series:
+        return then.where(when) if otherwise is None else then.where(when, otherwise)
+
     def __call__(self: Self, df: DaskLazyFrame) -> Sequence[dx.Series]:
-        condition = self._condition(df)[0]
-
-        if isinstance(self._then_value, DaskExpr):
-            then_value = self._then_value(df)[0]
+        is_expr = self._condition._is_expr
+        when = self._condition(df)[0]
+        then = self._then_value(df)[0] if is_expr(self._then_value) else self._then_value
+        if is_expr(self._otherwise_value):
+            otherwise = extract_comparand(df, when, self._otherwise_value(df)[0])
         else:
-            then_value = self._then_value
-        (then_series,) = align_series_full_broadcast(df, then_value)
-        validate_comparand(condition, then_series)
-
-        if self._otherwise_value is None:
-            return [then_series.where(condition)]
-
-        if isinstance(self._otherwise_value, DaskExpr):
-            otherwise_value = self._otherwise_value(df)[0]
-        else:
-            return [then_series.where(condition, self._otherwise_value)]  # pyright: ignore[reportArgumentType]
-        (otherwise_series,) = align_series_full_broadcast(df, otherwise_value)
-        validate_comparand(condition, otherwise_series)
-        return [then_series.where(condition, otherwise_series)]  # pyright: ignore[reportArgumentType]
+            otherwise = self._otherwise_value
+        result = self._if_then_else(when, extract_comparand(df, when, then), otherwise)
+        return [result]
 
 
 class DaskThen(CompliantThen[DaskLazyFrame, "dx.Series", DaskExpr], DaskExpr): ...

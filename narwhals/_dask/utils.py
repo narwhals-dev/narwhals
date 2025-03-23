@@ -15,7 +15,7 @@ from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     import dask.dataframe as dd
-import dask.dataframe.dask_expr as dx
+    import dask.dataframe.dask_expr as dx
 
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.expr import DaskExpr
@@ -73,6 +73,18 @@ def add_row_index(
         backend_version,
         implementation,
     )
+
+
+def extract_comparand(
+    df: DaskLazyFrame, condition: dx.Series, value: dx.Series | Any
+) -> dx.Series:
+    rhs = (
+        value
+        if isinstance(value, dx.Series)
+        else df.native.assign(_literal=value)["_literal"]
+    )
+    validate_comparand(condition, rhs)
+    return rhs
 
 
 def validate_comparand(lhs: dx.Series, rhs: dx.Series) -> None:
