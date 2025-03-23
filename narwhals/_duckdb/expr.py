@@ -43,7 +43,7 @@ if TYPE_CHECKING:
     from narwhals.utils import _FullContext
 
 with contextlib.suppress(ImportError):  # requires duckdb>=1.3.0
-    from duckdb import SQLExpression
+    from duckdb import SQLExpression  # type: ignore  # noqa: PGH003
 
 
 class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
@@ -459,7 +459,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             order_by_sql = generate_order_by_sql(*order_by, ascending=not reverse)
             partition_by_sql = generate_partition_by_sql(*partition_by)
             sql = f"sum ({_input}) over ({partition_by_sql} {order_by_sql} rows between unbounded preceding and current row)"
-            return SQLExpression(sql)
+            return SQLExpression(sql)  # type: ignore  # noqa: PGH003
 
         return self._with_window_function(func)
 
@@ -482,7 +482,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             partition_by_sql = generate_partition_by_sql(*partition_by)
             window = f"({partition_by_sql} {order_by_sql} rows between {start} and {end})"
             sql = f"case when count({_input}) over {window} >= {min_samples} then sum({_input}) over {window} else null end"
-            return SQLExpression(sql)
+            return SQLExpression(sql)  # type: ignore  # noqa: PGH003
 
         return self._with_window_function(func)
 
