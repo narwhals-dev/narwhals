@@ -15,7 +15,6 @@ import pandas as pd
 
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import DuplicateError
-from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import import_dtypes_module
@@ -130,26 +129,6 @@ def align_and_extract_native(
         raise TypeError(msg)
     # `rhs` must be scalar, so just leave it as-is
     return lhs_native, rhs
-
-
-def extract_dataframe_comparand(
-    index: pd.Index[Any], other: PandasLikeSeries
-) -> pd.Series[Any]:
-    """Extract native Series, broadcasting to `length` if necessary."""
-    if other._broadcast:
-        s = other._native_series
-        return s.__class__(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
-    if (len_other := len(other)) != (len_idx := len(index)):
-        msg = f"Expected object of length {len_idx}, got: {len_other}."
-        raise ShapeError(msg)
-    if other._native_series.index is not index:
-        return set_index(
-            other._native_series,
-            index,
-            implementation=other._implementation,
-            backend_version=other._backend_version,
-        )
-    return other._native_series
 
 
 def horizontal_concat(

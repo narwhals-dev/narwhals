@@ -13,14 +13,15 @@ from typing import overload
 import pyarrow as pa
 import pyarrow.compute as pc
 
+from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import align_series_full_broadcast
 from narwhals._arrow.utils import convert_str_slice_to_int_slice
-from narwhals._arrow.utils import extract_dataframe_comparand
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import select_rows
 from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
 from narwhals.dependencies import is_numpy_array_1d
+from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import check_column_exists
@@ -366,24 +367,34 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             )
         names = [s.name for s in new_series]
         reshaped = align_series_full_broadcast(*new_series)
-        df = pa.Table.from_arrays([s._native_series for s in reshaped], names=names)
+        df = pa.Table.from_arrays([s.native for s in reshaped], names=names)
         return self._from_native_frame(df, validate_column_names=True)
+
+    def _extract_comparand(self, other: ArrowSeries) -> ArrowChunkedArray:
+        length = len(self)
+        if not other._broadcast:
+            if (len_other := len(other)) != length:
+                msg = f"Expected object of length {length}, got: {len_other}."
+                raise ShapeError(msg)
+            return other.native
+
+        import numpy as np  # ignore-banned-import
+
+        value = other.native[0]
+        if self._backend_version < (13,) and hasattr(value, "as_py"):
+            value = value.as_py()
+        return pa.chunked_array([np.full(shape=length, fill_value=value)])
 
     def with_columns(self: ArrowDataFrame, *exprs: ArrowExpr) -> ArrowDataFrame:
         # NOTE: We use a faux-mutable variable and repeatedly "overwrite" (native_frame)
         # All `pyarrow` data is immutable, so this is fine
         native_frame = self.native
         new_columns = self._evaluate_into_exprs(*exprs)
-
-        length = len(self)
         columns = self.columns
 
         for col_value in new_columns:
             col_name = col_value.name
-
-            column = extract_dataframe_comparand(
-                length=length, other=col_value, backend_version=self._backend_version
-            )
+            column = self._extract_comparand(col_value)
             native_frame = (
                 native_frame.set_column(
                     columns.index(col_name),
@@ -427,21 +438,21 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
                 self.with_columns(
                     plx.lit(0, None).alias(key_token).broadcast(ExprKind.LITERAL)
                 )
-                ._native_frame.join(
+                .native.join(
                     other.with_columns(
                         plx.lit(0, None).alias(key_token).broadcast(ExprKind.LITERAL)
-                    )._native_frame,
+                    ).native,
                     keys=key_token,
                     right_keys=key_token,
                     join_type="inner",
                     right_suffix=suffix,
                 )
-                .drop([key_token]),
+                .drop([key_token])
             )
 
         return self._from_native_frame(
             self.native.join(
-                other._native_frame,
+                other.native,
                 keys=left_on or [],  # type: ignore[arg-type]
                 right_keys=right_on,  # type: ignore[arg-type]
                 join_type=how_to_join_map[how],

@@ -84,9 +84,9 @@ class GroupBy(Generic[DataFrameT]):
             raise InvalidOperationError(msg)
         plx = self._df.__narwhals_namespace__()
         compliant_aggs = (
-            *(x._to_compliant_expr(plx) for x in flat_aggs),
+            *(x._to_compliant_expr(plx)._with_metadata(x._metadata) for x in flat_aggs),
             *(
-                value._to_compliant_expr(plx).alias(key)
+                value._to_compliant_expr(plx).alias(key)._with_metadata(value._metadata)
                 for key, value in named_aggs.items()
             ),
         )
@@ -174,9 +174,9 @@ class LazyGroupBy(Generic[LazyFrameT]):
             raise InvalidOperationError(msg)
         plx = self._df.__narwhals_namespace__()
         compliant_aggs = (
-            *(x._to_compliant_expr(plx) for x in flat_aggs),
+            *(x._to_compliant_expr(plx)._with_metadata(x._metadata) for x in flat_aggs),
             *(
-                value._to_compliant_expr(plx).alias(key)
+                value._to_compliant_expr(plx).alias(key)._with_metadata(value._metadata)
                 for key, value in named_aggs.items()
             ),
         )

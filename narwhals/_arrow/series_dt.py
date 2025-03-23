@@ -49,7 +49,7 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
         return self.from_native(ser.native.cast(pa.timestamp(self.unit, time_zone)))
 
     def timestamp(self: Self, time_unit: TimeUnit) -> ArrowSeries:
-        ser: ArrowSeries = self.compliant
+        ser = self.compliant
         dtypes = import_dtypes_module(ser._version)
         if isinstance(ser.dtype, dtypes.Datetime):
             unit = ser.dtype.time_unit

@@ -60,14 +60,14 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         evaluate_column_names: Callable[[ArrowDataFrame], Sequence[str]],
         /,
         *,
-        function_name: str,
         context: _FullContext,
+        function_name: str = "",
     ) -> Self:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             try:
                 return [
                     ArrowSeries(
-                        df._native_frame[column_name],
+                        df.native[column_name],
                         name=column_name,
                         backend_version=df._backend_version,
                         version=df._version,
@@ -101,8 +101,8 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             return [
                 ArrowSeries(
-                    df._native_frame[column_index],
-                    name=df._native_frame.column_names[column_index],
+                    df.native[column_index],
+                    name=df.native.column_names[column_index],
                     backend_version=df._backend_version,
                     version=df._version,
                 )
@@ -163,9 +163,9 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                 # TODO(marco): is there a way to do this efficiently without
                 # doing 2 sorts? Here we're sorting the dataframe and then
                 # again calling `sort_indices`. `ArrowSeries.scatter` would also sort.
-                sorting_indices = pc.sort_indices(df[token]._native_series)  # type: ignore[call-overload]
+                sorting_indices = pc.sort_indices(df[token].native)  # type: ignore[call-overload]
                 return [
-                    ser._from_native_series(pc.take(ser._native_series, sorting_indices))
+                    ser._from_native_series(pc.take(ser.native, sorting_indices))
                     for ser in result
                 ]
         else:
