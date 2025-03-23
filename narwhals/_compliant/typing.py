@@ -42,10 +42,6 @@ CompliantLazyFrameAny: TypeAlias = "CompliantLazyFrame[Any, Any]"
 CompliantFrameAny: TypeAlias = "CompliantDataFrameAny | CompliantLazyFrameAny"
 
 DepthTrackingExprAny: TypeAlias = "DepthTrackingExpr[Any, Any]"
-DepthTrackingExprT = TypeVar("DepthTrackingExprT", bound=DepthTrackingExprAny)
-DepthTrackingExprT_contra = TypeVar(
-    "DepthTrackingExprT_contra", bound=DepthTrackingExprAny, contravariant=True
-)
 
 EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any, Any]"
 EagerSeriesAny: TypeAlias = "EagerSeries[Any]"
@@ -88,6 +84,11 @@ CompliantLazyFrameT_co = TypeVar(
     "CompliantLazyFrameT_co", bound=CompliantLazyFrameAny, covariant=True
 )
 IntoCompliantExpr: TypeAlias = "CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | CompliantSeriesOrNativeExprT_co"
+
+DepthTrackingExprT = TypeVar("DepthTrackingExprT", bound=DepthTrackingExprAny)
+DepthTrackingExprT_contra = TypeVar(
+    "DepthTrackingExprT_contra", bound=DepthTrackingExprAny, contravariant=True
+)
 
 EagerExprT = TypeVar("EagerExprT", bound=EagerExprAny)
 EagerExprT_contra = TypeVar("EagerExprT_contra", bound=EagerExprAny, contravariant=True)
