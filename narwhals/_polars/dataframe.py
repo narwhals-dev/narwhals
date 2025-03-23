@@ -119,9 +119,7 @@ class PolarsDataFrame:
                 f"Got {type(schema)}."
             )
             raise TypeError(msg)
-        native = context._implementation.to_native_namespace().from_numpy(
-            data, schema=schema_pl
-        )
+        native = pl.from_numpy(data, schema_pl)
         return cls(
             native, backend_version=context._backend_version, version=context._version
         )
