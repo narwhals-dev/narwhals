@@ -131,7 +131,6 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
         null_token: str = "__null_token_value__"  # noqa: S105
 
         table = self.compliant.native
-        # NOTE: stubs fail in multiple places for `ChunkedArray`
         it, separator_scalar = cast_to_comparable_string_types(
             *(table[key] for key in self._keys), separator=""
         )

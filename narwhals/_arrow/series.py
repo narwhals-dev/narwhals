@@ -48,7 +48,6 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import ArrowArray
     from narwhals._arrow.typing import ArrowChunkedArray
     from narwhals._arrow.typing import Incomplete
-    from narwhals._arrow.typing import Indices  # type: ignore[attr-defined]
     from narwhals._arrow.typing import NullPlacement
     from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
     from narwhals._arrow.typing import TieBreaker
@@ -261,13 +260,13 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         return self._from_native_series(pc.divide(*cast_for_truediv(other, ser)))  # pyright: ignore[reportArgumentType]
 
     def __mod__(self: Self, other: Any) -> Self:
-        floor_div = (self // other)._native_series
+        floor_div = (self // other).native
         ser, other = extract_native(self, other)
         res = pc.subtract(ser, pc.multiply(floor_div, other))
         return self._from_native_series(res)
 
     def __rmod__(self: Self, other: Any) -> Self:
-        floor_div = (other // self)._native_series
+        floor_div = (other // self).native
         ser, other = extract_native(self, other)
         res = pc.subtract(other, pc.multiply(floor_div, ser))
         return self._from_native_series(res)
@@ -292,10 +291,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         return self._from_native_series(self.native.filter(other_native))  # pyright: ignore[reportArgumentType]
 
     def mean(self: Self, *, _return_py_scalar: bool = True) -> float:
-        # NOTE: stub overly strict https://github.com/zen-xu/pyarrow-stubs/blob/d97063876720e6a5edda7eb15f4efe07c31b8296/pyarrow-stubs/compute.pyi#L274-L307
-        # docs say numeric https://arrow.apache.org/docs/python/generated/pyarrow.compute.mean.html
-        mean: Incomplete = pc.mean
-        return maybe_extract_py_scalar(mean(self.native), _return_py_scalar)
+        return maybe_extract_py_scalar(pc.mean(self.native), _return_py_scalar)
 
     def median(self: Self, *, _return_py_scalar: bool = True) -> float:
         from narwhals.exceptions import InvalidOperationError
@@ -350,8 +346,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         )
 
     def skew(self: Self, *, _return_py_scalar: bool = True) -> float | None:
-        # NOTE: stub issue with `pc.subtract`, `pc.mean` and `pa.ChunkedArray`
-        ser_not_null: Incomplete = self.native.drop_null()
+        ser_not_null = self.native.drop_null()
         if len(ser_not_null) == 0:
             return None
         elif len(ser_not_null) == 1:
@@ -359,9 +354,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         elif len(ser_not_null) == 2:
             return 0.0
         else:
-            m = cast(
-                "pc.NumericArray[Any]", pc.subtract(ser_not_null, pc.mean(ser_not_null))
-            )
+            m = pc.subtract(ser_not_null, pc.mean(ser_not_null))
             m2 = pc.mean(pc.power(m, lit(2)))
             m3 = pc.mean(pc.power(m, lit(3)))
             biased_population_skewness = pc.divide(m3, pc.power(m2, lit(1.5)))
@@ -400,7 +393,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         if isinstance(idx, int):
             return maybe_extract_py_scalar(self.native[idx], return_py_scalar=True)
         if isinstance(idx, (Sequence, pa.ChunkedArray)):
-            return self._from_native_series(self.native.take(cast("Indices", idx)))
+            return self._from_native_series(self.native.take(idx))
         return self._from_native_series(self.native[idx])
 
     def scatter(self: Self, indices: int | Sequence[int], values: Any) -> Self:
@@ -427,7 +420,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         result = pc.replace_with_mask(
             self.native,
             cast("list[bool]", mask),
-            values_native.take(cast("Indices", indices_native)),
+            values_native.take(indices_native),
         )
         return self._from_native_series(result)
 
@@ -456,9 +449,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         return self._from_native_series(pc.abs(self.native))
 
     def cum_sum(self: Self, *, reverse: bool) -> Self:
-        # NOTE: stub only permits `NumericArray`
-        # https://github.com/zen-xu/pyarrow-stubs/blob/d97063876720e6a5edda7eb15f4efe07c31b8296/pyarrow-stubs/compute.pyi#L140
-        cum_sum: Incomplete = pc.cumulative_sum
+        cum_sum = pc.cumulative_sum
         result = (
             cum_sum(self.native, skip_nulls=True)
             if not reverse
@@ -467,32 +458,21 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         return self._from_native_series(result)
 
     def round(self: Self, decimals: int) -> Self:
-        # NOTE: stub only permits `NumericArray`
-        # https://github.com/zen-xu/pyarrow-stubs/blob/d97063876720e6a5edda7eb15f4efe07c31b8296/pyarrow-stubs/compute.pyi#L140
-        pc_round: Incomplete = pc.round
         return self._from_native_series(
-            pc_round(self.native, decimals, round_mode="half_towards_infinity")
+            pc.round(self.native, decimals, round_mode="half_towards_infinity")
         )
 
     def diff(self: Self) -> Self:
-        # NOTE: stub only permits `ChunkedArray[TemporalScalar]`
-        # (https://github.com/zen-xu/pyarrow-stubs/blob/d97063876720e6a5edda7eb15f4efe07c31b8296/pyarrow-stubs/compute.pyi#L145-L148)
-        diff: Incomplete = pc.pairwise_diff
-        return self._from_native_series(diff(self.native.combine_chunks()))
+        return self._from_native_series(pc.pairwise_diff(self.native.combine_chunks()))
 
     def any(self: Self, *, _return_py_scalar: bool = True) -> bool:
-        # NOTE: stub restricts to `BooleanArray`, should be based on truthiness
-        # Copies `pc.all`
-        pc_any: Incomplete = pc.any
         return maybe_extract_py_scalar(
-            pc_any(self.native, min_count=0), _return_py_scalar
+            pc.any(self.native, min_count=0), _return_py_scalar
         )
 
     def all(self: Self, *, _return_py_scalar: bool = True) -> bool:
-        # NOTE: stub restricts to `BooleanArray`, should be based on truthiness
-        pc_all: Incomplete = pc.all
         return maybe_extract_py_scalar(
-            pc_all(self.native, min_count=0), _return_py_scalar
+            pc.all(self.native, min_count=0), _return_py_scalar
         )
 
     def is_between(
@@ -630,7 +610,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         rng = np.random.default_rng(seed=seed)
         idx = np.arange(0, num_rows)
         mask = rng.choice(idx, size=n, replace=with_replacement)
-        return self._from_native_series(self.native.take(mask))  # pyright: ignore[reportArgumentType]
+        return self._from_native_series(self.native.take(mask))
 
     def fill_null(
         self: Self,
@@ -690,15 +670,15 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def to_pandas(self: Self) -> pd.Series[Any]:
         import pandas as pd  # ignore-banned-import()
 
-        return pd.Series(self.native, name=self.name)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        return pd.Series(self.native, name=self.name)
 
     def to_polars(self: Self) -> pl.Series:
         import polars as pl  # ignore-banned-import
 
-        return pl.from_arrow(self.native)  # type: ignore[return-value]
+        return cast("pl.Series", pl.from_arrow(self.native))
 
-    def is_unique(self: Self) -> Self:
-        return self.to_frame().is_unique().alias(self.name)  # type: ignore[return-value]
+    def is_unique(self: Self) -> ArrowSeries:
+        return self.to_frame().is_unique().alias(self.name)
 
     def is_first_distinct(self: Self) -> Self:
         import numpy as np  # ignore-banned-import
@@ -828,25 +808,17 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     ) -> Self:
         _, lower_bound = extract_native(self, lower_bound)
         _, upper_bound = extract_native(self, upper_bound)
-        # NOTE: stubs are missing `ChunkedArray` support
-        # https://github.com/zen-xu/pyarrow-stubs/blob/d97063876720e6a5edda7eb15f4efe07c31b8296/pyarrow-stubs/compute.pyi#L948-L954
-        max_element_wise: Incomplete = pc.max_element_wise
-        arr = max_element_wise(self.native, lower_bound)
-        arr = cast("ArrowChunkedArray", pc.min_element_wise(arr, upper_bound))
-
-        return self._from_native_series(arr)
+        arr = pc.max_element_wise(self.native, lower_bound)
+        return self._from_native_series(pc.min_element_wise(arr, upper_bound))
 
     def to_arrow(self: Self) -> ArrowArray:
         return self.native.combine_chunks()
 
-    def mode(self: Self) -> Self:
+    def mode(self: Self) -> ArrowSeries:
         plx = self.__narwhals_namespace__()
         col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
-        return self.value_counts(  # type: ignore[return-value]
-            name=col_token,
-            normalize=False,
-            sort=False,
-            parallel=False,  # parallel is unused
+        return self.value_counts(
+            name=col_token, normalize=False, sort=False, parallel=False
         ).filter(plx.col(col_token) == plx.col(col_token).max())[self.name]
 
     def is_finite(self: Self) -> Self:
@@ -860,13 +832,10 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         if self._backend_version < (13, 0, 0):
             msg = "cum_min method is not supported for pyarrow < 13.0.0"
             raise NotImplementedError(msg)
-
-        native_series = cast("Any", self.native)
-
         result = (
-            pc.cumulative_min(native_series, skip_nulls=True)
+            pc.cumulative_min(self.native, skip_nulls=True)
             if not reverse
-            else pc.cumulative_min(native_series[::-1], skip_nulls=True)[::-1]
+            else pc.cumulative_min(self.native[::-1], skip_nulls=True)[::-1]
         )
         return self._from_native_series(result)
 
@@ -874,13 +843,10 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         if self._backend_version < (13, 0, 0):
             msg = "cum_max method is not supported for pyarrow < 13.0.0"
             raise NotImplementedError(msg)
-
-        native_series = cast("Any", self.native)
-
         result = (
-            pc.cumulative_max(native_series, skip_nulls=True)
+            pc.cumulative_max(self.native, skip_nulls=True)
             if not reverse
-            else pc.cumulative_max(native_series[::-1], skip_nulls=True)[::-1]
+            else pc.cumulative_max(self.native[::-1], skip_nulls=True)[::-1]
         )
         return self._from_native_series(result)
 
@@ -888,13 +854,10 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         if self._backend_version < (13, 0, 0):
             msg = "cum_max method is not supported for pyarrow < 13.0.0"
             raise NotImplementedError(msg)
-
-        native_series = cast("Any", self.native)
-
         result = (
-            pc.cumulative_prod(native_series, skip_nulls=True)
+            pc.cumulative_prod(self.native, skip_nulls=True)
             if not reverse
-            else pc.cumulative_prod(native_series[::-1], skip_nulls=True)[::-1]
+            else pc.cumulative_prod(self.native[::-1], skip_nulls=True)[::-1]
         )
         return self._from_native_series(result)
 
@@ -924,11 +887,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         )
 
         result = self._from_native_series(
-            pc.if_else(
-                (count_in_window >= min_samples)._native_series,
-                rolling_sum._native_series,
-                None,
-            )
+            pc.if_else((count_in_window >= min_samples).native, rolling_sum.native, None)
         )
         return result[offset:]
 
@@ -960,9 +919,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         result = (
             self._from_native_series(
                 pc.if_else(
-                    (count_in_window >= min_samples)._native_series,
-                    rolling_sum._native_series,
-                    None,
+                    (count_in_window >= min_samples).native, rolling_sum.native, None
                 )
             )
             / count_in_window
@@ -1006,18 +963,15 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         count_in_window = valid_count - valid_count.shift(window_size).fill_null(
             value=0, strategy=None, limit=None
         )
-        # NOTE: stubs are missing `ChunkedArray` support
-        # https://github.com/zen-xu/pyarrow-stubs/blob/d97063876720e6a5edda7eb15f4efe07c31b8296/pyarrow-stubs/compute.pyi#L948-L954
-        max_element_wise: Incomplete = pc.max_element_wise
 
         result = self._from_native_series(
             pc.if_else(
-                (count_in_window >= min_samples)._native_series,
-                (rolling_sum_sq - (rolling_sum**2 / count_in_window))._native_series,
+                (count_in_window >= min_samples).native,
+                (rolling_sum_sq - (rolling_sum**2 / count_in_window)).native,
                 None,
             )
         ) / self._from_native_series(
-            max_element_wise((count_in_window - ddof)._native_series, 0)
+            pc.max_element_wise((count_in_window - ddof).native, 0)
         )
 
         return result[offset:]
@@ -1125,8 +1079,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             )
             # empty bin intervals should have a 0 count
             counts_coalesce = cast(
-                "ArrowArray",
-                pc.coalesce(cast("ArrowArray", counts.column("counts")), lit(0)),
+                "ArrowArray", pc.coalesce(counts.column("counts"), lit(0))
             )
             counts = counts.set_column(0, "counts", counts_coalesce)
 
