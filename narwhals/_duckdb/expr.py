@@ -21,6 +21,7 @@ from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_name import DuckDBExprNameNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
 from narwhals._duckdb.expr_struct import DuckDBExprStructNamespace
+from narwhals._duckdb.utils import WindowInputs
 from narwhals._duckdb.utils import generate_order_by_sql
 from narwhals._duckdb.utils import generate_partition_by_sql
 from narwhals._duckdb.utils import lit
@@ -490,7 +491,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
             def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
                 return [
-                    window_function(expr, partition_by, order_by)
+                    window_function(WindowInputs(expr, partition_by, order_by))
                     for expr in self._call(df)
                 ]
         else:
@@ -535,76 +536,65 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         )
 
     def shift(self, n: int) -> Self:
-        def func(
-            _input: duckdb.Expression,
-            partition_by: Sequence[str],
-            order_by: Sequence[str],
-        ) -> duckdb.Expression:
-            order_by_sql = generate_order_by_sql(*order_by, ascending=True)
-            partition_by_sql = generate_partition_by_sql(*partition_by)
-            sql = f"lag({_input}, {n}) over ({partition_by_sql} {order_by_sql})"
+        def func(window_inputs: WindowInputs) -> duckdb.Expression:
+            order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=True)
+            partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
+            sql = (
+                f"lag({window_inputs.expr}, {n}) over ({partition_by_sql} {order_by_sql})"
+            )
             return SQLExpression(sql)
 
         return self._with_window_function(func)
 
     def is_first_distinct(self) -> Self:
-        def func(
-            _input: duckdb.Expression,
-            partition_by: Sequence[str],
-            order_by: Sequence[str],
-        ) -> duckdb.Expression:
-            order_by_sql = generate_order_by_sql(*order_by, ascending=True)
-            if partition_by:
+        def func(window_inputs: WindowInputs) -> duckdb.Expression:
+            order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=True)
+            if window_inputs.partition_by:
                 partition_by_sql = (
-                    generate_partition_by_sql(*partition_by) + f", {_input}"
+                    generate_partition_by_sql(*window_inputs.partition_by)
+                    + f", {window_inputs.expr}"
                 )
             else:
-                partition_by_sql = f"partition by {_input}"
+                partition_by_sql = f"partition by {window_inputs.expr}"
             sql = f"row_number() over({partition_by_sql} {order_by_sql}) == 1"
             return SQLExpression(sql)
 
         return self._with_window_function(func)
 
     def is_last_distinct(self) -> Self:
-        def func(
-            _input: duckdb.Expression,
-            partition_by: Sequence[str],
-            order_by: Sequence[str],
-        ) -> duckdb.Expression:
-            order_by_sql = generate_order_by_sql(*order_by, ascending=True)
-            if partition_by:
+        def func(window_inputs: WindowInputs) -> duckdb.Expression:
+            order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=True)
+            if window_inputs.partition_by:
                 partition_by_sql = (
-                    generate_partition_by_sql(*partition_by) + f", {_input}"
+                    generate_partition_by_sql(*window_inputs.partition_by)
+                    + f", {window_inputs.expr}"
                 )
             else:
-                partition_by_sql = f"partition by {_input}"
+                partition_by_sql = f"partition by {window_inputs.expr}"
             sql = f"row_number() over({partition_by_sql} {order_by_sql}) == count(*) over ({partition_by_sql})"
             return SQLExpression(sql)
 
         return self._with_window_function(func)
 
     def diff(self) -> Self:
-        def func(
-            _input: duckdb.Expression,
-            partition_by: Sequence[str],
-            order_by: Sequence[str],
-        ) -> duckdb.Expression:
-            order_by_sql = generate_order_by_sql(*order_by, ascending=True)
-            partition_by_sql = generate_partition_by_sql(*partition_by)
-            sql = f"lag({_input}) over ({partition_by_sql} {order_by_sql})"
-            return _input - SQLExpression(sql)
+        def func(window_inputs: WindowInputs) -> duckdb.Expression:
+            order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=True)
+            partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
+            sql = f"lag({window_inputs.expr}) over ({partition_by_sql} {order_by_sql})"
+            return window_inputs.expr - SQLExpression(sql)
 
         return self._with_window_function(func)
 
     def cum_sum(self, *, reverse: bool) -> Self:
-        def func(
-            _input: duckdb.Expression,
-            partition_by: Sequence[str],
-            order_by: Sequence[str],
-        ) -> duckdb.Expression:
-            order_by_sql = generate_order_by_sql(*order_by, ascending=not reverse)
-            partition_by_sql = generate_partition_by_sql(*partition_by)
-            sql = f"sum ({_input}) over ({partition_by_sql} {order_by_sql} rows between unbounded preceding and current row)"
+        def func(window_inputs: WindowInputs) -> duckdb.Expression:
+            order_by_sql = generate_order_by_sql(
+                *window_inputs.order_by, ascending=not reverse
+            )
+            partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
+            sql = (
+                f"sum ({window_inputs.expr}) over ({partition_by_sql} {order_by_sql}"
+                "rows between unbounded preceding and current row)"
+            )
             return SQLExpression(sql)
 
         return self._with_window_function(func)
@@ -619,15 +609,14 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             start = f"{window_size - 1} preceding"
             end = "current row"
 
-        def func(
-            _input: duckdb.Expression,
-            partition_by: Sequence[str],
-            order_by: Sequence[str],
-        ) -> duckdb.Expression:
-            order_by_sql = generate_order_by_sql(*order_by, ascending=True)
-            partition_by_sql = generate_partition_by_sql(*partition_by)
+        def func(window_inputs: WindowInputs) -> duckdb.Expression:
+            order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=True)
+            partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
             window = f"({partition_by_sql} {order_by_sql} rows between {start} and {end})"
-            sql = f"case when count({_input}) over {window} >= {min_samples} then sum({_input}) over {window} else null end"
+            sql = (
+                f"case when count({window_inputs.expr}) over {window} >= {min_samples}"
+                f"then sum({window_inputs.expr}) over {window} else null end"
+            )
             return SQLExpression(sql)
 
         return self._with_window_function(func)
