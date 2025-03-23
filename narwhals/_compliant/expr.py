@@ -871,6 +871,10 @@ class LazyExpr(
     replace_strict: not_implemented = not_implemented()
     cat: not_implemented = not_implemented()  # pyright: ignore[reportAssignmentType]
 
+    @classmethod
+    def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:
+        return hasattr(obj, "__narwhals_expr__")
+
 
 class EagerExprNamespace(_ExprNamespace[EagerExprT], Generic[EagerExprT]):
     def __init__(self, expr: EagerExprT, /) -> None:

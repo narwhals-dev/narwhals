@@ -4,11 +4,11 @@ import operator
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Callable
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
+import duckdb
 from duckdb import CaseExpression
 from duckdb import CoalesceOperator
 from duckdb import FunctionExpression
@@ -16,17 +16,18 @@ from duckdb.typing import BIGINT
 from duckdb.typing import VARCHAR
 
 from narwhals._compliant import CompliantNamespace
+from narwhals._compliant import CompliantThen
+from narwhals._compliant import LazyWhen
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.selectors import DuckDBSelectorNamespace
 from narwhals._duckdb.utils import lit
-from narwhals._duckdb.utils import maybe_evaluate_expr
 from narwhals._duckdb.utils import narwhals_to_native_dtype
+from narwhals._duckdb.utils import when
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
-    import duckdb
     from typing_extensions import Self
 
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
@@ -217,11 +218,7 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
         )
 
     def when(self: Self, predicate: DuckDBExpr) -> DuckDBWhen:
-        return DuckDBWhen(
-            predicate,
-            self._backend_version,
-            version=self._version,
-        )
+        return DuckDBWhen.from_expr(predicate, context=self)
 
     def lit(self: Self, value: Any, dtype: DType | None) -> DuckDBExpr:
         def func(_df: DuckDBLazyFrame) -> list[duckdb.Expression]:
@@ -256,71 +253,17 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
         )
 
 
-class DuckDBWhen:
-    def __init__(
-        self: Self,
-        condition: DuckDBExpr,
-        backend_version: tuple[int, ...],
-        then_value: Any = None,
-        otherwise_value: Any = None,
-        *,
-        version: Version,
-    ) -> None:
-        self._backend_version = backend_version
-        self._condition = condition
-        self._then_value = then_value
-        self._otherwise_value = otherwise_value
-        self._version = version
+class DuckDBWhen(LazyWhen["DuckDBLazyFrame", duckdb.Expression, DuckDBExpr]):
+    @property
+    def _then(self) -> type[DuckDBThen]:
+        return DuckDBThen
 
     def __call__(self: Self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
-        condition = maybe_evaluate_expr(df, self._condition)
-        then_value = maybe_evaluate_expr(df, self._then_value)
-        if self._otherwise_value is None:
-            return [CaseExpression(condition=condition, value=then_value)]
-        otherwise_value = maybe_evaluate_expr(df, self._otherwise_value)
-        return [
-            CaseExpression(condition=condition, value=then_value).otherwise(
-                otherwise_value
-            )
-        ]
-
-    def then(self: Self, value: DuckDBExpr | Any) -> DuckDBThen:
-        self._then_value = value
-
-        return DuckDBThen(
-            self,
-            function_name="whenthen",
-            evaluate_output_names=getattr(
-                value, "_evaluate_output_names", lambda _df: ["literal"]
-            ),
-            alias_output_names=getattr(value, "_alias_output_names", None),
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        self.when = when
+        self.lit = lit
+        return super().__call__(df)
 
 
-class DuckDBThen(DuckDBExpr):
-    def __init__(
-        self: Self,
-        call: DuckDBWhen,
-        *,
-        function_name: str,
-        evaluate_output_names: Callable[[DuckDBLazyFrame], Sequence[str]],
-        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
-        backend_version: tuple[int, ...],
-        version: Version,
-    ) -> None:
-        self._backend_version = backend_version
-        self._version = version
-        self._call = call
-        self._function_name = function_name
-        self._evaluate_output_names = evaluate_output_names
-        self._alias_output_names = alias_output_names
-
-    def otherwise(self: Self, value: DuckDBExpr | Any) -> DuckDBExpr:
-        # type ignore because we are setting the `_call` attribute to a
-        # callable object of type `DuckDBWhen`, base class has the attribute as
-        # only a `Callable`
-        self._call._otherwise_value = value  # type: ignore[attr-defined]
-        self._function_name = "whenotherwise"
-        return self
+class DuckDBThen(
+    CompliantThen["DuckDBLazyFrame", duckdb.Expression, DuckDBExpr], DuckDBExpr
+): ...
