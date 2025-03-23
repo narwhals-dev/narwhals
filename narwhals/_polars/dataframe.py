@@ -36,10 +36,12 @@ if TYPE_CHECKING:
     from narwhals._polars.group_by import PolarsLazyGroupBy
     from narwhals._polars.series import PolarsSeries
     from narwhals.dtypes import DType
+    from narwhals.schema import Schema
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
     T = TypeVar("T")
     R = TypeVar("R")
@@ -92,6 +94,37 @@ class PolarsDataFrame:
         self._implementation = Implementation.POLARS
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
+
+    @classmethod
+    def from_numpy(
+        cls,
+        data: _2DArray,
+        /,
+        *,
+        context: _FullContext,  # NOTE: Maybe only `Implementation`?
+        schema: Mapping[str, DType] | Schema | Sequence[str] | None,
+    ) -> Self:
+        from narwhals.schema import Schema
+
+        schema_pl: pl.Schema | Sequence[str] | None
+        if isinstance(schema, (Mapping, Schema)):
+            schema_pl = Schema(schema).to_polars()
+        elif is_sequence_but_not_str(schema) or schema is None:
+            schema_pl = schema
+        else:
+            # NOTE: This should be handled for **all** backends in `functions.from_numpy`
+            msg = (
+                "`schema` is expected to be one of the following types: "
+                "Mapping[str, DType] | Schema | Sequence[str]. "
+                f"Got {type(schema)}."
+            )
+            raise TypeError(msg)
+        native = context._implementation.to_native_namespace().from_numpy(
+            data, schema=schema_pl
+        )
+        return cls(
+            native, backend_version=context._backend_version, version=context._version
+        )
 
     @property
     def native(self) -> pl.DataFrame:
