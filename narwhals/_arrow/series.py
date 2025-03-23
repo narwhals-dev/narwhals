@@ -610,7 +610,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         rng = np.random.default_rng(seed=seed)
         idx = np.arange(0, num_rows)
         mask = rng.choice(idx, size=n, replace=with_replacement)
-        return self._from_native_series(self.native.take(mask))  # pyright: ignore[reportArgumentType]
+        return self._from_native_series(self.native.take(mask))
 
     def fill_null(
         self: Self,
@@ -670,7 +670,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def to_pandas(self: Self) -> pd.Series[Any]:
         import pandas as pd  # ignore-banned-import()
 
-        return pd.Series(self.native, name=self.name)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        return pd.Series(self.native, name=self.name)
 
     def to_polars(self: Self) -> pl.Series:
         import polars as pl  # ignore-banned-import
