@@ -58,9 +58,7 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
         # coverage bug? this is definitely hit
         return self._expr(  # pragma: no cover
             lambda df: [
-                ArrowSeries.from_iterable(
-                    [len(df._native_frame)], name="len", context=self
-                )
+                ArrowSeries.from_iterable([len(df.native)], name="len", context=self)
             ],
             depth=0,
             function_name="len",
@@ -219,7 +217,7 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
         *,
         how: Literal["horizontal", "vertical", "diagonal"],
     ) -> ArrowDataFrame:
-        dfs = [item._native_frame for item in items]
+        dfs = [item.native for item in items]
 
         if not dfs:
             msg = "No dataframes to concatenate"  # pragma: no cover

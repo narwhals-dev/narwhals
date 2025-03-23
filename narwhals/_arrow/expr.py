@@ -67,7 +67,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
             try:
                 return [
                     ArrowSeries(
-                        df._native_frame[column_name],
+                        df.native[column_name],
                         name=column_name,
                         backend_version=df._backend_version,
                         version=df._version,
@@ -101,8 +101,8 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             return [
                 ArrowSeries(
-                    df._native_frame[column_index],
-                    name=df._native_frame.column_names[column_index],
+                    df.native[column_index],
+                    name=df.native.column_names[column_index],
                     backend_version=df._backend_version,
                     version=df._version,
                 )

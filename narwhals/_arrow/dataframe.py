@@ -438,21 +438,21 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
                 self.with_columns(
                     plx.lit(0, None).alias(key_token).broadcast(ExprKind.LITERAL)
                 )
-                ._native_frame.join(
+                .native.join(
                     other.with_columns(
                         plx.lit(0, None).alias(key_token).broadcast(ExprKind.LITERAL)
-                    )._native_frame,
+                    ).native,
                     keys=key_token,
                     right_keys=key_token,
                     join_type="inner",
                     right_suffix=suffix,
                 )
-                .drop([key_token]),
+                .drop([key_token])
             )
 
         return self._from_native_frame(
             self.native.join(
-                other._native_frame,
+                other.native,
                 keys=left_on or [],  # type: ignore[arg-type]
                 right_keys=right_on,  # type: ignore[arg-type]
                 join_type=how_to_join_map[how],
