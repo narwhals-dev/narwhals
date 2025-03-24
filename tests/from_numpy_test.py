@@ -66,9 +66,7 @@ def test_from_numpy_schema_list(
 def test_from_numpy_schema_notvalid(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     backend = nw_v1.get_native_namespace(df)
-    with pytest.raises(
-        TypeError, match="`schema` is expected to be one of the following types"
-    ):
+    with pytest.raises(TypeError, match=r"`schema.*expected.*types"):
         nw.from_numpy(arr, schema=5, backend=backend)  # type: ignore[arg-type]
 
 
