@@ -10,7 +10,6 @@ import pytest
 
 import narwhals as nw_main  # use nw_main in some tests for coverage
 import narwhals.stable.v1 as nw
-from narwhals.exceptions import DuplicateError
 from narwhals.utils import Implementation
 from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
@@ -108,9 +107,7 @@ def test_full_join_duplicate(constructor: Constructor) -> None:
     df_left = nw_main.from_native(constructor(df1)).lazy()
     df_right = nw_main.from_native(constructor(df2)).lazy()
 
-    # polars throws `NarwhalsError`, everything else should raise `DuplicateError`
-    exceptions: list[type[Exception]] = [DuplicateError, nw.exceptions.NarwhalsError]
-
+    exceptions: list[type[Exception]] = [nw.exceptions.NarwhalsError]
     if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
         from pyspark.errors import AnalysisException
 
