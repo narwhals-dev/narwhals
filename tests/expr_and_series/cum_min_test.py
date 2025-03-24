@@ -53,9 +53,6 @@ def test_lazy_cum_min_grouped(
     reverse: bool,
     expected_a: list[int],
 ) -> None:
-    if "duckdb" in str(constructor):
-        # no window function support yet in duckdb
-        request.applymarker(pytest.mark.xfail)
     if "pyarrow_table" in str(constructor):
         # grouped window functions not yet supported
         request.applymarker(pytest.mark.xfail)
@@ -101,9 +98,6 @@ def test_lazy_cum_min_ordered_by_nulls(
     reverse: bool,
     expected_a: list[int],
 ) -> None:
-    if "duckdb" in str(constructor):
-        # no window function support yet in duckdb
-        request.applymarker(pytest.mark.xfail)
     if "pyarrow_table" in str(constructor):
         # grouped window functions not yet supported
         request.applymarker(pytest.mark.xfail)
@@ -153,9 +147,6 @@ def test_lazy_cum_min_ungrouped(
     reverse: bool,
     expected_a: list[int],
 ) -> None:
-    if "duckdb" in str(constructor):
-        # no window function support yet in duckdb
-        request.applymarker(pytest.mark.xfail)
     if "dask" in str(constructor) and reverse:
         # https://github.com/dask/dask/issues/11802
         request.applymarker(pytest.mark.xfail)
@@ -196,9 +187,6 @@ def test_lazy_cum_min_ungrouped_ordered_by_nulls(
     reverse: bool,
     expected_a: list[int],
 ) -> None:
-    if "duckdb" in str(constructor):
-        # no window function support yet in duckdb
-        request.applymarker(pytest.mark.xfail)
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
