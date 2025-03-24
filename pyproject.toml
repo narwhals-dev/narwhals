@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.31.0"
+version = "1.32.0"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
@@ -82,6 +82,7 @@ docs = [
   "mkdocs-material",
   "mkdocstrings[python]",
   "mkdocstrings-python>=1.16",
+  "sqlframe",
   "pandas",
   "polars>=1.0.0",
   "pyarrow",

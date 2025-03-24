@@ -10,6 +10,7 @@ import polars as pl
 
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import ComputeError
+from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import NarwhalsError
 from narwhals.exceptions import ShapeError
@@ -243,11 +244,13 @@ def catch_polars_exception(
         return ShapeError(str(exception))
     elif isinstance(exception, pl.exceptions.InvalidOperationError):
         return InvalidOperationError(str(exception))
+    elif isinstance(exception, pl.exceptions.DuplicateError):
+        return DuplicateError(str(exception))
     elif isinstance(exception, pl.exceptions.ComputeError):
         return ComputeError(str(exception))
     if backend_version >= (1,) and isinstance(exception, pl.exceptions.PolarsError):
         # Old versions of Polars didn't have PolarsError.
-        return NarwhalsError(str(exception))
+        return NarwhalsError(str(exception))  # pragma: no cover
     elif backend_version < (1,) and "polars.exceptions" in str(
         type(exception)
     ):  # pragma: no cover

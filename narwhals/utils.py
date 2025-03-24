@@ -1632,6 +1632,28 @@ def supports_arrow_c_stream(obj: Any) -> TypeIs[ArrowStreamExportable]:
     return _hasattr_static(obj, "__arrow_c_stream__")
 
 
+def _remap_full_join_keys(
+    left_on: Sequence[str], right_on: Sequence[str], suffix: str
+) -> dict[str, str]:
+    """Remap join keys to avoid collisions.
+
+    If left keys collide with the right keys, append the suffix.
+    If there's no collision, let the right keys be.
+
+    Arguments:
+        left_on: Left keys.
+        right_on: Right keys.
+        suffix: Suffix to append to right keys.
+
+    Returns:
+        A map of old to new right keys.
+    """
+    right_keys_suffixed = (
+        f"{key}{suffix}" if key in left_on else key for key in right_on
+    )
+    return dict(zip(right_on, right_keys_suffixed))
+
+
 # TODO @dangotbanned: Extend with runtime behavior for `v1.*`
 # See `narwhals.exceptions.NarwhalsUnstableWarning`
 def unstable(fn: _Fn, /) -> _Fn:

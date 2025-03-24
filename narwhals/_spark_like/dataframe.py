@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import warnings
+from functools import reduce
+from operator import and_
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
@@ -328,7 +330,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
     def join(
         self: Self,
         other: Self,
-        how: Literal["inner", "left", "cross", "semi", "anti"],
+        how: Literal["inner", "left", "full", "cross", "semi", "anti"],
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
         suffix: str,
@@ -339,14 +341,23 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
         left_columns = self.columns
         right_columns = other.columns
 
+        right_on_: list[str] = list(right_on) if right_on is not None else []
+        left_on_: list[str] = list(left_on) if left_on is not None else []
+
         # create a mapping for columns on other
         # `right_on` columns will be renamed as `left_on`
         # the remaining columns will be either added the suffix or left unchanged.
+        right_cols_to_rename = (
+            [c for c in right_columns if c not in right_on_]
+            if how != "full"
+            else right_columns
+        )
+
         rename_mapping = {
-            **dict(zip(right_on or [], left_on or [])),
+            **dict(zip(right_on_, left_on_)),
             **{
                 colname: f"{colname}{suffix}" if colname in left_columns else colname
-                for colname in list(set(right_columns).difference(set(right_on or [])))
+                for colname in right_cols_to_rename
             },
         }
         other_native = other_native.select(
@@ -363,12 +374,30 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
                 [
                     rename_mapping[colname]
                     for colname in right_columns
-                    if colname not in (right_on or [])
+                    if colname not in right_on_
                 ]
             )
-        on = list(left_on) if left_on else None
+        elif how == "full":
+            col_order.extend(rename_mapping.values())
+
+        right_on_remapped = [rename_mapping[c] for c in right_on_]
+        on_ = (
+            reduce(
+                and_,
+                (
+                    getattr(self_native, left_key) == getattr(other_native, right_key)
+                    for left_key, right_key in zip(left_on_, right_on_remapped)
+                ),
+            )
+            if how == "full"
+            else None
+            if how == "cross"
+            else left_on_
+        )
+        how_native = "full_outer" if how == "full" else how
+
         return self._from_native_frame(
-            self_native.join(other_native, on=on, how=how).select(col_order)
+            self_native.join(other_native, on=on_, how=how_native).select(col_order)
         )
 
     def explode(self: Self, columns: Sequence[str]) -> Self:

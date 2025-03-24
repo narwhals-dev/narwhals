@@ -64,7 +64,6 @@ class PolarsDataFrame:
     item: Method[Any]
     iter_rows: Method[Iterator[tuple[Any, ...]] | Iterator[Mapping[str, Any]]]
     is_unique: Method[PolarsSeries]
-    join: Method[Self]
     join_asof: Method[Self]
     rename: Method[Self]
     row: Method[tuple[Any, ...]]
@@ -448,6 +447,32 @@ class PolarsDataFrame:
     def to_polars(self: Self) -> pl.DataFrame:
         return self.native
 
+    def join(
+        self: Self,
+        other: Self,
+        *,
+        how: Literal["inner", "left", "full", "cross", "semi", "anti"],
+        left_on: Sequence[str] | None,
+        right_on: Sequence[str] | None,
+        suffix: str,
+    ) -> Self:
+        how_native = (
+            "outer" if (self._backend_version < (1, 0, 0) and how == "full") else how
+        )
+
+        try:
+            return self._from_native_frame(
+                self._native_frame.join(
+                    other=other._native_frame,
+                    how=how_native,  # type: ignore[arg-type]
+                    left_on=left_on,
+                    right_on=right_on,
+                    suffix=suffix,
+                )
+            )
+        except Exception as e:  # noqa: BLE001
+            raise catch_polars_exception(e, self._backend_version) from None
+
 
 class PolarsLazyFrame:
     drop_nulls: Method[Self]
@@ -455,7 +480,6 @@ class PolarsLazyFrame:
     filter: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]
-    join: Method[Self]
     join_asof: Method[Self]
     rename: Method[Self]
     select: Method[Self]
@@ -647,3 +671,26 @@ class PolarsLazyFrame:
 
     def aggregate(self: Self, *exprs: Any) -> Self:
         return self.select(*exprs)
+
+    def join(
+        self: Self,
+        other: Self,
+        *,
+        how: Literal["inner", "left", "full", "cross", "semi", "anti"],
+        left_on: Sequence[str] | None,
+        right_on: Sequence[str] | None,
+        suffix: str,
+    ) -> Self:
+        how_native = (
+            "outer" if (self._backend_version < (1, 0, 0) and how == "full") else how
+        )
+
+        return self._from_native_frame(
+            self._native_frame.join(
+                other=other._native_frame,
+                how=how_native,  # type: ignore[arg-type]
+                left_on=left_on,
+                right_on=right_on,
+                suffix=suffix,
+            )
+        )

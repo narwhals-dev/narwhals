@@ -33,7 +33,7 @@ def test_is_first_distinct_expr_lazy(constructor: Constructor) -> None:
     data = {"a": [1, 1, 2, 3, 2], "b": [1, 2, 3, 2, 1], "i": [0, 1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
     result = (
-        df.select(nw.col("a", "b").is_first_distinct().over(_order_by="i"), "i")
+        df.select(nw.col("a", "b").is_first_distinct().over(order_by="i"), "i")
         .sort("i")
         .drop("i")
     )
@@ -51,12 +51,12 @@ def test_is_first_distinct_expr_lazy_grouped(
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    if any(x in str(constructor) for x in ("dask", "pandas", "pyarrow")):
+    if any(x in str(constructor) for x in ("dask", "pandas", "pyarrow", "cudf", "modin")):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 1, 2, 2, 2], "b": [1, 3, 3, 2, 3], "i": [0, 1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
     result = (
-        df.select(nw.col("b").is_first_distinct().over("a", _order_by="i"), "i")
+        df.select(nw.col("b").is_first_distinct().over("a", order_by="i"), "i")
         .sort("i")
         .drop("i")
     )

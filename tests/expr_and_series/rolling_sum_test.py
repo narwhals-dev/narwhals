@@ -97,7 +97,7 @@ def test_rolling_sum_expr_lazy_ungrouped(
         df.with_columns(
             nw.col("a")
             .rolling_sum(window_size, min_samples=min_samples, center=center)
-            .over(_order_by="b")
+            .over(order_by="b")
         )
         .select("a", "i")
         .sort("i")
@@ -155,7 +155,7 @@ def test_rolling_sum_expr_lazy_grouped(
         df.with_columns(
             nw.col("a")
             .rolling_sum(window_size, min_samples=min_samples, center=center)
-            .over("g", _order_by="b")
+            .over("g", order_by="b")
         )
         .sort("i")
         .select("a")

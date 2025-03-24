@@ -403,7 +403,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             )
         names = [s.name for s in new_series]
         reshaped = align_series_full_broadcast(*new_series)
-        df = pa.Table.from_arrays([s._native_series for s in reshaped], names=names)
+        df = pa.Table.from_arrays([s.native for s in reshaped], names=names)
         return self._from_native_frame(df, validate_column_names=True)
 
     def _extract_comparand(self, other: ArrowSeries) -> ArrowChunkedArray:
@@ -452,7 +452,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         self: Self,
         other: Self,
         *,
-        how: Literal["left", "inner", "cross", "anti", "semi"],
+        how: Literal["inner", "left", "full", "cross", "semi", "anti"],
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
         suffix: str,
@@ -462,6 +462,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             "semi": "left semi",
             "inner": "inner",
             "left": "left outer",
+            "full": "full outer",
         }
 
         if how == "cross":
@@ -474,25 +475,27 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
                 self.with_columns(
                     plx.lit(0, None).alias(key_token).broadcast(ExprKind.LITERAL)
                 )
-                ._native_frame.join(
+                .native.join(
                     other.with_columns(
                         plx.lit(0, None).alias(key_token).broadcast(ExprKind.LITERAL)
-                    )._native_frame,
+                    ).native,
                     keys=key_token,
                     right_keys=key_token,
                     join_type="inner",
                     right_suffix=suffix,
                 )
-                .drop([key_token]),
+                .drop([key_token])
             )
 
+        coalesce_keys = how != "full"  # polars full join does not coalesce keys
         return self._from_native_frame(
             self.native.join(
-                other._native_frame,
+                other.native,
                 keys=left_on or [],  # type: ignore[arg-type]
                 right_keys=right_on,  # type: ignore[arg-type]
                 join_type=how_to_join_map[how],
                 right_suffix=suffix,
+                coalesce_keys=coalesce_keys,
             ),
         )
 

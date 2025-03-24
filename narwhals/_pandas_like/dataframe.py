@@ -31,6 +31,7 @@ from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
+from narwhals.utils import _remap_full_join_keys
 from narwhals.utils import check_column_exists
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
@@ -651,7 +652,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         self: Self,
         other: Self,
         *,
-        how: Literal["left", "inner", "cross", "anti", "semi"],
+        how: Literal["inner", "left", "full", "cross", "semi", "anti"],
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
         suffix: str,
@@ -773,6 +774,29 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
                 elif right_key != left_key:
                     extra.append(f"{right_key}{suffix}")
             return self._from_native_frame(result_native.drop(columns=extra))
+
+        if how == "full":
+            # Pandas coalesces keys in full joins unless there's no collision
+
+            # help mypy
+            assert left_on is not None  # noqa: S101
+            assert right_on is not None  # noqa: S101
+
+            right_on_mapper = _remap_full_join_keys(left_on, right_on, suffix)
+
+            other_native = other._native_frame
+            other_native = other_native.rename(columns=right_on_mapper)
+            check_column_names_are_unique(other_native.columns)
+            right_on = list(right_on_mapper.values())  # we now have the suffixed keys
+            return self._from_native_frame(
+                self._native_frame.merge(
+                    other_native,
+                    left_on=left_on,
+                    right_on=right_on,
+                    how="outer",
+                    suffixes=("", suffix),
+                ),
+            )
 
         return self._from_native_frame(
             self.native.merge(

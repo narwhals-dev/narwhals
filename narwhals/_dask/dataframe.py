@@ -17,7 +17,9 @@ from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
+from narwhals.utils import _remap_full_join_keys
 from narwhals.utils import check_column_exists
+from narwhals.utils import check_column_names_are_unique
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
@@ -255,7 +257,7 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
         self: Self,
         other: Self,
         *,
-        how: Literal["left", "inner", "cross", "anti", "semi"],
+        how: Literal["inner", "left", "full", "cross", "semi", "anti"],
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
         suffix: str,
@@ -349,6 +351,30 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
                 elif right_key != left_key:
                     extra.append(f"{right_key}_right")
             return self._from_native_frame(result_native.drop(columns=extra))
+
+        if how == "full":
+            # dask does not retain keys post-join
+            # we must append the suffix to each key before-hand
+
+            # help mypy
+            assert left_on is not None  # noqa: S101
+            assert right_on is not None  # noqa: S101
+
+            right_on_mapper = _remap_full_join_keys(left_on, right_on, suffix)
+
+            other_native = other._native_frame
+            other_native = other_native.rename(columns=right_on_mapper)
+            check_column_names_are_unique(other_native.columns)
+            right_on = list(right_on_mapper.values())  # we now have the suffixed keys
+            return self._from_native_frame(
+                self._native_frame.merge(
+                    other_native,
+                    left_on=left_on,
+                    right_on=right_on,
+                    how="outer",
+                    suffixes=("", suffix),
+                ),
+            )
 
         return self._from_native_frame(
             self._native_frame.merge(

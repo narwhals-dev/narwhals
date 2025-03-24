@@ -428,7 +428,7 @@ def test_over_without_partition_by(
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, -1, 2], "i": [0, 2, 1]}))
     result = (
-        df.with_columns(b=nw.col("a").abs().cum_sum().over(_order_by="i"))
+        df.with_columns(b=nw.col("a").abs().cum_sum().over(order_by="i"))
         .sort("i")
         .select("a", "b", "i")
     )
