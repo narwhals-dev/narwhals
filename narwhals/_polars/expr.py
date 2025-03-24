@@ -40,15 +40,6 @@ class PolarsExpr:
             expr, version=self._version, backend_version=self._backend_version
         )
 
-    def _with_metadata(self, metadata: ExprMetadata) -> Self:
-        expr = self.__class__(
-            self._native_expr,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-        expr._metadata = metadata
-        return expr
-
     @classmethod
     def _from_series(cls, series: Any) -> Self:
         return cls(

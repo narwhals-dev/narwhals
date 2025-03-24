@@ -46,7 +46,9 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "SparkLikeExpr
     def _expr(self) -> type[SparkLikeExpr]:
         return SparkLikeExpr
 
-    def lit(self: Self, value: object, dtype: DType | None) -> SparkLikeExpr:
+    def lit(
+        self: Self, value: object, dtype: DType | type[DType] | None
+    ) -> SparkLikeExpr:
         def _lit(df: SparkLikeLazyFrame) -> list[Column]:
             column = df._F.lit(value)
             if dtype:

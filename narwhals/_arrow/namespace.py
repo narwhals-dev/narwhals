@@ -72,7 +72,7 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
             version=self._version,
         )
 
-    def lit(self: Self, value: Any, dtype: DType | None) -> ArrowExpr:
+    def lit(self: Self, value: Any, dtype: DType | type[DType] | None) -> ArrowExpr:
         def _lit_arrow_series(_: ArrowDataFrame) -> ArrowSeries:
             arrow_series = ArrowSeries.from_iterable(
                 data=[value], name="literal", context=self
