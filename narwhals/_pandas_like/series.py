@@ -292,7 +292,10 @@ class PandasLikeSeries(EagerSeries[Any]):
             backend_version=self._backend_version,
             version=self._version,
         )
-        return self._from_native_series(ser.astype(pd_dtype))
+        result = self._from_native_series(ser.astype(pd_dtype))
+        if self._broadcast:
+            result._broadcast = True
+        return result
 
     def item(self: Self, index: int | None) -> Any:
         # cuDF doesn't have Series.item().
@@ -555,7 +558,10 @@ class PandasLikeSeries(EagerSeries[Any]):
     # Transformations
 
     def is_null(self: Self) -> PandasLikeSeries:
-        return self._from_native_series(self._native_series.isna())
+        result = self._from_native_series(self._native_series.isna())
+        if self._broadcast:
+            result._broadcast = True
+        return result
 
     def is_nan(self: Self) -> PandasLikeSeries:
         ser = self._native_series

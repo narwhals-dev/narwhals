@@ -13,6 +13,7 @@ from typing import overload
 import pyarrow as pa
 import pyarrow.compute as pc
 
+from narwhals.exceptions import ShapeError
 from narwhals.utils import _SeriesNamespace
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
@@ -260,10 +261,9 @@ def align_series_full_broadcast(*series: ArrowSeries) -> Sequence[ArrowSeries]:
     if fast_path:
         return series
 
-    is_max_length_gt_1 = max_length > 1
     reshaped = []
-    for s, length in zip(series, lengths):
-        if is_max_length_gt_1 and length == 1:
+    for s in series:
+        if s._broadcast:
             value = s.native[0]
             if s._backend_version < (13,) and hasattr(value, "as_py"):
                 value = value.as_py()
@@ -271,6 +271,9 @@ def align_series_full_broadcast(*series: ArrowSeries) -> Sequence[ArrowSeries]:
                 s._from_native_series(pa.array([value] * max_length, type=s._type))
             )
         else:
+            if (actual_len := len(s)) != max_length:
+                msg = f"Expected object of length {max_length}, got {actual_len}."
+                raise ShapeError(msg)
             reshaped.append(s)
 
     return reshaped

@@ -28,6 +28,7 @@ from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import nulls_like
 from narwhals._arrow.utils import pad_series
 from narwhals._compliant import EagerSeries
+from narwhals._expression_parsing import ExprKind
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
@@ -654,7 +655,10 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             series = fill_func(self.native)
         else:
             series = fill_aux(self.native, limit, strategy)
-        return self._from_native_series(series)
+        result = self._from_native_series(series)
+        if self._broadcast:
+            result._broadcast = True
+        return result
 
     def to_frame(self: Self) -> ArrowDataFrame:
         from narwhals._arrow.dataframe import ArrowDataFrame
@@ -817,9 +821,13 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def mode(self: Self) -> ArrowSeries:
         plx = self.__narwhals_namespace__()
         col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
-        return self.value_counts(
+        counts = self.value_counts(
             name=col_token, normalize=False, sort=False, parallel=False
-        ).filter(plx.col(col_token) == plx.col(col_token).max())[self.name]
+        )
+        return counts.filter(
+            plx.col(col_token)
+            == plx.col(col_token).max().broadcast(kind=ExprKind.AGGREGATION)
+        )[self.name]
 
     def is_finite(self: Self) -> Self:
         return self._from_native_series(pc.is_finite(self.native))
