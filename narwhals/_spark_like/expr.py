@@ -135,7 +135,10 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return result
 
     def _cum_window_func(
-        self: Self, *, reverse: bool, func_name: Literal["sum", "max", "min"]
+        self: Self,
+        *,
+        reverse: bool,
+        func_name: Literal["sum", "max", "min", "count", "product"],
     ) -> WindowFunction:
         def func(window_inputs: WindowInputs) -> Column:
             if reverse:
@@ -594,6 +597,16 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             self._cum_window_func(reverse=reverse, func_name="min")
         )
 
+    def cum_count(self, *, reverse: bool) -> Self:
+        return self._with_window_function(
+            self._cum_window_func(reverse=reverse, func_name="count")
+        )
+
+    def cum_prod(self, *, reverse: bool) -> Self:
+        return self._with_window_function(
+            self._cum_window_func(reverse=reverse, func_name="product")
+        )
+
     def fill_null(
         self,
         value: Any | None,
@@ -657,6 +670,4 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
     drop_nulls = not_implemented()
     unique = not_implemented()
-    cum_count = not_implemented()
-    cum_prod = not_implemented()
     quantile = not_implemented()
