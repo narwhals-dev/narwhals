@@ -773,8 +773,7 @@ def test_join_duplicate_column_names(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if (
-        "polars" in str(constructor)  # https://github.com/pola-rs/polars/issues/21048
-        or "cudf" in str(constructor)
+        "cudf" in str(constructor)
         # TODO(unassigned): cudf doesn't raise here for some reason,
         # need to investigate.
     ):
