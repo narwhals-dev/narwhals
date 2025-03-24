@@ -405,11 +405,6 @@ class Implementation(Enum):
         self: _DaskImplementation, version: Version, /
     ) -> DaskNamespace: ...
 
-    @overload
-    def _to_compliant_namespace(
-        self: _SparkLikeImplementation, version: Version, /
-    ) -> SparkLikeNamespace: ...
-
     def _to_compliant_namespace(
         self, version: Version, /
     ) -> CompliantNamespace[Any, Any]:
