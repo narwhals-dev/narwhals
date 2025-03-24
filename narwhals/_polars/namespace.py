@@ -109,7 +109,7 @@ class PolarsNamespace:
     ) -> PolarsDataFrame | PolarsSeries:
         if is_numpy_array_2d(data):
             return self._dataframe.from_numpy(data, schema=schema, context=self)
-        return self._series.from_numpy(data, context=self)
+        return self._series.from_numpy(data, context=self)  # pragma: no cover
 
     def nth(self: Self, *indices: int) -> PolarsExpr:
         if self._backend_version < (1, 0, 0):

@@ -616,17 +616,17 @@ def _into_compliant_namespace(
         from narwhals._arrow.namespace import ArrowNamespace
 
         return ArrowNamespace(backend_version=backend_version, version=version)
-    elif impl.is_spark_like():
+    elif impl.is_spark_like():  # pragma: no cover
         from narwhals._spark_like.namespace import SparkLikeNamespace
 
         return SparkLikeNamespace(
             implementation=impl, backend_version=backend_version, version=version
         )
-    elif impl.is_duckdb():
+    elif impl.is_duckdb():  # pragma: no cover
         from narwhals._duckdb.namespace import DuckDBNamespace
 
         return DuckDBNamespace(backend_version=backend_version, version=version)
-    elif impl.is_dask():
+    elif impl.is_dask():  # pragma: no cover
         from narwhals._dask.namespace import DaskNamespace
 
         return DaskNamespace(backend_version=backend_version, version=version)
@@ -1589,7 +1589,7 @@ def is_eager_allowed(obj: Implementation) -> TypeIs[_EagerAllowed]:
     }
 
 
-def is_lazy_allowed(obj: Implementation) -> TypeIs[_LazyAllowed]:
+def is_lazy_allowed(obj: Implementation) -> TypeIs[_LazyAllowed]:  # pragma: no cover
     return obj in {
         Implementation.POLARS,
         Implementation.PYSPARK,
