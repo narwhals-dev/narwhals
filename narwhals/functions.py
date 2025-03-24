@@ -507,7 +507,7 @@ def from_numpy(
         └──────────────────┘
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _from_numpy_impl(data, schema, backend=backend)
+    return _from_numpy_impl(data, schema, backend=backend, version=Version.MAIN)
 
 
 def _from_numpy_impl(
@@ -515,6 +515,7 @@ def _from_numpy_impl(
     schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
     *,
     backend: ModuleType | Implementation | str,
+    version: Version,
 ) -> DataFrame[Any]:
     from narwhals.schema import Schema
 
