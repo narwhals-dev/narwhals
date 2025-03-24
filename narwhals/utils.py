@@ -375,38 +375,40 @@ class Implementation(Enum):
         msg = "Not supported Implementation"  # pragma: no cover
         raise AssertionError(msg)
 
+    # NOTE: `mypy` complains, but `pyright` understands this fine
+    # error: Self argument missing for a non-static method (or an invalid type for self)  [misc]
     @overload
-    def _to_compliant_namespace(
+    def _to_compliant_namespace(  # type: ignore[misc]
         self: _PandasLikeImplementation, version: Version, /
     ) -> PandasLikeNamespace: ...
 
     @overload
-    def _to_compliant_namespace(
+    def _to_compliant_namespace(  # type: ignore[misc]
         self: _PolarsImplementation, version: Version, /
     ) -> PolarsNamespace: ...
 
     @overload
-    def _to_compliant_namespace(
+    def _to_compliant_namespace(  # type: ignore[misc]
         self: _ArrowImplementation, version: Version, /
     ) -> ArrowNamespace: ...
 
     @overload
-    def _to_compliant_namespace(
+    def _to_compliant_namespace(  # type: ignore[misc]
         self: _SparkLikeImplementation, version: Version, /
     ) -> SparkLikeNamespace: ...
 
     @overload
-    def _to_compliant_namespace(
+    def _to_compliant_namespace(  # type: ignore[misc]
         self: _DuckDBImplementation, version: Version, /
     ) -> DuckDBNamespace: ...
 
     @overload
-    def _to_compliant_namespace(
+    def _to_compliant_namespace(  # type: ignore[misc]
         self: _DaskImplementation, version: Version, /
     ) -> DaskNamespace: ...
 
     def _to_compliant_namespace(
-        self, version: Version, /
+        self: Implementation, version: Version, /
     ) -> CompliantNamespace[Any, Any]:
         native = self.to_native_namespace()
         into_version = native if not self.is_sqlframe() else native._version
