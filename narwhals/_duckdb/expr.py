@@ -92,6 +92,22 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         expr._metadata = metadata
         return expr
 
+    def _cum_window_func(
+        self, *, reverse: bool, func_name: Literal["sum", "max"]
+    ) -> WindowFunction:
+        def func(window_inputs: WindowInputs) -> duckdb.Expression:
+            order_by_sql = generate_order_by_sql(
+                *window_inputs.order_by, ascending=not reverse
+            )
+            partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
+            sql = (
+                f"{func_name} ({window_inputs.expr}) over ({partition_by_sql} {order_by_sql} "
+                "rows between unbounded preceding and current row)"
+            )
+            return SQLExpression(sql)  # type: ignore[no-any-return, unused-ignore]
+
+        return func
+
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         if kind is ExprKind.LITERAL:
             return self
@@ -499,18 +515,9 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         return self._with_window_function(func)
 
     def cum_sum(self, *, reverse: bool) -> Self:
-        def func(window_inputs: WindowInputs) -> duckdb.Expression:
-            order_by_sql = generate_order_by_sql(
-                *window_inputs.order_by, ascending=not reverse
-            )
-            partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
-            sql = (
-                f"sum ({window_inputs.expr}) over ({partition_by_sql} {order_by_sql} "
-                "rows between unbounded preceding and current row)"
-            )
-            return SQLExpression(sql)  # type: ignore[no-any-return, unused-ignore]
-
-        return self._with_window_function(func)
+        return self._with_window_function(
+            self._cum_window_func(reverse=reverse, func_name="sum")
+        )
 
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         if center:
