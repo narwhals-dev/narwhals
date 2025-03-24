@@ -52,14 +52,21 @@ if TYPE_CHECKING:
     from typing_extensions import LiteralString
     from typing_extensions import ParamSpec
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
+    from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._compliant import CompliantExpr
     from narwhals._compliant import CompliantFrameT
     from narwhals._compliant import CompliantNamespace
     from narwhals._compliant import CompliantSeriesOrNativeExprT_co
     from narwhals._compliant import NativeFrameT_co
     from narwhals._compliant import NativeSeriesT_co
+    from narwhals._dask.namespace import DaskNamespace
+    from narwhals._duckdb.namespace import DuckDBNamespace
+    from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals._polars.namespace import PolarsNamespace
+    from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -85,6 +92,29 @@ if TYPE_CHECKING:
     _Fn = TypeVar("_Fn", bound="Callable[..., Any]")
     P = ParamSpec("P")
     R = TypeVar("R")
+
+    _PandasLikeImplementation: TypeAlias = (
+        "Literal[Implementation.PANDAS, Implementation.CUDF, Implementation.MODIN]"
+    )
+    _ArrowImplementation: TypeAlias = "Literal[Implementation.PYARROW]"
+    _PolarsImplementation: TypeAlias = "Literal[Implementation.POLARS]"
+    _SparkLikeImplementation: TypeAlias = (
+        "Literal[Implementation.PYSPARK, Implementation.SQLFRAME]"
+    )
+    _DaskImplementation: TypeAlias = "Literal[Implementation.DASK]"
+    _DuckDBImplementation: TypeAlias = "Literal[Implementation.DUCKDB]"
+    _EagerOnlyImplementation: TypeAlias = (
+        "_PandasLikeImplementation | _ArrowImplementation"
+    )
+    _EagerAllowedImplementation: TypeAlias = (
+        "_PolarsImplementation | _EagerOnlyImplementation"
+    )
+    _LazyOnlyImplementation: TypeAlias = (
+        "_SparkLikeImplementation | _DaskImplementation | _DuckDBImplementation"
+    )
+    _LazyAllowedImplementation: TypeAlias = (
+        "_PolarsImplementation | _LazyOnlyImplementation"
+    )
 
     class _SupportsVersion(Protocol):
         __version__: str
@@ -344,6 +374,41 @@ class Implementation(Enum):
 
         msg = "Not supported Implementation"  # pragma: no cover
         raise AssertionError(msg)
+
+    @overload
+    def _to_compliant_namespace(
+        self: _PandasLikeImplementation, version: Version, /
+    ) -> PandasLikeNamespace: ...
+
+    @overload
+    def _to_compliant_namespace(
+        self: _PolarsImplementation, version: Version, /
+    ) -> PolarsNamespace: ...
+
+    @overload
+    def _to_compliant_namespace(
+        self: _ArrowImplementation, version: Version, /
+    ) -> ArrowNamespace: ...
+
+    @overload
+    def _to_compliant_namespace(
+        self: _SparkLikeImplementation, version: Version, /
+    ) -> SparkLikeNamespace: ...
+
+    @overload
+    def _to_compliant_namespace(
+        self: _DuckDBImplementation, version: Version, /
+    ) -> DuckDBNamespace: ...
+
+    @overload
+    def _to_compliant_namespace(
+        self: _DaskImplementation, version: Version, /
+    ) -> DaskNamespace: ...
+
+    @overload
+    def _to_compliant_namespace(
+        self: _SparkLikeImplementation, version: Version, /
+    ) -> SparkLikeNamespace: ...
 
     def _to_compliant_namespace(
         self, version: Version, /
