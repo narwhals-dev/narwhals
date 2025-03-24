@@ -49,7 +49,7 @@ T = TypeVar("T")
 
 
 class CompliantDataFrame(
-    NumpyConvertible["_2DArray"],
+    NumpyConvertible["_2DArray", "_2DArray"],
     _StoresNative[NativeFrameT_co],
     Sized,
     Protocol[CompliantSeriesT, CompliantExprT_contra, NativeFrameT_co],
