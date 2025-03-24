@@ -1603,6 +1603,26 @@ def is_compliant_expr(
     return hasattr(obj, "__narwhals_expr__")
 
 
+def is_eager_allowed(obj: Implementation) -> TypeIs[_EagerAllowedImplementation]:
+    return obj in {
+        Implementation.PANDAS,
+        Implementation.MODIN,
+        Implementation.CUDF,
+        Implementation.POLARS,
+        Implementation.PYARROW,
+    }
+
+
+def is_lazy_allowed(obj: Implementation) -> TypeIs[_LazyAllowedImplementation]:
+    return obj in {
+        Implementation.POLARS,
+        Implementation.PYSPARK,
+        Implementation.SQLFRAME,
+        Implementation.DASK,
+        Implementation.DUCKDB,
+    }
+
+
 def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
     return hasattr(obj, "__native_namespace__")
 
