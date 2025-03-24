@@ -58,9 +58,7 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
         # coverage bug? this is definitely hit
         return self._expr(  # pragma: no cover
             lambda df: [
-                ArrowSeries.from_iterable(
-                    [len(df._native_frame)], name="len", context=self
-                )
+                ArrowSeries.from_iterable([len(df.native)], name="len", context=self)
             ],
             depth=0,
             function_name="len",
@@ -158,12 +156,8 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             init_series, *series = list(chain.from_iterable(expr(df) for expr in exprs))
             init_series, *series = align_series_full_broadcast(init_series, *series)
-            # NOTE: Stubs copy the wrong signature https://github.com/zen-xu/pyarrow-stubs/blob/d97063876720e6a5edda7eb15f4efe07c31b8296/pyarrow-stubs/compute.pyi#L963
-            min_element_wise: Incomplete = pc.min_element_wise
             native_series = reduce(
-                min_element_wise,
-                [s._native_series for s in series],
-                init_series._native_series,
+                pc.min_element_wise, [s.native for s in series], init_series.native
             )
             return [
                 ArrowSeries(
@@ -187,13 +181,8 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             init_series, *series = list(chain.from_iterable(expr(df) for expr in exprs))
             init_series, *series = align_series_full_broadcast(init_series, *series)
-            # NOTE: stubs are missing `ChunkedArray` support
-            # https://github.com/zen-xu/pyarrow-stubs/blob/d97063876720e6a5edda7eb15f4efe07c31b8296/pyarrow-stubs/compute.pyi#L948-L954
-            max_element_wise: Incomplete = pc.max_element_wise
             native_series = reduce(
-                max_element_wise,
-                [s._native_series for s in series],
-                init_series._native_series,
+                pc.max_element_wise, [s.native for s in series], init_series.native
             )
             return [
                 ArrowSeries(
@@ -219,7 +208,7 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
         *,
         how: Literal["horizontal", "vertical", "diagonal"],
     ) -> ArrowDataFrame:
-        dfs = [item._native_frame for item in items]
+        dfs = [item.native for item in items]
 
         if not dfs:
             msg = "No dataframes to concatenate"  # pragma: no cover
