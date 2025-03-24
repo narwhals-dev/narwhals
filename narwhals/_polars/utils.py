@@ -250,7 +250,7 @@ def catch_polars_exception(
         return ComputeError(str(exception))
     if backend_version >= (1,) and isinstance(exception, pl.exceptions.PolarsError):
         # Old versions of Polars didn't have PolarsError.
-        return NarwhalsError(str(exception))
+        return NarwhalsError(str(exception))  # pragma: no cover
     elif backend_version < (1,) and "polars.exceptions" in str(
         type(exception)
     ):  # pragma: no cover
