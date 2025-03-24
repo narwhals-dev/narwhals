@@ -135,11 +135,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
                 Schema(schema).to_pandas(it)
             )
         else:
-            if is_sequence_but_not_str(schema):
-                columns = list(schema)
-            else:
-                columns = [f"column_{x}" for x in range(data.shape[1])]
-            native = DataFrame(data, columns=columns)
+            native = DataFrame(data, columns=cls._numpy_column_names(data, schema))
         return cls(
             native,
             implementation=implementation,

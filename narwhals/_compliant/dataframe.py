@@ -321,3 +321,9 @@ class EagerDataFrame(
     def _extract_comparand(self, other: EagerSeriesT, /) -> Any:
         """Extract native Series, broadcasting to `len(self)` if necessary."""
         ...
+
+    @staticmethod
+    def _numpy_column_names(
+        data: _2DArray, columns: Sequence[str] | None, /
+    ) -> list[str]:
+        return list(columns or (f"column_{x}" for x in range(data.shape[1])))

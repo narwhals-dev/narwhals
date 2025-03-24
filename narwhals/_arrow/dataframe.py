@@ -108,11 +108,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         if isinstance(schema, (Mapping, Schema)):
             native = pa.Table.from_arrays(arrays, schema=Schema(schema).to_arrow())
         else:
-            if is_sequence_but_not_str(schema):
-                names = list(schema)
-            else:
-                names = [f"column_{x}" for x in range(data.shape[1])]
-            native = pa.Table.from_arrays(arrays, names=names)
+            native = pa.Table.from_arrays(arrays, cls._numpy_column_names(data, schema))
         return cls(
             native,
             backend_version=context._backend_version,
