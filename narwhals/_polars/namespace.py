@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Literal
-from typing import Sequence
 from typing import overload
 
 import polars as pl
@@ -77,7 +76,7 @@ class PolarsNamespace:
     @overload
     def concat(
         self: Self,
-        items: Sequence[PolarsDataFrame],
+        items: Iterable[PolarsDataFrame],
         *,
         how: Literal["vertical", "horizontal", "diagonal"],
     ) -> PolarsDataFrame: ...
@@ -85,30 +84,28 @@ class PolarsNamespace:
     @overload
     def concat(
         self: Self,
-        items: Sequence[PolarsLazyFrame],
+        items: Iterable[PolarsLazyFrame],
         *,
         how: Literal["vertical", "horizontal", "diagonal"],
     ) -> PolarsLazyFrame: ...
 
     def concat(
         self: Self,
-        items: Sequence[PolarsDataFrame] | Sequence[PolarsLazyFrame],
+        items: Iterable[PolarsDataFrame] | Iterable[PolarsLazyFrame],
         *,
         how: Literal["vertical", "horizontal", "diagonal"],
     ) -> PolarsDataFrame | PolarsLazyFrame:
         from narwhals._polars.dataframe import PolarsDataFrame
         from narwhals._polars.dataframe import PolarsLazyFrame
 
-        dfs: list[Any] = [item._native_frame for item in items]
+        dfs: Iterable[Any] = (item.native for item in items)
         result = pl.concat(dfs, how=how)
         if isinstance(result, pl.DataFrame):
             return PolarsDataFrame(
-                result,
-                backend_version=items[0]._backend_version,
-                version=items[0]._version,
+                result, backend_version=self._backend_version, version=self._version
             )
         return PolarsLazyFrame(
-            result, backend_version=items[0]._backend_version, version=items[0]._version
+            result, backend_version=self._backend_version, version=self._version
         )
 
     def lit(self: Self, value: Any, dtype: DType | None) -> PolarsExpr:
