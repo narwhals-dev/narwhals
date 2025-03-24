@@ -56,6 +56,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant import CompliantExpr
     from narwhals._compliant import CompliantFrameT
+    from narwhals._compliant import CompliantNamespace
     from narwhals._compliant import CompliantSeriesOrNativeExprT_co
     from narwhals._compliant import NativeFrameT_co
     from narwhals._compliant import NativeSeriesT_co
@@ -343,6 +344,44 @@ class Implementation(Enum):
 
         msg = "Not supported Implementation"  # pragma: no cover
         raise AssertionError(msg)
+
+    def _to_compliant_namespace(
+        self, version: Version, /
+    ) -> CompliantNamespace[Any, Any]:
+        native = self.to_native_namespace()
+        into_version = native if not self.is_sqlframe() else native._version
+        backend_version = parse_version(into_version)
+        if self.is_pandas_like():
+            from narwhals._pandas_like.namespace import PandasLikeNamespace
+
+            return PandasLikeNamespace(
+                implementation=self, backend_version=backend_version, version=version
+            )
+        elif self.is_polars():
+            from narwhals._polars.namespace import PolarsNamespace
+
+            return PolarsNamespace(backend_version=backend_version, version=version)
+        elif self.is_pyarrow():
+            from narwhals._arrow.namespace import ArrowNamespace
+
+            return ArrowNamespace(backend_version=backend_version, version=version)
+        elif self.is_spark_like():
+            from narwhals._spark_like.namespace import SparkLikeNamespace
+
+            return SparkLikeNamespace(
+                implementation=self, backend_version=backend_version, version=version
+            )
+        elif self.is_duckdb():
+            from narwhals._duckdb.namespace import DuckDBNamespace
+
+            return DuckDBNamespace(backend_version=backend_version, version=version)
+        elif self.is_dask():
+            from narwhals._dask.namespace import DaskNamespace
+
+            return DaskNamespace(backend_version=backend_version, version=version)
+        else:
+            msg = "Not supported Implementation"  # pragma: no cover
+            raise AssertionError(msg)
 
     def is_pandas(self: Self) -> bool:
         """Return whether implementation is pandas.
