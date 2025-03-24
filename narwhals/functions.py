@@ -34,14 +34,13 @@ from narwhals.utils import Version
 from narwhals.utils import deprecate_native_namespace
 from narwhals.utils import flatten
 from narwhals.utils import is_compliant_expr
-from narwhals.utils import is_sequence_but_not_str
+from narwhals.utils import is_eager_allowed
 from narwhals.utils import parse_version
 from narwhals.utils import validate_laziness
 
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import polars as pl
     import pyarrow as pa
     from typing_extensions import Self
 
@@ -517,76 +516,15 @@ def _from_numpy_impl(
     backend: ModuleType | Implementation | str,
     version: Version,
 ) -> DataFrame[Any]:
-    from narwhals.schema import Schema
-
-    implementation = Implementation.from_backend(backend)
-    native_namespace = implementation.to_native_namespace()
-
     if not is_numpy_array_2d(data):
         msg = "`from_numpy` only accepts 2D numpy arrays"
         raise ValueError(msg)
-    implementation = Implementation.from_native_namespace(native_namespace)
-
-    if implementation is Implementation.POLARS:
-        if isinstance(schema, (Mapping, Schema)):
-            schema_pl: pl.Schema | Sequence[str] | None = Schema(schema).to_polars()
-        elif is_sequence_but_not_str(schema) or schema is None:
-            schema_pl = schema
-        else:
-            msg = (
-                "`schema` is expected to be one of the following types: "
-                "Mapping[str, DType] | Schema | Sequence[str]. "
-                f"Got {type(schema)}."
-            )
-            raise TypeError(msg)
-        native_frame = native_namespace.from_numpy(data, schema=schema_pl)
-
-    elif implementation.is_pandas_like():
-        if isinstance(schema, (Mapping, Schema)):
-            from narwhals._pandas_like.utils import get_dtype_backend
-
-            it: Iterable[DTypeBackend] = (
-                get_dtype_backend(native_type, implementation)
-                for native_type in schema.values()
-            )
-            native_frame = native_namespace.DataFrame(data, columns=schema.keys()).astype(
-                Schema(schema).to_pandas(it)
-            )
-        elif is_sequence_but_not_str(schema):
-            native_frame = native_namespace.DataFrame(data, columns=list(schema))
-        elif schema is None:
-            native_frame = native_namespace.DataFrame(
-                data, columns=[f"column_{x}" for x in range(data.shape[1])]
-            )
-        else:
-            msg = (
-                "`schema` is expected to be one of the following types: "
-                "Mapping[str, DType] | Schema | Sequence[str]. "
-                f"Got {type(schema)}."
-            )
-            raise TypeError(msg)
-
-    elif implementation is Implementation.PYARROW:
-        pa_arrays = [native_namespace.array(val) for val in data.T]
-        if isinstance(schema, (Mapping, Schema)):
-            schema_pa = Schema(schema).to_arrow()
-            native_frame = native_namespace.Table.from_arrays(pa_arrays, schema=schema_pa)
-        elif is_sequence_but_not_str(schema):
-            native_frame = native_namespace.Table.from_arrays(
-                pa_arrays, names=list(schema)
-            )
-        elif schema is None:
-            native_frame = native_namespace.Table.from_arrays(
-                pa_arrays, names=[f"column_{x}" for x in range(data.shape[1])]
-            )
-        else:
-            msg = (
-                "`schema` is expected to be one of the following types: "
-                "Mapping[str, DType] | Schema | Sequence[str]. "
-                f"Got {type(schema)}."
-            )
-            raise TypeError(msg)
+    implementation = Implementation.from_backend(backend)
+    if is_eager_allowed(implementation):
+        frame = implementation._to_compliant_namespace(version).from_numpy(data, schema)
+        return from_native(frame, eager_only=True)
     else:  # pragma: no cover
+        native_namespace = implementation.to_native_namespace()
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement `from_numpy` function in the top-level namespace.
@@ -594,7 +532,7 @@ def _from_numpy_impl(
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `from_numpy` function."
             raise AttributeError(msg) from e
-    return from_native(native_frame, eager_only=True)
+        return from_native(native_frame, eager_only=True)
 
 
 @deprecate_native_namespace(warn_version="1.31.0", required=True)
