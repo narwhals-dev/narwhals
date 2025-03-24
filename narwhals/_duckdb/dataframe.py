@@ -252,14 +252,16 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
         self: Self,
         other: Self,
         *,
-        how: Literal["left", "inner", "cross", "anti", "semi"],
+        how: Literal["inner", "left", "full", "cross", "semi", "anti"],
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
         suffix: str,
     ) -> Self:
         original_alias = self._native_frame.alias
 
-        if how == "cross":
+        native_how = "outer" if how == "full" else how
+
+        if native_how == "cross":
             if self._backend_version < (1, 1, 4):
                 msg = f"DuckDB>=1.1.4 is required for cross-join, found version: {self._backend_version}"
                 raise NotImplementedError(msg)
@@ -274,16 +276,20 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             conditions = [
                 f'lhs."{left}" = rhs."{right}"' for left, right in zip(left_on, right_on)
             ]
+
             condition = " and ".join(conditions)
             rel = self._native_frame.set_alias("lhs").join(
-                other._native_frame.set_alias("rhs"), condition=condition, how=how
+                other._native_frame.set_alias("rhs"), condition=condition, how=native_how
             )
 
-        if how in {"inner", "left", "cross"}:
+        if native_how in {"inner", "left", "cross", "outer"}:
             select = [f'lhs."{x}"' for x in self._native_frame.columns]
             for col in other._native_frame.columns:
-                if col in self._native_frame.columns and (
-                    right_on is None or col not in right_on
+                col_in_lhs: bool = col in self._native_frame.columns
+                if native_how == "outer" and not col_in_lhs:
+                    select.append(f'rhs."{col}"')
+                elif (native_how == "outer") or (
+                    col_in_lhs and (right_on is None or col not in right_on)
                 ):
                     select.append(f'rhs."{col}" as "{col}{suffix}"')
                 elif right_on is None or col not in right_on:
