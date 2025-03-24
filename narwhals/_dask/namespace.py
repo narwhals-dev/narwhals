@@ -55,7 +55,7 @@ class DaskNamespace(DepthTrackingNamespace[DaskLazyFrame, "DaskExpr"]):
         self._backend_version = backend_version
         self._version = version
 
-    def lit(self: Self, value: Any, dtype: DType | None) -> DaskExpr:
+    def lit(self: Self, value: Any, dtype: DType | type[DType] | None) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             if dtype is not None:
                 native_dtype = narwhals_to_native_dtype(dtype, self._version)

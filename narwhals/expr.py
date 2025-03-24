@@ -49,12 +49,15 @@ if TYPE_CHECKING:
 
 class Expr:
     def __init__(
-        self: Self,
-        to_compliant_expr: Callable[[Any], Any],
-        metadata: ExprMetadata,
+        self: Self, to_compliant_expr: _ToCompliant, metadata: ExprMetadata
     ) -> None:
         # callable from CompliantNamespace to CompliantExpr
-        self._to_compliant_expr: _ToCompliant = to_compliant_expr
+        def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
+            result = to_compliant_expr(plx)
+            result._metadata = self._metadata
+            return result
+
+        self._to_compliant_expr: _ToCompliant = func
         self._metadata = metadata
 
     def _from_callable(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
@@ -1598,9 +1601,9 @@ class Expr:
         )
 
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx)
-            ._with_metadata(current_meta)
-            .over(flat_partition_by, flat_order_by),
+            lambda plx: self._to_compliant_expr(plx).over(
+                flat_partition_by, flat_order_by
+            ),
             next_meta,
         )
 

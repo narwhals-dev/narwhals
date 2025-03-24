@@ -87,7 +87,7 @@ jobs:
       - name: install duckdb nightly
         run: uv pip install -U --pre duckdb --system
       - name: install pyspark
-        run: uv pip install -e ".[pyspark]" --system
+        run: echo "setuptools<78" | uv pip install -b - -e ".[pyspark]" --system
         # PySpark is not yet available on Python3.12+
         if: matrix.python-version != '3.13'
       - name: install ibis

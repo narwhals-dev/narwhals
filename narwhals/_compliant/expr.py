@@ -106,8 +106,6 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         cls: type[Self], *column_indices: int, context: _FullContext
     ) -> Self: ...
 
-    def _with_metadata(self, metadata: ExprMetadata) -> Self: ...
-
     def is_null(self) -> Self: ...
     def abs(self) -> Self: ...
     def all(self) -> Self: ...
@@ -352,21 +350,6 @@ class EagerExpr(
         self,
     ) -> EagerNamespace[EagerDataFrameT, EagerSeriesT, Self]: ...
     def __narwhals_expr__(self) -> None: ...
-
-    def _with_metadata(self, metadata: ExprMetadata) -> Self:
-        expr = self.__class__(
-            self._call,
-            function_name=self._function_name,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
-            version=self._version,
-            depth=self._depth,
-            implementation=self._implementation,
-            call_kwargs=self._call_kwargs,
-        )
-        expr._metadata = metadata
-        return expr
 
     @classmethod
     def _from_callable(

@@ -111,7 +111,7 @@ class PolarsNamespace:
             result, backend_version=items[0]._backend_version, version=items[0]._version
         )
 
-    def lit(self: Self, value: Any, dtype: DType | None) -> PolarsExpr:
+    def lit(self: Self, value: Any, dtype: DType | type[DType] | None) -> PolarsExpr:
         if dtype is not None:
             return self._expr(
                 pl.lit(
