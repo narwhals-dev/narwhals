@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Literal
+from typing import Mapping
+from typing import Sequence
 from typing import cast
 from typing import overload
 
@@ -14,6 +16,7 @@ from narwhals._polars.expr import PolarsExpr
 from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import narwhals_to_native_dtype
+from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dtypes import DType
 from narwhals.utils import Implementation
 
@@ -28,7 +31,10 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.dataframe import PolarsLazyFrame
+    from narwhals.schema import Schema
+    from narwhals.typing import Into1DArray
     from narwhals.typing import TimeUnit
+    from narwhals.typing import _2DArray
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -78,6 +84,32 @@ class PolarsNamespace:
     @property
     def _series(self) -> type[PolarsSeries]:
         return PolarsSeries
+
+    @overload
+    def from_numpy(
+        self,
+        data: Into1DArray,
+        /,
+        schema: None = ...,
+    ) -> PolarsSeries: ...
+
+    @overload
+    def from_numpy(
+        self,
+        data: _2DArray,
+        /,
+        schema: Mapping[str, DType] | Schema | Sequence[str] | None,
+    ) -> PolarsDataFrame: ...
+
+    def from_numpy(
+        self,
+        data: Into1DArray | _2DArray,
+        /,
+        schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
+    ) -> PolarsDataFrame | PolarsSeries:
+        if is_numpy_array_2d(data):
+            return self._dataframe.from_numpy(data, schema=schema, context=self)
+        return self._series.from_numpy(data, context=self)
 
     def nth(self: Self, *indices: int) -> PolarsExpr:
         if self._backend_version < (1, 0, 0):
