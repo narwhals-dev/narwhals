@@ -13,6 +13,7 @@ import narwhals.stable.v1 as nw
 from narwhals.utils import Implementation
 from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
+from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -772,6 +773,8 @@ def test_joinasof_by_exceptions(constructor: Constructor) -> None:
 def test_join_duplicate_column_names(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 26):
+        pytest.skip()
     if (
         "cudf" in str(constructor)
         # TODO(unassigned): cudf doesn't raise here for some reason,
