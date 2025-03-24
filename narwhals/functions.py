@@ -36,6 +36,7 @@ from narwhals.utils import deprecate_native_namespace
 from narwhals.utils import flatten
 from narwhals.utils import is_compliant_expr
 from narwhals.utils import is_eager_allowed
+from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_version
 from narwhals.utils import validate_laziness
 
@@ -44,6 +45,8 @@ if TYPE_CHECKING:
 
     import pyarrow as pa
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
+    from typing_extensions import TypeIs
 
     from narwhals._compliant import CompliantExpr
     from narwhals._compliant import CompliantNamespace
@@ -60,6 +63,8 @@ if TYPE_CHECKING:
     from narwhals.typing import NativeFrame
     from narwhals.typing import NativeLazyFrame
     from narwhals.typing import _2DArray
+
+    _IntoSchema: TypeAlias = "Mapping[str, DType] | Schema | Sequence[str] | None"
 
     class ArrowStreamExportable(Protocol):
         def __arrow_c_stream__(
@@ -520,6 +525,13 @@ def _from_numpy_impl(
     if not is_numpy_array_2d(data):
         msg = "`from_numpy` only accepts 2D numpy arrays"
         raise ValueError(msg)
+    if not _is_into_schema(schema):
+        msg = (
+            "`schema` is expected to be one of the following types: "
+            "Mapping[str, DType] | Schema | Sequence[str]. "
+            f"Got {type(schema)}."
+        )
+        raise TypeError(msg)
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
         ns = _into_compliant_namespace(implementation, version)
@@ -535,6 +547,14 @@ def _from_numpy_impl(
             msg = "Unknown namespace is expected to implement `from_numpy` function."
             raise AttributeError(msg) from e
         return from_native(native_frame, eager_only=True)
+
+
+def _is_into_schema(obj: Any) -> TypeIs[_IntoSchema]:
+    from narwhals.schema import Schema
+
+    return (
+        obj is None or isinstance(obj, (Mapping, Schema)) or is_sequence_but_not_str(obj)
+    )
 
 
 @deprecate_native_namespace(warn_version="1.31.0", required=True)

@@ -107,19 +107,12 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         arrays = [pa.array(val) for val in data.T]
         if isinstance(schema, (Mapping, Schema)):
             native = pa.Table.from_arrays(arrays, schema=Schema(schema).to_arrow())
-        elif is_sequence_but_not_str(schema):
-            native = pa.Table.from_arrays(arrays, names=list(schema))
-        elif schema is None:
-            native = pa.Table.from_arrays(
-                arrays, names=[f"column_{x}" for x in range(data.shape[1])]
-            )
         else:
-            msg = (
-                "`schema` is expected to be one of the following types: "
-                "Mapping[str, DType] | Schema | Sequence[str]. "
-                f"Got {type(schema)}."
-            )
-            raise TypeError(msg)
+            if is_sequence_but_not_str(schema):
+                names = list(schema)
+            else:
+                names = [f"column_{x}" for x in range(data.shape[1])]
+            native = pa.Table.from_arrays(arrays, names=names)
         return cls(
             native,
             backend_version=context._backend_version,

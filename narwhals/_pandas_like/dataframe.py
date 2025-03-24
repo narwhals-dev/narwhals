@@ -134,19 +134,12 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             native = DataFrame(data, columns=schema.keys()).astype(
                 Schema(schema).to_pandas(it)
             )
-        elif is_sequence_but_not_str(schema):
-            native = DataFrame(data, columns=list(schema))
-        elif schema is None:
-            native = DataFrame(
-                data, columns=[f"column_{x}" for x in range(data.shape[1])]
-            )
         else:
-            msg = (
-                "`schema` is expected to be one of the following types: "
-                "Mapping[str, DType] | Schema | Sequence[str]. "
-                f"Got {type(schema)}."
-            )
-            raise TypeError(msg)
+            if is_sequence_but_not_str(schema):
+                columns = list(schema)
+            else:
+                columns = [f"column_{x}" for x in range(data.shape[1])]
+            native = DataFrame(data, columns=columns)
         return cls(
             native,
             implementation=implementation,

@@ -105,20 +105,12 @@ class PolarsDataFrame:
     ) -> Self:
         from narwhals.schema import Schema
 
-        schema_pl: pl.Schema | Sequence[str] | None
-        if isinstance(schema, (Mapping, Schema)):
-            schema_pl = Schema(schema).to_polars()
-        elif is_sequence_but_not_str(schema) or schema is None:
-            schema_pl = schema
-        else:
-            # NOTE: This should be handled for **all** backends in `functions.from_numpy`
-            msg = (
-                "`schema` is expected to be one of the following types: "
-                "Mapping[str, DType] | Schema | Sequence[str]. "
-                f"Got {type(schema)}."
-            )
-            raise TypeError(msg)
-        native = pl.from_numpy(data, schema_pl)
+        pl_schema = (
+            Schema(schema).to_polars()
+            if isinstance(schema, (Mapping, Schema))
+            else schema
+        )
+        native = pl.from_numpy(data, pl_schema)
         return cls(
             native, backend_version=context._backend_version, version=context._version
         )
