@@ -4,6 +4,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import ShapeError
+from tests.utils import POLARS_VERSION
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -28,6 +29,8 @@ def test_mode_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_mode_different_lengths(constructor_eager: ConstructorEager) -> None:
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+        pytest.skip()
     df = nw.from_native(constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}))
     with pytest.raises(ShapeError):
         df.select(nw.col("a", "b").mode())
