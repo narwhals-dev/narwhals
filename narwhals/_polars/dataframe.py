@@ -429,15 +429,18 @@ class PolarsDataFrame:
             "outer" if (self._backend_version < (1, 0, 0) and how == "full") else how
         )
 
-        return self._from_native_frame(
-            self._native_frame.join(
-                other=other._native_frame,
-                how=how_native,  # type: ignore[arg-type]
-                left_on=left_on,
-                right_on=right_on,
-                suffix=suffix,
+        try:
+            return self._from_native_frame(
+                self._native_frame.join(
+                    other=other._native_frame,
+                    how=how_native,  # type: ignore[arg-type]
+                    left_on=left_on,
+                    right_on=right_on,
+                    suffix=suffix,
+                )
             )
-        )
+        except Exception as e:  # noqa: BLE001
+            raise catch_polars_exception(e, self._backend_version) from None
 
 
 class PolarsLazyFrame:

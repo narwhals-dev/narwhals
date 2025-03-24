@@ -10,7 +10,6 @@ import pytest
 
 import narwhals as nw_main  # use nw_main in some tests for coverage
 import narwhals.stable.v1 as nw
-from narwhals.exceptions import DuplicateError
 from narwhals.utils import Implementation
 from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
@@ -108,13 +107,14 @@ def test_full_join_duplicate(constructor: Constructor) -> None:
     df_left = nw_main.from_native(constructor(df1)).lazy()
     df_right = nw_main.from_native(constructor(df2)).lazy()
 
-    # polars throws `NarwhalsError`, everything else should raise `DuplicateError`
-    exceptions = [DuplicateError, nw.exceptions.NarwhalsError]
-
+    exceptions: list[type[Exception]] = [nw.exceptions.NarwhalsError]
     if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
         from pyspark.errors import AnalysisException
 
         exceptions.append(AnalysisException)
+    elif "cudf" in str(constructor):
+        # cudf throw their own exception earlier in the stack
+        exceptions.append(ValueError)
 
     with pytest.raises(tuple(exceptions)):
         df_left.join(df_right, on="foo", how="full").collect()
@@ -773,8 +773,7 @@ def test_join_duplicate_column_names(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if (
-        "polars" in str(constructor)  # https://github.com/pola-rs/polars/issues/21048
-        or "cudf" in str(constructor)
+        "cudf" in str(constructor)
         # TODO(unassigned): cudf doesn't raise here for some reason,
         # need to investigate.
     ):

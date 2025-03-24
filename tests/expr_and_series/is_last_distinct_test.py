@@ -63,7 +63,7 @@ def test_is_last_distinct_expr_lazy(constructor: Constructor) -> None:
 def test_is_last_distinct_expr_lazy_grouped(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("pandas", "pyarrow", "dask")):
+    if any(x in str(constructor) for x in ("pandas", "pyarrow", "dask", "cudf", "modin")):
         # non-elementary group-by agg
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
@@ -85,7 +85,7 @@ def test_is_last_distinct_expr_lazy_grouped(
 def test_is_last_distinct_expr_lazy_grouped_nulls(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("pandas", "pyarrow", "dask")):
+    if any(x in str(constructor) for x in ("pandas", "pyarrow", "dask", "cudf", "modin")):
         # non-elementary group-by agg
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
