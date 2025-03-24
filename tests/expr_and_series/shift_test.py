@@ -36,7 +36,7 @@ def test_shift_lazy(constructor: Constructor) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     df = nw.from_native(constructor(data))
-    result = df.with_columns(nw.col("a", "b", "c").shift(2).over(_order_by="i")).filter(
+    result = df.with_columns(nw.col("a", "b", "c").shift(2).over(order_by="i")).filter(
         nw.col("i") > 1
     )
     expected = {

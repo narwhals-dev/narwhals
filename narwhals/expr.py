@@ -905,6 +905,10 @@ class Expr:
     def cum_sum(self: Self, *, reverse: bool = False) -> Self:
         """Return cumulative sum.
 
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+
         Arguments:
             reverse: reverse the operation
 
@@ -935,6 +939,10 @@ class Expr:
 
     def diff(self: Self) -> Self:
         """Returns the difference between each element and the previous one.
+
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
         Returns:
             A new expression.
@@ -978,6 +986,10 @@ class Expr:
 
     def shift(self: Self, n: int) -> Self:
         """Shift values by `n` positions.
+
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
         Arguments:
             n: Number of positions to shift values by.
@@ -1520,16 +1532,18 @@ class Expr:
 
     def over(
         self: Self,
-        *partition_by: str | Iterable[str],
-        _order_by: str | None = None,
+        *partition_by: str | Sequence[str],
+        order_by: str | Sequence[str] | None = None,
     ) -> Self:
-        """Compute expressions over the given groups.
+        """Compute expressions over the given groups (optionally with given order).
 
         Arguments:
             partition_by: Names of columns to compute window expression over.
                 Must be names of columns, as opposed to expressions -
                 so, this is a bit less flexible than Polars' `Expr.over`.
-            _order_by: Unused, but this is building up to something.
+            order_by: Column(s) to order window functions by.
+                For lazy backends, this argument is required when `over` is applied
+                to order-dependent functions, see [order-dependence](../basics/order_dependence.md).
 
         Returns:
             A new expression.
@@ -1567,14 +1581,14 @@ class Expr:
             raise LengthChangingExprError(msg)
 
         flat_partition_by = flatten(partition_by)
-        order_by = [_order_by] if isinstance(_order_by, str) else _order_by
-        if not flat_partition_by and not _order_by:  # pragma: no cover
+        flat_order_by = [order_by] if isinstance(order_by, str) else order_by
+        if not flat_partition_by and not flat_order_by:  # pragma: no cover
             msg = "At least one of `partition_by` or `order_by` must be specified."
             raise ValueError(msg)
 
         kind = ExprKind.TRANSFORM
         n_open_windows = self._metadata.n_open_windows
-        if _order_by is not None and self._metadata.kind.is_window():
+        if flat_order_by is not None and self._metadata.kind.is_window():
             n_open_windows -= 1
         current_meta = self._metadata
         next_meta = ExprMetadata(
@@ -1586,7 +1600,7 @@ class Expr:
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx)
             ._with_metadata(current_meta)
-            .over(flat_partition_by, order_by),
+            .over(flat_partition_by, flat_order_by),
             next_meta,
         )
 
@@ -1672,6 +1686,10 @@ class Expr:
     def is_first_distinct(self: Self) -> Self:
         r"""Return a boolean mask indicating the first occurrence of each distinct value.
 
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+
         Returns:
             A new expression.
 
@@ -1700,6 +1718,10 @@ class Expr:
 
     def is_last_distinct(self: Self) -> Self:
         r"""Return a boolean mask indicating the last occurrence of each distinct value.
+
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
         Returns:
             A new expression.
@@ -2039,6 +2061,10 @@ class Expr:
     def cum_count(self: Self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative count of the non-null values in the column.
 
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+
         Arguments:
             reverse: reverse the operation
 
@@ -2071,6 +2097,10 @@ class Expr:
 
     def cum_min(self: Self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative min of the non-null values in the column.
+
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
         Arguments:
             reverse: reverse the operation
@@ -2105,6 +2135,10 @@ class Expr:
     def cum_max(self: Self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative max of the non-null values in the column.
 
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+
         Arguments:
             reverse: reverse the operation
 
@@ -2137,6 +2171,10 @@ class Expr:
 
     def cum_prod(self: Self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative product of the non-null values in the column.
+
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
         Arguments:
             reverse: reverse the operation
@@ -2186,6 +2224,10 @@ class Expr:
 
         The window at a given row will include the row itself and the `window_size - 1`
         elements before it.
+
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
         Arguments:
             window_size: The length of the window in number of elements. It must be a
@@ -2248,6 +2290,10 @@ class Expr:
 
         The window at a given row will include the row itself and the `window_size - 1`
         elements before it.
+
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
         Arguments:
             window_size: The length of the window in number of elements. It must be a
@@ -2312,6 +2358,10 @@ class Expr:
         The window at a given row will include the row itself and the `window_size - 1`
         elements before it.
 
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
@@ -2374,6 +2424,10 @@ class Expr:
         The window at a given row will include the row itself and the `window_size - 1`
         elements before it.
 
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
@@ -2429,6 +2483,10 @@ class Expr:
 
         Notes:
             The resulting dtype may differ between backends.
+
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
         Arguments:
             method: The method used to assign ranks to tied elements.
