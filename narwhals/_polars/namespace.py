@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Literal
+from typing import cast
 from typing import overload
 
 import polars as pl
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
     from typing_extensions import TypeAlias
 
+    from narwhals._compliant import CompliantSelectorNamespace
     from narwhals._compliant import CompliantWhen
     from narwhals._polars.dataframe import Method
     from narwhals._polars.dataframe import PolarsDataFrame
@@ -204,9 +206,14 @@ class PolarsNamespace:
             backend_version=self._backend_version,
         )
 
+    # NOTE: Implementation is too different to annotate correctly (vs other `*SelectorNamespace`)
+    # 1. Others have lots of private stuff for code reuse
+    #    i. None of that is useful here
+    # 2. We don't have a `PolarsSelector` abstraction, and just use `PolarsExpr`
+    # 3. `PolarsExpr` still has it's own gaps in the spec
     @property
-    def selectors(self: Self) -> PolarsSelectorNamespace:
-        return PolarsSelectorNamespace(self)
+    def selectors(self: Self) -> CompliantSelectorNamespace[Any, Any]:
+        return cast("CompliantSelectorNamespace[Any, Any]", PolarsSelectorNamespace(self))
 
 
 class PolarsSelectorNamespace:
