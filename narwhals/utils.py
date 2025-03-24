@@ -93,28 +93,18 @@ if TYPE_CHECKING:
     P = ParamSpec("P")
     R = TypeVar("R")
 
-    _PandasLikeImplementation: TypeAlias = (
+    _PandasLike: TypeAlias = (
         "Literal[Implementation.PANDAS, Implementation.CUDF, Implementation.MODIN]"
     )
-    _ArrowImplementation: TypeAlias = "Literal[Implementation.PYARROW]"
-    _PolarsImplementation: TypeAlias = "Literal[Implementation.POLARS]"
-    _SparkLikeImplementation: TypeAlias = (
-        "Literal[Implementation.PYSPARK, Implementation.SQLFRAME]"
-    )
-    _DaskImplementation: TypeAlias = "Literal[Implementation.DASK]"
-    _DuckDBImplementation: TypeAlias = "Literal[Implementation.DUCKDB]"
-    _EagerOnlyImplementation: TypeAlias = (
-        "_PandasLikeImplementation | _ArrowImplementation"
-    )
-    _EagerAllowedImplementation: TypeAlias = (
-        "_PolarsImplementation | _EagerOnlyImplementation"
-    )
-    _LazyOnlyImplementation: TypeAlias = (
-        "_SparkLikeImplementation | _DaskImplementation | _DuckDBImplementation"
-    )
-    _LazyAllowedImplementation: TypeAlias = (
-        "_PolarsImplementation | _LazyOnlyImplementation"
-    )
+    _Arrow: TypeAlias = "Literal[Implementation.PYARROW]"
+    _Polars: TypeAlias = "Literal[Implementation.POLARS]"
+    _SparkLike: TypeAlias = "Literal[Implementation.PYSPARK, Implementation.SQLFRAME]"
+    _Dask: TypeAlias = "Literal[Implementation.DASK]"
+    _DuckDB: TypeAlias = "Literal[Implementation.DUCKDB]"
+    _EagerOnly: TypeAlias = "_PandasLike | _Arrow"
+    _EagerAllowed: TypeAlias = "_Polars | _EagerOnly"
+    _LazyOnly: TypeAlias = "_SparkLike | _Dask | _DuckDB"
+    _LazyAllowed: TypeAlias = "_Polars | _LazyOnly"
 
     class _SupportsVersion(Protocol):
         __version__: str
@@ -588,46 +578,24 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
 
 @overload
 def _into_compliant_namespace(
-    impl: _PandasLikeImplementation, version: Version, /
+    impl: _PandasLike, version: Version, /
 ) -> PandasLikeNamespace: ...
-
-
+@overload
+def _into_compliant_namespace(impl: _Polars, version: Version, /) -> PolarsNamespace: ...
+@overload
+def _into_compliant_namespace(impl: _Arrow, version: Version, /) -> ArrowNamespace: ...
 @overload
 def _into_compliant_namespace(
-    impl: _PolarsImplementation, version: Version, /
-) -> PolarsNamespace: ...
-
-
-@overload
-def _into_compliant_namespace(
-    impl: _ArrowImplementation, version: Version, /
-) -> ArrowNamespace: ...
-
-
-@overload
-def _into_compliant_namespace(
-    impl: _SparkLikeImplementation, version: Version, /
+    impl: _SparkLike, version: Version, /
 ) -> SparkLikeNamespace: ...
-
-
+@overload
+def _into_compliant_namespace(impl: _DuckDB, version: Version, /) -> DuckDBNamespace: ...
+@overload
+def _into_compliant_namespace(impl: _Dask, version: Version, /) -> DaskNamespace: ...
 @overload
 def _into_compliant_namespace(
-    impl: _DuckDBImplementation, version: Version, /
-) -> DuckDBNamespace: ...
-
-
-@overload
-def _into_compliant_namespace(
-    impl: _DaskImplementation, version: Version, /
-) -> DaskNamespace: ...
-
-
-@overload
-def _into_compliant_namespace(
-    impl: _EagerAllowedImplementation, version: Version, /
+    impl: _EagerAllowed, version: Version, /
 ) -> PandasLikeNamespace | PolarsNamespace | ArrowNamespace: ...
-
-
 def _into_compliant_namespace(
     impl: Implementation, version: Version, /
 ) -> CompliantNamespace[Any, Any]:
@@ -1611,7 +1579,7 @@ def is_compliant_expr(
     return hasattr(obj, "__narwhals_expr__")
 
 
-def is_eager_allowed(obj: Implementation) -> TypeIs[_EagerAllowedImplementation]:
+def is_eager_allowed(obj: Implementation) -> TypeIs[_EagerAllowed]:
     return obj in {
         Implementation.PANDAS,
         Implementation.MODIN,
@@ -1621,7 +1589,7 @@ def is_eager_allowed(obj: Implementation) -> TypeIs[_EagerAllowedImplementation]
     }
 
 
-def is_lazy_allowed(obj: Implementation) -> TypeIs[_LazyAllowedImplementation]:
+def is_lazy_allowed(obj: Implementation) -> TypeIs[_LazyAllowed]:
     return obj in {
         Implementation.POLARS,
         Implementation.PYSPARK,
