@@ -35,6 +35,10 @@ class PandasLikeNamespace(
     EagerNamespace[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr]
 ):
     @property
+    def _dataframe(self) -> type[PandasLikeDataFrame]:
+        return PandasLikeDataFrame
+
+    @property
     def _expr(self) -> type[PandasLikeExpr]:
         return PandasLikeExpr
 

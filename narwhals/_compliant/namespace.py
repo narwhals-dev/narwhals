@@ -110,6 +110,8 @@ class EagerNamespace(
     Protocol[EagerDataFrameT, EagerSeriesT, EagerExprT],
 ):
     @property
+    def _dataframe(self) -> type[EagerDataFrameT]: ...
+    @property
     def _series(self) -> type[EagerSeriesT]: ...
     def when(
         self, predicate: EagerExprT
