@@ -20,14 +20,31 @@ if TYPE_CHECKING:
     from datetime import timezone
 
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
 
+    from narwhals._compliant import CompliantWhen
+    from narwhals._polars.dataframe import Method
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.dataframe import PolarsLazyFrame
     from narwhals.typing import TimeUnit
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
+
+    Incomplete: TypeAlias = Any
 
 
 class PolarsNamespace:
+    all: Method[PolarsExpr]
+    col: Method[PolarsExpr]
+    exclude: Method[PolarsExpr]
+    all_horizontal: Method[PolarsExpr]
+    any_horizontal: Method[PolarsExpr]
+    sum_horizontal: Method[PolarsExpr]
+    min_horizontal: Method[PolarsExpr]
+    max_horizontal: Method[PolarsExpr]
+    # NOTE: `PolarsSeries`, `PolarsExpr` still have gaps
+    when: Method[CompliantWhen[PolarsDataFrame, Incomplete, Incomplete]]
+
     def __init__(
         self: Self, *, backend_version: tuple[int, ...], version: Version
     ) -> None:
