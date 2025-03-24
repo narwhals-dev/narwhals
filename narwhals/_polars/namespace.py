@@ -205,14 +205,15 @@ class PolarsNamespace:
         )
 
     @property
-    def selectors(self: Self) -> PolarsSelectors:
-        return PolarsSelectors(self._version, backend_version=self._backend_version)
+    def selectors(self: Self) -> PolarsSelectorNamespace:
+        return PolarsSelectorNamespace(self)
 
 
-class PolarsSelectors:
-    def __init__(self: Self, version: Version, backend_version: tuple[int, ...]) -> None:
-        self._version = version
-        self._backend_version = backend_version
+class PolarsSelectorNamespace:
+    def __init__(self: Self, context: _FullContext, /) -> None:
+        self._implementation = context._implementation
+        self._backend_version = context._backend_version
+        self._version = context._version
 
     def by_dtype(self: Self, dtypes: Iterable[DType]) -> PolarsExpr:
         native_dtypes = [
