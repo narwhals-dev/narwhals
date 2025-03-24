@@ -31,6 +31,7 @@ from narwhals.translate import from_native
 from narwhals.translate import to_native
 from narwhals.utils import Implementation
 from narwhals.utils import Version
+from narwhals.utils import _into_compliant_namespace
 from narwhals.utils import deprecate_native_namespace
 from narwhals.utils import flatten
 from narwhals.utils import is_compliant_expr
@@ -521,11 +522,7 @@ def _from_numpy_impl(
         raise ValueError(msg)
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
-        # NOTE:  Quite baffled by `mypy` on this one 🤔
-        # error: Invalid self argument "Literal[Implementation.POLARS, Implementation.PANDAS, Implementation.CUDF, Implementation.MODIN, Implementation.PYARROW]"
-        # to attribute function "_to_compliant_namespace" with type
-        # "Callable[[Literal[Implementation.PANDAS, Implementation.CUDF, Implementation.MODIN], Version], PandasLikeNamespace]"  # noqa: ERA001
-        ns = implementation._to_compliant_namespace(version)  # type: ignore[misc]
+        ns = _into_compliant_namespace(implementation, version)
         frame = ns.from_numpy(data, schema)
         return from_native(frame, eager_only=True)
     else:  # pragma: no cover

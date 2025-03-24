@@ -375,76 +375,6 @@ class Implementation(Enum):
         msg = "Not supported Implementation"  # pragma: no cover
         raise AssertionError(msg)
 
-    # NOTE: `mypy` complains, but `pyright` understands this fine
-    # error: Self argument missing for a non-static method (or an invalid type for self)  [misc]
-    @overload
-    def _to_compliant_namespace(  # type: ignore[misc]
-        self: _PandasLikeImplementation, version: Version, /
-    ) -> PandasLikeNamespace: ...
-
-    @overload
-    def _to_compliant_namespace(  # type: ignore[misc]
-        self: _PolarsImplementation, version: Version, /
-    ) -> PolarsNamespace: ...
-
-    @overload
-    def _to_compliant_namespace(  # type: ignore[misc]
-        self: _ArrowImplementation, version: Version, /
-    ) -> ArrowNamespace: ...
-
-    @overload
-    def _to_compliant_namespace(  # type: ignore[misc]
-        self: _SparkLikeImplementation, version: Version, /
-    ) -> SparkLikeNamespace: ...
-
-    @overload
-    def _to_compliant_namespace(  # type: ignore[misc]
-        self: _DuckDBImplementation, version: Version, /
-    ) -> DuckDBNamespace: ...
-
-    @overload
-    def _to_compliant_namespace(  # type: ignore[misc]
-        self: _DaskImplementation, version: Version, /
-    ) -> DaskNamespace: ...
-
-    def _to_compliant_namespace(
-        self: Implementation, version: Version, /
-    ) -> CompliantNamespace[Any, Any]:
-        native = self.to_native_namespace()
-        into_version = native if not self.is_sqlframe() else native._version
-        backend_version = parse_version(into_version)
-        if self.is_pandas_like():
-            from narwhals._pandas_like.namespace import PandasLikeNamespace
-
-            return PandasLikeNamespace(
-                implementation=self, backend_version=backend_version, version=version
-            )
-        elif self.is_polars():
-            from narwhals._polars.namespace import PolarsNamespace
-
-            return PolarsNamespace(backend_version=backend_version, version=version)
-        elif self.is_pyarrow():
-            from narwhals._arrow.namespace import ArrowNamespace
-
-            return ArrowNamespace(backend_version=backend_version, version=version)
-        elif self.is_spark_like():
-            from narwhals._spark_like.namespace import SparkLikeNamespace
-
-            return SparkLikeNamespace(
-                implementation=self, backend_version=backend_version, version=version
-            )
-        elif self.is_duckdb():
-            from narwhals._duckdb.namespace import DuckDBNamespace
-
-            return DuckDBNamespace(backend_version=backend_version, version=version)
-        elif self.is_dask():
-            from narwhals._dask.namespace import DaskNamespace
-
-            return DaskNamespace(backend_version=backend_version, version=version)
-        else:
-            msg = "Not supported Implementation"  # pragma: no cover
-            raise AssertionError(msg)
-
     def is_pandas(self: Self) -> bool:
         """Return whether implementation is pandas.
 
@@ -654,6 +584,87 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.IBIS: (6,),
     Implementation.SQLFRAME: (3, 22, 0),
 }
+
+
+@overload
+def _into_compliant_namespace(
+    impl: _PandasLikeImplementation, version: Version, /
+) -> PandasLikeNamespace: ...
+
+
+@overload
+def _into_compliant_namespace(
+    impl: _PolarsImplementation, version: Version, /
+) -> PolarsNamespace: ...
+
+
+@overload
+def _into_compliant_namespace(
+    impl: _ArrowImplementation, version: Version, /
+) -> ArrowNamespace: ...
+
+
+@overload
+def _into_compliant_namespace(
+    impl: _SparkLikeImplementation, version: Version, /
+) -> SparkLikeNamespace: ...
+
+
+@overload
+def _into_compliant_namespace(
+    impl: _DuckDBImplementation, version: Version, /
+) -> DuckDBNamespace: ...
+
+
+@overload
+def _into_compliant_namespace(
+    impl: _DaskImplementation, version: Version, /
+) -> DaskNamespace: ...
+
+
+@overload
+def _into_compliant_namespace(
+    impl: _EagerAllowedImplementation, version: Version, /
+) -> PandasLikeNamespace | PolarsNamespace | ArrowNamespace: ...
+
+
+def _into_compliant_namespace(
+    impl: Implementation, version: Version, /
+) -> CompliantNamespace[Any, Any]:
+    native = impl.to_native_namespace()
+    into_version = native if not impl.is_sqlframe() else native._version
+    backend_version = parse_version(into_version)
+    if impl.is_pandas_like():
+        from narwhals._pandas_like.namespace import PandasLikeNamespace
+
+        return PandasLikeNamespace(
+            implementation=impl, backend_version=backend_version, version=version
+        )
+    elif impl.is_polars():
+        from narwhals._polars.namespace import PolarsNamespace
+
+        return PolarsNamespace(backend_version=backend_version, version=version)
+    elif impl.is_pyarrow():
+        from narwhals._arrow.namespace import ArrowNamespace
+
+        return ArrowNamespace(backend_version=backend_version, version=version)
+    elif impl.is_spark_like():
+        from narwhals._spark_like.namespace import SparkLikeNamespace
+
+        return SparkLikeNamespace(
+            implementation=impl, backend_version=backend_version, version=version
+        )
+    elif impl.is_duckdb():
+        from narwhals._duckdb.namespace import DuckDBNamespace
+
+        return DuckDBNamespace(backend_version=backend_version, version=version)
+    elif impl.is_dask():
+        from narwhals._dask.namespace import DaskNamespace
+
+        return DaskNamespace(backend_version=backend_version, version=version)
+    else:
+        msg = "Not supported Implementation"  # pragma: no cover
+        raise AssertionError(msg)
 
 
 def validate_backend_version(
