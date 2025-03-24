@@ -66,6 +66,12 @@ class PolarsNamespace:
         return func
 
     @property
+    def _dataframe(self) -> type[PolarsDataFrame]:
+        from narwhals._polars.dataframe import PolarsDataFrame
+
+        return PolarsDataFrame
+
+    @property
     def _expr(self) -> type[PolarsExpr]:
         return PolarsExpr
 
