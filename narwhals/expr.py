@@ -49,9 +49,7 @@ if TYPE_CHECKING:
 
 class Expr:
     def __init__(
-        self: Self,
-        to_compliant_expr: _ToCompliant,
-        metadata: ExprMetadata,
+        self: Self, to_compliant_expr: _ToCompliant, metadata: ExprMetadata
     ) -> None:
         # callable from CompliantNamespace to CompliantExpr
         def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
