@@ -621,31 +621,24 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
                 return self._from_native_frame(
                     self.native.assign(**{key_token: 0})
                     .merge(
-                        other._native_frame.assign(**{key_token: 0}),
+                        other.native.assign(**{key_token: 0}),
                         how="inner",
                         left_on=key_token,
                         right_on=key_token,
                         suffixes=("", suffix),
                     )
-                    .drop(columns=key_token),
+                    .drop(columns=key_token)
                 )
             else:
                 return self._from_native_frame(
-                    self.native.merge(
-                        other._native_frame,
-                        how="cross",
-                        suffixes=("", suffix),
-                    ),
+                    self.native.merge(other.native, how="cross", suffixes=("", suffix)),
                 )
 
         if how == "anti":
             if self._implementation is Implementation.CUDF:
                 return self._from_native_frame(
                     self.native.merge(
-                        other._native_frame,
-                        how="leftanti",
-                        left_on=left_on,
-                        right_on=right_on,
+                        other.native, how="leftanti", left_on=left_on, right_on=right_on
                     )
                 )
             else:
@@ -659,7 +652,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
                 # rename to avoid creating extra columns in join
                 other_native = rename(
                     select_columns_by_name(
-                        other._native_frame,
+                        other.native,
                         list(right_on),
                         self._backend_version,
                         self._implementation,
@@ -688,7 +681,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             other_native = (
                 rename(
                     select_columns_by_name(
-                        other._native_frame,
+                        other.native,
                         list(right_on),
                         self._backend_version,
                         self._implementation,
@@ -700,17 +693,13 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             )
             return self._from_native_frame(
                 self.native.merge(
-                    other_native,
-                    how="inner",
-                    left_on=left_on,
-                    right_on=left_on,
+                    other_native, how="inner", left_on=left_on, right_on=left_on
                 )
             )
 
         if how == "left":
-            other_native = other._native_frame
             result_native = self.native.merge(
-                other_native,
+                other.native,
                 how="left",
                 left_on=left_on,
                 right_on=right_on,
@@ -732,13 +721,11 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             assert right_on is not None  # noqa: S101
 
             right_on_mapper = _remap_full_join_keys(left_on, right_on, suffix)
-
-            other_native = other._native_frame
-            other_native = other_native.rename(columns=right_on_mapper)
+            other_native = other.native.rename(columns=right_on_mapper)
             check_column_names_are_unique(other_native.columns)
             right_on = list(right_on_mapper.values())  # we now have the suffixed keys
             return self._from_native_frame(
-                self._native_frame.merge(
+                self.native.merge(
                     other_native,
                     left_on=left_on,
                     right_on=right_on,
@@ -749,12 +736,12 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
 
         return self._from_native_frame(
             self.native.merge(
-                other._native_frame,
+                other.native,
                 left_on=left_on,
                 right_on=right_on,
                 how=how,
                 suffixes=("", suffix),
-            ),
+            )
         )
 
     def join_asof(
@@ -772,7 +759,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         return self._from_native_frame(
             plx.merge_asof(
                 self.native,
-                other._native_frame,
+                other.native,
                 left_on=left_on,
                 right_on=right_on,
                 left_by=by_left,
@@ -891,7 +878,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
                 .col(*to_convert)
                 .dt.convert_time_zone("UTC")
                 .dt.replace_time_zone(None)
-            )._native_frame
+            ).native
         else:
             df = self.native
 
