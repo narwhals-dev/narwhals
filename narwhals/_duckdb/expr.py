@@ -372,22 +372,38 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         return self._from_call(lambda _input: FunctionExpression("count"))
 
     def std(self: Self, ddof: int) -> Self:
+        if ddof == 0:
+            return self._from_call(
+                lambda _input: FunctionExpression("stddev_pop", _input)
+            )
+        if ddof == 1:
+            return self._from_call(
+                lambda _input: FunctionExpression("stddev_samp", _input)
+            )
+
         def _std(_input: duckdb.Expression) -> duckdb.Expression:
             n_samples = FunctionExpression("count", _input)
-            # NOTE: Not implemented Error: Unable to transform python value of type '<class 'duckdb.duckdb.Expression'>' to DuckDB LogicalType
             return (
                 FunctionExpression("stddev_pop", _input)
                 * FunctionExpression("sqrt", n_samples)
-                / (FunctionExpression("sqrt", (n_samples - ddof)))  # type: ignore[operator]
+                / (FunctionExpression("sqrt", (n_samples - lit(ddof))))
             )
 
         return self._from_call(_std)
 
     def var(self: Self, ddof: int) -> Self:
+        if ddof == 0:
+            return self._from_call(lambda _input: FunctionExpression("var_pop", _input))
+        if ddof == 1:
+            return self._from_call(lambda _input: FunctionExpression("var_samp", _input))
+
         def _var(_input: duckdb.Expression) -> duckdb.Expression:
             n_samples = FunctionExpression("count", _input)
-            # NOTE: Not implemented Error: Unable to transform python value of type '<class 'duckdb.duckdb.Expression'>' to DuckDB LogicalType
-            return FunctionExpression("var_pop", _input) * n_samples / (n_samples - ddof)  # type: ignore[operator, no-any-return]
+            return (
+                FunctionExpression("var_pop", _input)
+                * n_samples
+                / (n_samples - lit(ddof))
+            )
 
         return self._from_call(_var)
 
