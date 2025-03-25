@@ -348,8 +348,6 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         sz = self.native.nbytes
         return scale_bytes(sz, unit)
 
-    explode = not_implemented()
-
     @property
     def columns(self: Self) -> list[str]:
         return self.native.schema.names
