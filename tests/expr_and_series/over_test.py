@@ -50,8 +50,6 @@ def test_over_single(constructor: Constructor) -> None:
 
 
 def test_over_std_var(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
