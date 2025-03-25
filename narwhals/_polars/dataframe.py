@@ -426,7 +426,7 @@ class PolarsDataFrame:
         suffix: str,
     ) -> Self:
         how_native = (
-            "outer" if (self._backend_version < (1, 0, 0) and how == "full") else how
+            "outer" if (self._backend_version < (0, 20, 29) and how == "full") else how
         )
         try:
             return self._from_native_frame(
@@ -646,7 +646,7 @@ class PolarsLazyFrame:
         suffix: str,
     ) -> Self:
         how_native = (
-            "outer" if (self._backend_version < (1, 0, 0) and how == "full") else how
+            "outer" if (self._backend_version < (0, 20, 29) and how == "full") else how
         )
         return self._from_native_frame(
             self.native.join(
