@@ -110,7 +110,6 @@ local-dev = [
 exclude = [
   "/.*",
   "/docs",
-  "/tests",
   "/tpch",
   "/utils",
   ".gitignore",
