@@ -59,8 +59,7 @@ def test_lazy_cum_count_grouped(
         # grouped window functions not yet supported
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
-        # bugged
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip(reason="probably bugged")
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
