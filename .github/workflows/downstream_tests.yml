@@ -228,7 +228,7 @@ jobs:
         run: |
           cd tea-tasting
           pdm remove narwhals
-          pdm add ./..[tests]
+          pdm add ./..
       - name: show-deps
         run: |
           cd tea-tasting
@@ -236,47 +236,50 @@ jobs:
       - name: run-pytest
         run: |
           cd tea-tasting
+          # empty pytest.ini to avoid pytest using narwhals configs
+          touch pytest.ini
           pdm run test
 
-  tubular:
-    strategy:
-      matrix:
-        python-version: ["3.12"]
-        os: [ubuntu-latest]
+  # temporarily commented out until they address the `new_series` deprecation
+  # tubular:
+  #   strategy:
+  #     matrix:
+  #       python-version: ["3.12"]
+  #       os: [ubuntu-latest]
 
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
-          cache-dependency-glob: "pyproject.toml"
-      - name: clone-tubular
-        run: |
-          git clone https://github.com/lvgig/tubular --depth=1
-          cd tubular
-          git log
-      - name: install-basics
-        run: uv pip install --upgrade tox virtualenv setuptools pytest-env --system
-      - name: install-tubular-dev
-        run: |
-          cd tubular
-          uv pip install -e ".[dev]" --system
-      - name: install-narwhals-dev
-        run: |
-          uv pip uninstall narwhals --system
-          uv pip install -e . --system
-      - name: show-deps
-        run: uv pip freeze
-      - name: Run pytest
-        run: |
-          cd tubular
-          pytest tests --config-file=pyproject.toml
+  #   runs-on: ${{ matrix.os }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: ${{ matrix.python-version }}
+  #     - name: Install uv
+  #       uses: astral-sh/setup-uv@v5
+  #       with:
+  #         enable-cache: "true"
+  #         cache-suffix: ${{ matrix.python-version }}
+  #         cache-dependency-glob: "pyproject.toml"
+  #     - name: clone-tubular
+  #       run: |
+  #         git clone https://github.com/lvgig/tubular --depth=1
+  #         cd tubular
+  #         git log
+  #     - name: install-basics
+  #       run: uv pip install --upgrade tox virtualenv setuptools pytest-env --system
+  #     - name: install-tubular-dev
+  #       run: |
+  #         cd tubular
+  #         uv pip install -e ".[dev]" --system
+  #     - name: install-narwhals-dev
+  #       run: |
+  #         uv pip uninstall narwhals --system
+  #         uv pip install -e . --system
+  #     - name: show-deps
+  #       run: uv pip freeze
+  #     - name: Run pytest
+  #       run: |
+  #         cd tubular
+  #         pytest tests --config-file=pyproject.toml
 
   plotly:
     strategy:
@@ -306,7 +309,7 @@ jobs:
       - name: install-deps
         run: |
           cd plotly.py
-          uv pip install -r test_requirements/requirements_312_optional.txt --system
+          uv pip install -r test_requirements/requirements_core.txt -r test_requirements/requirements_optional.txt --system
           uv pip install -e . --system
       - name: install-narwhals-dev
         run: |
@@ -347,6 +350,8 @@ jobs:
       - name: install-deps
         run: |
           cd hierarchicalforecast
+          # temporary pin to get ci green
+          uv pip install "IPython<9" --system
           uv pip install --system ".[dev]"
       - name: install-narwhals-dev
         run: |
@@ -430,7 +435,7 @@ jobs:
         run: |
           cd pointblank
           uv pip install --system ".[dev]"
-          uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas --system    
+          uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny --system    
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals --system
@@ -467,27 +472,63 @@ jobs:
       - name: install-validoopsie-dev
         run: |
           cd validoopsie
-          uv venv
-          . .venv/bin/activate
           uv sync --dev
-          uv pip install pytest-env
-          which python
-      - name: show-deps
-        run: |
-          cd validoopsie
-          . .venv/bin/activate
-          uv pip freeze
       - name: install-narwhals-dev
         run: |
           cd validoopsie
-          . .venv/bin/activate
-          uv pip uninstall narwhals
-          uv pip install -e ./..
+          uv remove narwhals
+          uv add ./..
+      - name: show-deps
+        run: |
+          cd validoopsie
+          which python
+          uv pip freeze
       - name: Run tests
         run: |
           cd validoopsie
-          . .venv/bin/activate
+          # empty pytest.ini to avoid pytest using narwhals configs
+          touch pytest.ini       
           touch tests/__init__.py
           touch tests/utils/__init__.py
-          pytest tests
+          uv run pytest tests
         timeout-minutes: 15
+  
+  darts:
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+        os: ["ubuntu-latest"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: "true"
+          cache-suffix: ${{ matrix.python-version }}
+          cache-dependency-glob: "pyproject.toml"
+      - name: clone-darts
+        run: |
+          git clone https://github.com/unit8co/darts.git --depth=1
+          cd darts
+          git log
+      - name: install-deps
+        run: |
+          cd darts
+          uv pip install -r requirements/core.txt -r requirements/dev.txt --system
+      - name: install-narwhals-dev
+        run: |
+          uv pip uninstall narwhals --system
+          # TODO(FBruzzesi): Install polars from darts requirements when they introcude it
+          uv pip install -e ".[polars]" --system
+      - name: show-deps
+        run: uv pip freeze
+      - name: Run tests
+        run: |
+          cd darts
+          pytest darts/tests/test_timeseries.py
+          pytest darts/tests/test_timeseries_multivariate.py
+          pytest darts/tests/test_timeseries_static_covariates.py

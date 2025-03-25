@@ -10,6 +10,7 @@ import polars as pl
 
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import ComputeError
+from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import NarwhalsError
 from narwhals.exceptions import ShapeError
@@ -145,6 +146,10 @@ def native_to_narwhals_dtype(
         )
     if dtype == pl.Decimal:
         return dtypes.Decimal()
+    if dtype == pl.Time:
+        return dtypes.Time()
+    if dtype == pl.Binary:
+        return dtypes.Binary()
     return dtypes.Unknown()
 
 
@@ -188,6 +193,10 @@ def narwhals_to_native_dtype(
         raise NotImplementedError(msg)
     if dtype == dtypes.Date:
         return pl.Date()
+    if dtype == dtypes.Time:
+        return pl.Time()
+    if dtype == dtypes.Binary:
+        return pl.Binary()
     if dtype == dtypes.Decimal:
         msg = "Casting to Decimal is not supported yet."
         raise NotImplementedError(msg)
@@ -235,11 +244,13 @@ def catch_polars_exception(
         return ShapeError(str(exception))
     elif isinstance(exception, pl.exceptions.InvalidOperationError):
         return InvalidOperationError(str(exception))
+    elif isinstance(exception, pl.exceptions.DuplicateError):
+        return DuplicateError(str(exception))
     elif isinstance(exception, pl.exceptions.ComputeError):
         return ComputeError(str(exception))
     if backend_version >= (1,) and isinstance(exception, pl.exceptions.PolarsError):
         # Old versions of Polars didn't have PolarsError.
-        return NarwhalsError(str(exception))
+        return NarwhalsError(str(exception))  # pragma: no cover
     elif backend_version < (1,) and "polars.exceptions" in str(
         type(exception)
     ):  # pragma: no cover

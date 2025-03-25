@@ -1,19 +1,22 @@
 from __future__ import annotations
 
+from importlib import import_module
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Sequence
 from typing import overload
 
 from narwhals.exceptions import UnsupportedDTypeError
+from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import pyspark.sql.types as pyspark_types
+    import sqlframe.base.functions as sqlframe_functions
     import sqlframe.base.types as sqlframe_types
-    from pyspark.sql import Column
+    from sqlframe.base.column import Column
     from typing_extensions import TypeAlias
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
@@ -21,7 +24,21 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
-    _NativeDType: TypeAlias = "pyspark_types.DataType | sqlframe_types.DataType"
+    _NativeDType: TypeAlias = sqlframe_types.DataType
+
+
+class WindowInputs:
+    __slots__ = ("expr", "order_by", "partition_by")
+
+    def __init__(
+        self,
+        expr: Column,
+        partition_by: Sequence[str],
+        order_by: Sequence[str],
+    ) -> None:
+        self.expr = expr
+        self.partition_by = partition_by
+        self.order_by = order_by
 
 
 # NOTE: don't lru_cache this as `ModuleType` isn't hashable
@@ -30,7 +47,7 @@ def native_to_narwhals_dtype(
 ) -> DType:  # pragma: no cover
     dtypes = import_dtypes_module(version=version)
     if TYPE_CHECKING:
-        native = pyspark_types
+        native = sqlframe_types
     else:
         native = spark_types
 
@@ -55,6 +72,8 @@ def native_to_narwhals_dtype(
     if isinstance(dtype, native.TimestampNTZType):
         return dtypes.Datetime()
     if isinstance(dtype, native.TimestampType):
+        # TODO(marco): is UTC correct, or should we be getting the connection timezone?
+        # https://github.com/narwhals-dev/narwhals/issues/2165
         return dtypes.Datetime(time_zone="UTC")
     if isinstance(dtype, native.DecimalType):
         return dtypes.Decimal()
@@ -76,15 +95,17 @@ def native_to_narwhals_dtype(
                 for field in dtype
             ]
         )
+    if isinstance(dtype, native.BinaryType):
+        return dtypes.Binary()
     return dtypes.Unknown()
 
 
 def narwhals_to_native_dtype(
     dtype: DType | type[DType], version: Version, spark_types: ModuleType
-) -> pyspark_types.DataType:
+) -> _NativeDType:
     dtypes = import_dtypes_module(version)
     if TYPE_CHECKING:
-        native = pyspark_types
+        native = sqlframe_types
     else:
         native = spark_types
 
@@ -132,6 +153,8 @@ def narwhals_to_native_dtype(
                 for field in dtype.fields
             ]
         )
+    if isinstance_or_issubclass(dtype, dtypes.Binary):
+        return native.BinaryType()
 
     if isinstance_or_issubclass(
         dtype,
@@ -142,9 +165,10 @@ def narwhals_to_native_dtype(
             dtypes.UInt8,
             dtypes.Enum,
             dtypes.Categorical,
+            dtypes.Time,
         ),
     ):  # pragma: no cover
-        msg = "Unsigned integer, Enum and Categorical types are not supported by spark-like backend"
+        msg = "Unsigned integer, Enum, Categorical and Time types are not supported by spark-like backend"
         raise UnsupportedDTypeError(msg)
 
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
@@ -169,52 +193,83 @@ def evaluate_exprs(
     return native_results
 
 
-def maybe_evaluate_expr(df: SparkLikeLazyFrame, obj: SparkLikeExpr | object) -> Column:
-    from narwhals._spark_like.expr import SparkLikeExpr
-
-    if isinstance(obj, SparkLikeExpr):
-        column_results = obj._call(df)
-        if len(column_results) != 1:
-            msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
-            raise ValueError(msg)
-        return column_results[0]
-    return df._F.lit(obj)
-
-
 def _std(
-    _input: Column | str, ddof: int, np_version: tuple[int, ...], functions: Any
+    column: Column,
+    ddof: int,
+    np_version: tuple[int, ...],
+    functions: ModuleType,
+    implementation: Implementation,
 ) -> Column:
-    if np_version > (2, 0):
-        if ddof == 1:
-            return functions.stddev_samp(_input)
-        if ddof == 0:
-            return functions.stddev_pop(_input)
+    if TYPE_CHECKING:
+        F = sqlframe_functions  # noqa: N806
+    else:
+        F = functions  # noqa: N806
+    if implementation is Implementation.PYSPARK and np_version < (2, 0):
+        from pyspark.pandas.spark.functions import stddev
 
-        n_rows = functions.count(_input)
-        return functions.stddev_samp(_input) * functions.sqrt(
-            (n_rows - 1) / (n_rows - ddof)
-        )
-
-    from pyspark.pandas.spark.functions import stddev
-
-    input_col = functions.col(_input) if isinstance(_input, str) else _input
-    return stddev(input_col, ddof=ddof)
+        return stddev(column, ddof)  # pyright: ignore[reportReturnType, reportArgumentType]
+    if ddof == 0:
+        return F.stddev_pop(column)
+    if ddof == 1:
+        return F.stddev_samp(column)
+    n_rows = F.count(column)
+    return F.stddev_samp(column) * F.sqrt((n_rows - 1) / (n_rows - ddof))
 
 
 def _var(
-    _input: Column | str, ddof: int, np_version: tuple[int, ...], functions: Any
+    column: Column,
+    ddof: int,
+    np_version: tuple[int, ...],
+    functions: ModuleType,
+    implementation: Implementation,
 ) -> Column:
-    if np_version > (2, 0):
-        if ddof == 1:
-            return functions.var_samp(_input)
+    if TYPE_CHECKING:
+        F = sqlframe_functions  # noqa: N806
+    else:
+        F = functions  # noqa: N806
+    if implementation is Implementation.PYSPARK and np_version < (2, 0):
+        from pyspark.pandas.spark.functions import var
 
-        n_rows = functions.count(_input)
-        return functions.var_samp(_input) * (n_rows - 1) / (n_rows - ddof)
+        return var(column, ddof)  # pyright: ignore[reportReturnType, reportArgumentType]
+    if ddof == 0:
+        return F.var_pop(column)
+    if ddof == 1:
+        return F.var_samp(column)
 
-    from pyspark.pandas.spark.functions import var
+    n_rows = F.count(column)
+    return F.var_samp(column) * (n_rows - 1) / (n_rows - ddof)
 
-    input_col = functions.col(_input) if isinstance(_input, str) else _input
-    return var(input_col, ddof=ddof)
+
+def import_functions(implementation: Implementation, /) -> ModuleType:
+    if implementation is Implementation.PYSPARK:
+        from pyspark.sql import functions
+
+        return functions
+    from sqlframe.base.session import _BaseSession
+
+    return import_module(f"sqlframe.{_BaseSession().execution_dialect_name}.functions")
+
+
+def import_native_dtypes(implementation: Implementation, /) -> ModuleType:
+    if implementation is Implementation.PYSPARK:
+        from pyspark.sql import types
+
+        return types
+    from sqlframe.base.session import _BaseSession
+
+    return import_module(f"sqlframe.{_BaseSession().execution_dialect_name}.types")
+
+
+def import_window(implementation: Implementation, /) -> type[Any]:
+    if implementation is Implementation.PYSPARK:
+        from pyspark.sql import Window
+
+        return Window
+    from sqlframe.base.session import _BaseSession
+
+    return import_module(
+        f"sqlframe.{_BaseSession().execution_dialect_name}.window"
+    ).Window
 
 
 @overload
@@ -225,7 +280,7 @@ def strptime_to_pyspark_format(format: None) -> None: ...
 def strptime_to_pyspark_format(format: str) -> str: ...
 
 
-def strptime_to_pyspark_format(format: str | None) -> str | None:  # noqa: A002
+def strptime_to_pyspark_format(format: str | None) -> str | None:
     """Converts a Python strptime datetime format string to a PySpark datetime format string."""
     if format is None:
         return None

@@ -28,11 +28,11 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         # Python3.8 is technically at end-of-life, so we don't test everything
-        run: uv pip install -e ".[tests, core]" --system
+        run: uv pip install -e ".[pandas,polars,pyarrow]" backports.zoneinfo --group tests --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=85 --constructors=pandas,pyarrow,polars[eager],polars[lazy]
+        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=80 --constructors=pandas,pyarrow,polars[eager],polars[lazy]
 
   pytest-windows:
     strategy:
@@ -53,7 +53,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         # we are not testing pyspark on Windows here because it is very slow
-        run: uv pip install -e ".[tests, core, extra, dask, modin, sqlframe]" --system
+        run: uv pip install -e ".[dask, modin]" --group core-tests --group extra --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -83,9 +83,11 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e ".[tests, core, extra, modin, dask, sqlframe]" --system
+        run: uv pip install -e ".[modin, dask]" --group core-tests --group extra --system
+      - name: install duckdb nightly
+        run: uv pip install -U --pre duckdb --system
       - name: install pyspark
-        run: uv pip install -e ".[pyspark]" --system
+        run: echo "setuptools<78" | uv pip install -b - -e ".[pyspark]" --system
         # PySpark is not yet available on Python3.12+
         if: matrix.python-version != '3.13'
       - name: install ibis

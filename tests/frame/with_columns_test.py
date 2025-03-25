@@ -5,8 +5,10 @@ import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.exceptions import ShapeError
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
@@ -30,11 +32,20 @@ def test_with_columns_order(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_with_columns_empty(constructor: Constructor) -> None:
+def test_with_columns_empty(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor_eager(data))
     result = df.select().with_columns()
     assert_equal_data(result, {})
+
+
+def test_select_with_columns_empty_lazy(constructor: Constructor) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
+    df = nw.from_native(constructor(data)).lazy()
+    with pytest.raises(ValueError, match="At least one"):
+        df.with_columns()
+    with pytest.raises(ValueError, match="At least one"):
+        df.select()
 
 
 def test_with_columns_order_single_row(constructor: Constructor) -> None:
@@ -58,3 +69,12 @@ def test_with_columns_dtypes_single_row(
     df = nw.from_native(constructor(data)).with_columns(nw.col("a").cast(nw.Categorical))
     result = df.with_columns(nw.col("a"))
     assert result.collect_schema() == {"a": nw.Categorical}
+
+
+def test_with_columns_series_shape_mismatch(constructor_eager: ConstructorEager) -> None:
+    df1 = nw.from_native(constructor_eager({"first": [1, 2, 3]}), eager_only=True)
+    second = nw.from_native(constructor_eager({"second": [1, 2, 3, 4]}), eager_only=True)[
+        "second"
+    ]
+    with pytest.raises(ShapeError):
+        df1.with_columns(second=second)

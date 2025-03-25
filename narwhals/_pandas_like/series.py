@@ -5,14 +5,19 @@ from typing import Any
 from typing import Iterable
 from typing import Iterator
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 from typing import cast
 from typing import overload
 
+import numpy as np
+
+from narwhals._compliant import EagerSeries
 from narwhals._pandas_like.series_cat import PandasLikeSeriesCatNamespace
 from narwhals._pandas_like.series_dt import PandasLikeSeriesDateTimeNamespace
 from narwhals._pandas_like.series_list import PandasLikeSeriesListNamespace
 from narwhals._pandas_like.series_str import PandasLikeSeriesStringNamespace
+from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
 from narwhals._pandas_like.utils import align_and_extract_native
 from narwhals._pandas_like.utils import get_dtype_backend
 from narwhals._pandas_like.utils import narwhals_to_native_dtype
@@ -22,11 +27,12 @@ from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_index
+from narwhals.dependencies import is_numpy_array_1d
 from narwhals.dependencies import is_numpy_scalar
 from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantSeries
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import parse_version
 from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
@@ -39,10 +45,13 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.typing import ArrowArray
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+    from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import Into1DArray
     from narwhals.typing import _1DArray
     from narwhals.typing import _AnyDArray
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
 PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
     "Int64": "int64",
@@ -90,7 +99,7 @@ PANDAS_TO_NUMPY_DTYPE_MISSING = {
 }
 
 
-class PandasLikeSeries(CompliantSeries):
+class PandasLikeSeries(EagerSeries[Any]):
     def __init__(
         self: Self,
         native_series: Any,
@@ -112,6 +121,10 @@ class PandasLikeSeries(CompliantSeries):
         # the length of the whole dataframe, we just extract the scalar.
         self._broadcast = False
 
+    @property
+    def native(self) -> Any:
+        return self._native_series
+
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation in {
             Implementation.PANDAS,
@@ -123,8 +136,12 @@ class PandasLikeSeries(CompliantSeries):
         msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
-    def __narwhals_series__(self: Self) -> Self:
-        return self
+    def __narwhals_namespace__(self) -> PandasLikeNamespace:
+        from narwhals._pandas_like.namespace import PandasLikeNamespace
+
+        return PandasLikeNamespace(
+            self._implementation, self._backend_version, self._version
+        )
 
     @overload
     def __getitem__(self: Self, idx: int) -> Any: ...
@@ -139,7 +156,7 @@ class PandasLikeSeries(CompliantSeries):
 
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
-            self._native_series,
+            self.native,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=version,
@@ -154,30 +171,36 @@ class PandasLikeSeries(CompliantSeries):
         )
 
     @classmethod
-    def _from_iterable(
-        cls: type[Self],
+    def from_iterable(
+        cls,
         data: Iterable[Any],
-        name: str,
-        index: Any,
         *,
-        implementation: Implementation,
-        backend_version: tuple[int, ...],
-        version: Version,
+        context: _FullContext,
+        name: str = "",
+        index: Any = None,
     ) -> Self:
         return cls(
             native_series_from_iterable(
                 data,
                 name=name,
-                index=index,
-                implementation=implementation,
+                index=[] if index is None else index,
+                implementation=context._implementation,
             ),
-            implementation=implementation,
-            backend_version=backend_version,
-            version=version,
+            implementation=context._implementation,
+            backend_version=context._backend_version,
+            version=context._version,
         )
 
-    def __len__(self: Self) -> int:
-        return len(self._native_series)
+    @classmethod
+    def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
+        implementation = context._implementation
+        arr = data if is_numpy_array_1d(data) else [data]
+        return cls(
+            implementation.to_native_namespace().Series(arr, name=""),
+            implementation=implementation,
+            backend_version=context._backend_version,
+            version=context._version,
+        )
 
     @property
     def name(self: Self) -> str:
@@ -185,12 +208,12 @@ class PandasLikeSeries(CompliantSeries):
 
     @property
     def dtype(self: Self) -> DType:
-        native_dtype = self._native_series.dtype
+        native_dtype = self.native.dtype
         return (
             native_to_narwhals_dtype(native_dtype, self._version, self._implementation)
             if native_dtype != "object"
             else object_native_to_narwhals_dtype(
-                self._native_series, self._version, self._implementation
+                self.native, self._version, self._implementation
             )
         )
 
@@ -227,11 +250,8 @@ class PandasLikeSeries(CompliantSeries):
 
     def scatter(self: Self, indices: int | Sequence[int], values: Any) -> Self:
         if isinstance(values, self.__class__):
-            # .copy() is necessary in some pre-2.2 versions of pandas to avoid
-            # `values` also getting modified (!)
-            _, values = align_and_extract_native(self, values)
             values = set_index(
-                values.copy(),
+                values._native_series,
                 self._native_series.index[indices],
                 implementation=self._implementation,
                 backend_version=self._backend_version,
@@ -240,6 +260,25 @@ class PandasLikeSeries(CompliantSeries):
         s.iloc[indices] = values
         s.name = self.name
         return self._from_native_series(s)
+
+    def _scatter_in_place(self: Self, indices: Self, values: Self) -> None:
+        # Scatter, modifying original Series. Use with care!
+        values_native = set_index(
+            values._native_series,
+            self._native_series.index[indices._native_series],
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+        )
+        if self._implementation is Implementation.PANDAS and parse_version(np) < (2,):
+            values_native = values_native.copy()  # pragma: no cover
+        min_pd_version = (1, 2)
+        if (
+            self._implementation is Implementation.PANDAS
+            and self._backend_version < min_pd_version
+        ):
+            self._native_series.iloc[indices._native_series.values] = values_native  # noqa: PD011
+        else:
+            self._native_series.iloc[indices._native_series] = values_native
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
         ser = self._native_series
@@ -328,11 +367,13 @@ class PandasLikeSeries(CompliantSeries):
 
     # Binary comparisons
 
-    def filter(self: Self, other: Any) -> PandasLikeSeries:
-        if not (isinstance(other, list) and all(isinstance(x, bool) for x in other)):
-            _, other_native = align_and_extract_native(self, other)
+    def filter(self: Self, predicate: Any) -> PandasLikeSeries:
+        if not (
+            isinstance(predicate, list) and all(isinstance(x, bool) for x in predicate)
+        ):
+            _, other_native = align_and_extract_native(self, predicate)
         else:
-            other_native = other
+            other_native = predicate
         return self._from_native_series(self._native_series.loc[other_native]).alias(
             self.name
         )
@@ -531,6 +572,7 @@ class PandasLikeSeries(CompliantSeries):
     ) -> Self:
         ser = self._native_series
         if value is not None:
+            _, value = align_and_extract_native(self, value)
             res_ser = self._from_native_series(ser.fillna(value=value))
         else:
             res_ser = self._from_native_series(
@@ -589,7 +631,11 @@ class PandasLikeSeries(CompliantSeries):
         return self._from_native_series(self._native_series.shift(n))
 
     def replace_strict(
-        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+        self: Self,
+        old: Sequence[Any] | Mapping[Any, Any],
+        new: Sequence[Any],
+        *,
+        return_dtype: DType | type[DType] | None,
     ) -> PandasLikeSeries:
         tmp_name = f"{self.name}_tmp"
         dtype_backend = get_dtype_backend(
@@ -691,7 +737,7 @@ class PandasLikeSeries(CompliantSeries):
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)
 
-    def to_polars(self: Self) -> pl.DataFrame:
+    def to_polars(self: Self) -> pl.Series:
         import polars as pl  # ignore-banned-import
 
         if self._implementation is Implementation.PANDAS:
@@ -896,7 +942,7 @@ class PandasLikeSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
     ) -> Self:
         result = self._native_series.rolling(
@@ -908,7 +954,7 @@ class PandasLikeSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
     ) -> Self:
         result = self._native_series.rolling(
@@ -920,7 +966,7 @@ class PandasLikeSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -933,7 +979,7 @@ class PandasLikeSeries(CompliantSeries):
         self: Self,
         window_size: int,
         *,
-        min_samples: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -1105,3 +1151,7 @@ class PandasLikeSeries(CompliantSeries):
     @property
     def list(self: Self) -> PandasLikeSeriesListNamespace:
         return PandasLikeSeriesListNamespace(self)
+
+    @property
+    def struct(self: Self) -> PandasLikeSeriesStructNamespace:
+        return PandasLikeSeriesStructNamespace(self)

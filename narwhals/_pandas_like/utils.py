@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import functools
 import re
 import warnings
 from contextlib import suppress
-from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Sized
 from typing import TypeVar
 from typing import cast
 
@@ -19,7 +20,7 @@ from narwhals.utils import Version
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
-T = TypeVar("T")
+T = TypeVar("T", bound=Sized)
 
 if TYPE_CHECKING:
     from pandas._typing import Dtype as PandasDtype
@@ -128,48 +129,6 @@ def align_and_extract_native(
         raise TypeError(msg)
     # `rhs` must be scalar, so just leave it as-is
     return lhs_native, rhs
-
-
-def extract_dataframe_comparand(
-    index: pd.Index[Any], other: PandasLikeSeries
-) -> pd.Series[Any]:
-    """Extract native Series, broadcasting to `length` if necessary."""
-    if other._broadcast:
-        s = other._native_series
-        return s.__class__(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
-    if other._native_series.index is not index:
-        return set_index(
-            other._native_series,
-            index,
-            implementation=other._implementation,
-            backend_version=other._backend_version,
-        )
-    return other._native_series
-
-
-def create_compliant_series(
-    iterable: Any,
-    index: Any = None,
-    *,
-    implementation: Implementation,
-    backend_version: tuple[int, ...],
-    version: Version,
-) -> PandasLikeSeries:
-    from narwhals._pandas_like.series import PandasLikeSeries
-
-    if implementation in PANDAS_LIKE_IMPLEMENTATION:
-        series = implementation.to_native_namespace().Series(
-            iterable, index=index, name=""
-        )
-        return PandasLikeSeries(
-            series,
-            implementation=implementation,
-            backend_version=backend_version,
-            version=version,
-        )
-    else:  # pragma: no cover
-        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
-        raise TypeError(msg)
 
 
 def horizontal_concat(
@@ -356,7 +315,7 @@ def rename(
     return obj.rename(*args, **kwargs, copy=False)  # type: ignore[attr-defined]
 
 
-@lru_cache(maxsize=16)
+@functools.lru_cache(maxsize=16)
 def non_object_native_to_narwhals_dtype(dtype: str, version: Version) -> DType:
     dtypes = import_dtypes_module(version)
     if dtype in {"int64", "Int64", "Int64[pyarrow]", "int64[pyarrow]"}:
@@ -412,6 +371,10 @@ def non_object_native_to_narwhals_dtype(dtype: str, version: Version) -> DType:
         return dtypes.Date()
     if dtype.startswith("decimal") and dtype.endswith("[pyarrow]"):
         return dtypes.Decimal()
+    if dtype.startswith("time") and dtype.endswith("[pyarrow]"):
+        return dtypes.Time()
+    if dtype.startswith("binary") and dtype.endswith("[pyarrow]"):
+        return dtypes.Binary()
     return dtypes.Unknown()  # pragma: no cover
 
 
@@ -610,7 +573,9 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     if isinstance_or_issubclass(dtype, dtypes.Enum):
         msg = "Converting to Enum is not (yet) supported"
         raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, (dtypes.Struct, dtypes.Array, dtypes.List)):
+    if isinstance_or_issubclass(
+        dtype, (dtypes.Struct, dtypes.Array, dtypes.List, dtypes.Time, dtypes.Binary)
+    ):
         if implementation is Implementation.PANDAS and backend_version >= (2, 2):
             try:
                 import pandas as pd
@@ -679,9 +644,11 @@ def align_series_full_broadcast(
     return reindexed
 
 
-def to_datetime(implementation: Implementation) -> Any:
+def to_datetime(implementation: Implementation, *, utc: bool) -> Any:
     if implementation in PANDAS_LIKE_IMPLEMENTATION:
-        return implementation.to_native_namespace().to_datetime
+        return functools.partial(
+            implementation.to_native_namespace().to_datetime, utc=utc
+        )
 
     else:  # pragma: no cover
         msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"

@@ -5,11 +5,16 @@ import re
 from datetime import timezone
 from enum import Enum
 from enum import auto
+from functools import wraps
 from inspect import getattr_static
 from secrets import token_hex
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
+from typing import Container
 from typing import Iterable
+from typing import Literal
+from typing import Protocol
 from typing import Sequence
 from typing import TypeVar
 from typing import Union
@@ -42,22 +47,26 @@ from narwhals.exceptions import InvalidOperationError
 if TYPE_CHECKING:
     from types import ModuleType
     from typing import AbstractSet as Set
-    from typing import Protocol
 
     import pandas as pd
+    from typing_extensions import LiteralString
+    from typing_extensions import ParamSpec
     from typing_extensions import Self
     from typing_extensions import TypeIs
 
+    from narwhals._compliant import CompliantExpr
+    from narwhals._compliant import CompliantFrameT
+    from narwhals._compliant import CompliantSeriesOrNativeExprT_co
+    from narwhals._compliant import NativeFrameT_co
+    from narwhals._compliant import NativeSeriesT_co
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
+    from narwhals.functions import ArrowStreamExportable
     from narwhals.series import Series
     from narwhals.typing import CompliantDataFrame
-    from narwhals.typing import CompliantExpr
-    from narwhals.typing import CompliantFrameT_contra
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import CompliantSeries
-    from narwhals.typing import CompliantSeriesT_co
     from narwhals.typing import DataFrameLike
     from narwhals.typing import DTypes
     from narwhals.typing import IntoSeriesT
@@ -72,9 +81,15 @@ if TYPE_CHECKING:
     _T1 = TypeVar("_T1")
     _T2 = TypeVar("_T2")
     _T3 = TypeVar("_T3")
+    _Fn = TypeVar("_Fn", bound="Callable[..., Any]")
+    P = ParamSpec("P")
+    R = TypeVar("R")
 
     class _SupportsVersion(Protocol):
         __version__: str
+
+    class _SupportsGet(Protocol):  # noqa: PYI046
+        def __get__(self, instance: Any, owner: Any | None = None, /) -> Any: ...
 
     class _StoresImplementation(Protocol):
         _implementation: Implementation
@@ -106,6 +121,75 @@ if TYPE_CHECKING:
     class _StoresColumns(Protocol):
         @property
         def columns(self) -> Sequence[str]: ...
+
+
+NativeT_co = TypeVar("NativeT_co", covariant=True)
+CompliantT_co = TypeVar("CompliantT_co", covariant=True)
+CompliantExprT_co = TypeVar(
+    "CompliantExprT_co", bound="CompliantExpr[Any, Any]", covariant=True
+)
+CompliantSeriesT_co = TypeVar(
+    "CompliantSeriesT_co", bound="CompliantSeries[Any]", covariant=True
+)
+
+
+class _StoresNative(Protocol[NativeT_co]):
+    """Provides access to a native object.
+
+    Native objects have types like:
+
+    >>> from pandas import Series
+    >>> from pyarrow import Table
+    """
+
+    @property
+    def native(self) -> NativeT_co:
+        """Return the native object."""
+        ...
+
+
+class _StoresCompliant(Protocol[CompliantT_co]):
+    """Provides access to a compliant object.
+
+    Compliant objects have types like:
+
+    >>> from narwhals._pandas_like.series import PandasLikeSeries
+    >>> from narwhals._arrow.dataframe import ArrowDataFrame
+    """
+
+    @property
+    def compliant(self) -> CompliantT_co:
+        """Return the compliant object."""
+        ...
+
+
+class _SeriesNamespace(  # type: ignore[misc]  # noqa: PYI046
+    _StoresCompliant[CompliantSeriesT_co],
+    _StoresNative[NativeT_co],
+    Protocol[CompliantSeriesT_co, NativeT_co],
+):
+    _compliant_series: CompliantSeriesT_co
+
+    @property
+    def compliant(self) -> CompliantSeriesT_co:
+        return self._compliant_series
+
+    @property
+    def native(self) -> NativeT_co:
+        return self._compliant_series.native
+
+    def from_native(self, series: Any, /) -> CompliantSeriesT_co:
+        return self.compliant._from_native_series(series)
+
+
+class _ExprNamespace(  # type: ignore[misc] # noqa: PYI046
+    _StoresCompliant[CompliantExprT_co], Protocol[CompliantExprT_co]
+):
+    _compliant_expr: CompliantExprT_co
+
+    @property
+    def compliant(self) -> CompliantExprT_co:
+        return self._compliant_expr
 
 
 class Version(Enum):
@@ -806,7 +890,7 @@ def maybe_set_index(
         msg = "Only one of `column_names` or `index` should be provided"
         raise ValueError(msg)
 
-    if not column_names and not index:
+    if not column_names and index is None:
         msg = "Either `column_names` or `index` should be provided"
         raise ValueError(msg)
 
@@ -906,9 +990,9 @@ def _has_default_index(
     index = native_frame_or_series.index
     return (
         _is_range_index(index, native_namespace)
-        and index.start == 0  # type: ignore[comparison-overlap]
-        and index.stop == len(index)  # type: ignore[comparison-overlap]
-        and index.step == 1  # type: ignore[comparison-overlap]
+        and index.start == 0
+        and index.stop == len(index)
+        and index.step == 1
     )
 
 
@@ -1062,7 +1146,9 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
     return False  # pragma: no cover
 
 
-def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: no cover
+def generate_unique_token(
+    n_bytes: int, columns: Sequence[str]
+) -> str:  # pragma: no cover
     msg = (
         "Use `generate_temporary_column_name` instead. `generate_unique_token` is "
         "deprecated and it will be removed in future versions"
@@ -1071,7 +1157,7 @@ def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: n
     return generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
 
 
-def generate_temporary_column_name(n_bytes: int, columns: list[str]) -> str:
+def generate_temporary_column_name(n_bytes: int, columns: Sequence[str]) -> str:
     """Generates a unique column name that is not present in the given list of columns.
 
     It relies on [python secrets token_hex](https://docs.python.org/3/library/secrets.html#secrets.token_hex)
@@ -1209,25 +1295,45 @@ def validate_strict_and_pass_though(
     return pass_through
 
 
-def validate_native_namespace_and_backend(
-    backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,
-    *,
-    emit_deprecation_warning: bool,
-) -> ModuleType | Implementation | str | None:
-    if native_namespace is not None and backend is None:  # pragma: no cover
-        if emit_deprecation_warning:
-            msg = (
-                "`native_namespace` is deprecated, please use `backend` instead.\n\n"
-                "Note: `native_namespace` will remain available in `narwhals.stable.v1`.\n"
-                "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
-            )
-            issue_deprecation_warning(msg, _version="1.25.1")
-        backend = native_namespace
-    elif native_namespace is not None and backend is not None:
-        msg = "Can't pass both `native_namespace` and `backend`"
-        raise ValueError(msg)
-    return backend
+def deprecate_native_namespace(
+    *, warn_version: str = "", required: bool = False
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    """Decorator to transition from `native_namespace` to `backend` argument.
+
+    Arguments:
+        warn_version: Emit a deprecation warning from this version.
+        required: Raise when both `native_namespace`, `backend` are `None`.
+
+    Returns:
+        Wrapped function, with `native_namespace` **removed**.
+    """
+
+    def decorate(fn: Callable[P, R], /) -> Callable[P, R]:
+        @wraps(fn)
+        def wrapper(*args: P.args, **kwds: P.kwargs) -> R:
+            backend = kwds.pop("backend", None)
+            native_namespace = kwds.pop("native_namespace", None)
+            if native_namespace is not None and backend is None:
+                if warn_version:
+                    msg = (
+                        "`native_namespace` is deprecated, please use `backend` instead.\n\n"
+                        "Note: `native_namespace` will remain available in `narwhals.stable.v1`.\n"
+                        "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+                    )
+                    issue_deprecation_warning(msg, _version=warn_version)
+                backend = native_namespace
+            elif native_namespace is not None and backend is not None:
+                msg = "Can't pass both `native_namespace` and `backend`"
+                raise ValueError(msg)
+            elif native_namespace is None and backend is None and required:
+                msg = f"`backend` must be specified in `{fn.__name__}`."
+                raise ValueError(msg)
+            kwds["backend"] = backend
+            return fn(*args, **kwds)
+
+        return wrapper
+
+    return decorate
 
 
 def _validate_rolling_arguments(
@@ -1296,13 +1402,13 @@ def generate_repr(header: str, native_repr: str) -> str:
     )
 
 
-def check_column_exists(columns: list[str], subset: list[str] | None) -> None:
+def check_column_exists(columns: Sequence[str], subset: Sequence[str] | None) -> None:
     if subset is not None and (missing := set(subset).difference(columns)):
         msg = f"Column(s) {sorted(missing)} not found in {columns}"
         raise ColumnNotFoundError(msg)
 
 
-def check_column_names_are_unique(columns: list[str]) -> None:
+def check_column_names_are_unique(columns: Sequence[str]) -> None:
     len_unique_columns = len(set(columns))
     if len(columns) != len_unique_columns:
         from collections import Counter
@@ -1352,26 +1458,44 @@ def get_column_names(frame: _StoresColumns, /) -> Sequence[str]:
     return frame.columns
 
 
+def exclude_column_names(frame: _StoresColumns, names: Container[str]) -> Sequence[str]:
+    return [col_name for col_name in frame.columns if col_name not in names]
+
+
+def passthrough_column_names(names: Sequence[str], /) -> Callable[[Any], Sequence[str]]:
+    def fn(_frame: Any, /) -> Sequence[str]:
+        return names
+
+    return fn
+
+
 def _hasattr_static(obj: Any, attr: str) -> bool:
     sentinel = object()
     return getattr_static(obj, attr, sentinel) is not sentinel
 
 
-def is_compliant_dataframe(obj: Any) -> TypeIs[CompliantDataFrame]:
+def is_compliant_dataframe(
+    obj: CompliantDataFrame[CompliantSeriesT_co, CompliantExprT_co, NativeFrameT_co]
+    | Any,
+) -> TypeIs[CompliantDataFrame[CompliantSeriesT_co, CompliantExprT_co, NativeFrameT_co]]:
     return _hasattr_static(obj, "__narwhals_dataframe__")
 
 
-def is_compliant_lazyframe(obj: Any) -> TypeIs[CompliantLazyFrame]:
+def is_compliant_lazyframe(
+    obj: CompliantLazyFrame[CompliantExprT_co, NativeFrameT_co] | Any,
+) -> TypeIs[CompliantLazyFrame[CompliantExprT_co, NativeFrameT_co]]:
     return _hasattr_static(obj, "__narwhals_lazyframe__")
 
 
-def is_compliant_series(obj: Any) -> TypeIs[CompliantSeries]:
+def is_compliant_series(
+    obj: CompliantSeries[NativeSeriesT_co] | Any,
+) -> TypeIs[CompliantSeries[NativeSeriesT_co]]:
     return _hasattr_static(obj, "__narwhals_series__")
 
 
 def is_compliant_expr(
-    obj: CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co] | Any,
-) -> TypeIs[CompliantExpr[CompliantFrameT_contra, CompliantSeriesT_co]]:
+    obj: CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | Any,
+) -> TypeIs[CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co]]:
     return hasattr(obj, "__narwhals_expr__")
 
 
@@ -1381,3 +1505,165 @@ def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
 
 def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
     return hasattr(obj, "__dataframe__")
+
+
+def supports_arrow_c_stream(obj: Any) -> TypeIs[ArrowStreamExportable]:
+    return _hasattr_static(obj, "__arrow_c_stream__")
+
+
+def _remap_full_join_keys(
+    left_on: Sequence[str], right_on: Sequence[str], suffix: str
+) -> dict[str, str]:
+    """Remap join keys to avoid collisions.
+
+    If left keys collide with the right keys, append the suffix.
+    If there's no collision, let the right keys be.
+
+    Arguments:
+        left_on: Left keys.
+        right_on: Right keys.
+        suffix: Suffix to append to right keys.
+
+    Returns:
+        A map of old to new right keys.
+    """
+    right_keys_suffixed = (
+        f"{key}{suffix}" if key in left_on else key for key in right_on
+    )
+    return dict(zip(right_on, right_keys_suffixed))
+
+
+# TODO @dangotbanned: Extend with runtime behavior for `v1.*`
+# See `narwhals.exceptions.NarwhalsUnstableWarning`
+def unstable(fn: _Fn, /) -> _Fn:
+    """Visual-only marker for unstable functionality.
+
+    Arguments:
+        fn: Function to decorate.
+
+    Returns:
+        Decorated function (unchanged).
+
+    Examples:
+        >>> from narwhals.utils import unstable
+        >>> @unstable
+        ... def a_work_in_progress_feature(*args):
+        ...     return args
+        >>>
+        >>> a_work_in_progress_feature.__name__
+        'a_work_in_progress_feature'
+        >>> a_work_in_progress_feature(1, 2, 3)
+        (1, 2, 3)
+    """
+    return fn
+
+
+if TYPE_CHECKING:
+    import sys
+
+    if sys.version_info >= (3, 13):
+        # NOTE: avoids `mypy`
+        #     error: Module "narwhals.utils" does not explicitly export attribute "deprecated"  [attr-defined]
+        from warnings import deprecated as deprecated  # noqa: PLC0414
+    else:
+        from typing_extensions import deprecated as deprecated  # noqa: PLC0414
+else:
+
+    def deprecated(message: str, /) -> Callable[[_Fn], _Fn]:  # noqa: ARG001
+        def wrapper(func: _Fn, /) -> _Fn:
+            return func
+
+        return wrapper
+
+
+class not_implemented:  # noqa: N801
+    """Mark some functionality as unsupported.
+
+    Arguments:
+        alias: optional name used instead of the data model hook [`__set_name__`].
+
+    Returns:
+        An exception-raising [descriptor].
+
+    Notes:
+        - Attribute/method name *doesn't* need to be declared twice
+        - Allows different behavior when looked up on the class vs instance
+        - Allows us to use `isinstance(...)` instead of monkeypatching an attribute to the function
+
+    Examples:
+        >>> from narwhals.utils import not_implemented
+        >>> class Thing:
+        ...     def totally_ready(self) -> str:
+        ...         return "I'm ready!"
+        ...
+        ...     not_ready_yet = not_implemented()
+        >>>
+        >>> thing = Thing()
+        >>> thing.totally_ready()
+        "I'm ready!"
+        >>> thing.not_ready_yet()
+        Traceback (most recent call last):
+            ...
+        NotImplementedError: 'not_ready_yet' is not implemented for: 'Thing'.
+        ...
+        >>> isinstance(Thing.not_ready_yet, not_implemented)
+        True
+
+    [`__set_name__`]: https://docs.python.org/3/reference/datamodel.html#object.__set_name__
+    [descriptor]: https://docs.python.org/3/howto/descriptor.html
+    """
+
+    def __init__(self, alias: str | None = None, /) -> None:
+        # NOTE: Don't like this
+        # Trying to workaround `mypy` requiring `@property` everywhere
+        self._alias: str | None = alias
+
+    def __repr__(self) -> str:
+        return f"<{type(self).__name__}>: {self._name_owner}.{self._name}"
+
+    def __set_name__(self, owner: type[_T], name: str) -> None:
+        # https://docs.python.org/3/howto/descriptor.html#customized-names
+        self._name_owner: str = owner.__name__
+        self._name: str = self._alias or name
+
+    def __get__(
+        self, instance: _T | Literal["raise"] | None, owner: type[_T] | None = None, /
+    ) -> Any:
+        if instance is None:
+            # NOTE: Branch for `cls._name`
+            # We can check that to see if an instance of `type(self)` for
+            # https://narwhals-dev.github.io/narwhals/api-completeness/expr/
+            return self
+        # NOTE: Prefer not exposing the actual class we're defining in
+        # `_implementation` may not be available everywhere
+        who = getattr(instance, "_implementation", self._name_owner)
+        raise _not_implemented_error(self._name, who)
+
+    def __call__(self, *args: Any, **kwds: Any) -> Any:
+        # NOTE: Purely to duck-type as assignable to **any** instance method
+        # Wouldn't be reachable through *regular* attribute access
+        return self.__get__("raise")
+
+    @classmethod
+    def deprecated(cls, message: LiteralString, /) -> Self:
+        """Alt constructor, wraps with `@deprecated`.
+
+        Arguments:
+            message: **Static-only** deprecation message, emitted in an IDE.
+
+        Returns:
+            An exception-raising [descriptor].
+
+        [descriptor]: https://docs.python.org/3/howto/descriptor.html
+        """
+        obj = cls()
+        return deprecated(message)(obj)
+
+
+def _not_implemented_error(what: str, who: str, /) -> NotImplementedError:
+    msg = (
+        f"{what!r} is not implemented for: {who!r}.\n\n"
+        "If you would like to see this functionality in `narwhals`, "
+        "please open an issue at: https://github.com/narwhals-dev/narwhals/issues"
+    )
+    return NotImplementedError(msg)

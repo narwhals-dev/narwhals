@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from narwhals.stable.v1._dtypes import Array
+from narwhals.stable.v1._dtypes import Binary
 from narwhals.stable.v1._dtypes import Boolean
 from narwhals.stable.v1._dtypes import Categorical
 from narwhals.stable.v1._dtypes import Date
@@ -26,6 +27,7 @@ from narwhals.stable.v1._dtypes import Object
 from narwhals.stable.v1._dtypes import SignedIntegerType
 from narwhals.stable.v1._dtypes import String
 from narwhals.stable.v1._dtypes import Struct
+from narwhals.stable.v1._dtypes import Time
 from narwhals.stable.v1._dtypes import UInt8
 from narwhals.stable.v1._dtypes import UInt16
 from narwhals.stable.v1._dtypes import UInt32
@@ -36,6 +38,7 @@ from narwhals.stable.v1._dtypes import UnsignedIntegerType
 
 __all__ = [
     "Array",
+    "Binary",
     "Boolean",
     "Categorical",
     "DType",
@@ -61,6 +64,7 @@ __all__ = [
     "SignedIntegerType",
     "String",
     "Struct",
+    "Time",
     "UInt8",
     "UInt16",
     "UInt32",

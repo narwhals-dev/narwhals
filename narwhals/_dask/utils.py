@@ -32,9 +32,7 @@ def maybe_evaluate_expr(df: DaskLazyFrame, obj: DaskExpr | object) -> dx.Series 
 
     if isinstance(obj, DaskExpr):
         results = obj._call(df)
-        if len(results) != 1:
-            msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
-            raise AssertionError(msg)
+        assert len(results) == 1  # debug assertion  # noqa: S101
         return results[0]
     return obj
 
@@ -143,6 +141,12 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> An
         return NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
         msg = "Converting to Array dtype is not supported yet"
+        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Time):  # pragma: no cover
+        msg = "Converting to Time dtype is not supported yet"
+        return NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Binary):  # pragma: no cover
+        msg = "Converting to Binary dtype is not supported yet"
         return NotImplementedError(msg)
 
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover

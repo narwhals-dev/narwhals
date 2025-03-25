@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterator
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 
 import dask.dataframe as dd
@@ -15,8 +17,11 @@ from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
+from narwhals.utils import _remap_full_join_keys
 from narwhals.utils import check_column_exists
+from narwhals.utils import check_column_names_are_unique
 from narwhals.utils import generate_temporary_column_name
+from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import validate_backend_version
@@ -24,6 +29,7 @@ from narwhals.utils import validate_backend_version
 if TYPE_CHECKING:
     from types import ModuleType
 
+    import dask.dataframe.dask_expr as dx
     from typing_extensions import Self
 
     from narwhals._dask.expr import DaskExpr
@@ -33,15 +39,13 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class DaskLazyFrame(CompliantLazyFrame):
+class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
     def __init__(
         self: Self,
         native_dataframe: dd.DataFrame,
         *,
         backend_version: tuple[int, ...],
         version: Version,
-        # Unused, just for compatibility. We only validate when collecting.
-        validate_column_names: bool = False,
     ) -> None:
         self._native_frame: dd.DataFrame = native_dataframe
         self._backend_version = backend_version
@@ -79,6 +83,10 @@ class DaskLazyFrame(CompliantLazyFrame):
             version=self._version,
         )
 
+    def _iter_columns(self) -> Iterator[dx.Series]:
+        for _col, ser in self._native_frame.items():  # noqa: PERF102
+            yield ser
+
     def with_columns(self: Self, *exprs: DaskExpr) -> Self:
         df = self._native_frame
         new_series = evaluate_exprs(self, *exprs)
@@ -89,9 +97,7 @@ class DaskLazyFrame(CompliantLazyFrame):
         self: Self,
         backend: Implementation | None,
         **kwargs: Any,
-    ) -> CompliantDataFrame:
-        import pandas as pd
-
+    ) -> CompliantDataFrame[Any, Any, Any]:
         result = self._native_frame.compute(**kwargs)
 
         if backend is None or backend is Implementation.PANDAS:
@@ -158,15 +164,6 @@ class DaskLazyFrame(CompliantLazyFrame):
 
     def select(self: Self, *exprs: DaskExpr) -> Self:
         new_series = evaluate_exprs(self, *exprs)
-
-        if not new_series:
-            # return empty dataframe, like Polars does
-            return self._from_native_frame(
-                dd.from_pandas(
-                    pd.DataFrame(), npartitions=self._native_frame.npartitions
-                ),
-            )
-
         df = select_columns_by_name(
             self._native_frame.assign(**dict(new_series)),
             [s[0] for s in new_series],
@@ -175,7 +172,7 @@ class DaskLazyFrame(CompliantLazyFrame):
         )
         return self._from_native_frame(df)
 
-    def drop_nulls(self: Self, subset: list[str] | None) -> Self:
+    def drop_nulls(self: Self, subset: Sequence[str] | None) -> Self:
         if subset is None:
             return self._from_native_frame(self._native_frame.dropna())
         plx = self.__narwhals_namespace__()
@@ -196,7 +193,7 @@ class DaskLazyFrame(CompliantLazyFrame):
     def collect_schema(self: Self) -> dict[str, DType]:
         return self.schema
 
-    def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
+    def drop(self: Self, columns: Sequence[str], *, strict: bool) -> Self:
         to_drop = parse_columns_to_drop(
             compliant_frame=self, columns=columns, strict=strict
         )
@@ -212,7 +209,7 @@ class DaskLazyFrame(CompliantLazyFrame):
             )
         )
 
-    def rename(self: Self, mapping: dict[str, str]) -> Self:
+    def rename(self: Self, mapping: Mapping[str, str]) -> Self:
         return self._from_native_frame(self._native_frame.rename(columns=mapping))
 
     def head(self: Self, n: int) -> Self:
@@ -222,9 +219,9 @@ class DaskLazyFrame(CompliantLazyFrame):
 
     def unique(
         self: Self,
-        subset: list[str] | None,
+        subset: Sequence[str] | None,
         *,
-        keep: Literal["any", "none"] = "any",
+        keep: Literal["any", "none"],
     ) -> Self:
         check_column_exists(self.columns, subset)
         native_frame = self._native_frame
@@ -260,9 +257,9 @@ class DaskLazyFrame(CompliantLazyFrame):
         self: Self,
         other: Self,
         *,
-        how: Literal["left", "inner", "cross", "anti", "semi"],
-        left_on: list[str] | None,
-        right_on: list[str] | None,
+        how: Literal["inner", "left", "full", "cross", "semi", "anti"],
+        left_on: Sequence[str] | None,
+        right_on: Sequence[str] | None,
         suffix: str,
     ) -> Self:
         if how == "cross":
@@ -293,7 +290,7 @@ class DaskLazyFrame(CompliantLazyFrame):
             other_native = (
                 select_columns_by_name(
                     other._native_frame,
-                    right_on,
+                    list(right_on),
                     self._backend_version,
                     self._implementation,
                 )
@@ -320,7 +317,7 @@ class DaskLazyFrame(CompliantLazyFrame):
             other_native = (
                 select_columns_by_name(
                     other._native_frame,
-                    right_on,
+                    list(right_on),
                     self._backend_version,
                     self._implementation,
                 )
@@ -355,6 +352,30 @@ class DaskLazyFrame(CompliantLazyFrame):
                     extra.append(f"{right_key}_right")
             return self._from_native_frame(result_native.drop(columns=extra))
 
+        if how == "full":
+            # dask does not retain keys post-join
+            # we must append the suffix to each key before-hand
+
+            # help mypy
+            assert left_on is not None  # noqa: S101
+            assert right_on is not None  # noqa: S101
+
+            right_on_mapper = _remap_full_join_keys(left_on, right_on, suffix)
+
+            other_native = other._native_frame
+            other_native = other_native.rename(columns=right_on_mapper)
+            check_column_names_are_unique(other_native.columns)
+            right_on = list(right_on_mapper.values())  # we now have the suffixed keys
+            return self._from_native_frame(
+                self._native_frame.merge(
+                    other_native,
+                    left_on=left_on,
+                    right_on=right_on,
+                    how="outer",
+                    suffixes=("", suffix),
+                ),
+            )
+
         return self._from_native_frame(
             self._native_frame.merge(
                 other._native_frame,
@@ -371,8 +392,8 @@ class DaskLazyFrame(CompliantLazyFrame):
         *,
         left_on: str | None,
         right_on: str | None,
-        by_left: list[str] | None,
-        by_right: list[str] | None,
+        by_left: Sequence[str] | None,
+        by_right: Sequence[str] | None,
         strategy: Literal["backward", "forward", "nearest"],
         suffix: str,
     ) -> Self:
@@ -393,7 +414,7 @@ class DaskLazyFrame(CompliantLazyFrame):
     def group_by(self: Self, *by: str, drop_null_keys: bool) -> DaskLazyGroupBy:
         from narwhals._dask.group_by import DaskLazyGroupBy
 
-        return DaskLazyGroupBy(self, list(by), drop_null_keys=drop_null_keys)
+        return DaskLazyGroupBy(self, by, drop_null_keys=drop_null_keys)
 
     def tail(self: Self, n: int) -> Self:  # pragma: no cover
         native_frame = self._native_frame
@@ -419,8 +440,8 @@ class DaskLazyFrame(CompliantLazyFrame):
 
     def unpivot(
         self: Self,
-        on: list[str] | None,
-        index: list[str] | None,
+        on: Sequence[str] | None,
+        index: Sequence[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:
@@ -432,3 +453,5 @@ class DaskLazyFrame(CompliantLazyFrame):
                 value_name=value_name,
             )
         )
+
+    explode = not_implemented()

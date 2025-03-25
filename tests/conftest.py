@@ -8,9 +8,6 @@ from typing import Any
 from typing import Callable
 from typing import Sequence
 
-import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 
 from narwhals.utils import generate_temporary_column_name
@@ -18,11 +15,12 @@ from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     import duckdb
+    import polars as pl
 
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoFrame
 
-MIN_PANDAS_NULLABLE_VERSION = (1, 5)
+MIN_PANDAS_NULLABLE_VERSION = (2,)
 
 # When testing cudf.pandas in Kaggle, we get an error if we try to run
 # python -m cudf.pandas -m pytest --constructors=pandas. This gives us
@@ -33,9 +31,7 @@ if default_constructors := os.environ.get(
 ):  # pragma: no cover
     DEFAULT_CONSTRUCTORS = default_constructors
 else:
-    DEFAULT_CONSTRUCTORS = (
-        "pandas,pandas[nullable],pandas[pyarrow],polars[eager],polars[lazy],pyarrow"
-    )
+    DEFAULT_CONSTRUCTORS = "pandas,pandas[pyarrow],polars[eager],pyarrow,duckdb,sqlframe"
 
 
 def pytest_addoption(parser: Any) -> None:
@@ -74,19 +70,26 @@ def pytest_collection_modifyitems(
 
 
 def pandas_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+    import pandas as pd
+
     return pd.DataFrame(obj)
 
 
 def pandas_nullable_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+    import pandas as pd
+
     return pd.DataFrame(obj).convert_dtypes(dtype_backend="numpy_nullable")
 
 
 def pandas_pyarrow_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+    import pandas as pd
+
     return pd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")
 
 
 def modin_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:  # pragma: no cover
     import modin.pandas as mpd
+    import pandas as pd
 
     return mpd.DataFrame(pd.DataFrame(obj))  # type: ignore[no-any-return]
 
@@ -95,6 +98,7 @@ def modin_pyarrow_constructor(
     obj: dict[str, list[Any]],
 ) -> IntoDataFrame:  # pragma: no cover
     import modin.pandas as mpd
+    import pandas as pd
 
     return mpd.DataFrame(pd.DataFrame(obj)).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
 
@@ -106,15 +110,20 @@ def cudf_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:  # pragma: no 
 
 
 def polars_eager_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+    import polars as pl
+
     return pl.DataFrame(obj)
 
 
 def polars_lazy_constructor(obj: dict[str, list[Any]]) -> pl.LazyFrame:
+    import polars as pl
+
     return pl.LazyFrame(obj)
 
 
 def duckdb_lazy_constructor(obj: dict[str, list[Any]]) -> duckdb.DuckDBPyRelation:
     import duckdb
+    import polars as pl
 
     _df = pl.LazyFrame(obj)
     return duckdb.table("_df")
@@ -133,6 +142,8 @@ def dask_lazy_p2_constructor(obj: dict[str, list[Any]]) -> IntoFrame:  # pragma:
 
 
 def pyarrow_table_constructor(obj: dict[str, Any]) -> IntoDataFrame:
+    import pyarrow as pa
+
     return pa.table(obj)
 
 
@@ -173,7 +184,7 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
             index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
             _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
 
-            return (
+            return (  # type: ignore[no-any-return]
                 session.createDataFrame([*zip(*_obj.values())], schema=[*_obj.keys()])
                 .repartition(2)
                 .orderBy(index_col_name)
@@ -189,9 +200,7 @@ def sqlframe_pyspark_lazy_constructor(
     from sqlframe.duckdb import DuckDBSession
 
     session = DuckDBSession()
-    return (  # type: ignore[no-any-return]
-        session.createDataFrame([*zip(*obj.values())], schema=[*obj.keys()])
-    )
+    return session.createDataFrame([*zip(*obj.values())], schema=[*obj.keys()])
 
 
 EAGER_CONSTRUCTORS: dict[str, Callable[[Any], IntoDataFrame]] = {
@@ -235,26 +244,27 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
 
     for constructor in selected_constructors:
         if (
-            constructor in {"pandas[nullable]", "pandas[pyarrow]"}
-            and MIN_PANDAS_NULLABLE_VERSION > PANDAS_VERSION
-        ):  # pragma: no cover
-            continue
+            (
+                constructor in {"pandas[nullable]", "pandas[pyarrow]"}
+                and MIN_PANDAS_NULLABLE_VERSION > PANDAS_VERSION
+            )
+            or (constructor == "sqlframe" and sys.version_info < (3, 9))
+            or (constructor == "pyspark" and sys.version_info >= (3, 12))
+        ):
+            continue  # pragma: no cover
+
         if constructor in EAGER_CONSTRUCTORS:
             eager_constructors.append(EAGER_CONSTRUCTORS[constructor])
             eager_constructors_ids.append(constructor)
             constructors.append(EAGER_CONSTRUCTORS[constructor])
-            constructors_ids.append(constructor)
+        elif constructor == "pyspark":  # pragma: no cover
+            constructors.append(pyspark_lazy_constructor())
         elif constructor in LAZY_CONSTRUCTORS:
-            if constructor == "pyspark":
-                if sys.version_info >= (3, 12):  # pragma: no cover
-                    continue
-                constructors.append(pyspark_lazy_constructor())  # pragma: no cover
-            else:
-                constructors.append(LAZY_CONSTRUCTORS[constructor])
-            constructors_ids.append(constructor)
+            constructors.append(LAZY_CONSTRUCTORS[constructor])
         else:  # pragma: no cover
             msg = f"Expected one of {EAGER_CONSTRUCTORS.keys()} or {LAZY_CONSTRUCTORS.keys()}, got {constructor}"
             raise ValueError(msg)
+        constructors_ids.append(constructor)
 
     if "constructor_eager" in metafunc.fixturenames:
         metafunc.parametrize(

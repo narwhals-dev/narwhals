@@ -4,6 +4,8 @@ import math
 import os
 import sys
 import warnings
+from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterator
@@ -20,10 +22,8 @@ from narwhals.typing import IntoFrame
 from narwhals.utils import Implementation
 from narwhals.utils import parse_version
 
-if sys.version_info >= (3, 10):
-    from typing import TypeAlias  # pragma: no cover
-else:
-    from typing_extensions import TypeAlias  # pragma: no cover
+if TYPE_CHECKING:
+    from typing_extensions import TypeAlias
 
 
 def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
@@ -86,10 +86,6 @@ def _sort_dict_by_key(
 
 
 def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
-    is_pyspark = (
-        hasattr(result, "_compliant_frame")
-        and result.implementation is Implementation.PYSPARK
-    )
     is_duckdb = (
         hasattr(result, "_compliant_frame")
         and result._compliant_frame._implementation is Implementation.DUCKDB
@@ -110,10 +106,6 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
         for idx, (col, key) in enumerate(zip(result.columns, expected.keys())):
             assert col == key, f"Expected column name {key} at index {idx}, found {col}"
     result = {key: _to_comparable_list(result[key]) for key in expected}
-    if (is_pyspark or is_duckdb) and expected:  # pragma: no cover
-        sort_key = next(iter(expected.keys()))
-        expected = _sort_dict_by_key(expected, sort_key)
-        result = _sort_dict_by_key(result, sort_key)
     assert list(result.keys()) == list(expected.keys()), (
         f"Result keys {result.keys()}, expected keys: {expected.keys()}"
     )
@@ -159,3 +151,13 @@ def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:
 def is_windows() -> bool:
     """Check if the current platform is Windows."""
     return sys.platform in {"win32", "cygwin"}
+
+
+def windows_has_tzdata() -> bool:  # pragma: no cover
+    """From PyArrow: python/pyarrow/tests/util.py."""
+    return (Path.home() / "Downloads" / "tzdata").exists()
+
+
+def is_pyarrow_windows_no_tzdata(constructor: Constructor, /) -> bool:
+    """Skip test on Windows when the tz database is not configured."""
+    return "pyarrow" in str(constructor) and is_windows() and not windows_has_tzdata()

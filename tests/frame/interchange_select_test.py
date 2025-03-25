@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Mapping
 
-import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -50,7 +49,12 @@ def test_interchange() -> None:
 def test_interchange_ibis(
     tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover
-    ibis = pytest.importorskip("ibis")
+    pytest.importorskip("polars")
+    pytest.importorskip("ibis")
+
+    import ibis
+    import polars as pl
+
     try:
         ibis.set_backend("duckdb")
     except ImportError:
@@ -69,7 +73,12 @@ def test_interchange_ibis(
 
 
 def test_interchange_duckdb() -> None:
-    duckdb = pytest.importorskip("duckdb")
+    pytest.importorskip("polars")
+    pytest.importorskip("duckdb")
+
+    import duckdb
+    import polars as pl
+
     df_pl = pl.DataFrame(data)  # noqa: F841
     rel = duckdb.sql("select * from df_pl")
     df = nw.from_native(rel, eager_or_interchange_only=True)

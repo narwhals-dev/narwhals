@@ -66,12 +66,9 @@ def test_unique_none(constructor: Constructor) -> None:
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
 
-    result = df.unique(maintain_order=False).sort("z")
+    result = df.unique().sort("z")
     assert_equal_data(result, data)
 
-    if isinstance(df, nw.LazyFrame):
-        with pytest.raises(ValueError, match="not supported"):
-            result = df.unique(maintain_order=True).sort("z")
-    else:
+    if not isinstance(df, nw.LazyFrame):
         result = df.unique(maintain_order=True)
         assert_equal_data(result, data)

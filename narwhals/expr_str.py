@@ -250,7 +250,7 @@ class ExprStringNamespace(Generic[ExprT]):
             A new expression.
 
         Examples:
-           >>> import pandas as pd
+            >>> import pandas as pd
             >>> import narwhals as nw
             >>> df_native = pd.DataFrame({"s": ["pear", None, "papaya"]})
             >>> df = nw.from_native(df_native)
@@ -367,8 +367,15 @@ class ExprStringNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def to_datetime(self: Self, format: str | None = None) -> ExprT:  # noqa: A002
+    def to_datetime(self: Self, format: str | None = None) -> ExprT:
         """Convert to Datetime dtype.
+
+        Notes:
+            - pandas defaults to nanosecond time unit, Polars to microsecond.
+              Prior to pandas 2.0, nanoseconds were the only time unit supported
+              in pandas, with no ability to set any other one. The ability to
+              set the time unit in pandas, if the version permits, will arrive.
+            - timezone-aware strings are all converted to and parsed as UTC.
 
         Warning:
             As different backends auto-infer format in different ways, if `format=None`
@@ -380,12 +387,6 @@ class ExprStringNamespace(Generic[ExprT]):
 
         Returns:
             A new expression.
-
-        Notes:
-            pandas defaults to nanosecond time unit, Polars to microsecond.
-            Prior to pandas 2.0, nanoseconds were the only time unit supported
-            in pandas, with no ability to set any other one. The ability to
-            set the time unit in pandas, if the version permits, will arrive.
 
         Examples:
             >>> import polars as pl

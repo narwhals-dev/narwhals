@@ -12,6 +12,7 @@ Here are the top-level functions available in Narwhals.
         - col
         - concat
         - concat_str
+        - exclude
         - from_arrow
         - from_dict
         - from_native
