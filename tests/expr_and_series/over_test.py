@@ -53,6 +53,8 @@ def test_over_std_var(request: pytest.FixtureRequest, constructor: Constructor) 
     if "cudf" in str(constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
 
     df = nw.from_native(constructor(data))
     expected = {
