@@ -90,6 +90,7 @@ def test_lazy_cum_prod_grouped(
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
     if "sqlframe" in str(constructor):
+        # https://github.com/eakmanrq/sqlframe/issues/348
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
