@@ -1,15 +1,11 @@
 from __future__ import annotations
 
-import pytest
-
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
 
-def test_add(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_add(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
     result = df.with_columns(

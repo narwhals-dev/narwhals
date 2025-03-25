@@ -338,3 +338,26 @@ def test_arithmetic_series_left_literal(
     df = nw.from_native(constructor_eager(data))
     result = df.select(getattr(lhs, attr)(nw.col("a")))
     assert_equal_data(result, {"literal": expected})
+
+
+def test_std_broadcating(constructor: Constructor) -> None:
+    # `std(ddof=2)` fails for duckdb here
+    df = nw.from_native(constructor({"a": [1, 2, 3]}))
+    result = df.with_columns(b=nw.col("a").std()).sort("a")
+    expected = {"a": [1, 2, 3], "b": [1.0, 1.0, 1.0]}
+    assert_equal_data(result, expected)
+    result = df.with_columns(b=nw.col("a").var()).sort("a")
+    expected = {"a": [1, 2, 3], "b": [1.0, 1.0, 1.0]}
+    assert_equal_data(result, expected)
+    result = df.with_columns(b=nw.col("a").std(ddof=0)).sort("a")
+    expected = {
+        "a": [1, 2, 3],
+        "b": [0.816496580927726, 0.816496580927726, 0.816496580927726],
+    }
+    assert_equal_data(result, expected)
+    result = df.with_columns(b=nw.col("a").var(ddof=0)).sort("a")
+    expected = {
+        "a": [1, 2, 3],
+        "b": [0.6666666666666666, 0.6666666666666666, 0.6666666666666666],
+    }
+    assert_equal_data(result, expected)
