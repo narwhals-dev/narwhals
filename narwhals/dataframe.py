@@ -2176,7 +2176,8 @@ class LazyFrame(BaseFrame[FrameT]):
                     "Hints:\n"
                     "- Instead of `lf.select(nw.col('a').sort())`, use `lf.select('a').sort()`.\n"
                     "- Instead of `lf.select(nw.col('a').cum_sum())`, use\n"
-                    "  `lf.select(nw.col('a').cum_sum().over(order_by='date'))`."
+                    "  `lf.select(nw.col('a').cum_sum().over(order_by='date'))`.\n\n"
+                    "See https://narwhals-dev.github.io/narwhals/basics/order_dependence/."
                 )
                 raise OrderDependentExprError(msg)
             if arg._metadata.kind.is_filtration():
