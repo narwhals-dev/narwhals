@@ -9,6 +9,7 @@ from hypothesis import given
 
 import narwhals.stable.v1 as nw
 from tests.utils import DASK_VERSION
+from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -338,3 +339,28 @@ def test_arithmetic_series_left_literal(
     df = nw.from_native(constructor_eager(data))
     result = df.select(getattr(lhs, attr)(nw.col("a")))
     assert_equal_data(result, {"literal": expected})
+
+
+def test_std_broadcating(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        # `std(ddof=2)` fails for duckdb here
+        pytest.skip()
+    df = nw.from_native(constructor({"a": [1, 2, 3]}))
+    result = df.with_columns(b=nw.col("a").std()).sort("a")
+    expected = {"a": [1, 2, 3], "b": [1.0, 1.0, 1.0]}
+    assert_equal_data(result, expected)
+    result = df.with_columns(b=nw.col("a").var()).sort("a")
+    expected = {"a": [1, 2, 3], "b": [1.0, 1.0, 1.0]}
+    assert_equal_data(result, expected)
+    result = df.with_columns(b=nw.col("a").std(ddof=0)).sort("a")
+    expected = {
+        "a": [1, 2, 3],
+        "b": [0.816496580927726, 0.816496580927726, 0.816496580927726],
+    }
+    assert_equal_data(result, expected)
+    result = df.with_columns(b=nw.col("a").var(ddof=0)).sort("a")
+    expected = {
+        "a": [1, 2, 3],
+        "b": [0.6666666666666666, 0.6666666666666666, 0.6666666666666666],
+    }
+    assert_equal_data(result, expected)

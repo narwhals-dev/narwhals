@@ -79,6 +79,25 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             backend_version=self._backend_version, version=self._version
         )
 
+    def _cum_window_func(
+        self,
+        *,
+        reverse: bool,
+        func_name: Literal["sum", "max", "min", "count", "product"],
+    ) -> WindowFunction:
+        def func(window_inputs: WindowInputs) -> duckdb.Expression:
+            order_by_sql = generate_order_by_sql(
+                *window_inputs.order_by, ascending=not reverse
+            )
+            partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
+            sql = (
+                f"{func_name} ({window_inputs.expr}) over ({partition_by_sql} {order_by_sql} "
+                "rows between unbounded preceding and current row)"
+            )
+            return SQLExpression(sql)  # type: ignore[no-any-return, unused-ignore]
+
+        return func
+
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         if kind is ExprKind.LITERAL:
             return self
@@ -353,22 +372,38 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         return self._from_call(lambda _input: FunctionExpression("count"))
 
     def std(self: Self, ddof: int) -> Self:
+        if ddof == 0:
+            return self._from_call(
+                lambda _input: FunctionExpression("stddev_pop", _input)
+            )
+        if ddof == 1:
+            return self._from_call(
+                lambda _input: FunctionExpression("stddev_samp", _input)
+            )
+
         def _std(_input: duckdb.Expression) -> duckdb.Expression:
             n_samples = FunctionExpression("count", _input)
-            # NOTE: Not implemented Error: Unable to transform python value of type '<class 'duckdb.duckdb.Expression'>' to DuckDB LogicalType
             return (
                 FunctionExpression("stddev_pop", _input)
                 * FunctionExpression("sqrt", n_samples)
-                / (FunctionExpression("sqrt", (n_samples - ddof)))  # type: ignore[operator]
+                / (FunctionExpression("sqrt", (n_samples - lit(ddof))))
             )
 
         return self._from_call(_std)
 
     def var(self: Self, ddof: int) -> Self:
+        if ddof == 0:
+            return self._from_call(lambda _input: FunctionExpression("var_pop", _input))
+        if ddof == 1:
+            return self._from_call(lambda _input: FunctionExpression("var_samp", _input))
+
         def _var(_input: duckdb.Expression) -> duckdb.Expression:
             n_samples = FunctionExpression("count", _input)
-            # NOTE: Not implemented Error: Unable to transform python value of type '<class 'duckdb.duckdb.Expression'>' to DuckDB LogicalType
-            return FunctionExpression("var_pop", _input) * n_samples / (n_samples - ddof)  # type: ignore[operator, no-any-return]
+            return (
+                FunctionExpression("var_pop", _input)
+                * n_samples
+                / (n_samples - lit(ddof))
+            )
 
         return self._from_call(_var)
 
@@ -486,18 +521,29 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         return self._with_window_function(func)
 
     def cum_sum(self, *, reverse: bool) -> Self:
-        def func(window_inputs: WindowInputs) -> duckdb.Expression:
-            order_by_sql = generate_order_by_sql(
-                *window_inputs.order_by, ascending=not reverse
-            )
-            partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
-            sql = (
-                f"sum ({window_inputs.expr}) over ({partition_by_sql} {order_by_sql} "
-                "rows between unbounded preceding and current row)"
-            )
-            return SQLExpression(sql)  # type: ignore[no-any-return, unused-ignore]
+        return self._with_window_function(
+            self._cum_window_func(reverse=reverse, func_name="sum")
+        )
 
-        return self._with_window_function(func)
+    def cum_max(self, *, reverse: bool) -> Self:
+        return self._with_window_function(
+            self._cum_window_func(reverse=reverse, func_name="max")
+        )
+
+    def cum_min(self, *, reverse: bool) -> Self:
+        return self._with_window_function(
+            self._cum_window_func(reverse=reverse, func_name="min")
+        )
+
+    def cum_count(self, *, reverse: bool) -> Self:
+        return self._with_window_function(
+            self._cum_window_func(reverse=reverse, func_name="count")
+        )
+
+    def cum_prod(self, *, reverse: bool) -> Self:
+        return self._with_window_function(
+            self._cum_window_func(reverse=reverse, func_name="product")
+        )
 
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         if center:
@@ -563,7 +609,3 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     drop_nulls = not_implemented()
     unique = not_implemented()
     is_unique = not_implemented()
-    cum_count = not_implemented()
-    cum_min = not_implemented()
-    cum_max = not_implemented()
-    cum_prod = not_implemented()
