@@ -79,19 +79,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             backend_version=self._backend_version, version=self._version
         )
 
-    def _with_metadata(self, metadata: ExprMetadata) -> Self:
-        expr = self.__class__(
-            self._call,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-        if func := self._window_function:
-            expr = expr._with_window_function(func)
-        expr._metadata = metadata
-        return expr
-
     def _cum_window_func(
         self, *, reverse: bool, func_name: Literal["sum", "max", "min"]
     ) -> WindowFunction:

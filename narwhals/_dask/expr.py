@@ -83,20 +83,6 @@ class DaskExpr(
 
         return DaskNamespace(backend_version=self._backend_version, version=self._version)
 
-    def _with_metadata(self, metadata: ExprMetadata) -> Self:
-        expr = self.__class__(
-            self._call,
-            function_name=self._function_name,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
-            version=self._version,
-            depth=self._depth,
-            call_kwargs=self._call_kwargs,
-        )
-        expr._metadata = metadata
-        return expr
-
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             return [result[0] for result in self(df)]

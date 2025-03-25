@@ -213,7 +213,7 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
     def when(self: Self, predicate: DuckDBExpr) -> DuckDBWhen:
         return DuckDBWhen.from_expr(predicate, context=self)
 
-    def lit(self: Self, value: Any, dtype: DType | None) -> DuckDBExpr:
+    def lit(self: Self, value: Any, dtype: DType | type[DType] | None) -> DuckDBExpr:
         def func(_df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             if dtype is not None:
                 return [
