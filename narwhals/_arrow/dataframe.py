@@ -691,7 +691,8 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
         raise AssertionError(msg)  # pragma: no cover
 
-    clone = not_implemented()
+    def clone(self) -> Self:
+        return self._from_native_frame(self.native, validate_column_names=False)
 
     def item(self: Self, row: int | None, column: int | str | None) -> Any:
         from narwhals._arrow.series import maybe_extract_py_scalar
