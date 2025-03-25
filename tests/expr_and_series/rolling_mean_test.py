@@ -10,7 +10,10 @@ import pytest
 from hypothesis import given
 
 import narwhals.stable.v1 as nw
+from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
+from tests.utils import POLARS_VERSION
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -95,3 +98,114 @@ def test_rolling_mean_hypothesis(center: bool, values: list[float]) -> None:  # 
     )
     expected_dict = nw.from_native(expected, eager_only=True).to_dict(as_series=False)
     assert_equal_data(result, expected_dict)
+
+
+@pytest.mark.filterwarnings(
+    "ignore:`Expr.rolling_mean` is being called from the stable API although considered an unstable feature."
+)
+@pytest.mark.parametrize(
+    ("expected_a", "window_size", "min_samples", "center"),
+    [
+        ([None, None, 1.5, None, None, 5, 8.5], 2, None, False),
+        ([None, None, 1.5, None, None, 5, 8.5], 2, 2, False),
+        ([None, None, 1.5, 1.5, None, 5, 7.0], 3, 2, False),
+        ([1, None, 1.5, 1.5, 4, 5, 7], 3, 1, False),
+        ([1.5, 1, 1.5, 2, 5, 7, 8.5], 3, 1, True),
+        ([1.5, 1, 1.5, 1.5, 5, 7, 7], 4, 1, True),
+        ([1.5, 1.5, 1.5, 1.5, 7, 7, 7], 5, 1, True),
+    ],
+)
+def test_rolling_mean_expr_lazy_grouped(
+    constructor: Constructor,
+    expected_a: list[float],
+    window_size: int,
+    min_samples: int,
+    request: pytest.FixtureRequest,
+    *,
+    center: bool,
+) -> None:
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    ):
+        pytest.skip()
+    if "pandas" in str(constructor):
+        pytest.skip()
+    if any(x in str(constructor) for x in ("dask", "pyarrow_table")):
+        request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor) and center:
+        # center is not implemented for offset-based windows
+        request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor):
+        # unreliable
+        pytest.skip()
+    if "sqlframe" in str(constructor):
+        pytest.skip()
+    data = {
+        "a": [1, None, 2, None, 4, 6, 11],
+        "g": [1, 1, 1, 1, 2, 2, 2],
+        "b": [1, None, 2, 3, 4, 5, 6],
+        "i": list(range(7)),
+    }
+    df = nw.from_native(constructor(data))
+    result = (
+        df.with_columns(
+            nw.col("a")
+            .rolling_mean(window_size, min_samples=min_samples, center=center)
+            .over("g", order_by="b")
+        )
+        .sort("i")
+        .select("a")
+    )
+    expected = {"a": expected_a}
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.filterwarnings(
+    "ignore:`Expr.rolling_mean` is being called from the stable API although considered an unstable feature."
+)
+@pytest.mark.parametrize(
+    ("expected_a", "window_size", "min_samples", "center"),
+    [
+        ([None, None, 1.5, None, None, 5, 8.5], 2, None, False),
+        ([None, None, 1.5, None, None, 5, 8.5], 2, 2, False),
+        ([None, None, 1.5, 1.5, 3, 5, 7], 3, 2, False),
+        ([1, None, 1.5, 1.5, 3, 5, 7], 3, 1, False),
+        ([1.5, 1, 1.5, 3, 5, 7, 8.5], 3, 1, True),
+        ([1.5, 1, 1.5, 2.3333333333333335, 4, 7, 7], 4, 1, True),
+        ([1.5, 1.5, 2.3333333333333335, 3.25, 5.75, 7.0, 7.0], 5, 1, True),
+    ],
+)
+def test_rolling_mean_expr_lazy_ungrouped(
+    constructor: Constructor,
+    expected_a: list[float],
+    window_size: int,
+    min_samples: int,
+    *,
+    center: bool,
+) -> None:
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    ):
+        pytest.skip()
+    if "modin" in str(constructor):
+        # unreliable
+        pytest.skip()
+    if "sqlframe" in str(constructor):
+        pytest.skip()
+    data = {
+        "a": [1, None, 2, None, 4, 6, 11],
+        "b": [1, None, 2, 3, 4, 5, 6],
+        "i": list(range(7)),
+    }
+    df = nw.from_native(constructor(data))
+    result = (
+        df.with_columns(
+            nw.col("a")
+            .rolling_mean(window_size, min_samples=min_samples, center=center)
+            .over(order_by="b")
+        )
+        .select("a", "i")
+        .sort("i")
+    )
+    expected = {"a": expected_a, "i": list(range(7))}
+    assert_equal_data(result, expected)
