@@ -306,7 +306,7 @@ class PolarsDataFrame:
             from narwhals._duckdb.dataframe import DuckDBLazyFrame
 
             # NOTE: (F841) is a false positive
-            df = self._native_frame  # noqa: F841
+            df = self.native  # noqa: F841
             return DuckDBLazyFrame(
                 duckdb.table("df"),
                 backend_version=parse_version(duckdb),
@@ -428,11 +428,10 @@ class PolarsDataFrame:
         how_native = (
             "outer" if (self._backend_version < (1, 0, 0) and how == "full") else how
         )
-
         try:
             return self._from_native_frame(
-                self._native_frame.join(
-                    other=other._native_frame,
+                self.native.join(
+                    other=other.native,
                     how=how_native,  # type: ignore[arg-type]
                     left_on=left_on,
                     right_on=right_on,
@@ -562,12 +561,8 @@ class PolarsLazyFrame:
             raise catch_polars_exception(e, self._backend_version) from None
 
         if backend is None or backend is Implementation.POLARS:
-            from narwhals._polars.dataframe import PolarsDataFrame
-
             return PolarsDataFrame(
-                result,
-                backend_version=self._backend_version,
-                version=self._version,
+                result, backend_version=self._backend_version, version=self._version
             )
 
         if backend is Implementation.PANDAS:
@@ -653,10 +648,9 @@ class PolarsLazyFrame:
         how_native = (
             "outer" if (self._backend_version < (1, 0, 0) and how == "full") else how
         )
-
         return self._from_native_frame(
-            self._native_frame.join(
-                other=other._native_frame,
+            self.native.join(
+                other=other.native,
                 how=how_native,  # type: ignore[arg-type]
                 left_on=left_on,
                 right_on=right_on,
