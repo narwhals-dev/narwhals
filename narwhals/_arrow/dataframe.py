@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Iterator
 from typing import Literal
 from typing import Mapping
@@ -870,11 +871,10 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         other_columns = [c for c in original_columns if c not in to_explode]
         ONE = lit(1)  # noqa: N806
         fast_path = pc.all(pc.greater_equal(counts, ONE)).as_py()
-
+        flatten: Callable[..., ArrowChunkedArray]
         if fast_path:
             indices = pc.list_parent_indices(self.native[to_explode[0]])
             flatten = list_flatten
-
         else:
             filled_counts = pc.max_element_wise(counts, ONE, skip_nulls=True)
             indices = pa.array(
@@ -884,21 +884,21 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
                     for _ in range(count)
                 ]
             )
-
             parent_indices = pc.list_parent_indices(self.native[to_explode[0]])
             is_valid_index = pc.is_in(indices, value_set=parent_indices)
             exploded_size = len(is_valid_index)
 
-            def flatten(
+            def _flatten(
                 array: pa.ChunkedArray[pa.ListScalar[Any]], /
             ) -> ArrowChunkedArray:
                 dtype = array.type.value_type
-
                 return pc.replace_with_mask(
                     pa.nulls(exploded_size, dtype),
                     is_valid_index,
                     list_flatten(array).combine_chunks(),
                 )
+
+            flatten = _flatten
 
         arrays = [
             self.native[col_name].take(indices)
