@@ -915,14 +915,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
     def to_polars(self: Self) -> pl.DataFrame:
         import polars as pl  # ignore-banned-import
 
-        if self._implementation is Implementation.PANDAS:
-            return pl.from_pandas(self.native)
-        elif self._implementation is Implementation.CUDF:  # pragma: no cover
-            return pl.from_pandas(self.native.to_pandas())
-        elif self._implementation is Implementation.MODIN:
-            return pl.from_pandas(self.native._to_pandas())
-        msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
-        raise AssertionError(msg)
+        return pl.from_pandas(self.to_pandas())
 
     def write_parquet(self: Self, file: str | Path | BytesIO) -> None:
         self.native.to_parquet(file)
