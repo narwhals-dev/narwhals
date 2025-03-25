@@ -70,6 +70,27 @@ def test_allh_nth(
     assert_equal_data(result, expected)
 
 
+def test_allh_iterator(constructor: Constructor) -> None:
+    def iter_eq(items: Any, /) -> Any:
+        for column, value in items:
+            yield nw.col(column) == value
+
+    data = {"a": [1, 2, 3, 3, 3], "b": ["b", "b", "a", "a", "b"]}
+    df = nw.from_native(constructor(data))
+    expr_items = [("a", 3), ("b", "b")]
+    expected = {"a": [3], "b": ["b"]}
+
+    eager = nw.all_horizontal(list(iter_eq(expr_items)))
+    assert_equal_data(df.filter(eager), expected)
+    unpacked = nw.all_horizontal(*iter_eq(expr_items))
+    assert_equal_data(df.filter(unpacked), expected)
+    lazy = nw.all_horizontal(iter_eq(expr_items))
+
+    assert_equal_data(df.filter(lazy), expected)
+    assert_equal_data(df.filter(lazy), expected)
+    assert_equal_data(df.filter(lazy), expected)
+
+
 def test_horizontal_expressions_empty(constructor: Constructor) -> None:
     data = {
         "a": [False, False, True],

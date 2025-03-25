@@ -1,12 +1,16 @@
 from __future__ import annotations
 
-import duckdb
-import polars as pl
+from typing import Any
+from typing import Mapping
+
 import pytest
 
 import narwhals.stable.v1 as nw
 
-data = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
+pytest.importorskip("polars")
+import polars as pl
+
+data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 
 
 def test_interchange() -> None:
@@ -29,9 +33,15 @@ def test_interchange() -> None:
 
 @pytest.mark.filterwarnings("ignore:.*The `ArrowDtype` class is not available in pandas")
 def test_ibis(
-    tmpdir: pytest.TempdirFactory,
+    tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover
-    ibis = pytest.importorskip("ibis")
+    pytest.importorskip("ibis")
+    import ibis
+
+    try:
+        ibis.set_backend("duckdb")
+    except ImportError:
+        request.applymarker(pytest.mark.xfail)
     df_pl = pl.DataFrame(data)
 
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
@@ -45,6 +55,9 @@ def test_ibis(
 
 
 def test_duckdb() -> None:
+    pytest.importorskip("duckdb")
+    import duckdb
+
     df_pl = pl.DataFrame(data)  # noqa: F841
 
     rel = duckdb.sql("select * from df_pl")

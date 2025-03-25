@@ -3,25 +3,34 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
+from typing import cast
 from typing import overload
 
+import polars as pl
+
+from narwhals._polars.utils import catch_polars_exception
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
 from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals._polars.utils import native_to_narwhals_dtype
+from narwhals.dependencies import is_numpy_array_1d
 from narwhals.utils import Implementation
+from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
     from types import ModuleType
     from typing import TypeVar
 
-    import numpy as np
-    import polars as pl
     from typing_extensions import Self
 
     from narwhals._polars.dataframe import PolarsDataFrame
+    from narwhals._polars.expr import PolarsExpr
+    from narwhals._polars.namespace import PolarsNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import Into1DArray
+    from narwhals.typing import _1DArray
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
     T = TypeVar("T")
 
@@ -38,9 +47,17 @@ class PolarsSeries:
         self._backend_version = backend_version
         self._implementation = Implementation.POLARS
         self._version = version
+        validate_backend_version(self._implementation, self._backend_version)
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         return "PolarsSeries"
+
+    def __narwhals_namespace__(self) -> PolarsNamespace:
+        from narwhals._polars.namespace import PolarsNamespace
+
+        return PolarsNamespace(
+            backend_version=self._backend_version, version=self._version
+        )
 
     def __narwhals_series__(self: Self) -> Self:
         return self
@@ -55,6 +72,14 @@ class PolarsSeries:
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
             self._native_series, backend_version=self._backend_version, version=version
+        )
+
+    @classmethod
+    def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
+        return cls(
+            pl.Series(data if is_numpy_array_1d(data) else [data]),
+            backend_version=context._backend_version,
+            version=context._version,
         )
 
     def _from_native_series(self: Self, series: pl.Series) -> Self:
@@ -74,8 +99,6 @@ class PolarsSeries:
     def _from_native_object(
         self: Self, series: pl.Series | pl.DataFrame | T
     ) -> Self | PolarsDataFrame | T:
-        import polars as pl
-
         if isinstance(series, pl.Series):
             return self._from_native_series(series)
         if isinstance(series, pl.DataFrame):
@@ -86,6 +109,9 @@ class PolarsSeries:
             )
         # scalar
         return series
+
+    def _to_expr(self) -> PolarsExpr:
+        return self.__narwhals_namespace__()._expr._from_series(self)
 
     def __getattr__(self: Self, attr: str) -> Any:
         if attr == "as_py":  # pragma: no cover
@@ -103,10 +129,6 @@ class PolarsSeries:
         return len(self._native_series)
 
     @property
-    def shape(self: Self) -> tuple[int]:
-        return (len(self),)
-
-    @property
     def name(self: Self) -> str:
         return self._native_series.name
 
@@ -116,26 +138,34 @@ class PolarsSeries:
             self._native_series.dtype, self._version, self._backend_version
         )
 
+    @property
+    def native(self) -> pl.Series:
+        return self._native_series
+
+    def alias(self, name: str) -> Self:
+        return self._from_native_object(self._native_series.alias(name))
+
     @overload
     def __getitem__(self: Self, item: int) -> Any: ...
 
     @overload
-    def __getitem__(self: Self, item: slice | Sequence[int]) -> Self: ...
+    def __getitem__(self: Self, item: slice | Sequence[int] | pl.Series) -> Self: ...
 
-    def __getitem__(self: Self, item: int | slice | Sequence[int]) -> Any | Self:
+    def __getitem__(
+        self: Self, item: int | slice | Sequence[int] | pl.Series
+    ) -> Any | Self:
         return self._from_native_object(self._native_series.__getitem__(item))
 
     def cast(self: Self, dtype: DType) -> Self:
-        ser = self._native_series
-        dtype_pl = narwhals_to_native_dtype(dtype, self._version)
-        return self._from_native_series(ser.cast(dtype_pl))
+        dtype_pl = narwhals_to_native_dtype(dtype, self._version, self._backend_version)
+        return self._from_native_series(self.native.cast(dtype_pl))
 
     def replace_strict(
         self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
     ) -> Self:
         ser = self._native_series
         dtype = (
-            narwhals_to_native_dtype(return_dtype, self._version)
+            narwhals_to_native_dtype(return_dtype, self._version, self._backend_version)
             if return_dtype
             else None
         )
@@ -144,7 +174,10 @@ class PolarsSeries:
             raise NotImplementedError(msg)
         return self._from_native_series(ser.replace_strict(old, new, return_dtype=dtype))
 
-    def __array__(self: Self, dtype: Any, copy: bool | None) -> np.ndarray:
+    def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
+        return self.__array__(dtype, copy=copy)
+
+    def __array__(self: Self, dtype: Any, *, copy: bool | None) -> _1DArray:
         if self._backend_version < (0, 20, 29):
             return self._native_series.__array__(dtype=dtype)
         return self._native_series.__array__(dtype=dtype, copy=copy)
@@ -220,6 +253,18 @@ class PolarsSeries:
     def __invert__(self: Self) -> Self:
         return self._from_native_series(self._native_series.__invert__())
 
+    def is_nan(self: Self) -> Self:
+        native = self._native_series
+        try:
+            native_is_nan = native.is_nan()
+        except Exception as e:  # noqa: BLE001
+            raise catch_polars_exception(e, self._backend_version) from None
+        if self._backend_version < (1, 18):  # pragma: no cover
+            return self._from_native_series(
+                pl.select(pl.when(native.is_not_null()).then(native_is_nan))[native.name]
+            )
+        return self._from_native_series(native_is_nan)
+
     def median(self: Self) -> Any:
         from narwhals.exceptions import InvalidOperationError
 
@@ -230,8 +275,6 @@ class PolarsSeries:
         return self._native_series.median()
 
     def to_dummies(self: Self, *, separator: str, drop_first: bool) -> PolarsDataFrame:
-        import polars as pl
-
         from narwhals._polars.dataframe import PolarsDataFrame
 
         if self._backend_version < (0, 20, 15):
@@ -259,10 +302,16 @@ class PolarsSeries:
         half_life: float | None,
         alpha: float | None,
         adjust: bool,
-        min_periods: int,
+        min_samples: int,
         ignore_nulls: bool,
     ) -> Self:
         native_series = self._native_series
+
+        extra_kwargs = (
+            {"min_periods": min_samples}
+            if self._backend_version < (1, 21, 0)
+            else {"min_samples": min_samples}
+        )
 
         native_result = native_series.ewm_mean(
             com=com,
@@ -270,12 +319,10 @@ class PolarsSeries:
             half_life=half_life,
             alpha=alpha,
             adjust=adjust,
-            min_periods=min_periods,
             ignore_nulls=ignore_nulls,
+            **extra_kwargs,
         )
         if self._backend_version < (1,):  # pragma: no cover
-            import polars as pl
-
             return self._from_native_series(
                 pl.select(
                     pl.when(~native_series.is_null()).then(native_result).otherwise(None)
@@ -288,7 +335,7 @@ class PolarsSeries:
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -296,12 +343,18 @@ class PolarsSeries:
             msg = "`rolling_var` not implemented for polars older than 1.0"
             raise NotImplementedError(msg)
 
+        extra_kwargs = (
+            {"min_periods": min_samples}
+            if self._backend_version < (1, 21, 0)
+            else {"min_samples": min_samples}
+        )
+
         return self._from_native_series(
             self._native_series.rolling_var(
                 window_size=window_size,
-                min_periods=min_periods,
                 center=center,
                 ddof=ddof,
+                **extra_kwargs,  # type: ignore[arg-type]
             )
         )
 
@@ -309,7 +362,7 @@ class PolarsSeries:
         self: Self,
         window_size: int,
         *,
-        min_periods: int | None,
+        min_samples: int,
         center: bool,
         ddof: int,
     ) -> Self:
@@ -317,12 +370,60 @@ class PolarsSeries:
             msg = "`rolling_std` not implemented for polars older than 1.0"
             raise NotImplementedError(msg)
 
+        extra_kwargs = (
+            {"min_periods": min_samples}
+            if self._backend_version < (1, 21, 0)
+            else {"min_samples": min_samples}
+        )
+
         return self._from_native_series(
             self._native_series.rolling_std(
                 window_size=window_size,
-                min_periods=min_periods,
                 center=center,
                 ddof=ddof,
+                **extra_kwargs,  # type: ignore[arg-type]
+            )
+        )
+
+    def rolling_sum(
+        self: Self,
+        window_size: int,
+        *,
+        min_samples: int,
+        center: bool,
+    ) -> Self:
+        extra_kwargs = (
+            {"min_periods": min_samples}
+            if self._backend_version < (1, 21, 0)
+            else {"min_samples": min_samples}
+        )
+
+        return self._from_native_series(
+            self._native_series.rolling_sum(
+                window_size=window_size,
+                center=center,
+                **extra_kwargs,  # type: ignore[arg-type]
+            )
+        )
+
+    def rolling_mean(
+        self: Self,
+        window_size: int,
+        *,
+        min_samples: int,
+        center: bool,
+    ) -> Self:
+        extra_kwargs = (
+            {"min_periods": min_samples}
+            if self._backend_version < (1, 21, 0)
+            else {"min_samples": min_samples}
+        )
+
+        return self._from_native_series(
+            self._native_series.rolling_mean(
+                window_size=window_size,
+                center=center,
+                **extra_kwargs,  # type: ignore[arg-type]
             )
         )
 
@@ -331,8 +432,6 @@ class PolarsSeries:
             result = self._native_series.sort(descending=descending)
 
             if nulls_last:
-                import polars as pl
-
                 is_null = result.is_null()
                 result = pl.concat([result.filter(~is_null), result.filter(is_null)])
         else:
@@ -359,8 +458,6 @@ class PolarsSeries:
         from narwhals._polars.dataframe import PolarsDataFrame
 
         if self._backend_version < (1, 0, 0):
-            import polars as pl
-
             value_name_ = name or ("proportion" if normalize else "count")
 
             result = self._native_series.value_counts(sort=sort, parallel=parallel)
@@ -392,15 +489,106 @@ class PolarsSeries:
         return self._from_native_series(result)
 
     def __contains__(self: Self, other: Any) -> bool:
-        from polars.exceptions import InvalidOperationError as PlInvalidOperationError
-
         try:
             return self._native_series.__contains__(other)
-        except PlInvalidOperationError as exc:
-            from narwhals.exceptions import InvalidOperationError
+        except Exception as e:  # noqa: BLE001
+            raise catch_polars_exception(e, self._backend_version) from None
 
-            msg = f"Unable to compare other of type {type(other)} with series of type {self.dtype}."
-            raise InvalidOperationError(msg) from exc
+    def hist(
+        self: Self,
+        bins: list[float | int] | None,
+        *,
+        bin_count: int | None,
+        include_breakpoint: bool,
+    ) -> PolarsDataFrame:
+        from narwhals._polars.dataframe import PolarsDataFrame
+
+        if (bins is not None and len(bins) <= 1) or (bin_count == 0):  # pragma: no cover
+            data: list[pl.Series] = []
+            if include_breakpoint:
+                data.append(pl.Series("breakpoint", [], dtype=pl.Float64))
+            data.append(pl.Series("count", [], dtype=pl.UInt32))
+            return PolarsDataFrame(
+                pl.DataFrame(data),
+                backend_version=self._backend_version,
+                version=self._version,
+            )
+        elif (self._backend_version < (1, 15)) and self._native_series.count() < 1:
+            data_dict: dict[str, Sequence[Any] | pl.Series]
+            if bins is not None:
+                data_dict = {
+                    "breakpoint": bins[1:],
+                    "count": pl.zeros(n=len(bins) - 1, dtype=pl.Int64, eager=True),
+                }
+            elif bin_count is not None:
+                data_dict = {
+                    "breakpoint": pl.int_range(0, bin_count, eager=True) / bin_count,
+                    "count": pl.zeros(n=bin_count, dtype=pl.Int64, eager=True),
+                }
+
+            if not include_breakpoint:
+                del data_dict["breakpoint"]
+
+            return PolarsDataFrame(
+                pl.DataFrame(data_dict),
+                backend_version=self._backend_version,
+                version=self._version,
+            )
+
+        # polars <1.15 does not adjust the bins when they have equivalent min/max
+        # polars <1.5 with bin_count=...
+        # returns bins that range from -inf to +inf and has bin_count + 1 bins.
+        #   for compat: convert `bin_count=` call to `bins=`
+        if (
+            (self._backend_version < (1, 15))
+            and (bin_count is not None)
+            and (self._native_series.count() > 0)
+        ):  # pragma: no cover
+            lower = cast("float", self._native_series.min())
+            upper = cast("float", self._native_series.max())
+            pad_lowest_bin = False
+            if lower == upper:
+                width = 1 / bin_count
+                lower -= 0.5
+                upper += 0.5
+            else:
+                pad_lowest_bin = True
+                width = (upper - lower) / bin_count
+
+            bins = (pl.int_range(0, bin_count + 1, eager=True) * width + lower).to_list()
+            if pad_lowest_bin:
+                bins[0] -= 0.001 * abs(bins[0]) if bins[0] != 0 else 0.001
+            bin_count = None
+
+        # Polars inconsistently handles NaN values when computing histograms
+        #   against predefined bins: https://github.com/pola-rs/polars/issues/21082
+        series = self._native_series
+        if self._backend_version < (1, 15) or bins is not None:
+            series = series.set(series.is_nan(), None)
+
+        df = series.hist(
+            bins=bins,
+            bin_count=bin_count,
+            include_category=False,
+            include_breakpoint=include_breakpoint,
+        )
+        if not include_breakpoint:
+            df.columns = ["count"]
+
+        #  polars<1.15 implicitly adds -inf and inf to either end of bins
+        if self._backend_version < (1, 15) and bins is not None:  # pragma: no cover
+            r = pl.int_range(0, len(df))
+            df = df.filter((r > 0) & (r < len(df) - 1))
+
+        if self._backend_version < (1, 0) and include_breakpoint:
+            df = df.rename({"break_point": "breakpoint"})
+
+        return PolarsDataFrame(
+            df, backend_version=self._backend_version, version=self._version
+        )
+
+    def to_polars(self: Self) -> pl.Series:
+        return self._native_series
 
     @property
     def dt(self: Self) -> PolarsSeriesDateTimeNamespace:
@@ -417,6 +605,10 @@ class PolarsSeries:
     @property
     def list(self: Self) -> PolarsSeriesListNamespace:
         return PolarsSeriesListNamespace(self)
+
+    @property
+    def struct(self: Self) -> PolarsSeriesStructNamespace:
+        return PolarsSeriesStructNamespace(self)
 
 
 class PolarsSeriesDateTimeNamespace:
@@ -470,15 +662,11 @@ class PolarsSeriesListNamespace:
         native_result = native_series.list.len()
 
         if self._series._backend_version < (1, 16):  # pragma: no cover
-            import polars as pl
-
             native_result = pl.select(
                 pl.when(~native_series.is_null()).then(native_result).otherwise(None)
             )[native_series.name].cast(pl.UInt32())
 
         elif self._series._backend_version < (1, 17):  # pragma: no cover
-            import polars as pl
-
             native_result = native_series.cast(pl.UInt32())
 
         return self._series._from_native_series(native_result)
@@ -489,6 +677,22 @@ class PolarsSeriesListNamespace:
             args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
             return self._series._from_native_series(
                 getattr(self._series._native_series.list, attr)(*args, **kwargs)
+            )
+
+        return func
+
+
+class PolarsSeriesStructNamespace:
+    def __init__(self: Self, series: PolarsSeries) -> None:
+        self._compliant_series = series
+
+    def __getattr__(self: Self, attr: str) -> Any:
+        def func(*args: Any, **kwargs: Any) -> Any:
+            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
+            return self._compliant_series._from_native_series(
+                getattr(self._compliant_series._native_series.struct, attr)(
+                    *args, **kwargs
+                )
             )
 
         return func

@@ -1,24 +1,45 @@
 from __future__ import annotations
 
+import re
 import string
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
+from typing import Any
+from typing import Protocol
+from typing import cast
 
 import hypothesis.strategies as st
 import pandas as pd
-import polars as pl
+import pyarrow as pa
 import pytest
 from hypothesis import given
 from pandas.testing import assert_frame_equal
 from pandas.testing import assert_index_equal
 from pandas.testing import assert_series_equal
 
+import narwhals as unstable_nw
 import narwhals.stable.v1 as nw
+from narwhals.exceptions import ColumnNotFoundError
+from narwhals.utils import Implementation
+from narwhals.utils import check_column_exists
+from narwhals.utils import deprecate_native_namespace
+from narwhals.utils import parse_version
 from tests.utils import PANDAS_VERSION
 from tests.utils import get_module_version_as_tuple
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
+    from typing_extensions import Self
+
     from narwhals.series import Series
-    from narwhals.typing import IntoSeriesT
+    from narwhals.typing import IntoSeries
+    from narwhals.utils import _SupportsVersion
+
+
+@dataclass
+class DummyModule:
+    __version__: str
 
 
 def test_maybe_align_index_pandas() -> None:
@@ -55,6 +76,9 @@ def test_non_unique_index() -> None:
 
 
 def test_maybe_align_index_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
     s = nw.from_native(pl.Series([1, 2, 3]), series_only=True)
     result = nw.maybe_align_index(df, s)
@@ -86,6 +110,9 @@ def test_maybe_set_index_pandas_column_names(
 def test_maybe_set_index_polars_column_names(
     column_names: str | list[str] | None,
 ) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = nw.maybe_set_index(df, column_names)
     assert result is df
@@ -112,17 +139,17 @@ def test_maybe_set_index_polars_column_names(
     ],
 )
 def test_maybe_set_index_pandas_direct_index(
-    narwhals_index: Series[IntoSeriesT] | list[Series[IntoSeriesT]] | None,
-    pandas_index: pd.Series | list[pd.Series] | None,
-    native_df_or_series: pd.DataFrame | pd.Series,
+    narwhals_index: Series[IntoSeries] | list[Series[IntoSeries]],
+    pandas_index: pd.Series[Any] | list[pd.Series[Any]],
+    native_df_or_series: pd.DataFrame | pd.Series[Any],
 ) -> None:
     df = nw.from_native(native_df_or_series, allow_series=True)
     result = nw.maybe_set_index(df, index=narwhals_index)
     if isinstance(native_df_or_series, pd.Series):
-        native_df_or_series.index = pandas_index
+        native_df_or_series.index = pandas_index  # type: ignore[assignment]
         assert_series_equal(nw.to_native(result), native_df_or_series)
     else:
-        expected = native_df_or_series.set_index(pandas_index)
+        expected = native_df_or_series.set_index(pandas_index)  # type: ignore[arg-type]
         assert_frame_equal(nw.to_native(result), expected)
 
 
@@ -137,8 +164,11 @@ def test_maybe_set_index_pandas_direct_index(
     ],
 )
 def test_maybe_set_index_polars_direct_index(
-    index: Series[IntoSeriesT] | list[Series[IntoSeriesT]] | None,
+    index: Series[IntoSeries] | list[Series[IntoSeries]] | None,
 ) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = nw.maybe_set_index(df, index=index)
     assert result is df
@@ -168,14 +198,20 @@ def test_maybe_set_index_pandas_either_index_or_column_names() -> None:
 
 def test_maybe_get_index_pandas() -> None:
     pandas_df = pd.DataFrame({"a": [1, 2, 3]}, index=[1, 2, 0])
-    result = nw.maybe_get_index(nw.from_native(pandas_df))
+    result = cast("pd.Index[Any]", nw.maybe_get_index(nw.from_native(pandas_df)))
     assert_index_equal(result, pandas_df.index)
     pandas_series = pd.Series([1, 2, 3], index=[1, 2, 0])
-    result_s = nw.maybe_get_index(nw.from_native(pandas_series, series_only=True))
+    result_s = cast(
+        "pd.Index[Any]",
+        nw.maybe_get_index(nw.from_native(pandas_series, series_only=True)),
+    )
     assert_index_equal(result_s, pandas_series.index)
 
 
 def test_maybe_get_index_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
     result = nw.maybe_get_index(df)
     assert result is None
@@ -210,6 +246,9 @@ def test_maybe_reset_index_pandas() -> None:
 
 
 def test_maybe_reset_index_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = nw.maybe_reset_index(df)
     assert result is df
@@ -236,6 +275,9 @@ def test_maybe_convert_dtypes_pandas() -> None:
 def test_maybe_convert_dtypes_polars() -> None:
     import numpy as np
 
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = nw.from_native(pl.DataFrame({"a": [1.1, np.nan]}))
     result = nw.maybe_convert_dtypes(df)
     assert result is df
@@ -246,7 +288,7 @@ def test_get_trivial_version_with_uninstalled_module() -> None:
     assert result == (0, 0, 0)
 
 
-@given(n_bytes=st.integers(1, 100))  # type: ignore[misc]
+@given(n_bytes=st.integers(1, 100))
 @pytest.mark.slow
 def test_generate_temporary_column_name(n_bytes: int) -> None:
     columns = ["abc", "XYZ"]
@@ -271,3 +313,191 @@ def test_generate_temporary_column_name_raise() -> None:
         match="Internal Error: Narwhals was not able to generate a column name with ",
     ):
         nw.generate_temporary_column_name(n_bytes=1, columns=columns)
+
+
+@pytest.mark.parametrize(
+    ("version", "expected"),
+    [
+        ("2020.1.2", (2020, 1, 2)),
+        ("2020.1.2-dev123", (2020, 1, 2)),
+        ("3.0.0.dev0+618.gb552dc95c9", (3, 0, 0)),
+        (DummyModule("2020.1.2-dev123"), (2020, 1, 2)),
+    ],
+)
+def test_parse_version(
+    version: str | _SupportsVersion, expected: tuple[int, ...]
+) -> None:
+    assert parse_version(version) == expected
+
+
+def test_check_column_exists() -> None:
+    columns = ["a", "b", "c"]
+    subset = ["d", "f"]
+    with pytest.raises(
+        ColumnNotFoundError,
+        match=re.escape("Column(s) ['d', 'f'] not found in ['a', 'b', 'c']"),
+    ):
+        check_column_exists(columns, subset)
+
+
+def test_not_implemented() -> None:
+    pytest.importorskip("polars")
+
+    from narwhals._arrow.expr import ArrowExpr
+    from narwhals._polars.expr import PolarsExpr
+    from narwhals._polars.expr import PolarsExprStringNamespace
+    from narwhals.utils import not_implemented
+
+    data: dict[str, Any] = {"foo": [1, 2], "bar": [6.0, 7.0]}
+    df = pa.table(data)
+    nw_df = unstable_nw.from_native(df)
+    ewm_mean = unstable_nw.col("foo").ewm_mean(com=1, ignore_nulls=False)
+    pattern = re.compile(
+        r".+ewm_mean.+ not implemented.+arrow", flags=re.DOTALL | re.IGNORECASE
+    )
+    with pytest.raises(NotImplementedError, match=pattern):
+        nw_df.with_columns(ewm_mean)
+
+    assert isinstance(ArrowExpr.ewm_mean, not_implemented)
+
+    if TYPE_CHECKING:
+        from narwhals.utils import _SupportsGet
+
+    class DummyCompliant(Protocol):
+        _implementation: nw.Implementation
+
+        def alias(self, name: str) -> str: ...
+        def unique(self) -> Self: ...
+
+        # NOTE property option (1)
+        str: _SupportsGet
+        dt: _SupportsGet
+
+        # NOTE property option (2)
+        @property
+        def cat(self) -> Any: ...
+        @property
+        def list(self) -> Any: ...
+
+    class DummyExpr(DummyCompliant):
+        def __init__(self) -> None:
+            self._implementation = nw.Implementation.POLARS
+
+        def alias(self, name: str) -> str:
+            return name
+
+        unique = not_implemented()
+
+        # NOTE: Only `mypy` has an issue with this?
+        # error: Cannot override writeable attribute with read-only property
+        @property
+        def str(self) -> PolarsExprStringNamespace:  # type: ignore[override]
+            pl_expr = cast("PolarsExpr", self)
+            return PolarsExprStringNamespace(pl_expr)
+
+        dt = not_implemented()
+
+        # NOTE: Typing is happy w/ double property
+        @property
+        def cat(self) -> PolarsExprStringNamespace:
+            pl_expr = cast("PolarsExpr", self)
+            return PolarsExprStringNamespace(pl_expr)
+
+        # NOTE: Typing still happy - but it complicates runtime (API completeness) access
+        _list = not_implemented("list")
+
+        @property
+        def list(self) -> Any:
+            return self._list
+
+    expr = DummyExpr()
+    # NOTE: Happy path
+    assert expr._implementation is nw.Implementation.POLARS
+    assert expr.alias("new name") == "new name"
+    assert isinstance(expr.str, PolarsExprStringNamespace)
+    assert isinstance(expr.cat, PolarsExprStringNamespace)
+
+    # NOTE: not implemented override
+    pattern = re.compile(
+        r".+unique.+ not implemented.+polars", flags=re.DOTALL | re.IGNORECASE
+    )
+    with pytest.raises(NotImplementedError, match=pattern):
+        expr.unique()
+
+    assert isinstance(DummyExpr.unique, not_implemented)
+    assert repr(DummyExpr.unique) == "<not_implemented>: DummyExpr.unique"
+
+    pattern = re.compile(
+        r".+unique.+ not implemented.+DummyExpr", flags=re.DOTALL | re.IGNORECASE
+    )
+    with pytest.raises(NotImplementedError, match=pattern):
+        DummyExpr.unique()
+
+    pattern = re.compile(
+        r".+dt.+ not implemented.+polars", flags=re.DOTALL | re.IGNORECASE
+    )
+    with pytest.raises(NotImplementedError, match=pattern):
+        expr.dt  # noqa: B018
+
+    assert isinstance(DummyExpr.dt, not_implemented)
+    assert repr(DummyExpr.dt) == "<not_implemented>: DummyExpr.dt"
+
+    pattern = re.compile(
+        r".+list.+ not implemented.+polars", flags=re.DOTALL | re.IGNORECASE
+    )
+    with pytest.raises(NotImplementedError, match=pattern):
+        expr.list  # noqa: B018
+
+    assert isinstance(DummyExpr._list, not_implemented)
+    assert repr(DummyExpr._list) == "<not_implemented>: DummyExpr.list"
+
+
+def test_deprecate_native_namespace() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    @deprecate_native_namespace()
+    def func1(
+        arg: str,  # noqa: ARG001
+        *,
+        backend: ModuleType | Implementation | str | None = None,  # noqa: ARG001
+        native_namespace: ModuleType | None = None,
+    ) -> Any:
+        return native_namespace
+
+    @deprecate_native_namespace(warn_version="3.0.0")
+    def func2(
+        arg: str,  # noqa: ARG001
+        *,
+        backend: ModuleType | Implementation | str | None = None,
+        native_namespace: ModuleType | None = None,  # noqa: ARG001
+    ) -> Any:
+        return backend
+
+    @deprecate_native_namespace(required=True)
+    def func3(
+        arg: str,  # noqa: ARG001
+        *,
+        backend: ModuleType | Implementation | str | None = None,
+        native_namespace: ModuleType | None = None,  # noqa: ARG001
+    ) -> Any:
+        return backend
+
+    param = "hello"
+    non_default = cast("ModuleType", "non_default")
+
+    assert func1(param, native_namespace=non_default) is None
+    with pytest.warns(DeprecationWarning):
+        result = func2(param, native_namespace=pl)
+    assert result is pl
+    assert func2(param, backend=pl) is pl
+
+    with pytest.raises(ValueError, match=r"`backend` must be specified in `func3`"):
+        func3(param)
+
+    with pytest.raises(
+        ValueError, match=r"Can't pass both `native_namespace` and `backend`"
+    ):
+        func3(param, backend=pl, native_namespace=pl)
+
+    assert func3(param, backend=Implementation.POLARS) is Implementation.POLARS

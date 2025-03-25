@@ -32,6 +32,7 @@ data = {
         ("microsecond", [49000, 715000]),
         ("nanosecond", [49000000, 715000000]),
         ("ordinal_day", [60, 2]),
+        ("weekday", [1, 4]),
     ],
 )
 def test_datetime_attributes(
@@ -68,6 +69,7 @@ def test_datetime_attributes(
         ("microsecond", [49000, 715000]),
         ("nanosecond", [49000000, 715000000]),
         ("ordinal_day", [60, 2]),
+        ("weekday", [1, 4]),
     ],
 )
 def test_datetime_attributes_series(
@@ -95,6 +97,8 @@ def test_datetime_chained_attributes(
 ) -> None:
     if "pandas" in str(constructor_eager) and "pyarrow" not in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor_eager) and "pyarrow" not in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
@@ -109,7 +113,12 @@ def test_datetime_chained_attributes(
 def test_to_date(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(
         x in str(constructor)
-        for x in ("pandas_constructor", "pandas_nullable_constructor", "cudf")
+        for x in (
+            "pandas_constructor",
+            "pandas_nullable_constructor",
+            "cudf",
+            "modin_constructor",
+        )
     ):
         request.applymarker(pytest.mark.xfail)
     dates = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}

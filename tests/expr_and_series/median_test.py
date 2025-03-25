@@ -11,7 +11,7 @@ from tests.utils import assert_equal_data
 data = {
     "a": [3, 8, 2, None],
     "b": [5, 5, None, 7],
-    "z": [7.0, 8, 9, None],
+    "z": [7.0, 8.0, 9.0, None],
     "s": ["f", "a", "x", "x"],
 }
 
@@ -41,21 +41,21 @@ def test_median_series(
 
 @pytest.mark.parametrize("expr", [nw.col("s").median(), nw.median("s")])
 def test_median_expr_raises_on_str(
-    constructor: Constructor,
-    expr: nw.Expr,
+    constructor: Constructor, expr: nw.Expr, request: pytest.FixtureRequest
 ) -> None:
-    from polars.exceptions import InvalidOperationError as PlInvalidOperationError
+    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
-    if "polars_lazy" in str(constructor):
+    if isinstance(df, nw.LazyFrame):
         with pytest.raises(
-            PlInvalidOperationError,
-            match="`median` operation not supported for dtype `str`",
+            InvalidOperationError,
+            match="`median` operation not supported",
         ):
             df.select(expr).lazy().collect()
     else:
         with pytest.raises(
-            (InvalidOperationError, PlInvalidOperationError),
+            InvalidOperationError,
             match="`median` operation not supported",
         ):
             df.select(expr)

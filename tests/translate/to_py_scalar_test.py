@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from datetime import timedelta
+from decimal import Decimal
 from typing import Any
 
 import numpy as np
@@ -20,6 +21,7 @@ from tests.utils import PANDAS_VERSION
         (1, 1),
         (pa.scalar(1), 1),
         (np.int64(1), 1),
+        (Decimal("1.1"), Decimal("1.1")),
         (1.0, 1.0),
         (None, None),
         ("a", "a"),
@@ -41,7 +43,7 @@ def test_to_py_scalar(
 ) -> None:
     output = nw.to_py_scalar(input_value)
     if expected == 1:
-        assert not isinstance(output, np.int64)
+        assert not isinstance(output, np.generic)
     assert output == expected
 
 

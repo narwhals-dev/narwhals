@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import duckdb
 import pandas as pd
 import pytest
 
@@ -26,7 +25,13 @@ def test_interchange_ibis_to_pandas(
     if PANDAS_VERSION < (1, 5, 0):
         request.applymarker(pytest.mark.xfail)
 
-    ibis = pytest.importorskip("ibis")
+    pytest.importorskip("ibis")
+    import ibis
+
+    try:
+        ibis.set_backend("duckdb")
+    except ImportError:
+        request.applymarker(pytest.mark.xfail)
     df_raw = pd.DataFrame(data)
 
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
@@ -39,6 +44,9 @@ def test_interchange_ibis_to_pandas(
 
 
 def test_interchange_duckdb_to_pandas(request: pytest.FixtureRequest) -> None:
+    pytest.importorskip("duckdb")
+    import duckdb
+
     if PANDAS_VERSION < (1, 0, 0):
         request.applymarker(pytest.mark.xfail)
     df_raw = pd.DataFrame(data)

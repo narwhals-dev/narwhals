@@ -16,11 +16,10 @@ if TYPE_CHECKING:
 
 
 def test_to_numpy(constructor_eager: ConstructorEager) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.0]}
     df_raw = constructor_eager(data)
     result = nw.from_native(df_raw, eager_only=True).to_numpy()
-
-    expected = np.array([[1, 3, 2], [4, 4, 6], [7.1, 8, 9]]).T
+    expected = np.array([[1, 3, 2], [4, 4, 6], [7.1, 8.0, 9.0]]).T
     np.testing.assert_array_equal(result, expected)
     assert result.dtype == "float64"
 
@@ -31,10 +30,7 @@ def test_to_numpy_tz_aware(
     if (
         ("pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (12,))
         or ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 2))
-        or (
-            any(x in str(constructor_eager) for x in ("pyarrow", "modin"))
-            and is_windows()
-        )
+        or ("pyarrow" in str(constructor_eager) and is_windows())
     ):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(

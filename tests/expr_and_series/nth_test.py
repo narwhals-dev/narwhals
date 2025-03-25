@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-import polars as pl
+from typing import Any
+from typing import Mapping
+
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -8,7 +10,7 @@ from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
-data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}
+data: Mapping[str, Any] = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.0]}
 
 
 @pytest.mark.parametrize(
@@ -16,7 +18,7 @@ data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}
     [
         (0, {"a": [1, 3, 2]}),
         ([0, 1], {"a": [1, 3, 2], "b": [4, 4, 6]}),
-        ([0, 2], {"a": [1, 3, 2], "z": [7.1, 8, 9]}),
+        ([0, 2], {"a": [1, 3, 2], "z": [7.1, 8.0, 9.0]}),
     ],
 )
 def test_nth(
@@ -37,6 +39,9 @@ def test_nth(
     reason="1.0.0",
 )
 def test_nth_not_supported() -> None:  # pragma: no cover
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = nw.from_native(pl.DataFrame(data))
     with pytest.raises(
         AttributeError, match="`nth` is only supported for Polars>=1.0.0."

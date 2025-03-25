@@ -8,6 +8,7 @@ from narwhals import stable
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dtypes import Array
+from narwhals.dtypes import Binary
 from narwhals.dtypes import Boolean
 from narwhals.dtypes import Categorical
 from narwhals.dtypes import Date
@@ -27,6 +28,7 @@ from narwhals.dtypes import List
 from narwhals.dtypes import Object
 from narwhals.dtypes import String
 from narwhals.dtypes import Struct
+from narwhals.dtypes import Time
 from narwhals.dtypes import UInt8
 from narwhals.dtypes import UInt16
 from narwhals.dtypes import UInt32
@@ -34,35 +36,36 @@ from narwhals.dtypes import UInt64
 from narwhals.dtypes import UInt128
 from narwhals.dtypes import Unknown
 from narwhals.expr import Expr
-from narwhals.expr import all_ as all
-from narwhals.expr import all_horizontal
-from narwhals.expr import any_horizontal
-from narwhals.expr import col
-from narwhals.expr import concat_str
-from narwhals.expr import len_ as len
-from narwhals.expr import lit
-from narwhals.expr import max
-from narwhals.expr import max_horizontal
-from narwhals.expr import mean
-from narwhals.expr import mean_horizontal
-from narwhals.expr import median
-from narwhals.expr import min
-from narwhals.expr import min_horizontal
-from narwhals.expr import nth
-from narwhals.expr import sum
-from narwhals.expr import sum_horizontal
-from narwhals.expr import when
+from narwhals.functions import all_ as all
+from narwhals.functions import all_horizontal
+from narwhals.functions import any_horizontal
+from narwhals.functions import col
 from narwhals.functions import concat
+from narwhals.functions import concat_str
+from narwhals.functions import exclude
 from narwhals.functions import from_arrow
 from narwhals.functions import from_dict
 from narwhals.functions import from_numpy
 from narwhals.functions import get_level
+from narwhals.functions import len_ as len
+from narwhals.functions import lit
+from narwhals.functions import max
+from narwhals.functions import max_horizontal
+from narwhals.functions import mean
+from narwhals.functions import mean_horizontal
+from narwhals.functions import median
+from narwhals.functions import min
+from narwhals.functions import min_horizontal
 from narwhals.functions import new_series
+from narwhals.functions import nth
 from narwhals.functions import read_csv
 from narwhals.functions import read_parquet
 from narwhals.functions import scan_csv
 from narwhals.functions import scan_parquet
 from narwhals.functions import show_versions
+from narwhals.functions import sum
+from narwhals.functions import sum_horizontal
+from narwhals.functions import when
 from narwhals.schema import Schema
 from narwhals.series import Series
 from narwhals.translate import from_native
@@ -79,10 +82,11 @@ from narwhals.utils import maybe_get_index
 from narwhals.utils import maybe_reset_index
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.19.0"
+__version__ = "1.32.0"
 
 __all__ = [
     "Array",
+    "Binary",
     "Boolean",
     "Categorical",
     "DataFrame",
@@ -108,6 +112,7 @@ __all__ = [
     "Series",
     "String",
     "Struct",
+    "Time",
     "UInt8",
     "UInt16",
     "UInt32",
@@ -123,6 +128,7 @@ __all__ = [
     "dependencies",
     "dtypes",
     "exceptions",
+    "exclude",
     "from_arrow",
     "from_dict",
     "from_native",

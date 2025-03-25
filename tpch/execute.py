@@ -5,14 +5,19 @@ from importlib import import_module
 from pathlib import Path
 
 import dask.dataframe as dd
+import duckdb
 import pandas as pd
 import polars as pl
 import pyarrow as pa
+import sqlframe
+from polars.testing import assert_frame_equal
+from sqlframe.duckdb import DuckDBSession
 
 import narwhals as nw
 
 pd.options.mode.copy_on_write = True
 pd.options.future.infer_string = True
+pl.Config.set_fmt_float("full")
 
 DATA_DIR = Path("data")
 LINEITEM_PATH = DATA_DIR / "lineitem.parquet"
@@ -28,13 +33,12 @@ BACKEND_NAMESPACE_KWARGS_MAP = {
     "pandas[pyarrow]": (pd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
     "polars[lazy]": (pl, {}),
     "pyarrow": (pa, {}),
+    "duckdb": (duckdb, {}),
     "dask": (dd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
+    "sqlframe": (sqlframe, {"session": DuckDBSession()}),
 }
 
-BACKEND_COLLECT_FUNC_MAP = {
-    "polars[lazy]": lambda x: x.collect(),
-    "dask": lambda x: x.compute(),
-}
+DUCKDB_SKIPS = ["q15"]
 
 QUERY_DATA_PATH_MAP = {
     "q1": (LINEITEM_PATH,),
@@ -88,17 +92,27 @@ def execute_query(query_id: str) -> None:
     query_module = import_module(f"tpch.queries.{query_id}")
     data_paths = QUERY_DATA_PATH_MAP[query_id]
 
+    expected = pl.read_parquet(DATA_DIR / f"result_{query_id}.parquet")
+
     for backend, (native_namespace, kwargs) in BACKEND_NAMESPACE_KWARGS_MAP.items():
+        if backend in {"duckdb", "sqlframe"} and query_id in DUCKDB_SKIPS:
+            print(f"\nSkipping {query_id} for {backend}")  # noqa: T201
+            continue
+
         print(f"\nRunning {query_id} with {backend=}")  # noqa: T201
-        result = query_module.query(
-            *(
-                nw.scan_parquet(path, native_namespace=native_namespace, **kwargs)
-                for path in data_paths
+        result: pl.DataFrame = (
+            query_module.query(
+                *(
+                    nw.scan_parquet(str(path), backend=native_namespace, **kwargs)
+                    for path in data_paths
+                )
             )
+            .lazy()
+            .collect(backend=nw.Implementation.POLARS)
+            .to_native()
         )
-        if collect_func := BACKEND_COLLECT_FUNC_MAP.get(backend):
-            result = collect_func(result)
-        print(result)  # noqa: T201
+
+        assert_frame_equal(expected, result, check_dtypes=False)
 
 
 def main() -> None:

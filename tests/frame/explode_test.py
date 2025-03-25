@@ -3,8 +3,6 @@ from __future__ import annotations
 from typing import Sequence
 
 import pytest
-from polars.exceptions import InvalidOperationError as PlInvalidOperationError
-from polars.exceptions import ShapeError as PlShapeError
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import InvalidOperationError
@@ -28,8 +26,8 @@ data = {
 @pytest.mark.parametrize(
     ("column", "expected_values"),
     [
-        ("l2", [3, None, None, 42, None]),
-        ("l3", [1, 2, 3, None, 1]),  # fast path for arrow
+        ("l2", [None, 3, None, None, 42]),
+        ("l3", [1, 1, 2, 3, None]),  # fast path for arrow
     ],
 )
 def test_explode_single_col(
@@ -49,8 +47,9 @@ def test_explode_single_col(
         .with_columns(nw.col(column).cast(nw.List(nw.Int32())))
         .explode(column)
         .select("a", column)
+        .sort("a")
     )
-    expected = {"a": ["x", "x", "y", "z", "w"], column: expected_values}
+    expected = {"a": ["w", "x", "x", "y", "z"], column: expected_values}
     assert_equal_data(result, expected)
 
 
@@ -84,7 +83,10 @@ def test_explode_multiple_cols(
     more_columns: Sequence[str],
     expected: dict[str, list[str | int | None]],
 ) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
+    if any(
+        backend in str(constructor)
+        for backend in ("dask", "modin", "cudf", "duckdb", "pyspark")
+    ):
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
@@ -109,8 +111,8 @@ def test_explode_shape_error(
         request.applymarker(pytest.mark.xfail)
 
     with pytest.raises(
-        (ShapeError, PlShapeError),
-        match="exploded columns must have matching element counts",
+        (ShapeError, NotImplementedError),
+        match=r".*exploded columns (must )?have matching element counts",
     ):
         _ = (
             nw.from_native(constructor(data))
@@ -131,7 +133,7 @@ def test_explode_invalid_operation_error(
         request.applymarker(pytest.mark.xfail)
 
     with pytest.raises(
-        (InvalidOperationError, PlInvalidOperationError),
+        InvalidOperationError,
         match="`explode` operation not supported for dtype",
     ):
         _ = nw.from_native(constructor(data)).lazy().explode("a").collect()

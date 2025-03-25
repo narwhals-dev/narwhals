@@ -8,12 +8,11 @@ if TYPE_CHECKING:
     from narwhals.typing import FrameT
 
 
-@nw.narwhalify
 def query(customer_ds: FrameT, orders_ds: FrameT) -> FrameT:
     q1 = (
         customer_ds.with_columns(nw.col("c_phone").str.slice(0, 2).alias("cntrycode"))
         .filter(nw.col("cntrycode").str.contains("13|31|23|29|30|18|17"))
-        .select("c_acctbal", "c_custkey", "cntrycode")
+        .select("c_acctbal", "c_custkey", nw.col("cntrycode").cast(nw.Int64()))
     )
 
     q2 = q1.filter(nw.col("c_acctbal") > 0.0).select(

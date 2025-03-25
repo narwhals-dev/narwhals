@@ -14,4 +14,4 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
 
-    IntoPandasLikeExpr: TypeAlias = Union[PandasLikeExpr, str, PandasLikeSeries]
+    IntoPandasLikeExpr: TypeAlias = Union[PandasLikeExpr, PandasLikeSeries]

@@ -1,46 +1,89 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+from typing import TypeVar
+
 import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.exceptions import MultiOutputExpressionError
 from tests.utils import NUMPY_VERSION
+from tests.utils import POLARS_VERSION
+from tests.utils import Constructor
+
+if TYPE_CHECKING:
+    from narwhals.typing import Frame
+
+
+T = TypeVar("T")
+
+
+@pytest.mark.skipif(
+    POLARS_VERSION < (1,), reason="Polars would raise unrecoverable panic."
+)
+def test_all_vs_all(constructor: Constructor) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6]}
+    df: Frame = nw.from_native(constructor(data))
+    with pytest.raises(MultiOutputExpressionError):
+        df.lazy().select(nw.all() + nw.col("b", "a")).collect()
 
 
 def test_invalid() -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
-    df = nw.from_native(pa.table({"a": [1, 2], "b": [3, 4]}))
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
+    df: Frame = nw.from_native(pd.DataFrame(data))
     with pytest.raises(ValueError, match="Multi-output"):
         df.select(nw.all() + nw.all())
-    df = nw.from_native(pd.DataFrame(data))
-    with pytest.raises(ValueError, match="Multi-output"):
+
+
+def test_invalid_pyarrow() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    df: Frame = nw.from_native(pa.table({"a": [1, 2], "b": [3, 4]}))
+    with pytest.raises(MultiOutputExpressionError):
         df.select(nw.all() + nw.all())
-    with pytest.raises(TypeError, match="Perhaps you:"):
+
+
+def test_invalid_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
+    df: Frame = nw.from_native(pd.DataFrame(data))
+    with pytest.raises(TypeError, match="Perhaps you"):
         df.select([pl.col("a")])  # type: ignore[list-item]
     with pytest.raises(TypeError, match="Expected Narwhals dtype"):
         df.select([nw.col("a").cast(pl.Int64)])  # type: ignore[arg-type]
 
 
 def test_native_vs_non_native() -> None:
-    s = pd.Series([1, 2, 3])
-    df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+    s_pd = pd.Series([1, 2, 3])
+    df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     with pytest.raises(TypeError, match="Perhaps you forgot"):
-        nw.from_native(df).filter(s > 1)
-    s = pl.Series([1, 2, 3])
-    df = pl.DataFrame({"a": [2, 2, 3], "b": [4, 5, 6]})
+        nw.from_native(df_pd).filter(s_pd > 1)  # type: ignore[arg-type]
+
+
+def test_native_vs_non_native_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    s_pl = pl.Series([1, 2, 3])
+    df_pl = pl.DataFrame({"a": [2, 2, 3], "b": [4, 5, 6]})
     with pytest.raises(TypeError, match="Perhaps you\n- forgot"):
-        nw.from_native(df).filter(s > 1)
+        nw.from_native(df_pl).filter(s_pl > 1)
 
 
 def test_validate_laziness() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     with pytest.raises(
         TypeError,
         match=("The items to concatenate should either all be eager, or all lazy"),
     ):
-        nw.concat([nw.from_native(df, eager_only=True), nw.from_native(df).lazy()])  # type: ignore[list-item]
+        nw.concat([nw.from_native(df, eager_only=True), nw.from_native(df).lazy()])
 
 
 @pytest.mark.slow
@@ -49,12 +92,18 @@ def test_memmap() -> None:
     pytest.importorskip("sklearn")
     # the headache this caused me...
     from sklearn.utils import check_X_y
-    from sklearn.utils._testing import create_memmap_backed_data
+
+    if TYPE_CHECKING:
+
+        def create_memmap_backed_data(data: T) -> T:
+            return data
+    else:
+        from sklearn.utils._testing import create_memmap_backed_data
 
     x_any = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     y_any = create_memmap_backed_data(x_any["b"])
 
-    x_any, y_any = create_memmap_backed_data([x_any, y_any])
+    x_any, y_any = create_memmap_backed_data((x_any, y_any))
 
     x = nw.from_native(x_any)
     x = x.with_columns(y=nw.from_native(y_any, series_only=True))

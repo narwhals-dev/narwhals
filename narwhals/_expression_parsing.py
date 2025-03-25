@@ -3,312 +3,429 @@
 # and pandas or PyArrow.
 from __future__ import annotations
 
-from copy import copy
+from enum import Enum
+from enum import auto
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
+from typing import Literal
 from typing import Sequence
 from typing import TypeVar
-from typing import Union
 from typing import cast
-from typing import overload
 
+from narwhals.dependencies import is_narwhals_series
 from narwhals.dependencies import is_numpy_array
-from narwhals.exceptions import InvalidIntoExprError
-from narwhals.utils import Implementation
+from narwhals.exceptions import LengthChangingExprError
+from narwhals.exceptions import MultiOutputExpressionError
+from narwhals.exceptions import ShapeError
+from narwhals.utils import is_compliant_expr
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
+    from typing_extensions import Never
+    from typing_extensions import TypeIs
 
-    from narwhals._arrow.expr import ArrowExpr
-    from narwhals._pandas_like.expr import PandasLikeExpr
+    from narwhals._compliant import CompliantExpr
+    from narwhals._compliant import CompliantExprT
+    from narwhals._compliant import CompliantFrameT
+    from narwhals._compliant import CompliantNamespace
+    from narwhals._compliant.typing import EagerNamespaceAny
+    from narwhals.expr import Expr
     from narwhals.typing import CompliantDataFrame
-    from narwhals.typing import CompliantExpr
     from narwhals.typing import CompliantLazyFrame
-    from narwhals.typing import CompliantNamespace
-    from narwhals.typing import CompliantSeries
-    from narwhals.typing import CompliantSeriesT_co
-
-    IntoCompliantExpr: TypeAlias = (
-        CompliantExpr[CompliantSeriesT_co] | str | CompliantSeriesT_co
-    )
-    CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExpr[Any])
-
-    ArrowOrPandasLikeExpr = TypeVar(
-        "ArrowOrPandasLikeExpr", bound=Union[ArrowExpr, PandasLikeExpr]
-    )
-    PandasLikeExprT = TypeVar("PandasLikeExprT", bound=PandasLikeExpr)
-    ArrowExprT = TypeVar("ArrowExprT", bound=ArrowExpr)
+    from narwhals.typing import IntoExpr
+    from narwhals.typing import _1DArray
 
     T = TypeVar("T")
 
 
-def evaluate_into_expr(
-    df: CompliantDataFrame | CompliantLazyFrame,
-    into_expr: IntoCompliantExpr[CompliantSeriesT_co],
-) -> Sequence[CompliantSeriesT_co]:
-    """Return list of raw columns."""
-    expr = parse_into_expr(into_expr, namespace=df.__narwhals_namespace__())
-    return expr(df)
+def is_expr(obj: Any) -> TypeIs[Expr]:
+    """Check whether `obj` is a Narwhals Expr."""
+    from narwhals.expr import Expr
+
+    return isinstance(obj, Expr)
 
 
-def evaluate_into_exprs(
-    df: CompliantDataFrame,
-    *exprs: IntoCompliantExpr[CompliantSeriesT_co],
-    **named_exprs: IntoCompliantExpr[CompliantSeriesT_co],
-) -> Sequence[CompliantSeriesT_co]:
-    """Evaluate each expr into Series."""
-    series = [
-        item
-        for sublist in (evaluate_into_expr(df, into_expr) for into_expr in exprs)
-        for item in sublist
-    ]
-    for name, expr in named_exprs.items():
-        evaluated_expr = evaluate_into_expr(df, expr)
-        if len(evaluated_expr) > 1:
-            msg = "Named expressions must return a single column"  # pragma: no cover
-            raise AssertionError(msg)
-        to_append = evaluated_expr[0].alias(name)
-        series.append(to_append)
-    return series
-
-
-def maybe_evaluate_expr(
-    df: CompliantDataFrame, expr: CompliantExpr[CompliantSeriesT_co] | T
-) -> Sequence[CompliantSeriesT_co] | T:
-    """Evaluate `expr` if it's an expression, otherwise return it as is."""
-    if hasattr(expr, "__narwhals_expr__"):
-        compliant_expr = cast("CompliantExpr[Any]", expr)
-        return compliant_expr(df)
-    return expr
-
-
-def parse_into_exprs(
-    *exprs: IntoCompliantExpr[CompliantSeriesT_co],
-    namespace: CompliantNamespace[CompliantSeriesT_co],
-    **named_exprs: IntoCompliantExpr[CompliantSeriesT_co],
-) -> Sequence[CompliantExpr[CompliantSeriesT_co]]:
-    """Parse each input as an expression (if it's not already one).
-
-    See `parse_into_expr` for more details.
-    """
-    return [parse_into_expr(into_expr, namespace=namespace) for into_expr in exprs] + [
-        parse_into_expr(expr, namespace=namespace).alias(name)
-        for name, expr in named_exprs.items()
-    ]
-
-
-def parse_into_expr(
-    into_expr: IntoCompliantExpr[CompliantSeriesT_co],
-    *,
-    namespace: CompliantNamespace[CompliantSeriesT_co],
-) -> CompliantExpr[CompliantSeriesT_co]:
-    """Parse `into_expr` as an expression.
-
-    For example, in Polars, we can do both `df.select('a')` and `df.select(pl.col('a'))`.
-    We do the same in Narwhals:
-
-    - if `into_expr` is already an expression, just return it
-    - if it's a Series, then convert it to an expression
-    - if it's a numpy array, then convert it to a Series and then to an expression
-    - if it's a string, then convert it to an expression
-    - else, raise
-    """
-    if hasattr(into_expr, "__narwhals_expr__"):
-        return into_expr  # type: ignore[return-value]
-    if hasattr(into_expr, "__narwhals_series__"):
-        return namespace._create_expr_from_series(into_expr)  # type: ignore[no-any-return, attr-defined]
-    if isinstance(into_expr, str):
-        return namespace.col(into_expr)
-    if is_numpy_array(into_expr):
-        series = namespace._create_compliant_series(into_expr)
-        return namespace._create_expr_from_series(series)
-    raise InvalidIntoExprError.from_invalid_type(type(into_expr))
-
-
-@overload
-def reuse_series_implementation(
-    expr: PandasLikeExprT,
-    attr: str,
-    *,
-    returns_scalar: bool = False,
-    **kwargs: Any,
-) -> PandasLikeExprT: ...
-
-
-@overload
-def reuse_series_implementation(
-    expr: ArrowExprT,
-    attr: str,
-    *,
-    returns_scalar: bool = False,
-    **kwargs: Any,
-) -> ArrowExprT: ...
-
-
-def reuse_series_implementation(
-    expr: ArrowExprT | PandasLikeExprT,
-    attr: str,
-    *,
-    returns_scalar: bool = False,
-    **kwargs: Any,
-) -> ArrowExprT | PandasLikeExprT:
-    """Reuse Series implementation for expression.
-
-    If Series.foo is already defined, and we'd like Expr.foo to be the same, we can
-    leverage this method to do that for us.
-
-    Arguments:
-        expr: expression object.
-        attr: name of method.
-        returns_scalar: whether the Series version returns a scalar. In this case,
-            the expression version should return a 1-row Series.
-        args: arguments to pass to function.
-        kwargs: keyword arguments to pass to function.
-    """
-    plx = expr.__narwhals_namespace__()
-
-    def func(df: CompliantDataFrame) -> Sequence[CompliantSeries]:
-        _kwargs = {  # type: ignore[var-annotated]
-            arg_name: maybe_evaluate_expr(df, arg_value)
-            for arg_name, arg_value in kwargs.items()
-        }
-
-        # For PyArrow.Series, we return Python Scalars (like Polars does) instead of PyArrow Scalars.
-        # However, when working with expressions, we keep everything PyArrow-native.
-        extra_kwargs = (
-            {"_return_py_scalar": False}
-            if returns_scalar and expr._implementation is Implementation.PYARROW
-            else {}
-        )
-
-        out: list[CompliantSeries] = [
-            plx._create_series_from_scalar(
-                getattr(series, attr)(**extra_kwargs, **_kwargs),
-                reference_series=series,  # type: ignore[arg-type]
-            )
-            if returns_scalar
-            else getattr(series, attr)(**_kwargs)
-            for series in expr(df)  # type: ignore[arg-type]
-        ]
-        if expr._output_names is not None and (
-            [s.name for s in out] != expr._output_names
-        ):  # pragma: no cover
-            msg = (
-                f"Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues\n"
-                f"Expression output names: {expr._output_names}\n"
-                f"Series names: {[s.name for s in out]}"
-            )
-            raise AssertionError(msg)
-        return out
-
-    # Try tracking root and output names by combining them from all
-    # expressions appearing in args and kwargs. If any anonymous
-    # expression appears (e.g. nw.all()), then give up on tracking root names
-    # and just set it to None.
-    root_names = copy(expr._root_names)
-    output_names = expr._output_names
-    for arg in list(kwargs.values()):
-        if root_names is not None and isinstance(arg, expr.__class__):
-            if arg._root_names is not None:
-                root_names.extend(arg._root_names)
-            else:
-                root_names = None
-                output_names = None
-                break
-        elif root_names is None:
-            output_names = None
-            break
-
-    if not (
-        (output_names is None and root_names is None)
-        or (output_names is not None and root_names is not None)
-    ):  # pragma: no cover
-        msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+def combine_evaluate_output_names(
+    *exprs: CompliantExpr[CompliantFrameT, Any],
+) -> Callable[[CompliantFrameT], Sequence[str]]:
+    # Follow left-hand-rule for naming. E.g. `nw.sum_horizontal(expr1, expr2)` takes the
+    # first name of `expr1`.
+    if not is_compliant_expr(exprs[0]):  # pragma: no cover
+        msg = f"Safety assertion failed, expected expression, got: {type(exprs[0])}. Please report a bug."
         raise AssertionError(msg)
 
-    return plx._create_expr_from_callable(  # type: ignore[return-value]
-        func,  # type: ignore[arg-type]
-        depth=expr._depth + 1,
-        function_name=f"{expr._function_name}->{attr}",
-        root_names=root_names,
-        output_names=output_names,
-        kwargs=kwargs,
+    def evaluate_output_names(df: CompliantFrameT) -> Sequence[str]:
+        return exprs[0]._evaluate_output_names(df)[:1]
+
+    return evaluate_output_names
+
+
+def combine_alias_output_names(
+    *exprs: CompliantExpr[Any, Any],
+) -> Callable[[Sequence[str]], Sequence[str]] | None:
+    # Follow left-hand-rule for naming. E.g. `nw.sum_horizontal(expr1.alias(alias), expr2)` takes the
+    # aliasing function of `expr1` and apply it to the first output name of `expr1`.
+    if exprs[0]._alias_output_names is None:
+        return None
+
+    def alias_output_names(names: Sequence[str]) -> Sequence[str]:
+        return exprs[0]._alias_output_names(names)[:1]  # type: ignore[misc]
+
+    return alias_output_names
+
+
+def extract_compliant(
+    plx: CompliantNamespace[Any, CompliantExprT], other: Any, *, str_as_lit: bool
+) -> CompliantExprT | object:
+    if is_expr(other):
+        return other._to_compliant_expr(plx)
+    if isinstance(other, str) and not str_as_lit:
+        return plx.col(other)
+    if is_narwhals_series(other):
+        return other._compliant_series._to_expr()
+    if is_numpy_array(other):
+        ns = cast("EagerNamespaceAny", plx)
+        return ns._series.from_numpy(other, context=ns)._to_expr()
+    return other
+
+
+def evaluate_output_names_and_aliases(
+    expr: CompliantExpr[Any, Any],
+    df: CompliantDataFrame[Any, Any, Any] | CompliantLazyFrame[Any, Any],
+    exclude: Sequence[str],
+) -> tuple[Sequence[str], Sequence[str]]:
+    output_names = expr._evaluate_output_names(df)
+    if not output_names:
+        return [], []
+    aliases = (
+        output_names
+        if expr._alias_output_names is None
+        else expr._alias_output_names(output_names)
     )
+    if exclude:
+        assert expr._metadata is not None  # noqa: S101
+        if expr._metadata.expansion_kind.is_multi_unnamed():
+            output_names, aliases = zip(
+                *[
+                    (x, alias)
+                    for x, alias in zip(output_names, aliases)
+                    if x not in exclude
+                ]
+            )
+    return output_names, aliases
 
 
-@overload
-def reuse_series_namespace_implementation(
-    expr: ArrowExprT, series_namespace: str, attr: str, **kwargs: Any
-) -> ArrowExprT: ...
-@overload
-def reuse_series_namespace_implementation(
-    expr: PandasLikeExprT, series_namespace: str, attr: str, **kwargs: Any
-) -> PandasLikeExprT: ...
-def reuse_series_namespace_implementation(
-    expr: ArrowExprT | PandasLikeExprT,
-    series_namespace: str,
-    attr: str,
-    **kwargs: Any,
-) -> ArrowExprT | PandasLikeExprT:
-    """Reuse Series implementation for expression.
+class ExprKind(Enum):
+    """Describe which kind of expression we are dealing with.
 
-    Just like `reuse_series_implementation`, but for e.g. `Expr.dt.foo` instead
-    of `Expr.foo`.
+    Commutative composition rules are:
+    - LITERAL vs LITERAL -> LITERAL
+    - FILTRATION vs (LITERAL | AGGREGATION) -> FILTRATION
+    - FILTRATION vs (FILTRATION | TRANSFORM | WINDOW) -> raise
+    - (TRANSFORM | WINDOW) vs (LITERAL | AGGREGATION) -> TRANSFORM
+    - AGGREGATION vs (LITERAL | AGGREGATION) -> AGGREGATION
+    """
+
+    LITERAL = auto()
+    """e.g. `nw.lit(1)`"""
+
+    AGGREGATION = auto()
+    """e.g. `nw.col('a').mean()`"""
+
+    TRANSFORM = auto()
+    """preserves length, e.g. `nw.col('a').round()`"""
+
+    WINDOW = auto()
+    """transform in which last node is order-dependent
+
+    examples:
+    - `nw.col('a').cum_sum()`
+    - `(nw.col('a')+1).cum_sum()`
+
+    non-examples:
+    - `nw.col('a').cum_sum()+1`
+    - `nw.col('a').cum_sum().mean()`
+    """
+
+    FILTRATION = auto()
+    """e.g. `nw.col('a').drop_nulls()`"""
+
+    def preserves_length(self) -> bool:
+        return self in {ExprKind.TRANSFORM, ExprKind.WINDOW}
+
+    def is_window(self) -> bool:
+        return self is ExprKind.WINDOW
+
+    def is_filtration(self) -> bool:
+        return self is ExprKind.FILTRATION
+
+    def is_scalar_like(self) -> bool:
+        return is_scalar_like(self)
+
+
+def is_scalar_like(
+    kind: ExprKind,
+) -> TypeIs[Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]]:
+    # Like ExprKind.is_scalar_like, but uses TypeIs for better type checking.
+    return kind in {ExprKind.AGGREGATION, ExprKind.LITERAL}
+
+
+class ExpansionKind(Enum):
+    """Describe what kind of expansion the expression performs."""
+
+    SINGLE = auto()
+    """e.g. `nw.col('a'), nw.sum_horizontal(nw.all())`"""
+
+    MULTI_NAMED = auto()
+    """e.g. `nw.col('a', 'b')`"""
+
+    MULTI_UNNAMED = auto()
+    """e.g. `nw.all()`, nw.nth(0, 1)"""
+
+    def is_multi_unnamed(self) -> bool:
+        return self is ExpansionKind.MULTI_UNNAMED
+
+
+def is_multi_output(
+    expansion_kind: ExpansionKind,
+) -> TypeIs[Literal[ExpansionKind.MULTI_NAMED, ExpansionKind.MULTI_UNNAMED]]:
+    return expansion_kind in {ExpansionKind.MULTI_NAMED, ExpansionKind.MULTI_UNNAMED}
+
+
+class ExprMetadata:
+    __slots__ = ("_expansion_kind", "_kind", "_n_open_windows")
+
+    def __init__(
+        self, kind: ExprKind, /, *, n_open_windows: int, expansion_kind: ExpansionKind
+    ) -> None:
+        self._kind: ExprKind = kind
+        self._n_open_windows = n_open_windows
+        self._expansion_kind = expansion_kind
+
+    def __init_subclass__(cls, /, *args: Any, **kwds: Any) -> Never:  # pragma: no cover
+        msg = f"Cannot subclass {cls.__name__!r}"
+        raise TypeError(msg)
+
+    def __repr__(self) -> str:
+        return f"ExprMetadata(kind: {self._kind}, n_open_windows: {self._n_open_windows}, expansion_kind: {self._expansion_kind})"
+
+    @property
+    def kind(self) -> ExprKind:
+        return self._kind
+
+    @property
+    def n_open_windows(self) -> int:
+        return self._n_open_windows
+
+    @property
+    def expansion_kind(self) -> ExpansionKind:
+        return self._expansion_kind
+
+    def with_kind(self, kind: ExprKind, /) -> ExprMetadata:
+        """Change metadata kind, leaving all other attributes the same."""
+        return ExprMetadata(
+            kind, n_open_windows=self._n_open_windows, expansion_kind=self._expansion_kind
+        )
+
+    def with_extra_open_window(self) -> ExprMetadata:
+        """Increment `n_open_windows` leaving other attributes the same."""
+        return ExprMetadata(
+            self.kind,
+            n_open_windows=self._n_open_windows + 1,
+            expansion_kind=self._expansion_kind,
+        )
+
+    def with_kind_and_extra_open_window(self, kind: ExprKind, /) -> ExprMetadata:
+        """Change metadata kind and increment `n_open_windows`."""
+        return ExprMetadata(
+            kind,
+            n_open_windows=self._n_open_windows + 1,
+            expansion_kind=self._expansion_kind,
+        )
+
+    @staticmethod
+    def simple_selector() -> ExprMetadata:
+        # e.g. `nw.col('a')`, `nw.nth(0)`
+        return ExprMetadata(
+            ExprKind.TRANSFORM, n_open_windows=0, expansion_kind=ExpansionKind.SINGLE
+        )
+
+    @staticmethod
+    def multi_output_selector_named() -> ExprMetadata:
+        # e.g. `nw.col('a', 'b')`
+        return ExprMetadata(
+            ExprKind.TRANSFORM, n_open_windows=0, expansion_kind=ExpansionKind.MULTI_NAMED
+        )
+
+    @staticmethod
+    def multi_output_selector_unnamed() -> ExprMetadata:
+        # e.g. `nw.all()`
+        return ExprMetadata(
+            ExprKind.TRANSFORM,
+            n_open_windows=0,
+            expansion_kind=ExpansionKind.MULTI_UNNAMED,
+        )
+
+
+def combine_metadata(
+    *args: IntoExpr | object | None,
+    str_as_lit: bool,
+    allow_multi_output: bool,
+    to_single_output: bool,
+) -> ExprMetadata:
+    """Combine metadata from `args`.
 
     Arguments:
-        expr: expression object.
-        series_namespace: The Series namespace (e.g. `dt`, `cat`, `str`, `list`, `name`)
-        attr: name of method.
-        args: arguments to pass to function.
-        kwargs: keyword arguments to pass to function.
+        args: Arguments, maybe expressions, literals, or Series.
+        str_as_lit: Whether to interpret strings as literals or as column names.
+        allow_multi_output: Whether to allow multi-output inputs.
+        to_single_output: Whether the result is always single-output, regardless
+            of the inputs (e.g. `nw.sum_horizontal`).
     """
-    plx = expr.__narwhals_namespace__()
-    return plx._create_expr_from_callable(  # type: ignore[return-value]
-        lambda df: [
-            getattr(getattr(series, series_namespace), attr)(**kwargs)
-            for series in expr(df)  # type: ignore[arg-type]
-        ],
-        depth=expr._depth + 1,
-        function_name=f"{expr._function_name}->{series_namespace}.{attr}",
-        root_names=expr._root_names,
-        output_names=expr._output_names,
-        kwargs=kwargs,
+    n_filtrations = 0
+    has_transforms_or_windows = False
+    has_aggregations = False
+    has_literals = False
+    result_n_open_windows = 0
+    result_expansion_kind = ExpansionKind.SINGLE
+
+    for i, arg in enumerate(args):
+        if isinstance(arg, str) and not str_as_lit:
+            has_transforms_or_windows = True
+        elif is_expr(arg):
+            if is_multi_output(arg._metadata.expansion_kind):
+                if i > 0 and not allow_multi_output:
+                    # Left-most argument is always allowed to be multi-output.
+                    msg = (
+                        "Multi-output expressions (e.g. nw.col('a', 'b'), nw.all()) "
+                        "are not supported in this context."
+                    )
+                    raise MultiOutputExpressionError(msg)
+                if not to_single_output:
+                    if i == 0:
+                        result_expansion_kind = arg._metadata.expansion_kind
+                    else:
+                        result_expansion_kind = resolve_expansion_kind(
+                            result_expansion_kind, arg._metadata.expansion_kind
+                        )
+            if arg._metadata.n_open_windows:
+                result_n_open_windows += 1
+            kind = arg._metadata.kind
+            if kind is ExprKind.AGGREGATION:
+                has_aggregations = True
+            elif kind is ExprKind.LITERAL:
+                has_literals = True
+            elif kind is ExprKind.FILTRATION:
+                n_filtrations += 1
+            elif kind.preserves_length():
+                has_transforms_or_windows = True
+            else:  # pragma: no cover
+                msg = "unreachable code"
+                raise AssertionError(msg)
+
+    if (
+        has_literals
+        and not has_aggregations
+        and not has_transforms_or_windows
+        and not n_filtrations
+    ):
+        result_kind = ExprKind.LITERAL
+    elif n_filtrations > 1:
+        msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
+        raise LengthChangingExprError(msg)
+    elif n_filtrations and has_transforms_or_windows:
+        msg = "Cannot combine length-changing expressions with length-preserving ones or aggregations"
+        raise ShapeError(msg)
+    elif n_filtrations:
+        result_kind = ExprKind.FILTRATION
+    elif has_transforms_or_windows:
+        result_kind = ExprKind.TRANSFORM
+    else:
+        result_kind = ExprKind.AGGREGATION
+
+    return ExprMetadata(
+        result_kind,
+        n_open_windows=result_n_open_windows,
+        expansion_kind=result_expansion_kind,
     )
 
 
-def is_simple_aggregation(expr: CompliantExpr[Any]) -> bool:
-    """Check if expr is a very simple one.
-
-    Examples:
-        - nw.col('a').mean()  # depth 1
-        - nw.mean('a')  # depth 1
-        - nw.len()  # depth 0
-
-    as opposed to, say
-
-        - nw.col('a').filter(nw.col('b')>nw.col('c')).max()
-
-    because then, we can use a fastpath in pandas.
-    """
-    return expr._depth < 2
+def resolve_expansion_kind(lhs: ExpansionKind, rhs: ExpansionKind) -> ExpansionKind:
+    if lhs is ExpansionKind.MULTI_UNNAMED and rhs is ExpansionKind.MULTI_UNNAMED:
+        # e.g. nw.selectors.all() - nw.selectors.numeric().
+        return ExpansionKind.MULTI_UNNAMED
+    # Don't attempt anything more complex, keep it simple and raise in the face of ambiguity.
+    msg = f"Unsupported ExpansionKind combination, got {lhs} and {rhs}, please report a bug."  # pragma: no cover
+    raise AssertionError(msg)  # pragma: no cover
 
 
-def combine_root_names(parsed_exprs: Sequence[CompliantExpr[Any]]) -> list[str] | None:
-    root_names = copy(parsed_exprs[0]._root_names)
-    for arg in parsed_exprs[1:]:
-        if root_names is not None:
-            if arg._root_names is not None:
-                root_names.extend(arg._root_names)
-            else:
-                root_names = None
-                break
-    return root_names
-
-
-def reduce_output_names(parsed_exprs: Sequence[CompliantExpr[Any]]) -> list[str] | None:
-    """Returns the left-most output name."""
-    return (
-        parsed_exprs[0]._output_names[:1]
-        if parsed_exprs[0]._output_names is not None
-        else None
+def combine_metadata_binary_op(lhs: Expr, rhs: IntoExpr) -> ExprMetadata:
+    # We may be able to allow multi-output rhs in the future:
+    # https://github.com/narwhals-dev/narwhals/issues/2244.
+    return combine_metadata(
+        lhs, rhs, str_as_lit=True, allow_multi_output=False, to_single_output=False
     )
+
+
+def combine_metadata_horizontal_op(*exprs: IntoExpr) -> ExprMetadata:
+    return combine_metadata(
+        *exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
+    )
+
+
+def check_expressions_preserve_length(*args: IntoExpr, function_name: str) -> None:
+    # Raise if any argument in `args` isn't length-preserving.
+    # For Series input, we don't raise (yet), we let such checks happen later,
+    # as this function works lazily and so can't evaluate lengths.
+    from narwhals.series import Series
+
+    if not all(
+        (is_expr(x) and x._metadata.kind.preserves_length())
+        or isinstance(x, (str, Series))
+        for x in args
+    ):
+        msg = f"Expressions which aggregate or change length cannot be passed to '{function_name}'."
+        raise ShapeError(msg)
+
+
+def all_exprs_are_scalar_like(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
+    # Raise if any argument in `args` isn't an aggregation or literal.
+    # For Series input, we don't raise (yet), we let such checks happen later,
+    # as this function works lazily and so can't evaluate lengths.
+    exprs = chain(args, kwargs.values())
+    return all(is_expr(x) and x._metadata.kind.is_scalar_like() for x in exprs)
+
+
+def infer_kind(obj: IntoExpr | _1DArray | object, *, str_as_lit: bool) -> ExprKind:
+    if is_expr(obj):
+        return obj._metadata.kind
+    if (
+        is_narwhals_series(obj)
+        or is_numpy_array(obj)
+        or (isinstance(obj, str) and not str_as_lit)
+    ):
+        return ExprKind.TRANSFORM
+    return ExprKind.LITERAL
+
+
+def apply_n_ary_operation(
+    plx: CompliantNamespace[Any, Any],
+    function: Any,
+    *comparands: IntoExpr,
+    str_as_lit: bool,
+) -> CompliantExpr[Any, Any]:
+    compliant_exprs = (
+        extract_compliant(plx, comparand, str_as_lit=str_as_lit)
+        for comparand in comparands
+    )
+    kinds = [infer_kind(comparand, str_as_lit=str_as_lit) for comparand in comparands]
+
+    broadcast = any(kind.preserves_length() for kind in kinds)
+    compliant_exprs = (
+        compliant_expr.broadcast(kind)
+        if broadcast and is_compliant_expr(compliant_expr) and is_scalar_like(kind)
+        else compliant_expr
+        for compliant_expr, kind in zip(compliant_exprs, kinds)
+    )
+    return function(*compliant_exprs)

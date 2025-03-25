@@ -1,22 +1,24 @@
 from __future__ import annotations
 
-from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING
 from typing import Any
 
-import pandas as pd
-import polars as pl
 import pytest
 
 import narwhals as nw
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from narwhals.typing import IntoDataFrameT
 
 data = {"a": [2, 3, 4]}
 
 
 def test_narwhalify() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     @nw.narwhalify
     def func(df: nw.DataFrame[IntoDataFrameT]) -> nw.DataFrame[IntoDataFrameT]:
         return df.with_columns(nw.all() + 1)
@@ -29,10 +31,13 @@ def test_narwhalify() -> None:
 
 
 def test_narwhalify_method() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     class Foo:
         @nw.narwhalify
         def func(
-            self, df: nw.DataFrame[IntoDataFrameT], a: int = 1
+            self: Self, df: nw.DataFrame[IntoDataFrameT], a: int = 1
         ) -> nw.DataFrame[IntoDataFrameT]:
             return df.with_columns(nw.all() + a)
 
@@ -44,10 +49,13 @@ def test_narwhalify_method() -> None:
 
 
 def test_narwhalify_method_called() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     class Foo:
         @nw.narwhalify
         def func(
-            self, df: nw.DataFrame[IntoDataFrameT], a: int = 1
+            self: Self, df: nw.DataFrame[IntoDataFrameT], a: int = 1
         ) -> nw.DataFrame[IntoDataFrameT]:
             return df.with_columns(nw.all() + a)
 
@@ -85,35 +93,67 @@ def test_narwhalify_invalid() -> None:
         func()
 
 
-@pytest.mark.parametrize(
-    ("arg1", "arg2", "context"),
-    [
-        (pd.DataFrame(data), pd.Series(data["a"]), does_not_raise()),
-        (pl.DataFrame(data), pl.Series(data["a"]), does_not_raise()),
-        (
-            pd.DataFrame(data),
-            pl.DataFrame(data),
-            pytest.raises(
-                ValueError,
-                match="Found multiple backends. Make sure that all dataframe/series inputs come from the same backend.",
-            ),
-        ),
-        (
-            pl.DataFrame(data),
-            pd.Series(data["a"]),
-            pytest.raises(
-                ValueError,
-                match="Found multiple backends. Make sure that all dataframe/series inputs come from the same backend.",
-            ),
-        ),
-    ],
-)
-def test_narwhalify_backends(arg1: Any, arg2: Any, context: Any) -> None:
+def test_narwhalify_backends_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     @nw.narwhalify
     def func(
         arg1: Any, arg2: Any, extra: int = 1
     ) -> tuple[Any, Any, int]:  # pragma: no cover
         return arg1, arg2, extra
 
-    with context:
-        func(arg1, arg2)
+    func(pd.DataFrame(data), pd.Series(data["a"]))
+
+
+def test_narwhalify_backends_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    @nw.narwhalify
+    def func(
+        arg1: Any, arg2: Any, extra: int = 1
+    ) -> tuple[Any, Any, int]:  # pragma: no cover
+        return arg1, arg2, extra
+
+    func(pl.DataFrame(data), pl.Series(data["a"]))
+
+
+def test_narwhalify_backends_cross() -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("polars")
+
+    import pandas as pd
+    import polars as pl
+
+    @nw.narwhalify
+    def func(
+        arg1: Any, arg2: Any, extra: int = 1
+    ) -> tuple[Any, Any, int]:  # pragma: no cover
+        return arg1, arg2, extra
+
+    with pytest.raises(
+        ValueError,
+        match="Found multiple backends. Make sure that all dataframe/series inputs come from the same backend.",
+    ):
+        func(pd.DataFrame(data), pl.DataFrame(data))
+
+
+def test_narwhalify_backends_cross2() -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("polars")
+
+    import pandas as pd
+    import polars as pl
+
+    @nw.narwhalify
+    def func(
+        arg1: Any, arg2: Any, extra: int = 1
+    ) -> tuple[Any, Any, int]:  # pragma: no cover
+        return arg1, arg2, extra
+
+    with pytest.raises(
+        ValueError,
+        match="Found multiple backends. Make sure that all dataframe/series inputs come from the same backend.",
+    ):
+        func(pl.DataFrame(data), pd.Series(data["a"]))

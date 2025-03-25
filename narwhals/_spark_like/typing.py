@@ -1,16 +1,12 @@
-from __future__ import annotations  # pragma: no cover
+from __future__ import annotations
 
-from typing import TYPE_CHECKING  # pragma: no cover
-from typing import Union  # pragma: no cover
+from typing import TYPE_CHECKING
+from typing import Protocol
 
 if TYPE_CHECKING:
-    import sys
+    from sqlframe.base.column import Column
 
-    if sys.version_info >= (3, 10):
-        from typing import TypeAlias
-    else:
-        from typing_extensions import TypeAlias
+    from narwhals._spark_like.utils import WindowInputs
 
-    from narwhals._spark_like.expr import SparkLikeExpr
-
-    IntoSparkLikeExpr: TypeAlias = Union[SparkLikeExpr, str]
+    class WindowFunction(Protocol):
+        def __call__(self, window_inputs: WindowInputs) -> Column: ...

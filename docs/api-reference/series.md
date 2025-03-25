@@ -30,6 +30,7 @@
         - filter
         - gather_every
         - head
+        - hist
         - implementation
         - is_between
         - is_duplicated
@@ -38,6 +39,7 @@
         - is_first_distinct
         - is_in
         - is_last_distinct
+        - is_nan
         - is_null
         - is_sorted
         - is_unique
@@ -53,6 +55,7 @@
         - null_count
         - pipe
         - quantile
+        - rank
         - rename
         - replace_strict
         - rolling_mean
@@ -75,6 +78,7 @@
         - to_list
         - to_numpy
         - to_pandas
+        - to_polars
         - to_native
         - unique
         - value_counts

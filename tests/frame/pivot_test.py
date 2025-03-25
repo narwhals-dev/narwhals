@@ -3,10 +3,10 @@ from __future__ import annotations
 from contextlib import nullcontext as does_not_raise
 from typing import Any
 
-import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.exceptions import NarwhalsError
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import ConstructorEager
@@ -137,6 +137,7 @@ def test_pivot(
         index=index,
         values=["foo", "bar"],
         aggregate_function=agg_func,  # type: ignore[arg-type]
+        sort_columns=True,
     )
 
     assert_equal_data(result, expected)
@@ -146,7 +147,7 @@ def test_pivot(
     ("data_", "context"),
     [
         (data_no_dups, does_not_raise()),
-        (data, pytest.raises((ValueError, pl.exceptions.ComputeError))),
+        (data, pytest.raises((ValueError, NarwhalsError))),
     ],
 )
 def test_pivot_no_agg(
@@ -266,11 +267,12 @@ def test_pivot_no_index(
         # not implemented
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor_eager(data_no_dups), eager_only=True)
-    result = df.pivot(on="col", values="foo").sort("ix", "bar")
+    with pytest.warns(UserWarning, match="has no effect"):
+        result = df.pivot(on="col", values="foo", maintain_order=True).sort("ix", "bar")
     expected = {
         "ix": [1, 1, 2, 2],
         "bar": ["x", "y", "w", "z"],
-        "a": [1.0, float("nan"), float("nan"), 3.0],
-        "b": [float("nan"), 2.0, 4.0, float("nan")],
+        "a": [1.0, None, None, 3.0],
+        "b": [None, 2.0, 4.0, None],
     }
     assert_equal_data(result, expected)

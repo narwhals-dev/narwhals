@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from narwhals.dtypes import Array
+from narwhals.dtypes import Binary
 from narwhals.dtypes import Boolean
 from narwhals.dtypes import Categorical
 from narwhals.dtypes import Date
@@ -12,22 +15,31 @@ from narwhals.dtypes import Enum
 from narwhals.dtypes import Field
 from narwhals.dtypes import Float32
 from narwhals.dtypes import Float64
+from narwhals.dtypes import FloatType
 from narwhals.dtypes import Int8
 from narwhals.dtypes import Int16
 from narwhals.dtypes import Int32
 from narwhals.dtypes import Int64
 from narwhals.dtypes import Int128
+from narwhals.dtypes import IntegerType
 from narwhals.dtypes import List
+from narwhals.dtypes import NestedType
 from narwhals.dtypes import NumericType
 from narwhals.dtypes import Object
+from narwhals.dtypes import SignedIntegerType
 from narwhals.dtypes import String
 from narwhals.dtypes import Struct
+from narwhals.dtypes import Time
 from narwhals.dtypes import UInt8
 from narwhals.dtypes import UInt16
 from narwhals.dtypes import UInt32
 from narwhals.dtypes import UInt64
 from narwhals.dtypes import UInt128
 from narwhals.dtypes import Unknown
+from narwhals.dtypes import UnsignedIntegerType
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
 
 class Datetime(NwDatetime):
@@ -40,36 +52,9 @@ class Datetime(NwDatetime):
 
     Notes:
         Adapted from [Polars implementation](https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L398-L457)
-
-    Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
-        >>> import pyarrow as pa
-        >>> import pyarrow.compute as pc
-        >>> import narwhals as nw
-        >>> from datetime import datetime, timedelta
-        >>> data = [datetime(2024, 12, 9) + timedelta(days=n) for n in range(5)]
-        >>> ser_pd = (
-        ...     pd.Series(data)
-        ...     .dt.tz_localize("Africa/Accra")
-        ...     .astype("datetime64[ms, Africa/Accra]")
-        ... )
-        >>> ser_pl = (
-        ...     pl.Series(data).cast(pl.Datetime("ms")).dt.replace_time_zone("Africa/Accra")
-        ... )
-        >>> ser_pa = pc.assume_timezone(
-        ...     pa.chunked_array([data], type=pa.timestamp("ms")), "Africa/Accra"
-        ... )
-
-        >>> nw.from_native(ser_pd, series_only=True).dtype
-        Datetime(time_unit='ms', time_zone='Africa/Accra')
-        >>> nw.from_native(ser_pl, series_only=True).dtype
-        Datetime(time_unit='ms', time_zone='Africa/Accra')
-        >>> nw.from_native(ser_pa, series_only=True).dtype
-        Datetime(time_unit='ms', time_zone='Africa/Accra')
     """
 
-    def __hash__(self) -> int:
+    def __hash__(self: Self) -> int:
         return hash(self.__class__)
 
 
@@ -81,32 +66,15 @@ class Duration(NwDuration):
 
     Notes:
         Adapted from [Polars implementation](https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L460-L502)
-
-    Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
-        >>> import pyarrow as pa
-        >>> import narwhals as nw
-        >>> from datetime import timedelta
-        >>> data = [timedelta(seconds=d) for d in range(1, 4)]
-        >>> ser_pd = pd.Series(data).astype("timedelta64[ms]")
-        >>> ser_pl = pl.Series(data).cast(pl.Duration("ms"))
-        >>> ser_pa = pa.chunked_array([data], type=pa.duration("ms"))
-
-        >>> nw.from_native(ser_pd, series_only=True).dtype
-        Duration(time_unit='ms')
-        >>> nw.from_native(ser_pl, series_only=True).dtype
-        Duration(time_unit='ms')
-        >>> nw.from_native(ser_pa, series_only=True).dtype
-        Duration(time_unit='ms')
     """
 
-    def __hash__(self) -> int:
+    def __hash__(self: Self) -> int:
         return hash(self.__class__)
 
 
 __all__ = [
     "Array",
+    "Binary",
     "Boolean",
     "Categorical",
     "DType",
@@ -118,20 +86,26 @@ __all__ = [
     "Field",
     "Float32",
     "Float64",
+    "FloatType",
     "Int8",
     "Int16",
     "Int32",
     "Int64",
     "Int128",
+    "IntegerType",
     "List",
+    "NestedType",
     "NumericType",
     "Object",
+    "SignedIntegerType",
     "String",
     "Struct",
+    "Time",
     "UInt8",
     "UInt16",
     "UInt32",
     "UInt64",
     "UInt128",
     "Unknown",
+    "UnsignedIntegerType",
 ]

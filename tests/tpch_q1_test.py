@@ -2,16 +2,19 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
+from typing import TYPE_CHECKING
 from unittest import mock
 
 import pandas as pd
-import polars as pl
-import pyarrow.csv as pa_csv
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import DASK_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import assert_equal_data
+
+if TYPE_CHECKING:
+    from narwhals.stable.v1.typing import IntoFrame
 
 
 @pytest.mark.parametrize(
@@ -20,21 +23,28 @@ from tests.utils import assert_equal_data
 )
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 def test_q1(library: str, request: pytest.FixtureRequest) -> None:
+    if library == "dask" and DASK_VERSION < (2024, 10):
+        request.applymarker(pytest.mark.xfail)
     if library == "pandas" and PANDAS_VERSION < (1, 5):
         request.applymarker(pytest.mark.xfail)
     elif library == "pandas":
-        df_raw = pd.read_csv("tests/data/lineitem.csv")
+        df_raw: IntoFrame = pd.read_csv("tests/data/lineitem.csv")
     elif library == "polars":
+        pytest.importorskip("polars")
+        import polars as pl
+
         df_raw = pl.scan_csv("tests/data/lineitem.csv")
     elif library == "dask":
         pytest.importorskip("dask")
-        pytest.importorskip("dask_expr", exc_type=ImportError)
         import dask.dataframe as dd
 
         df_raw = dd.from_pandas(
             pd.read_csv("tests/data/lineitem.csv", dtype_backend="pyarrow")
         )
     else:
+        pytest.importorskip("pyarrow.csv")
+        import pyarrow.csv as pa_csv
+
         df_raw = pa_csv.read_csv("tests/data/lineitem.csv")
     var_1 = datetime(1998, 9, 2)
     df = nw.from_native(df_raw).lazy()
@@ -66,7 +76,6 @@ def test_q1(library: str, request: pytest.FixtureRequest) -> None:
         )
         .sort(["l_returnflag", "l_linestatus"])
     )
-    result = query_result.collect().to_dict(as_series=False)
     expected = {
         "l_returnflag": ["A", "N", "N", "R"],
         "l_linestatus": ["F", "F", "O", "F"],
@@ -89,7 +98,7 @@ def test_q1(library: str, request: pytest.FixtureRequest) -> None:
         "avg_disc": [0.05039473684210526, 0.02, 0.05537414965986395, 0.04507042253521127],
         "count_order": [76, 1, 147, 71],
     }
-    assert_equal_data(result, expected)
+    assert_equal_data(query_result, expected)
 
 
 @pytest.mark.parametrize(
@@ -104,8 +113,11 @@ def test_q1_w_generic_funcs(library: str, request: pytest.FixtureRequest) -> Non
     if library == "pandas" and PANDAS_VERSION < (1, 5):
         request.applymarker(pytest.mark.xfail)
     elif library == "pandas":
-        df_raw = pd.read_csv("tests/data/lineitem.csv")
+        df_raw: IntoFrame = pd.read_csv("tests/data/lineitem.csv")
     else:
+        pytest.importorskip("polars")
+        import polars as pl
+
         df_raw = pl.read_csv("tests/data/lineitem.csv")
     var_1 = datetime(1998, 9, 2)
     df = nw.from_native(df_raw, eager_only=True)
@@ -193,7 +205,6 @@ def test_q1_w_pandas_agg_generic_path() -> None:
         )
         .sort(["l_returnflag", "l_linestatus"])
     )
-    result = query_result.collect().to_dict(as_series=False)
     expected = {
         "l_returnflag": ["A", "N", "N", "R"],
         "l_linestatus": ["F", "F", "O", "F"],
@@ -216,4 +227,4 @@ def test_q1_w_pandas_agg_generic_path() -> None:
         "avg_disc": [0.05039473684210526, 0.02, 0.05537414965986395, 0.04507042253521127],
         "count_order": [76, 1, 147, 71],
     }
-    assert_equal_data(result, expected)
+    assert_equal_data(query_result, expected)

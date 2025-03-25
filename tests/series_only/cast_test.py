@@ -4,11 +4,7 @@ from datetime import date
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
-from polars.testing import assert_frame_equal
 
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
@@ -31,6 +27,10 @@ def test_cast_253(
 
 
 def test_cast_date_datetime_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+    from polars.testing import assert_frame_equal
+
     # polars: date to datetime
     dfpl = pl.DataFrame({"a": [date(2020, 1, 1), date(2020, 1, 2)]})
     df = nw.from_native(dfpl)
@@ -50,6 +50,9 @@ def test_cast_date_datetime_polars() -> None:
 
 
 def test_cast_date_datetime_pyarrow() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     # polars: date to datetime
     dfpa = pa.table({"a": [date(2020, 1, 1), date(2020, 1, 2)]})
     df = nw.from_native(dfpa)
@@ -72,6 +75,9 @@ def test_cast_date_datetime_pyarrow() -> None:
     reason="pyarrow dtype not available",
 )
 def test_cast_date_datetime_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     # pandas: pyarrow date to datetime
     dfpd = pd.DataFrame({"a": [date(2020, 1, 1), date(2020, 1, 2)]}).astype(
         {"a": "date32[pyarrow]"}
@@ -98,35 +104,38 @@ def test_cast_date_datetime_pandas() -> None:
     assert df.schema == {"a": nw.Date}
 
 
-@pytest.mark.skipif(
-    PANDAS_VERSION < (2, 0, 0),
-    reason="pyarrow dtype not available",
-)
-def test_cast_date_datetime_invalid() -> None:
-    # pandas: pyarrow datetime to date
-    dfpd = pd.DataFrame({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]})
-    df = nw.from_native(dfpd)
-    with pytest.raises(NotImplementedError, match="pyarrow"):
-        df.select(nw.col("a").cast(nw.Date))
-
-
 @pytest.mark.filterwarnings("ignore: casting period")
 def test_unknown_to_int() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = pd.DataFrame({"a": pd.period_range("2000", periods=3, freq="min")})
     assert nw.from_native(df).select(nw.col("a").cast(nw.Int64)).schema == {"a": nw.Int64}
 
 
-def test_cast_to_enum() -> None:
+def test_cast_to_enum_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     # we don't yet support metadata in dtypes, so for now disallow this
     # seems like a very niche use case anyway, and allowing it later wouldn't be
     # backwards-incompatible
-    df = pl.DataFrame({"a": ["a", "b"]}, schema={"a": pl.Categorical})
+    df_pl = pl.DataFrame({"a": ["a", "b"]}, schema={"a": pl.Categorical})
     with pytest.raises(
         NotImplementedError, match=r"Converting to Enum is not \(yet\) supported"
     ):
-        nw.from_native(df).select(nw.col("a").cast(nw.Enum))
-    df = pd.DataFrame({"a": ["a", "b"]}, dtype="category")
+        nw.from_native(df_pl).select(nw.col("a").cast(nw.Enum))
+
+
+def test_cast_to_enum_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    # we don't yet support metadata in dtypes, so for now disallow this
+    # seems like a very niche use case anyway, and allowing it later wouldn't be
+    # backwards-incompatible
+    df_pd = pd.DataFrame({"a": ["a", "b"]}, dtype="category")
     with pytest.raises(
         NotImplementedError, match=r"Converting to Enum is not \(yet\) supported"
     ):
-        nw.from_native(df).select(nw.col("a").cast(nw.Enum))
+        nw.from_native(df_pd).select(nw.col("a").cast(nw.Enum))

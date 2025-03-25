@@ -2,25 +2,22 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Generic
 from typing import Literal
 from typing import Protocol
-from typing import Sequence
 from typing import TypeVar
 from typing import Union
 
+from narwhals._compliant import CompliantDataFrame
+from narwhals._compliant import CompliantLazyFrame
+from narwhals._compliant import CompliantSeries
+
 if TYPE_CHECKING:
-    import sys
+    from types import ModuleType
+    from typing import Iterable
+    from typing import Sized
 
-    from narwhals.dtypes import DType
-    from narwhals.utils import Implementation
-
-    if sys.version_info >= (3, 10):
-        from typing import TypeAlias
-    else:
-        from typing_extensions import TypeAlias
-
-    from typing_extensions import Self
+    import numpy as np
+    from typing_extensions import TypeAlias
 
     from narwhals import dtypes
     from narwhals.dataframe import DataFrame
@@ -37,53 +34,18 @@ if TYPE_CHECKING:
 
         def join(self, *args: Any, **kwargs: Any) -> Any: ...
 
-    class NativeSeries(Protocol):
-        def __len__(self) -> int: ...
+    class NativeLazyFrame(NativeFrame, Protocol):
+        def explain(self, *args: Any, **kwargs: Any) -> Any: ...
+
+    class NativeSeries(Sized, Iterable[Any], Protocol):
+        def filter(self, *args: Any, **kwargs: Any) -> Any: ...
 
     class DataFrameLike(Protocol):
         def __dataframe__(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
-class CompliantSeries(Protocol):
-    @property
-    def name(self) -> str: ...
-    def __narwhals_series__(self) -> CompliantSeries: ...
-    def alias(self, name: str) -> Self: ...
-
-
-class CompliantDataFrame(Protocol):
-    def __narwhals_dataframe__(self) -> CompliantDataFrame: ...
-    def __narwhals_namespace__(self) -> Any: ...
-
-
-class CompliantLazyFrame(Protocol):
-    def __narwhals_lazyframe__(self) -> CompliantLazyFrame: ...
-    def __narwhals_namespace__(self) -> Any: ...
-
-
-CompliantSeriesT_co = TypeVar(
-    "CompliantSeriesT_co", bound=CompliantSeries, covariant=True
-)
-
-
-class CompliantExpr(Protocol, Generic[CompliantSeriesT_co]):
-    _implementation: Implementation
-    _output_names: list[str] | None
-    _root_names: list[str] | None
-    _depth: int
-    _function_name: str
-    _kwargs: dict[str, Any]
-
-    def __call__(self, df: Any) -> Sequence[CompliantSeriesT_co]: ...
-    def __narwhals_expr__(self) -> None: ...
-    def __narwhals_namespace__(self) -> CompliantNamespace[CompliantSeriesT_co]: ...
-    def is_null(self) -> Self: ...
-    def alias(self, name: str) -> Self: ...
-    def cast(self, dtype: DType) -> Self: ...
-
-
-class CompliantNamespace(Protocol, Generic[CompliantSeriesT_co]):
-    def col(self, *column_names: str) -> CompliantExpr[CompliantSeriesT_co]: ...
+class SupportsNativeNamespace(Protocol):
+    def __native_namespace__(self) -> ModuleType: ...
 
 
 IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]
@@ -107,6 +69,8 @@ Examples:
     ...     df = nw.from_native(df_native, eager_only=True)
     ...     return df.shape
 """
+
+IntoLazyFrame: TypeAlias = "NativeLazyFrame | LazyFrame[Any]"
 
 IntoFrame: TypeAlias = Union[
     "NativeFrame", "DataFrame[Any]", "LazyFrame[Any]", "DataFrameLike"
@@ -181,6 +145,8 @@ Examples:
     ...     return df.with_columns(c=df["a"] + 1).to_native()
 """
 
+IntoLazyFrameT = TypeVar("IntoLazyFrameT", bound="IntoLazyFrame")
+
 FrameT = TypeVar("FrameT", bound="Frame")
 """TypeVar bound to Narwhals DataFrame or Narwhals LazyFrame.
 
@@ -209,6 +175,8 @@ Examples:
     ...     return df.with_columns(c=df["a"] + 1)
 """
 
+LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[Any]")
+
 IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries")
 """TypeVar bound to object convertible to Narwhals Series.
 
@@ -223,6 +191,7 @@ Examples:
     ...     return s.abs().to_native()
 """
 
+DTypeBackend: TypeAlias = 'Literal["pyarrow", "numpy_nullable"] | None'
 SizeUnit: TypeAlias = Literal[
     "b",
     "kb",
@@ -235,6 +204,17 @@ SizeUnit: TypeAlias = Literal[
     "gigabytes",
     "terabytes",
 ]
+
+TimeUnit: TypeAlias = Literal["ns", "us", "ms", "s"]
+
+_ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
+_NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
+_1DArray: TypeAlias = "_NDArray[tuple[int]]"  # noqa: PYI042
+_2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI042, PYI047
+_AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
+_NumpyScalar: TypeAlias = "np.generic[Any]"
+Into1DArray: TypeAlias = "_1DArray | _NumpyScalar"
+"""A 1-dimensional `numpy.ndarray` or scalar that can be converted into one."""
 
 
 class DTypes:
@@ -264,6 +244,8 @@ class DTypes:
     List: type[dtypes.List]
     Array: type[dtypes.Array]
     Unknown: type[dtypes.Unknown]
+    Time: type[dtypes.Time]
+    Binary: type[dtypes.Binary]
 
 
 __all__ = [

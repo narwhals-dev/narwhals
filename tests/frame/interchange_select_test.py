@@ -1,27 +1,30 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
+from typing import Mapping
 
-import duckdb
-import polars as pl
 import pytest
 
 import narwhals.stable.v1 as nw
 
-data = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.1], "z": ["x", "y", "z"]}
+if TYPE_CHECKING:
+    from typing_extensions import Self
+
+data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.1], "z": ["x", "y", "z"]}
 
 
 class InterchangeDataFrame:
-    def __init__(self, df: CustomDataFrame) -> None:
+    def __init__(self: Self, df: CustomDataFrame) -> None:
         self._df = df
 
-    def __dataframe__(self) -> InterchangeDataFrame:  # pragma: no cover
+    def __dataframe__(self: Self) -> InterchangeDataFrame:  # pragma: no cover
         return self
 
-    def column_names(self) -> list[str]:
+    def column_names(self: Self) -> list[str]:
         return list(self._df._data.keys())
 
-    def select_columns_by_name(self, columns: list[str]) -> InterchangeDataFrame:
+    def select_columns_by_name(self: Self, columns: list[str]) -> InterchangeDataFrame:
         return InterchangeDataFrame(
             CustomDataFrame(
                 {key: value for key, value in self._df._data.items() if key in columns}
@@ -30,10 +33,10 @@ class InterchangeDataFrame:
 
 
 class CustomDataFrame:
-    def __init__(self, data: dict[str, Any]) -> None:
+    def __init__(self: Self, data: dict[str, Any]) -> None:
         self._data = data
 
-    def __dataframe__(self, *, allow_copy: bool = True) -> InterchangeDataFrame:
+    def __dataframe__(self: Self, *, allow_copy: bool = True) -> InterchangeDataFrame:
         return InterchangeDataFrame(self)
 
 
@@ -44,9 +47,18 @@ def test_interchange() -> None:
 
 
 def test_interchange_ibis(
-    tmpdir: pytest.TempdirFactory,
+    tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover
-    ibis = pytest.importorskip("ibis")
+    pytest.importorskip("polars")
+    pytest.importorskip("ibis")
+
+    import ibis
+    import polars as pl
+
+    try:
+        ibis.set_backend("duckdb")
+    except ImportError:
+        request.applymarker(pytest.mark.xfail)
     df_pl = pl.DataFrame(data)
 
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
@@ -61,6 +73,12 @@ def test_interchange_ibis(
 
 
 def test_interchange_duckdb() -> None:
+    pytest.importorskip("polars")
+    pytest.importorskip("duckdb")
+
+    import duckdb
+    import polars as pl
+
     df_pl = pl.DataFrame(data)  # noqa: F841
     rel = duckdb.sql("select * from df_pl")
     df = nw.from_native(rel, eager_or_interchange_only=True)

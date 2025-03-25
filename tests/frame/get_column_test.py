@@ -29,5 +29,5 @@ def test_non_string_name() -> None:
 
 def test_get_single_row() -> None:
     df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
-    result = nw.from_native(df, eager_only=True)[0]  # type: ignore[call-overload]
+    result = nw.from_native(df, eager_only=True)[0]
     assert_equal_data(result, {"a": [1], "b": [3]})

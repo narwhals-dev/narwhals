@@ -23,6 +23,7 @@ ALLOWED_IMPORTS = {
     "_arrow": {"pyarrow", "pyarrow.compute", "pyarrow.parquet"},
     "_dask": {"dask.dataframe", "pandas", "dask_expr"},
     "_polars": {"polars"},
+    "_duckdb": {"duckdb"},
 }
 
 
@@ -63,6 +64,7 @@ class ImportPandasChecker(ast.NodeVisitor):
         if (
             node.module in BANNED_IMPORTS
             and "# ignore-banned-import" not in self.lines[node.lineno - 1]
+            and node.module not in self.allowed_imports
         ):
             print(  # noqa: T201
                 f"{self.file_name}:{node.lineno}:{node.col_offset}: found {node.module} import"

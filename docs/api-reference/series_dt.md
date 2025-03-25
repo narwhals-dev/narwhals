@@ -23,6 +23,7 @@
         - total_nanoseconds
         - total_seconds
         - to_string
+        - weekday
         - year
       show_source: false
       show_bases: false

@@ -1,25 +1,37 @@
 from __future__ import annotations
 
+import os
 import re
+from datetime import timezone
 from enum import Enum
 from enum import auto
+from functools import wraps
+from inspect import getattr_static
 from secrets import token_hex
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
+from typing import Container
 from typing import Iterable
+from typing import Literal
+from typing import Protocol
 from typing import Sequence
 from typing import TypeVar
 from typing import Union
 from typing import cast
+from typing import overload
 from warnings import warn
 
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask_dataframe
+from narwhals.dependencies import get_duckdb
+from narwhals.dependencies import get_ibis
 from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyspark_sql
+from narwhals.dependencies import get_sqlframe
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_modin_series
 from narwhals.dependencies import is_pandas_dataframe
@@ -29,25 +41,155 @@ from narwhals.dependencies import is_pandas_series
 from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from types import ModuleType
+    from typing import AbstractSet as Set
 
     import pandas as pd
+    from typing_extensions import LiteralString
+    from typing_extensions import ParamSpec
     from typing_extensions import Self
-    from typing_extensions import TypeGuard
+    from typing_extensions import TypeIs
 
+    from narwhals._compliant import CompliantExpr
+    from narwhals._compliant import CompliantFrameT
+    from narwhals._compliant import CompliantSeriesOrNativeExprT_co
+    from narwhals._compliant import NativeFrameT_co
+    from narwhals._compliant import NativeSeriesT_co
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
+    from narwhals.dtypes import DType
+    from narwhals.functions import ArrowStreamExportable
     from narwhals.series import Series
+    from narwhals.typing import CompliantDataFrame
+    from narwhals.typing import CompliantLazyFrame
+    from narwhals.typing import CompliantSeries
+    from narwhals.typing import DataFrameLike
     from narwhals.typing import DTypes
     from narwhals.typing import IntoSeriesT
     from narwhals.typing import SizeUnit
+    from narwhals.typing import SupportsNativeNamespace
+    from narwhals.typing import TimeUnit
 
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
     )
+    _T = TypeVar("_T")
+    _T1 = TypeVar("_T1")
+    _T2 = TypeVar("_T2")
+    _T3 = TypeVar("_T3")
+    _Fn = TypeVar("_Fn", bound="Callable[..., Any]")
+    P = ParamSpec("P")
+    R = TypeVar("R")
+
+    class _SupportsVersion(Protocol):
+        __version__: str
+
+    class _SupportsGet(Protocol):  # noqa: PYI046
+        def __get__(self, instance: Any, owner: Any | None = None, /) -> Any: ...
+
+    class _StoresImplementation(Protocol):
+        _implementation: Implementation
+        """Implementation of native object (pandas, Polars, PyArrow, ...)."""
+
+    class _StoresBackendVersion(Protocol):
+        _backend_version: tuple[int, ...]
+        """Version tuple for a native package."""
+
+    class _StoresVersion(Protocol):
+        _version: Version
+        """Narwhals API version (V1 or MAIN)."""
+
+    class _LimitedContext(_StoresBackendVersion, _StoresVersion, Protocol):
+        """Provides 2 attributes.
+
+        - `_backend_version`
+        - `_version`
+        """
+
+    class _FullContext(_StoresImplementation, _LimitedContext, Protocol):  # noqa: PYI046
+        """Provides 3 attributes.
+
+        - `_implementation`
+        - `_backend_version`
+        - `_version`
+        """
+
+    class _StoresColumns(Protocol):
+        @property
+        def columns(self) -> Sequence[str]: ...
+
+
+NativeT_co = TypeVar("NativeT_co", covariant=True)
+CompliantT_co = TypeVar("CompliantT_co", covariant=True)
+CompliantExprT_co = TypeVar(
+    "CompliantExprT_co", bound="CompliantExpr[Any, Any]", covariant=True
+)
+CompliantSeriesT_co = TypeVar(
+    "CompliantSeriesT_co", bound="CompliantSeries[Any]", covariant=True
+)
+
+
+class _StoresNative(Protocol[NativeT_co]):
+    """Provides access to a native object.
+
+    Native objects have types like:
+
+    >>> from pandas import Series
+    >>> from pyarrow import Table
+    """
+
+    @property
+    def native(self) -> NativeT_co:
+        """Return the native object."""
+        ...
+
+
+class _StoresCompliant(Protocol[CompliantT_co]):
+    """Provides access to a compliant object.
+
+    Compliant objects have types like:
+
+    >>> from narwhals._pandas_like.series import PandasLikeSeries
+    >>> from narwhals._arrow.dataframe import ArrowDataFrame
+    """
+
+    @property
+    def compliant(self) -> CompliantT_co:
+        """Return the compliant object."""
+        ...
+
+
+class _SeriesNamespace(  # type: ignore[misc]  # noqa: PYI046
+    _StoresCompliant[CompliantSeriesT_co],
+    _StoresNative[NativeT_co],
+    Protocol[CompliantSeriesT_co, NativeT_co],
+):
+    _compliant_series: CompliantSeriesT_co
+
+    @property
+    def compliant(self) -> CompliantSeriesT_co:
+        return self._compliant_series
+
+    @property
+    def native(self) -> NativeT_co:
+        return self._compliant_series.native
+
+    def from_native(self, series: Any, /) -> CompliantSeriesT_co:
+        return self.compliant._from_native_series(series)
+
+
+class _ExprNamespace(  # type: ignore[misc] # noqa: PYI046
+    _StoresCompliant[CompliantExprT_co], Protocol[CompliantExprT_co]
+):
+    _compliant_expr: CompliantExprT_co
+
+    @property
+    def compliant(self) -> CompliantExprT_co:
+        return self._compliant_expr
 
 
 class Version(Enum):
@@ -72,6 +214,12 @@ class Implementation(Enum):
     """Polars implementation."""
     DASK = auto()
     """Dask implementation."""
+    DUCKDB = auto()
+    """DuckDB implementation."""
+    IBIS = auto()
+    """Ibis implementation."""
+    SQLFRAME = auto()
+    """SQLFrame implementation."""
 
     UNKNOWN = auto()
     """Unknown implementation."""
@@ -96,8 +244,57 @@ class Implementation(Enum):
             get_pyspark_sql(): Implementation.PYSPARK,
             get_polars(): Implementation.POLARS,
             get_dask_dataframe(): Implementation.DASK,
+            get_duckdb(): Implementation.DUCKDB,
+            get_ibis(): Implementation.IBIS,
+            get_sqlframe(): Implementation.SQLFRAME,
         }
         return mapping.get(native_namespace, Implementation.UNKNOWN)
+
+    @classmethod
+    def from_string(
+        cls: type[Self], backend_name: str
+    ) -> Implementation:  # pragma: no cover
+        """Instantiate Implementation object from a native namespace module.
+
+        Arguments:
+            backend_name: Name of backend, expressed as string.
+
+        Returns:
+            Implementation.
+        """
+        mapping = {
+            "pandas": Implementation.PANDAS,
+            "modin": Implementation.MODIN,
+            "cudf": Implementation.CUDF,
+            "pyarrow": Implementation.PYARROW,
+            "pyspark": Implementation.PYSPARK,
+            "polars": Implementation.POLARS,
+            "dask": Implementation.DASK,
+            "duckdb": Implementation.DUCKDB,
+            "ibis": Implementation.IBIS,
+            "sqlframe": Implementation.SQLFRAME,
+        }
+        return mapping.get(backend_name, Implementation.UNKNOWN)
+
+    @classmethod
+    def from_backend(
+        cls: type[Self], backend: str | Implementation | ModuleType
+    ) -> Implementation:
+        """Instantiate from native namespace module, string, or Implementation.
+
+        Arguments:
+            backend: Backend to instantiate Implementation from.
+
+        Returns:
+            Implementation.
+        """
+        return (
+            cls.from_string(backend)
+            if isinstance(backend, str)
+            else backend
+            if isinstance(backend, Implementation)
+            else cls.from_native_namespace(backend)
+        )
 
     def to_native_namespace(self: Self) -> ModuleType:
         """Return the native namespace module corresponding to Implementation.
@@ -105,18 +302,49 @@ class Implementation(Enum):
         Returns:
             Native module.
         """
-        mapping = {
-            Implementation.PANDAS: get_pandas(),
-            Implementation.MODIN: get_modin(),
-            Implementation.CUDF: get_cudf(),
-            Implementation.PYARROW: get_pyarrow(),
-            Implementation.PYSPARK: get_pyspark_sql(),
-            Implementation.POLARS: get_polars(),
-            Implementation.DASK: get_dask_dataframe(),
-        }
-        return mapping[self]  # type: ignore[no-any-return]
+        if self is Implementation.PANDAS:
+            import pandas as pd  # ignore-banned-import
 
-    def is_pandas(self) -> bool:
+            return pd
+        if self is Implementation.MODIN:
+            import modin.pandas
+
+            return modin.pandas
+        if self is Implementation.CUDF:  # pragma: no cover
+            import cudf  # ignore-banned-import
+
+            return cudf
+        if self is Implementation.PYARROW:
+            import pyarrow as pa  # ignore-banned-import
+
+            return pa
+        if self is Implementation.PYSPARK:  # pragma: no cover
+            import pyspark.sql
+
+            return pyspark.sql
+        if self is Implementation.POLARS:
+            import polars as pl  # ignore-banned-import
+
+            return pl
+        if self is Implementation.DASK:
+            import dask.dataframe  # ignore-banned-import
+
+            return dask.dataframe
+
+        if self is Implementation.DUCKDB:
+            import duckdb  # ignore-banned-import
+
+            return duckdb
+
+        if self is Implementation.SQLFRAME:
+            import sqlframe  # ignore-banned-import
+
+            return sqlframe
+
+        msg = "Not supported Implementation"  # pragma: no cover
+        raise AssertionError(msg)
+
+    def is_pandas(self: Self) -> bool:
         """Return whether implementation is pandas.
 
         Returns:
@@ -132,7 +360,7 @@ class Implementation(Enum):
         """
         return self is Implementation.PANDAS
 
-    def is_pandas_like(self) -> bool:
+    def is_pandas_like(self: Self) -> bool:
         """Return whether implementation is pandas, Modin, or cuDF.
 
         Returns:
@@ -146,9 +374,29 @@ class Implementation(Enum):
             >>> df.implementation.is_pandas_like()
             True
         """
-        return self in {Implementation.PANDAS, Implementation.MODIN, Implementation.CUDF}
+        return self in {
+            Implementation.PANDAS,
+            Implementation.MODIN,
+            Implementation.CUDF,
+        }
 
-    def is_polars(self) -> bool:
+    def is_spark_like(self: Self) -> bool:
+        """Return whether implementation is pyspark or sqlframe.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_spark_like()
+            False
+        """
+        return self in {Implementation.PYSPARK, Implementation.SQLFRAME}
+
+    def is_polars(self: Self) -> bool:
         """Return whether implementation is Polars.
 
         Returns:
@@ -164,7 +412,7 @@ class Implementation(Enum):
         """
         return self is Implementation.POLARS
 
-    def is_cudf(self) -> bool:
+    def is_cudf(self: Self) -> bool:
         """Return whether implementation is cuDF.
 
         Returns:
@@ -180,7 +428,7 @@ class Implementation(Enum):
         """
         return self is Implementation.CUDF  # pragma: no cover
 
-    def is_modin(self) -> bool:
+    def is_modin(self: Self) -> bool:
         """Return whether implementation is Modin.
 
         Returns:
@@ -196,7 +444,7 @@ class Implementation(Enum):
         """
         return self is Implementation.MODIN  # pragma: no cover
 
-    def is_pyspark(self) -> bool:
+    def is_pyspark(self: Self) -> bool:
         """Return whether implementation is PySpark.
 
         Returns:
@@ -212,7 +460,7 @@ class Implementation(Enum):
         """
         return self is Implementation.PYSPARK  # pragma: no cover
 
-    def is_pyarrow(self) -> bool:
+    def is_pyarrow(self: Self) -> bool:
         """Return whether implementation is PyArrow.
 
         Returns:
@@ -228,7 +476,7 @@ class Implementation(Enum):
         """
         return self is Implementation.PYARROW  # pragma: no cover
 
-    def is_dask(self) -> bool:
+    def is_dask(self: Self) -> bool:
         """Return whether implementation is Dask.
 
         Returns:
@@ -243,6 +491,76 @@ class Implementation(Enum):
             False
         """
         return self is Implementation.DASK  # pragma: no cover
+
+    def is_duckdb(self: Self) -> bool:
+        """Return whether implementation is DuckDB.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_duckdb()
+            False
+        """
+        return self is Implementation.DUCKDB  # pragma: no cover
+
+    def is_ibis(self: Self) -> bool:
+        """Return whether implementation is Ibis.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_ibis()
+            False
+        """
+        return self is Implementation.IBIS  # pragma: no cover
+
+    def is_sqlframe(self: Self) -> bool:
+        """Return whether implementation is SQLFrame.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_sqlframe()
+            False
+        """
+        return self is Implementation.SQLFRAME  # pragma: no cover
+
+
+MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
+    Implementation.PANDAS: (0, 25, 3),
+    Implementation.MODIN: (0, 25, 3),
+    Implementation.CUDF: (24, 10),
+    Implementation.PYARROW: (11,),
+    Implementation.PYSPARK: (3, 5),
+    Implementation.POLARS: (0, 20, 3),
+    Implementation.DASK: (2024, 8),
+    Implementation.DUCKDB: (1,),
+    Implementation.IBIS: (6,),
+    Implementation.SQLFRAME: (3, 22, 0),
+}
+
+
+def validate_backend_version(
+    implementation: Implementation, backend_version: tuple[int, ...]
+) -> None:
+    if backend_version < (min_version := MIN_VERSIONS[implementation]):
+        msg = f"Minimum version of {implementation} supported by Narwhals is {min_version}, found: {backend_version}"
+        raise ValueError(msg)
 
 
 def import_dtypes_module(version: Version) -> DTypes:
@@ -260,10 +578,10 @@ def import_dtypes_module(version: Version) -> DTypes:
     return dtypes  # type: ignore[return-value]
 
 
-def remove_prefix(text: str, prefix: str) -> str:
+def remove_prefix(text: str, prefix: str) -> str:  # pragma: no cover
     if text.startswith(prefix):
         return text[len(prefix) :]
-    return text  # pragma: no cover
+    return text
 
 
 def remove_suffix(text: str, suffix: str) -> str:  # pragma: no cover
@@ -273,11 +591,7 @@ def remove_suffix(text: str, suffix: str) -> str:  # pragma: no cover
 
 
 def flatten(args: Any) -> list[Any]:
-    if not args:
-        return []
-    if len(args) == 1 and _is_iterable(args[0]):
-        return args[0]  # type: ignore[no-any-return]
-    return args  # type: ignore[no-any-return]
+    return list(args[0] if (len(args) == 1 and _is_iterable(args[0])) else args)
 
 
 def tupleify(arg: Any) -> Any:
@@ -306,27 +620,73 @@ def _is_iterable(arg: Any | Iterable[Any]) -> bool:
     return isinstance(arg, Iterable) and not isinstance(arg, (str, bytes, Series))
 
 
-def parse_version(version: Sequence[str | int]) -> tuple[int, ...]:
+def parse_version(version: str | ModuleType | _SupportsVersion) -> tuple[int, ...]:
     """Simple version parser; split into a tuple of ints for comparison.
 
     Arguments:
-        version: Version string to parse.
+        version: Version string, or object with one, to parse.
 
     Returns:
         Parsed version number.
     """
     # lifted from Polars
-    if isinstance(version, str):  # pragma: no cover
-        version = version.split(".")
-    return tuple(int(re.sub(r"\D", "", str(v))) for v in version)
+    # [marco]: Take care of DuckDB pre-releases which end with e.g. `-dev4108`
+    # and pandas pre-releases which end with e.g. .dev0+618.gb552dc95c9
+    version_str = version if isinstance(version, str) else version.__version__
+    version_str = re.sub(r"(\D?dev.*$)", "", version_str)
+    return tuple(int(re.sub(r"\D", "", v)) for v in version_str.split("."))
 
 
-def isinstance_or_issubclass(obj: Any, cls: Any) -> bool:
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type, cls_or_tuple: type[_T]
+) -> TypeIs[type[_T]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type, cls_or_tuple: type[_T]
+) -> TypeIs[_T | type[_T]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type, cls_or_tuple: tuple[type[_T1], type[_T2]]
+) -> TypeIs[type[_T1 | _T2]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type, cls_or_tuple: tuple[type[_T1], type[_T2]]
+) -> TypeIs[_T1 | _T2 | type[_T1 | _T2]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type, cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3]]
+) -> TypeIs[type[_T1 | _T2 | _T3]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type, cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3]]
+) -> TypeIs[_T1 | _T2 | _T3 | type[_T1 | _T2 | _T3]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: Any, cls_or_tuple: tuple[type, ...]
+) -> TypeIs[Any]: ...
+
+
+def isinstance_or_issubclass(obj_or_cls: Any, cls_or_tuple: Any) -> bool:
     from narwhals.dtypes import DType
 
-    if isinstance(obj, DType):
-        return isinstance(obj, cls)
-    return isinstance(obj, cls) or (isinstance(obj, type) and issubclass(obj, cls))
+    if isinstance(obj_or_cls, DType):
+        return isinstance(obj_or_cls, cls_or_tuple)
+    return isinstance(obj_or_cls, cls_or_tuple) or (
+        isinstance(obj_or_cls, type) and issubclass(obj_or_cls, cls_or_tuple)
+    )
 
 
 def validate_laziness(items: Iterable[Any]) -> None:
@@ -382,14 +742,14 @@ def maybe_align_index(
             msg = "given index doesn't have a unique index"
             raise ValueError(msg)
 
-    lhs_any = cast(Any, lhs)
-    rhs_any = cast(Any, rhs)
+    lhs_any = cast("Any", lhs)
+    rhs_any = cast("Any", rhs)
     if isinstance(
         getattr(lhs_any, "_compliant_frame", None), PandasLikeDataFrame
     ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasLikeDataFrame):
         _validate_index(lhs_any._compliant_frame._native_frame.index)
         _validate_index(rhs_any._compliant_frame._native_frame.index)
-        return lhs_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+        return lhs_any._from_compliant_dataframe(
             lhs_any._compliant_frame._from_native_frame(
                 lhs_any._compliant_frame._native_frame.loc[
                     rhs_any._compliant_frame._native_frame.index
@@ -401,7 +761,7 @@ def maybe_align_index(
     ) and isinstance(getattr(rhs_any, "_compliant_series", None), PandasLikeSeries):
         _validate_index(lhs_any._compliant_frame._native_frame.index)
         _validate_index(rhs_any._compliant_series._native_series.index)
-        return lhs_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+        return lhs_any._from_compliant_dataframe(
             lhs_any._compliant_frame._from_native_frame(
                 lhs_any._compliant_frame._native_frame.loc[
                     rhs_any._compliant_series._native_series.index
@@ -413,7 +773,7 @@ def maybe_align_index(
     ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasLikeDataFrame):
         _validate_index(lhs_any._compliant_series._native_series.index)
         _validate_index(rhs_any._compliant_frame._native_frame.index)
-        return lhs_any._from_compliant_series(  # type: ignore[no-any-return]
+        return lhs_any._from_compliant_series(
             lhs_any._compliant_series._from_native_series(
                 lhs_any._compliant_series._native_series.loc[
                     rhs_any._compliant_frame._native_frame.index
@@ -425,7 +785,7 @@ def maybe_align_index(
     ) and isinstance(getattr(rhs_any, "_compliant_series", None), PandasLikeSeries):
         _validate_index(lhs_any._compliant_series._native_series.index)
         _validate_index(rhs_any._compliant_series._native_series.index)
-        return lhs_any._from_compliant_series(  # type: ignore[no-any-return]
+        return lhs_any._from_compliant_series(
             lhs_any._compliant_series._from_native_series(
                 lhs_any._compliant_series._native_series.loc[
                     rhs_any._compliant_series._native_series.index
@@ -467,7 +827,7 @@ def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series[Any]) -> Any |
         >>> nw.maybe_get_index(series)
         RangeIndex(start=0, stop=2, step=1)
     """
-    obj_any = cast(Any, obj)
+    obj_any = cast("Any", obj)
     native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj) or is_pandas_like_series(native_obj):
         return native_obj.index
@@ -523,14 +883,14 @@ def maybe_set_index(
     """
     from narwhals.translate import to_native
 
-    df_any = cast(Any, obj)
+    df_any = cast("Any", obj)
     native_obj = df_any.to_native()
 
     if column_names is not None and index is not None:
         msg = "Only one of `column_names` or `index` should be provided"
         raise ValueError(msg)
 
-    if not column_names and not index:
+    if not column_names and index is None:
         msg = "Either `column_names` or `index` should be provided"
         raise ValueError(msg)
 
@@ -544,27 +904,27 @@ def maybe_set_index(
         keys = column_names
 
     if is_pandas_like_dataframe(native_obj):
-        return df_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+        return df_any._from_compliant_dataframe(
             df_any._compliant_frame._from_native_frame(native_obj.set_index(keys))
         )
     elif is_pandas_like_series(native_obj):
-        from narwhals._pandas_like.utils import set_axis
+        from narwhals._pandas_like.utils import set_index
 
         if column_names:
             msg = "Cannot set index using column names on a Series"
             raise ValueError(msg)
 
-        native_obj = set_axis(
+        native_obj = set_index(
             native_obj,
             keys,
             implementation=obj._compliant_series._implementation,  # type: ignore[union-attr]
             backend_version=obj._compliant_series._backend_version,  # type: ignore[union-attr]
         )
-        return df_any._from_compliant_series(  # type: ignore[no-any-return]
+        return df_any._from_compliant_series(
             df_any._compliant_series._from_native_series(native_obj)
         )
     else:
-        return df_any  # type: ignore[no-any-return]
+        return df_any
 
 
 def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
@@ -598,33 +958,38 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
         >>> nw.maybe_get_index(series)
         RangeIndex(start=0, stop=2, step=1)
     """
-    obj_any = cast(Any, obj)
+    obj_any = cast("Any", obj)
     native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj):
         native_namespace = obj_any.__native_namespace__()
         if _has_default_index(native_obj, native_namespace):
-            return obj_any  # type: ignore[no-any-return]
-        return obj_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+            return obj_any
+        return obj_any._from_compliant_dataframe(
             obj_any._compliant_frame._from_native_frame(native_obj.reset_index(drop=True))
         )
     if is_pandas_like_series(native_obj):
         native_namespace = obj_any.__native_namespace__()
         if _has_default_index(native_obj, native_namespace):
-            return obj_any  # type: ignore[no-any-return]
-        return obj_any._from_compliant_series(  # type: ignore[no-any-return]
+            return obj_any
+        return obj_any._from_compliant_series(
             obj_any._compliant_series._from_native_series(
                 native_obj.reset_index(drop=True)
             )
         )
-    return obj_any  # type: ignore[no-any-return]
+    return obj_any
 
 
+def _is_range_index(obj: Any, native_namespace: Any) -> TypeIs[pd.RangeIndex]:
+    return isinstance(obj, native_namespace.RangeIndex)
+
+
+# NOTE: Remove ignore(s) after release w/ (https://github.com/pandas-dev/pandas-stubs/pull/1115)
 def _has_default_index(
-    native_frame_or_series: pd.Series | pd.DataFrame, native_namespace: Any
+    native_frame_or_series: pd.Series[Any] | pd.DataFrame, native_namespace: Any
 ) -> bool:
     index = native_frame_or_series.index
     return (
-        isinstance(index, native_namespace.RangeIndex)
+        _is_range_index(index, native_namespace)
         and index.start == 0
         and index.stop == len(index)
         and index.step == 1
@@ -660,26 +1025,28 @@ def maybe_convert_dtypes(
         ...     }
         ... )
         >>> df = nw.from_native(df_pd)
-        >>> nw.to_native(nw.maybe_convert_dtypes(df)).dtypes  # doctest: +NORMALIZE_WHITESPACE
+        >>> nw.to_native(
+        ...     nw.maybe_convert_dtypes(df)
+        ... ).dtypes  # doctest: +NORMALIZE_WHITESPACE
         a             Int32
         b           boolean
         dtype: object
     """
-    obj_any = cast(Any, obj)
+    obj_any = cast("Any", obj)
     native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj):
-        return obj_any._from_compliant_dataframe(  # type: ignore[no-any-return]
+        return obj_any._from_compliant_dataframe(
             obj_any._compliant_frame._from_native_frame(
                 native_obj.convert_dtypes(*args, **kwargs)
             )
         )
     if is_pandas_like_series(native_obj):
-        return obj_any._from_compliant_series(  # type: ignore[no-any-return]
+        return obj_any._from_compliant_series(
             obj_any._compliant_series._from_native_series(
                 native_obj.convert_dtypes(*args, **kwargs)
             )
         )
-    return obj_any  # type: ignore[no-any-return]
+    return obj_any
 
 
 def scale_bytes(sz: int, unit: SizeUnit) -> int | float:
@@ -757,29 +1124,31 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         isinstance(series._compliant_series, InterchangeSeries)
         and series.dtype == dtypes.Categorical
     ):
-        return series._compliant_series._native_series.describe_categorical[  # type: ignore[no-any-return]
-            "is_ordered"
-        ]
+        return series._compliant_series._native_series.describe_categorical["is_ordered"]
     if series.dtype == dtypes.Enum:
         return True
     if series.dtype != dtypes.Categorical:
         return False
     native_series = series.to_native()
     if is_polars_series(native_series):
-        return native_series.dtype.ordering == "physical"  # type: ignore[attr-defined, no-any-return]
+        return native_series.dtype.ordering == "physical"  # type: ignore[attr-defined]
     if is_pandas_series(native_series):
-        return native_series.cat.ordered  # type: ignore[no-any-return]
+        return bool(native_series.cat.ordered)
     if is_modin_series(native_series):  # pragma: no cover
-        return native_series.cat.ordered  # type: ignore[no-any-return]
+        return native_series.cat.ordered
     if is_cudf_series(native_series):  # pragma: no cover
-        return native_series.cat.ordered  # type: ignore[no-any-return]
+        return native_series.cat.ordered
     if is_pyarrow_chunked_array(native_series):
-        return native_series.type.ordered  # type: ignore[no-any-return]
+        from narwhals._arrow.utils import is_dictionary
+
+        return is_dictionary(native_series.type) and native_series.type.ordered
     # If it doesn't match any of the above, let's just play it safe and return False.
     return False  # pragma: no cover
 
 
-def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: no cover
+def generate_unique_token(
+    n_bytes: int, columns: Sequence[str]
+) -> str:  # pragma: no cover
     msg = (
         "Use `generate_temporary_column_name` instead. `generate_unique_token` is "
         "deprecated and it will be removed in future versions"
@@ -788,7 +1157,7 @@ def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: n
     return generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
 
 
-def generate_temporary_column_name(n_bytes: int, columns: list[str]) -> str:
+def generate_temporary_column_name(n_bytes: int, columns: Sequence[str]) -> str:
     """Generates a unique column name that is not present in the given list of columns.
 
     It relies on [python secrets token_hex](https://docs.python.org/3/library/secrets.html#secrets.token_hex)
@@ -843,7 +1212,7 @@ def parse_columns_to_drop(
     return to_drop
 
 
-def is_sequence_but_not_str(sequence: Any) -> TypeGuard[Sequence[Any]]:
+def is_sequence_but_not_str(sequence: Any | Sequence[_T]) -> TypeIs[Sequence[_T]]:
     return isinstance(sequence, Sequence) and not isinstance(sequence, str)
 
 
@@ -901,8 +1270,8 @@ def issue_deprecation_warning(message: str, _version: str) -> None:
 
 
 def validate_strict_and_pass_though(
-    strict: bool | None,
-    pass_through: bool | None,
+    strict: bool | None,  # noqa: FBT001
+    pass_through: bool | None,  # noqa: FBT001
     *,
     pass_through_default: bool,
     emit_deprecation_warning: bool,
@@ -914,7 +1283,7 @@ def validate_strict_and_pass_though(
             msg = (
                 "`strict` in `from_native` is deprecated, please use `pass_through` instead.\n\n"
                 "Note: `strict` will remain available in `narwhals.stable.v1`.\n"
-                "See [stable api](../backcompat.md/) for more information.\n"
+                "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
             )
             issue_deprecation_warning(msg, _version="1.13.0")
         pass_through = not strict
@@ -926,8 +1295,49 @@ def validate_strict_and_pass_though(
     return pass_through
 
 
+def deprecate_native_namespace(
+    *, warn_version: str = "", required: bool = False
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    """Decorator to transition from `native_namespace` to `backend` argument.
+
+    Arguments:
+        warn_version: Emit a deprecation warning from this version.
+        required: Raise when both `native_namespace`, `backend` are `None`.
+
+    Returns:
+        Wrapped function, with `native_namespace` **removed**.
+    """
+
+    def decorate(fn: Callable[P, R], /) -> Callable[P, R]:
+        @wraps(fn)
+        def wrapper(*args: P.args, **kwds: P.kwargs) -> R:
+            backend = kwds.pop("backend", None)
+            native_namespace = kwds.pop("native_namespace", None)
+            if native_namespace is not None and backend is None:
+                if warn_version:
+                    msg = (
+                        "`native_namespace` is deprecated, please use `backend` instead.\n\n"
+                        "Note: `native_namespace` will remain available in `narwhals.stable.v1`.\n"
+                        "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+                    )
+                    issue_deprecation_warning(msg, _version=warn_version)
+                backend = native_namespace
+            elif native_namespace is not None and backend is not None:
+                msg = "Can't pass both `native_namespace` and `backend`"
+                raise ValueError(msg)
+            elif native_namespace is None and backend is None and required:
+                msg = f"`backend` must be specified in `{fn.__name__}`."
+                raise ValueError(msg)
+            kwds["backend"] = backend
+            return fn(*args, **kwds)
+
+        return wrapper
+
+    return decorate
+
+
 def _validate_rolling_arguments(
-    window_size: int, min_periods: int | None
+    window_size: int, min_samples: int | None
 ) -> tuple[int, int]:
     if window_size < 1:
         msg = "window_size must be greater or equal than 1"
@@ -941,22 +1351,319 @@ def _validate_rolling_arguments(
         )
         raise TypeError(msg)
 
-    if min_periods is not None:
-        if min_periods < 1:
-            msg = "min_periods must be greater or equal than 1"
+    if min_samples is not None:
+        if min_samples < 1:
+            msg = "min_samples must be greater or equal than 1"
             raise ValueError(msg)
 
-        if not isinstance(min_periods, int):
-            _type = min_periods.__class__.__name__
+        if not isinstance(min_samples, int):
+            _type = min_samples.__class__.__name__
             msg = (
-                f"argument 'min_periods': '{_type}' object cannot be "
+                f"argument 'min_samples': '{_type}' object cannot be "
                 "interpreted as an integer"
             )
             raise TypeError(msg)
-        if min_periods > window_size:
-            msg = "`min_periods` must be less or equal than `window_size`"
+        if min_samples > window_size:
+            msg = "`min_samples` must be less or equal than `window_size`"
             raise InvalidOperationError(msg)
     else:
-        min_periods = window_size
+        min_samples = window_size
 
-    return window_size, min_periods
+    return window_size, min_samples
+
+
+def generate_repr(header: str, native_repr: str) -> str:
+    try:
+        terminal_width = os.get_terminal_size().columns
+    except OSError:
+        terminal_width = int(os.getenv("COLUMNS", 80))  # noqa: PLW1508
+    native_lines = native_repr.splitlines()
+    max_native_width = max(len(line) for line in native_lines)
+
+    if max_native_width + 2 <= terminal_width:
+        length = max(max_native_width, len(header))
+        output = f"┌{'─' * length}┐\n"
+        header_extra = length - len(header)
+        output += f"|{' ' * (header_extra // 2)}{header}{' ' * (header_extra // 2 + header_extra % 2)}|\n"
+        output += f"|{'-' * (length)}|\n"
+        start_extra = (length - max_native_width) // 2
+        end_extra = (length - max_native_width) // 2 + (length - max_native_width) % 2
+        for line in native_lines:
+            output += f"|{' ' * (start_extra)}{line}{' ' * (end_extra + max_native_width - len(line))}|\n"
+        output += f"└{'─' * length}┘"
+        return output
+
+    diff = 39 - len(header)
+    return (
+        f"┌{'─' * (39)}┐\n"
+        f"|{' ' * (diff // 2)}{header}{' ' * (diff // 2 + diff % 2)}|\n"
+        "| Use `.to_native` to see native output |\n└"
+        f"{'─' * 39}┘"
+    )
+
+
+def check_column_exists(columns: Sequence[str], subset: Sequence[str] | None) -> None:
+    if subset is not None and (missing := set(subset).difference(columns)):
+        msg = f"Column(s) {sorted(missing)} not found in {columns}"
+        raise ColumnNotFoundError(msg)
+
+
+def check_column_names_are_unique(columns: Sequence[str]) -> None:
+    len_unique_columns = len(set(columns))
+    if len(columns) != len_unique_columns:
+        from collections import Counter
+
+        counter = Counter(columns)
+        duplicates = {k: v for k, v in counter.items() if v > 1}
+        msg = "".join(f"\n- '{k}' {v} times" for k, v in duplicates.items())
+        msg = f"Expected unique column names, got:{msg}"
+        raise DuplicateError(msg)
+
+
+def _parse_time_unit_and_time_zone(
+    time_unit: TimeUnit | Iterable[TimeUnit] | None,
+    time_zone: str | timezone | Iterable[str | timezone | None] | None,
+) -> tuple[Set[TimeUnit], Set[str | None]]:
+    time_units: Set[TimeUnit] = (
+        {"ms", "us", "ns", "s"}
+        if time_unit is None
+        else {time_unit}
+        if isinstance(time_unit, str)
+        else set(time_unit)
+    )
+    time_zones: Set[str | None] = (
+        {None}
+        if time_zone is None
+        else {str(time_zone)}
+        if isinstance(time_zone, (str, timezone))
+        else {str(tz) if tz is not None else None for tz in time_zone}
+    )
+    return time_units, time_zones
+
+
+def dtype_matches_time_unit_and_time_zone(
+    dtype: DType, dtypes: DTypes, time_units: Set[TimeUnit], time_zones: Set[str | None]
+) -> bool:
+    return (
+        isinstance(dtype, dtypes.Datetime)
+        and (dtype.time_unit in time_units)
+        and (
+            dtype.time_zone in time_zones
+            or ("*" in time_zones and dtype.time_zone is not None)
+        )
+    )
+
+
+def get_column_names(frame: _StoresColumns, /) -> Sequence[str]:
+    return frame.columns
+
+
+def exclude_column_names(frame: _StoresColumns, names: Container[str]) -> Sequence[str]:
+    return [col_name for col_name in frame.columns if col_name not in names]
+
+
+def passthrough_column_names(names: Sequence[str], /) -> Callable[[Any], Sequence[str]]:
+    def fn(_frame: Any, /) -> Sequence[str]:
+        return names
+
+    return fn
+
+
+def _hasattr_static(obj: Any, attr: str) -> bool:
+    sentinel = object()
+    return getattr_static(obj, attr, sentinel) is not sentinel
+
+
+def is_compliant_dataframe(
+    obj: CompliantDataFrame[CompliantSeriesT_co, CompliantExprT_co, NativeFrameT_co]
+    | Any,
+) -> TypeIs[CompliantDataFrame[CompliantSeriesT_co, CompliantExprT_co, NativeFrameT_co]]:
+    return _hasattr_static(obj, "__narwhals_dataframe__")
+
+
+def is_compliant_lazyframe(
+    obj: CompliantLazyFrame[CompliantExprT_co, NativeFrameT_co] | Any,
+) -> TypeIs[CompliantLazyFrame[CompliantExprT_co, NativeFrameT_co]]:
+    return _hasattr_static(obj, "__narwhals_lazyframe__")
+
+
+def is_compliant_series(
+    obj: CompliantSeries[NativeSeriesT_co] | Any,
+) -> TypeIs[CompliantSeries[NativeSeriesT_co]]:
+    return _hasattr_static(obj, "__narwhals_series__")
+
+
+def is_compliant_expr(
+    obj: CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | Any,
+) -> TypeIs[CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co]]:
+    return hasattr(obj, "__narwhals_expr__")
+
+
+def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
+    return hasattr(obj, "__native_namespace__")
+
+
+def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
+    return hasattr(obj, "__dataframe__")
+
+
+def supports_arrow_c_stream(obj: Any) -> TypeIs[ArrowStreamExportable]:
+    return _hasattr_static(obj, "__arrow_c_stream__")
+
+
+def _remap_full_join_keys(
+    left_on: Sequence[str], right_on: Sequence[str], suffix: str
+) -> dict[str, str]:
+    """Remap join keys to avoid collisions.
+
+    If left keys collide with the right keys, append the suffix.
+    If there's no collision, let the right keys be.
+
+    Arguments:
+        left_on: Left keys.
+        right_on: Right keys.
+        suffix: Suffix to append to right keys.
+
+    Returns:
+        A map of old to new right keys.
+    """
+    right_keys_suffixed = (
+        f"{key}{suffix}" if key in left_on else key for key in right_on
+    )
+    return dict(zip(right_on, right_keys_suffixed))
+
+
+# TODO @dangotbanned: Extend with runtime behavior for `v1.*`
+# See `narwhals.exceptions.NarwhalsUnstableWarning`
+def unstable(fn: _Fn, /) -> _Fn:
+    """Visual-only marker for unstable functionality.
+
+    Arguments:
+        fn: Function to decorate.
+
+    Returns:
+        Decorated function (unchanged).
+
+    Examples:
+        >>> from narwhals.utils import unstable
+        >>> @unstable
+        ... def a_work_in_progress_feature(*args):
+        ...     return args
+        >>>
+        >>> a_work_in_progress_feature.__name__
+        'a_work_in_progress_feature'
+        >>> a_work_in_progress_feature(1, 2, 3)
+        (1, 2, 3)
+    """
+    return fn
+
+
+if TYPE_CHECKING:
+    import sys
+
+    if sys.version_info >= (3, 13):
+        # NOTE: avoids `mypy`
+        #     error: Module "narwhals.utils" does not explicitly export attribute "deprecated"  [attr-defined]
+        from warnings import deprecated as deprecated  # noqa: PLC0414
+    else:
+        from typing_extensions import deprecated as deprecated  # noqa: PLC0414
+else:
+
+    def deprecated(message: str, /) -> Callable[[_Fn], _Fn]:  # noqa: ARG001
+        def wrapper(func: _Fn, /) -> _Fn:
+            return func
+
+        return wrapper
+
+
+class not_implemented:  # noqa: N801
+    """Mark some functionality as unsupported.
+
+    Arguments:
+        alias: optional name used instead of the data model hook [`__set_name__`].
+
+    Returns:
+        An exception-raising [descriptor].
+
+    Notes:
+        - Attribute/method name *doesn't* need to be declared twice
+        - Allows different behavior when looked up on the class vs instance
+        - Allows us to use `isinstance(...)` instead of monkeypatching an attribute to the function
+
+    Examples:
+        >>> from narwhals.utils import not_implemented
+        >>> class Thing:
+        ...     def totally_ready(self) -> str:
+        ...         return "I'm ready!"
+        ...
+        ...     not_ready_yet = not_implemented()
+        >>>
+        >>> thing = Thing()
+        >>> thing.totally_ready()
+        "I'm ready!"
+        >>> thing.not_ready_yet()
+        Traceback (most recent call last):
+            ...
+        NotImplementedError: 'not_ready_yet' is not implemented for: 'Thing'.
+        ...
+        >>> isinstance(Thing.not_ready_yet, not_implemented)
+        True
+
+    [`__set_name__`]: https://docs.python.org/3/reference/datamodel.html#object.__set_name__
+    [descriptor]: https://docs.python.org/3/howto/descriptor.html
+    """
+
+    def __init__(self, alias: str | None = None, /) -> None:
+        # NOTE: Don't like this
+        # Trying to workaround `mypy` requiring `@property` everywhere
+        self._alias: str | None = alias
+
+    def __repr__(self) -> str:
+        return f"<{type(self).__name__}>: {self._name_owner}.{self._name}"
+
+    def __set_name__(self, owner: type[_T], name: str) -> None:
+        # https://docs.python.org/3/howto/descriptor.html#customized-names
+        self._name_owner: str = owner.__name__
+        self._name: str = self._alias or name
+
+    def __get__(
+        self, instance: _T | Literal["raise"] | None, owner: type[_T] | None = None, /
+    ) -> Any:
+        if instance is None:
+            # NOTE: Branch for `cls._name`
+            # We can check that to see if an instance of `type(self)` for
+            # https://narwhals-dev.github.io/narwhals/api-completeness/expr/
+            return self
+        # NOTE: Prefer not exposing the actual class we're defining in
+        # `_implementation` may not be available everywhere
+        who = getattr(instance, "_implementation", self._name_owner)
+        raise _not_implemented_error(self._name, who)
+
+    def __call__(self, *args: Any, **kwds: Any) -> Any:
+        # NOTE: Purely to duck-type as assignable to **any** instance method
+        # Wouldn't be reachable through *regular* attribute access
+        return self.__get__("raise")
+
+    @classmethod
+    def deprecated(cls, message: LiteralString, /) -> Self:
+        """Alt constructor, wraps with `@deprecated`.
+
+        Arguments:
+            message: **Static-only** deprecation message, emitted in an IDE.
+
+        Returns:
+            An exception-raising [descriptor].
+
+        [descriptor]: https://docs.python.org/3/howto/descriptor.html
+        """
+        obj = cls()
+        return deprecated(message)(obj)
+
+
+def _not_implemented_error(what: str, who: str, /) -> NotImplementedError:
+    msg = (
+        f"{what!r} is not implemented for: {who!r}.\n\n"
+        "If you would like to see this functionality in `narwhals`, "
+        "please open an issue at: https://github.com/narwhals-dev/narwhals/issues"
+    )
+    return NotImplementedError(msg)

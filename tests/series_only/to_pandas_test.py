@@ -22,7 +22,7 @@ def test_convert(
 ) -> None:
     if any(
         cname in str(constructor_eager)
-        for cname in ("pandas_nullable", "pandas_pyarrow", "modin")
+        for cname in ("pandas_nullable", "pandas_pyarrow", "modin_pyarrow")
     ):
         request.applymarker(pytest.mark.xfail)
 

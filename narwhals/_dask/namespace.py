@@ -1,214 +1,154 @@
 from __future__ import annotations
 
+import operator
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
-from typing import cast
 
+import dask.dataframe as dd
+import pandas as pd
+
+from narwhals._compliant import CompliantThen
+from narwhals._compliant import CompliantWhen
+from narwhals._compliant.namespace import DepthTrackingNamespace
 from narwhals._dask.dataframe import DaskLazyFrame
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
+from narwhals._dask.utils import align_series_full_broadcast
 from narwhals._dask.utils import name_preserving_div
 from narwhals._dask.utils import name_preserving_sum
 from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals._dask.utils import validate_comparand
-from narwhals._expression_parsing import combine_root_names
-from narwhals._expression_parsing import parse_into_exprs
-from narwhals._expression_parsing import reduce_output_names
-from narwhals.typing import CompliantNamespace
+from narwhals._expression_parsing import combine_alias_output_names
+from narwhals._expression_parsing import combine_evaluate_output_names
+from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
-    import dask_expr
+    from typing_extensions import Self
 
-    from narwhals._dask.typing import IntoDaskExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
+    try:
+        import dask.dataframe.dask_expr as dx
+    except ModuleNotFoundError:  # pragma: no cover
+        import dask_expr as dx
 
-class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
+
+class DaskNamespace(DepthTrackingNamespace[DaskLazyFrame, "DaskExpr"]):
+    _implementation: Implementation = Implementation.DASK
+
     @property
-    def selectors(self) -> DaskSelectorNamespace:
-        return DaskSelectorNamespace(
-            backend_version=self._backend_version, version=self._version
-        )
+    def selectors(self: Self) -> DaskSelectorNamespace:
+        return DaskSelectorNamespace(self)
 
-    def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
+    @property
+    def _expr(self) -> type[DaskExpr]:
+        return DaskExpr
+
+    def __init__(
+        self: Self, *, backend_version: tuple[int, ...], version: Version
+    ) -> None:
         self._backend_version = backend_version
         self._version = version
 
-    def all(self) -> DaskExpr:
-        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            return [df._native_frame[column_name] for column_name in df.columns]
+    def lit(self: Self, value: Any, dtype: DType | type[DType] | None) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            if dtype is not None:
+                native_dtype = narwhals_to_native_dtype(dtype, self._version)
+                native_pd_series = pd.Series([value], dtype=native_dtype, name="literal")
+            else:
+                native_pd_series = pd.Series([value], name="literal")
+            npartitions = df._native_frame.npartitions
+            dask_series = dd.from_pandas(native_pd_series, npartitions=npartitions)
+            return [dask_series[0].to_series()]
 
-        return DaskExpr(
+        return self._expr(
             func,
             depth=0,
-            function_name="all",
-            root_names=None,
-            output_names=None,
-            returns_scalar=False,
-            backend_version=self._backend_version,
-            version=self._version,
-            kwargs={},
-        )
-
-    def col(self, *column_names: str) -> DaskExpr:
-        return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        )
-
-    def nth(self, *column_indices: int) -> DaskExpr:
-        return DaskExpr.from_column_indices(
-            *column_indices, backend_version=self._backend_version, version=self._version
-        )
-
-    def lit(self, value: Any, dtype: DType | None) -> DaskExpr:
-        def convert_if_dtype(
-            series: dask_expr.Series, dtype: DType | type[DType]
-        ) -> dask_expr.Series:
-            return (
-                series.astype(narwhals_to_native_dtype(dtype, self._version))
-                if dtype
-                else series
-            )
-
-        return DaskExpr(
-            lambda df: [
-                df._native_frame.assign(literal=value)["literal"].pipe(
-                    convert_if_dtype, dtype
-                )
-            ],
-            depth=0,
             function_name="lit",
-            root_names=None,
-            output_names=["literal"],
-            returns_scalar=False,
+            evaluate_output_names=lambda _df: ["literal"],
+            alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
-    def min(self, *column_names: str) -> DaskExpr:
-        return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).min()
+    def len(self: Self) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            # We don't allow dataframes with 0 columns, so `[0]` is safe.
+            return [df._native_frame[df.columns[0]].size.to_series()]
 
-    def max(self, *column_names: str) -> DaskExpr:
-        return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).max()
-
-    def mean(self, *column_names: str) -> DaskExpr:
-        return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).mean()
-
-    def median(self, *column_names: str) -> DaskExpr:
-        return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).median()
-
-    def sum(self, *column_names: str) -> DaskExpr:
-        return DaskExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        ).sum()
-
-    def len(self) -> DaskExpr:
-        import dask.dataframe as dd
-        import pandas as pd
-
-        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            if not df.columns:
-                return [
-                    dd.from_pandas(
-                        pd.Series([0], name="len"),
-                        npartitions=df._native_frame.npartitions,
-                    )
-                ]
-            return [df._native_frame[df.columns[0]].size.to_series().rename("len")]
-
-        # coverage bug? this is definitely hit
-        return DaskExpr(  # pragma: no cover
+        return self._expr(
             func,
             depth=0,
             function_name="len",
-            root_names=None,
-            output_names=["len"],
-            returns_scalar=True,
+            evaluate_output_names=lambda _df: ["len"],
+            alias_output_names=None,
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
-    def all_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+    def all_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            series = align_series_full_broadcast(
+                df, *(s for _expr in exprs for s in _expr(df))
+            )
+            return [reduce(operator.and_, series)]
 
-        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            series = [s for _expr in parsed_exprs for s in _expr(df)]
-            return [reduce(lambda x, y: x & y, series).rename(series[0].name)]
-
-        return DaskExpr(
+        return self._expr(
             call=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="all_horizontal",
-            root_names=combine_root_names(parsed_exprs),
-            output_names=reduce_output_names(parsed_exprs),
-            returns_scalar=False,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
-    def any_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+    def any_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            series = align_series_full_broadcast(
+                df, *(s for _expr in exprs for s in _expr(df))
+            )
+            return [reduce(operator.or_, series)]
 
-        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            series = [s for _expr in parsed_exprs for s in _expr(df)]
-            return [reduce(lambda x, y: x | y, series).rename(series[0].name)]
-
-        return DaskExpr(
+        return self._expr(
             call=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="any_horizontal",
-            root_names=combine_root_names(parsed_exprs),
-            output_names=reduce_output_names(parsed_exprs),
-            returns_scalar=False,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
-    def sum_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+    def sum_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            series = align_series_full_broadcast(
+                df, *(s for _expr in exprs for s in _expr(df))
+            )
+            return [dd.concat(series, axis=1).sum(axis=1)]
 
-        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            series = [s.fillna(0) for _expr in parsed_exprs for s in _expr(df)]
-            return [reduce(lambda x, y: x + y, series).rename(series[0].name)]
-
-        return DaskExpr(
+        return self._expr(
             call=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="sum_horizontal",
-            root_names=combine_root_names(parsed_exprs),
-            output_names=reduce_output_names(parsed_exprs),
-            returns_scalar=False,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
     def concat(
-        self,
+        self: Self,
         items: Iterable[DaskLazyFrame],
         *,
         how: Literal["horizontal", "vertical", "diagonal"],
     ) -> DaskLazyFrame:
-        import dask.dataframe as dd
-
-        if len(list(items)) == 0:
+        if not items:
             msg = "No items to concatenate"  # pragma: no cover
             raise AssertionError(msg)
         dfs = [i._native_frame for i in items]
@@ -257,12 +197,13 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
 
         raise NotImplementedError
 
-    def mean_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
-
-        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            series = (s.fillna(0) for _expr in parsed_exprs for s in _expr(df))
-            non_na = (1 - s.isna() for _expr in parsed_exprs for s in _expr(df))
+    def mean_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            expr_results = [s for _expr in exprs for s in _expr(df)]
+            series = align_series_full_broadcast(df, *(s.fillna(0) for s in expr_results))
+            non_na = align_series_full_broadcast(
+                df, *(1 - s.isna() for s in expr_results)
+            )
             return [
                 name_preserving_div(
                     reduce(name_preserving_sum, series),
@@ -270,95 +211,70 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
                 )
             ]
 
-        return DaskExpr(
+        return self._expr(
             call=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="mean_horizontal",
-            root_names=combine_root_names(parsed_exprs),
-            output_names=reduce_output_names(parsed_exprs),
-            returns_scalar=False,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
-    def min_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        import dask.dataframe as dd
+    def min_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            series = align_series_full_broadcast(
+                df, *(s for _expr in exprs for s in _expr(df))
+            )
 
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+            return [dd.concat(series, axis=1).min(axis=1)]
 
-        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            series = [s for _expr in parsed_exprs for s in _expr(df)]
-
-            return [dd.concat(series, axis=1).min(axis=1).rename(series[0].name)]
-
-        return DaskExpr(
+        return self._expr(
             call=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="min_horizontal",
-            root_names=combine_root_names(parsed_exprs),
-            output_names=reduce_output_names(parsed_exprs),
-            returns_scalar=False,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
-    def max_horizontal(self, *exprs: IntoDaskExpr) -> DaskExpr:
-        import dask.dataframe as dd
+    def max_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            series = align_series_full_broadcast(
+                df, *(s for _expr in exprs for s in _expr(df))
+            )
 
-        parsed_exprs = parse_into_exprs(*exprs, namespace=self)
+            return [dd.concat(series, axis=1).max(axis=1)]
 
-        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            series = [s for _expr in parsed_exprs for s in _expr(df)]
-
-            return [dd.concat(series, axis=1).max(axis=1).rename(series[0].name)]
-
-        return DaskExpr(
+        return self._expr(
             call=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="max_horizontal",
-            root_names=combine_root_names(parsed_exprs),
-            output_names=reduce_output_names(parsed_exprs),
-            returns_scalar=False,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
-    def when(
-        self,
-        *predicates: IntoDaskExpr,
-    ) -> DaskWhen:
-        plx = self.__class__(backend_version=self._backend_version, version=self._version)
-        if predicates:
-            condition = plx.all_horizontal(*predicates)
-        else:
-            msg = "at least one predicate needs to be provided"
-            raise TypeError(msg)
-
-        return DaskWhen(
-            condition, self._backend_version, returns_scalar=False, version=self._version
-        )
+    def when(self: Self, predicate: DaskExpr) -> DaskWhen:
+        return DaskWhen.from_expr(predicate, context=self)
 
     def concat_str(
-        self,
-        exprs: Iterable[IntoDaskExpr],
-        *more_exprs: IntoDaskExpr,
-        separator: str = "",
-        ignore_nulls: bool = False,
+        self: Self,
+        *exprs: DaskExpr,
+        separator: str,
+        ignore_nulls: bool,
     ) -> DaskExpr:
-        parsed_exprs = [
-            *parse_into_exprs(*exprs, namespace=self),
-            *parse_into_exprs(*more_exprs, namespace=self),
-        ]
-
-        def func(df: DaskLazyFrame) -> list[dask_expr.Series]:
-            series = (s.astype(str) for _expr in parsed_exprs for s in _expr(df))
-            null_mask = [s for _expr in parsed_exprs for s in _expr.is_null()(df)]
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            expr_results = [s for _expr in exprs for s in _expr(df)]
+            series = (
+                s.astype(str) for s in align_series_full_broadcast(df, *expr_results)
+            )
+            null_mask = [s.isna() for s in align_series_full_broadcast(df, *expr_results)]
 
             if not ignore_nulls:
-                null_mask_result = reduce(lambda x, y: x | y, null_mask)
+                null_mask_result = reduce(operator.or_, null_mask)
                 result = reduce(lambda x, y: x + separator + y, series).where(
                     ~null_mask_result, None
                 )
@@ -372,117 +288,51 @@ class DaskNamespace(CompliantNamespace["dask_expr.Series"]):
                     for nm in null_mask[:-1]
                 )
                 result = reduce(
-                    lambda x, y: x + y,
+                    operator.add,
                     (s + v for s, v in zip(separators, values)),
                     init_value,
                 )
 
             return [result]
 
-        return DaskExpr(
+        return self._expr(
             call=func,
-            depth=max(x._depth for x in parsed_exprs) + 1,
+            depth=max(x._depth for x in exprs) + 1,
             function_name="concat_str",
-            root_names=combine_root_names(parsed_exprs),
-            output_names=reduce_output_names(parsed_exprs),
-            returns_scalar=False,
+            evaluate_output_names=getattr(
+                exprs[0], "_evaluate_output_names", lambda _df: ["literal"]
+            ),
+            alias_output_names=getattr(exprs[0], "_alias_output_names", None),
             backend_version=self._backend_version,
             version=self._version,
-            kwargs={},
         )
 
 
-class DaskWhen:
-    def __init__(
-        self,
-        condition: DaskExpr,
-        backend_version: tuple[int, ...],
-        then_value: Any = None,
-        otherwise_value: Any = None,
-        *,
-        returns_scalar: bool,
-        version: Version,
-    ) -> None:
-        self._backend_version = backend_version
-        self._condition = condition
-        self._then_value = then_value
-        self._otherwise_value = otherwise_value
-        self._returns_scalar = returns_scalar
-        self._version = version
+class DaskWhen(CompliantWhen[DaskLazyFrame, "dx.Series", DaskExpr]):
+    @property
+    def _then(self) -> type[DaskThen]:
+        return DaskThen
 
-    def __call__(self, df: DaskLazyFrame) -> Sequence[dask_expr.Series]:
-        from narwhals._dask.namespace import DaskNamespace
-        from narwhals._expression_parsing import parse_into_expr
+    def __call__(self: Self, df: DaskLazyFrame) -> Sequence[dx.Series]:
+        condition = self._condition(df)[0]
 
-        plx = DaskNamespace(backend_version=self._backend_version, version=self._version)
-
-        condition = parse_into_expr(self._condition, namespace=plx)(df)[0]
-        condition = cast("dask_expr.Series", condition)
-        try:
-            value_series = parse_into_expr(self._then_value, namespace=plx)(df)[0]
-        except TypeError:
-            # `self._otherwise_value` is a scalar and can't be converted to an expression
-            _df = condition.to_frame("a")
-            _df["tmp"] = self._then_value
-            value_series = _df["tmp"]
-        value_series = cast("dask_expr.Series", value_series)
-        validate_comparand(condition, value_series)
+        if isinstance(self._then_value, DaskExpr):
+            then_value = self._then_value(df)[0]
+        else:
+            then_value = self._then_value
+        (then_series,) = align_series_full_broadcast(df, then_value)
+        validate_comparand(condition, then_series)
 
         if self._otherwise_value is None:
-            return [value_series.where(condition)]
-        try:
-            otherwise_expr = parse_into_expr(self._otherwise_value, namespace=plx)
-        except TypeError:
-            # `self._otherwise_value` is a scalar and can't be converted to an expression
-            return [value_series.where(condition, self._otherwise_value)]
-        otherwise_series = otherwise_expr(df)[0]
+            return [then_series.where(condition)]
+
+        if isinstance(self._otherwise_value, DaskExpr):
+            otherwise_value = self._otherwise_value(df)[0]
+        else:
+            return [then_series.where(condition, self._otherwise_value)]  # pyright: ignore[reportArgumentType]
+        (otherwise_series,) = align_series_full_broadcast(df, otherwise_value)
         validate_comparand(condition, otherwise_series)
-        return [value_series.where(condition, otherwise_series)]
-
-    def then(self, value: DaskExpr | Any) -> DaskThen:
-        self._then_value = value
-
-        return DaskThen(
-            self,
-            depth=0,
-            function_name="whenthen",
-            root_names=None,
-            output_names=None,
-            returns_scalar=self._returns_scalar,
-            backend_version=self._backend_version,
-            version=self._version,
-            kwargs={},
-        )
+        return [then_series.where(condition, otherwise_series)]  # pyright: ignore[reportArgumentType]
 
 
-class DaskThen(DaskExpr):
-    def __init__(
-        self,
-        call: DaskWhen,
-        *,
-        depth: int,
-        function_name: str,
-        root_names: list[str] | None,
-        output_names: list[str] | None,
-        returns_scalar: bool,
-        backend_version: tuple[int, ...],
-        version: Version,
-        kwargs: dict[str, Any],
-    ) -> None:
-        self._backend_version = backend_version
-        self._version = version
-        self._call = call
-        self._depth = depth
-        self._function_name = function_name
-        self._root_names = root_names
-        self._output_names = output_names
-        self._returns_scalar = returns_scalar
-        self._kwargs = kwargs
-
-    def otherwise(self, value: DaskExpr | Any) -> DaskExpr:
-        # type ignore because we are setting the `_call` attribute to a
-        # callable object of type `DaskWhen`, base class has the attribute as
-        # only a `Callable`
-        self._call._otherwise_value = value  # type: ignore[attr-defined]
-        self._function_name = "whenotherwise"
-        return self
+class DaskThen(CompliantThen[DaskLazyFrame, "dx.Series", DaskExpr], DaskExpr): ...

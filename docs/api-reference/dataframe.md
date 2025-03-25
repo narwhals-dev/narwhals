@@ -23,6 +23,7 @@
         - is_empty
         - is_unique
         - item
+        - iter_columns
         - iter_rows
         - join
         - join_asof
@@ -44,6 +45,7 @@
         - to_native
         - to_numpy
         - to_pandas
+        - to_polars
         - unique
         - unpivot
         - with_columns

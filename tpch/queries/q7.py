@@ -9,7 +9,6 @@ if TYPE_CHECKING:
     from narwhals.typing import FrameT
 
 
-@nw.narwhalify
 def query(
     nation_ds: FrameT,
     customer_ds: FrameT,

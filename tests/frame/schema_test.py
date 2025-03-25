@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import date
 from datetime import datetime
 from datetime import timedelta
@@ -7,15 +8,17 @@ from datetime import timezone
 from typing import TYPE_CHECKING
 from typing import Any
 
-import duckdb
 import pandas as pd
-import polars as pl
 import pytest
 
+import narwhals as nw_main
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from narwhals.typing import DTypeBackend
     from tests.utils import Constructor
     from tests.utils import ConstructorEager
 
@@ -28,7 +31,9 @@ data = {
 
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
 def test_schema(constructor: Constructor) -> None:
-    df = nw.from_native(constructor({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}))
+    df = nw.from_native(
+        constructor({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.0]})
+    )
     result = df.schema
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
 
@@ -39,7 +44,9 @@ def test_schema(constructor: Constructor) -> None:
 
 
 def test_collect_schema(constructor: Constructor) -> None:
-    df = nw.from_native(constructor({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8, 9]}))
+    df = nw.from_native(
+        constructor({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.0]})
+    )
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
 
     result = df.collect_schema()
@@ -70,7 +77,7 @@ def test_string_disguised_as_object() -> None:
 def test_actual_object(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("modin", "pyarrow_table", "cudf")):
+    if any(x in str(constructor_eager) for x in ("pyarrow_table", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
     class Foo: ...
@@ -83,6 +90,9 @@ def test_actual_object(
 
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="too old")
 def test_dtypes() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     df_pl = pl.DataFrame(
         {
             "a": [1],
@@ -196,18 +206,34 @@ def test_schema_object(method: str, expected: Any) -> None:
     assert getattr(schema, method)() == expected
 
 
-@pytest.mark.skipif(
-    PANDAS_VERSION < (2,),
-    reason="Before 2.0, pandas would raise on `drop_duplicates`",
-)
-def test_from_non_hashable_column_name() -> None:
-    # This is technically super-illegal
-    # BUT, it shows up in a scikit-learn test, so...
-    df = pd.DataFrame([[1, 2], [3, 4]], columns=["pizza", ["a", "b"]])
+def test_validate_not_duplicated_columns_pandas_like() -> None:
+    df = pd.DataFrame([[1, 2], [4, 5]], columns=["a", "a"])
+    with pytest.raises(
+        ValueError, match="Expected unique column names, got:\n- 'a' 2 times"
+    ):
+        nw.from_native(df, eager_only=True)
 
-    df = nw.from_native(df, eager_only=True)
-    assert df.columns == ["pizza", ["a", "b"]]
-    assert df["pizza"].dtype == nw.Int64
+
+def test_validate_not_duplicated_columns_arrow() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    table = pa.Table.from_arrays([pa.array([1, 2]), pa.array([4, 5])], names=["a", "a"])
+    with pytest.raises(
+        ValueError, match="Expected unique column names, got:\n- 'a' 2 times"
+    ):
+        nw.from_native(table, eager_only=True)
+
+
+def test_validate_not_duplicated_columns_duckdb() -> None:
+    pytest.importorskip("duckdb")
+    import duckdb
+
+    rel = duckdb.sql("SELECT 1 AS a, 2 AS a")
+    with pytest.raises(
+        ValueError, match="Expected unique column names, got:\n- 'a' 2 times"
+    ):
+        nw.from_native(rel, eager_only=False).lazy().collect()
 
 
 @pytest.mark.skipif(
@@ -215,39 +241,45 @@ def test_from_non_hashable_column_name() -> None:
     reason="too old for pyarrow types",
 )
 def test_nested_dtypes() -> None:
-    df = pl.DataFrame(
+    pytest.importorskip("duckdb")
+    pytest.importorskip("polars")
+
+    import duckdb
+    import polars as pl
+
+    df_pd = pl.DataFrame(
         {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
         schema_overrides={"b": pl.Array(pl.Int64, 2)},
     ).to_pandas(use_pyarrow_extension_array=True)
-    nwdf = nw.from_native(df)
+    nwdf: nw.DataFrame[Any] | nw.LazyFrame[Any] = nw.from_native(df_pd)
     assert nwdf.schema == {
         "a": nw.List(nw.Int64),
         "b": nw.Array(nw.Int64, 2),
         "c": nw.Struct({"a": nw.Int64}),
     }
-    df = pl.DataFrame(
+    df_pl = pl.DataFrame(
         {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1}]},
         schema_overrides={"b": pl.Array(pl.Int64, 2)},
     )
-    nwdf = nw.from_native(df)
+    nwdf = nw.from_native(df_pl)
     assert nwdf.schema == {
         "a": nw.List(nw.Int64),
         "b": nw.Array(nw.Int64, 2),
         "c": nw.Struct({"a": nw.Int64}),
     }
 
-    df = pl.DataFrame(
+    df_pa = pl.DataFrame(
         {"a": [[1, 2]], "b": [[1, 2]], "c": [{"a": 1, "b": "x", "c": 1.1}]},
         schema_overrides={"b": pl.Array(pl.Int64, 2)},
     ).to_arrow()
-    nwdf = nw.from_native(df)
+    nwdf = nw.from_native(df_pa)
     assert nwdf.schema == {
         "a": nw.List(nw.Int64),
         "b": nw.Array(nw.Int64, 2),
         "c": nw.Struct({"a": nw.Int64, "b": nw.String, "c": nw.Float64}),
     }
-    df = duckdb.sql("select * from df")
-    nwdf = nw.from_native(df)
+    rel = duckdb.sql("select * from df_pa")
+    nwdf = nw.from_native(rel)
     assert nwdf.schema == {
         "a": nw.List(nw.Int64),
         "b": nw.Array(nw.Int64, 2),
@@ -256,7 +288,12 @@ def test_nested_dtypes() -> None:
 
 
 def test_nested_dtypes_ibis(request: pytest.FixtureRequest) -> None:  # pragma: no cover
-    ibis = pytest.importorskip("ibis")
+    pytest.importorskip("ibis")
+    pytest.importorskip("polars")
+
+    import ibis
+    import polars as pl
+
     if PANDAS_VERSION < (1, 1):
         request.applymarker(pytest.mark.xfail)
     df = pl.DataFrame(
@@ -274,8 +311,10 @@ def test_nested_dtypes_ibis(request: pytest.FixtureRequest) -> None:  # pragma: 
 )
 def test_nested_dtypes_dask() -> None:
     pytest.importorskip("dask")
-    pytest.importorskip("dask_expr", exc_type=ImportError)
+    pytest.importorskip("polars")
+
     import dask.dataframe as dd
+    import polars as pl
 
     df = dd.from_pandas(
         pl.DataFrame(
@@ -289,3 +328,110 @@ def test_nested_dtypes_dask() -> None:
         "b": nw.Array(nw.Int64, 2),
         "c": nw.Struct({"a": nw.Int64}),
     }
+
+
+def test_all_nulls_pandas() -> None:
+    assert (
+        nw_main.from_native(pd.Series([None] * 3, dtype="object"), series_only=True).dtype
+        == nw_main.String
+    )
+    assert (
+        nw.from_native(pd.Series([None] * 3, dtype="object"), series_only=True).dtype
+        == nw.Object
+    )
+
+
+@pytest.mark.parametrize(
+    ("dtype_backend", "expected"),
+    [
+        (
+            None,
+            {"a": "int64", "b": str, "c": "bool", "d": "float64", "e": "datetime64[ns]"},
+        ),
+        (
+            "pyarrow",
+            {
+                "a": "Int64[pyarrow]",
+                "b": "string[pyarrow]",
+                "c": "boolean[pyarrow]",
+                "d": "Float64[pyarrow]",
+                "e": "timestamp[ns][pyarrow]",
+            },
+        ),
+        (
+            "numpy_nullable",
+            {
+                "a": "Int64",
+                "b": "string",
+                "c": "boolean",
+                "d": "Float64",
+                "e": "datetime64[ns]",
+            },
+        ),
+        (
+            [
+                "numpy_nullable",
+                "pyarrow",
+                None,
+                "pyarrow",
+                "numpy_nullable",
+            ],
+            {
+                "a": "Int64",
+                "b": "string[pyarrow]",
+                "c": "bool",
+                "d": "Float64[pyarrow]",
+                "e": "datetime64[ns]",
+            },
+        ),
+    ],
+)
+def test_schema_to_pandas(
+    dtype_backend: DTypeBackend | Sequence[DTypeBackend] | None, expected: dict[str, Any]
+) -> None:
+    schema = nw.Schema(
+        {
+            "a": nw.Int64(),
+            "b": nw.String(),
+            "c": nw.Boolean(),
+            "d": nw.Float64(),
+            "e": nw.Datetime("ns"),
+        }
+    )
+    assert schema.to_pandas(dtype_backend) == expected
+
+
+def test_schema_to_pandas_strict_zip() -> None:
+    schema = nw.Schema(
+        {
+            "a": nw.Int64(),
+            "b": nw.String(),
+            "c": nw.Boolean(),
+            "d": nw.Float64(),
+            "e": nw.Datetime("ns"),
+        }
+    )
+    dtype_backend: list[DTypeBackend] = ["numpy_nullable", "pyarrow", None]
+    tup = (
+        "numpy_nullable",
+        "pyarrow",
+        None,
+        "numpy_nullable",
+        "pyarrow",
+    )
+    suggestion = re.escape(f"({tup})")
+    with pytest.raises(
+        ValueError,
+        match=re.compile(
+            rf".+3.+but.+schema contains.+5.+field.+Hint.+schema.to_pandas{suggestion}",
+            re.DOTALL,
+        ),
+    ):
+        schema.to_pandas(dtype_backend)
+
+
+def test_schema_to_pandas_invalid() -> None:
+    schema = nw.Schema({"a": nw.Int64()})
+    msg = "Expected one of {None, 'pyarrow', 'numpy_nullable'}, got: 'cabbage'"
+    with pytest.raises(ValueError, match=msg):
+        schema.to_pandas("cabbage")  # type: ignore[arg-type]

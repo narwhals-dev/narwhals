@@ -8,7 +8,6 @@ if TYPE_CHECKING:
     from narwhals.typing import FrameT
 
 
-@nw.narwhalify
 def query(lineitem_ds: FrameT, part_ds: FrameT) -> FrameT:
     var1 = "Brand#23"
     var2 = "MED BOX"
