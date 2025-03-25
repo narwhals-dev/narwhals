@@ -292,6 +292,17 @@ class EagerSeries(CompliantSeries[NativeSeriesT_co], Protocol[NativeSeriesT_co])
     def _to_expr(self) -> EagerExpr[Any, Any]:
         return self.__narwhals_namespace__()._expr._from_series(self)  # type: ignore[no-any-return]
 
+    @property
+    def str(self) -> Any: ...
+    @property
+    def dt(self) -> Any: ...
+    @property
+    def cat(self) -> EagerSeriesCatNamespace[Self, NativeSeriesT_co]: ...
+    @property
+    def list(self) -> Any: ...
+    @property
+    def struct(self) -> Any: ...
+
 
 class EagerSeriesNamespace(  # type: ignore[misc]
     _SeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
