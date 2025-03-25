@@ -40,12 +40,13 @@ def test_over_single(constructor: Constructor) -> None:
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, 3, 5, 3],
         "c": [5, 4, 3, 2, 1],
+        "i": list(range(5)),
         "c_max": [5, 5, 3, 3, 3],
     }
 
-    result = df.with_columns(c_max=nw.col("c").max().over("a")).sort("i").drop("i")
+    result = df.with_columns(c_max=nw.col("c").max().over("a")).sort("i")
     assert_equal_data(result, expected)
-    result = df.with_columns(c_max=nw.col("c").max().over(["a"])).sort("i").drop("i")
+    result = df.with_columns(c_max=nw.col("c").max().over(["a"])).sort("i")
     assert_equal_data(result, expected)
 
 
@@ -61,6 +62,7 @@ def test_over_std_var(request: pytest.FixtureRequest, constructor: Constructor) 
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, 3, 5, 3],
         "c": [5, 4, 3, 2, 1],
+        "i": list(range(5)),
         "c_std0": [0.5, 0.5, 0.816496580927726, 0.816496580927726, 0.816496580927726],
         "c_std1": [0.7071067811865476, 0.7071067811865476, 1.0, 1.0, 1.0],
         "c_var0": [
@@ -73,16 +75,12 @@ def test_over_std_var(request: pytest.FixtureRequest, constructor: Constructor) 
         "c_var1": [0.5, 0.5, 1.0, 1.0, 1.0],
     }
 
-    result = (
-        df.with_columns(
-            c_std0=nw.col("c").std(ddof=0).over("a"),
-            c_std1=nw.col("c").std(ddof=1).over("a"),
-            c_var0=nw.col("c").var(ddof=0).over("a"),
-            c_var1=nw.col("c").var(ddof=1).over("a"),
-        )
-        .sort("i")
-        .drop("i")
-    )
+    result = df.with_columns(
+        c_std0=nw.col("c").std(ddof=0).over("a"),
+        c_std1=nw.col("c").std(ddof=1).over("a"),
+        c_var0=nw.col("c").var(ddof=0).over("a"),
+        c_var1=nw.col("c").var(ddof=1).over("a"),
+    ).sort("i")
     assert_equal_data(result, expected)
 
 
@@ -94,6 +92,7 @@ def test_over_multiple(constructor: Constructor) -> None:
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, 3, 3, 5],
         "c": [5, 4, 3, 1, 2],
+        "i": list(range(5)),
         "c_min": [5, 4, 1, 1, 2],
     }
     expected = {
@@ -102,7 +101,7 @@ def test_over_multiple(constructor: Constructor) -> None:
         "c": [5, 4, 3, 2, 1],
     }
 
-    result = df.with_columns(c_min=nw.col("c").min().over("a", "b")).sort("i").drop("i")
+    result = df.with_columns(c_min=nw.col("c").min().over("a", "b")).sort("i")
     assert_equal_data(result, expected)
 
 
