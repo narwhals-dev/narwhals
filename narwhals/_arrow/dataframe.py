@@ -880,7 +880,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             indices = pa.array(
                 [
                     i
-                    for i, count in enumerate(filled_counts.to_pylist())
+                    for i, count in enumerate(filled_counts.to_pylist())  # pyright: ignore[reportAttributeAccessIssue]
                     for _ in range(count)
                 ]
             )
