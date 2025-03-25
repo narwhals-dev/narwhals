@@ -21,6 +21,7 @@ from narwhals._arrow.utils import select_rows
 from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
 from narwhals.dependencies import is_numpy_array_1d
+from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
@@ -834,11 +835,6 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         # upcast numeric to non-numeric (e.g. string) datatypes
 
     def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
-        import pyarrow as pa
-        import pyarrow.compute as pc
-
-        from narwhals.exceptions import InvalidOperationError
-
         dtypes = import_dtypes_module(self._version)
 
         to_explode = (
@@ -866,8 +862,6 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             pc.all(pc.equal(pc.list_value_length(native_frame[col_name]), counts)).as_py()
             for col_name in to_explode[1:]
         ):
-            from narwhals.exceptions import ShapeError
-
             msg = "exploded columns must have matching element counts"
             raise ShapeError(msg)
 
