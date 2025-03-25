@@ -855,11 +855,10 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
 
                 raise InvalidOperationError(msg)
 
-        native_frame = self._native_frame
-        counts = pc.list_value_length(native_frame[to_explode[0]])
+        counts = pc.list_value_length(self.native[to_explode[0]])
 
         if not all(
-            pc.all(pc.equal(pc.list_value_length(native_frame[col_name]), counts)).as_py()
+            pc.all(pc.equal(pc.list_value_length(self.native[col_name]), counts)).as_py()
             for col_name in to_explode[1:]
         ):
             msg = "exploded columns must have matching element counts"
@@ -870,7 +869,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         fast_path = pc.all(pc.greater_equal(counts, 1)).as_py()
 
         if fast_path:
-            indices = pc.list_parent_indices(native_frame[to_explode[0]])
+            indices = pc.list_parent_indices(self.native[to_explode[0]])
             flatten_func = pc.list_flatten
 
         else:
@@ -883,7 +882,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
                 ]
             )
 
-            parent_indices = pc.list_parent_indices(native_frame[to_explode[0]])
+            parent_indices = pc.list_parent_indices(self.native[to_explode[0]])
             is_valid_index = pc.is_in(indices, value_set=parent_indices)
             exploded_size = len(is_valid_index)
 
@@ -896,9 +895,9 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
                 )
 
         arrays = [
-            native_frame[col_name].take(indices)
+            self.native[col_name].take(indices)
             if col_name in other_columns
-            else flatten_func(native_frame[col_name])
+            else flatten_func(self.native[col_name])
             for col_name in original_columns
         ]
 
