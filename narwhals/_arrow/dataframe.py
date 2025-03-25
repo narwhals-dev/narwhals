@@ -16,6 +16,8 @@ import pyarrow.compute as pc
 from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import align_series_full_broadcast
 from narwhals._arrow.utils import convert_str_slice_to_int_slice
+from narwhals._arrow.utils import list_flatten
+from narwhals._arrow.utils import lit
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import select_rows
 from narwhals._compliant import EagerDataFrame
@@ -866,14 +868,15 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
 
         original_columns = self.columns
         other_columns = [c for c in original_columns if c not in to_explode]
-        fast_path = pc.all(pc.greater_equal(counts, 1)).as_py()
+        ONE = lit(1)  # noqa: N806
+        fast_path = pc.all(pc.greater_equal(counts, ONE)).as_py()
 
         if fast_path:
             indices = pc.list_parent_indices(self.native[to_explode[0]])
-            flatten_func = pc.list_flatten
+            flatten = list_flatten
 
         else:
-            filled_counts = pc.max_element_wise(counts, 1, skip_nulls=True)
+            filled_counts = pc.max_element_wise(counts, ONE, skip_nulls=True)
             indices = pa.array(
                 [
                     i
@@ -886,24 +889,24 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             is_valid_index = pc.is_in(indices, value_set=parent_indices)
             exploded_size = len(is_valid_index)
 
-            def flatten_func(array: pa.ChunkedArray) -> pa.ChunkedArray:
+            def flatten(
+                array: pa.ChunkedArray[pa.ListScalar[Any]], /
+            ) -> ArrowChunkedArray:
                 dtype = array.type.value_type
+
                 return pc.replace_with_mask(
-                    pa.repeat(pa.scalar(None, type=dtype), exploded_size),
+                    pa.nulls(exploded_size, dtype),
                     is_valid_index,
-                    pc.list_flatten(array).combine_chunks(),
+                    list_flatten(array).combine_chunks(),
                 )
 
         arrays = [
             self.native[col_name].take(indices)
             if col_name in other_columns
-            else flatten_func(self.native[col_name])
+            else flatten(self.native[col_name])
             for col_name in original_columns
         ]
 
         return self._from_native_frame(
-            pa.Table.from_arrays(
-                arrays=arrays,
-                names=original_columns,
-            )
+            pa.Table.from_arrays(arrays, names=original_columns)
         )

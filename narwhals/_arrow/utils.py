@@ -53,8 +53,15 @@ if TYPE_CHECKING:
         options: Any = None,
         memory_pool: Any = None,
     ) -> ChunkedArrayStructArray: ...
+
+    @overload
+    def list_flatten(lists: ArrowChunkedArray, /, **kwds: Any) -> ArrowChunkedArray: ...
+    @overload
+    def list_flatten(lists: pa.ListArray[Any], /, **kwds: Any) -> pa.ListArray[Any]: ...
+    def list_flatten(lists: Any, /, recursive: bool = False, **kwds: Any) -> Any: ...  # noqa: FBT001, FBT002
 else:
     from pyarrow.compute import extract_regex
+    from pyarrow.compute import list_flatten  # noqa: F401
     from pyarrow.types import is_dictionary  # noqa: F401
     from pyarrow.types import is_duration
     from pyarrow.types import is_fixed_size_list
