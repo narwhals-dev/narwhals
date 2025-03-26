@@ -74,11 +74,13 @@ def extract_py_scalar(value: Any, /) -> Any:
 
 def chunked_array(
     arr: ArrowArray | list[Iterable[pa.Scalar[Any]]] | ArrowChunkedArray,
+    dtype: pa.DataType | None = None,
+    /,
 ) -> ArrowChunkedArray:
     if isinstance(arr, pa.ChunkedArray):
         return arr
     if isinstance(arr, list):
-        return pa.chunked_array(cast("Any", arr))
+        return pa.chunked_array(cast("Any", arr), dtype)
     else:
         return pa.chunked_array([arr], arr.type)
 
