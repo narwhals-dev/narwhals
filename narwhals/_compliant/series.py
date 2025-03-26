@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import sys
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Generic
 from typing import Iterable
 from typing import Iterator
 from typing import Literal
@@ -21,16 +21,6 @@ from narwhals._translate import FromIterable
 from narwhals._translate import NumpyConvertible
 from narwhals.utils import _SeriesNamespace
 from narwhals.utils import unstable
-
-if not TYPE_CHECKING:  # pragma: no cover
-    if sys.version_info >= (3, 9):
-        from typing import Protocol as Protocol38
-    else:
-        from typing import Generic as Protocol38
-else:  # pragma: no cover
-    # TODO @dangotbanned: Remove after dropping `3.8` (#2084)
-    # - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
-    from typing import Protocol as Protocol38
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -315,9 +305,9 @@ class EagerSeries(CompliantSeries[NativeSeriesT_co], Protocol[NativeSeriesT_co])
     def struct(self) -> Any: ...
 
 
-class EagerSeriesNamespace(  # type: ignore[misc]
+class EagerSeriesNamespace(
     _SeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
-    Protocol38[EagerSeriesT_co, NativeSeriesT_co],
+    Generic[EagerSeriesT_co, NativeSeriesT_co],
 ):
     _compliant_series: EagerSeriesT_co
 
@@ -326,35 +316,35 @@ class EagerSeriesNamespace(  # type: ignore[misc]
 
 
 class EagerSeriesCatNamespace(  # type: ignore[misc]
-    EagerSeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
+    _SeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
     CatNamespace[EagerSeriesT_co],
     Protocol[EagerSeriesT_co, NativeSeriesT_co],
 ): ...
 
 
 class EagerSeriesDateTimeNamespace(  # type: ignore[misc]
-    EagerSeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
+    _SeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
     DateTimeNamespace[EagerSeriesT_co],
     Protocol[EagerSeriesT_co, NativeSeriesT_co],
 ): ...
 
 
 class EagerSeriesListNamespace(  # type: ignore[misc]
-    EagerSeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
+    _SeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
     ListNamespace[EagerSeriesT_co],
     Protocol[EagerSeriesT_co, NativeSeriesT_co],
 ): ...
 
 
 class EagerSeriesStringNamespace(  # type: ignore[misc]
-    EagerSeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
+    _SeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
     StringNamespace[EagerSeriesT_co],
     Protocol[EagerSeriesT_co, NativeSeriesT_co],
 ): ...
 
 
 class EagerSeriesStructNamespace(  # type: ignore[misc]
-    EagerSeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
+    _SeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
     StructNamespace[EagerSeriesT_co],
     Protocol[EagerSeriesT_co, NativeSeriesT_co],
 ): ...
