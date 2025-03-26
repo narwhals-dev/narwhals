@@ -22,6 +22,7 @@ from narwhals._expression_parsing import combine_metadata_horizontal_op
 from narwhals._expression_parsing import extract_compliant
 from narwhals._expression_parsing import infer_kind
 from narwhals._expression_parsing import is_scalar_like
+from narwhals.dependencies import get_sqlframe
 from narwhals.dependencies import is_numpy_array
 from narwhals.dependencies import is_numpy_array_2d
 from narwhals.expr import Expr
@@ -1138,12 +1139,14 @@ def _scan_parquet_impl(
         if (session := kwargs.pop("session", None)) is None:
             msg = "Spark like backends require a session object to be passed in `kwargs`."
             raise ValueError(msg)
-
         native_frame = (
             session.read.format("parquet").load(source)
             # passing `options` currently not possible in SQLFrame: see
             # https://github.com/eakmanrq/sqlframe/issues/341
-            if implementation is Implementation.SQLFRAME
+            if (
+                implementation is Implementation.SQLFRAME
+                and (parse_version(get_sqlframe()._version)) < (3, 27, 0)
+            )
             else session.read.format("parquet").options(**kwargs).load(source)
         )
 
