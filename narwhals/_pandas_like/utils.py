@@ -647,17 +647,6 @@ def align_series_full_broadcast(
     return reindexed
 
 
-def to_datetime(implementation: Implementation, *, utc: bool) -> Any:
-    if implementation in PANDAS_LIKE_IMPLEMENTATION:
-        return functools.partial(
-            implementation.to_native_namespace().to_datetime, utc=utc
-        )
-
-    else:  # pragma: no cover
-        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
-        raise TypeError(msg)
-
-
 def int_dtype_mapper(dtype: Any) -> str:
     if "pyarrow" in str(dtype):
         return "Int64[pyarrow]"

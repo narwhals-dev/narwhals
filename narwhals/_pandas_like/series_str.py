@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import Any
 
 from narwhals._compliant.any_namespace import StringNamespace
 from narwhals._pandas_like.utils import PandasLikeSeriesNamespace
 from narwhals._pandas_like.utils import is_pyarrow_dtype_backend
-from narwhals._pandas_like.utils import to_datetime
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -58,19 +58,18 @@ class PandasLikeSeriesStringNamespace(
         return self.from_native(self.native.str.split(pat=by))
 
     def to_datetime(self, format: str | None) -> PandasLikeSeries:
-        implementation = self.implementation
+        # If we know inputs are timezone-aware, we can pass `utc=True` for better performance.
         if format and any(x in format for x in ("%z", "Z")):
-            # We know that the inputs are timezone-aware, so we can directly pass
-            # `utc=True` for better performance.
-            return self.from_native(
-                to_datetime(implementation, utc=True)(self.native, format=format)
-            )
-        result = self.from_native(
-            to_datetime(implementation, utc=False)(self.native, format=format)
-        )
+            return self.from_native(self._to_datetime(format, utc=True))
+        result = self.from_native(self._to_datetime(format, utc=False))
         if (tz := getattr(result.dtype, "time_zone", None)) and tz != "UTC":
             return result.dt.convert_time_zone("UTC")
         return result
+
+    def _to_datetime(self, format: str | None, *, utc: bool) -> Any:
+        return self.implementation.to_native_namespace().to_datetime(
+            self.native, format=format, utc=utc
+        )
 
     def to_uppercase(self) -> PandasLikeSeries:
         return self.from_native(self.native.str.upper())
