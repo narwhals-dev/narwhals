@@ -32,6 +32,10 @@ class PolarsExpr:
         self._backend_version = backend_version
         self._metadata: ExprMetadata | None = None
 
+    @property
+    def native(self) -> pl.Expr:
+        return self._native_expr
+
     def __repr__(self: Self) -> str:  # pragma: no cover
         return "PolarsExpr"
 
@@ -43,7 +47,7 @@ class PolarsExpr:
     @classmethod
     def _from_series(cls, series: Any) -> Self:
         return cls(
-            series._native_series,
+            series.native,
             version=series._version,
             backend_version=series._backend_version,
         )
