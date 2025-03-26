@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.dataframe import PolarsLazyFrame
+    from narwhals._polars.typing import FrameT
     from narwhals.schema import Schema
     from narwhals.typing import Into1DArray
     from narwhals.typing import TimeUnit
@@ -130,35 +131,17 @@ class PolarsNamespace:
             pl.len(), version=self._version, backend_version=self._backend_version
         )
 
-    @overload
     def concat(
         self: Self,
-        items: Iterable[PolarsDataFrame],
-        *,
-        how: Literal["vertical", "horizontal", "diagonal"],
-    ) -> PolarsDataFrame: ...
-
-    @overload
-    def concat(
-        self: Self,
-        items: Iterable[PolarsLazyFrame],
-        *,
-        how: Literal["vertical", "horizontal", "diagonal"],
-    ) -> PolarsLazyFrame: ...
-
-    def concat(
-        self: Self,
-        items: Iterable[PolarsDataFrame] | Iterable[PolarsLazyFrame],
+        items: Iterable[FrameT],
         *,
         how: Literal["vertical", "horizontal", "diagonal"],
     ) -> PolarsDataFrame | PolarsLazyFrame:
-        from narwhals._polars.dataframe import PolarsDataFrame
         from narwhals._polars.dataframe import PolarsLazyFrame
 
-        dfs: Iterable[Any] = (item.native for item in items)
-        result = pl.concat(dfs, how=how)
+        result = pl.concat((item.native for item in items), how=how)
         if isinstance(result, pl.DataFrame):
-            return PolarsDataFrame(
+            return self._dataframe(
                 result, backend_version=self._backend_version, version=self._version
             )
         return PolarsLazyFrame(
