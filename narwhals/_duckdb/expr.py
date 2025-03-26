@@ -105,7 +105,9 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         center: bool,
         window_size: int,
         min_samples: int,
+        ddof: int | None = None,
     ) -> WindowFunction:
+        supported_funcs = ["sum", "mean", "std", "var"]
         if center:
             half = (window_size - 1) // 2
             remainder = (window_size - 1) % 2
@@ -119,9 +121,25 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=True)
             partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
             window = f"({partition_by_sql} {order_by_sql} rows between {start} and {end})"
+            if func_name in {"sum", "mean"}:
+                func_: str = func_name
+            elif func_name == "var" and ddof == 0:
+                func_ = "var_pop"
+            elif func_name in "var" and ddof == 1:
+                func_ = "var_samp"
+            elif func_name == "std" and ddof == 0:
+                func_ = "stddev_pop"
+            elif func_name == "std" and ddof == 1:
+                func_ = "stddev_samp"
+            elif func_name in {"var", "std"}:
+                msg = f"Only ddof=0 and ddof=1 are currently supported for {func_name}."
+                raise ValueError(msg)
+            else:
+                msg = f"Only the following functions are supported: {supported_funcs}.\nGot: {func_name}."
+                raise ValueError(msg)
             sql = (
                 f"case when count({window_inputs.expr}) over {window} >= {min_samples}"
-                f"then {func_name}({window_inputs.expr}) over {window} else null end"
+                f"then {func_}({window_inputs.expr}) over {window} else null end"
             )
             return SQLExpression(sql)  # type: ignore[no-any-return, unused-ignore]
 
@@ -591,6 +609,32 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
                 center=center,
                 window_size=window_size,
                 min_samples=min_samples,
+            )
+        )
+
+    def rolling_var(
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
+    ) -> Self:
+        return self._with_window_function(
+            self._rolling_window_func(
+                func_name="var",
+                center=center,
+                window_size=window_size,
+                min_samples=min_samples,
+                ddof=ddof,
+            )
+        )
+
+    def rolling_std(
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
+    ) -> Self:
+        return self._with_window_function(
+            self._rolling_window_func(
+                func_name="std",
+                center=center,
+                window_size=window_size,
+                min_samples=min_samples,
+                ddof=ddof,
             )
         )
 

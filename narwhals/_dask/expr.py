@@ -402,6 +402,34 @@ class DaskExpr(
             "rolling_mean",
         )
 
+    def rolling_var(
+        self: Self, window_size: int, *, min_samples: int, center: bool, ddof: int
+    ) -> Self:
+        if ddof == 1:
+            return self._from_call(
+                lambda _input: _input.rolling(
+                    window=window_size, min_periods=min_samples, center=center
+                ).var(),
+                "rolling_var",
+            )
+        else:
+            msg = "Dask backend only supports `ddof=1` for `rolling_var`"
+            raise NotImplementedError(msg)
+
+    def rolling_std(
+        self: Self, window_size: int, *, min_samples: int, center: bool, ddof: int
+    ) -> Self:
+        if ddof == 1:
+            return self._from_call(
+                lambda _input: _input.rolling(
+                    window=window_size, min_periods=min_samples, center=center
+                ).std(),
+                "rolling_std",
+            )
+        else:
+            msg = "Dask backend only supports `ddof=1` for `rolling_std`"
+            raise NotImplementedError(msg)
+
     def sum(self: Self) -> Self:
         return self._from_call(lambda _input: _input.sum().to_series(), "sum")
 
