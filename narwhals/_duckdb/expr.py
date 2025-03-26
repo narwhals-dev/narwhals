@@ -613,6 +613,13 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
         return self._from_call(func)
 
+    def is_unique(self: Self) -> Self:
+        def func(_input: duckdb.Expression) -> duckdb.Expression:
+            sql = f"count(*) over (partition by {_input})"
+            return SQLExpression(sql) == lit(1)
+
+        return self._from_call(func)
+
     @property
     def str(self: Self) -> DuckDBExprStringNamespace:
         return DuckDBExprStringNamespace(self)
@@ -635,4 +642,3 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
     drop_nulls = not_implemented()
     unique = not_implemented()
-    is_unique = not_implemented()
