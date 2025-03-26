@@ -6,7 +6,10 @@ from typing import Any
 from typing import Container
 from typing import Iterable
 from typing import Literal
+from typing import Mapping
 from typing import Protocol
+from typing import Sequence
+from typing import overload
 
 from narwhals._compliant.typing import CompliantExprT
 from narwhals._compliant.typing import CompliantFrameT
@@ -14,6 +17,7 @@ from narwhals._compliant.typing import DepthTrackingExprT
 from narwhals._compliant.typing import EagerDataFrameT
 from narwhals._compliant.typing import EagerExprT
 from narwhals._compliant.typing import EagerSeriesT
+from narwhals.dependencies import is_numpy_array_2d
 from narwhals.utils import exclude_column_names
 from narwhals.utils import get_column_names
 from narwhals.utils import passthrough_column_names
@@ -25,6 +29,9 @@ if TYPE_CHECKING:
     from narwhals._compliant.when_then import CompliantWhen
     from narwhals._compliant.when_then import EagerWhen
     from narwhals.dtypes import DType
+    from narwhals.schema import Schema
+    from narwhals.typing import Into1DArray
+    from narwhals.typing import _2DArray
     from narwhals.utils import Implementation
     from narwhals.utils import Version
 
@@ -110,7 +117,35 @@ class EagerNamespace(
     Protocol[EagerDataFrameT, EagerSeriesT, EagerExprT],
 ):
     @property
+    def _dataframe(self) -> type[EagerDataFrameT]: ...
+    @property
     def _series(self) -> type[EagerSeriesT]: ...
     def when(
         self, predicate: EagerExprT
     ) -> EagerWhen[EagerDataFrameT, EagerSeriesT, EagerExprT, Incomplete]: ...
+
+    @overload
+    def from_numpy(
+        self,
+        data: Into1DArray,
+        /,
+        schema: None = ...,
+    ) -> EagerSeriesT: ...
+
+    @overload
+    def from_numpy(
+        self,
+        data: _2DArray,
+        /,
+        schema: Mapping[str, DType] | Schema | Sequence[str] | None,
+    ) -> EagerDataFrameT: ...
+
+    def from_numpy(
+        self,
+        data: Into1DArray | _2DArray,
+        /,
+        schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
+    ) -> EagerDataFrameT | EagerSeriesT:
+        if is_numpy_array_2d(data):
+            return self._dataframe.from_numpy(data, schema=schema, context=self)
+        return self._series.from_numpy(data, context=self)

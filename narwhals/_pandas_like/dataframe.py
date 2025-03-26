@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
+from typing import Iterable
 from typing import Iterator
 from typing import Literal
 from typing import Mapping
@@ -17,6 +19,7 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_series_full_broadcast
 from narwhals._pandas_like.utils import check_column_names_are_unique
 from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
+from narwhals._pandas_like.utils import get_dtype_backend
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
@@ -46,17 +49,23 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
 
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.dtypes import DType
+    from narwhals.schema import Schema
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
+    from narwhals.typing import DTypeBackend
     from narwhals.typing import SizeUnit
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
+
+    Constructor: TypeAlias = Callable[..., pd.DataFrame]
 
 
 CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
@@ -103,6 +112,37 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         validate_backend_version(self._implementation, self._backend_version)
         if validate_column_names:
             check_column_names_are_unique(native_dataframe.columns)
+
+    @classmethod
+    def from_numpy(
+        cls,
+        data: _2DArray,
+        /,
+        *,
+        context: _FullContext,
+        schema: Mapping[str, DType] | Schema | Sequence[str] | None,
+    ) -> Self:
+        from narwhals.schema import Schema
+
+        implementation = context._implementation
+        DataFrame: Constructor = implementation.to_native_namespace().DataFrame  # noqa: N806
+        if isinstance(schema, (Mapping, Schema)):
+            it: Iterable[DTypeBackend] = (
+                get_dtype_backend(native_type, implementation)
+                for native_type in schema.values()
+            )
+            native = DataFrame(data, columns=schema.keys()).astype(
+                Schema(schema).to_pandas(it)
+            )
+        else:
+            native = DataFrame(data, columns=cls._numpy_column_names(data, schema))
+        return cls(
+            native,
+            implementation=implementation,
+            backend_version=context._backend_version,
+            version=context._version,
+            validate_column_names=True,
+        )
 
     def __narwhals_dataframe__(self: Self) -> Self:
         return self

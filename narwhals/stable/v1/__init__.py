@@ -2338,7 +2338,7 @@ def from_numpy(
         A new DataFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(_from_numpy_impl(data, schema, backend=backend))  # type: ignore[no-any-return]
+    return _stableify(_from_numpy_impl(data, schema, backend=backend, version=Version.V1))  # type: ignore[no-any-return]
 
 
 @deprecate_native_namespace(required=True)

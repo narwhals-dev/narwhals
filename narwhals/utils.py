@@ -52,13 +52,21 @@ if TYPE_CHECKING:
     from typing_extensions import LiteralString
     from typing_extensions import ParamSpec
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
+    from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._compliant import CompliantExpr
     from narwhals._compliant import CompliantFrameT
+    from narwhals._compliant import CompliantNamespace
     from narwhals._compliant import CompliantSeriesOrNativeExprT_co
     from narwhals._compliant import NativeFrameT_co
     from narwhals._compliant import NativeSeriesT_co
+    from narwhals._dask.namespace import DaskNamespace
+    from narwhals._duckdb.namespace import DuckDBNamespace
+    from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals._polars.namespace import PolarsNamespace
+    from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -84,6 +92,19 @@ if TYPE_CHECKING:
     _Fn = TypeVar("_Fn", bound="Callable[..., Any]")
     P = ParamSpec("P")
     R = TypeVar("R")
+
+    _PandasLike: TypeAlias = (
+        "Literal[Implementation.PANDAS, Implementation.CUDF, Implementation.MODIN]"
+    )
+    _Arrow: TypeAlias = "Literal[Implementation.PYARROW]"
+    _Polars: TypeAlias = "Literal[Implementation.POLARS]"
+    _SparkLike: TypeAlias = "Literal[Implementation.PYSPARK, Implementation.SQLFRAME]"
+    _Dask: TypeAlias = "Literal[Implementation.DASK]"
+    _DuckDB: TypeAlias = "Literal[Implementation.DUCKDB]"
+    _EagerOnly: TypeAlias = "_PandasLike | _Arrow"
+    _EagerAllowed: TypeAlias = "_Polars | _EagerOnly"
+    _LazyOnly: TypeAlias = "_SparkLike | _Dask | _DuckDB"
+    _LazyAllowed: TypeAlias = "_Polars | _LazyOnly"
 
     class _SupportsVersion(Protocol):
         __version__: str
@@ -553,6 +574,65 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.IBIS: (6,),
     Implementation.SQLFRAME: (3, 22, 0),
 }
+
+
+@overload
+def _into_compliant_namespace(
+    impl: _PandasLike, version: Version, /
+) -> PandasLikeNamespace: ...
+@overload
+def _into_compliant_namespace(impl: _Polars, version: Version, /) -> PolarsNamespace: ...
+@overload
+def _into_compliant_namespace(impl: _Arrow, version: Version, /) -> ArrowNamespace: ...
+@overload
+def _into_compliant_namespace(
+    impl: _SparkLike, version: Version, /
+) -> SparkLikeNamespace: ...
+@overload
+def _into_compliant_namespace(impl: _DuckDB, version: Version, /) -> DuckDBNamespace: ...
+@overload
+def _into_compliant_namespace(impl: _Dask, version: Version, /) -> DaskNamespace: ...
+@overload
+def _into_compliant_namespace(
+    impl: _EagerAllowed, version: Version, /
+) -> PandasLikeNamespace | PolarsNamespace | ArrowNamespace: ...
+def _into_compliant_namespace(
+    impl: Implementation, version: Version, /
+) -> CompliantNamespace[Any, Any]:
+    native = impl.to_native_namespace()
+    into_version = native if not impl.is_sqlframe() else native._version
+    backend_version = parse_version(into_version)
+    if impl.is_pandas_like():
+        from narwhals._pandas_like.namespace import PandasLikeNamespace
+
+        return PandasLikeNamespace(
+            implementation=impl, backend_version=backend_version, version=version
+        )
+    elif impl.is_polars():
+        from narwhals._polars.namespace import PolarsNamespace
+
+        return PolarsNamespace(backend_version=backend_version, version=version)
+    elif impl.is_pyarrow():
+        from narwhals._arrow.namespace import ArrowNamespace
+
+        return ArrowNamespace(backend_version=backend_version, version=version)
+    elif impl.is_spark_like():  # pragma: no cover
+        from narwhals._spark_like.namespace import SparkLikeNamespace
+
+        return SparkLikeNamespace(
+            implementation=impl, backend_version=backend_version, version=version
+        )
+    elif impl.is_duckdb():  # pragma: no cover
+        from narwhals._duckdb.namespace import DuckDBNamespace
+
+        return DuckDBNamespace(backend_version=backend_version, version=version)
+    elif impl.is_dask():  # pragma: no cover
+        from narwhals._dask.namespace import DaskNamespace
+
+        return DaskNamespace(backend_version=backend_version, version=version)
+    else:
+        msg = "Not supported Implementation"  # pragma: no cover
+        raise AssertionError(msg)
 
 
 def validate_backend_version(
@@ -1497,6 +1577,26 @@ def is_compliant_expr(
     obj: CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | Any,
 ) -> TypeIs[CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co]]:
     return hasattr(obj, "__narwhals_expr__")
+
+
+def is_eager_allowed(obj: Implementation) -> TypeIs[_EagerAllowed]:
+    return obj in {
+        Implementation.PANDAS,
+        Implementation.MODIN,
+        Implementation.CUDF,
+        Implementation.POLARS,
+        Implementation.PYARROW,
+    }
+
+
+def is_lazy_allowed(obj: Implementation) -> TypeIs[_LazyAllowed]:  # pragma: no cover
+    return obj in {
+        Implementation.POLARS,
+        Implementation.PYSPARK,
+        Implementation.SQLFRAME,
+        Implementation.DASK,
+        Implementation.DUCKDB,
+    }
 
 
 def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
