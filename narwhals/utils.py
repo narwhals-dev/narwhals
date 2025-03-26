@@ -760,22 +760,22 @@ def maybe_align_index(
         getattr(lhs_any, "_compliant_frame", None), PandasLikeDataFrame
     ) and isinstance(getattr(rhs_any, "_compliant_series", None), PandasLikeSeries):
         _validate_index(lhs_any._compliant_frame._native_frame.index)
-        _validate_index(rhs_any._compliant_series._native_series.index)
+        _validate_index(rhs_any._compliant_series.native.index)
         return lhs_any._from_compliant_dataframe(
             lhs_any._compliant_frame._from_native_frame(
                 lhs_any._compliant_frame._native_frame.loc[
-                    rhs_any._compliant_series._native_series.index
+                    rhs_any._compliant_series.native.index
                 ]
             )
         )
     if isinstance(
         getattr(lhs_any, "_compliant_series", None), PandasLikeSeries
     ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasLikeDataFrame):
-        _validate_index(lhs_any._compliant_series._native_series.index)
+        _validate_index(lhs_any._compliant_series.native.index)
         _validate_index(rhs_any._compliant_frame._native_frame.index)
         return lhs_any._from_compliant_series(
             lhs_any._compliant_series._from_native_series(
-                lhs_any._compliant_series._native_series.loc[
+                lhs_any._compliant_series.native.loc[
                     rhs_any._compliant_frame._native_frame.index
                 ]
             )
@@ -783,12 +783,12 @@ def maybe_align_index(
     if isinstance(
         getattr(lhs_any, "_compliant_series", None), PandasLikeSeries
     ) and isinstance(getattr(rhs_any, "_compliant_series", None), PandasLikeSeries):
-        _validate_index(lhs_any._compliant_series._native_series.index)
-        _validate_index(rhs_any._compliant_series._native_series.index)
+        _validate_index(lhs_any._compliant_series.native.index)
+        _validate_index(rhs_any._compliant_series.native.index)
         return lhs_any._from_compliant_series(
             lhs_any._compliant_series._from_native_series(
-                lhs_any._compliant_series._native_series.loc[
-                    rhs_any._compliant_series._native_series.index
+                lhs_any._compliant_series.native.loc[
+                    rhs_any._compliant_series.native.index
                 ]
             )
         )
@@ -1124,7 +1124,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         isinstance(series._compliant_series, InterchangeSeries)
         and series.dtype == dtypes.Categorical
     ):
-        return series._compliant_series._native_series.describe_categorical["is_ordered"]
+        return series._compliant_series.native.describe_categorical["is_ordered"]
     if series.dtype == dtypes.Enum:
         return True
     if series.dtype != dtypes.Categorical:

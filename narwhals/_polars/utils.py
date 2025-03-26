@@ -57,12 +57,8 @@ def extract_native(
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.series import PolarsSeries
 
-    if isinstance(obj, (PolarsDataFrame, PolarsLazyFrame)):
-        return obj._native_frame
-    if isinstance(obj, PolarsSeries):
-        return obj._native_series
-    if isinstance(obj, PolarsExpr):
-        return obj._native_expr
+    if isinstance(obj, (PolarsDataFrame, PolarsLazyFrame, PolarsSeries, PolarsExpr)):
+        return obj.native
     return obj
 
 
