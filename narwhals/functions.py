@@ -904,6 +904,18 @@ def _scan_csv_impl(
         from pyarrow import csv  # ignore-banned-import
 
         native_frame = csv.read_csv(source, **kwargs)
+    elif implementation.is_spark_like():
+        if (session := kwargs.pop("session", None)) is None:
+            msg = "Spark like backends require a session object to be passed in `kwargs`."
+            raise ValueError(msg)
+        native_frame = (
+            session.read.format("csv").load(source)
+            if (
+                implementation is Implementation.SQLFRAME
+                and (parse_version(version("sqlframe"))) < (3, 27, 0)
+            )
+            else session.read.format("csv").options(**kwargs).load(source)
+        )
     else:  # pragma: no cover
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
