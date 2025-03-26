@@ -270,10 +270,10 @@ def _new_series_impl(
         native_namespace = implementation.to_native_namespace()
         try:
             native_series = native_namespace.new_series(name, values, dtype)
+            return from_native(native_series, series_only=True).alias(name)
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `new_series` constructor."
             raise AttributeError(msg) from e
-        return from_native(native_series, series_only=True).alias(name)
 
 
 @deprecate_native_namespace(warn_version="1.26.0")
