@@ -158,7 +158,7 @@ def test_scan_parquet(
     if "sqlframe" in str(constructor):
         from sqlframe.duckdb import DuckDBSession
 
-        kwargs = {"session": DuckDBSession()}
+        kwargs = {"session": DuckDBSession(), "inferSchema": True}
     elif "pyspark" in str(constructor):
         from pyspark.sql import SparkSession
 
