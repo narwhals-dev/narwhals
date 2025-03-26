@@ -93,7 +93,7 @@ def test_over_multiple(constructor: Constructor) -> None:
         "b": [1, 2, 3, 3, 5],
         "c": [5, 4, 3, 1, 2],
         "i": list(range(5)),
-        "c_min": [5, 4, 1, 1, 2],
+        "c_min": [5, 4, 1, 2, 1],
     }
 
     result = df.with_columns(c_min=nw.col("c").min().over("a", "b")).sort("i")
