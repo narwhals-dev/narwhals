@@ -138,8 +138,6 @@ def test_rolling_mean_expr_lazy_grouped(
     if "modin" in str(constructor):
         # unreliable
         pytest.skip()
-    if "sqlframe" in str(constructor):
-        pytest.skip()
     data = {
         "a": [1, None, 2, None, 4, 6, 11],
         "g": [1, 1, 1, 1, 2, 2, 2],
@@ -189,8 +187,6 @@ def test_rolling_mean_expr_lazy_ungrouped(
         pytest.skip()
     if "modin" in str(constructor):
         # unreliable
-        pytest.skip()
-    if "sqlframe" in str(constructor):
         pytest.skip()
     data = {
         "a": [1, None, 2, None, 4, 6, 11],
