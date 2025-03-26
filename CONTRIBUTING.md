@@ -109,7 +109,7 @@ If you want to run PySpark-related tests, you'll need to have Java installed. Re
 
 2. Install Narwhals: `uv pip install -e . --group local-dev"`. This will include fast-ish core libraries and dev dependencies.
    If you also want to test other libraries like Dask , PySpark, and Modin, you can install them too with
-   `uv pip install -e ".[dask, pyspark, modin]" --group local-dev"`.
+   `uv pip install -e ".[dask, pyspark, modin]" --group local-dev`.
 
 You should also install pre-commit:
 
