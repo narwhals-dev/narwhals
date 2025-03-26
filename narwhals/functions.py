@@ -44,7 +44,6 @@ from narwhals.utils import validate_laziness
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import pyarrow as pa
     from typing_extensions import Self
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
@@ -260,50 +259,15 @@ def _new_series_impl(
     version: Version,
 ) -> Series[Any]:
     implementation = Implementation.from_backend(backend)
-    native_namespace = implementation.to_native_namespace()
-
-    if implementation is Implementation.POLARS:
-        if dtype:
-            from narwhals._polars.utils import (
-                narwhals_to_native_dtype as polars_narwhals_to_native_dtype,
-            )
-
-            backend_version = parse_version(native_namespace.__version__)
-            dtype_pl = polars_narwhals_to_native_dtype(
-                dtype, version=version, backend_version=backend_version
-            )
-        else:
-            dtype_pl = None
-
-        native_series = native_namespace.Series(name=name, values=values, dtype=dtype_pl)
-    elif implementation.is_pandas_like():
-        if dtype:
-            from narwhals._pandas_like.utils import (
-                narwhals_to_native_dtype as pandas_like_narwhals_to_native_dtype,
-            )
-
-            backend_version = parse_version(native_namespace)
-            pd_dtype = pandas_like_narwhals_to_native_dtype(
-                dtype, None, implementation, backend_version, version
-            )
-            native_series = native_namespace.Series(values, name=name, dtype=pd_dtype)
-        else:
-            native_series = native_namespace.Series(values, name=name)
-
-    elif implementation is Implementation.PYARROW:
-        pa_dtype: pa.DataType | None = None
-        if dtype:
-            from narwhals._arrow.utils import (
-                narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
-            )
-
-            pa_dtype = arrow_narwhals_to_native_dtype(dtype, version=version)
-        native_series = native_namespace.chunked_array([values], type=pa_dtype)
-
+    if is_eager_allowed(implementation):
+        ns = _into_compliant_namespace(implementation, version)
+        series = ns._series.from_iterable(values, name=name, context=ns, dtype=dtype)
+        return from_native(series, series_only=True)
     elif implementation is Implementation.DASK:  # pragma: no cover
         msg = "Dask support in Narwhals is lazy-only, so `new_series` is not supported"
         raise NotImplementedError(msg)
     else:  # pragma: no cover
+        native_namespace = implementation.to_native_namespace()
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement `from_dict` function in the top-level namespace.
