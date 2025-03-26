@@ -83,7 +83,7 @@ def test_lazy_cum_max_grouped(
     result = df.with_columns(
         nw.col("a").cum_max(reverse=reverse).over("g", order_by="b")
     ).sort("i")
-    expected = {"a": expected_a, "b": [1, 0, 2], "i": [0, 1, 2]}
+    expected = {"a": expected_a, "b": [1, 0, 2], "i": [0, 1, 2], "g": [1, 1, 1]}
     assert_equal_data(result, expected)
 
 
@@ -134,6 +134,7 @@ def test_lazy_cum_max_ordered_by_nulls(
         "a": expected_a,
         "b": [1, -1, 3, 2, 5, 0, None],
         "i": [0, 1, 2, 3, 4, 5, 6],
+        "g": [1, 1, 1, 1, 1, 1, 1],
     }
     assert_equal_data(result, expected)
 

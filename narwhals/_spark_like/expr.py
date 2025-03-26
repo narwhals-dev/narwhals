@@ -159,6 +159,39 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         return func
 
+    def _rolling_window_func(
+        self,
+        *,
+        func_name: Literal["sum", "mean", "std", "var"],
+        center: bool,
+        window_size: int,
+        min_samples: int,
+    ) -> WindowFunction:
+        if center:
+            half = (window_size - 1) // 2
+            remainder = (window_size - 1) % 2
+            start = self._Window().currentRow - half - remainder
+            end = self._Window().currentRow + half
+        else:
+            start = self._Window().currentRow - window_size + 1
+            end = self._Window().currentRow
+
+        def func(window_inputs: WindowInputs) -> Column:
+            window = (
+                self._Window()
+                .partitionBy(list(window_inputs.partition_by))
+                .orderBy(
+                    [self._F.col(x).asc_nulls_first() for x in window_inputs.order_by]
+                )
+                .rowsBetween(start, end)
+            )
+            return self._F.when(
+                self._F.count(window_inputs.expr).over(window) >= min_samples,
+                getattr(self._F, func_name)(window_inputs.expr).over(window),
+            )
+
+        return func
+
     @classmethod
     def from_column_names(
         cls: type[Self],
@@ -623,30 +656,24 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._from_call(_fill_null, value=value)
 
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
-        if center:
-            half = (window_size - 1) // 2
-            remainder = (window_size - 1) % 2
-            start = self._Window().currentRow - half - remainder
-            end = self._Window().currentRow + half
-        else:
-            start = self._Window().currentRow - window_size + 1
-            end = self._Window().currentRow
-
-        def func(window_inputs: WindowInputs) -> Column:
-            window = (
-                self._Window()
-                .partitionBy(list(window_inputs.partition_by))
-                .orderBy(
-                    [self._F.col(x).asc_nulls_first() for x in window_inputs.order_by]
-                )
-                .rowsBetween(start, end)
+        return self._with_window_function(
+            self._rolling_window_func(
+                func_name="sum",
+                center=center,
+                window_size=window_size,
+                min_samples=min_samples,
             )
-            return self._F.when(
-                self._F.count(window_inputs.expr).over(window) >= min_samples,
-                self._F.sum(window_inputs.expr).over(window),
-            )
+        )
 
-        return self._with_window_function(func)
+    def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
+        return self._with_window_function(
+            self._rolling_window_func(
+                func_name="mean",
+                center=center,
+                window_size=window_size,
+                min_samples=min_samples,
+            )
+        )
 
     @property
     def str(self: Self) -> SparkLikeExprStringNamespace:

@@ -39,6 +39,10 @@ if TYPE_CHECKING:
 
 class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
     @property
+    def _dataframe(self) -> type[ArrowDataFrame]:
+        return ArrowDataFrame
+
+    @property
     def _expr(self) -> type[ArrowExpr]:
         return ArrowExpr
 

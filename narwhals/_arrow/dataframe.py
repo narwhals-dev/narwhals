@@ -53,12 +53,14 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import Mask  # type: ignore[attr-defined]
     from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
     from narwhals.dtypes import DType
+    from narwhals.schema import Schema
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import SizeUnit
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
     JoinType: TypeAlias = Literal[
         "left semi",
@@ -90,6 +92,29 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         self._backend_version = backend_version
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
+
+    @classmethod
+    def from_numpy(
+        cls,
+        data: _2DArray,
+        /,
+        *,
+        context: _FullContext,
+        schema: Mapping[str, DType] | Schema | Sequence[str] | None,
+    ) -> Self:
+        from narwhals.schema import Schema
+
+        arrays = [pa.array(val) for val in data.T]
+        if isinstance(schema, (Mapping, Schema)):
+            native = pa.Table.from_arrays(arrays, schema=Schema(schema).to_arrow())
+        else:
+            native = pa.Table.from_arrays(arrays, cls._numpy_column_names(data, schema))
+        return cls(
+            native,
+            backend_version=context._backend_version,
+            version=context._version,
+            validate_column_names=True,
+        )
 
     def __narwhals_namespace__(self: Self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
@@ -511,7 +536,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
 
         return pl.from_arrow(self.native)  # type: ignore[return-value]
 
-    def to_numpy(self: Self) -> _2DArray:
+    def to_numpy(self: Self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
         import numpy as np  # ignore-banned-import
 
         arr: Any = np.column_stack([col.to_numpy() for col in self.native.columns])

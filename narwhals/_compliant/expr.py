@@ -882,7 +882,6 @@ class LazyExpr(
     sample: not_implemented = not_implemented()
     map_batches: not_implemented = not_implemented()
     ewm_mean: not_implemented = not_implemented()
-    rolling_mean: not_implemented = not_implemented()
     rolling_var: not_implemented = not_implemented()
     rolling_std: not_implemented = not_implemented()
     gather_every: not_implemented = not_implemented()

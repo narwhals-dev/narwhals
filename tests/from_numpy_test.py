@@ -63,16 +63,10 @@ def test_from_numpy_schema_list(
     assert result.columns == schema
 
 
-def test_from_numpy_schema_notvalid(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "dask" in str(constructor) or "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_from_numpy_schema_notvalid(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     backend = nw_v1.get_native_namespace(df)
-    with pytest.raises(
-        TypeError, match="`schema` is expected to be one of the following types"
-    ):
+    with pytest.raises(TypeError, match=r"`schema.*expected.*types"):
         nw.from_numpy(arr, schema=5, backend=backend)  # type: ignore[arg-type]
 
 
