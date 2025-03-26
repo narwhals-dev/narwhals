@@ -75,18 +75,18 @@ def test_lazy_cum_count_grouped(
         constructor(
             {
                 "arg entina": [None, 2, 3],
-                "ban gkock": [1, 0, 2],
+                "ban gkok": [1, 0, 2],
                 "i ran": [0, 1, 2],
                 "g": [1, 1, 1],
             }
         )
     )
     result = df.with_columns(
-        nw.col("arg entina").cum_count(reverse=reverse).over("g", order_by="ban gkock")
+        nw.col("arg entina").cum_count(reverse=reverse).over("g", order_by="ban gkok")
     ).sort("i ran")
     expected = {
         "arg entina": expected_a,
-        "ban gkock": [1, 0, 2],
+        "ban gkok": [1, 0, 2],
         "i ran": [0, 1, 2],
         "g": [1, 1, 1],
     }
