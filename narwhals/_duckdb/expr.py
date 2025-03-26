@@ -98,6 +98,35 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
         return func
 
+    def _rolling_window_func(
+        self,
+        *,
+        func_name: Literal["sum", "mean", "std", "var"],
+        center: bool,
+        window_size: int,
+        min_samples: int,
+    ) -> WindowFunction:
+        if center:
+            half = (window_size - 1) // 2
+            remainder = (window_size - 1) % 2
+            start = f"{half + remainder} preceding"
+            end = f"{half} following"
+        else:
+            start = f"{window_size - 1} preceding"
+            end = "current row"
+
+        def func(window_inputs: WindowInputs) -> duckdb.Expression:
+            order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=True)
+            partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
+            window = f"({partition_by_sql} {order_by_sql} rows between {start} and {end})"
+            sql = (
+                f"case when count({window_inputs.expr}) over {window} >= {min_samples}"
+                f"then {func_name}({window_inputs.expr}) over {window} else null end"
+            )
+            return SQLExpression(sql)  # type: ignore[no-any-return, unused-ignore]
+
+        return func
+
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         if kind is ExprKind.LITERAL:
             return self
@@ -546,26 +575,24 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         )
 
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
-        if center:
-            half = (window_size - 1) // 2
-            remainder = (window_size - 1) % 2
-            start = f"{half + remainder} preceding"
-            end = f"{half} following"
-        else:
-            start = f"{window_size - 1} preceding"
-            end = "current row"
-
-        def func(window_inputs: WindowInputs) -> duckdb.Expression:
-            order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=True)
-            partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
-            window = f"({partition_by_sql} {order_by_sql} rows between {start} and {end})"
-            sql = (
-                f"case when count({window_inputs.expr}) over {window} >= {min_samples}"
-                f"then sum({window_inputs.expr}) over {window} else null end"
+        return self._with_window_function(
+            self._rolling_window_func(
+                func_name="sum",
+                center=center,
+                window_size=window_size,
+                min_samples=min_samples,
             )
-            return SQLExpression(sql)  # type: ignore[no-any-return, unused-ignore]
+        )
 
-        return self._with_window_function(func)
+    def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
+        return self._with_window_function(
+            self._rolling_window_func(
+                func_name="mean",
+                center=center,
+                window_size=window_size,
+                min_samples=min_samples,
+            )
+        )
 
     def fill_null(
         self: Self, value: Self | Any, strategy: Any, limit: int | None
