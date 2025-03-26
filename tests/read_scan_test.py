@@ -67,7 +67,11 @@ def test_scan_csv(
     if "sqlframe" in str(constructor):
         from sqlframe.duckdb import DuckDBSession
 
-        kwargs = {"session": DuckDBSession(), "inferSchema": True}
+        kwargs = {
+            "session": DuckDBSession(),
+            "inferSchema": True,
+            "header": True,
+        }
     elif "pyspark" in str(constructor):
         from pyspark.sql import SparkSession
 
@@ -82,6 +86,7 @@ def test_scan_csv(
                 .getOrCreate()
             ),
             "inferSchema": True,
+            "header": True,
         }
     else:
         kwargs = {}
