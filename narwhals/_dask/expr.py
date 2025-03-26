@@ -392,6 +392,16 @@ class DaskExpr(
             "rolling_sum",
         )
 
+    def rolling_mean(
+        self: Self, window_size: int, *, min_samples: int, center: bool
+    ) -> Self:
+        return self._from_call(
+            lambda _input: _input.rolling(
+                window=window_size, min_periods=min_samples, center=center
+            ).mean(),
+            "rolling_mean",
+        )
+
     def sum(self: Self) -> Self:
         return self._from_call(lambda _input: _input.sum().to_series(), "sum")
 
