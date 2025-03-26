@@ -159,7 +159,14 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         return func
 
-    def _rolling_window_size(self, *, center: bool, window_size: int) -> tuple[int, int]:
+    def _rolling_window_func(
+        self,
+        *,
+        func_name: Literal["sum", "mean", "std", "var"],
+        center: bool,
+        window_size: int,
+        min_samples: int,
+    ) -> WindowFunction:
         if center:
             half = (window_size - 1) // 2
             remainder = (window_size - 1) % 2
@@ -168,16 +175,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         else:
             start = self._Window().currentRow - window_size + 1
             end = self._Window().currentRow
-        return start, end
 
-    def _rolling_window_func(
-        self,
-        *,
-        func_name: Literal["sum", "mean", "std", "var"],
-        start: int,
-        end: int,
-        min_samples: int,
-    ) -> WindowFunction:
         def func(window_inputs: WindowInputs) -> Column:
             window = (
                 self._Window()
@@ -658,18 +656,22 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._from_call(_fill_null, value=value)
 
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
-        start, end = self._rolling_window_size(center=center, window_size=window_size)
         return self._with_window_function(
             self._rolling_window_func(
-                func_name="sum", start=start, end=end, min_samples=min_samples
+                func_name="sum",
+                center=center,
+                window_size=window_size,
+                min_samples=min_samples,
             )
         )
 
     def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
-        start, end = self._rolling_window_size(center=center, window_size=window_size)
         return self._with_window_function(
             self._rolling_window_func(
-                func_name="mean", start=start, end=end, min_samples=min_samples
+                func_name="mean",
+                center=center,
+                window_size=window_size,
+                min_samples=min_samples,
             )
         )
 

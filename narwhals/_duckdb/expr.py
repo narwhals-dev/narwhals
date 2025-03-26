@@ -98,12 +98,14 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
         return func
 
-    def _rolling_window_size(
+    def _rolling_window_func(
         self,
         *,
+        func_name: Literal["sum", "mean", "std", "var"],
         center: bool,
         window_size: int,
-    ) -> tuple[str, str]:
+        min_samples: int,
+    ) -> WindowFunction:
         if center:
             half = (window_size - 1) // 2
             remainder = (window_size - 1) % 2
@@ -112,16 +114,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         else:
             start = f"{window_size - 1} preceding"
             end = "current row"
-        return start, end
 
-    def _rolling_window_func(
-        self,
-        *,
-        func_name: Literal["sum", "mean", "std", "var"],
-        start: str,
-        end: str,
-        min_samples: int,
-    ) -> WindowFunction:
         def func(window_inputs: WindowInputs) -> duckdb.Expression:
             order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=True)
             partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
@@ -582,18 +575,22 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         )
 
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
-        start, end = self._rolling_window_size(center=center, window_size=window_size)
         return self._with_window_function(
             self._rolling_window_func(
-                func_name="sum", start=start, end=end, min_samples=min_samples
+                func_name="sum",
+                center=center,
+                window_size=window_size,
+                min_samples=min_samples,
             )
         )
 
     def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
-        start, end = self._rolling_window_size(center=center, window_size=window_size)
         return self._with_window_function(
             self._rolling_window_func(
-                func_name="mean", start=start, end=end, min_samples=min_samples
+                func_name="mean",
+                center=center,
+                window_size=window_size,
+                min_samples=min_samples,
             )
         )
 
