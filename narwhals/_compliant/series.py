@@ -70,7 +70,13 @@ class CompliantSeries(
     def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self: ...
     @classmethod
     def from_iterable(
-        cls, data: Iterable[Any], /, *, context: _FullContext, name: str = ""
+        cls,
+        data: Iterable[Any],
+        /,
+        *,
+        context: _FullContext,
+        name: str = "",
+        dtype: DType | type[DType] | None = None,
     ) -> Self: ...
     def _change_version(self, version: Version) -> Self: ...
 
