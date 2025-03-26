@@ -269,11 +269,9 @@ def _new_series_impl(
     else:  # pragma: no cover
         native_namespace = implementation.to_native_namespace()
         try:
-            # implementation is UNKNOWN, Narwhals extension using this feature should
-            # implement `from_dict` function in the top-level namespace.
             native_series = native_namespace.new_series(name, values, dtype)
         except AttributeError as e:
-            msg = "Unknown namespace is expected to implement `Series` constructor."
+            msg = "Unknown namespace is expected to implement `new_series` constructor."
             raise AttributeError(msg) from e
     return from_native(native_series, series_only=True).alias(name)
 
