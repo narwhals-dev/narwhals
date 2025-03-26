@@ -68,7 +68,7 @@ typing = [
   "mypy~=1.15.0",
   "pyright",
   "pyarrow-stubs==17.18",
-  "sqlframe==3.24.1",
+  "sqlframe",
   "polars==1.25.2",
   "uv",
 ]

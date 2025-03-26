@@ -35,6 +35,10 @@ class InterchangeSeries:
             self._native_series.dtype, version=self._version
         )
 
+    @property
+    def native(self) -> Any:
+        return self._native_series
+
     def __getattr__(self: Self, attr: str) -> NoReturn:
         msg = (  # pragma: no cover
             f"Attribute {attr} is not supported for metadata-only dataframes.\n\n"

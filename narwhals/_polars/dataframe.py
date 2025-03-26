@@ -36,10 +36,12 @@ if TYPE_CHECKING:
     from narwhals._polars.group_by import PolarsLazyGroupBy
     from narwhals._polars.series import PolarsSeries
     from narwhals.dtypes import DType
+    from narwhals.schema import Schema
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
     T = TypeVar("T")
     R = TypeVar("R")
@@ -91,6 +93,27 @@ class PolarsDataFrame:
         self._implementation = Implementation.POLARS
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
+
+    @classmethod
+    def from_numpy(
+        cls,
+        data: _2DArray,
+        /,
+        *,
+        context: _FullContext,  # NOTE: Maybe only `Implementation`?
+        schema: Mapping[str, DType] | Schema | Sequence[str] | None,
+    ) -> Self:
+        from narwhals.schema import Schema
+
+        pl_schema = (
+            Schema(schema).to_polars()
+            if isinstance(schema, (Mapping, Schema))
+            else schema
+        )
+        native = pl.from_numpy(data, pl_schema)
+        return cls(
+            native, backend_version=context._backend_version, version=context._version
+        )
 
     @property
     def native(self) -> pl.DataFrame:

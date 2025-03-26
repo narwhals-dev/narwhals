@@ -35,6 +35,10 @@ class PandasLikeNamespace(
     EagerNamespace[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr]
 ):
     @property
+    def _dataframe(self) -> type[PandasLikeDataFrame]:
+        return PandasLikeDataFrame
+
+    @property
     def _expr(self) -> type[PandasLikeExpr]:
         return PandasLikeExpr
 
@@ -290,7 +294,7 @@ class PandasLikeNamespace(
                 sep_array = init_value.from_iterable(
                     data=[separator] * len(init_value),
                     name="sep",
-                    index=init_value._native_series.index,
+                    index=init_value.native.index,
                     context=self,
                 )
                 separators = (sep_array.zip_with(~nm, "") for nm in null_mask[:-1])

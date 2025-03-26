@@ -100,36 +100,34 @@ def align_and_extract_native(
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
 
-    lhs_index = lhs._native_series.index
+    lhs_index = lhs.native.index
 
     if isinstance(rhs, PandasLikeDataFrame):
         return NotImplemented
 
     if lhs._broadcast and isinstance(rhs, PandasLikeSeries) and not rhs._broadcast:
-        return lhs._native_series.iloc[0], rhs._native_series
+        return lhs.native.iloc[0], rhs.native
 
-    lhs_native = lhs._native_series
     if isinstance(rhs, PandasLikeSeries):
         if rhs._broadcast:
-            return (lhs_native, rhs._native_series.iloc[0])
-        rhs_native = rhs._native_series
-        if rhs_native.index is not lhs_index:
+            return (lhs.native, rhs.native.iloc[0])
+        if rhs.native.index is not lhs_index:
             return (
-                lhs_native,
+                lhs.native,
                 set_index(
-                    rhs_native,
+                    rhs.native,
                     lhs_index,
                     implementation=rhs._implementation,
                     backend_version=rhs._backend_version,
                 ),
             )
-        return (lhs_native, rhs_native)
+        return (lhs.native, rhs.native)
 
     if isinstance(rhs, list):
         msg = "Expected Series or scalar, got list."
         raise TypeError(msg)
     # `rhs` must be scalar, so just leave it as-is
-    return lhs_native, rhs
+    return lhs.native, rhs
 
 
 def horizontal_concat(
@@ -617,27 +615,26 @@ def align_series_full_broadcast(
     lengths = [len(s) for s in series]
     max_length = max(lengths)
 
-    idx = series[lengths.index(max_length)]._native_series.index
+    idx = series[lengths.index(max_length)].native.index
     reindexed = []
     for s in series:
-        s_native = s._native_series
         if s._broadcast:
             reindexed.append(
                 s._from_native_series(
                     native_namespace.Series(
-                        [s_native.iloc[0]] * max_length,
+                        [s.native.iloc[0]] * max_length,
                         index=idx,
-                        name=s_native.name,
-                        dtype=s_native.dtype,
+                        name=s.name,
+                        dtype=s.native.dtype,
                     )
                 )
             )
 
-        elif s_native.index is not idx:
+        elif s.native.index is not idx:
             reindexed.append(
                 s._from_native_series(
                     set_index(
-                        s_native,
+                        s.native,
                         idx,
                         implementation=s._implementation,
                         backend_version=s._backend_version,
