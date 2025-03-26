@@ -173,18 +173,30 @@ class PandasLikeSeries(EagerSeries[Any]):
         *,
         context: _FullContext,
         name: str = "",
+        dtype: DType | type[DType] | None = None,
         index: Any = None,
     ) -> Self:
-        return cls(
-            native_series_from_iterable(
+        implementation = context._implementation
+        backend_version = context._backend_version
+        version = context._version
+        if dtype:
+            pd_dtype = narwhals_to_native_dtype(
+                dtype, None, implementation, backend_version, version
+            )
+            ns = implementation.to_native_namespace()
+            series = ns.Series(data, name=name, dtype=pd_dtype)
+        else:
+            series = native_series_from_iterable(
                 data,
-                name=name,
+                name,
                 index=[] if index is None else index,
-                implementation=context._implementation,
-            ),
-            implementation=context._implementation,
-            backend_version=context._backend_version,
-            version=context._version,
+                implementation=implementation,
+            )
+        return cls(
+            series,
+            implementation=implementation,
+            backend_version=backend_version,
+            version=version,
         )
 
     @classmethod
