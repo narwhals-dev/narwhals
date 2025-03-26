@@ -808,8 +808,31 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     ) -> Self:
         _, lower_bound = extract_native(self, lower_bound)
         _, upper_bound = extract_native(self, upper_bound)
-        arr = pc.max_element_wise(self.native, lower_bound)
-        return self._from_native_series(pc.min_element_wise(arr, upper_bound))
+
+        def _clip_lower(_input: ArrowChunkedArray, lower_bound: Any) -> ArrowChunkedArray:
+            return pc.max_element_wise(_input, lower_bound)
+
+        def _clip_upper(_input: ArrowChunkedArray, upper_bound: Any) -> ArrowChunkedArray:
+            return pc.min_element_wise(_input, upper_bound)
+
+        def _clip_both(
+            _input: ArrowChunkedArray, lower_bound: Any, upper_bound: Any
+        ) -> ArrowChunkedArray:
+            return pc.max_element_wise(
+                pc.min_element_wise(_input, upper_bound), lower_bound
+            )
+
+        if lower_bound is None:
+            return self._from_native_series(
+                _clip_upper(self.native, upper_bound=upper_bound)
+            )
+        if upper_bound is None:
+            return self._from_native_series(
+                _clip_lower(self.native, lower_bound=lower_bound)
+            )
+        return self._from_native_series(
+            _clip_both(self.native, lower_bound=lower_bound, upper_bound=upper_bound)
+        )
 
     def to_arrow(self: Self) -> ArrowArray:
         return self.native.combine_chunks()
