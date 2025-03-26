@@ -92,14 +92,9 @@ def test_over_multiple(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
-        "b": [1, 2, 3, 3, 5],
-        "c": [5, 4, 3, 1, 2],
-        "c_min": [5, 4, 1, 1, 2],
-    }
-    expected = {
-        "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, 3, 5, 3],
         "c": [5, 4, 3, 2, 1],
+        "c_min": [5, 4, 1, 2, 1],
     }
 
     result = df.with_columns(c_min=nw.col("c").min().over("a", "b")).sort("i").drop("i")
