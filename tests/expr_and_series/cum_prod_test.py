@@ -88,22 +88,24 @@ def test_lazy_cum_prod_grouped(
     if "cudf" in str(constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
-    if "sqlframe" in str(constructor):
-        # https://github.com/eakmanrq/sqlframe/issues/348
-        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
         constructor(
             {
                 "arg entina": [1, 2, 3],
-                "ban gkock": [1, 0, 2],
+                "ban gkok": [1, 0, 2],
                 "i ran": [0, 1, 2],
                 "g": [1, 1, 1],
             }
         )
     )
     result = df.with_columns(
-        nw.col("arg entina").cum_prod(reverse=reverse).over("g", order_by="ban gkock")
+        nw.col("arg entina").cum_prod(reverse=reverse).over("g", order_by="ban gkok")
     ).sort("i ran")
-    expected = {"arg entina": expected_a, "ban gkock": [1, 0, 2], "i ran": [0, 1, 2]}
+    expected = {
+        "arg entina": expected_a,
+        "ban gkok": [1, 0, 2],
+        "i ran": [0, 1, 2],
+        "g": [1, 1, 1],
+    }
     assert_equal_data(result, expected)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import platform
 import sys
+from importlib.metadata import version
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -1099,12 +1100,12 @@ def _scan_parquet_impl(
         if (session := kwargs.pop("session", None)) is None:
             msg = "Spark like backends require a session object to be passed in `kwargs`."
             raise ValueError(msg)
-
         native_frame = (
             session.read.format("parquet").load(source)
-            # passing `options` currently not possible in SQLFrame: see
-            # https://github.com/eakmanrq/sqlframe/issues/341
-            if implementation is Implementation.SQLFRAME
+            if (
+                implementation is Implementation.SQLFRAME
+                and (parse_version(version("sqlframe"))) < (3, 27, 0)
+            )
             else session.read.format("parquet").options(**kwargs).load(source)
         )
 
