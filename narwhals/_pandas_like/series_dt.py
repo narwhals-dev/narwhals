@@ -14,7 +14,6 @@ from narwhals.utils import import_dtypes_module
 if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.typing import TimeUnit
-    from narwhals.utils import Implementation
 
 
 class PandasLikeSeriesDateTimeNamespace(
@@ -172,7 +171,7 @@ class PandasLikeSeriesDateTimeNamespace(
         s = self.native
         dtype = self.compliant.dtype
         mask_na = s.isna()
-        dtypes = import_dtypes_module(self.compliant._version)
+        dtypes = import_dtypes_module(self.version)
         if dtype == dtypes.Date:
             # Date is only supported in pandas dtypes if pyarrow-backed
             s_cast = s.astype("Int32[pyarrow]")
@@ -190,11 +189,3 @@ class PandasLikeSeriesDateTimeNamespace(
             raise TypeError(msg)
         result[mask_na] = None
         return self.from_native(result)
-
-    @property
-    def implementation(self) -> Implementation:
-        return self.compliant._implementation
-
-    @property
-    def backend_version(self) -> tuple[int, ...]:
-        return self.compliant._backend_version

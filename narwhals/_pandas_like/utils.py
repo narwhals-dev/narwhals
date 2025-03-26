@@ -821,4 +821,15 @@ def check_column_names_are_unique(columns: pd.Index[str]) -> None:
         raise DuplicateError(msg)
 
 
-class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]): ...
+class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]):
+    @property
+    def implementation(self) -> Implementation:
+        return self.compliant._implementation
+
+    @property
+    def backend_version(self) -> tuple[int, ...]:
+        return self.compliant._backend_version
+
+    @property
+    def version(self) -> Version:
+        return self.compliant._version
