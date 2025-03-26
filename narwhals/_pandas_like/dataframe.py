@@ -464,7 +464,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             )
         new_series = align_series_full_broadcast(*new_series)
         df = horizontal_concat(
-            [s._native_series for s in new_series],
+            [s.native for s in new_series],
             implementation=self._implementation,
             backend_version=self._backend_version,
         )
