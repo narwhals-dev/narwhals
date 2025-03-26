@@ -15,11 +15,13 @@ from narwhals._compliant.any_namespace import DateTimeNamespace
 from narwhals._compliant.any_namespace import ListNamespace
 from narwhals._compliant.any_namespace import StringNamespace
 from narwhals._compliant.any_namespace import StructNamespace
+from narwhals._compliant.typing import CompliantSeriesT_co
 from narwhals._compliant.typing import EagerSeriesT_co
 from narwhals._compliant.typing import NativeSeriesT_co
 from narwhals._translate import FromIterable
 from narwhals._translate import NumpyConvertible
-from narwhals.utils import _SeriesNamespace
+from narwhals.utils import _StoresCompliant
+from narwhals.utils import _StoresNative
 from narwhals.utils import unstable
 
 if TYPE_CHECKING:
@@ -303,6 +305,25 @@ class EagerSeries(CompliantSeries[NativeSeriesT_co], Protocol[NativeSeriesT_co])
     def list(self) -> Any: ...
     @property
     def struct(self) -> Any: ...
+
+
+class _SeriesNamespace(  # type: ignore[misc]
+    _StoresCompliant[CompliantSeriesT_co],
+    _StoresNative[NativeSeriesT_co],
+    Protocol[CompliantSeriesT_co, NativeSeriesT_co],
+):
+    _compliant_series: CompliantSeriesT_co
+
+    @property
+    def compliant(self) -> CompliantSeriesT_co:
+        return self._compliant_series
+
+    @property
+    def native(self) -> NativeSeriesT_co:
+        return self._compliant_series.native  # type: ignore[no-any-return]
+
+    def from_native(self, series: Any, /) -> CompliantSeriesT_co:
+        return self.compliant._from_native_series(series)
 
 
 class EagerSeriesNamespace(
