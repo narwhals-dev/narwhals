@@ -7,7 +7,9 @@ import narwhals.stable.v1 as nw
 
 
 def test_repr() -> None:
-    duckdb = pytest.importorskip("duckdb")
+    pytest.importorskip("duckdb")
+    import duckdb
+
     df = pd.DataFrame({"a": [1, 2, 3], "b": ["fdaf", "fda", "cf"]})
     result = nw.from_native(df).__repr__()
     expected = (

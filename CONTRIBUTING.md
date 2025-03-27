@@ -107,14 +107,13 @@ If you want to run PySpark-related tests, you'll need to have Java installed. Re
 
    4. Activate it. On Linux, this is `. .venv/bin/activate`, on Windows `.\.venv\Scripts\activate`.
 
-2. Install Narwhals: `uv pip install -e ".[dev, core, docs]"`. This will include fast-ish core libraries.
+2. Install Narwhals: `uv pip install -e . --group local-dev"`. This will include fast-ish core libraries and dev dependencies.
    If you also want to test other libraries like Dask , PySpark, and Modin, you can install them too with
-   `uv pip install -e ".[dev, core, docs, dask, pyspark, modin]"`.
+   `uv pip install -e ".[dask, pyspark, modin]" --group local-dev`.
 
 You should also install pre-commit:
 
 ```terminal
-uv pip install pre-commit
 pre-commit install
 ```
 
@@ -206,6 +205,26 @@ then their tests will run too.
 #### Testing cuDF
 
 We can't currently test in CI against cuDF, but you can test it manually in Kaggle using GPUs. Please follow this [Kaggle notebook](https://www.kaggle.com/code/marcogorelli/testing-cudf-in-narwhals) to run the tests.
+
+### Static typing
+
+We run both `mypy` and `pyright` in CI. To run them locally, make sure to install
+
+```terminal
+uv pip install -U -e ".[typing]"
+```
+
+You can then run
+- `mypy narwhals tests`
+- `pyright narwhals tests`
+
+to verify type completeness / correctness.
+
+Note that:
+- In `_pandas_like`, we type all native objects as if they are pandas ones, though
+  in reality this package is shared between pandas, Modin, and cuDF.
+- In `_spark_like`, we type all native objects as if they are SQLFrame ones, though
+  in reality this package is shared between SQLFrame and PySpark.
 
 ### 8. Writing the doc(strings)
 

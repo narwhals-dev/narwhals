@@ -5,6 +5,7 @@ import os
 import sys
 import warnings
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterator
@@ -21,10 +22,8 @@ from narwhals.typing import IntoFrame
 from narwhals.utils import Implementation
 from narwhals.utils import parse_version
 
-if sys.version_info >= (3, 10):
-    from typing import TypeAlias  # pragma: no cover
-else:
-    from typing_extensions import TypeAlias  # pragma: no cover
+if TYPE_CHECKING:
+    from typing_extensions import TypeAlias
 
 
 def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
@@ -49,7 +48,7 @@ ConstructorEager: TypeAlias = Callable[[Any], IntoDataFrame]
 
 def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
     if len(left) != len(right):
-        msg = f"left {len(left)=} != right {len(right)=}"  # pragma: no cover
+        msg = f"{len(left)=} != {len(right)=}\nLeft: {left}\nRight: {right}"  # pragma: no cover
         raise ValueError(msg)  # pragma: no cover
     return zip(left, right)
 
@@ -71,21 +70,6 @@ def _to_comparable_list(column_values: Any) -> Any:
     return list(column_values)
 
 
-def _sort_dict_by_key(
-    data_dict: Mapping[str, list[Any]], key: str
-) -> dict[str, list[Any]]:  # pragma: no cover
-    sort_list = data_dict[key]
-    sorted_indices = sorted(
-        range(len(sort_list)),
-        key=lambda i: (
-            (sort_list[i] is None)
-            or (isinstance(sort_list[i], float) and math.isnan(sort_list[i])),
-            sort_list[i],
-        ),
-    )
-    return {key: [value[i] for i in sorted_indices] for key, value in data_dict.items()}
-
-
 def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
     is_duckdb = (
         hasattr(result, "_compliant_frame")
@@ -104,7 +88,9 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
         result = result.collect(**kwargs.get(result.implementation, {}))
 
     if hasattr(result, "columns"):
-        for idx, (col, key) in enumerate(zip(result.columns, expected.keys())):
+        for idx, (col, key) in enumerate(
+            zip_strict(result.columns, list(expected.keys()))
+        ):
             assert col == key, f"Expected column name {key} at index {idx}, found {col}"
     result = {key: _to_comparable_list(result[key]) for key in expected}
     assert list(result.keys()) == list(expected.keys()), (

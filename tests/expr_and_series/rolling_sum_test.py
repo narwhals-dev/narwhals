@@ -11,6 +11,7 @@ from hypothesis import given
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import InvalidOperationError
+from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
@@ -76,14 +77,13 @@ def test_rolling_sum_expr_lazy_ungrouped(
     expected_a: list[float],
     window_size: int,
     min_samples: int,
-    request: pytest.FixtureRequest,
     *,
     center: bool,
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    ):
         pytest.skip()
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         # unreliable
         pytest.skip()
@@ -97,7 +97,7 @@ def test_rolling_sum_expr_lazy_ungrouped(
         df.with_columns(
             nw.col("a")
             .rolling_sum(window_size, min_samples=min_samples, center=center)
-            .over(_order_by="b")
+            .over(order_by="b")
         )
         .select("a", "i")
         .sort("i")
@@ -130,11 +130,13 @@ def test_rolling_sum_expr_lazy_grouped(
     *,
     center: bool,
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    ):
         pytest.skip()
     if "pandas" in str(constructor) and PANDAS_VERSION < (1, 2):
         pytest.skip()
-    if any(x in str(constructor) for x in ("dask", "pyarrow_table", "duckdb")):
+    if any(x in str(constructor) for x in ("dask", "pyarrow_table")):
         request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor) and center:
         # center is not implemented for offset-based windows
@@ -153,7 +155,7 @@ def test_rolling_sum_expr_lazy_grouped(
         df.with_columns(
             nw.col("a")
             .rolling_sum(window_size, min_samples=min_samples, center=center)
-            .over("g", _order_by="b")
+            .over("g", order_by="b")
         )
         .sort("i")
         .select("a")

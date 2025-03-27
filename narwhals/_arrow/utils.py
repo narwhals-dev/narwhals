@@ -5,6 +5,7 @@ from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Iterator
 from typing import Sequence
 from typing import cast
 from typing import overload
@@ -26,8 +27,6 @@ if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import ArrowArray
     from narwhals._arrow.typing import ArrowChunkedArray
-    from narwhals._arrow.typing import Incomplete
-    from narwhals._arrow.typing import StringArray
     from narwhals.dtypes import DType
     from narwhals.typing import _AnyDArray
     from narwhals.utils import Version
@@ -89,8 +88,7 @@ def nulls_like(n: int, series: ArrowSeries) -> ArrowArray:
 
     Uses the type of `series`, without upseting `mypy`.
     """
-    nulls: Incomplete = pa.nulls
-    return nulls(n, series._type)
+    return pa.nulls(n, series.native.type)
 
 
 @lru_cache(maxsize=16)
@@ -152,6 +150,10 @@ def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
         )
     if pa.types.is_decimal(dtype):
         return dtypes.Decimal()
+    if pa.types.is_time32(dtype) or pa.types.is_time64(dtype):
+        return dtypes.Time()
+    if pa.types.is_binary(dtype):
+        return dtypes.Binary()
     return dtypes.Unknown()  # pragma: no cover
 
 
@@ -205,6 +207,10 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
         inner = narwhals_to_native_dtype(dtype.inner, version=version)
         list_size = dtype.size
         return pa.list_(inner, list_size=list_size)
+    if isinstance_or_issubclass(dtype, dtypes.Time):
+        return pa.time64("ns")
+    if isinstance_or_issubclass(dtype, dtypes.Binary):
+        return pa.binary()
 
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
@@ -268,23 +274,6 @@ def align_series_full_broadcast(*series: ArrowSeries) -> Sequence[ArrowSeries]:
             reshaped.append(s)
 
     return reshaped
-
-
-def extract_dataframe_comparand(
-    length: int,
-    other: ArrowSeries,
-    backend_version: tuple[int, ...],
-) -> ArrowChunkedArray:
-    """Extract native Series, broadcasting to `length` if necessary."""
-    if not other._broadcast:
-        return other.native
-
-    import numpy as np  # ignore-banned-import
-
-    value = other.native[0]
-    if backend_version < (13,) and hasattr(value, "as_py"):
-        value = value.as_py()
-    return pa.chunked_array([np.full(shape=length, fill_value=value)])
 
 
 def horizontal_concat(dfs: list[pa.Table]) -> pa.Table:
@@ -352,7 +341,6 @@ def floordiv_compat(left: Any, right: Any) -> Any:
             )
             result = pc.if_else(
                 pc.and_(has_remainder, has_one_negative_operand),
-                # GH: 55561 ruff: ignore
                 pc.subtract(divided, lit(1, type=divided.type)),
                 divided,
             )
@@ -482,8 +470,8 @@ def parse_datetime_format(arr: ArrowChunkedArray) -> str:
         msg = "Found multiple timezone values while inferring datetime format."
         raise ValueError(msg)
 
-    date_value = _parse_date_format(cast("StringArray", matches.field("date")))
-    time_value = _parse_time_format(cast("StringArray", matches.field("time")))
+    date_value = _parse_date_format(cast("pc.StringArray", matches.field("date")))
+    time_value = _parse_time_format(cast("pc.StringArray", matches.field("time")))
 
     sep_value = separators[0].as_py()
     tz_value = "%z" if tz[0].as_py() else ""
@@ -491,7 +479,7 @@ def parse_datetime_format(arr: ArrowChunkedArray) -> str:
     return f"{date_value}{sep_value}{time_value}{tz_value}"
 
 
-def _parse_date_format(arr: StringArray) -> str:
+def _parse_date_format(arr: pc.StringArray) -> str:
     for date_rgx, date_fmt in DATE_FORMATS:
         matches = pc.extract_regex(arr, pattern=date_rgx)
         if date_fmt == "%Y%m%d" and pc.all(matches.is_valid()).as_py():
@@ -511,7 +499,7 @@ def _parse_date_format(arr: StringArray) -> str:
     raise ValueError(msg)
 
 
-def _parse_time_format(arr: StringArray) -> str:
+def _parse_time_format(arr: pc.StringArray) -> str:
     for time_rgx, time_fmt in TIME_FORMATS:
         matches = pc.extract_regex(arr, pattern=time_rgx)
         if pc.all(matches.is_valid()).as_py():
@@ -541,6 +529,19 @@ def pad_series(
     pad_right = pa.array([None] * offset_right, type=series._type)
     concat = pa.concat_arrays([pad_left, *series.native.chunks, pad_right])
     return series._from_native_series(concat), offset_left + offset_right
+
+
+def cast_to_comparable_string_types(
+    *chunked_arrays: ArrowChunkedArray,
+    separator: str,
+) -> tuple[Iterator[ArrowChunkedArray], pa.Scalar[Any]]:
+    # Ensure `chunked_arrays` are either all `string` or all `large_string`.
+    dtype = (
+        pa.string()  # (PyArrow default)
+        if not any(pa.types.is_large_string(ca.type) for ca in chunked_arrays)
+        else pa.large_string()
+    )
+    return (ca.cast(dtype) for ca in chunked_arrays), lit(separator, dtype)
 
 
 class ArrowSeriesNamespace(_SeriesNamespace["ArrowSeries", "ArrowChunkedArray"]):

@@ -12,6 +12,7 @@ from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import combine_metadata
+from narwhals._expression_parsing import combine_metadata_binary_op
 from narwhals._expression_parsing import extract_compliant
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import LengthChangingExprError
@@ -48,12 +49,15 @@ if TYPE_CHECKING:
 
 class Expr:
     def __init__(
-        self: Self,
-        to_compliant_expr: Callable[[Any], Any],
-        metadata: ExprMetadata,
+        self: Self, to_compliant_expr: _ToCompliant, metadata: ExprMetadata
     ) -> None:
         # callable from CompliantNamespace to CompliantExpr
-        self._to_compliant_expr: _ToCompliant = to_compliant_expr
+        def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
+            result = to_compliant_expr(plx)
+            result._metadata = self._metadata
+            return result
+
+        self._to_compliant_expr: _ToCompliant = func
         self._metadata = metadata
 
     def _from_callable(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
@@ -164,7 +168,7 @@ class Expr:
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x == y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=True),
+            combine_metadata_binary_op(self, other),
         )
 
     def __ne__(self: Self, other: Self | Any) -> Self:  # type: ignore[override]
@@ -172,7 +176,7 @@ class Expr:
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x != y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=True),
+            combine_metadata_binary_op(self, other),
         )
 
     def __and__(self: Self, other: Any) -> Self:
@@ -180,7 +184,7 @@ class Expr:
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x & y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=True),
+            combine_metadata_binary_op(self, other),
         )
 
     def __rand__(self: Self, other: Any) -> Self:
@@ -191,7 +195,7 @@ class Expr:
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x | y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=True),
+            combine_metadata_binary_op(self, other),
         )
 
     def __ror__(self: Self, other: Any) -> Self:
@@ -202,7 +206,7 @@ class Expr:
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x + y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=True),
+            combine_metadata_binary_op(self, other),
         )
 
     def __radd__(self: Self, other: Any) -> Self:
@@ -213,7 +217,7 @@ class Expr:
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x - y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=True),
+            combine_metadata_binary_op(self, other),
         )
 
     def __rsub__(self: Self, other: Any) -> Self:
@@ -225,7 +229,7 @@ class Expr:
                 other,
                 str_as_lit=True,
             ),
-            combine_metadata(self, other, str_as_lit=True),
+            combine_metadata_binary_op(self, other),
         )
 
     def __truediv__(self: Self, other: Any) -> Self:
@@ -233,7 +237,7 @@ class Expr:
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x / y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=True),
+            combine_metadata_binary_op(self, other),
         )
 
     def __rtruediv__(self: Self, other: Any) -> Self:
@@ -245,7 +249,7 @@ class Expr:
                 other,
                 str_as_lit=True,
             ),
-            combine_metadata(self, other, str_as_lit=True),
+            combine_metadata_binary_op(self, other),
         )
 
     def __mul__(self: Self, other: Any) -> Self:
@@ -253,7 +257,7 @@ class Expr:
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x * y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=True),
+            combine_metadata_binary_op(self, other),
         )
 
     def __rmul__(self: Self, other: Any) -> Self:
@@ -264,7 +268,7 @@ class Expr:
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x <= y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=True),
+            combine_metadata_binary_op(self, other),
         )
 
     def __lt__(self: Self, other: Any) -> Self:
@@ -272,7 +276,7 @@ class Expr:
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x < y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=True),
+            combine_metadata_binary_op(self, other),
         )
 
     def __gt__(self: Self, other: Any) -> Self:
@@ -280,7 +284,7 @@ class Expr:
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x > y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=True),
+            combine_metadata_binary_op(self, other),
         )
 
     def __ge__(self: Self, other: Any) -> Self:
@@ -288,7 +292,7 @@ class Expr:
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x >= y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=True),
+            combine_metadata_binary_op(self, other),
         )
 
     def __pow__(self: Self, other: Any) -> Self:
@@ -296,7 +300,7 @@ class Expr:
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x**y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=True),
+            combine_metadata_binary_op(self, other),
         )
 
     def __rpow__(self: Self, other: Any) -> Self:
@@ -308,7 +312,7 @@ class Expr:
                 other,
                 str_as_lit=True,
             ),
-            combine_metadata(self, other, str_as_lit=True),
+            combine_metadata_binary_op(self, other),
         )
 
     def __floordiv__(self: Self, other: Any) -> Self:
@@ -316,7 +320,7 @@ class Expr:
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x // y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=True),
+            combine_metadata_binary_op(self, other),
         )
 
     def __rfloordiv__(self: Self, other: Any) -> Self:
@@ -328,7 +332,7 @@ class Expr:
                 other,
                 str_as_lit=True,
             ),
-            combine_metadata(self, other, str_as_lit=True),
+            combine_metadata_binary_op(self, other),
         )
 
     def __mod__(self: Self, other: Any) -> Self:
@@ -336,7 +340,7 @@ class Expr:
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x % y, self, other, str_as_lit=True
             ),
-            combine_metadata(self, other, str_as_lit=True),
+            combine_metadata_binary_op(self, other),
         )
 
     def __rmod__(self: Self, other: Any) -> Self:
@@ -348,7 +352,7 @@ class Expr:
                 other,
                 str_as_lit=True,
             ),
-            combine_metadata(self, other, str_as_lit=True),
+            combine_metadata_binary_op(self, other),
         )
 
     # --- unary ---
@@ -904,6 +908,10 @@ class Expr:
     def cum_sum(self: Self, *, reverse: bool = False) -> Self:
         """Return cumulative sum.
 
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+
         Arguments:
             reverse: reverse the operation
 
@@ -934,6 +942,10 @@ class Expr:
 
     def diff(self: Self) -> Self:
         """Returns the difference between each element and the previous one.
+
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
         Returns:
             A new expression.
@@ -977,6 +989,10 @@ class Expr:
 
     def shift(self: Self, n: int) -> Self:
         """Shift values by `n` positions.
+
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
         Arguments:
             n: Number of positions to shift values by.
@@ -1163,7 +1179,14 @@ class Expr:
             lambda plx: apply_n_ary_operation(
                 plx, func, self, lower_bound, upper_bound, str_as_lit=False
             ),
-            combine_metadata(self, lower_bound, upper_bound, str_as_lit=False),
+            combine_metadata(
+                self,
+                lower_bound,
+                upper_bound,
+                str_as_lit=False,
+                allow_multi_output=False,
+                to_single_output=False,
+            ),
         )
 
     def is_in(self: Self, other: Any) -> Self:
@@ -1231,6 +1254,13 @@ class Expr:
             └──────────────────┘
         """
         flat_predicates = flatten(predicates)
+        metadata = combine_metadata(
+            self,
+            *flat_predicates,
+            str_as_lit=False,
+            allow_multi_output=True,
+            to_single_output=False,
+        ).with_kind(ExprKind.FILTRATION)
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx,
@@ -1239,9 +1269,7 @@ class Expr:
                 *flat_predicates,
                 str_as_lit=False,
             ),
-            combine_metadata(self, *flat_predicates, str_as_lit=False).with_kind(
-                ExprKind.FILTRATION
-            ),
+            metadata,
         )
 
     def is_null(self: Self) -> Self:
@@ -1507,16 +1535,18 @@ class Expr:
 
     def over(
         self: Self,
-        *partition_by: str | Iterable[str],
-        _order_by: str | None = None,
+        *partition_by: str | Sequence[str],
+        order_by: str | Sequence[str] | None = None,
     ) -> Self:
-        """Compute expressions over the given groups.
+        """Compute expressions over the given groups (optionally with given order).
 
         Arguments:
             partition_by: Names of columns to compute window expression over.
                 Must be names of columns, as opposed to expressions -
                 so, this is a bit less flexible than Polars' `Expr.over`.
-            _order_by: Unused, but this is building up to something.
+            order_by: Column(s) to order window functions by.
+                For lazy backends, this argument is required when `over` is applied
+                to order-dependent functions, see [order-dependence](../basics/order_dependence.md).
 
         Returns:
             A new expression.
@@ -1554,22 +1584,27 @@ class Expr:
             raise LengthChangingExprError(msg)
 
         flat_partition_by = flatten(partition_by)
-        order_by = [_order_by] if isinstance(_order_by, str) else _order_by
-        if not flat_partition_by and not _order_by:  # pragma: no cover
+        flat_order_by = [order_by] if isinstance(order_by, str) else order_by
+        if not flat_partition_by and not flat_order_by:  # pragma: no cover
             msg = "At least one of `partition_by` or `order_by` must be specified."
             raise ValueError(msg)
 
         kind = ExprKind.TRANSFORM
         n_open_windows = self._metadata.n_open_windows
-        if _order_by is not None and self._metadata.kind.is_window():
+        if flat_order_by is not None and self._metadata.kind.is_window():
             n_open_windows -= 1
-        metadata = ExprMetadata(kind, n_open_windows=n_open_windows)
+        current_meta = self._metadata
+        next_meta = ExprMetadata(
+            kind,
+            n_open_windows=n_open_windows,
+            expansion_kind=current_meta.expansion_kind,
+        )
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).over(
-                flat_partition_by, order_by=order_by, kind=self._metadata.kind
+                flat_partition_by, flat_order_by
             ),
-            metadata,
+            next_meta,
         )
 
     def is_duplicated(self: Self) -> Self:
@@ -1654,6 +1689,10 @@ class Expr:
     def is_first_distinct(self: Self) -> Self:
         r"""Return a boolean mask indicating the first occurrence of each distinct value.
 
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+
         Returns:
             A new expression.
 
@@ -1682,6 +1721,10 @@ class Expr:
 
     def is_last_distinct(self: Self) -> Self:
         r"""Return a boolean mask indicating the last occurrence of each distinct value.
+
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
         Returns:
             A new expression.
@@ -1944,7 +1987,14 @@ class Expr:
                 upper_bound,  # type: ignore[arg-type]
                 str_as_lit=False,
             ),
-            combine_metadata(self, lower_bound, upper_bound, str_as_lit=False),
+            combine_metadata(
+                self,
+                lower_bound,
+                upper_bound,
+                str_as_lit=False,
+                allow_multi_output=False,
+                to_single_output=False,
+            ),
         )
 
     def mode(self: Self) -> Self:
@@ -2014,6 +2064,10 @@ class Expr:
     def cum_count(self: Self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative count of the non-null values in the column.
 
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+
         Arguments:
             reverse: reverse the operation
 
@@ -2046,6 +2100,10 @@ class Expr:
 
     def cum_min(self: Self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative min of the non-null values in the column.
+
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
         Arguments:
             reverse: reverse the operation
@@ -2080,6 +2138,10 @@ class Expr:
     def cum_max(self: Self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative max of the non-null values in the column.
 
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+
         Arguments:
             reverse: reverse the operation
 
@@ -2112,6 +2174,10 @@ class Expr:
 
     def cum_prod(self: Self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative product of the non-null values in the column.
+
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
         Arguments:
             reverse: reverse the operation
@@ -2161,6 +2227,10 @@ class Expr:
 
         The window at a given row will include the row itself and the `window_size - 1`
         elements before it.
+
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
         Arguments:
             window_size: The length of the window in number of elements. It must be a
@@ -2223,6 +2293,10 @@ class Expr:
 
         The window at a given row will include the row itself and the `window_size - 1`
         elements before it.
+
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
         Arguments:
             window_size: The length of the window in number of elements. It must be a
@@ -2287,6 +2361,10 @@ class Expr:
         The window at a given row will include the row itself and the `window_size - 1`
         elements before it.
 
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
@@ -2349,6 +2427,10 @@ class Expr:
         The window at a given row will include the row itself and the `window_size - 1`
         elements before it.
 
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+
         Arguments:
             window_size: The length of the window in number of elements. It must be a
                 strictly positive integer.
@@ -2404,6 +2486,10 @@ class Expr:
 
         Notes:
             The resulting dtype may differ between backends.
+
+        !!! info
+            For lazy backends, this operation must be followed by `Expr.over` with
+            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
         Arguments:
             method: The method used to assign ranks to tied elements.

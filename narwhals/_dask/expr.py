@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 import warnings
 from typing import TYPE_CHECKING
 from typing import Any
@@ -9,6 +8,7 @@ from typing import Literal
 from typing import Sequence
 
 from narwhals._compliant import LazyExpr
+from narwhals._compliant.expr import DepthTrackingExpr
 from narwhals._dask.expr_dt import DaskExprDateTimeNamespace
 from narwhals._dask.expr_name import DaskExprNameNamespace
 from narwhals._dask.expr_str import DaskExprStringNamespace
@@ -17,7 +17,6 @@ from narwhals._dask.utils import maybe_evaluate_expr
 from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._expression_parsing import is_elementary_expression
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
@@ -37,11 +36,16 @@ if TYPE_CHECKING:
 
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.namespace import DaskNamespace
+    from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
 
-class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
+class DaskExpr(
+    LazyExpr["DaskLazyFrame", "dx.Series"],
+    DepthTrackingExpr["DaskLazyFrame", "dx.Series"],
+):
     _implementation: Implementation = Implementation.DASK
 
     def __init__(
@@ -66,6 +70,7 @@ class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
         self._backend_version = backend_version
         self._version = version
         self._call_kwargs = call_kwargs or {}
+        self._metadata: ExprMetadata | None = None
 
     def __call__(self: Self, df: DaskLazyFrame) -> Sequence[dx.Series]:
         return self._call(df)
@@ -99,9 +104,8 @@ class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
         evaluate_column_names: Callable[[DaskLazyFrame], Sequence[str]],
         /,
         *,
-        function_name: str,
-        backend_version: tuple[int, ...],
-        version: Version,
+        context: _FullContext,
+        function_name: str = "",
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             try:
@@ -124,16 +128,13 @@ class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
             function_name=function_name,
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
-            backend_version=backend_version,
-            version=version,
+            backend_version=context._backend_version,
+            version=context._version,
         )
 
     @classmethod
     def from_column_indices(
-        cls: type[Self],
-        *column_indices: int,
-        backend_version: tuple[int, ...],
-        version: Version,
+        cls: type[Self], *column_indices: int, context: _FullContext
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             return [
@@ -146,8 +147,8 @@ class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
             function_name="nth",
             evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
             alias_output_names=None,
-            backend_version=backend_version,
-            version=version,
+            backend_version=context._backend_version,
+            version=context._version,
         )
 
     def _from_call(
@@ -391,6 +392,16 @@ class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
             "rolling_sum",
         )
 
+    def rolling_mean(
+        self: Self, window_size: int, *, min_samples: int, center: bool
+    ) -> Self:
+        return self._from_call(
+            lambda _input: _input.rolling(
+                window=window_size, min_periods=min_samples, center=center
+            ).mean(),
+            "rolling_mean",
+        )
+
     def sum(self: Self) -> Self:
         return self._from_call(lambda _input: _input.sum().to_series(), "sum")
 
@@ -549,11 +560,10 @@ class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
     def over(
         self: Self,
         partition_by: Sequence[str],
-        kind: ExprKind,
         order_by: Sequence[str] | None,
     ) -> Self:
         # pandas is a required dependency of dask so it's safe to import this
-        from narwhals._pandas_like.group_by import AGGREGATIONS_TO_PANDAS_EQUIVALENT
+        from narwhals._pandas_like.group_by import PandasLikeGroupBy
 
         if not partition_by:
             assert order_by is not None  # help type checkers  # noqa: S101
@@ -562,7 +572,7 @@ class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
             # which we can always easily support, as it doesn't require grouping.
             def func(df: DaskLazyFrame) -> Sequence[dx.Series]:
                 return self(df.sort(*order_by, descending=False, nulls_last=False))
-        elif not is_elementary_expression(self):  # pragma: no cover
+        elif not self._is_elementary():  # pragma: no cover
             msg = (
                 "Only elementary expressions are supported for `.over` in dask.\n\n"
                 "Please see: "
@@ -570,14 +580,14 @@ class DaskExpr(LazyExpr["DaskLazyFrame", "dx.Series"]):
             )
             raise NotImplementedError(msg)
         else:
-            function_name = re.sub(r"(\w+->)", "", self._function_name)
+            function_name = PandasLikeGroupBy._leaf_name(self)
             try:
-                dask_function_name = AGGREGATIONS_TO_PANDAS_EQUIVALENT[function_name]
+                dask_function_name = PandasLikeGroupBy._REMAP_AGGS[function_name]
             except KeyError:
                 # window functions are unsupported: https://github.com/dask/dask/issues/11806
                 msg = (
                     f"Unsupported function: {function_name} in `over` context.\n\n"
-                    f"Supported functions are {', '.join(AGGREGATIONS_TO_PANDAS_EQUIVALENT)}\n"
+                    f"Supported functions are {', '.join(PandasLikeGroupBy._REMAP_AGGS)}\n"
                 )
                 raise NotImplementedError(msg) from None
 

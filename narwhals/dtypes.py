@@ -697,3 +697,52 @@ class Date(TemporalType):
         >>> nw.from_native(s_native, series_only=True).dtype
         Date
     """
+
+
+class Time(TemporalType):
+    """Data type representing the time of day.
+
+    Examples:
+       >>> import polars as pl
+       >>> import pyarrow as pa
+       >>> import narwhals as nw
+       >>> import duckdb
+       >>> from datetime import time
+       >>> data = [time(9, 0), time(9, 1, 10), time(9, 2)]
+       >>> ser_pl = pl.Series(data)
+       >>> ser_pa = pa.chunked_array([pa.array(data, type=pa.time64("ns"))])
+       >>> rel = duckdb.sql(
+       ...     " SELECT * FROM (VALUES (TIME '12:00:00'), (TIME '14:30:15')) df(t)"
+       ... )
+
+       >>> nw.from_native(ser_pl, series_only=True).dtype
+       Time
+       >>> nw.from_native(ser_pa, series_only=True).dtype
+       Time
+       >>> nw.from_native(rel).schema["t"]
+       Time
+    """
+
+
+class Binary(DType):
+    """Binary type.
+
+    Examples:
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> import pyarrow as pa
+        >>> import duckdb
+        >>> data = [b"test1", b"test2"]
+        >>> ser_pl = pl.Series(data, dtype=pl.Binary)
+        >>> ser_pa = pa.chunked_array([pa.array(data, type=pa.binary())])
+        >>> rel = duckdb.sql(
+        ...     "SELECT * FROM (VALUES (BLOB 'test1'), (BLOB 'test2')) AS df(t)"
+        ... )
+
+        >>> nw.from_native(ser_pl, series_only=True).dtype
+        Binary
+        >>> nw.from_native(ser_pa, series_only=True).dtype
+        Binary
+        >>> nw.from_native(rel).schema["t"]
+        Binary
+    """

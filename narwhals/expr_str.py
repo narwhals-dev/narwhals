@@ -367,7 +367,7 @@ class ExprStringNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def to_datetime(self: Self, format: str | None = None) -> ExprT:  # noqa: A002
+    def to_datetime(self: Self, format: str | None = None) -> ExprT:
         """Convert to Datetime dtype.
 
         Notes:

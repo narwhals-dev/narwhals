@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._expression_parsing import ExprKind
+    from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
@@ -29,6 +30,11 @@ class PolarsExpr:
         self._implementation = Implementation.POLARS
         self._version = version
         self._backend_version = backend_version
+        self._metadata: ExprMetadata | None = None
+
+    @property
+    def native(self) -> pl.Expr:
+        return self._native_expr
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         return "PolarsExpr"
@@ -41,7 +47,7 @@ class PolarsExpr:
     @classmethod
     def _from_series(cls, series: Any) -> Self:
         return cls(
-            series._native_series,
+            series.native,
             version=series._version,
             backend_version=series._backend_version,
         )
@@ -108,7 +114,6 @@ class PolarsExpr:
     def over(
         self: Self,
         partition_by: Sequence[str],
-        kind: ExprKind,
         order_by: Sequence[str] | None,
     ) -> Self:
         if self._backend_version < (1, 9):

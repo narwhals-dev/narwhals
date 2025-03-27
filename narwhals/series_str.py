@@ -369,7 +369,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.str.to_lowercase()
         )
 
-    def to_datetime(self: Self, format: str | None = None) -> SeriesT:  # noqa: A002
+    def to_datetime(self: Self, format: str | None = None) -> SeriesT:
         """Parse Series with strings to a Series with Datetime dtype.
 
         Notes:

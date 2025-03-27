@@ -13,8 +13,112 @@ import narwhals.stable.v1 as nw
 from narwhals.utils import Implementation
 from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
+from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
+
+
+@pytest.mark.parametrize(
+    ("df1", "df2", "expected", "on", "left_on", "right_on"),
+    [
+        (
+            {"id": [1, 2, 3], "name": ["Alice", "Bob", "Charlie"], "age": [25, 30, 35]},
+            {
+                "id": [2, 3, 4],
+                "department": ["HR", "Engineering", "Marketing"],
+                "salary": [50000, 60000, 70000],
+            },
+            {
+                "id": [1, 2, 3, None],
+                "name": ["Alice", "Bob", "Charlie", None],
+                "age": [25, 30, 35, None],
+                "id_right": [None, 2, 3, 4],
+                "department": [None, "HR", "Engineering", "Marketing"],
+                "salary": [None, 50000, 60000, 70000],
+            },
+            None,
+            ["id"],
+            ["id"],
+        ),
+        (
+            {"id": [1, 2, 3], "name": ["Alice", "Bob", "Charlie"], "age": [25, 30, 35]},
+            {
+                "id": [2, 3, 4],
+                "department": ["HR", "Engineering", "Marketing"],
+                "salary": [50000, 60000, 70000],
+            },
+            {
+                "id": [1, 2, 3, None],
+                "name": ["Alice", "Bob", "Charlie", None],
+                "age": [25, 30, 35, None],
+                "id_right": [None, 2, 3, 4],
+                "department": [None, "HR", "Engineering", "Marketing"],
+                "salary": [None, 50000, 60000, 70000],
+            },
+            "id",
+            None,
+            None,
+        ),
+        (
+            {
+                "id": [1, 2, 3, 4],
+                "year": [2020, 2021, 2022, 2023],
+                "value1": [100, 200, 300, 400],
+            },
+            {
+                "id": [2, 3, 4, 5],
+                "year_foo": [2021, 2022, 2023, 2024],
+                "value2": [500, 600, 700, 800],
+            },
+            {
+                "id": [1, 2, 3, 4, None],
+                "year": [2020, 2021, 2022, 2023, None],
+                "value1": [100, 200, 300, 400, None],
+                "id_right": [None, 2, 3, 4, 5],
+                # since year is different, don't apply suffix
+                "year_foo": [None, 2021, 2022, 2023, 2024],
+                "value2": [None, 500, 600, 700, 800],
+            },
+            None,
+            ["id", "year"],
+            ["id", "year_foo"],
+        ),
+    ],
+)
+def test_full_join(
+    df1: dict[str, list[Any]],
+    df2: dict[str, list[Any]],
+    expected: dict[str, list[Any]],
+    on: None | str | list[str],
+    left_on: None | str | list[str],
+    right_on: None | str | list[str],
+    constructor: Constructor,
+) -> None:
+    df_left = nw_main.from_native(constructor(df1))
+    df_right = nw_main.from_native(constructor(df2))
+    result = df_left.join(
+        df_right, on=on, left_on=left_on, right_on=right_on, how="full"
+    ).sort("id", nulls_last=True)
+    assert_equal_data(result, expected)
+
+
+def test_full_join_duplicate(constructor: Constructor) -> None:
+    df1 = {"foo": [1, 2, 3], "val1": [1, 2, 3]}
+    df2 = {"foo": [1, 2, 3], "foo_right": [1, 2, 3]}
+    df_left = nw_main.from_native(constructor(df1)).lazy()
+    df_right = nw_main.from_native(constructor(df2)).lazy()
+
+    exceptions: list[type[Exception]] = [nw.exceptions.NarwhalsError]
+    if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
+        from pyspark.errors import AnalysisException
+
+        exceptions.append(AnalysisException)
+    elif "cudf" in str(constructor):
+        # cudf throw their own exception earlier in the stack
+        exceptions.append(ValueError)
+
+    with pytest.raises(tuple(exceptions)):
+        df_left.join(df_right, on="foo", how="full").collect()
 
 
 def test_inner_join_two_keys(constructor: Constructor) -> None:
@@ -215,7 +319,7 @@ def test_semi_join(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.parametrize("how", ["right", "full"])
+@pytest.mark.parametrize("how", ["right"])
 def test_join_not_implemented(constructor: Constructor, how: str) -> None:
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
@@ -223,7 +327,7 @@ def test_join_not_implemented(constructor: Constructor, how: str) -> None:
     with pytest.raises(
         NotImplementedError,
         match=re.escape(
-            f"Only the following join strategies are supported: ('inner', 'left', 'cross', 'anti', 'semi'); found '{how}'."
+            f"Only the following join strategies are supported: ('inner', 'left', 'full', 'cross', 'anti', 'semi'); found '{how}'."
         ),
     ):
         df.join(df, left_on="antananarivo", right_on="antananarivo", how=how)  # type: ignore[arg-type]
@@ -669,9 +773,10 @@ def test_joinasof_by_exceptions(constructor: Constructor) -> None:
 def test_join_duplicate_column_names(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 26):
+        pytest.skip()
     if (
-        "polars" in str(constructor)  # https://github.com/pola-rs/polars/issues/21048
-        or "cudf" in str(constructor)
+        "cudf" in str(constructor)
         # TODO(unassigned): cudf doesn't raise here for some reason,
         # need to investigate.
     ):

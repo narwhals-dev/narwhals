@@ -10,7 +10,6 @@ from typing import cast
 
 import hypothesis.strategies as st
 import pandas as pd
-import polars as pl
 import pyarrow as pa
 import pytest
 from hypothesis import given
@@ -21,12 +20,16 @@ from pandas.testing import assert_series_equal
 import narwhals as unstable_nw
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import ColumnNotFoundError
+from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
+from narwhals.utils import deprecate_native_namespace
 from narwhals.utils import parse_version
 from tests.utils import PANDAS_VERSION
 from tests.utils import get_module_version_as_tuple
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from typing_extensions import Self
 
     from narwhals.series import Series
@@ -73,6 +76,9 @@ def test_non_unique_index() -> None:
 
 
 def test_maybe_align_index_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
     s = nw.from_native(pl.Series([1, 2, 3]), series_only=True)
     result = nw.maybe_align_index(df, s)
@@ -104,6 +110,9 @@ def test_maybe_set_index_pandas_column_names(
 def test_maybe_set_index_polars_column_names(
     column_names: str | list[str] | None,
 ) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = nw.maybe_set_index(df, column_names)
     assert result is df
@@ -157,6 +166,9 @@ def test_maybe_set_index_pandas_direct_index(
 def test_maybe_set_index_polars_direct_index(
     index: Series[IntoSeries] | list[Series[IntoSeries]] | None,
 ) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = nw.maybe_set_index(df, index=index)
     assert result is df
@@ -197,6 +209,9 @@ def test_maybe_get_index_pandas() -> None:
 
 
 def test_maybe_get_index_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
     result = nw.maybe_get_index(df)
     assert result is None
@@ -231,6 +246,9 @@ def test_maybe_reset_index_pandas() -> None:
 
 
 def test_maybe_reset_index_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = nw.maybe_reset_index(df)
     assert result is df
@@ -256,6 +274,9 @@ def test_maybe_convert_dtypes_pandas() -> None:
 
 def test_maybe_convert_dtypes_polars() -> None:
     import numpy as np
+
+    pytest.importorskip("polars")
+    import polars as pl
 
     df = nw.from_native(pl.DataFrame({"a": [1.1, np.nan]}))
     result = nw.maybe_convert_dtypes(df)
@@ -320,6 +341,8 @@ def test_check_column_exists() -> None:
 
 
 def test_not_implemented() -> None:
+    pytest.importorskip("polars")
+
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.expr import PolarsExprStringNamespace
@@ -427,3 +450,54 @@ def test_not_implemented() -> None:
 
     assert isinstance(DummyExpr._list, not_implemented)
     assert repr(DummyExpr._list) == "<not_implemented>: DummyExpr.list"
+
+
+def test_deprecate_native_namespace() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    @deprecate_native_namespace()
+    def func1(
+        arg: str,  # noqa: ARG001
+        *,
+        backend: ModuleType | Implementation | str | None = None,  # noqa: ARG001
+        native_namespace: ModuleType | None = None,
+    ) -> Any:
+        return native_namespace
+
+    @deprecate_native_namespace(warn_version="3.0.0")
+    def func2(
+        arg: str,  # noqa: ARG001
+        *,
+        backend: ModuleType | Implementation | str | None = None,
+        native_namespace: ModuleType | None = None,  # noqa: ARG001
+    ) -> Any:
+        return backend
+
+    @deprecate_native_namespace(required=True)
+    def func3(
+        arg: str,  # noqa: ARG001
+        *,
+        backend: ModuleType | Implementation | str | None = None,
+        native_namespace: ModuleType | None = None,  # noqa: ARG001
+    ) -> Any:
+        return backend
+
+    param = "hello"
+    non_default = cast("ModuleType", "non_default")
+
+    assert func1(param, native_namespace=non_default) is None
+    with pytest.warns(DeprecationWarning):
+        result = func2(param, native_namespace=pl)
+    assert result is pl
+    assert func2(param, backend=pl) is pl
+
+    with pytest.raises(ValueError, match=r"`backend` must be specified in `func3`"):
+        func3(param)
+
+    with pytest.raises(
+        ValueError, match=r"Can't pass both `native_namespace` and `backend`"
+    ):
+        func3(param, backend=pl, native_namespace=pl)
+
+    assert func3(param, backend=Implementation.POLARS) is Implementation.POLARS

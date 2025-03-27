@@ -33,6 +33,7 @@ from narwhals.utils import Implementation
 from narwhals.utils import find_stacklevel
 from narwhals.utils import flatten
 from narwhals.utils import generate_repr
+from narwhals.utils import is_compliant_lazyframe
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import issue_deprecation_warning
 from narwhals.utils import parse_version
@@ -50,6 +51,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant import IntoCompliantExpr
+    from narwhals._compliant.typing import EagerNamespaceAny
     from narwhals.group_by import GroupBy
     from narwhals.group_by import LazyGroupBy
     from narwhals.series import Series
@@ -235,7 +237,7 @@ class BaseFrame(Generic[_FrameT]):
         self: Self,
         other: Self,
         on: str | list[str] | None = None,
-        how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
+        how: Literal["inner", "left", "full", "cross", "semi", "anti"] = "inner",
         *,
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
@@ -245,7 +247,9 @@ class BaseFrame(Generic[_FrameT]):
         left_on = [left_on] if isinstance(left_on, str) else left_on
         right_on = [right_on] if isinstance(right_on, str) else right_on
 
-        if how not in (_supported_joins := ("inner", "left", "cross", "anti", "semi")):
+        if how not in (
+            _supported_joins := ("inner", "left", "full", "cross", "anti", "semi")
+        ):
             msg = f"Only the following join strategies are supported: {_supported_joins}; found '{how}'."
             raise NotImplementedError(msg)
 
@@ -277,9 +281,6 @@ class BaseFrame(Generic[_FrameT]):
                 suffix=suffix,
             )
         )
-
-    def clone(self: Self) -> Self:
-        return self._from_compliant_dataframe(self._compliant_frame.clone())
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         return self._from_compliant_dataframe(
@@ -416,7 +417,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             ```py
             narwhals.from_dict(
                 data={"a": [1, 2, 3]},
-                native_namespace=narwhals.get_native_namespace(another_object),
+                backend=narwhals.get_native_namespace(another_object),
             )
             ```
     """
@@ -425,7 +426,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         from narwhals.expr import Expr
         from narwhals.series import Series
 
-        plx = self.__narwhals_namespace__()
+        plx: EagerNamespaceAny = self.__narwhals_namespace__()
         if isinstance(arg, BaseFrame):
             return arg._compliant_frame
         if isinstance(arg, Series):
@@ -443,7 +444,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             )
             raise TypeError(msg)
         if is_numpy_array(arg):
-            return plx._create_compliant_series(arg)._to_expr()
+            return plx._series.from_numpy(arg, context=plx)._to_expr()
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     @property
@@ -1623,7 +1624,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         self: Self,
         other: Self,
         on: str | list[str] | None = None,
-        how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
+        how: Literal["inner", "left", "full", "cross", "semi", "anti"] = "inner",
         *,
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
@@ -1639,6 +1640,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
                   * *inner*: Returns rows that have matching values in both tables.
                   * *left*: Returns all rows from the left table, and the matched rows from the right table.
+                  * *full*: Returns all rows in both dataframes, with the suffix appended to the right join keys.
                   * *cross*: Returns the Cartesian product of rows from both tables.
                   * *semi*: Filter rows that have a match in the right table.
                   * *anti*: Filter rows that do not have a match in the right table.
@@ -1875,7 +1877,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         Returns:
             An identical copy of the original dataframe.
         """
-        return super().clone()
+        return self._from_compliant_dataframe(self._compliant_frame.clone())
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         r"""Take every nth row in the DataFrame and return as a new DataFrame.
@@ -2172,11 +2174,10 @@ class LazyFrame(BaseFrame[FrameT]):
                 msg = (
                     "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
                     "Hints:\n"
-                    "- Instead of `lf.select(nw.col('a').sort())`, use `lf.select('a').sort()\n"
-                    "- Instead of `lf.select(nw.col('a').head())`, use `lf.select('a').head()\n"
-                    "- `Expr.cum_sum`, and other such expressions, are not currently supported.\n"
-                    "  In a future version of Narwhals, a `order_by` argument will be added to\n"
-                    "  `over` and they will be supported."
+                    "- Instead of `lf.select(nw.col('a').sort())`, use `lf.select('a').sort()`.\n"
+                    "- Instead of `lf.select(nw.col('a').cum_sum())`, use\n"
+                    "  `lf.select(nw.col('a').cum_sum().over(order_by='date'))`.\n\n"
+                    "See https://narwhals-dev.github.io/narwhals/basics/order_dependence/."
                 )
                 raise OrderDependentExprError(msg)
             if arg._metadata.kind.is_filtration():
@@ -2211,8 +2212,10 @@ class LazyFrame(BaseFrame[FrameT]):
         level: Literal["full", "lazy", "interchange"],
     ) -> None:
         self._level = level
-        if hasattr(df, "__narwhals_lazyframe__"):
-            self._compliant_frame: Any = df.__narwhals_lazyframe__()
+        if is_compliant_lazyframe(df):
+            # NOTE: Blocked by (#2239)
+            # self._compliant_frame: CompliantLazyFrame[Any, FrameT] = df.__narwhals_lazyframe__()  # noqa: ERA001
+            self._compliant_frame = df.__narwhals_lazyframe__()
         else:  # pragma: no cover
             msg = f"Expected Polars LazyFrame or an object that implements `__narwhals_lazyframe__`, got: {type(df)}"
             raise AssertionError(msg)
@@ -2520,6 +2523,9 @@ class LazyFrame(BaseFrame[FrameT]):
             |└───────┴──────────────┴───────┘|
             └────────────────────────────────┘
         """
+        if not exprs and not named_exprs:
+            msg = "At least one expression must be passed to LazyFrame.with_columns"
+            raise ValueError(msg)
         return super().with_columns(*exprs, **named_exprs)
 
     def select(
@@ -2561,6 +2567,9 @@ class LazyFrame(BaseFrame[FrameT]):
             |└───────┴──────────┘|
             └────────────────────┘
         """
+        if not exprs and not named_exprs:
+            msg = "At least one expression must be passed to LazyFrame.select"
+            raise ValueError(msg)
         return super().select(*exprs, **named_exprs)
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
@@ -2670,20 +2679,17 @@ class LazyFrame(BaseFrame[FrameT]):
         subset: str | list[str] | None = None,
         *,
         keep: Literal["any", "none"] = "any",
-        maintain_order: bool | None = None,
     ) -> Self:
         """Drop duplicate rows from this LazyFrame.
 
         Arguments:
             subset: Column name(s) to consider when identifying duplicate rows.
                      If set to `None`, use all columns.
-            keep: {'first', 'none'}
+            keep: {'any', 'none'}
                 Which of the duplicate rows to keep.
 
                 * 'any': Does not give any guarantee of which row is kept.
-                        This allows more optimizations.
                 * 'none': Don't keep duplicate rows.
-            maintain_order: Has no effect and is kept around only for backwards-compatibility.
 
         Returns:
             The LazyFrame with unique rows.
@@ -2711,15 +2717,6 @@ class LazyFrame(BaseFrame[FrameT]):
                 f"'any' and 'none' are supported for `keep` in `unique`. Got: {keep}."
             )
             raise ValueError(msg)
-        if maintain_order:
-            msg = "`maintain_order=True` is not supported for LazyFrame.unique."
-            raise ValueError(msg)
-        if maintain_order is not None:
-            msg = (
-                "`maintain_order` has no effect and is only kept around for backwards-compatibility. "
-                "You can safely remove this argument."
-            )
-            warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
         if isinstance(subset, str):
             subset = [subset]
         return self._from_compliant_dataframe(
@@ -2914,7 +2911,7 @@ class LazyFrame(BaseFrame[FrameT]):
         self: Self,
         other: Self,
         on: str | list[str] | None = None,
-        how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
+        how: Literal["inner", "left", "full", "cross", "semi", "anti"] = "inner",
         *,
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
@@ -2930,6 +2927,7 @@ class LazyFrame(BaseFrame[FrameT]):
 
                   * *inner*: Returns rows that have matching values in both tables.
                   * *left*: Returns all rows from the left table, and the matched rows from the right table.
+                  * *full*: Returns all rows in both dataframes, with the suffix appended to the right join keys.
                   * *cross*: Returns the Cartesian product of rows from both tables.
                   * *semi*: Filter rows that have a match in the right table.
                   * *anti*: Filter rows that do not have a match in the right table.
@@ -3054,14 +3052,6 @@ class LazyFrame(BaseFrame[FrameT]):
             strategy=strategy,
             suffix=suffix,
         )
-
-    def clone(self: Self) -> Self:
-        r"""Create a copy of this DataFrame.
-
-        Returns:
-            An identical copy of the original LazyFrame.
-        """
-        return super().clone()
 
     def lazy(self: Self) -> Self:
         """Restrict available API methods to lazy-only ones.

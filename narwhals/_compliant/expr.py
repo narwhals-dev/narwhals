@@ -29,6 +29,8 @@ from narwhals._compliant.typing import EagerExprT
 from narwhals._compliant.typing import EagerSeriesT
 from narwhals._compliant.typing import NativeExprT_co
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals.dependencies import get_numpy
+from narwhals.dependencies import is_numpy_array
 from narwhals.dtypes import DType
 from narwhals.utils import _ExprNamespace
 from narwhals.utils import deprecated
@@ -49,11 +51,13 @@ if TYPE_CHECKING:
     from typing import Mapping
 
     from typing_extensions import Self
+    from typing_extensions import TypeIs
 
     from narwhals._compliant.namespace import CompliantNamespace
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals._compliant.series import CompliantSeries
     from narwhals._expression_parsing import ExprKind
+    from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
     from narwhals.utils import Implementation
@@ -80,8 +84,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     _version: Version
     _evaluate_output_names: Callable[[CompliantFrameT], Sequence[str]]
     _alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None
-    _depth: int
-    _function_name: str
+    _metadata: ExprMetadata | None
 
     def __call__(
         self, df: CompliantFrameT
@@ -89,7 +92,20 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def __narwhals_expr__(self) -> None: ...
     def __narwhals_namespace__(
         self,
-    ) -> CompliantNamespace[CompliantFrameT, CompliantSeriesOrNativeExprT_co]: ...
+    ) -> CompliantNamespace[CompliantFrameT, Self]: ...
+    @classmethod
+    def from_column_names(
+        cls,
+        evaluate_column_names: Callable[[CompliantFrameT], Sequence[str]],
+        /,
+        *,
+        context: _FullContext,
+    ) -> Self: ...
+    @classmethod
+    def from_column_indices(
+        cls: type[Self], *column_indices: int, context: _FullContext
+    ) -> Self: ...
+
     def is_null(self) -> Self: ...
     def abs(self) -> Self: ...
     def all(self) -> Self: ...
@@ -150,9 +166,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         *,
         return_dtype: DType | type[DType] | None,
     ) -> Self: ...
-    def over(
-        self: Self, keys: Sequence[str], kind: ExprKind, order_by: Sequence[str] | None
-    ) -> Self: ...
+    def over(self: Self, keys: Sequence[str], order_by: Sequence[str] | None) -> Self: ...
     def sample(
         self,
         n: int | None,
@@ -168,7 +182,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     ) -> Self: ...
     def map_batches(
         self,
-        function: Callable[[CompliantSeries], CompliantExpr[Any, Any]],
+        function: Callable[[CompliantSeries[Any]], CompliantExpr[Any, Any]],
         return_dtype: DType | type[DType] | None,
     ) -> Self: ...
 
@@ -255,17 +269,64 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def broadcast(
         self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]
     ) -> Self: ...
+    def _is_multi_output_unnamed(self) -> bool:
+        """Return `True` for multi-output aggregations without names.
+
+        For example, column `'a'` only appears in the output as a grouping key:
+
+            df.group_by('a').agg(nw.all().sum())
+
+        It does not get included in:
+
+            nw.all().sum().
+        """
+        assert self._metadata is not None  # noqa: S101
+        return self._metadata.expansion_kind.is_multi_unnamed()
+
+
+class DepthTrackingExpr(
+    CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
+    Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
+):
+    _depth: int
+    _function_name: str
+
+    @classmethod
+    def from_column_names(
+        cls: type[Self],
+        evaluate_column_names: Callable[[CompliantFrameT], Sequence[str]],
+        /,
+        *,
+        context: _FullContext,
+        function_name: str = "",
+    ) -> Self: ...
+
+    def _is_elementary(self) -> bool:
+        """Check if expr is elementary.
+
+        Examples:
+            - nw.col('a').mean()  # depth 1
+            - nw.mean('a')  # depth 1
+            - nw.len()  # depth 0
+
+        as opposed to, say
+
+            - nw.col('a').filter(nw.col('b')>nw.col('c')).max()
+
+        Elementary expressions are the only ones supported properly in
+        pandas, PyArrow, and Dask.
+        """
+        return self._depth < 2
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"{type(self).__name__}(depth={self._depth}, function_name={self._function_name})"
 
 
 class EagerExpr(
-    CompliantExpr[EagerDataFrameT, EagerSeriesT],
+    DepthTrackingExpr[EagerDataFrameT, EagerSeriesT],
     Protocol38[EagerDataFrameT, EagerSeriesT],
 ):
     _call: Callable[[EagerDataFrameT], Sequence[EagerSeriesT]]
-    _depth: int
-    _function_name: str
-    _evaluate_output_names: Any
-    _alias_output_names: Any
     _call_kwargs: dict[str, Any]
 
     def __init__(
@@ -284,9 +345,6 @@ class EagerExpr(
 
     def __call__(self, df: EagerDataFrameT) -> Sequence[EagerSeriesT]:
         return self._call(df)
-
-    def __repr__(self) -> str:  # pragma: no cover
-        return f"{type(self).__name__}(depth={self._depth}, function_name={self._function_name})"
 
     def __narwhals_namespace__(
         self,
@@ -329,22 +387,6 @@ class EagerExpr(
             backend_version=series._backend_version,
             version=series._version,
         )
-
-    @classmethod
-    def from_column_names(
-        cls,
-        evaluate_column_names: Callable[[EagerDataFrameT], Sequence[str]],
-        /,
-        *,
-        function_name: str,
-        context: _FullContext,
-    ) -> Self: ...
-    @classmethod
-    def from_column_indices(
-        cls,
-        *column_indices: int,
-        context: _FullContext,
-    ) -> Self: ...
 
     def _reuse_series(
         self: Self,
@@ -392,6 +434,10 @@ class EagerExpr(
     ) -> dict[str, Any]:
         return {}
 
+    @classmethod
+    def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:
+        return hasattr(obj, "__narwhals_expr__")
+
     def _reuse_series_inner(
         self,
         df: EagerDataFrameT,
@@ -404,8 +450,8 @@ class EagerExpr(
         kwargs = {
             **call_kwargs,
             **{
-                arg_name: df._maybe_evaluate_expr(arg_value)
-                for arg_name, arg_value in expressifiable_args.items()
+                name: df._evaluate_expr(value) if self._is_expr(value) else value
+                for name, value in expressifiable_args.items()
             },
         }
         method = methodcaller(
@@ -764,6 +810,38 @@ class EagerExpr(
             ddof=ddof,
         )
 
+    def map_batches(
+        self: Self,
+        function: Callable[[Any], Any],
+        return_dtype: DType | type[DType] | None,
+    ) -> Self:
+        def func(df: EagerDataFrameT) -> Sequence[EagerSeriesT]:
+            input_series_list = self(df)
+            output_names = [input_series.name for input_series in input_series_list]
+            result = [function(series) for series in input_series_list]
+            if is_numpy_array(result[0]) or (
+                (np := get_numpy()) is not None and np.isscalar(result[0])
+            ):
+                from_numpy = partial(
+                    self.__narwhals_namespace__()._series.from_numpy, context=self
+                )
+                result = [
+                    from_numpy(array).alias(output_name)
+                    for array, output_name in zip(result, output_names)
+                ]
+            if return_dtype is not None:
+                result = [series.cast(return_dtype) for series in result]
+            return result
+
+        return self._from_callable(
+            func,
+            depth=self._depth + 1,
+            function_name=self._function_name + "->map_batches",
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            context=self,
+        )
+
     @property
     def cat(self) -> EagerExprCatNamespace[Self]:
         return EagerExprCatNamespace(self)
@@ -804,12 +882,15 @@ class LazyExpr(
     sample: not_implemented = not_implemented()
     map_batches: not_implemented = not_implemented()
     ewm_mean: not_implemented = not_implemented()
-    rolling_mean: not_implemented = not_implemented()
     rolling_var: not_implemented = not_implemented()
     rolling_std: not_implemented = not_implemented()
     gather_every: not_implemented = not_implemented()
     replace_strict: not_implemented = not_implemented()
     cat: not_implemented = not_implemented()  # pyright: ignore[reportAssignmentType]
+
+    @classmethod
+    def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:
+        return hasattr(obj, "__narwhals_expr__")
 
 
 class EagerExprNamespace(_ExprNamespace[EagerExprT], Generic[EagerExprT]):
@@ -827,7 +908,7 @@ class EagerExprCatNamespace(
 class EagerExprDateTimeNamespace(
     EagerExprNamespace[EagerExprT], DateTimeNamespace[EagerExprT], Generic[EagerExprT]
 ):
-    def to_string(self, format: str) -> EagerExprT:  # noqa: A002
+    def to_string(self, format: str) -> EagerExprT:
         return self.compliant._reuse_series_namespace("dt", "to_string", format=format)
 
     def replace_time_zone(self, time_zone: str | None) -> EagerExprT:
@@ -990,7 +1071,7 @@ class EagerExprStringNamespace(
     def split(self, by: str) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "split", by=by)
 
-    def to_datetime(self, format: str | None) -> EagerExprT:  # noqa: A002
+    def to_datetime(self, format: str | None) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "to_datetime", format=format)
 
     def to_lowercase(self) -> EagerExprT:

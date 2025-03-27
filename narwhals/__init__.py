@@ -8,6 +8,7 @@ from narwhals import stable
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dtypes import Array
+from narwhals.dtypes import Binary
 from narwhals.dtypes import Boolean
 from narwhals.dtypes import Categorical
 from narwhals.dtypes import Date
@@ -27,6 +28,7 @@ from narwhals.dtypes import List
 from narwhals.dtypes import Object
 from narwhals.dtypes import String
 from narwhals.dtypes import Struct
+from narwhals.dtypes import Time
 from narwhals.dtypes import UInt8
 from narwhals.dtypes import UInt16
 from narwhals.dtypes import UInt32
@@ -80,10 +82,11 @@ from narwhals.utils import maybe_get_index
 from narwhals.utils import maybe_reset_index
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.30.0"
+__version__ = "1.32.0"
 
 __all__ = [
     "Array",
+    "Binary",
     "Boolean",
     "Categorical",
     "DataFrame",
@@ -109,6 +112,7 @@ __all__ = [
     "Series",
     "String",
     "Struct",
+    "Time",
     "UInt8",
     "UInt16",
     "UInt32",

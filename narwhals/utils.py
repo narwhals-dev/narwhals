@@ -5,6 +5,7 @@ import re
 from datetime import timezone
 from enum import Enum
 from enum import auto
+from functools import wraps
 from inspect import getattr_static
 from secrets import token_hex
 from typing import TYPE_CHECKING
@@ -48,16 +49,28 @@ if TYPE_CHECKING:
     from typing import AbstractSet as Set
 
     import pandas as pd
+    from typing_extensions import LiteralString
+    from typing_extensions import ParamSpec
     from typing_extensions import Self
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
+    from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._compliant import CompliantExpr
     from narwhals._compliant import CompliantFrameT
+    from narwhals._compliant import CompliantNamespace
     from narwhals._compliant import CompliantSeriesOrNativeExprT_co
+    from narwhals._compliant import NativeFrameT_co
+    from narwhals._compliant import NativeSeriesT_co
+    from narwhals._dask.namespace import DaskNamespace
+    from narwhals._duckdb.namespace import DuckDBNamespace
+    from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals._polars.namespace import PolarsNamespace
+    from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
+    from narwhals.functions import ArrowStreamExportable
     from narwhals.series import Series
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
@@ -77,8 +90,21 @@ if TYPE_CHECKING:
     _T2 = TypeVar("_T2")
     _T3 = TypeVar("_T3")
     _Fn = TypeVar("_Fn", bound="Callable[..., Any]")
+    P = ParamSpec("P")
+    R = TypeVar("R")
 
-    _TracksDepth: TypeAlias = "Literal[Implementation.DASK,Implementation.CUDF,Implementation.MODIN,Implementation.PANDAS,Implementation.PYSPARK]"
+    _PandasLike: TypeAlias = (
+        "Literal[Implementation.PANDAS, Implementation.CUDF, Implementation.MODIN]"
+    )
+    _Arrow: TypeAlias = "Literal[Implementation.PYARROW]"
+    _Polars: TypeAlias = "Literal[Implementation.POLARS]"
+    _SparkLike: TypeAlias = "Literal[Implementation.PYSPARK, Implementation.SQLFRAME]"
+    _Dask: TypeAlias = "Literal[Implementation.DASK]"
+    _DuckDB: TypeAlias = "Literal[Implementation.DUCKDB]"
+    _EagerOnly: TypeAlias = "_PandasLike | _Arrow"
+    _EagerAllowed: TypeAlias = "_Polars | _EagerOnly"
+    _LazyOnly: TypeAlias = "_SparkLike | _Dask | _DuckDB"
+    _LazyAllowed: TypeAlias = "_Polars | _LazyOnly"
 
     class _SupportsVersion(Protocol):
         __version__: str
@@ -124,7 +150,7 @@ CompliantExprT_co = TypeVar(
     "CompliantExprT_co", bound="CompliantExpr[Any, Any]", covariant=True
 )
 CompliantSeriesT_co = TypeVar(
-    "CompliantSeriesT_co", bound="CompliantSeries", covariant=True
+    "CompliantSeriesT_co", bound="CompliantSeries[Any]", covariant=True
 )
 
 
@@ -550,6 +576,65 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
 }
 
 
+@overload
+def _into_compliant_namespace(
+    impl: _PandasLike, version: Version, /
+) -> PandasLikeNamespace: ...
+@overload
+def _into_compliant_namespace(impl: _Polars, version: Version, /) -> PolarsNamespace: ...
+@overload
+def _into_compliant_namespace(impl: _Arrow, version: Version, /) -> ArrowNamespace: ...
+@overload
+def _into_compliant_namespace(
+    impl: _SparkLike, version: Version, /
+) -> SparkLikeNamespace: ...
+@overload
+def _into_compliant_namespace(impl: _DuckDB, version: Version, /) -> DuckDBNamespace: ...
+@overload
+def _into_compliant_namespace(impl: _Dask, version: Version, /) -> DaskNamespace: ...
+@overload
+def _into_compliant_namespace(
+    impl: _EagerAllowed, version: Version, /
+) -> PandasLikeNamespace | PolarsNamespace | ArrowNamespace: ...
+def _into_compliant_namespace(
+    impl: Implementation, version: Version, /
+) -> CompliantNamespace[Any, Any]:
+    native = impl.to_native_namespace()
+    into_version = native if not impl.is_sqlframe() else native._version
+    backend_version = parse_version(into_version)
+    if impl.is_pandas_like():
+        from narwhals._pandas_like.namespace import PandasLikeNamespace
+
+        return PandasLikeNamespace(
+            implementation=impl, backend_version=backend_version, version=version
+        )
+    elif impl.is_polars():
+        from narwhals._polars.namespace import PolarsNamespace
+
+        return PolarsNamespace(backend_version=backend_version, version=version)
+    elif impl.is_pyarrow():
+        from narwhals._arrow.namespace import ArrowNamespace
+
+        return ArrowNamespace(backend_version=backend_version, version=version)
+    elif impl.is_spark_like():  # pragma: no cover
+        from narwhals._spark_like.namespace import SparkLikeNamespace
+
+        return SparkLikeNamespace(
+            implementation=impl, backend_version=backend_version, version=version
+        )
+    elif impl.is_duckdb():  # pragma: no cover
+        from narwhals._duckdb.namespace import DuckDBNamespace
+
+        return DuckDBNamespace(backend_version=backend_version, version=version)
+    elif impl.is_dask():  # pragma: no cover
+        from narwhals._dask.namespace import DaskNamespace
+
+        return DaskNamespace(backend_version=backend_version, version=version)
+    else:
+        msg = "Not supported Implementation"  # pragma: no cover
+        raise AssertionError(msg)
+
+
 def validate_backend_version(
     implementation: Implementation, backend_version: tuple[int, ...]
 ) -> None:
@@ -755,22 +840,22 @@ def maybe_align_index(
         getattr(lhs_any, "_compliant_frame", None), PandasLikeDataFrame
     ) and isinstance(getattr(rhs_any, "_compliant_series", None), PandasLikeSeries):
         _validate_index(lhs_any._compliant_frame._native_frame.index)
-        _validate_index(rhs_any._compliant_series._native_series.index)
+        _validate_index(rhs_any._compliant_series.native.index)
         return lhs_any._from_compliant_dataframe(
             lhs_any._compliant_frame._from_native_frame(
                 lhs_any._compliant_frame._native_frame.loc[
-                    rhs_any._compliant_series._native_series.index
+                    rhs_any._compliant_series.native.index
                 ]
             )
         )
     if isinstance(
         getattr(lhs_any, "_compliant_series", None), PandasLikeSeries
     ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasLikeDataFrame):
-        _validate_index(lhs_any._compliant_series._native_series.index)
+        _validate_index(lhs_any._compliant_series.native.index)
         _validate_index(rhs_any._compliant_frame._native_frame.index)
         return lhs_any._from_compliant_series(
             lhs_any._compliant_series._from_native_series(
-                lhs_any._compliant_series._native_series.loc[
+                lhs_any._compliant_series.native.loc[
                     rhs_any._compliant_frame._native_frame.index
                 ]
             )
@@ -778,12 +863,12 @@ def maybe_align_index(
     if isinstance(
         getattr(lhs_any, "_compliant_series", None), PandasLikeSeries
     ) and isinstance(getattr(rhs_any, "_compliant_series", None), PandasLikeSeries):
-        _validate_index(lhs_any._compliant_series._native_series.index)
-        _validate_index(rhs_any._compliant_series._native_series.index)
+        _validate_index(lhs_any._compliant_series.native.index)
+        _validate_index(rhs_any._compliant_series.native.index)
         return lhs_any._from_compliant_series(
             lhs_any._compliant_series._from_native_series(
-                lhs_any._compliant_series._native_series.loc[
-                    rhs_any._compliant_series._native_series.index
+                lhs_any._compliant_series.native.loc[
+                    rhs_any._compliant_series.native.index
                 ]
             )
         )
@@ -1119,7 +1204,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         isinstance(series._compliant_series, InterchangeSeries)
         and series.dtype == dtypes.Categorical
     ):
-        return series._compliant_series._native_series.describe_categorical["is_ordered"]
+        return series._compliant_series.native.describe_categorical["is_ordered"]
     if series.dtype == dtypes.Enum:
         return True
     if series.dtype != dtypes.Categorical:
@@ -1141,7 +1226,9 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
     return False  # pragma: no cover
 
 
-def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: no cover
+def generate_unique_token(
+    n_bytes: int, columns: Sequence[str]
+) -> str:  # pragma: no cover
     msg = (
         "Use `generate_temporary_column_name` instead. `generate_unique_token` is "
         "deprecated and it will be removed in future versions"
@@ -1150,7 +1237,7 @@ def generate_unique_token(n_bytes: int, columns: list[str]) -> str:  # pragma: n
     return generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
 
 
-def generate_temporary_column_name(n_bytes: int, columns: list[str]) -> str:
+def generate_temporary_column_name(n_bytes: int, columns: Sequence[str]) -> str:
     """Generates a unique column name that is not present in the given list of columns.
 
     It relies on [python secrets token_hex](https://docs.python.org/3/library/secrets.html#secrets.token_hex)
@@ -1288,25 +1375,45 @@ def validate_strict_and_pass_though(
     return pass_through
 
 
-def validate_native_namespace_and_backend(
-    backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,
-    *,
-    emit_deprecation_warning: bool,
-) -> ModuleType | Implementation | str | None:
-    if native_namespace is not None and backend is None:  # pragma: no cover
-        if emit_deprecation_warning:
-            msg = (
-                "`native_namespace` is deprecated, please use `backend` instead.\n\n"
-                "Note: `native_namespace` will remain available in `narwhals.stable.v1`.\n"
-                "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
-            )
-            issue_deprecation_warning(msg, _version="1.25.1")
-        backend = native_namespace
-    elif native_namespace is not None and backend is not None:
-        msg = "Can't pass both `native_namespace` and `backend`"
-        raise ValueError(msg)
-    return backend
+def deprecate_native_namespace(
+    *, warn_version: str = "", required: bool = False
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    """Decorator to transition from `native_namespace` to `backend` argument.
+
+    Arguments:
+        warn_version: Emit a deprecation warning from this version.
+        required: Raise when both `native_namespace`, `backend` are `None`.
+
+    Returns:
+        Wrapped function, with `native_namespace` **removed**.
+    """
+
+    def decorate(fn: Callable[P, R], /) -> Callable[P, R]:
+        @wraps(fn)
+        def wrapper(*args: P.args, **kwds: P.kwargs) -> R:
+            backend = kwds.pop("backend", None)
+            native_namespace = kwds.pop("native_namespace", None)
+            if native_namespace is not None and backend is None:
+                if warn_version:
+                    msg = (
+                        "`native_namespace` is deprecated, please use `backend` instead.\n\n"
+                        "Note: `native_namespace` will remain available in `narwhals.stable.v1`.\n"
+                        "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+                    )
+                    issue_deprecation_warning(msg, _version=warn_version)
+                backend = native_namespace
+            elif native_namespace is not None and backend is not None:
+                msg = "Can't pass both `native_namespace` and `backend`"
+                raise ValueError(msg)
+            elif native_namespace is None and backend is None and required:
+                msg = f"`backend` must be specified in `{fn.__name__}`."
+                raise ValueError(msg)
+            kwds["backend"] = backend
+            return fn(*args, **kwds)
+
+        return wrapper
+
+    return decorate
 
 
 def _validate_rolling_arguments(
@@ -1375,13 +1482,13 @@ def generate_repr(header: str, native_repr: str) -> str:
     )
 
 
-def check_column_exists(columns: list[str], subset: list[str] | None) -> None:
+def check_column_exists(columns: Sequence[str], subset: Sequence[str] | None) -> None:
     if subset is not None and (missing := set(subset).difference(columns)):
         msg = f"Column(s) {sorted(missing)} not found in {columns}"
         raise ColumnNotFoundError(msg)
 
 
-def check_column_names_are_unique(columns: list[str]) -> None:
+def check_column_names_are_unique(columns: Sequence[str]) -> None:
     len_unique_columns = len(set(columns))
     if len(columns) != len_unique_columns:
         from collections import Counter
@@ -1448,16 +1555,21 @@ def _hasattr_static(obj: Any, attr: str) -> bool:
 
 
 def is_compliant_dataframe(
-    obj: CompliantDataFrame[CompliantSeriesT_co] | Any,
-) -> TypeIs[CompliantDataFrame[CompliantSeriesT_co]]:
+    obj: CompliantDataFrame[CompliantSeriesT_co, CompliantExprT_co, NativeFrameT_co]
+    | Any,
+) -> TypeIs[CompliantDataFrame[CompliantSeriesT_co, CompliantExprT_co, NativeFrameT_co]]:
     return _hasattr_static(obj, "__narwhals_dataframe__")
 
 
-def is_compliant_lazyframe(obj: Any) -> TypeIs[CompliantLazyFrame]:
+def is_compliant_lazyframe(
+    obj: CompliantLazyFrame[CompliantExprT_co, NativeFrameT_co] | Any,
+) -> TypeIs[CompliantLazyFrame[CompliantExprT_co, NativeFrameT_co]]:
     return _hasattr_static(obj, "__narwhals_lazyframe__")
 
 
-def is_compliant_series(obj: Any) -> TypeIs[CompliantSeries]:
+def is_compliant_series(
+    obj: CompliantSeries[NativeSeriesT_co] | Any,
+) -> TypeIs[CompliantSeries[NativeSeriesT_co]]:
     return _hasattr_static(obj, "__narwhals_series__")
 
 
@@ -1465,6 +1577,26 @@ def is_compliant_expr(
     obj: CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | Any,
 ) -> TypeIs[CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co]]:
     return hasattr(obj, "__narwhals_expr__")
+
+
+def is_eager_allowed(obj: Implementation) -> TypeIs[_EagerAllowed]:
+    return obj in {
+        Implementation.PANDAS,
+        Implementation.MODIN,
+        Implementation.CUDF,
+        Implementation.POLARS,
+        Implementation.PYARROW,
+    }
+
+
+def is_lazy_allowed(obj: Implementation) -> TypeIs[_LazyAllowed]:  # pragma: no cover
+    return obj in {
+        Implementation.POLARS,
+        Implementation.PYSPARK,
+        Implementation.SQLFRAME,
+        Implementation.DASK,
+        Implementation.DUCKDB,
+    }
 
 
 def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
@@ -1475,9 +1607,30 @@ def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
     return hasattr(obj, "__dataframe__")
 
 
-def is_tracks_depth(obj: Implementation, /) -> TypeIs[_TracksDepth]:  # pragma: no cover
-    # Return `True` for implementations that utilize `CompliantExpr._depth`.
-    return obj.is_pandas_like() or obj in {Implementation.PYARROW, Implementation.DASK}
+def supports_arrow_c_stream(obj: Any) -> TypeIs[ArrowStreamExportable]:
+    return _hasattr_static(obj, "__arrow_c_stream__")
+
+
+def _remap_full_join_keys(
+    left_on: Sequence[str], right_on: Sequence[str], suffix: str
+) -> dict[str, str]:
+    """Remap join keys to avoid collisions.
+
+    If left keys collide with the right keys, append the suffix.
+    If there's no collision, let the right keys be.
+
+    Arguments:
+        left_on: Left keys.
+        right_on: Right keys.
+        suffix: Suffix to append to right keys.
+
+    Returns:
+        A map of old to new right keys.
+    """
+    right_keys_suffixed = (
+        f"{key}{suffix}" if key in left_on else key for key in right_on
+    )
+    return dict(zip(right_on, right_keys_suffixed))
 
 
 # TODO @dangotbanned: Extend with runtime behavior for `v1.*`
@@ -1503,6 +1656,24 @@ def unstable(fn: _Fn, /) -> _Fn:
         (1, 2, 3)
     """
     return fn
+
+
+if TYPE_CHECKING:
+    import sys
+
+    if sys.version_info >= (3, 13):
+        # NOTE: avoids `mypy`
+        #     error: Module "narwhals.utils" does not explicitly export attribute "deprecated"  [attr-defined]
+        from warnings import deprecated as deprecated  # noqa: PLC0414
+    else:
+        from typing_extensions import deprecated as deprecated  # noqa: PLC0414
+else:
+
+    def deprecated(message: str, /) -> Callable[[_Fn], _Fn]:  # noqa: ARG001
+        def wrapper(func: _Fn, /) -> _Fn:
+            return func
+
+        return wrapper
 
 
 class not_implemented:  # noqa: N801
@@ -1573,6 +1744,21 @@ class not_implemented:  # noqa: N801
         # Wouldn't be reachable through *regular* attribute access
         return self.__get__("raise")
 
+    @classmethod
+    def deprecated(cls, message: LiteralString, /) -> Self:
+        """Alt constructor, wraps with `@deprecated`.
+
+        Arguments:
+            message: **Static-only** deprecation message, emitted in an IDE.
+
+        Returns:
+            An exception-raising [descriptor].
+
+        [descriptor]: https://docs.python.org/3/howto/descriptor.html
+        """
+        obj = cls()
+        return deprecated(message)(obj)
+
 
 def _not_implemented_error(what: str, who: str, /) -> NotImplementedError:
     msg = (
@@ -1581,21 +1767,3 @@ def _not_implemented_error(what: str, who: str, /) -> NotImplementedError:
         "please open an issue at: https://github.com/narwhals-dev/narwhals/issues"
     )
     return NotImplementedError(msg)
-
-
-if TYPE_CHECKING:
-    import sys
-
-    if sys.version_info >= (3, 13):
-        # NOTE: avoids `mypy`
-        #     error: Module "narwhals.utils" does not explicitly export attribute "deprecated"  [attr-defined]
-        from warnings import deprecated as deprecated  # noqa: PLC0414
-    else:
-        from typing_extensions import deprecated as deprecated  # noqa: PLC0414
-else:
-
-    def deprecated(message: str, /) -> Callable[[_Fn], _Fn]:  # noqa: ARG001
-        def wrapper(func: _Fn, /) -> _Fn:
-            return func
-
-        return wrapper

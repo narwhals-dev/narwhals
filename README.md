@@ -14,8 +14,8 @@
 
 Extremely lightweight and extensible compatibility layer between dataframe libraries!
 
-- **Full API support**: cuDF, Modin, pandas, Polars, PyArrow
-- **Lazy-only support**: Dask. Work in progress: DuckDB, Ibis, PySpark.
+- **Full API support**: cuDF, Modin, pandas, Polars, PyArrow.
+- **Lazy-only support**: Dask, SQLFrame, PySpark. Work in progress: DuckDB, Ibis.
 
 Seamlessly support all, without depending on any!
 
@@ -110,9 +110,11 @@ for an up-to-date plan of future work.
 Join the party!
 
 - [altair](https://github.com/vega/altair/)
+- [bokeh](https://github.com/bokeh/bokeh)
 - [darts](https://github.com/unit8co/darts)
 - [hierarchicalforecast](https://github.com/Nixtla/hierarchicalforecast)
 - [marimo](https://github.com/marimo-team/marimo)
+- [metalearners](https://github.com/Quantco/metalearners)
 - [panel-graphic-walker](https://github.com/panel-extensions/panel-graphic-walker)
 - [plotly](https://plotly.com)
 - [pointblank](https://github.com/posit-dev/pointblank)

@@ -178,7 +178,7 @@ class PandasLikeSeriesDateTimeNamespace:
             s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
         return self._compliant_series._from_native_series(s_abs * s_sign)
 
-    def to_string(self: Self, format: str) -> PandasLikeSeries:  # noqa: A002
+    def to_string(self: Self, format: str) -> PandasLikeSeries:
         # Polars' parser treats `'%.f'` as pandas does `'.%f'`
         # PyArrow interprets `'%S'` as "seconds, plus fractional seconds"
         # and doesn't support `%f`

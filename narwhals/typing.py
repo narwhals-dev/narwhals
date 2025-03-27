@@ -34,6 +34,9 @@ if TYPE_CHECKING:
 
         def join(self, *args: Any, **kwargs: Any) -> Any: ...
 
+    class NativeLazyFrame(NativeFrame, Protocol):
+        def explain(self, *args: Any, **kwargs: Any) -> Any: ...
+
     class NativeSeries(Sized, Iterable[Any], Protocol):
         def filter(self, *args: Any, **kwargs: Any) -> Any: ...
 
@@ -66,6 +69,8 @@ Examples:
     ...     df = nw.from_native(df_native, eager_only=True)
     ...     return df.shape
 """
+
+IntoLazyFrame: TypeAlias = "NativeLazyFrame | LazyFrame[Any]"
 
 IntoFrame: TypeAlias = Union[
     "NativeFrame", "DataFrame[Any]", "LazyFrame[Any]", "DataFrameLike"
@@ -140,6 +145,8 @@ Examples:
     ...     return df.with_columns(c=df["a"] + 1).to_native()
 """
 
+IntoLazyFrameT = TypeVar("IntoLazyFrameT", bound="IntoLazyFrame")
+
 FrameT = TypeVar("FrameT", bound="Frame")
 """TypeVar bound to Narwhals DataFrame or Narwhals LazyFrame.
 
@@ -167,6 +174,8 @@ Examples:
     >>> def func(df: DataFrameT) -> DataFrameT:
     ...     return df.with_columns(c=df["a"] + 1)
 """
+
+LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[Any]")
 
 IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries")
 """TypeVar bound to object convertible to Narwhals Series.
@@ -200,9 +209,12 @@ TimeUnit: TypeAlias = Literal["ns", "us", "ms", "s"]
 
 _ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
 _NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
-_1DArray: TypeAlias = "_NDArray[tuple[int]]"  # noqa: PYI042, PYI047
+_1DArray: TypeAlias = "_NDArray[tuple[int]]"  # noqa: PYI042
 _2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI042, PYI047
 _AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
+_NumpyScalar: TypeAlias = "np.generic[Any]"
+Into1DArray: TypeAlias = "_1DArray | _NumpyScalar"
+"""A 1-dimensional `numpy.ndarray` or scalar that can be converted into one."""
 
 
 class DTypes:
@@ -232,6 +244,8 @@ class DTypes:
     List: type[dtypes.List]
     Array: type[dtypes.Array]
     Unknown: type[dtypes.Unknown]
+    Time: type[dtypes.Time]
+    Binary: type[dtypes.Binary]
 
 
 __all__ = [

@@ -86,7 +86,7 @@ class GroupBy(Generic[DataFrameT]):
         compliant_aggs = (
             *(x._to_compliant_expr(plx) for x in flat_aggs),
             *(
-                value._to_compliant_expr(plx).alias(key)
+                value.alias(key)._to_compliant_expr(plx)
                 for key, value in named_aggs.items()
             ),
         )
@@ -176,7 +176,7 @@ class LazyGroupBy(Generic[LazyFrameT]):
         compliant_aggs = (
             *(x._to_compliant_expr(plx) for x in flat_aggs),
             *(
-                value._to_compliant_expr(plx).alias(key)
+                value.alias(key)._to_compliant_expr(plx)
                 for key, value in named_aggs.items()
             ),
         )

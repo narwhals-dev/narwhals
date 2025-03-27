@@ -233,10 +233,11 @@ def is_pyspark_dataframe(df: Any) -> TypeIs[pyspark_sql.DataFrame]:
 
 def is_sqlframe_dataframe(df: Any) -> TypeIs[SQLFrameDataFrame]:
     """Check whether `df` is a SQLFrame DataFrame without importing SQLFrame."""
-    return bool(
-        (sqlframe := get_sqlframe()) is not None
-        and isinstance(df, sqlframe.base.dataframe.BaseDataFrame)
-    )
+    if get_sqlframe() is not None:
+        from sqlframe.base.dataframe import BaseDataFrame
+
+        return isinstance(df, BaseDataFrame)
+    return False  # pragma: no cover
 
 
 def is_numpy_array(arr: Any | _NDArray[_ShapeT]) -> TypeIs[_NDArray[_ShapeT]]:
