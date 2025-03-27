@@ -796,7 +796,7 @@ def maybe_align_index(
     ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasLikeDataFrame):
         _validate_index(lhs_any._compliant_frame._native_frame.index)
         _validate_index(rhs_any._compliant_frame._native_frame.index)
-        return lhs_any._from_compliant_dataframe(
+        return lhs_any._with_compliant(
             lhs_any._compliant_frame._with_native(
                 lhs_any._compliant_frame._native_frame.loc[
                     rhs_any._compliant_frame._native_frame.index
@@ -808,7 +808,7 @@ def maybe_align_index(
     ) and isinstance(getattr(rhs_any, "_compliant_series", None), PandasLikeSeries):
         _validate_index(lhs_any._compliant_frame._native_frame.index)
         _validate_index(rhs_any._compliant_series.native.index)
-        return lhs_any._from_compliant_dataframe(
+        return lhs_any._with_compliant(
             lhs_any._compliant_frame._with_native(
                 lhs_any._compliant_frame._native_frame.loc[
                     rhs_any._compliant_series.native.index
@@ -820,7 +820,7 @@ def maybe_align_index(
     ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasLikeDataFrame):
         _validate_index(lhs_any._compliant_series.native.index)
         _validate_index(rhs_any._compliant_frame._native_frame.index)
-        return lhs_any._from_compliant_series(
+        return lhs_any._with_compliant(
             lhs_any._compliant_series._with_native(
                 lhs_any._compliant_series.native.loc[
                     rhs_any._compliant_frame._native_frame.index
@@ -832,7 +832,7 @@ def maybe_align_index(
     ) and isinstance(getattr(rhs_any, "_compliant_series", None), PandasLikeSeries):
         _validate_index(lhs_any._compliant_series.native.index)
         _validate_index(rhs_any._compliant_series.native.index)
-        return lhs_any._from_compliant_series(
+        return lhs_any._with_compliant(
             lhs_any._compliant_series._with_native(
                 lhs_any._compliant_series.native.loc[
                     rhs_any._compliant_series.native.index
@@ -951,7 +951,7 @@ def maybe_set_index(
         keys = column_names
 
     if is_pandas_like_dataframe(native_obj):
-        return df_any._from_compliant_dataframe(
+        return df_any._with_compliant(
             df_any._compliant_frame._with_native(native_obj.set_index(keys))
         )
     elif is_pandas_like_series(native_obj):
@@ -967,9 +967,7 @@ def maybe_set_index(
             implementation=obj._compliant_series._implementation,  # type: ignore[union-attr]
             backend_version=obj._compliant_series._backend_version,  # type: ignore[union-attr]
         )
-        return df_any._from_compliant_series(
-            df_any._compliant_series._with_native(native_obj)
-        )
+        return df_any._with_compliant(df_any._compliant_series._with_native(native_obj))
     else:
         return df_any
 
@@ -1011,14 +1009,14 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
         native_namespace = obj_any.__native_namespace__()
         if _has_default_index(native_obj, native_namespace):
             return obj_any
-        return obj_any._from_compliant_dataframe(
+        return obj_any._with_compliant(
             obj_any._compliant_frame._with_native(native_obj.reset_index(drop=True))
         )
     if is_pandas_like_series(native_obj):
         native_namespace = obj_any.__native_namespace__()
         if _has_default_index(native_obj, native_namespace):
             return obj_any
-        return obj_any._from_compliant_series(
+        return obj_any._with_compliant(
             obj_any._compliant_series._with_native(native_obj.reset_index(drop=True))
         )
     return obj_any
@@ -1080,13 +1078,13 @@ def maybe_convert_dtypes(
     obj_any = cast("Any", obj)
     native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj):
-        return obj_any._from_compliant_dataframe(
+        return obj_any._with_compliant(
             obj_any._compliant_frame._with_native(
                 native_obj.convert_dtypes(*args, **kwargs)
             )
         )
     if is_pandas_like_series(native_obj):
-        return obj_any._from_compliant_series(
+        return obj_any._with_compliant(
             obj_any._compliant_series._with_native(
                 native_obj.convert_dtypes(*args, **kwargs)
             )

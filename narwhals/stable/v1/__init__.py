@@ -362,7 +362,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         Returns:
             The LazyFrame containing only the selected rows.
         """
-        return self._from_compliant_dataframe(
+        return self._with_compliant(
             self._compliant_frame.gather_every(n=n, offset=offset)
         )
 

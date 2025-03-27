@@ -33,6 +33,6 @@ class SeriesCatNamespace(Generic[SeriesT]):
             1    mango
             dtype: object
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.cat.get_categories()
         )

@@ -191,7 +191,7 @@ def concat(
     validate_laziness(items)
     first_item = items[0]
     plx = first_item.__narwhals_namespace__()
-    return first_item._from_compliant_dataframe(
+    return first_item._with_compliant(
         plx.concat([df._compliant_frame for df in items], how=how),
     )
 

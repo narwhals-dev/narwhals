@@ -42,6 +42,6 @@ class SeriesListNamespace(Generic[SeriesT]):
               ]
             ]
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.list.len()
         )
