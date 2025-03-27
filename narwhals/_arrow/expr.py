@@ -164,10 +164,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                 # doing 2 sorts? Here we're sorting the dataframe and then
                 # again calling `sort_indices`. `ArrowSeries.scatter` would also sort.
                 sorting_indices = pc.sort_indices(df[token].native)  # type: ignore[call-overload]
-                return [
-                    ser._from_native_series(pc.take(ser.native, sorting_indices))
-                    for ser in result
-                ]
+                return [s._with_native(s.native.take(sorting_indices)) for s in result]
         else:
 
             def func(df: ArrowDataFrame) -> Sequence[ArrowSeries]:

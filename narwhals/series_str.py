@@ -37,7 +37,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
                     null
             ]
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.len_chars()
         )
 
@@ -65,7 +65,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             1     abc123
             dtype: object
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.replace(
                 pattern, value, literal=literal, n=n
             )
@@ -94,7 +94,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             1     123
             dtype: object
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.replace_all(
                 pattern, value, literal=literal
             )
@@ -122,7 +122,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
                     "mango"
             ]
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.strip_chars(characters)
         )
 
@@ -146,7 +146,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             2     None
             dtype: object
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.starts_with(prefix)
         )
 
@@ -170,7 +170,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             2     None
             dtype: object
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.ends_with(suffix)
         )
 
@@ -200,7 +200,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
               ]
             ]
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.contains(pattern, literal=literal)
         )
 
@@ -226,7 +226,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             2      ya
             dtype: object
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.slice(
                 offset=offset, length=length
             )
@@ -254,7 +254,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
                     ["foo", "bar"]
             ]
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.split(by=by)
         )
 
@@ -287,7 +287,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
               ]
             ]
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.slice(offset=0, length=n)
         )
 
@@ -320,7 +320,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
               ]
             ]
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.slice(offset=-n, length=None)
         )
 
@@ -345,7 +345,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             1     None
             dtype: object
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.to_uppercase()
         )
 
@@ -365,7 +365,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             1     None
             dtype: object
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.to_lowercase()
         )
 
@@ -405,6 +405,6 @@ class SeriesStringNamespace(Generic[SeriesT]):
                     2020-01-02 00:00:00
             ]
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.to_datetime(format=format)
         )

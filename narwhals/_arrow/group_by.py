@@ -122,7 +122,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
             result_simple = result_simple.select(
                 [*self._keys, *[col for col in columns if col not in self._keys]]
             )
-        return self.compliant._from_native_frame(result_simple)
+        return self.compliant._with_native(result_simple)
 
     def __iter__(self: Self) -> Iterator[tuple[Any, ArrowDataFrame]]:
         col_token = generate_temporary_column_name(
@@ -145,7 +145,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
         )
         table = table.add_column(i=0, field_=col_token, column=key_values)
         for v in pc.unique(key_values):
-            t = self.compliant._from_native_frame(
+            t = self.compliant._with_native(
                 table.filter(pc.equal(table[col_token], v)).drop([col_token])
             )
             row = t.simple_select(*self._keys).row(0)

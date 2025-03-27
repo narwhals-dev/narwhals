@@ -69,12 +69,12 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
     def __narwhals_lazyframe__(self: Self) -> Self:
         return self
 
-    def _change_version(self: Self, version: Version) -> Self:
+    def _with_version(self: Self, version: Version) -> Self:
         return self.__class__(
             self.native, backend_version=self._backend_version, version=version
         )
 
-    def _from_native_frame(self: Self, df: Any) -> Self:
+    def _with_native(self: Self, df: Any) -> Self:
         return self.__class__(
             df, backend_version=self._backend_version, version=self._version
         )
@@ -85,7 +85,7 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
 
     def with_columns(self: Self, *exprs: DaskExpr) -> Self:
         new_series = evaluate_exprs(self, *exprs)
-        return self._from_native_frame(self.native.assign(**dict(new_series)))
+        return self._with_native(self.native.assign(**dict(new_series)))
 
     def collect(
         self: Self,
@@ -138,22 +138,18 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
     def filter(self: Self, predicate: DaskExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
         mask = predicate(self)[0]
-        return self._from_native_frame(self.native.loc[mask])
+        return self._with_native(self.native.loc[mask])
 
     def simple_select(self: Self, *column_names: str) -> Self:
-        return self._from_native_frame(
-            select_columns_by_name(
-                self.native,
-                list(column_names),
-                self._backend_version,
-                self._implementation,
-            ),
+        native = select_columns_by_name(
+            self.native, list(column_names), self._backend_version, self._implementation
         )
+        return self._with_native(native)
 
     def aggregate(self: Self, *exprs: DaskExpr) -> Self:
         new_series = evaluate_exprs(self, *exprs)
         df = dd.concat([val.rename(name) for name, val in new_series], axis=1)
-        return self._from_native_frame(df)
+        return self._with_native(df)
 
     def select(self: Self, *exprs: DaskExpr) -> Self:
         new_series = evaluate_exprs(self, *exprs)
@@ -163,11 +159,11 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
             self._backend_version,
             self._implementation,
         )
-        return self._from_native_frame(df)
+        return self._with_native(df)
 
     def drop_nulls(self: Self, subset: Sequence[str] | None) -> Self:
         if subset is None:
-            return self._from_native_frame(self.native.dropna())
+            return self._with_native(self.native.dropna())
         plx = self.__narwhals_namespace__()
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
@@ -191,22 +187,20 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
             compliant_frame=self, columns=columns, strict=strict
         )
 
-        return self._from_native_frame(self.native.drop(columns=to_drop))
+        return self._with_native(self.native.drop(columns=to_drop))
 
     def with_row_index(self: Self, name: str) -> Self:
         # Implementation is based on the following StackOverflow reply:
         # https://stackoverflow.com/questions/60831518/in-dask-how-does-one-add-a-range-of-integersauto-increment-to-a-new-column/60852409#60852409
-        return self._from_native_frame(
+        return self._with_native(
             add_row_index(self.native, name, self._backend_version, self._implementation)
         )
 
     def rename(self: Self, mapping: Mapping[str, str]) -> Self:
-        return self._from_native_frame(self.native.rename(columns=mapping))
+        return self._with_native(self.native.rename(columns=mapping))
 
     def head(self: Self, n: int) -> Self:
-        return self._from_native_frame(
-            self.native.head(n=n, compute=False, npartitions=-1)
-        )
+        return self._with_native(self.native.head(n=n, compute=False, npartitions=-1))
 
     def unique(
         self: Self,
@@ -225,7 +219,7 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
         else:
             mapped_keep = {"any": "first"}.get(keep, keep)
             result = self.native.drop_duplicates(subset=subset, keep=mapped_keep)
-        return self._from_native_frame(result)
+        return self._with_native(result)
 
     def sort(
         self: Self,
@@ -238,7 +232,7 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
         else:
             ascending = [not d for d in descending]
         position = "last" if nulls_last else "first"
-        return self._from_native_frame(
+        return self._with_native(
             self.native.sort_values(list(by), ascending=ascending, na_position=position)
         )
 
@@ -256,7 +250,7 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
                 n_bytes=8, columns=[*self.columns, *other.columns]
             )
 
-            return self._from_native_frame(
+            return self._with_native(
                 self.native.assign(**{key_token: 0})
                 .merge(
                     other.native.assign(**{key_token: 0}),
@@ -295,7 +289,7 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
                 left_on=left_on,
                 right_on=left_on,
             )
-            return self._from_native_frame(
+            return self._with_native(
                 df[df[indicator_token] == "left_only"].drop(columns=[indicator_token])
             )
 
@@ -315,7 +309,7 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
                 )
                 .drop_duplicates()  # avoids potential rows duplication from inner join
             )
-            return self._from_native_frame(
+            return self._with_native(
                 self.native.merge(
                     other_native, how="inner", left_on=left_on, right_on=left_on
                 )
@@ -335,7 +329,7 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
                     extra.append(right_key)
                 elif right_key != left_key:
                     extra.append(f"{right_key}_right")
-            return self._from_native_frame(result_native.drop(columns=extra))
+            return self._with_native(result_native.drop(columns=extra))
 
         if how == "full":
             # dask does not retain keys post-join
@@ -349,7 +343,7 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
             other_native = other.native.rename(columns=right_on_mapper)
             check_column_names_are_unique(other_native.columns)
             right_on = list(right_on_mapper.values())  # we now have the suffixed keys
-            return self._from_native_frame(
+            return self._with_native(
                 self.native.merge(
                     other_native,
                     left_on=left_on,
@@ -359,7 +353,7 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
                 )
             )
 
-        return self._from_native_frame(
+        return self._with_native(
             self.native.merge(
                 other.native,
                 left_on=left_on,
@@ -381,7 +375,7 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
         suffix: str,
     ) -> Self:
         plx = self.__native_namespace__()
-        return self._from_native_frame(
+        return self._with_native(
             plx.merge_asof(
                 self.native,
                 other.native,
@@ -404,7 +398,7 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
         n_partitions = native_frame.npartitions
 
         if n_partitions == 1:
-            return self._from_native_frame(self.native.tail(n=n, compute=False))
+            return self._with_native(self.native.tail(n=n, compute=False))
         else:
             msg = "`LazyFrame.tail` is not supported for Dask backend with multiple partitions."
             raise NotImplementedError(msg)
@@ -428,7 +422,7 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
         variable_name: str,
         value_name: str,
     ) -> Self:
-        return self._from_native_frame(
+        return self._with_native(
             self.native.melt(
                 id_vars=index,
                 value_vars=on,

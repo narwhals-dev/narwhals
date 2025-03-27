@@ -136,7 +136,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
     def __narwhals_lazyframe__(self: Self) -> Self:
         return self
 
-    def _change_version(self: Self, version: Version) -> Self:
+    def _with_version(self: Self, version: Version) -> Self:
         return self.__class__(
             self.native,
             backend_version=self._backend_version,
@@ -144,7 +144,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             validate_column_names=False,
         )
 
-    def _from_native_frame(
+    def _with_native(
         self: Self, df: pa.Table, *, validate_column_names: bool = True
     ) -> Self:
         return self.__class__(
@@ -277,9 +277,9 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         ):
             if len(item[1]) == 0:
                 # Return empty dataframe
-                return self._from_native_frame(self.native.slice(0, 0).select([]))
+                return self._with_native(self.native.slice(0, 0).select([]))
             selected_rows = select_rows(self.native, item[0])
-            return self._from_native_frame(selected_rows.select(cast("Indices", item[1])))
+            return self._with_native(selected_rows.select(cast("Indices", item[1])))
 
         elif isinstance(item, tuple) and len(item) == 2:
             if isinstance(item[1], slice):
@@ -287,15 +287,15 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
                 indices = cast("Indices", item[0])
                 if item[1] == slice(None):
                     if isinstance(item[0], Sequence) and len(item[0]) == 0:
-                        return self._from_native_frame(self.native.slice(0, 0))
-                    return self._from_native_frame(self.native.take(indices))
+                        return self._with_native(self.native.slice(0, 0))
+                    return self._with_native(self.native.take(indices))
                 if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
                     start, stop, step = convert_str_slice_to_int_slice(item[1], columns)
-                    return self._from_native_frame(
+                    return self._with_native(
                         self.native.take(indices).select(columns[start:stop:step])
                     )
                 if isinstance(item[1].start, int) or isinstance(item[1].stop, int):
-                    return self._from_native_frame(
+                    return self._with_native(
                         self.native.take(indices).select(
                             columns[item[1].start : item[1].stop : item[1].step]
                         )
@@ -335,12 +335,10 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             columns = self.columns
             if isinstance(item.start, str) or isinstance(item.stop, str):
                 start, stop, step = convert_str_slice_to_int_slice(item, columns)
-                return self._from_native_frame(
-                    self.native.select(columns[start:stop:step])
-                )
+                return self._with_native(self.native.select(columns[start:stop:step]))
             start = item.start or 0
             stop = item.stop if item.stop is not None else len(self.native)
-            return self._from_native_frame(self.native.slice(start, stop - start))
+            return self._with_native(self.native.slice(start, stop - start))
 
         elif isinstance(item, Sequence) or is_numpy_array_1d(item):
             if (
@@ -348,10 +346,10 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
                 and all(isinstance(x, str) for x in item)
                 and len(item) > 0
             ):
-                return self._from_native_frame(self.native.select(cast("Indices", item)))
+                return self._with_native(self.native.select(cast("Indices", item)))
             if isinstance(item, Sequence) and len(item) == 0:
-                return self._from_native_frame(self.native.slice(0, 0))
-            return self._from_native_frame(self.native.take(cast("Indices", item)))
+                return self._with_native(self.native.slice(0, 0))
+            return self._with_native(self.native.take(cast("Indices", item)))
 
         else:  # pragma: no cover
             msg = f"Expected str or slice, got: {type(item)}"
@@ -379,7 +377,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         return self.native.schema.names
 
     def simple_select(self, *column_names: str) -> Self:
-        return self._from_native_frame(
+        return self._with_native(
             self.native.select(list(column_names)), validate_column_names=False
         )
 
@@ -387,13 +385,13 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         new_series = self._evaluate_into_exprs(*exprs)
         if not new_series:
             # return empty dataframe, like Polars does
-            return self._from_native_frame(
+            return self._with_native(
                 self.native.__class__.from_arrays([]), validate_column_names=False
             )
         names = [s.name for s in new_series]
         reshaped = align_series_full_broadcast(*new_series)
         df = pa.Table.from_arrays([s.native for s in reshaped], names=names)
-        return self._from_native_frame(df, validate_column_names=True)
+        return self._with_native(df, validate_column_names=True)
 
     def _extract_comparand(self, other: ArrowSeries) -> ArrowChunkedArray:
         length = len(self)
@@ -430,7 +428,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
                 else native_frame.append_column(field_=col_name, column=column)
             )
 
-        return self._from_native_frame(native_frame, validate_column_names=False)
+        return self._with_native(native_frame, validate_column_names=False)
 
     def group_by(self: Self, *keys: str, drop_null_keys: bool) -> ArrowGroupBy:
         from narwhals._arrow.group_by import ArrowGroupBy
@@ -460,7 +458,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
                 n_bytes=8, columns=[*self.columns, *other.columns]
             )
 
-            return self._from_native_frame(
+            return self._with_native(
                 self.with_columns(
                     plx.lit(0, None).alias(key_token).broadcast(ExprKind.LITERAL)
                 )
@@ -477,7 +475,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             )
 
         coalesce_keys = how != "full"  # polars full join does not coalesce keys
-        return self._from_native_frame(
+        return self._with_native(
             self.native.join(
                 other.native,
                 keys=left_on or [],  # type: ignore[arg-type]
@@ -494,15 +492,11 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         to_drop = parse_columns_to_drop(
             compliant_frame=self, columns=columns, strict=strict
         )
-        return self._from_native_frame(
-            self.native.drop(to_drop), validate_column_names=False
-        )
+        return self._with_native(self.native.drop(to_drop), validate_column_names=False)
 
     def drop_nulls(self: ArrowDataFrame, subset: Sequence[str] | None) -> ArrowDataFrame:
         if subset is None:
-            return self._from_native_frame(
-                self.native.drop_null(), validate_column_names=False
-            )
+            return self._with_native(self.native.drop_null(), validate_column_names=False)
         plx = self.__narwhals_namespace__()
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
@@ -523,7 +517,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
 
         null_placement = "at_end" if nulls_last else "at_start"
 
-        return self._from_native_frame(
+        return self._with_native(
             self.native.sort_by(sorting, null_placement=null_placement),
             validate_column_names=False,
         )
@@ -574,7 +568,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         cols = self.columns
 
         row_indices = pa.array(range(df.num_rows))
-        return self._from_native_frame(
+        return self._with_native(
             df.append_column(name, row_indices).select([name, *cols])
         )
 
@@ -586,17 +580,17 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         else:
             # `[0]` is safe as the predicate's expression only returns a single column
             mask_native = self._evaluate_into_exprs(predicate)[0].native
-        return self._from_native_frame(
+        return self._with_native(
             self.native.filter(mask_native), validate_column_names=False
         )
 
     def head(self: Self, n: int) -> Self:
         df = self.native
         if n >= 0:
-            return self._from_native_frame(df.slice(0, n), validate_column_names=False)
+            return self._with_native(df.slice(0, n), validate_column_names=False)
         else:
             num_rows = df.num_rows
-            return self._from_native_frame(
+            return self._with_native(
                 df.slice(0, max(0, num_rows + n)), validate_column_names=False
             )
 
@@ -604,11 +598,11 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         df = self.native
         if n >= 0:
             num_rows = df.num_rows
-            return self._from_native_frame(
+            return self._with_native(
                 df.slice(max(0, num_rows - n)), validate_column_names=False
             )
         else:
-            return self._from_native_frame(df.slice(abs(n)), validate_column_names=False)
+            return self._with_native(df.slice(abs(n)), validate_column_names=False)
 
     def lazy(
         self: Self, *, backend: Implementation | None = None
@@ -692,7 +686,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         raise AssertionError(msg)  # pragma: no cover
 
     def clone(self) -> Self:
-        return self._from_native_frame(self.native, validate_column_names=False)
+        return self._with_native(self.native, validate_column_names=False)
 
     def item(self: Self, row: int | None, column: int | str | None) -> Any:
         from narwhals._arrow.series import maybe_extract_py_scalar
@@ -717,7 +711,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
     def rename(self: Self, mapping: Mapping[str, str]) -> Self:
         df = self.native
         new_cols = [mapping.get(c, c) for c in df.column_names]
-        return self._from_native_frame(df.rename_columns(new_cols))
+        return self._with_native(df.rename_columns(new_cols))
 
     def write_parquet(self: Self, file: str | Path | BytesIO) -> None:
         import pyarrow.parquet as pp
@@ -787,7 +781,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
                 .aggregate([(col_token, agg_func)])
                 .column(f"{col_token}_{agg_func}")
             )
-            return self._from_native_frame(
+            return self._with_native(
                 self.native.take(keep_idx_native), validate_column_names=False
             )
 
@@ -796,9 +790,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         return self.filter(plx._expr._from_series(keep_idx))
 
     def gather_every(self: Self, n: int, offset: int) -> Self:
-        return self._from_native_frame(
-            self.native[offset::n], validate_column_names=False
-        )
+        return self._with_native(self.native[offset::n], validate_column_names=False)
 
     def to_arrow(self: Self) -> pa.Table:
         return self.native
@@ -819,9 +811,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         rng = np.random.default_rng(seed=seed)
         idx = np.arange(0, num_rows)
         mask = rng.choice(idx, size=n, replace=with_replacement)
-        return self._from_native_frame(
-            self.native.take(mask), validate_column_names=False
-        )
+        return self._with_native(self.native.take(mask), validate_column_names=False)
 
     def unpivot(
         self: Self,
@@ -839,7 +829,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             else pa.concat_tables
         )
         names = [*index_, variable_name, value_name]
-        return self._from_native_frame(
+        return self._with_native(
             concat(
                 [
                     pa.Table.from_arrays(

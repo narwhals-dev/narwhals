@@ -246,7 +246,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
             # Keep inplace=True to avoid making a redundant copy.
             # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
             result.reset_index(inplace=True)  # noqa: PD002
-            return self.compliant._from_native_frame(
+            return self.compliant._with_native(
                 select_columns_by_name(result, new_names, backend_version, implementation)
             )
 
@@ -278,7 +278,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
             out_group = []
             out_names = []
             for expr in exprs:
-                results_keys = expr(self.compliant._from_native_frame(df))
+                results_keys = expr(self.compliant._with_native(df))
                 for result_keys in results_keys:
                     out_group.append(result_keys.native.iloc[0])
                     out_names.append(result_keys.name)
@@ -294,7 +294,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
         # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
         result_complex.reset_index(inplace=True)  # noqa: PD002
 
-        return self.compliant._from_native_frame(
+        return self.compliant._with_native(
             select_columns_by_name(
                 result_complex, new_names, backend_version, implementation
             )
@@ -308,4 +308,4 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
                 category=FutureWarning,
             )
             for key, group in self._grouped:
-                yield (key, self.compliant._from_native_frame(group))
+                yield (key, self.compliant._with_native(group))

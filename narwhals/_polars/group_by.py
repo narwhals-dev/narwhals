@@ -34,12 +34,12 @@ class PolarsGroupBy:
         self._grouped: NativeGroupBy = df._native_frame.group_by(keys)
 
     def agg(self: Self, *aggs: PolarsExpr) -> PolarsDataFrame:
-        from_native = self.compliant._from_native_frame
+        from_native = self.compliant._with_native
         return from_native(self._grouped.agg(extract_native(arg) for arg in aggs))
 
     def __iter__(self: Self) -> Iterator[tuple[tuple[str, ...], PolarsDataFrame]]:
         for key, df in self._grouped:
-            yield tuple(cast("str", key)), self.compliant._from_native_frame(df)
+            yield tuple(cast("str", key)), self.compliant._with_native(df)
 
 
 class PolarsLazyGroupBy:
@@ -59,5 +59,5 @@ class PolarsLazyGroupBy:
         self._grouped: NativeLazyGroupBy = df._native_frame.group_by(keys)
 
     def agg(self: Self, *aggs: PolarsExpr) -> PolarsLazyFrame:
-        from_native = self.compliant._from_native_frame
+        from_native = self.compliant._with_native
         return from_native(self._grouped.agg(extract_native(arg) for arg in aggs))

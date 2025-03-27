@@ -146,7 +146,7 @@ class EagerWhen(
         else:
             otherwise = self._otherwise_value
         result = self._if_then_else(when.native, df._extract_comparand(then), otherwise)
-        return [then._from_native_series(result)]
+        return [then._with_native(result)]
 
 
 class LazyWhen(

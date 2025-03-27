@@ -15,12 +15,12 @@ class PandasLikeSeriesStringNamespace(
     PandasLikeSeriesNamespace, StringNamespace["PandasLikeSeries"]
 ):
     def len_chars(self) -> PandasLikeSeries:
-        return self.from_native(self.native.str.len())
+        return self.with_native(self.native.str.len())
 
     def replace(
         self, pattern: str, value: str, *, literal: bool, n: int
     ) -> PandasLikeSeries:
-        return self.from_native(
+        return self.with_native(
             self.native.str.replace(pat=pattern, repl=value, n=n, regex=not literal)
         )
 
@@ -28,20 +28,20 @@ class PandasLikeSeriesStringNamespace(
         return self.replace(pattern, value, literal=literal, n=-1)
 
     def strip_chars(self, characters: str | None) -> PandasLikeSeries:
-        return self.from_native(self.native.str.strip(characters))
+        return self.with_native(self.native.str.strip(characters))
 
     def starts_with(self, prefix: str) -> PandasLikeSeries:
-        return self.from_native(self.native.str.startswith(prefix))
+        return self.with_native(self.native.str.startswith(prefix))
 
     def ends_with(self, suffix: str) -> PandasLikeSeries:
-        return self.from_native(self.native.str.endswith(suffix))
+        return self.with_native(self.native.str.endswith(suffix))
 
     def contains(self, pattern: str, *, literal: bool) -> PandasLikeSeries:
-        return self.from_native(self.native.str.contains(pat=pattern, regex=not literal))
+        return self.with_native(self.native.str.contains(pat=pattern, regex=not literal))
 
     def slice(self, offset: int, length: int | None) -> PandasLikeSeries:
         stop = offset + length if length else None
-        return self.from_native(self.native.str.slice(start=offset, stop=stop))
+        return self.with_native(self.native.str.slice(start=offset, stop=stop))
 
     def split(self, by: str) -> PandasLikeSeries:
         implementation = self.implementation
@@ -55,13 +55,13 @@ class PandasLikeSeriesStringNamespace(
                 "Additionally, make sure you have pandas version 1.5+ and pyarrow installed. "
             )
             raise TypeError(msg)
-        return self.from_native(self.native.str.split(pat=by))
+        return self.with_native(self.native.str.split(pat=by))
 
     def to_datetime(self, format: str | None) -> PandasLikeSeries:
         # If we know inputs are timezone-aware, we can pass `utc=True` for better performance.
         if format and any(x in format for x in ("%z", "Z")):
-            return self.from_native(self._to_datetime(format, utc=True))
-        result = self.from_native(self._to_datetime(format, utc=False))
+            return self.with_native(self._to_datetime(format, utc=True))
+        result = self.with_native(self._to_datetime(format, utc=False))
         if (tz := getattr(result.dtype, "time_zone", None)) and tz != "UTC":
             return result.dt.convert_time_zone("UTC")
         return result
@@ -72,7 +72,7 @@ class PandasLikeSeriesStringNamespace(
         )
 
     def to_uppercase(self) -> PandasLikeSeries:
-        return self.from_native(self.native.str.upper())
+        return self.with_native(self.native.str.upper())
 
     def to_lowercase(self) -> PandasLikeSeries:
-        return self.from_native(self.native.str.lower())
+        return self.with_native(self.native.str.lower())

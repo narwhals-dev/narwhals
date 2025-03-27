@@ -362,7 +362,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         Returns:
             The LazyFrame containing only the selected rows.
         """
-        return self._from_compliant_dataframe(
+        return self._with_compliant(
             self._compliant_frame.gather_every(n=n, offset=offset)
         )
 
@@ -1143,20 +1143,11 @@ def _stableify(
     | Any,
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT] | Expr | Any:
     if isinstance(obj, NwDataFrame):
-        return DataFrame(
-            obj._compliant_frame._change_version(Version.V1),
-            level=obj._level,
-        )
+        return DataFrame(obj._compliant_frame._with_version(Version.V1), level=obj._level)
     if isinstance(obj, NwLazyFrame):
-        return LazyFrame(
-            obj._compliant_frame._change_version(Version.V1),
-            level=obj._level,
-        )
+        return LazyFrame(obj._compliant_frame._with_version(Version.V1), level=obj._level)
     if isinstance(obj, NwSeries):
-        return Series(
-            obj._compliant_series._change_version(Version.V1),
-            level=obj._level,
-        )
+        return Series(obj._compliant_series._with_version(Version.V1), level=obj._level)
     if isinstance(obj, NwExpr):
         return Expr(obj._to_compliant_expr, obj._metadata)
     return obj

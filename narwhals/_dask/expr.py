@@ -151,11 +151,12 @@ class DaskExpr(
             version=context._version,
         )
 
-    def _from_call(
+    def _with_callable(
         self: Self,
         # First argument to `call` should be `dx.Series`
         call: Callable[..., dx.Series],
-        expr_name: str,
+        /,
+        expr_name: str = "",
         call_kwargs: dict[str, Any] | None = None,
         **expressifiable_args: Self | Any,
     ) -> Self:
@@ -201,110 +202,110 @@ class DaskExpr(
         )
 
     def __add__(self: Self, other: Any) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: _input.__add__(other), "__add__", other=other
         )
 
     def __sub__(self: Self, other: Any) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: _input.__sub__(other), "__sub__", other=other
         )
 
     def __rsub__(self: Self, other: Any) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: other - _input, "__rsub__", other=other
         ).alias("literal")
 
     def __mul__(self: Self, other: Any) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: _input.__mul__(other), "__mul__", other=other
         )
 
     def __truediv__(self: Self, other: Any) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: _input.__truediv__(other), "__truediv__", other=other
         )
 
     def __rtruediv__(self: Self, other: Any) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: other / _input, "__rtruediv__", other=other
         ).alias("literal")
 
     def __floordiv__(self: Self, other: Any) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: _input.__floordiv__(other), "__floordiv__", other=other
         )
 
     def __rfloordiv__(self: Self, other: Any) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: other // _input, "__rfloordiv__", other=other
         ).alias("literal")
 
     def __pow__(self: Self, other: Any) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: _input.__pow__(other), "__pow__", other=other
         )
 
     def __rpow__(self: Self, other: Any) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: other**_input, "__rpow__", other=other
         ).alias("literal")
 
     def __mod__(self: Self, other: Any) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: _input.__mod__(other), "__mod__", other=other
         )
 
     def __rmod__(self: Self, other: Any) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: other % _input, "__rmod__", other=other
         ).alias("literal")
 
     def __eq__(self: Self, other: DaskExpr) -> Self:  # type: ignore[override]
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: _input.__eq__(other), "__eq__", other=other
         )
 
     def __ne__(self: Self, other: DaskExpr) -> Self:  # type: ignore[override]
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: _input.__ne__(other), "__ne__", other=other
         )
 
     def __ge__(self: Self, other: DaskExpr | Any) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: _input.__ge__(other), "__ge__", other=other
         )
 
     def __gt__(self: Self, other: DaskExpr) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: _input.__gt__(other), "__gt__", other=other
         )
 
     def __le__(self: Self, other: DaskExpr) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: _input.__le__(other), "__le__", other=other
         )
 
     def __lt__(self: Self, other: DaskExpr) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: _input.__lt__(other), "__lt__", other=other
         )
 
     def __and__(self: Self, other: DaskExpr | Any) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: _input.__and__(other), "__and__", other=other
         )
 
     def __or__(self: Self, other: DaskExpr) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: _input.__or__(other), "__or__", other=other
         )
 
     def __invert__(self: Self) -> Self:
-        return self._from_call(lambda _input: _input.__invert__(), "__invert__")
+        return self._with_callable(lambda _input: _input.__invert__(), "__invert__")
 
     def mean(self: Self) -> Self:
-        return self._from_call(lambda _input: _input.mean().to_series(), "mean")
+        return self._with_callable(lambda _input: _input.mean().to_series(), "mean")
 
     def median(self: Self) -> Self:
         from narwhals.exceptions import InvalidOperationError
@@ -316,33 +317,33 @@ class DaskExpr(
                 raise InvalidOperationError(msg)
             return s.median_approximate().to_series()
 
-        return self._from_call(func, "median")
+        return self._with_callable(func, "median")
 
     def min(self: Self) -> Self:
-        return self._from_call(lambda _input: _input.min().to_series(), "min")
+        return self._with_callable(lambda _input: _input.min().to_series(), "min")
 
     def max(self: Self) -> Self:
-        return self._from_call(lambda _input: _input.max().to_series(), "max")
+        return self._with_callable(lambda _input: _input.max().to_series(), "max")
 
     def std(self: Self, ddof: int) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input: _input.std(ddof=ddof).to_series(),
             "std",
             call_kwargs={"ddof": ddof},
         )
 
     def var(self: Self, ddof: int) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input: _input.var(ddof=ddof).to_series(),
             "var",
             call_kwargs={"ddof": ddof},
         )
 
     def skew(self: Self) -> Self:
-        return self._from_call(lambda _input: _input.skew().to_series(), "skew")
+        return self._with_callable(lambda _input: _input.skew().to_series(), "skew")
 
     def shift(self: Self, n: int) -> Self:
-        return self._from_call(lambda _input: _input.shift(n), "shift")
+        return self._with_callable(lambda _input: _input.shift(n), "shift")
 
     def cum_sum(self: Self, *, reverse: bool) -> Self:
         if reverse:  # pragma: no cover
@@ -350,14 +351,14 @@ class DaskExpr(
             msg = "`cum_sum(reverse=True)` is not supported with Dask backend"
             raise NotImplementedError(msg)
 
-        return self._from_call(lambda _input: _input.cumsum(), "cum_sum")
+        return self._with_callable(lambda _input: _input.cumsum(), "cum_sum")
 
     def cum_count(self: Self, *, reverse: bool) -> Self:
         if reverse:  # pragma: no cover
             msg = "`cum_count(reverse=True)` is not supported with Dask backend"
             raise NotImplementedError(msg)
 
-        return self._from_call(
+        return self._with_callable(
             lambda _input: (~_input.isna()).astype(int).cumsum(), "cum_count"
         )
 
@@ -366,26 +367,26 @@ class DaskExpr(
             msg = "`cum_min(reverse=True)` is not supported with Dask backend"
             raise NotImplementedError(msg)
 
-        return self._from_call(lambda _input: _input.cummin(), "cum_min")
+        return self._with_callable(lambda _input: _input.cummin(), "cum_min")
 
     def cum_max(self: Self, *, reverse: bool) -> Self:
         if reverse:  # pragma: no cover
             msg = "`cum_max(reverse=True)` is not supported with Dask backend"
             raise NotImplementedError(msg)
 
-        return self._from_call(lambda _input: _input.cummax(), "cum_max")
+        return self._with_callable(lambda _input: _input.cummax(), "cum_max")
 
     def cum_prod(self: Self, *, reverse: bool) -> Self:
         if reverse:  # pragma: no cover
             msg = "`cum_prod(reverse=True)` is not supported with Dask backend"
             raise NotImplementedError(msg)
 
-        return self._from_call(lambda _input: _input.cumprod(), "cum_prod")
+        return self._with_callable(lambda _input: _input.cumprod(), "cum_prod")
 
     def rolling_sum(
         self: Self, window_size: int, *, min_samples: int, center: bool
     ) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input: _input.rolling(
                 window=window_size, min_periods=min_samples, center=center
             ).sum(),
@@ -395,7 +396,7 @@ class DaskExpr(
     def rolling_mean(
         self: Self, window_size: int, *, min_samples: int, center: bool
     ) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input: _input.rolling(
                 window=window_size, min_periods=min_samples, center=center
             ).mean(),
@@ -406,7 +407,7 @@ class DaskExpr(
         self: Self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
         if ddof == 1:
-            return self._from_call(
+            return self._with_callable(
                 lambda _input: _input.rolling(
                     window=window_size, min_periods=min_samples, center=center
                 ).var(),
@@ -420,7 +421,7 @@ class DaskExpr(
         self: Self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
         if ddof == 1:
-            return self._from_call(
+            return self._with_callable(
                 lambda _input: _input.rolling(
                     window=window_size, min_periods=min_samples, center=center
                 ).std(),
@@ -431,25 +432,25 @@ class DaskExpr(
             raise NotImplementedError(msg)
 
     def sum(self: Self) -> Self:
-        return self._from_call(lambda _input: _input.sum().to_series(), "sum")
+        return self._with_callable(lambda _input: _input.sum().to_series(), "sum")
 
     def count(self: Self) -> Self:
-        return self._from_call(lambda _input: _input.count().to_series(), "count")
+        return self._with_callable(lambda _input: _input.count().to_series(), "count")
 
     def round(self: Self, decimals: int) -> Self:
-        return self._from_call(lambda _input: _input.round(decimals), "round")
+        return self._with_callable(lambda _input: _input.round(decimals), "round")
 
     def unique(self: Self) -> Self:
-        return self._from_call(lambda _input: _input.unique(), "unique")
+        return self._with_callable(lambda _input: _input.unique(), "unique")
 
     def drop_nulls(self: Self) -> Self:
-        return self._from_call(lambda _input: _input.dropna(), "drop_nulls")
+        return self._with_callable(lambda _input: _input.dropna(), "drop_nulls")
 
     def abs(self: Self) -> Self:
-        return self._from_call(lambda _input: _input.abs(), "abs")
+        return self._with_callable(lambda _input: _input.abs(), "abs")
 
     def all(self: Self) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input: _input.all(
                 axis=None, skipna=True, split_every=False, out=None
             ).to_series(),
@@ -457,7 +458,7 @@ class DaskExpr(
         )
 
     def any(self: Self) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input: _input.any(axis=0, skipna=True, split_every=False).to_series(),
             "any",
         )
@@ -479,14 +480,14 @@ class DaskExpr(
                 )
             return res_ser
 
-        return self._from_call(func, "fillna")
+        return self._with_callable(func, "fillna")
 
     def clip(
         self: Self,
         lower_bound: Self | Any | None,
         upper_bound: Self | Any | None,
     ) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, lower_bound, upper_bound: _input.clip(
                 lower=lower_bound, upper=upper_bound
             ),
@@ -496,15 +497,15 @@ class DaskExpr(
         )
 
     def diff(self: Self) -> Self:
-        return self._from_call(lambda _input: _input.diff(), "diff")
+        return self._with_callable(lambda _input: _input.diff(), "diff")
 
     def n_unique(self: Self) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input: _input.nunique(dropna=False).to_series(), "n_unique"
         )
 
     def is_null(self: Self) -> Self:
-        return self._from_call(lambda _input: _input.isna(), "is_null")
+        return self._with_callable(lambda _input: _input.isna(), "is_null")
 
     def is_nan(self: Self) -> Self:
         def func(_input: dx.Series) -> dx.Series:
@@ -516,10 +517,10 @@ class DaskExpr(
             msg = f"`.is_nan` only supported for numeric dtypes and not {dtype}, did you mean `.is_null`?"
             raise InvalidOperationError(msg)
 
-        return self._from_call(func, "is_null")
+        return self._with_callable(func, "is_null")
 
     def len(self: Self) -> Self:
-        return self._from_call(lambda _input: _input.size.to_series(), "len")
+        return self._with_callable(lambda _input: _input.size.to_series(), "len")
 
     def quantile(
         self: Self,
@@ -536,7 +537,7 @@ class DaskExpr(
                     q=quantile, method="dask"
                 ).to_series()  # pragma: no cover
 
-            return self._from_call(func, "quantile", quantile=quantile)
+            return self._with_callable(func, "quantile", quantile=quantile)
         else:
             msg = "`higher`, `lower`, `midpoint`, `nearest` - interpolation methods are not supported by Dask. Please use `linear` instead."
             raise NotImplementedError(msg)
@@ -551,7 +552,7 @@ class DaskExpr(
             first_distinct_index = frame.groupby(_name).agg({col_token: "min"})[col_token]
             return frame[col_token].isin(first_distinct_index)
 
-        return self._from_call(func, "is_first_distinct")
+        return self._with_callable(func, "is_first_distinct")
 
     def is_last_distinct(self: Self) -> Self:
         def func(_input: dx.Series) -> dx.Series:
@@ -563,7 +564,7 @@ class DaskExpr(
             last_distinct_index = frame.groupby(_name).agg({col_token: "max"})[col_token]
             return frame[col_token].isin(last_distinct_index)
 
-        return self._from_call(func, "is_last_distinct")
+        return self._with_callable(func, "is_last_distinct")
 
     def is_unique(self: Self) -> Self:
         def func(_input: dx.Series) -> dx.Series:
@@ -575,13 +576,13 @@ class DaskExpr(
                 == 1
             )
 
-        return self._from_call(func, "is_unique")
+        return self._with_callable(func, "is_unique")
 
     def is_in(self: Self, other: Any) -> Self:
-        return self._from_call(lambda _input: _input.isin(other), "is_in")
+        return self._with_callable(lambda _input: _input.isin(other), "is_in")
 
     def null_count(self: Self) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input: _input.isna().sum().to_series(), "null_count"
         )
 
@@ -629,12 +630,12 @@ class DaskExpr(
                         message=".*`meta` is not specified",
                         category=UserWarning,
                     )
-                    res_native = df._native_frame.groupby(partition_by)[
+                    res_native = df.native.groupby(partition_by)[
                         list(output_names)
                     ].transform(dask_function_name, **self._call_kwargs)
-                result_frame = df._from_native_frame(
+                result_frame = df._with_native(
                     res_native.rename(columns=dict(zip(output_names, aliases)))
-                )._native_frame
+                ).native
                 return [result_frame[name] for name in aliases]
 
         return self.__class__(
@@ -652,12 +653,12 @@ class DaskExpr(
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
             return _input.astype(native_dtype)
 
-        return self._from_call(func, "cast")
+        return self._with_callable(func, "cast")
 
     def is_finite(self: Self) -> Self:
         import dask.array as da
 
-        return self._from_call(da.isfinite, "is_finite")
+        return self._with_callable(da.isfinite, "is_finite")
 
     @property
     def str(self: Self) -> DaskExprStringNamespace:

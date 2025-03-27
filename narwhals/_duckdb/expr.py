@@ -201,9 +201,10 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             version=context._version,
         )
 
-    def _from_call(
+    def _with_callable(
         self: Self,
         call: Callable[..., duckdb.Expression],
+        /,
         **expressifiable_args: Self | Any,
     ) -> Self:
         """Create expression from callable.
@@ -249,80 +250,82 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         return result
 
     def __and__(self: Self, other: DuckDBExpr) -> Self:
-        return self._from_call(lambda _input, other: _input & other, other=other)
+        return self._with_callable(lambda _input, other: _input & other, other=other)
 
     def __or__(self: Self, other: DuckDBExpr) -> Self:
-        return self._from_call(lambda _input, other: _input | other, other=other)
+        return self._with_callable(lambda _input, other: _input | other, other=other)
 
     def __add__(self: Self, other: DuckDBExpr) -> Self:
-        return self._from_call(lambda _input, other: _input + other, other=other)
+        return self._with_callable(lambda _input, other: _input + other, other=other)
 
     def __truediv__(self: Self, other: DuckDBExpr) -> Self:
-        return self._from_call(lambda _input, other: _input / other, other=other)
+        return self._with_callable(lambda _input, other: _input / other, other=other)
 
     def __rtruediv__(self: Self, other: DuckDBExpr) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: other.__truediv__(_input), other=other
         ).alias("literal")
 
     def __floordiv__(self: Self, other: DuckDBExpr) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: _input.__floordiv__(other), other=other
         )
 
     def __rfloordiv__(self: Self, other: DuckDBExpr) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: other.__floordiv__(_input), other=other
         ).alias("literal")
 
     def __mod__(self: Self, other: DuckDBExpr) -> Self:
-        return self._from_call(lambda _input, other: _input.__mod__(other), other=other)
+        return self._with_callable(
+            lambda _input, other: _input.__mod__(other), other=other
+        )
 
     def __rmod__(self: Self, other: DuckDBExpr) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: other.__mod__(_input), other=other
         ).alias("literal")
 
     def __sub__(self: Self, other: DuckDBExpr) -> Self:
-        return self._from_call(lambda _input, other: _input - other, other=other)
+        return self._with_callable(lambda _input, other: _input - other, other=other)
 
     def __rsub__(self: Self, other: DuckDBExpr) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: other.__sub__(_input), other=other
         ).alias("literal")
 
     def __mul__(self: Self, other: DuckDBExpr) -> Self:
-        return self._from_call(lambda _input, other: _input * other, other=other)
+        return self._with_callable(lambda _input, other: _input * other, other=other)
 
     def __pow__(self: Self, other: DuckDBExpr) -> Self:
-        return self._from_call(lambda _input, other: _input**other, other=other)
+        return self._with_callable(lambda _input, other: _input**other, other=other)
 
     def __rpow__(self: Self, other: DuckDBExpr) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: other.__pow__(_input), other=other
         ).alias("literal")
 
     def __lt__(self: Self, other: DuckDBExpr) -> Self:
-        return self._from_call(lambda _input, other: _input < other, other=other)
+        return self._with_callable(lambda _input, other: _input < other, other=other)
 
     def __gt__(self: Self, other: DuckDBExpr) -> Self:
-        return self._from_call(lambda _input, other: _input > other, other=other)
+        return self._with_callable(lambda _input, other: _input > other, other=other)
 
     def __le__(self: Self, other: DuckDBExpr) -> Self:
-        return self._from_call(lambda _input, other: _input <= other, other=other)
+        return self._with_callable(lambda _input, other: _input <= other, other=other)
 
     def __ge__(self: Self, other: DuckDBExpr) -> Self:
-        return self._from_call(lambda _input, other: _input >= other, other=other)
+        return self._with_callable(lambda _input, other: _input >= other, other=other)
 
     def __eq__(self: Self, other: DuckDBExpr) -> Self:  # type: ignore[override]
-        return self._from_call(lambda _input, other: _input == other, other=other)
+        return self._with_callable(lambda _input, other: _input == other, other=other)
 
     def __ne__(self: Self, other: DuckDBExpr) -> Self:  # type: ignore[override]
-        return self._from_call(lambda _input, other: _input != other, other=other)
+        return self._with_callable(lambda _input, other: _input != other, other=other)
 
     def __invert__(self: Self) -> Self:
         invert = cast("Callable[..., duckdb.Expression]", operator.invert)
-        return self._from_call(invert)
+        return self._with_callable(invert)
 
     def alias(self: Self, name: str) -> Self:
         def alias_output_names(names: Sequence[str]) -> Sequence[str]:
@@ -340,10 +343,10 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         )
 
     def abs(self: Self) -> Self:
-        return self._from_call(lambda _input: FunctionExpression("abs", _input))
+        return self._with_callable(lambda _input: FunctionExpression("abs", _input))
 
     def mean(self: Self) -> Self:
-        return self._from_call(lambda _input: FunctionExpression("mean", _input))
+        return self._with_callable(lambda _input: FunctionExpression("mean", _input))
 
     def skew(self: Self) -> Self:
         def func(_input: duckdb.Expression) -> duckdb.Expression:
@@ -361,16 +364,16 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
                 )
             )
 
-        return self._from_call(func)
+        return self._with_callable(func)
 
     def median(self: Self) -> Self:
-        return self._from_call(lambda _input: FunctionExpression("median", _input))
+        return self._with_callable(lambda _input: FunctionExpression("median", _input))
 
     def all(self: Self) -> Self:
-        return self._from_call(lambda _input: FunctionExpression("bool_and", _input))
+        return self._with_callable(lambda _input: FunctionExpression("bool_and", _input))
 
     def any(self: Self) -> Self:
-        return self._from_call(lambda _input: FunctionExpression("bool_or", _input))
+        return self._with_callable(lambda _input: FunctionExpression("bool_or", _input))
 
     def quantile(
         self: Self,
@@ -383,7 +386,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             msg = "Only linear interpolation methods are supported for DuckDB quantile."
             raise NotImplementedError(msg)
 
-        return self._from_call(func)
+        return self._with_callable(func)
 
     def clip(self: Self, lower_bound: Any, upper_bound: Any) -> Self:
         def _clip_lower(_input: duckdb.Expression, lower_bound: Any) -> duckdb.Expression:
@@ -400,15 +403,15 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             )
 
         if lower_bound is None:
-            return self._from_call(_clip_upper, upper_bound=upper_bound)
+            return self._with_callable(_clip_upper, upper_bound=upper_bound)
         if upper_bound is None:
-            return self._from_call(_clip_lower, lower_bound=lower_bound)
-        return self._from_call(
+            return self._with_callable(_clip_lower, lower_bound=lower_bound)
+        return self._with_callable(
             _clip_both, lower_bound=lower_bound, upper_bound=upper_bound
         )
 
     def sum(self: Self) -> Self:
-        return self._from_call(lambda _input: FunctionExpression("sum", _input))
+        return self._with_callable(lambda _input: FunctionExpression("sum", _input))
 
     def n_unique(self: Self) -> Self:
         def func(_input: duckdb.Expression) -> duckdb.Expression:
@@ -422,21 +425,21 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
                 ),
             )
 
-        return self._from_call(func)
+        return self._with_callable(func)
 
     def count(self: Self) -> Self:
-        return self._from_call(lambda _input: FunctionExpression("count", _input))
+        return self._with_callable(lambda _input: FunctionExpression("count", _input))
 
     def len(self: Self) -> Self:
-        return self._from_call(lambda _input: FunctionExpression("count"))
+        return self._with_callable(lambda _input: FunctionExpression("count"))
 
     def std(self: Self, ddof: int) -> Self:
         if ddof == 0:
-            return self._from_call(
+            return self._with_callable(
                 lambda _input: FunctionExpression("stddev_pop", _input)
             )
         if ddof == 1:
-            return self._from_call(
+            return self._with_callable(
                 lambda _input: FunctionExpression("stddev_samp", _input)
             )
 
@@ -448,13 +451,17 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
                 / (FunctionExpression("sqrt", (n_samples - lit(ddof))))
             )
 
-        return self._from_call(_std)
+        return self._with_callable(_std)
 
     def var(self: Self, ddof: int) -> Self:
         if ddof == 0:
-            return self._from_call(lambda _input: FunctionExpression("var_pop", _input))
+            return self._with_callable(
+                lambda _input: FunctionExpression("var_pop", _input)
+            )
         if ddof == 1:
-            return self._from_call(lambda _input: FunctionExpression("var_samp", _input))
+            return self._with_callable(
+                lambda _input: FunctionExpression("var_samp", _input)
+            )
 
         def _var(_input: duckdb.Expression) -> duckdb.Expression:
             n_samples = FunctionExpression("count", _input)
@@ -464,16 +471,16 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
                 / (n_samples - lit(ddof))
             )
 
-        return self._from_call(_var)
+        return self._with_callable(_var)
 
     def max(self: Self) -> Self:
-        return self._from_call(lambda _input: FunctionExpression("max", _input))
+        return self._with_callable(lambda _input: FunctionExpression("max", _input))
 
     def min(self: Self) -> Self:
-        return self._from_call(lambda _input: FunctionExpression("min", _input))
+        return self._with_callable(lambda _input: FunctionExpression("min", _input))
 
     def null_count(self: Self) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input: FunctionExpression("sum", _input.isnull().cast("int")),
         )
 
@@ -511,21 +518,21 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         )
 
     def is_null(self: Self) -> Self:
-        return self._from_call(lambda _input: _input.isnull())
+        return self._with_callable(lambda _input: _input.isnull())
 
     def is_nan(self: Self) -> Self:
-        return self._from_call(lambda _input: FunctionExpression("isnan", _input))
+        return self._with_callable(lambda _input: FunctionExpression("isnan", _input))
 
     def is_finite(self: Self) -> Self:
-        return self._from_call(lambda _input: FunctionExpression("isfinite", _input))
+        return self._with_callable(lambda _input: FunctionExpression("isfinite", _input))
 
     def is_in(self: Self, other: Sequence[Any]) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input: FunctionExpression("contains", lit(other), _input)
         )
 
     def round(self: Self, decimals: int) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input: FunctionExpression("round", _input, lit(decimals))
         )
 
@@ -660,21 +667,21 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         def func(_input: duckdb.Expression, value: Any) -> duckdb.Expression:
             return CoalesceOperator(_input, value)
 
-        return self._from_call(func, value=value)
+        return self._with_callable(func, value=value)
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
         def func(_input: duckdb.Expression) -> duckdb.Expression:
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
             return _input.cast(DuckDBPyType(native_dtype))
 
-        return self._from_call(func)
+        return self._with_callable(func)
 
     def is_unique(self: Self) -> Self:
         def func(_input: duckdb.Expression) -> duckdb.Expression:
             sql = f"count(*) over (partition by {_input})"
             return SQLExpression(sql) == lit(1)  # type: ignore[no-any-return, unused-ignore]
 
-        return self._from_call(func)
+        return self._with_callable(func)
 
     @property
     def str(self: Self) -> DuckDBExprStringNamespace:
