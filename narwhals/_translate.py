@@ -74,7 +74,7 @@ class FromIterable(Protocol[FromIterableT_contra]):
 
 
 ToDictDT_co = TypeVar(
-    "ToDictDT_co", bound=Mapping[str, Any], covariant=True, default=dict[str, Any]
+    "ToDictDT_co", bound=Mapping[str, Any], covariant=True, default="dict[str, Any]"
 )
 FromDictDT_contra = TypeVar(
     "FromDictDT_contra",
