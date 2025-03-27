@@ -908,13 +908,15 @@ def _scan_csv_impl(
         if (session := kwargs.pop("session", None)) is None:
             msg = "Spark like backends require a session object to be passed in `kwargs`."
             raise ValueError(msg)
+
+        csv_reader = session.read.format("csv")
         native_frame = (
-            session.read.format("csv").load(source)
+            csv_reader.load(source)
             if (
                 implementation is Implementation.SQLFRAME
-                and (parse_version(version("sqlframe"))) < (3, 27, 0)
+                and parse_version(version("sqlframe")) < (3, 27, 0)
             )
-            else session.read.format("csv").options(**kwargs).load(source)
+            else csv_reader.options(**kwargs).load(source)
         )
     else:  # pragma: no cover
         try:
@@ -1112,13 +1114,15 @@ def _scan_parquet_impl(
         if (session := kwargs.pop("session", None)) is None:
             msg = "Spark like backends require a session object to be passed in `kwargs`."
             raise ValueError(msg)
+
+        pq_reader = session.read.format("parquet")
         native_frame = (
-            session.read.format("parquet").load(source)
+            pq_reader.load(source)
             if (
                 implementation is Implementation.SQLFRAME
-                and (parse_version(version("sqlframe"))) < (3, 27, 0)
+                and parse_version(version("sqlframe")) < (3, 27, 0)
             )
-            else session.read.format("parquet").options(**kwargs).load(source)
+            else pq_reader.options(**kwargs).load(source)
         )
 
     else:  # pragma: no cover
