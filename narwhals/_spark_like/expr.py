@@ -197,10 +197,10 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
                 func_ = "stddev_pop"
             elif func_name == "std" and ddof == 1:
                 func_ = "stddev_samp"
-            elif func_name in {"var", "std"}:
-                msg = f"Only ddof=0 and ddof=1 are currently supported for {func_name}."
+            elif func_name in {"var", "std"}:  # pragma: no cover
+                msg = f"Only ddof=0 and ddof=1 are currently supported for rolling_{func_name}."
                 raise ValueError(msg)
-            else:
+            else:  # pragma: no cover
                 msg = f"Only the following functions are supported: {supported_funcs}.\nGot: {func_name}."
                 raise ValueError(msg)
             return self._F.when(
