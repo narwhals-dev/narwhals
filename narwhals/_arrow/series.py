@@ -28,6 +28,7 @@ from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import nulls_like
 from narwhals._arrow.utils import pad_series
 from narwhals._compliant import EagerSeries
+from narwhals._expression_parsing import ExprKind
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
@@ -131,13 +132,18 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def _from_native_series(
         self: Self,
         series: ArrowArray | ArrowChunkedArray,
+        *,
+        preserve_broadcast: bool = False,
     ) -> Self:
-        return self.__class__(
+        result = self.__class__(
             chunked_array(series),
             name=self._name,
             backend_version=self._backend_version,
             version=self._version,
         )
+        if preserve_broadcast:
+            result._broadcast = self._broadcast
+        return result
 
     @classmethod
     def from_iterable(
@@ -434,12 +440,14 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         return self.native.to_numpy()
 
     def alias(self: Self, name: str) -> Self:
-        return self.__class__(
+        result = self.__class__(
             self.native,
             name=name,
             backend_version=self._backend_version,
             version=self._version,
         )
+        result._broadcast = self._broadcast
+        return result
 
     @property
     def dtype(self: Self) -> DType:
@@ -504,14 +512,16 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         return self._from_native_series(res)
 
     def is_null(self: Self) -> Self:
-        return self._from_native_series(self.native.is_null())
+        return self._from_native_series(self.native.is_null(), preserve_broadcast=True)
 
     def is_nan(self: Self) -> Self:
-        return self._from_native_series(pc.is_nan(self.native))
+        return self._from_native_series(pc.is_nan(self.native), preserve_broadcast=True)
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
         data_type = narwhals_to_native_dtype(dtype, self._version)
-        return self._from_native_series(pc.cast(self.native, data_type))
+        return self._from_native_series(
+            pc.cast(self.native, data_type), preserve_broadcast=True
+        )
 
     def null_count(self: Self, *, _return_py_scalar: bool = True) -> int:
         return maybe_extract_py_scalar(self.native.null_count, _return_py_scalar)
@@ -654,7 +664,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             series = fill_func(self.native)
         else:
             series = fill_aux(self.native, limit, strategy)
-        return self._from_native_series(series)
+        return self._from_native_series(series, preserve_broadcast=True)
 
     def to_frame(self: Self) -> ArrowDataFrame:
         from narwhals._arrow.dataframe import ArrowDataFrame
@@ -829,9 +839,13 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def mode(self: Self) -> ArrowSeries:
         plx = self.__narwhals_namespace__()
         col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
-        return self.value_counts(
+        counts = self.value_counts(
             name=col_token, normalize=False, sort=False, parallel=False
-        ).filter(plx.col(col_token) == plx.col(col_token).max())[self.name]
+        )
+        return counts.filter(
+            plx.col(col_token)
+            == plx.col(col_token).max().broadcast(kind=ExprKind.AGGREGATION)
+        )[self.name]
 
     def is_finite(self: Self) -> Self:
         return self._from_native_series(pc.is_finite(self.native))
