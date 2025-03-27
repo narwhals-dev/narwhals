@@ -124,9 +124,10 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         schema: Mapping[str, DType] | Schema | None,
     ) -> Self:
         from narwhals.schema import Schema
-        from narwhals.translate import from_native
 
         implementation = context._implementation
+        backend_version = context._backend_version
+        version = context._version
         ns = implementation.to_native_namespace()
         Series = cast("type[pd.Series[Any]]", ns.Series)  # noqa: N806
         DataFrame = cast("type[pd.DataFrame]", ns.DataFrame)  # noqa: N806
@@ -134,9 +135,14 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         left_most: PandasLikeSeries | None = None
         for name, series in data.items():
             if isinstance(series, Series):
-                compliant = from_native(series, series_only=True)._compliant_series
+                compliant = PandasLikeSeries(
+                    series,
+                    implementation=implementation,
+                    backend_version=backend_version,
+                    version=version,
+                )
                 if left_most is None:
-                    left_most = cast("PandasLikeSeries", compliant)
+                    left_most = compliant
                     aligned_data[name] = series
                 else:
                     aligned_data[name] = align_and_extract_native(left_most, compliant)[1]
@@ -152,8 +158,8 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         return cls(
             native,
             implementation=implementation,
-            backend_version=context._backend_version,
-            version=context._version,
+            backend_version=backend_version,
+            version=version,
             validate_column_names=True,
         )
 
