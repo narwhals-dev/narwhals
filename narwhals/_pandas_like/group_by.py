@@ -12,7 +12,6 @@ from typing import Sequence
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import horizontal_concat
-from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_columns
 from narwhals.utils import find_stacklevel
@@ -283,12 +282,8 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
                 for result_keys in results_keys:
                     out_group.append(result_keys.native.iloc[0])
                     out_names.append(result_keys.name)
-            return native_series_from_iterable(
-                out_group,
-                index=out_names,
-                name="",
-                implementation=implementation,
-            )
+            ns = self.compliant.__narwhals_namespace__()
+            return ns._series.from_iterable(out_group, index=out_names, context=ns).native
 
         if implementation.is_pandas() and backend_version >= (2, 2):
             result_complex = self._grouped.apply(func, include_groups=False)

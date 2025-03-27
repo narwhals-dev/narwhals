@@ -21,7 +21,6 @@ from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
 from narwhals._pandas_like.utils import align_and_extract_native
 from narwhals._pandas_like.utils import get_dtype_backend
 from narwhals._pandas_like.utils import narwhals_to_native_dtype
-from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
 from narwhals._pandas_like.utils import rename
@@ -158,13 +157,18 @@ class PandasLikeSeries(EagerSeries[Any]):
             version=version,
         )
 
-    def _from_native_series(self: Self, series: Any) -> Self:
-        return self.__class__(
+    def _from_native_series(
+        self: Self, series: Any, *, preserve_broadcast: bool = False
+    ) -> Self:
+        result = self.__class__(
             series,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
         )
+        if preserve_broadcast:
+            result._broadcast = self._broadcast
+        return result
 
     @classmethod
     def from_iterable(
@@ -173,18 +177,28 @@ class PandasLikeSeries(EagerSeries[Any]):
         *,
         context: _FullContext,
         name: str = "",
+        dtype: DType | type[DType] | None = None,
         index: Any = None,
     ) -> Self:
+        implementation = context._implementation
+        backend_version = context._backend_version
+        version = context._version
+        ns = implementation.to_native_namespace()
+        kwds: dict[str, Any] = {}
+        if dtype:
+            kwds["dtype"] = narwhals_to_native_dtype(
+                dtype, None, implementation, backend_version, version
+            )
+        else:
+            if implementation.is_pandas():
+                kwds["copy"] = False
+            if index is not None and len(index):
+                kwds["index"] = index
         return cls(
-            native_series_from_iterable(
-                data,
-                name=name,
-                index=[] if index is None else index,
-                implementation=context._implementation,
-            ),
-            implementation=context._implementation,
-            backend_version=context._backend_version,
-            version=context._version,
+            ns.Series(data, name=name, **kwds),
+            implementation=implementation,
+            backend_version=backend_version,
+            version=version,
         )
 
     @classmethod
@@ -284,7 +298,9 @@ class PandasLikeSeries(EagerSeries[Any]):
             backend_version=self._backend_version,
             version=self._version,
         )
-        return self._from_native_series(self.native.astype(pd_dtype))
+        return self._from_native_series(
+            self.native.astype(pd_dtype), preserve_broadcast=True
+        )
 
     def item(self: Self, index: int | None) -> Any:
         # cuDF doesn't have Series.item().
@@ -540,12 +556,12 @@ class PandasLikeSeries(EagerSeries[Any]):
     # Transformations
 
     def is_null(self: Self) -> PandasLikeSeries:
-        return self._from_native_series(self.native.isna())
+        return self._from_native_series(self.native.isna(), preserve_broadcast=True)
 
     def is_nan(self: Self) -> PandasLikeSeries:
         ser = self.native
         if self.dtype.is_numeric():
-            return self._from_native_series(ser != ser)  # noqa: PLR0124
+            return self._from_native_series(ser != ser, preserve_broadcast=True)  # noqa: PLR0124
         msg = f"`.is_nan` only supported for numeric dtype and not {self.dtype}, did you mean `.is_null`?"
         raise InvalidOperationError(msg)
 
@@ -558,12 +574,15 @@ class PandasLikeSeries(EagerSeries[Any]):
         ser = self.native
         if value is not None:
             _, value = align_and_extract_native(self, value)
-            res_ser = self._from_native_series(ser.fillna(value=value))
+            res_ser = self._from_native_series(
+                ser.fillna(value=value), preserve_broadcast=True
+            )
         else:
             res_ser = self._from_native_series(
                 ser.ffill(limit=limit)
                 if strategy == "forward"
-                else ser.bfill(limit=limit)
+                else ser.bfill(limit=limit),
+                preserve_broadcast=True,
             )
 
         return res_ser
@@ -661,7 +680,8 @@ class PandasLikeSeries(EagerSeries[Any]):
                     name,
                     implementation=self._implementation,
                     backend_version=self._backend_version,
-                )
+                ),
+                preserve_broadcast=True,
             )
         return self
 
@@ -839,8 +859,12 @@ class PandasLikeSeries(EagerSeries[Any]):
     def clip(
         self: Self, lower_bound: Self | Any | None, upper_bound: Self | Any | None
     ) -> Self:
-        _, lower_bound = align_and_extract_native(self, lower_bound)
-        _, upper_bound = align_and_extract_native(self, upper_bound)
+        _, lower_bound = (
+            align_and_extract_native(self, lower_bound) if lower_bound else (None, None)
+        )
+        _, upper_bound = (
+            align_and_extract_native(self, upper_bound) if upper_bound else (None, None)
+        )
         kwargs = {"axis": 0} if self._implementation is Implementation.MODIN else {}
         return self._from_native_series(
             self.native.clip(lower_bound, upper_bound, **kwargs)
@@ -1064,8 +1088,14 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     @property
     def list(self: Self) -> PandasLikeSeriesListNamespace:
+        if not hasattr(self.native, "list"):
+            msg = "Series must be of PyArrow List type to support list namespace."
+            raise TypeError(msg)
         return PandasLikeSeriesListNamespace(self)
 
     @property
     def struct(self: Self) -> PandasLikeSeriesStructNamespace:
+        if not hasattr(self.native, "struct"):
+            msg = "Series must be of PyArrow Struct type to support struct namespace."
+            raise TypeError(msg)
         return PandasLikeSeriesStructNamespace(self)

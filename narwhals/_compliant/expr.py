@@ -21,6 +21,7 @@ from narwhals._compliant.any_namespace import StructNamespace
 from narwhals._compliant.namespace import CompliantNamespace
 from narwhals._compliant.typing import AliasName
 from narwhals._compliant.typing import AliasNames
+from narwhals._compliant.typing import CompliantExprT_co
 from narwhals._compliant.typing import CompliantFrameT
 from narwhals._compliant.typing import CompliantLazyFrameT
 from narwhals._compliant.typing import CompliantSeriesOrNativeExprT_co
@@ -32,7 +33,7 @@ from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
 from narwhals.dtypes import DType
-from narwhals.utils import _ExprNamespace
+from narwhals.utils import _StoresCompliant
 from narwhals.utils import deprecated
 from narwhals.utils import not_implemented
 from narwhals.utils import unstable
@@ -882,8 +883,6 @@ class LazyExpr(
     sample: not_implemented = not_implemented()
     map_batches: not_implemented = not_implemented()
     ewm_mean: not_implemented = not_implemented()
-    rolling_var: not_implemented = not_implemented()
-    rolling_std: not_implemented = not_implemented()
     gather_every: not_implemented = not_implemented()
     replace_strict: not_implemented = not_implemented()
     cat: not_implemented = not_implemented()  # pyright: ignore[reportAssignmentType]
@@ -891,6 +890,16 @@ class LazyExpr(
     @classmethod
     def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:
         return hasattr(obj, "__narwhals_expr__")
+
+
+class _ExprNamespace(  # type: ignore[misc]
+    _StoresCompliant[CompliantExprT_co], Protocol[CompliantExprT_co]
+):
+    _compliant_expr: CompliantExprT_co
+
+    @property
+    def compliant(self) -> CompliantExprT_co:
+        return self._compliant_expr
 
 
 class EagerExprNamespace(_ExprNamespace[EagerExprT], Generic[EagerExprT]):
