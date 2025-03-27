@@ -112,7 +112,7 @@ class IbisLazyFrame:
         return self._native_frame.to_pyarrow()
 
     def simple_select(self, *column_names: str) -> Self:
-        return self._from_native_frame(self._native_frame.select(s.cols(*column_names)))
+        return self._with_native(self._native_frame.select(s.cols(*column_names)))
 
     def aggregate(self: Self, *exprs: Any) -> Self:
         raise NotImplementedError
@@ -150,7 +150,7 @@ class IbisLazyFrame:
             self._native_frame, version=version, backend_version=self._backend_version
         )
 
-    def _from_native_frame(self: Self, df: Any) -> Self:
+    def _with_native(self: Self, df: Any) -> Self:
         return self.__class__(
             df, version=self._version, backend_version=self._backend_version
         )

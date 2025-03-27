@@ -71,7 +71,7 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
             msg = "inputs should all have the same schema"
             raise TypeError(msg)
         res = reduce(lambda x, y: x.union(y), (item._native_frame for item in items))
-        return first._from_native_frame(res)
+        return first._with_native(res)
 
     def concat_str(
         self: Self,

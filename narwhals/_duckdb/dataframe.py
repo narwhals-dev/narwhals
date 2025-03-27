@@ -132,26 +132,26 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
         raise ValueError(msg)  # pragma: no cover
 
     def head(self: Self, n: int) -> Self:
-        return self._from_native_frame(self.native.limit(n))
+        return self._with_native(self.native.limit(n))
 
     def simple_select(self, *column_names: str) -> Self:
-        return self._from_native_frame(self.native.select(*column_names))
+        return self._with_native(self.native.select(*column_names))
 
     def aggregate(self: Self, *exprs: DuckDBExpr) -> Self:
         selection = [val.alias(col) for col, val in evaluate_exprs(self, *exprs)]
-        return self._from_native_frame(self.native.aggregate(selection))  # type: ignore[arg-type]
+        return self._with_native(self.native.aggregate(selection))  # type: ignore[arg-type]
 
     def select(
         self: Self,
         *exprs: DuckDBExpr,
     ) -> Self:
         selection = (val.alias(col) for col, val in evaluate_exprs(self, *exprs))
-        return self._from_native_frame(self.native.select(*selection))
+        return self._with_native(self.native.select(*selection))
 
     def drop(self: Self, columns: Sequence[str], *, strict: bool) -> Self:
         columns_to_drop = parse_columns_to_drop(self, columns=columns, strict=strict)
         selection = (col for col in self.columns if col not in columns_to_drop)
-        return self._from_native_frame(self.native.select(*selection))
+        return self._with_native(self.native.select(*selection))
 
     def lazy(self: Self, *, backend: Implementation | None = None) -> Self:
         # The `backend`` argument has no effect but we keep it here for
@@ -172,12 +172,12 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             for col in self.native.columns
         ]
         result.extend(value.alias(col) for col, value in new_columns_map.items())
-        return self._from_native_frame(self.native.select(*result))
+        return self._with_native(self.native.select(*result))
 
     def filter(self: Self, predicate: DuckDBExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
         mask = predicate(self)[0]
-        return self._from_native_frame(self.native.filter(mask))
+        return self._with_native(self.native.filter(mask))
 
     @property
     def schema(self: Self) -> dict[str, DType]:
@@ -215,7 +215,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             self.native, version=version, backend_version=self._backend_version
         )
 
-    def _from_native_frame(self: Self, df: duckdb.DuckDBPyRelation) -> Self:
+    def _with_native(self: Self, df: duckdb.DuckDBPyRelation) -> Self:
         return self.__class__(
             df, backend_version=self._backend_version, version=self._version
         )
@@ -230,7 +230,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
         selection = [
             f"{col} as {mapping[col]}" if col in mapping else col for col in df.columns
         ]
-        return self._from_native_frame(df.select(", ".join(selection)))
+        return self._with_native(df.select(", ".join(selection)))
 
     def join(
         self: Self,
@@ -277,7 +277,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             select = ["lhs.*"]
 
         res = rel.select(", ".join(select)).set_alias(self.native.alias)
-        return self._from_native_frame(res)
+        return self._with_native(res)
 
     def join_asof(
         self: Self,
@@ -322,7 +322,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             ON {condition}
             """  # noqa: S608
         res = duckdb.sql(query)
-        return self._from_native_frame(res)
+        return self._with_native(res)
 
     def collect_schema(self: Self) -> dict[str, DType]:
         return {
@@ -357,8 +357,8 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
                 )
                 select * exclude ({idx_name}, {count_name}) from cte {keep_condition}
                 """  # noqa: S608
-            return self._from_native_frame(duckdb.sql(query))
-        return self._from_native_frame(self.native.unique(", ".join(self.columns)))
+            return self._with_native(duckdb.sql(query))
+        return self._with_native(self.native.unique(", ".join(self.columns)))
 
     def sort(
         self: Self,
@@ -380,14 +380,14 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
                 )
             )
         )
-        return self._from_native_frame(result)
+        return self._with_native(result)
 
     def drop_nulls(self: Self, subset: Sequence[str] | None) -> Self:
         rel = self.native
         subset_ = subset if subset is not None else rel.columns
         keep_condition = " and ".join(f'"{col}" is not null' for col in subset_)
         query = f"select * from rel where {keep_condition}"  # noqa: S608
-        return self._from_native_frame(duckdb.sql(query))
+        return self._with_native(duckdb.sql(query))
 
     def explode(self: Self, columns: Sequence[str]) -> Self:
         dtypes = import_dtypes_module(self._version)
@@ -429,7 +429,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             *(lit(None).alias(col) if col in columns else col for col in original_columns)
         )
 
-        return self._from_native_frame(non_null_rel.union(null_rel))
+        return self._with_native(non_null_rel.union(null_rel))
 
     def unpivot(
         self: Self,
@@ -466,7 +466,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             select {cols_to_select}
             from unpivot_cte;
             """  # noqa: S608
-        return self._from_native_frame(duckdb.sql(query))
+        return self._with_native(duckdb.sql(query))
 
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."

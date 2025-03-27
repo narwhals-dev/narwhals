@@ -115,7 +115,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
             implementation=self._implementation,
         )
 
-    def _from_native_frame(self: Self, df: SQLFrameDataFrame) -> Self:
+    def _with_native(self: Self, df: SQLFrameDataFrame) -> Self:
         return self.__class__(
             df,
             backend_version=self._backend_version,
@@ -217,7 +217,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
         raise ValueError(msg)  # pragma: no cover
 
     def simple_select(self: Self, *column_names: str) -> Self:
-        return self._from_native_frame(self.native.select(*column_names))
+        return self._with_native(self.native.select(*column_names))
 
     def aggregate(
         self: Self,
@@ -226,7 +226,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
         new_columns = evaluate_exprs(self, *exprs)
 
         new_columns_list = [col.alias(col_name) for col_name, col in new_columns]
-        return self._from_native_frame(self.native.agg(*new_columns_list))
+        return self._with_native(self.native.agg(*new_columns_list))
 
     def select(
         self: Self,
@@ -234,17 +234,17 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
     ) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
         new_columns_list = [col.alias(col_name) for (col_name, col) in new_columns]
-        return self._from_native_frame(self.native.select(*new_columns_list))
+        return self._with_native(self.native.select(*new_columns_list))
 
     def with_columns(self: Self, *exprs: SparkLikeExpr) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
-        return self._from_native_frame(self.native.withColumns(dict(new_columns)))
+        return self._with_native(self.native.withColumns(dict(new_columns)))
 
     def filter(self: Self, predicate: SparkLikeExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
         condition = predicate._call(self)[0]
         spark_df = self.native.where(condition)
-        return self._from_native_frame(spark_df)
+        return self._with_native(spark_df)
 
     @property
     def schema(self: Self) -> dict[str, DType]:
@@ -266,10 +266,10 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
         columns_to_drop = parse_columns_to_drop(
             compliant_frame=self, columns=columns, strict=strict
         )
-        return self._from_native_frame(self.native.drop(*columns_to_drop))
+        return self._with_native(self.native.drop(*columns_to_drop))
 
     def head(self: Self, n: int) -> Self:
-        return self._from_native_frame(self.native.limit(num=n))
+        return self._with_native(self.native.limit(num=n))
 
     def group_by(self: Self, *keys: str, drop_null_keys: bool) -> SparkLikeLazyGroupBy:
         from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
@@ -297,17 +297,17 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
             )
 
         sort_cols = [sort_f(col) for col, sort_f in zip(by, sort_funcs)]
-        return self._from_native_frame(self.native.sort(*sort_cols))
+        return self._with_native(self.native.sort(*sort_cols))
 
     def drop_nulls(self: Self, subset: Sequence[str] | None) -> Self:
         subset = list(subset) if subset else None
-        return self._from_native_frame(self.native.dropna(subset=subset))
+        return self._with_native(self.native.dropna(subset=subset))
 
     def rename(self: Self, mapping: Mapping[str, str]) -> Self:
         rename_mapping = {
             colname: mapping.get(colname, colname) for colname in self.columns
         }
-        return self._from_native_frame(
+        return self._with_native(
             self.native.select(
                 [self._F.col(old).alias(new) for old, new in rename_mapping.items()]
             )
@@ -324,7 +324,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
             raise ValueError(msg)
         check_column_exists(self.columns, subset)
         subset = list(subset) if subset else None
-        return self._from_native_frame(self.native.dropDuplicates(subset=subset))
+        return self._with_native(self.native.dropDuplicates(subset=subset))
 
     def join(
         self: Self,
@@ -390,7 +390,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
         )
         how_native = "full_outer" if how == "full" else how
 
-        return self._from_native_frame(
+        return self._with_native(
             self.native.join(other_native, on=on_, how=how_native).select(col_order)
         )
 
@@ -418,7 +418,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
             raise NotImplementedError(msg)
 
         if self._implementation.is_pyspark():
-            return self._from_native_frame(
+            return self._with_native(
                 self.native.select(
                     *[
                         self._F.col(col_name).alias(col_name)
@@ -438,7 +438,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
             def null_condition(col_name: str) -> Column:
                 return self._F.isnull(col_name) | (self._F.array_size(col_name) == 0)
 
-            return self._from_native_frame(
+            return self._with_native(
                 self.native.select(
                     *[
                         self._F.col(col_name).alias(col_name)
@@ -491,7 +491,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
         )
         if index is None:
             unpivoted_native_frame = unpivoted_native_frame.drop(*ids)
-        return self._from_native_frame(unpivoted_native_frame)
+        return self._with_native(unpivoted_native_frame)
 
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."

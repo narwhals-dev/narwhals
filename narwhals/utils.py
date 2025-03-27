@@ -797,7 +797,7 @@ def maybe_align_index(
         _validate_index(lhs_any._compliant_frame._native_frame.index)
         _validate_index(rhs_any._compliant_frame._native_frame.index)
         return lhs_any._from_compliant_dataframe(
-            lhs_any._compliant_frame._from_native_frame(
+            lhs_any._compliant_frame._with_native(
                 lhs_any._compliant_frame._native_frame.loc[
                     rhs_any._compliant_frame._native_frame.index
                 ]
@@ -809,7 +809,7 @@ def maybe_align_index(
         _validate_index(lhs_any._compliant_frame._native_frame.index)
         _validate_index(rhs_any._compliant_series.native.index)
         return lhs_any._from_compliant_dataframe(
-            lhs_any._compliant_frame._from_native_frame(
+            lhs_any._compliant_frame._with_native(
                 lhs_any._compliant_frame._native_frame.loc[
                     rhs_any._compliant_series.native.index
                 ]
@@ -952,7 +952,7 @@ def maybe_set_index(
 
     if is_pandas_like_dataframe(native_obj):
         return df_any._from_compliant_dataframe(
-            df_any._compliant_frame._from_native_frame(native_obj.set_index(keys))
+            df_any._compliant_frame._with_native(native_obj.set_index(keys))
         )
     elif is_pandas_like_series(native_obj):
         from narwhals._pandas_like.utils import set_index
@@ -1012,7 +1012,7 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
         if _has_default_index(native_obj, native_namespace):
             return obj_any
         return obj_any._from_compliant_dataframe(
-            obj_any._compliant_frame._from_native_frame(native_obj.reset_index(drop=True))
+            obj_any._compliant_frame._with_native(native_obj.reset_index(drop=True))
         )
     if is_pandas_like_series(native_obj):
         native_namespace = obj_any.__native_namespace__()
@@ -1081,7 +1081,7 @@ def maybe_convert_dtypes(
     native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj):
         return obj_any._from_compliant_dataframe(
-            obj_any._compliant_frame._from_native_frame(
+            obj_any._compliant_frame._with_native(
                 native_obj.convert_dtypes(*args, **kwargs)
             )
         )

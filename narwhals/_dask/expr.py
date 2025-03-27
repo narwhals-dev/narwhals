@@ -632,7 +632,7 @@ class DaskExpr(
                     res_native = df._native_frame.groupby(partition_by)[
                         list(output_names)
                     ].transform(dask_function_name, **self._call_kwargs)
-                result_frame = df._from_native_frame(
+                result_frame = df._with_native(
                     res_native.rename(columns=dict(zip(output_names, aliases)))
                 )._native_frame
                 return [result_frame[name] for name in aliases]
