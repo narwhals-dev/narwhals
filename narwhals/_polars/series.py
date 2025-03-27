@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
 from typing import Sequence
 from typing import cast
 from typing import overload
@@ -72,6 +73,28 @@ class PolarsSeries:
     def _change_version(self: Self, version: Version) -> Self:
         return self.__class__(
             self.native, backend_version=self._backend_version, version=version
+        )
+
+    @classmethod
+    def from_iterable(
+        cls,
+        data: Iterable[Any],
+        *,
+        context: _FullContext,
+        name: str = "",
+        dtype: DType | type[DType] | None = None,
+    ) -> Self:
+        version = context._version
+        backend_version = context._backend_version
+        dtype_pl = (
+            narwhals_to_native_dtype(dtype, version, backend_version) if dtype else None
+        )
+        # NOTE: `Iterable` is fine, annotation is overly narrow
+        # https://github.com/pola-rs/polars/blob/82d57a4ee41f87c11ca1b1af15488459727efdd7/py-polars/polars/series/series.py#L332-L333
+        return cls(
+            pl.Series(name=name, values=cast("Sequence[Any]", data), dtype=dtype_pl),
+            backend_version=backend_version,
+            version=version,
         )
 
     @classmethod

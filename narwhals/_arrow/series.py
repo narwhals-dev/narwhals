@@ -147,13 +147,20 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
 
     @classmethod
     def from_iterable(
-        cls, data: Iterable[Any], *, context: _FullContext, name: str = ""
+        cls,
+        data: Iterable[Any],
+        *,
+        context: _FullContext,
+        name: str = "",
+        dtype: DType | type[DType] | None = None,
     ) -> Self:
+        version = context._version
+        dtype_pa = narwhals_to_native_dtype(dtype, version) if dtype else None
         return cls(
-            chunked_array([data]),
+            chunked_array([data], dtype_pa),
             name=name,
             backend_version=context._backend_version,
-            version=context._version,
+            version=version,
         )
 
     def _from_scalar(self, value: Any) -> Self:

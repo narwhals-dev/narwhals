@@ -21,7 +21,6 @@ from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
 from narwhals._pandas_like.utils import align_and_extract_native
 from narwhals._pandas_like.utils import get_dtype_backend
 from narwhals._pandas_like.utils import narwhals_to_native_dtype
-from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
 from narwhals._pandas_like.utils import rename
@@ -178,18 +177,28 @@ class PandasLikeSeries(EagerSeries[Any]):
         *,
         context: _FullContext,
         name: str = "",
+        dtype: DType | type[DType] | None = None,
         index: Any = None,
     ) -> Self:
+        implementation = context._implementation
+        backend_version = context._backend_version
+        version = context._version
+        ns = implementation.to_native_namespace()
+        kwds: dict[str, Any] = {}
+        if dtype:
+            kwds["dtype"] = narwhals_to_native_dtype(
+                dtype, None, implementation, backend_version, version
+            )
+        else:
+            if implementation.is_pandas():
+                kwds["copy"] = False
+            if index is not None and len(index):
+                kwds["index"] = index
         return cls(
-            native_series_from_iterable(
-                data,
-                name=name,
-                index=[] if index is None else index,
-                implementation=context._implementation,
-            ),
-            implementation=context._implementation,
-            backend_version=context._backend_version,
-            version=context._version,
+            ns.Series(data, name=name, **kwds),
+            implementation=implementation,
+            backend_version=backend_version,
+            version=version,
         )
 
     @classmethod

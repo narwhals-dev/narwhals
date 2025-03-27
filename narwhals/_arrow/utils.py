@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     # NOTE: stubs don't allow for `ChunkedArray[StructArray]`
     # Intended to represent the `.chunks` property storing `list[pa.StructArray]`
     ChunkedArrayStructArray: TypeAlias = ArrowChunkedArray
+    ArrayAny: TypeAlias = "ArrowArray | ArrowChunkedArray"
 
     _T = TypeVar("_T")
 
@@ -74,12 +75,12 @@ def extract_py_scalar(value: Any, /) -> Any:
 
 
 def chunked_array(
-    arr: ArrowArray | list[Iterable[pa.Scalar[Any]]] | ArrowChunkedArray,
+    arr: ArrayAny | list[Iterable[Any]], dtype: pa.DataType | None = None, /
 ) -> ArrowChunkedArray:
     if isinstance(arr, pa.ChunkedArray):
         return arr
     if isinstance(arr, list):
-        return pa.chunked_array(cast("Any", arr))
+        return pa.chunked_array(arr, dtype)
     else:
         return pa.chunked_array([arr], arr.type)
 

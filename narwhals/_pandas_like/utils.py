@@ -6,7 +6,6 @@ import warnings
 from contextlib import suppress
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Iterable
 from typing import Sized
 from typing import TypeVar
 from typing import cast
@@ -213,26 +212,6 @@ def diagonal_concat(
             else {}
         )
         return implementation.to_native_namespace().concat(dfs, axis=0, **extra_kwargs)
-
-    else:  # pragma: no cover
-        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
-        raise TypeError(msg)
-
-
-def native_series_from_iterable(
-    data: Iterable[Any],
-    name: str,
-    index: Any,
-    implementation: Implementation,
-) -> Any:
-    """Return native series."""
-    if implementation in PANDAS_LIKE_IMPLEMENTATION:
-        extra_kwargs = {"copy": False} if implementation is Implementation.PANDAS else {}
-        if len(index) == 0:
-            index = None
-        return implementation.to_native_namespace().Series(
-            data, name=name, index=index, **extra_kwargs
-        )
 
     else:  # pragma: no cover
         msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
