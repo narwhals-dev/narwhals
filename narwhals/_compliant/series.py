@@ -74,7 +74,7 @@ class CompliantSeries(
     def __len__(self) -> int:
         return len(self.native)
 
-    def _from_native_series(self, series: Any) -> Self: ...
+    def _with_native(self, series: Any) -> Self: ...
     def _to_expr(self) -> CompliantExpr[Any, Self]: ...
     @classmethod
     def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self: ...
@@ -296,9 +296,7 @@ class EagerSeries(CompliantSeries[NativeSeriesT_co], Protocol[NativeSeriesT_co])
     def _from_scalar(self, value: Any) -> Self:
         return self.from_iterable([value], name=self.name, context=self)
 
-    def _from_native_series(
-        self, series: Any, *, preserve_broadcast: bool = False
-    ) -> Self:
+    def _with_native(self, series: Any, *, preserve_broadcast: bool = False) -> Self:
         """Return a new `CompliantSeries`, wrapping the native `series`.
 
         In cases when operations are known to not affect whether a result should
@@ -342,7 +340,7 @@ class _SeriesNamespace(  # type: ignore[misc]
         return self._compliant_series.native  # type: ignore[no-any-return]
 
     def from_native(self, series: Any, /) -> CompliantSeriesT_co:
-        return self.compliant._from_native_series(series)
+        return self.compliant._with_native(series)
 
 
 class EagerSeriesNamespace(

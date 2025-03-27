@@ -165,7 +165,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                 # again calling `sort_indices`. `ArrowSeries.scatter` would also sort.
                 sorting_indices = pc.sort_indices(df[token].native)  # type: ignore[call-overload]
                 return [
-                    ser._from_native_series(pc.take(ser.native, sorting_indices))
+                    ser._with_native(pc.take(ser.native, sorting_indices))
                     for ser in result
                 ]
         else:

@@ -268,9 +268,7 @@ def align_series_full_broadcast(*series: ArrowSeries) -> Sequence[ArrowSeries]:
             value = s.native[0]
             if s._backend_version < (13,) and hasattr(value, "as_py"):
                 value = value.as_py()
-            reshaped.append(
-                s._from_native_series(pa.array([value] * max_length, type=s._type))
-            )
+            reshaped.append(s._with_native(pa.array([value] * max_length, type=s._type)))
         else:
             if (actual_len := len(s)) != max_length:
                 msg = f"Expected object of length {max_length}, got {actual_len}."
@@ -532,7 +530,7 @@ def pad_series(
     pad_left = pa.array([None] * offset_left, type=series._type)
     pad_right = pa.array([None] * offset_right, type=series._type)
     concat = pa.concat_arrays([pad_left, *series.native.chunks, pad_right])
-    return series._from_native_series(concat), offset_left + offset_right
+    return series._with_native(concat), offset_left + offset_right
 
 
 def cast_to_comparable_string_types(

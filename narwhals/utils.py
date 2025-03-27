@@ -821,7 +821,7 @@ def maybe_align_index(
         _validate_index(lhs_any._compliant_series.native.index)
         _validate_index(rhs_any._compliant_frame._native_frame.index)
         return lhs_any._from_compliant_series(
-            lhs_any._compliant_series._from_native_series(
+            lhs_any._compliant_series._with_native(
                 lhs_any._compliant_series.native.loc[
                     rhs_any._compliant_frame._native_frame.index
                 ]
@@ -833,7 +833,7 @@ def maybe_align_index(
         _validate_index(lhs_any._compliant_series.native.index)
         _validate_index(rhs_any._compliant_series.native.index)
         return lhs_any._from_compliant_series(
-            lhs_any._compliant_series._from_native_series(
+            lhs_any._compliant_series._with_native(
                 lhs_any._compliant_series.native.loc[
                     rhs_any._compliant_series.native.index
                 ]
@@ -968,7 +968,7 @@ def maybe_set_index(
             backend_version=obj._compliant_series._backend_version,  # type: ignore[union-attr]
         )
         return df_any._from_compliant_series(
-            df_any._compliant_series._from_native_series(native_obj)
+            df_any._compliant_series._with_native(native_obj)
         )
     else:
         return df_any
@@ -1019,9 +1019,7 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
         if _has_default_index(native_obj, native_namespace):
             return obj_any
         return obj_any._from_compliant_series(
-            obj_any._compliant_series._from_native_series(
-                native_obj.reset_index(drop=True)
-            )
+            obj_any._compliant_series._with_native(native_obj.reset_index(drop=True))
         )
     return obj_any
 
@@ -1089,7 +1087,7 @@ def maybe_convert_dtypes(
         )
     if is_pandas_like_series(native_obj):
         return obj_any._from_compliant_series(
-            obj_any._compliant_series._from_native_series(
+            obj_any._compliant_series._with_native(
                 native_obj.convert_dtypes(*args, **kwargs)
             )
         )

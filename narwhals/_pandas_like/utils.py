@@ -605,7 +605,7 @@ def align_series_full_broadcast(
     for s in series:
         if s._broadcast:
             reindexed.append(
-                s._from_native_series(
+                s._with_native(
                     native_namespace.Series(
                         [s.native.iloc[0]] * max_length,
                         index=idx,
@@ -617,7 +617,7 @@ def align_series_full_broadcast(
 
         elif s.native.index is not idx:
             reindexed.append(
-                s._from_native_series(
+                s._with_native(
                     set_index(
                         s.native,
                         idx,
