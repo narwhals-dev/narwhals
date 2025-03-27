@@ -141,14 +141,10 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
         return self._with_native(self.native.loc[mask])
 
     def simple_select(self: Self, *column_names: str) -> Self:
-        return self._with_native(
-            select_columns_by_name(
-                self.native,
-                list(column_names),
-                self._backend_version,
-                self._implementation,
-            ),
+        native = select_columns_by_name(
+            self.native, list(column_names), self._backend_version, self._implementation
         )
+        return self._with_native(native)
 
     def aggregate(self: Self, *exprs: DaskExpr) -> Self:
         new_series = evaluate_exprs(self, *exprs)

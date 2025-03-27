@@ -2289,9 +2289,7 @@ class Series(Generic[IntoSeriesT]):
 
         return self._with_compliant(
             self._compliant_series.rolling_sum(
-                window_size=window_size,
-                min_samples=min_samples_int,
-                center=center,
+                window_size=window_size, min_samples=min_samples_int, center=center
             )
         )
 
@@ -2353,9 +2351,7 @@ class Series(Generic[IntoSeriesT]):
 
         return self._with_compliant(
             self._compliant_series.rolling_mean(
-                window_size=window_size,
-                min_samples=min_samples,
-                center=center,
+                window_size=window_size, min_samples=min_samples, center=center
             )
         )
 

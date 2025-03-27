@@ -794,23 +794,21 @@ def maybe_align_index(
     if isinstance(
         getattr(lhs_any, "_compliant_frame", None), PandasLikeDataFrame
     ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasLikeDataFrame):
-        _validate_index(lhs_any._compliant_frame._native_frame.index)
-        _validate_index(rhs_any._compliant_frame._native_frame.index)
+        _validate_index(lhs_any._compliant_frame.native.index)
+        _validate_index(rhs_any._compliant_frame.native.index)
         return lhs_any._with_compliant(
             lhs_any._compliant_frame._with_native(
-                lhs_any._compliant_frame._native_frame.loc[
-                    rhs_any._compliant_frame._native_frame.index
-                ]
+                lhs_any._compliant_frame.native.loc[rhs_any._compliant_frame.native.index]
             )
         )
     if isinstance(
         getattr(lhs_any, "_compliant_frame", None), PandasLikeDataFrame
     ) and isinstance(getattr(rhs_any, "_compliant_series", None), PandasLikeSeries):
-        _validate_index(lhs_any._compliant_frame._native_frame.index)
+        _validate_index(lhs_any._compliant_frame.native.index)
         _validate_index(rhs_any._compliant_series.native.index)
         return lhs_any._with_compliant(
             lhs_any._compliant_frame._with_native(
-                lhs_any._compliant_frame._native_frame.loc[
+                lhs_any._compliant_frame.native.loc[
                     rhs_any._compliant_series.native.index
                 ]
             )
@@ -819,11 +817,11 @@ def maybe_align_index(
         getattr(lhs_any, "_compliant_series", None), PandasLikeSeries
     ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasLikeDataFrame):
         _validate_index(lhs_any._compliant_series.native.index)
-        _validate_index(rhs_any._compliant_frame._native_frame.index)
+        _validate_index(rhs_any._compliant_frame.native.index)
         return lhs_any._with_compliant(
             lhs_any._compliant_series._with_native(
                 lhs_any._compliant_series.native.loc[
-                    rhs_any._compliant_frame._native_frame.index
+                    rhs_any._compliant_frame.native.index
                 ]
             )
         )

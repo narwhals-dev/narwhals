@@ -122,15 +122,11 @@ class BaseFrame(Generic[_FrameT]):
         return function(self, *args, **kwargs)
 
     def with_row_index(self: Self, name: str = "index") -> Self:
-        return self._with_compliant(
-            self._compliant_frame.with_row_index(name),
-        )
+        return self._with_compliant(self._compliant_frame.with_row_index(name))
 
     def drop_nulls(self: Self, subset: str | list[str] | None) -> Self:
         subset = [subset] if isinstance(subset, str) else subset
-        return self._with_compliant(
-            self._compliant_frame.drop_nulls(subset=subset),
-        )
+        return self._with_compliant(self._compliant_frame.drop_nulls(subset=subset))
 
     @property
     def columns(self: Self) -> list[str]:
@@ -144,9 +140,7 @@ class BaseFrame(Generic[_FrameT]):
             compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
             for compliant_expr, kind in zip(compliant_exprs, kinds)
         ]
-        return self._with_compliant(
-            self._compliant_frame.with_columns(*compliant_exprs),
-        )
+        return self._with_compliant(self._compliant_frame.with_columns(*compliant_exprs))
 
     def select(
         self: Self,
@@ -158,7 +152,7 @@ class BaseFrame(Generic[_FrameT]):
             # fast path!
             try:
                 return self._with_compliant(
-                    self._compliant_frame.simple_select(*flat_exprs),
+                    self._compliant_frame.simple_select(*flat_exprs)
                 )
             except Exception as e:
                 # Column not found is the only thing that can realistically be raised here.
@@ -169,16 +163,12 @@ class BaseFrame(Generic[_FrameT]):
                 ) from e
         compliant_exprs, kinds = self._flatten_and_extract(*flat_exprs, **named_exprs)
         if compliant_exprs and all_exprs_are_scalar_like(*flat_exprs, **named_exprs):
-            return self._with_compliant(
-                self._compliant_frame.aggregate(*compliant_exprs),
-            )
+            return self._with_compliant(self._compliant_frame.aggregate(*compliant_exprs))
         compliant_exprs = [
             compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
             for compliant_expr, kind in zip(compliant_exprs, kinds)
         ]
-        return self._with_compliant(
-            self._compliant_frame.select(*compliant_exprs),
-        )
+        return self._with_compliant(self._compliant_frame.select(*compliant_exprs))
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
         return self._with_compliant(self._compliant_frame.rename(mapping))
@@ -354,10 +344,7 @@ class BaseFrame(Generic[_FrameT]):
 
         return self._with_compliant(
             self._compliant_frame.unpivot(
-                on=on,
-                index=index,
-                variable_name=variable_name,
-                value_name=value_name,
+                on=on, index=index, variable_name=variable_name, value_name=value_name
             )
         )
 
@@ -915,10 +902,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                 return self
             return self._with_compliant(self._compliant_frame[item])
         if isinstance(item, str) or (isinstance(item, tuple) and len(item) == 2):
-            return self._series(
-                self._compliant_frame[item],
-                level=self._level,
-            )
+            return self._series(self._compliant_frame[item], level=self._level)
 
         elif (
             is_sequence_but_not_str(item)

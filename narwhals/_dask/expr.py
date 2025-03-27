@@ -630,12 +630,12 @@ class DaskExpr(
                         message=".*`meta` is not specified",
                         category=UserWarning,
                     )
-                    res_native = df._native_frame.groupby(partition_by)[
+                    res_native = df.native.groupby(partition_by)[
                         list(output_names)
                     ].transform(dask_function_name, **self._call_kwargs)
                 result_frame = df._with_native(
                     res_native.rename(columns=dict(zip(output_names, aliases)))
-                )._native_frame
+                ).native
                 return [result_frame[name] for name in aliases]
 
         return self.__class__(

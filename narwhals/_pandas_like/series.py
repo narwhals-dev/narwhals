@@ -409,9 +409,7 @@ class PandasLikeSeries(EagerSeries[Any]):
     def __rand__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
         ser = cast("pd.Series[Any]", ser)
-        return self._with_native(
-            ser.__and__(other),
-        ).alias(self.name)
+        return self._with_native(ser.__and__(other)).alias(self.name)
 
     def __or__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
@@ -420,9 +418,7 @@ class PandasLikeSeries(EagerSeries[Any]):
     def __ror__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
         ser = cast("pd.Series[Any]", ser)
-        return self._with_native(
-            ser.__or__(other),
-        ).alias(self.name)
+        return self._with_native(ser.__or__(other)).alias(self.name)
 
     def __add__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
@@ -430,9 +426,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def __radd__(self: Self, other: Any) -> PandasLikeSeries:
         _, other_native = align_and_extract_native(self, other)
-        return self._with_native(
-            self.native.__radd__(other_native),
-        ).alias(self.name)
+        return self._with_native(self.native.__radd__(other_native)).alias(self.name)
 
     def __sub__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
@@ -440,9 +434,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def __rsub__(self: Self, other: Any) -> PandasLikeSeries:
         _, other_native = align_and_extract_native(self, other)
-        return self._with_native(
-            self.native.__rsub__(other_native),
-        ).alias(self.name)
+        return self._with_native(self.native.__rsub__(other_native)).alias(self.name)
 
     def __mul__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
@@ -450,9 +442,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def __rmul__(self: Self, other: Any) -> PandasLikeSeries:
         _, other_native = align_and_extract_native(self, other)
-        return self._with_native(
-            self.native.__rmul__(other_native),
-        ).alias(self.name)
+        return self._with_native(self.native.__rmul__(other_native)).alias(self.name)
 
     def __truediv__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
@@ -460,9 +450,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def __rtruediv__(self: Self, other: Any) -> PandasLikeSeries:
         _, other_native = align_and_extract_native(self, other)
-        return self._with_native(
-            self.native.__rtruediv__(other_native),
-        ).alias(self.name)
+        return self._with_native(self.native.__rtruediv__(other_native)).alias(self.name)
 
     def __floordiv__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
@@ -470,9 +458,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def __rfloordiv__(self: Self, other: Any) -> PandasLikeSeries:
         _, other_native = align_and_extract_native(self, other)
-        return self._with_native(
-            self.native.__rfloordiv__(other_native),
-        ).alias(self.name)
+        return self._with_native(self.native.__rfloordiv__(other_native)).alias(self.name)
 
     def __pow__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
@@ -480,9 +466,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def __rpow__(self: Self, other: Any) -> PandasLikeSeries:
         _, other_native = align_and_extract_native(self, other)
-        return self._with_native(
-            self.native.__rpow__(other_native),
-        ).alias(self.name)
+        return self._with_native(self.native.__rpow__(other_native)).alias(self.name)
 
     def __mod__(self: Self, other: Any) -> PandasLikeSeries:
         ser, other = align_and_extract_native(self, other)
@@ -490,9 +474,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def __rmod__(self: Self, other: Any) -> PandasLikeSeries:
         _, other_native = align_and_extract_native(self, other)
-        return self._with_native(
-            self.native.__rmod__(other_native),
-        ).alias(self.name)
+        return self._with_native(self.native.__rmod__(other_native)).alias(self.name)
 
     # Unary
 

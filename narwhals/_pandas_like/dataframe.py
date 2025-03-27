@@ -663,7 +663,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
                 )
             else:
                 return self._with_native(
-                    self.native.merge(other.native, how="cross", suffixes=("", suffix)),
+                    self.native.merge(other.native, how="cross", suffixes=("", suffix))
                 )
 
         if how == "anti":

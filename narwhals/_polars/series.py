@@ -342,7 +342,7 @@ class PolarsSeries:
             msg = "`rolling_var` not implemented for polars older than 1.0"
             raise NotImplementedError(msg)
 
-        extra_kwargs = (
+        extra_kwargs: dict[str, Any] = (
             {"min_periods": min_samples}
             if self._backend_version < (1, 21, 0)
             else {"min_samples": min_samples}
@@ -350,10 +350,7 @@ class PolarsSeries:
 
         return self._with_native(
             self.native.rolling_var(
-                window_size=window_size,
-                center=center,
-                ddof=ddof,
-                **extra_kwargs,  # type: ignore[arg-type]
+                window_size=window_size, center=center, ddof=ddof, **extra_kwargs
             )
         )
 
@@ -369,7 +366,7 @@ class PolarsSeries:
             msg = "`rolling_std` not implemented for polars older than 1.0"
             raise NotImplementedError(msg)
 
-        extra_kwargs = (
+        extra_kwargs: dict[str, Any] = (
             {"min_periods": min_samples}
             if self._backend_version < (1, 21, 0)
             else {"min_samples": min_samples}
@@ -377,10 +374,7 @@ class PolarsSeries:
 
         return self._with_native(
             self.native.rolling_std(
-                window_size=window_size,
-                center=center,
-                ddof=ddof,
-                **extra_kwargs,  # type: ignore[arg-type]
+                window_size=window_size, center=center, ddof=ddof, **extra_kwargs
             )
         )
 
@@ -391,7 +385,7 @@ class PolarsSeries:
         min_samples: int,
         center: bool,
     ) -> Self:
-        extra_kwargs = (
+        extra_kwargs: dict[str, Any] = (
             {"min_periods": min_samples}
             if self._backend_version < (1, 21, 0)
             else {"min_samples": min_samples}
@@ -399,9 +393,7 @@ class PolarsSeries:
 
         return self._with_native(
             self.native.rolling_sum(
-                window_size=window_size,
-                center=center,
-                **extra_kwargs,  # type: ignore[arg-type]
+                window_size=window_size, center=center, **extra_kwargs
             )
         )
 
@@ -412,7 +404,7 @@ class PolarsSeries:
         min_samples: int,
         center: bool,
     ) -> Self:
-        extra_kwargs = (
+        extra_kwargs: dict[str, Any] = (
             {"min_periods": min_samples}
             if self._backend_version < (1, 21, 0)
             else {"min_samples": min_samples}
@@ -420,9 +412,7 @@ class PolarsSeries:
 
         return self._with_native(
             self.native.rolling_mean(
-                window_size=window_size,
-                center=center,
-                **extra_kwargs,  # type: ignore[arg-type]
+                window_size=window_size, center=center, **extra_kwargs
             )
         )
 
