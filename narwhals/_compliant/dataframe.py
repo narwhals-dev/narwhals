@@ -18,6 +18,7 @@ from narwhals._compliant.typing import EagerExprT_contra
 from narwhals._compliant.typing import EagerSeriesT
 from narwhals._compliant.typing import NativeFrameT_co
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals._translate import DictConvertible
 from narwhals._translate import NumpyConvertible
 from narwhals.utils import Version
 from narwhals.utils import _StoresNative
@@ -47,9 +48,12 @@ __all__ = ["CompliantDataFrame", "CompliantLazyFrame", "EagerDataFrame"]
 
 T = TypeVar("T")
 
+_ToDict: TypeAlias = "dict[str, CompliantSeriesT] | dict[str, list[Any]]"  # noqa: PYI047
+
 
 class CompliantDataFrame(
     NumpyConvertible["_2DArray", "_2DArray"],
+    DictConvertible["_ToDict[CompliantSeriesT]", Mapping[str, Any]],
     _StoresNative[NativeFrameT_co],
     Sized,
     Protocol[CompliantSeriesT, CompliantExprT_contra, NativeFrameT_co],
@@ -61,6 +65,15 @@ class CompliantDataFrame(
 
     def __narwhals_dataframe__(self) -> Self: ...
     def __narwhals_namespace__(self) -> Any: ...
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+        /,
+        *,
+        context: _FullContext,
+        schema: Mapping[str, DType] | Schema | None,
+    ) -> Self: ...
     @classmethod
     def from_numpy(
         cls,
