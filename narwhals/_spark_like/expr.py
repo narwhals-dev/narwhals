@@ -166,7 +166,9 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         center: bool,
         window_size: int,
         min_samples: int,
+        ddof: int | None = None,
     ) -> WindowFunction:
+        supported_funcs = ["sum", "mean", "std", "var"]
         if center:
             half = (window_size - 1) // 2
             remainder = (window_size - 1) % 2
@@ -185,9 +187,25 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
                 )
                 .rowsBetween(start, end)
             )
+            if func_name in {"sum", "mean"}:
+                func_: str = func_name
+            elif func_name == "var" and ddof == 0:
+                func_ = "var_pop"
+            elif func_name in "var" and ddof == 1:
+                func_ = "var_samp"
+            elif func_name == "std" and ddof == 0:
+                func_ = "stddev_pop"
+            elif func_name == "std" and ddof == 1:
+                func_ = "stddev_samp"
+            elif func_name in {"var", "std"}:  # pragma: no cover
+                msg = f"Only ddof=0 and ddof=1 are currently supported for rolling_{func_name}."
+                raise ValueError(msg)
+            else:  # pragma: no cover
+                msg = f"Only the following functions are supported: {supported_funcs}.\nGot: {func_name}."
+                raise ValueError(msg)
             return self._F.when(
                 self._F.count(window_inputs.expr).over(window) >= min_samples,
-                getattr(self._F, func_name)(window_inputs.expr).over(window),
+                getattr(self._F, func_)(window_inputs.expr).over(window),
             )
 
         return func
@@ -454,9 +472,11 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         def _clip_both(
             _input: Column, lower_bound: Column, upper_bound: Column
         ) -> Column:
-            result = _input
-            result = self._F.when(result < lower_bound, lower_bound).otherwise(result)
-            return self._F.when(result > upper_bound, upper_bound).otherwise(result)
+            return (
+                self._F.when(_input < lower_bound, lower_bound)
+                .when(_input > upper_bound, upper_bound)
+                .otherwise(_input)
+            )
 
         if lower_bound is None:
             return self._from_call(_clip_upper, upper_bound=upper_bound)
@@ -672,6 +692,32 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
                 center=center,
                 window_size=window_size,
                 min_samples=min_samples,
+            )
+        )
+
+    def rolling_var(
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
+    ) -> Self:
+        return self._with_window_function(
+            self._rolling_window_func(
+                func_name="var",
+                center=center,
+                window_size=window_size,
+                min_samples=min_samples,
+                ddof=ddof,
+            )
+        )
+
+    def rolling_std(
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
+    ) -> Self:
+        return self._with_window_function(
+            self._rolling_window_func(
+                func_name="std",
+                center=center,
+                window_size=window_size,
+                min_samples=min_samples,
+                ddof=ddof,
             )
         )
 

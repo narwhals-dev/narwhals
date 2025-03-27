@@ -866,6 +866,20 @@ def _scan_csv_impl(
         from pyarrow import csv  # ignore-banned-import
 
         native_frame = csv.read_csv(source, **kwargs)
+    elif implementation.is_spark_like():
+        if (session := kwargs.pop("session", None)) is None:
+            msg = "Spark like backends require a session object to be passed in `kwargs`."
+            raise ValueError(msg)
+
+        csv_reader = session.read.format("csv")
+        native_frame = (
+            csv_reader.load(source)
+            if (
+                implementation is Implementation.SQLFRAME
+                and parse_version(version("sqlframe")) < (3, 27, 0)
+            )
+            else csv_reader.options(**kwargs).load(source)
+        )
     else:  # pragma: no cover
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
@@ -1062,13 +1076,15 @@ def _scan_parquet_impl(
         if (session := kwargs.pop("session", None)) is None:
             msg = "Spark like backends require a session object to be passed in `kwargs`."
             raise ValueError(msg)
+
+        pq_reader = session.read.format("parquet")
         native_frame = (
-            session.read.format("parquet").load(source)
+            pq_reader.load(source)
             if (
                 implementation is Implementation.SQLFRAME
-                and (parse_version(version("sqlframe"))) < (3, 27, 0)
+                and parse_version(version("sqlframe")) < (3, 27, 0)
             )
-            else session.read.format("parquet").options(**kwargs).load(source)
+            else pq_reader.options(**kwargs).load(source)
         )
 
     else:  # pragma: no cover

@@ -233,7 +233,7 @@ def extract_native(
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
 
-    if rhs is None:
+    if rhs is None:  # pragma: no cover
         return lhs.native, lit(None, type=lhs._type)
 
     if isinstance(rhs, ArrowDataFrame):

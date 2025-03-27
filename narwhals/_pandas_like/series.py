@@ -848,8 +848,12 @@ class PandasLikeSeries(EagerSeries[Any]):
     def clip(
         self: Self, lower_bound: Self | Any | None, upper_bound: Self | Any | None
     ) -> Self:
-        _, lower_bound = align_and_extract_native(self, lower_bound)
-        _, upper_bound = align_and_extract_native(self, upper_bound)
+        _, lower_bound = (
+            align_and_extract_native(self, lower_bound) if lower_bound else (None, None)
+        )
+        _, upper_bound = (
+            align_and_extract_native(self, upper_bound) if upper_bound else (None, None)
+        )
         kwargs = {"axis": 0} if self._implementation is Implementation.MODIN else {}
         return self._from_native_series(
             self.native.clip(lower_bound, upper_bound, **kwargs)
