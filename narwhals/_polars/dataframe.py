@@ -95,6 +95,23 @@ class PolarsDataFrame:
         validate_backend_version(self._implementation, self._backend_version)
 
     @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+        /,
+        *,
+        context: _FullContext,
+        schema: Mapping[str, DType] | Schema | None,
+    ) -> Self:
+        from narwhals.schema import Schema
+
+        pl_schema = Schema(schema).to_polars() if schema is not None else schema
+        native = pl.from_dict(data, pl_schema)
+        return cls(
+            native, backend_version=context._backend_version, version=context._version
+        )
+
+    @classmethod
     def from_numpy(
         cls,
         data: _2DArray,
