@@ -16,6 +16,7 @@ import pandas as pd
 from narwhals._compliant.series import EagerSeriesNamespace
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import DuplicateError
+from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import import_dtypes_module
@@ -250,6 +251,11 @@ def set_index(
 
     We can set `copy` / `inplace` based on implementation/version.
     """
+    if isinstance(index, implementation.to_native_namespace().Index) and (
+        expected_len := len(index)
+    ) != (actual_len := len(obj)):
+        msg = f"Expected object of length {expected_len}, got length: {actual_len}"
+        raise ShapeError(msg)
     if implementation is Implementation.CUDF:  # pragma: no cover
         obj = obj.copy(deep=False)  # type: ignore[attr-defined]
         obj.index = index  # type: ignore[attr-defined]
@@ -617,9 +623,8 @@ def align_series_full_broadcast(
 
     idx = series[lengths.index(max_length)].native.index
     reindexed = []
-    max_length_gt_1 = max_length > 1
-    for s, length in zip(series, lengths):
-        if max_length_gt_1 and length == 1:
+    for s in series:
+        if s._broadcast:
             reindexed.append(
                 s._from_native_series(
                     native_namespace.Series(

@@ -158,13 +158,18 @@ class PandasLikeSeries(EagerSeries[Any]):
             version=version,
         )
 
-    def _from_native_series(self: Self, series: Any) -> Self:
-        return self.__class__(
+    def _from_native_series(
+        self: Self, series: Any, *, preserve_broadcast: bool = False
+    ) -> Self:
+        result = self.__class__(
             series,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
         )
+        if preserve_broadcast:
+            result._broadcast = self._broadcast
+        return result
 
     @classmethod
     def from_iterable(
@@ -284,7 +289,9 @@ class PandasLikeSeries(EagerSeries[Any]):
             backend_version=self._backend_version,
             version=self._version,
         )
-        return self._from_native_series(self.native.astype(pd_dtype))
+        return self._from_native_series(
+            self.native.astype(pd_dtype), preserve_broadcast=True
+        )
 
     def item(self: Self, index: int | None) -> Any:
         # cuDF doesn't have Series.item().
@@ -540,12 +547,12 @@ class PandasLikeSeries(EagerSeries[Any]):
     # Transformations
 
     def is_null(self: Self) -> PandasLikeSeries:
-        return self._from_native_series(self.native.isna())
+        return self._from_native_series(self.native.isna(), preserve_broadcast=True)
 
     def is_nan(self: Self) -> PandasLikeSeries:
         ser = self.native
         if self.dtype.is_numeric():
-            return self._from_native_series(ser != ser)  # noqa: PLR0124
+            return self._from_native_series(ser != ser, preserve_broadcast=True)  # noqa: PLR0124
         msg = f"`.is_nan` only supported for numeric dtype and not {self.dtype}, did you mean `.is_null`?"
         raise InvalidOperationError(msg)
 
@@ -558,12 +565,15 @@ class PandasLikeSeries(EagerSeries[Any]):
         ser = self.native
         if value is not None:
             _, value = align_and_extract_native(self, value)
-            res_ser = self._from_native_series(ser.fillna(value=value))
+            res_ser = self._from_native_series(
+                ser.fillna(value=value), preserve_broadcast=True
+            )
         else:
             res_ser = self._from_native_series(
                 ser.ffill(limit=limit)
                 if strategy == "forward"
-                else ser.bfill(limit=limit)
+                else ser.bfill(limit=limit),
+                preserve_broadcast=True,
             )
 
         return res_ser
@@ -661,7 +671,8 @@ class PandasLikeSeries(EagerSeries[Any]):
                     name,
                     implementation=self._implementation,
                     backend_version=self._backend_version,
-                )
+                ),
+                preserve_broadcast=True,
             )
         return self
 
