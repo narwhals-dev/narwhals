@@ -616,7 +616,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     def is_unique(self: Self) -> Self:
         def func(_input: duckdb.Expression) -> duckdb.Expression:
             sql = f"count(*) over (partition by {_input})"
-            return SQLExpression(sql) == lit(1)
+            return SQLExpression(sql) == lit(1)  # type: ignore[no-any-return, unused-ignore]
 
         return self._from_call(func)
 
