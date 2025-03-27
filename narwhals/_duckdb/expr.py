@@ -204,6 +204,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     def _with_callable(
         self: Self,
         call: Callable[..., duckdb.Expression],
+        /,
         **expressifiable_args: Self | Any,
     ) -> Self:
         """Create expression from callable.

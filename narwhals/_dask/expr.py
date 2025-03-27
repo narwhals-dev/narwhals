@@ -155,7 +155,8 @@ class DaskExpr(
         self: Self,
         # First argument to `call` should be `dx.Series`
         call: Callable[..., dx.Series],
-        expr_name: str,
+        /,
+        expr_name: str = "",
         call_kwargs: dict[str, Any] | None = None,
         **expressifiable_args: Self | Any,
     ) -> Self:

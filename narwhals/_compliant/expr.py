@@ -891,12 +891,7 @@ class LazyExpr(
     def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:
         return hasattr(obj, "__narwhals_expr__")
 
-    def _with_callable(
-        self: Self,
-        call: Callable[..., Any],
-        *args: Any,
-        **expressifiable_args: Self | Any,
-    ) -> Self: ...
+    def _with_callable(self: Self, call: Callable[..., Any], /) -> Self: ...
 
 
 class _ExprNamespace(  # type: ignore[misc]

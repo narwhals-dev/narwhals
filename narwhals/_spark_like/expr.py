@@ -250,6 +250,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def _with_callable(
         self: Self,
         call: Callable[..., Column],
+        /,
         **expressifiable_args: Self | Any,
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
