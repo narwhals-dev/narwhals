@@ -367,14 +367,15 @@ def from_dict(
         |     1  2  4      |
         └──────────────────┘
     """
-    return _from_dict_impl(data, schema, backend=backend)
+    return _from_dict_impl(data, schema, backend=backend, version=Version.V1)
 
 
 def _from_dict_impl(
     data: Mapping[str, Any],
-    schema: Mapping[str, DType] | Schema | None = None,
+    schema: Mapping[str, DType] | Schema | None,
     *,
-    backend: ModuleType | Implementation | str | None = None,
+    backend: ModuleType | Implementation | str | None,
+    version: Version,
 ) -> DataFrame[Any]:
     from narwhals.series import Series
 

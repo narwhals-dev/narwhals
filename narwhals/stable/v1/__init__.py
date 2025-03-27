@@ -2296,7 +2296,7 @@ def from_dict(
         A new DataFrame.
     """
     return _stableify(  # type: ignore[no-any-return]
-        _from_dict_impl(data, schema, backend=backend)
+        _from_dict_impl(data, schema, backend=backend, version=Version.V1)
     )
 
 
