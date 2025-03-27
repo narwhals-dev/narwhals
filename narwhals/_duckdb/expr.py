@@ -368,14 +368,26 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         return self._from_call(func)
 
     def clip(self: Self, lower_bound: Any, upper_bound: Any) -> Self:
-        def func(
+        def _clip_lower(_input: duckdb.Expression, lower_bound: Any) -> duckdb.Expression:
+            return FunctionExpression("greatest", _input, lower_bound)
+
+        def _clip_upper(_input: duckdb.Expression, upper_bound: Any) -> duckdb.Expression:
+            return FunctionExpression("least", _input, upper_bound)
+
+        def _clip_both(
             _input: duckdb.Expression, lower_bound: Any, upper_bound: Any
         ) -> duckdb.Expression:
             return FunctionExpression(
                 "greatest", FunctionExpression("least", _input, upper_bound), lower_bound
             )
 
-        return self._from_call(func, lower_bound=lower_bound, upper_bound=upper_bound)
+        if lower_bound is None:
+            return self._from_call(_clip_upper, upper_bound=upper_bound)
+        if upper_bound is None:
+            return self._from_call(_clip_lower, lower_bound=lower_bound)
+        return self._from_call(
+            _clip_both, lower_bound=lower_bound, upper_bound=upper_bound
+        )
 
     def sum(self: Self) -> Self:
         return self._from_call(lambda _input: FunctionExpression("sum", _input))
@@ -613,6 +625,13 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
         return self._from_call(func)
 
+    def is_unique(self: Self) -> Self:
+        def func(_input: duckdb.Expression) -> duckdb.Expression:
+            sql = f"count(*) over (partition by {_input})"
+            return SQLExpression(sql) == lit(1)  # type: ignore[no-any-return, unused-ignore]
+
+        return self._from_call(func)
+
     @property
     def str(self: Self) -> DuckDBExprStringNamespace:
         return DuckDBExprStringNamespace(self)
@@ -635,4 +654,3 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
     drop_nulls = not_implemented()
     unique = not_implemented()
-    is_unique = not_implemented()

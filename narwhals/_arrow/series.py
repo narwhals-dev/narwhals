@@ -806,10 +806,22 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def clip(
         self: Self, lower_bound: Self | Any | None, upper_bound: Self | Any | None
     ) -> Self:
-        _, lower_bound = extract_native(self, lower_bound)
-        _, upper_bound = extract_native(self, upper_bound)
-        arr = pc.max_element_wise(self.native, lower_bound)
-        return self._from_native_series(pc.min_element_wise(arr, upper_bound))
+        _, lower_bound = (
+            extract_native(self, lower_bound) if lower_bound else (None, None)
+        )
+        _, upper_bound = (
+            extract_native(self, upper_bound) if upper_bound else (None, None)
+        )
+
+        if lower_bound is None:
+            return self._from_native_series(pc.min_element_wise(self.native, upper_bound))
+        if upper_bound is None:
+            return self._from_native_series(pc.max_element_wise(self.native, lower_bound))
+        return self._from_native_series(
+            pc.max_element_wise(
+                pc.min_element_wise(self.native, upper_bound), lower_bound
+            )
+        )
 
     def to_arrow(self: Self) -> ArrowArray:
         return self.native.combine_chunks()
