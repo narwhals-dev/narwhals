@@ -105,8 +105,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         from narwhals.schema import Schema
 
         pa_schema = Schema(schema).to_arrow() if schema is not None else schema
-        # NOTE: Stubs too narrow on `data`
-        native = pa.table(data, schema=pa_schema)  # type: ignore[arg-type]
+        native = pa.Table.from_pydict(data, schema=pa_schema)
         return cls(
             native,
             backend_version=context._backend_version,
