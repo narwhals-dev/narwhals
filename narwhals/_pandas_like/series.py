@@ -161,11 +161,6 @@ class PandasLikeSeries(EagerSeries[Any]):
     def _from_native_series(
         self: Self, series: Any, *, preserve_broadcast: bool = False
     ) -> Self:
-        # In cases when operations are known to not affect whether a result should
-        # be broadcast, we can pass `preverse_broadcast=True`.
-        # Set this with care - it should only be set for unary expressions which don't
-        # change length or order, such as `.alias` or `.fill_null`. If in doubt, don't
-        # set it, you probably don't need it.
         result = self.__class__(
             series,
             implementation=self._implementation,
