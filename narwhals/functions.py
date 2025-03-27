@@ -380,15 +380,7 @@ def _from_dict_impl(
         msg = "from_dict cannot be called with empty dictionary"
         raise ValueError(msg)
     if backend is None:
-        for val in data.values():
-            if is_narwhals_series(val):
-                native_namespace = val.__native_namespace__()
-                break
-        else:
-            msg = "Calling `from_dict` without `backend` is only supported if all input values are already Narwhals Series"
-            raise TypeError(msg)
-        data = {key: to_native(value, pass_through=True) for key, value in data.items()}
-        backend = native_namespace
+        data, backend = _from_dict_no_backend(data)
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
         ns = _into_compliant_namespace(implementation, version)
@@ -410,6 +402,20 @@ def _from_dict_impl(
         f"or None, got: {implementation}."
     )
     raise ValueError(msg)
+
+
+def _from_dict_no_backend(
+    data: Mapping[str, Series[Any] | Any], /
+) -> tuple[dict[str, Series[Any] | Any], ModuleType]:
+    for val in data.values():
+        if is_narwhals_series(val):
+            native_namespace = val.__native_namespace__()
+            break
+    else:
+        msg = "Calling `from_dict` without `backend` is only supported if all input values are already Narwhals Series"
+        raise TypeError(msg)
+    data = {key: to_native(value, pass_through=True) for key, value in data.items()}
+    return data, native_namespace
 
 
 @deprecate_native_namespace(warn_version="1.31.0", required=True)
