@@ -328,7 +328,7 @@ def from_dict(
         |     1  2  4      |
         └──────────────────┘
     """
-    return _from_dict_impl(data, schema, backend=backend, version=Version.V1)
+    return _from_dict_impl(data, schema, backend=backend, version=Version.MAIN)
 
 
 def _from_dict_impl(
