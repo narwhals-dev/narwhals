@@ -339,7 +339,7 @@ class _SeriesNamespace(  # type: ignore[misc]
     def native(self) -> NativeSeriesT_co:
         return self._compliant_series.native  # type: ignore[no-any-return]
 
-    def from_native(self, series: Any, /) -> CompliantSeriesT_co:
+    def with_native(self, series: Any, /) -> CompliantSeriesT_co:
         return self.compliant._with_native(series)
 
 

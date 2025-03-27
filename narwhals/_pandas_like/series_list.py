@@ -34,4 +34,4 @@ class PandasLikeSeriesListNamespace(
             backend_version,
             self.version,
         )
-        return self.from_native(result.astype(dtype)).alias(self.native.name)
+        return self.with_native(result.astype(dtype)).alias(self.native.name)

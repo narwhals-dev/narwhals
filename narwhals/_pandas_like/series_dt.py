@@ -20,7 +20,7 @@ class PandasLikeSeriesDateTimeNamespace(
     PandasLikeSeriesNamespace, DateTimeNamespace["PandasLikeSeries"]
 ):
     def date(self) -> PandasLikeSeries:
-        result = self.from_native(self.native.dt.date)
+        result = self.with_native(self.native.dt.date)
         if str(result.dtype).lower() == "object":
             msg = (
                 "Accessing `date` on the default pandas backend "
@@ -33,22 +33,22 @@ class PandasLikeSeriesDateTimeNamespace(
         return result
 
     def year(self) -> PandasLikeSeries:
-        return self.from_native(self.native.dt.year)
+        return self.with_native(self.native.dt.year)
 
     def month(self) -> PandasLikeSeries:
-        return self.from_native(self.native.dt.month)
+        return self.with_native(self.native.dt.month)
 
     def day(self) -> PandasLikeSeries:
-        return self.from_native(self.native.dt.day)
+        return self.with_native(self.native.dt.day)
 
     def hour(self) -> PandasLikeSeries:
-        return self.from_native(self.native.dt.hour)
+        return self.with_native(self.native.dt.hour)
 
     def minute(self) -> PandasLikeSeries:
-        return self.from_native(self.native.dt.minute)
+        return self.with_native(self.native.dt.minute)
 
     def second(self) -> PandasLikeSeries:
-        return self.from_native(self.native.dt.second)
+        return self.with_native(self.native.dt.second)
 
     def millisecond(self) -> PandasLikeSeries:
         return self.microsecond() // 1000
@@ -64,9 +64,9 @@ class PandasLikeSeriesDateTimeNamespace(
                 pc.multiply(pc.millisecond(arr), 1000), pc.microsecond(arr)
             )
             result = type(self.native)(type(arr_ns)(result_arr), name=self.native.name)
-            return self.from_native(result)
+            return self.with_native(result)
 
-        return self.from_native(self.native.dt.microsecond)
+        return self.with_native(self.native.dt.microsecond)
 
     def nanosecond(self) -> PandasLikeSeries:
         return self.microsecond() * 1_000 + self.native.dt.nanosecond
@@ -78,13 +78,13 @@ class PandasLikeSeriesDateTimeNamespace(
             - (year_start.to_numpy() - 1970).astype("datetime64[Y]")
         ).astype("int32") + 1
         dtype = "Int64[pyarrow]" if self._is_pyarrow() else "int32"
-        return self.from_native(
+        return self.with_native(
             type(self.native)(result, dtype=dtype, name=year_start.name)
         )
 
     def weekday(self) -> PandasLikeSeries:
         # Pandas is 0-6 while Polars is 1-7
-        return self.from_native(self.native.dt.weekday) + 1
+        return self.with_native(self.native.dt.weekday) + 1
 
     def _is_pyarrow(self) -> bool:
         return is_pyarrow_dtype_backend(self.native.dtype, self.implementation)
@@ -107,7 +107,7 @@ class PandasLikeSeriesDateTimeNamespace(
         s_abs = s.abs() // 60
         if ~s.isna().any():
             s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
-        return self.from_native(s_abs * s_sign)
+        return self.with_native(s_abs * s_sign)
 
     def total_seconds(self) -> PandasLikeSeries:
         s = self._get_total_seconds()
@@ -116,7 +116,7 @@ class PandasLikeSeriesDateTimeNamespace(
         s_abs = s.abs() // 1
         if ~s.isna().any():
             s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
-        return self.from_native(s_abs * s_sign)
+        return self.with_native(s_abs * s_sign)
 
     def total_milliseconds(self) -> PandasLikeSeries:
         s = self._get_total_seconds() * 1e3
@@ -125,7 +125,7 @@ class PandasLikeSeriesDateTimeNamespace(
         s_abs = s.abs() // 1
         if ~s.isna().any():
             s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
-        return self.from_native(s_abs * s_sign)
+        return self.with_native(s_abs * s_sign)
 
     def total_microseconds(self) -> PandasLikeSeries:
         s = self._get_total_seconds() * 1e6
@@ -134,7 +134,7 @@ class PandasLikeSeriesDateTimeNamespace(
         s_abs = s.abs() // 1
         if ~s.isna().any():
             s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
-        return self.from_native(s_abs * s_sign)
+        return self.with_native(s_abs * s_sign)
 
     def total_nanoseconds(self) -> PandasLikeSeries:
         s = self._get_total_seconds() * 1e9
@@ -143,7 +143,7 @@ class PandasLikeSeriesDateTimeNamespace(
         s_abs = s.abs() // 1
         if ~s.isna().any():
             s_abs = s_abs.astype(int_dtype_mapper(s.dtype))
-        return self.from_native(s_abs * s_sign)
+        return self.with_native(s_abs * s_sign)
 
     def to_string(self, format: str) -> PandasLikeSeries:
         # Polars' parser treats `'%.f'` as pandas does `'.%f'`
@@ -153,19 +153,19 @@ class PandasLikeSeriesDateTimeNamespace(
             format = format.replace("%S%.f", "%S.%f")
         else:
             format = format.replace("%S.%f", "%S").replace("%S%.f", "%S")
-        return self.from_native(self.native.dt.strftime(format))
+        return self.with_native(self.native.dt.strftime(format))
 
     def replace_time_zone(self, time_zone: str | None) -> PandasLikeSeries:
         de_zone = self.native.dt.tz_localize(None)
         result = de_zone.dt.tz_localize(time_zone) if time_zone is not None else de_zone
-        return self.from_native(result)
+        return self.with_native(result)
 
     def convert_time_zone(self, time_zone: str) -> PandasLikeSeries:
         if self.compliant.dtype.time_zone is None:  # type: ignore[attr-defined]
             result = self.native.dt.tz_localize("UTC").dt.tz_convert(time_zone)
         else:
             result = self.native.dt.tz_convert(time_zone)
-        return self.from_native(result)
+        return self.with_native(result)
 
     def timestamp(self, time_unit: TimeUnit) -> PandasLikeSeries:
         s = self.native
@@ -188,4 +188,4 @@ class PandasLikeSeriesDateTimeNamespace(
             msg = "Input should be either of Date or Datetime type"
             raise TypeError(msg)
         result[mask_na] = None
-        return self.from_native(result)
+        return self.with_native(result)

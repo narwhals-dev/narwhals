@@ -14,4 +14,4 @@ if TYPE_CHECKING:
 
 class ArrowSeriesStructNamespace(ArrowSeriesNamespace):
     def field(self: Self, name: str) -> ArrowSeries:
-        return self.from_native(pc.struct_field(self.native, name)).alias(name)
+        return self.with_native(pc.struct_field(self.native, name)).alias(name)

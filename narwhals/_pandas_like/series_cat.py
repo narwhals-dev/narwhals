@@ -14,4 +14,4 @@ class PandasLikeSeriesCatNamespace(
 ):
     def get_categories(self) -> PandasLikeSeries:
         s = self.native
-        return self.from_native(type(s)(s.cat.categories, name=s.name))
+        return self.with_native(type(s)(s.cat.categories, name=s.name))
