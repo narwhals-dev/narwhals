@@ -1088,8 +1088,14 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     @property
     def list(self: Self) -> PandasLikeSeriesListNamespace:
+        if not hasattr(self.native, "list"):
+            msg = "Series must be of PyArrow List type to support list namespace."
+            raise TypeError(msg)
         return PandasLikeSeriesListNamespace(self)
 
     @property
     def struct(self: Self) -> PandasLikeSeriesStructNamespace:
+        if not hasattr(self.native, "struct"):
+            msg = "Series must be of PyArrow Struct type to support struct namespace."
+            raise TypeError(msg)
         return PandasLikeSeriesStructNamespace(self)

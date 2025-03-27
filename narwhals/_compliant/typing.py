@@ -59,10 +59,14 @@ NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=T
 NativeFrameT_co = TypeVar("NativeFrameT_co", bound="NativeFrame", covariant=True)
 
 CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExprAny)
+CompliantExprT_co = TypeVar("CompliantExprT_co", bound=CompliantExprAny, covariant=True)
 CompliantExprT_contra = TypeVar(
     "CompliantExprT_contra", bound=CompliantExprAny, contravariant=True
 )
 CompliantSeriesT = TypeVar("CompliantSeriesT", bound=CompliantSeriesAny)
+CompliantSeriesT_co = TypeVar(
+    "CompliantSeriesT_co", bound=CompliantSeriesAny, covariant=True
+)
 CompliantSeriesOrNativeExprT = TypeVar(
     "CompliantSeriesOrNativeExprT", bound=CompliantSeriesOrNativeExprAny
 )

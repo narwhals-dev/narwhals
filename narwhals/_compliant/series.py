@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Generic
 from typing import Iterable
 from typing import Iterator
 from typing import Literal
@@ -9,9 +10,18 @@ from typing import Mapping
 from typing import Protocol
 from typing import Sequence
 
+from narwhals._compliant.any_namespace import CatNamespace
+from narwhals._compliant.any_namespace import DateTimeNamespace
+from narwhals._compliant.any_namespace import ListNamespace
+from narwhals._compliant.any_namespace import StringNamespace
+from narwhals._compliant.any_namespace import StructNamespace
+from narwhals._compliant.typing import CompliantSeriesT_co
+from narwhals._compliant.typing import EagerSeriesT_co
 from narwhals._compliant.typing import NativeSeriesT_co
 from narwhals._translate import FromIterable
 from narwhals._translate import NumpyConvertible
+from narwhals.utils import _StoresCompliant
+from narwhals.utils import _StoresNative
 from narwhals.utils import unstable
 
 if TYPE_CHECKING:
@@ -303,3 +313,78 @@ class EagerSeries(CompliantSeries[NativeSeriesT_co], Protocol[NativeSeriesT_co])
 
     def _to_expr(self) -> EagerExpr[Any, Any]:
         return self.__narwhals_namespace__()._expr._from_series(self)  # type: ignore[no-any-return]
+
+    @property
+    def str(self) -> EagerSeriesStringNamespace[Self, NativeSeriesT_co]: ...
+    @property
+    def dt(self) -> EagerSeriesDateTimeNamespace[Self, NativeSeriesT_co]: ...
+    @property
+    def cat(self) -> EagerSeriesCatNamespace[Self, NativeSeriesT_co]: ...
+    @property
+    def list(self) -> EagerSeriesListNamespace[Self, NativeSeriesT_co]: ...
+    @property
+    def struct(self) -> EagerSeriesStructNamespace[Self, NativeSeriesT_co]: ...
+
+
+class _SeriesNamespace(  # type: ignore[misc]
+    _StoresCompliant[CompliantSeriesT_co],
+    _StoresNative[NativeSeriesT_co],
+    Protocol[CompliantSeriesT_co, NativeSeriesT_co],
+):
+    _compliant_series: CompliantSeriesT_co
+
+    @property
+    def compliant(self) -> CompliantSeriesT_co:
+        return self._compliant_series
+
+    @property
+    def native(self) -> NativeSeriesT_co:
+        return self._compliant_series.native  # type: ignore[no-any-return]
+
+    def from_native(self, series: Any, /) -> CompliantSeriesT_co:
+        return self.compliant._from_native_series(series)
+
+
+class EagerSeriesNamespace(
+    _SeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
+    Generic[EagerSeriesT_co, NativeSeriesT_co],
+):
+    _compliant_series: EagerSeriesT_co
+
+    def __init__(self, series: EagerSeriesT_co, /) -> None:
+        self._compliant_series = series
+
+
+class EagerSeriesCatNamespace(  # type: ignore[misc]
+    _SeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
+    CatNamespace[EagerSeriesT_co],
+    Protocol[EagerSeriesT_co, NativeSeriesT_co],
+): ...
+
+
+class EagerSeriesDateTimeNamespace(  # type: ignore[misc]
+    _SeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
+    DateTimeNamespace[EagerSeriesT_co],
+    Protocol[EagerSeriesT_co, NativeSeriesT_co],
+): ...
+
+
+class EagerSeriesListNamespace(  # type: ignore[misc]
+    _SeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
+    ListNamespace[EagerSeriesT_co],
+    Protocol[EagerSeriesT_co, NativeSeriesT_co],
+): ...
+
+
+class EagerSeriesStringNamespace(  # type: ignore[misc]
+    _SeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
+    StringNamespace[EagerSeriesT_co],
+    Protocol[EagerSeriesT_co, NativeSeriesT_co],
+): ...
+
+
+class EagerSeriesStructNamespace(  # type: ignore[misc]
+    _SeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
+    StructNamespace[EagerSeriesT_co],
+    Protocol[EagerSeriesT_co, NativeSeriesT_co],
+): ...

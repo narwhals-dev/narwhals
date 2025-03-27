@@ -12,6 +12,7 @@ from typing import cast
 
 import pandas as pd
 
+from narwhals._compliant.series import EagerSeriesNamespace
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import ShapeError
@@ -429,6 +430,11 @@ def get_dtype_backend(dtype: Any, implementation: Implementation) -> DTypeBacken
     return None
 
 
+@functools.lru_cache(maxsize=16)
+def is_pyarrow_dtype_backend(dtype: Any, implementation: Implementation) -> bool:
+    return get_dtype_backend(dtype, implementation) == "pyarrow"
+
+
 def narwhals_to_native_dtype(  # noqa: PLR0915
     dtype: DType | type[DType],
     dtype_backend: DTypeBackend,
@@ -625,17 +631,6 @@ def align_series_full_broadcast(
     return reindexed
 
 
-def to_datetime(implementation: Implementation, *, utc: bool) -> Any:
-    if implementation in PANDAS_LIKE_IMPLEMENTATION:
-        return functools.partial(
-            implementation.to_native_namespace().to_datetime, utc=utc
-        )
-
-    else:  # pragma: no cover
-        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
-        raise TypeError(msg)
-
-
 def int_dtype_mapper(dtype: Any) -> str:
     if "pyarrow" in str(dtype):
         return "Int64[pyarrow]"
@@ -797,3 +792,17 @@ def check_column_names_are_unique(columns: pd.Index[str]) -> None:
                 msg += f"\n- '{key}' {value} times"
         msg = f"Expected unique column names, got:{msg}"
         raise DuplicateError(msg)
+
+
+class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]):
+    @property
+    def implementation(self) -> Implementation:
+        return self.compliant._implementation
+
+    @property
+    def backend_version(self) -> tuple[int, ...]:
+        return self.compliant._backend_version
+
+    @property
+    def version(self) -> Version:
+        return self.compliant._version

@@ -57,9 +57,11 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._compliant import CompliantExpr
+    from narwhals._compliant import CompliantExprT
     from narwhals._compliant import CompliantFrameT
     from narwhals._compliant import CompliantNamespace
     from narwhals._compliant import CompliantSeriesOrNativeExprT_co
+    from narwhals._compliant import CompliantSeriesT
     from narwhals._compliant import NativeFrameT_co
     from narwhals._compliant import NativeSeriesT_co
     from narwhals._dask.namespace import DaskNamespace
@@ -146,15 +148,9 @@ if TYPE_CHECKING:
 
 NativeT_co = TypeVar("NativeT_co", covariant=True)
 CompliantT_co = TypeVar("CompliantT_co", covariant=True)
-CompliantExprT_co = TypeVar(
-    "CompliantExprT_co", bound="CompliantExpr[Any, Any]", covariant=True
-)
-CompliantSeriesT_co = TypeVar(
-    "CompliantSeriesT_co", bound="CompliantSeries[Any]", covariant=True
-)
 
 
-class _StoresNative(Protocol[NativeT_co]):
+class _StoresNative(Protocol[NativeT_co]):  # noqa: PYI046
     """Provides access to a native object.
 
     Native objects have types like:
@@ -169,7 +165,7 @@ class _StoresNative(Protocol[NativeT_co]):
         ...
 
 
-class _StoresCompliant(Protocol[CompliantT_co]):
+class _StoresCompliant(Protocol[CompliantT_co]):  # noqa: PYI046
     """Provides access to a compliant object.
 
     Compliant objects have types like:
@@ -182,35 +178,6 @@ class _StoresCompliant(Protocol[CompliantT_co]):
     def compliant(self) -> CompliantT_co:
         """Return the compliant object."""
         ...
-
-
-class _SeriesNamespace(  # type: ignore[misc]  # noqa: PYI046
-    _StoresCompliant[CompliantSeriesT_co],
-    _StoresNative[NativeT_co],
-    Protocol[CompliantSeriesT_co, NativeT_co],
-):
-    _compliant_series: CompliantSeriesT_co
-
-    @property
-    def compliant(self) -> CompliantSeriesT_co:
-        return self._compliant_series
-
-    @property
-    def native(self) -> NativeT_co:
-        return self._compliant_series.native
-
-    def from_native(self, series: Any, /) -> CompliantSeriesT_co:
-        return self.compliant._from_native_series(series)
-
-
-class _ExprNamespace(  # type: ignore[misc] # noqa: PYI046
-    _StoresCompliant[CompliantExprT_co], Protocol[CompliantExprT_co]
-):
-    _compliant_expr: CompliantExprT_co
-
-    @property
-    def compliant(self) -> CompliantExprT_co:
-        return self._compliant_expr
 
 
 class Version(Enum):
@@ -1555,15 +1522,14 @@ def _hasattr_static(obj: Any, attr: str) -> bool:
 
 
 def is_compliant_dataframe(
-    obj: CompliantDataFrame[CompliantSeriesT_co, CompliantExprT_co, NativeFrameT_co]
-    | Any,
-) -> TypeIs[CompliantDataFrame[CompliantSeriesT_co, CompliantExprT_co, NativeFrameT_co]]:
+    obj: CompliantDataFrame[CompliantSeriesT, CompliantExprT, NativeFrameT_co] | Any,
+) -> TypeIs[CompliantDataFrame[CompliantSeriesT, CompliantExprT, NativeFrameT_co]]:
     return _hasattr_static(obj, "__narwhals_dataframe__")
 
 
 def is_compliant_lazyframe(
-    obj: CompliantLazyFrame[CompliantExprT_co, NativeFrameT_co] | Any,
-) -> TypeIs[CompliantLazyFrame[CompliantExprT_co, NativeFrameT_co]]:
+    obj: CompliantLazyFrame[CompliantExprT, NativeFrameT_co] | Any,
+) -> TypeIs[CompliantLazyFrame[CompliantExprT, NativeFrameT_co]]:
     return _hasattr_static(obj, "__narwhals_lazyframe__")
 
 
