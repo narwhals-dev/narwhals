@@ -210,7 +210,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
         # only if version is v1, keep around for backcompat
         return self.native.arrow()
 
-    def _change_version(self: Self, version: Version) -> Self:
+    def _with_version(self: Self, version: Version) -> Self:
         return self.__class__(
             self.native, version=version, backend_version=self._backend_version
         )

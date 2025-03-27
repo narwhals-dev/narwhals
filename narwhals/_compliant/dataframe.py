@@ -84,6 +84,8 @@ class CompliantDataFrame(
         # NOTE: Ignore is to avoid an intermittent false positive
         return self.select(*exprs)  # pyright: ignore[reportArgumentType]
 
+    def _with_version(self, version: Version) -> Self: ...
+
     @property
     def native(self) -> NativeFrameT_co:
         return self._native_frame  # type: ignore[no-any-return]
@@ -211,7 +213,7 @@ class CompliantLazyFrame(
         """
         ...
 
-    def _change_version(self, version: Version) -> Self: ...
+    def _with_version(self, version: Version) -> Self: ...
 
     @property
     def native(self) -> NativeFrameT_co:

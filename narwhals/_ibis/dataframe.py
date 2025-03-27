@@ -145,7 +145,7 @@ class IbisLazyFrame:
         )
         raise NotImplementedError(msg)
 
-    def _change_version(self: Self, version: Version) -> Self:
+    def _with_version(self: Self, version: Version) -> Self:
         return self.__class__(
             self._native_frame, version=version, backend_version=self._backend_version
         )

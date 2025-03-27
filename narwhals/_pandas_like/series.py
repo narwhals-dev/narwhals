@@ -149,7 +149,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             return self.native.iloc[idx]
         return self._with_native(self.native.iloc[idx])
 
-    def _change_version(self: Self, version: Version) -> Self:
+    def _with_version(self: Self, version: Version) -> Self:
         return self.__class__(
             self.native,
             implementation=self._implementation,
