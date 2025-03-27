@@ -15,44 +15,44 @@ class DaskExprNameNamespace:
         self._compliant_expr = expr
 
     def keep(self: Self) -> DaskExpr:
-        return self._from_alias_output_names(alias_output_names=None)
+        return self._with_alias_output_names(alias_output_names=None)
 
     def map(self: Self, function: Callable[[str], str]) -> DaskExpr:
-        return self._from_alias_output_names(
+        return self._with_alias_output_names(
             alias_output_names=lambda output_names: [
                 function(str(name)) for name in output_names
             ],
         )
 
     def prefix(self: Self, prefix: str) -> DaskExpr:
-        return self._from_alias_output_names(
+        return self._with_alias_output_names(
             alias_output_names=lambda output_names: [
                 f"{prefix}{output_name}" for output_name in output_names
             ],
         )
 
     def suffix(self: Self, suffix: str) -> DaskExpr:
-        return self._from_alias_output_names(
+        return self._with_alias_output_names(
             alias_output_names=lambda output_names: [
                 f"{output_name}{suffix}" for output_name in output_names
             ]
         )
 
     def to_lowercase(self: Self) -> DaskExpr:
-        return self._from_alias_output_names(
+        return self._with_alias_output_names(
             alias_output_names=lambda output_names: [
                 str(name).lower() for name in output_names
             ],
         )
 
     def to_uppercase(self: Self) -> DaskExpr:
-        return self._from_alias_output_names(
+        return self._with_alias_output_names(
             alias_output_names=lambda output_names: [
                 str(name).upper() for name in output_names
             ]
         )
 
-    def _from_alias_output_names(
+    def _with_alias_output_names(
         self: Self,
         alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
     ) -> DaskExpr:
