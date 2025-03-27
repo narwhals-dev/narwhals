@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Mapping
 from typing import Protocol
 
 if TYPE_CHECKING:
@@ -70,3 +71,30 @@ class FromIterable(Protocol[FromIterableT_contra]):
     def from_iterable(
         cls, data: Iterable[FromIterableT_contra], *args: Any, **kwds: Any
     ) -> Self: ...
+
+
+ToDictDT_co = TypeVar(
+    "ToDictDT_co", bound=Mapping[str, Any], covariant=True, default="dict[str, Any]"
+)
+FromDictDT_contra = TypeVar(
+    "FromDictDT_contra",
+    bound=Mapping[str, Any],
+    contravariant=True,
+    default=Mapping[str, Any],
+)
+
+
+class ToDict(Protocol[ToDictDT_co]):
+    def to_dict(self, *args: Any, **kwds: Any) -> ToDictDT_co: ...
+
+
+class FromDict(Protocol[FromDictDT_contra]):
+    @classmethod
+    def from_dict(cls, data: FromDictDT_contra, *args: Any, **kwds: Any) -> Self: ...
+
+
+class DictConvertible(
+    ToDict[ToDictDT_co],
+    FromDict[FromDictDT_contra],
+    Protocol[ToDictDT_co, FromDictDT_contra],
+): ...

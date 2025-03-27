@@ -16,6 +16,7 @@ import numpy as np
 from narwhals._compliant import EagerDataFrame
 from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
 from narwhals._pandas_like.series import PandasLikeSeries
+from narwhals._pandas_like.utils import align_and_extract_native
 from narwhals._pandas_like.utils import align_series_full_broadcast
 from narwhals._pandas_like.utils import check_column_names_are_unique
 from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
@@ -112,6 +113,55 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         validate_backend_version(self._implementation, self._backend_version)
         if validate_column_names:
             check_column_names_are_unique(native_dataframe.columns)
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+        /,
+        *,
+        context: _FullContext,
+        schema: Mapping[str, DType] | Schema | None,
+    ) -> Self:
+        from narwhals.schema import Schema
+
+        implementation = context._implementation
+        backend_version = context._backend_version
+        version = context._version
+        ns = implementation.to_native_namespace()
+        Series = cast("type[pd.Series[Any]]", ns.Series)  # noqa: N806
+        DataFrame = cast("type[pd.DataFrame]", ns.DataFrame)  # noqa: N806
+        aligned_data: dict[str, pd.Series[Any] | Any] = {}
+        left_most: PandasLikeSeries | None = None
+        for name, series in data.items():
+            if isinstance(series, Series):
+                compliant = PandasLikeSeries(
+                    series,
+                    implementation=implementation,
+                    backend_version=backend_version,
+                    version=version,
+                )
+                if left_most is None:
+                    left_most = compliant
+                    aligned_data[name] = series
+                else:
+                    aligned_data[name] = align_and_extract_native(left_most, compliant)[1]
+            else:
+                aligned_data[name] = series
+
+        native = DataFrame.from_dict(aligned_data)
+        if schema:
+            it: Iterable[DTypeBackend] = (
+                get_dtype_backend(dtype, implementation) for dtype in native.dtypes
+            )
+            native = native.astype(Schema(schema).to_pandas(it))
+        return cls(
+            native,
+            implementation=implementation,
+            backend_version=backend_version,
+            version=version,
+            validate_column_names=True,
+        )
 
     @classmethod
     def from_numpy(

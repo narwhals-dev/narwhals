@@ -94,6 +94,26 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         validate_backend_version(self._implementation, self._backend_version)
 
     @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+        /,
+        *,
+        context: _FullContext,
+        schema: Mapping[str, DType] | Schema | None,
+    ) -> Self:
+        from narwhals.schema import Schema
+
+        pa_schema = Schema(schema).to_arrow() if schema is not None else schema
+        native = pa.Table.from_pydict(data, schema=pa_schema)
+        return cls(
+            native,
+            backend_version=context._backend_version,
+            version=context._version,
+            validate_column_names=True,
+        )
+
+    @classmethod
     def from_numpy(
         cls,
         data: _2DArray,

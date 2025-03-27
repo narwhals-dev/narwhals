@@ -23,10 +23,10 @@ from narwhals._expression_parsing import combine_metadata_horizontal_op
 from narwhals._expression_parsing import extract_compliant
 from narwhals._expression_parsing import infer_kind
 from narwhals._expression_parsing import is_scalar_like
+from narwhals.dependencies import is_narwhals_series
 from narwhals.dependencies import is_numpy_array
 from narwhals.dependencies import is_numpy_array_2d
 from narwhals.expr import Expr
-from narwhals.schema import Schema
 from narwhals.series import Series
 from narwhals.translate import from_native
 from narwhals.translate import to_native
@@ -50,12 +50,11 @@ if TYPE_CHECKING:
 
     from narwhals._compliant import CompliantExpr
     from narwhals._compliant import CompliantNamespace
-    from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
+    from narwhals.schema import Schema
     from narwhals.series import Series
-    from narwhals.typing import DTypeBackend
     from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrameT
@@ -329,83 +328,28 @@ def from_dict(
         |     1  2  4      |
         └──────────────────┘
     """
-    return _from_dict_impl(data, schema, backend=backend)
+    return _from_dict_impl(data, schema, backend=backend, version=Version.MAIN)
 
 
 def _from_dict_impl(
     data: Mapping[str, Any],
-    schema: Mapping[str, DType] | Schema | None = None,
+    schema: Mapping[str, DType] | Schema | None,
     *,
-    backend: ModuleType | Implementation | str | None = None,
+    backend: ModuleType | Implementation | str | None,
+    version: Version,
 ) -> DataFrame[Any]:
-    from narwhals.series import Series
-
     if not data:
         msg = "from_dict cannot be called with empty dictionary"
         raise ValueError(msg)
     if backend is None:
-        for val in data.values():
-            if isinstance(val, Series):
-                native_namespace = val.__native_namespace__()
-                break
-        else:
-            msg = "Calling `from_dict` without `backend` is only supported if all input values are already Narwhals Series"
-            raise TypeError(msg)
-        data = {key: to_native(value, pass_through=True) for key, value in data.items()}
-        eager_backend = Implementation.from_native_namespace(native_namespace)
-    else:
-        eager_backend = Implementation.from_backend(backend)
-        native_namespace = eager_backend.to_native_namespace()
-
-    supported_eager_backends = (
-        Implementation.POLARS,
-        Implementation.PANDAS,
-        Implementation.PYARROW,
-        Implementation.MODIN,
-        Implementation.CUDF,
-    )
-    if eager_backend is not None and eager_backend not in supported_eager_backends:
-        msg = f"Unsupported `backend` value.\nExpected one of {supported_eager_backends} or None, got: {eager_backend}."
-        raise ValueError(msg)
-    if eager_backend is Implementation.POLARS:
-        schema_pl = Schema(schema).to_polars() if schema else None
-        native_frame = native_namespace.from_dict(data, schema=schema_pl)
-    elif eager_backend.is_pandas_like():
-        from narwhals._pandas_like.utils import align_and_extract_native
-
-        aligned_data = {}
-        left_most_series = None
-        for key, native_series in data.items():
-            if isinstance(native_series, native_namespace.Series):
-                compliant_series = from_native(
-                    native_series, series_only=True
-                )._compliant_series
-                if left_most_series is None:
-                    left_most_series = cast("PandasLikeSeries", compliant_series)
-                    aligned_data[key] = native_series
-                else:
-                    aligned_data[key] = align_and_extract_native(
-                        left_most_series, compliant_series
-                    )[1]
-            else:
-                aligned_data[key] = native_series
-
-        native_frame = native_namespace.DataFrame.from_dict(aligned_data)
-
-        if schema:
-            from narwhals._pandas_like.utils import get_dtype_backend
-
-            it: Iterable[DTypeBackend] = (
-                get_dtype_backend(native_type, eager_backend)
-                for native_type in native_frame.dtypes
-            )
-            pd_schema = Schema(schema).to_pandas(it)
-            native_frame = native_frame.astype(pd_schema)
-
-    elif eager_backend is Implementation.PYARROW:
-        pa_schema = Schema(schema).to_arrow() if schema is not None else schema
-        native_frame = native_namespace.table(data, schema=pa_schema)
-    else:  # pragma: no cover
+        data, backend = _from_dict_no_backend(data)
+    implementation = Implementation.from_backend(backend)
+    if is_eager_allowed(implementation):
+        ns = _into_compliant_namespace(implementation, version)
+        frame = ns._dataframe.from_dict(data, schema=schema, context=ns)
+        return from_native(frame, eager_only=True)
+    elif implementation is Implementation.UNKNOWN:  # pragma: no cover
+        native_namespace = implementation.to_native_namespace()
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement `from_dict` function in the top-level namespace.
@@ -413,7 +357,27 @@ def _from_dict_impl(
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `from_dict` function."
             raise AttributeError(msg) from e
-    return from_native(native_frame, eager_only=True)
+        return from_native(native_frame, eager_only=True)
+    msg = (
+        f"Unsupported `backend` value.\nExpected one of "
+        f"{Implementation.POLARS, Implementation.PANDAS, Implementation.PYARROW, Implementation.MODIN, Implementation.CUDF} "
+        f"or None, got: {implementation}."
+    )
+    raise ValueError(msg)
+
+
+def _from_dict_no_backend(
+    data: Mapping[str, Series[Any] | Any], /
+) -> tuple[dict[str, Series[Any] | Any], ModuleType]:
+    for val in data.values():
+        if is_narwhals_series(val):
+            native_namespace = val.__native_namespace__()
+            break
+    else:
+        msg = "Calling `from_dict` without `backend` is only supported if all input values are already Narwhals Series"
+        raise TypeError(msg)
+    data = {key: to_native(value, pass_through=True) for key, value in data.items()}
+    return data, native_namespace
 
 
 @deprecate_native_namespace(warn_version="1.31.0", required=True)
