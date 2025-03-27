@@ -454,9 +454,11 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         def _clip_both(
             _input: Column, lower_bound: Column, upper_bound: Column
         ) -> Column:
-            result = _input
-            result = self._F.when(result < lower_bound, lower_bound).otherwise(result)
-            return self._F.when(result > upper_bound, upper_bound).otherwise(result)
+            return (
+                self._F.when(_input < lower_bound, lower_bound)
+                .when(_input > upper_bound, upper_bound)
+                .otherwise(_input)
+            )
 
         if lower_bound is None:
             return self._from_call(_clip_upper, upper_bound=upper_bound)
