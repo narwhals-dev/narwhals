@@ -18,6 +18,7 @@ from narwhals._compliant.typing import EagerExprT_contra
 from narwhals._compliant.typing import EagerSeriesT
 from narwhals._compliant.typing import NativeFrameT_co
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals._translate import ArrowConvertible
 from narwhals._translate import DictConvertible
 from narwhals._translate import NumpyConvertible
 from narwhals.utils import Version
@@ -35,6 +36,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._compliant.group_by import CompliantGroupBy
+    from narwhals._translate import ArrowStreamExportable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import SizeUnit
@@ -54,6 +56,7 @@ _ToDict: TypeAlias = "dict[str, CompliantSeriesT] | dict[str, list[Any]]"  # noq
 class CompliantDataFrame(
     NumpyConvertible["_2DArray", "_2DArray"],
     DictConvertible["_ToDict[CompliantSeriesT]", Mapping[str, Any]],
+    ArrowConvertible["pa.Table", "ArrowStreamExportable"],
     _StoresNative[NativeFrameT_co],
     Sized,
     Protocol[CompliantSeriesT, CompliantExprT_contra, NativeFrameT_co],
@@ -65,6 +68,10 @@ class CompliantDataFrame(
 
     def __narwhals_dataframe__(self) -> Self: ...
     def __narwhals_namespace__(self) -> Any: ...
+    @classmethod
+    def from_arrow(
+        cls, data: ArrowStreamExportable, /, *, context: _FullContext
+    ) -> Self: ...
     @classmethod
     def from_dict(
         cls,
