@@ -43,7 +43,7 @@ def test_from_arrow_to_polars(monkeypatch: pytest.MonkeyPatch) -> None:
 
     tbl = pa.table({"ab": [1, 2, 3], "ba": [4, 5, 6]})
     monkeypatch.delitem(sys.modules, "pandas")
-    if PYARROW_VERSION < (14,):
+    if PYARROW_VERSION < (14,):  # pragma: no cover
         result = nw.from_arrow(tbl, backend=pl)
     else:
         df = nw.from_native(tbl, eager_only=True)
