@@ -879,7 +879,6 @@ class LazyExpr(
     tail: not_implemented = not_implemented()
     mode: not_implemented = not_implemented()
     sort: not_implemented = not_implemented()
-    rank: not_implemented = not_implemented()
     sample: not_implemented = not_implemented()
     map_batches: not_implemented = not_implemented()
     ewm_mean: not_implemented = not_implemented()

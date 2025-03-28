@@ -683,6 +683,34 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
         return self._with_callable(func)
 
+    def rank(
+        self,
+        method: Literal["average", "min", "max", "dense", "ordinal"],
+        *,
+        descending: bool = False,
+    ) -> Self:
+        if method == "min":
+            func_name = "rank"
+        elif method == "dense":
+            func_name = "dense_rank"
+        else:  # pragma: no cover
+            msg = f"Method {method} is not yet implemented."
+            raise NotImplementedError(msg)
+
+        def _rank(_input: duckdb.Expression) -> duckdb.Expression:
+            if descending:
+                by_sql = f"{_input} desc nulls first"
+            else:
+                by_sql = f"{_input} asc nulls last"
+            order_by_sql = f"order by {by_sql}"
+            sql = (
+                f"CASE WHEN {_input} IS NULL THEN NULL "
+                f"ELSE {func_name}() OVER ({order_by_sql}) END"
+            )
+            return SQLExpression(sql)
+
+        return self._from_call(_rank)
+
     @property
     def str(self: Self) -> DuckDBExprStringNamespace:
         return DuckDBExprStringNamespace(self)

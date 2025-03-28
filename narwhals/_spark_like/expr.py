@@ -746,6 +746,32 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             )
         )
 
+    def rank(
+        self,
+        method: Literal["average", "min", "max", "dense", "ordinal"],
+        *,
+        descending: bool = False,
+    ) -> Self:
+        if method == "min":
+            func_name = "rank"
+        elif method == "dense":
+            func_name = "dense_rank"
+        else:  # pragma: no cover
+            msg = f"Method {method} is not yet implemented."
+            raise NotImplementedError(msg)
+
+        def _rank(_input: Column) -> Column:
+            if descending:
+                order_by_cols = [self._F.desc_nulls_first(_input)]
+            else:
+                order_by_cols = [self._F.asc_nulls_last(_input)]
+            window = self._Window().orderBy(order_by_cols)
+            return self._F.when(_input.isNull(), self._F.lit(None)).otherwise(
+                getattr(self._F, func_name)().over(window)
+            )
+
+        return self._from_call(_rank)
+
     @property
     def str(self: Self) -> SparkLikeExprStringNamespace:
         return SparkLikeExprStringNamespace(self)
