@@ -106,7 +106,7 @@ class PolarsDataFrame:
             # TODO @dangotbanned: Turn the import guard into a util that all backends use
             # - Use `find_spec` instead of `try-except-from-None`
             # - Probably also want to allow `pa.Table` for `pyarrow < (14, 0)`
-            import pyarrow as pa
+            import pyarrow as pa  # ignore-banned-import
 
             from narwhals._arrow.namespace import ArrowNamespace
 

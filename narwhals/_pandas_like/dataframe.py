@@ -118,7 +118,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
     @classmethod
     def from_arrow(cls, data: ArrowStreamExportable, /, *, context: _FullContext) -> Self:
         # TODO @dangotbanned: See `PolarsDataFrame.from_arrow`
-        import pyarrow as pa
+        import pyarrow as pa  # ignore-banned-import
 
         from narwhals._arrow.namespace import ArrowNamespace
 
