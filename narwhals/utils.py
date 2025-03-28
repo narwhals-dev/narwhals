@@ -6,6 +6,7 @@ from datetime import timezone
 from enum import Enum
 from enum import auto
 from functools import wraps
+from importlib.util import find_spec
 from inspect import getattr_static
 from secrets import token_hex
 from typing import TYPE_CHECKING
@@ -49,6 +50,7 @@ if TYPE_CHECKING:
     from typing import AbstractSet as Set
 
     import pandas as pd
+    import pyarrow as pa
     from typing_extensions import LiteralString
     from typing_extensions import ParamSpec
     from typing_extensions import Self
@@ -133,7 +135,7 @@ if TYPE_CHECKING:
         - `_version`
         """
 
-    class _FullContext(_StoresImplementation, _LimitedContext, Protocol):  # noqa: PYI046
+    class _FullContext(_StoresImplementation, _LimitedContext, Protocol):
         """Provides 3 attributes.
 
         - `_implementation`
@@ -1591,6 +1593,20 @@ def _remap_full_join_keys(
         f"{key}{suffix}" if key in left_on else key for key in right_on
     )
     return dict(zip(right_on, right_keys_suffixed))
+
+
+def _into_arrow_table(data: ArrowStreamExportable, context: _FullContext, /) -> pa.Table:
+    """Guards `ArrowDataFrame.from_arrow` w/ safer imports."""
+    if find_spec("pyarrow"):
+        import pyarrow as pa  # ignore-banned-import
+
+        from narwhals._arrow.namespace import ArrowNamespace
+
+        version = context._version
+        ns = ArrowNamespace(backend_version=parse_version(pa), version=version)
+        return ns._dataframe.from_arrow(data, context=ns).native
+    msg = f"PyArrow>=14.0.0 is required for `from_arrow` for object of type {type(data).__name__!r}."
+    raise ModuleNotFoundError(msg)
 
 
 # TODO @dangotbanned: Extend with runtime behavior for `v1.*`
