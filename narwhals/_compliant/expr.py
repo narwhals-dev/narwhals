@@ -28,6 +28,7 @@ from narwhals._compliant.typing import CompliantSeriesOrNativeExprT_co
 from narwhals._compliant.typing import EagerDataFrameT
 from narwhals._compliant.typing import EagerExprT
 from narwhals._compliant.typing import EagerSeriesT
+from narwhals._compliant.typing import LazyExprT
 from narwhals._compliant.typing import NativeExprT_co
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals.dependencies import get_numpy
@@ -909,6 +910,11 @@ class EagerExprNamespace(_ExprNamespace[EagerExprT], Generic[EagerExprT]):
         self._compliant_expr = expr
 
 
+class LazyExprNamespace(_ExprNamespace[LazyExprT], Generic[LazyExprT]):
+    def __init__(self, expr: LazyExprT, /) -> None:
+        self._compliant_expr = expr
+
+
 class EagerExprCatNamespace(
     EagerExprNamespace[EagerExprT], CatNamespace[EagerExprT], Generic[EagerExprT]
 ):
@@ -996,25 +1002,27 @@ class EagerExprListNamespace(
         return self.compliant._reuse_series_namespace("list", "len")
 
 
-class EagerExprNameNamespace(
-    EagerExprNamespace[EagerExprT], NameNamespace[EagerExprT], Generic[EagerExprT]
+class CompliantExprNameNamespace(  # type: ignore[misc]
+    _ExprNamespace[CompliantExprT_co],
+    NameNamespace[CompliantExprT_co],
+    Protocol[CompliantExprT_co],
 ):
-    def keep(self) -> EagerExprT:
+    def keep(self) -> CompliantExprT_co:
         return self._from_callable(lambda name: name, alias=False)
 
-    def map(self, function: AliasName) -> EagerExprT:
+    def map(self, function: AliasName) -> CompliantExprT_co:
         return self._from_callable(function)
 
-    def prefix(self, prefix: str) -> EagerExprT:
+    def prefix(self, prefix: str) -> CompliantExprT_co:
         return self._from_callable(lambda name: f"{prefix}{name}")
 
-    def suffix(self, suffix: str) -> EagerExprT:
+    def suffix(self, suffix: str) -> CompliantExprT_co:
         return self._from_callable(lambda name: f"{name}{suffix}")
 
-    def to_lowercase(self) -> EagerExprT:
+    def to_lowercase(self) -> CompliantExprT_co:
         return self._from_callable(str.lower)
 
-    def to_uppercase(self) -> EagerExprT:
+    def to_uppercase(self) -> CompliantExprT_co:
         return self._from_callable(str.upper)
 
     @staticmethod
@@ -1024,6 +1032,16 @@ class EagerExprNameNamespace(
 
         return fn
 
+    def _from_callable(
+        self, func: AliasName, /, *, alias: bool = True
+    ) -> CompliantExprT_co: ...
+
+
+class EagerExprNameNamespace(
+    EagerExprNamespace[EagerExprT],
+    CompliantExprNameNamespace[EagerExprT],
+    Generic[EagerExprT],
+):
     def _from_callable(self, func: AliasName, /, *, alias: bool = True) -> EagerExprT:
         expr = self.compliant
         return type(expr)(
