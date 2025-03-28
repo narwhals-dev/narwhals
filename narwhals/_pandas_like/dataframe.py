@@ -127,19 +127,17 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         version = context._version
         arrow_ns = ArrowNamespace(backend_version=parse_version(pa), version=version)
         tbl = arrow_ns._dataframe.from_arrow(data, context=arrow_ns).native
-        from_arrow: Constructor
+        native: pd.DataFrame
         if implementation.is_pandas():
-            from_arrow = type(tbl).to_pandas
+            native = tbl.to_pandas()
         elif implementation.is_modin():  # pragma: no cover
             from modin.pandas.utils import from_arrow as mpd_from_arrow
 
-            from_arrow = mpd_from_arrow
+            native = mpd_from_arrow(tbl)
         elif implementation.is_cudf():  # pragma: no cover
-            from_arrow = implementation.to_native_namespace().DataFrame.from_arrow
+            native = implementation.to_native_namespace().DataFrame.from_arrow(tbl)
         else:
             raise NotImplementedError
-
-        native = from_arrow(tbl)
         return cls(
             native,
             implementation=implementation,
