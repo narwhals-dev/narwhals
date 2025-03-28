@@ -1596,7 +1596,15 @@ def _remap_full_join_keys(
 
 
 def _into_arrow_table(data: ArrowStreamExportable, context: _FullContext, /) -> pa.Table:
-    """Guards `ArrowDataFrame.from_arrow` w/ safer imports."""
+    """Guards `ArrowDataFrame.from_arrow` w/ safer imports.
+
+    Arguments:
+        data: Object which implements `__arrow_c_stream__`.
+        context: Initialized compliant object.
+
+    Returns:
+        A PyArrow Table.
+    """
     if find_spec("pyarrow"):
         import pyarrow as pa  # ignore-banned-import
 
