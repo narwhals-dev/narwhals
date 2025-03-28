@@ -194,7 +194,7 @@ def test_lazy_rank_expr(
 
 
 @pytest.mark.parametrize("method", ["average", "min", "max", "dense", "ordinal"])
-@pytest.mark.parametrize("data", [data_float])
+@pytest.mark.parametrize("data", [data_int, data_float])
 def test_lazy_rank_expr_desc(
     request: pytest.FixtureRequest,
     constructor: Constructor,
