@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Collection
 from typing import Iterator
 from typing import Literal
 from typing import Mapping
@@ -52,6 +53,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import Indices  # type: ignore[attr-defined]
     from narwhals._arrow.typing import Mask  # type: ignore[attr-defined]
     from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
+    from narwhals._translate import ArrowStreamExportable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import CompliantDataFrame
@@ -92,6 +94,25 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         self._backend_version = backend_version
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
+
+    @classmethod
+    def from_arrow(cls, data: ArrowStreamExportable, /, *, context: _FullContext) -> Self:
+        backend_version = context._backend_version
+        # NOTE: Placeholder, see `PolarsDataFrame.from_arrow`
+        if backend_version >= (14,):
+            native = pa.table(data)
+        elif isinstance(data, pa.Table):
+            native = data
+        elif isinstance(data, Collection):
+            native = pa.table(data)
+        else:
+            raise NotImplementedError
+        return cls(
+            native,
+            backend_version=backend_version,
+            version=context._version,
+            validate_column_names=True,
+        )
 
     @classmethod
     def from_dict(
