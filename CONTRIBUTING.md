@@ -349,8 +349,7 @@ Above all else, please assume good intentions and go the extra mile to be super-
 
 Some general guidelines:
 
-- If you think "does this sound too nice?", then it probably doesn't. If in doubt,
-  err on the side of being warm rather than being cold.
+- If in doubt, err on the side of being warm rather than being cold.
 - If in doubt, put one extra positive emoji than one fewer one.
 - Never delete or dismiss other maintainers' comments.
 - Non-maintainers' comments should only be deleted if they are unambiguously spam
