@@ -37,15 +37,17 @@ def test_from_arrow_to_arrow() -> None:
     assert_equal_data(result, expected)
 
 
-@pytest.mark.xfail(PYARROW_VERSION < (14,), reason="too old")
 def test_from_arrow_to_polars(monkeypatch: pytest.MonkeyPatch) -> None:
     pytest.importorskip("polars")
     import polars as pl
 
     tbl = pa.table({"ab": [1, 2, 3], "ba": [4, 5, 6]})
     monkeypatch.delitem(sys.modules, "pandas")
-    df = nw.from_native(tbl, eager_only=True)
-    result = nw.from_arrow(df, backend=pl)
+    if PYARROW_VERSION < (14,):
+        result = nw.from_arrow(tbl, backend=pl)
+    else:
+        df = nw.from_native(tbl, eager_only=True)
+        result = nw.from_arrow(df, backend=pl)
     assert isinstance(result.to_native(), pl.DataFrame)
     expected = {"ab": [1, 2, 3], "ba": [4, 5, 6]}
     assert_equal_data(result, expected)
