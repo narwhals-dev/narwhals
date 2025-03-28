@@ -18,6 +18,7 @@ from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
+from narwhals.utils import _into_arrow_table
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -99,21 +100,11 @@ class PolarsDataFrame:
     @classmethod
     def from_arrow(cls, data: ArrowStreamExportable, /, *, context: _FullContext) -> Self:
         backend_version = context._backend_version
-        version = context._version
         if backend_version >= (1, 3):
             native = pl.DataFrame(data)
         else:
-            # TODO @dangotbanned: Turn the import guard into a util that all backends use
-            # - Use `find_spec` instead of `try-except-from-None`
-            # - Probably also want to allow `pa.Table` for `pyarrow < (14, 0)`
-            import pyarrow as pa  # ignore-banned-import
-
-            from narwhals._arrow.namespace import ArrowNamespace
-
-            arrow_ns = ArrowNamespace(backend_version=parse_version(pa), version=version)
-            tbl = arrow_ns._dataframe.from_arrow(data, context=arrow_ns).native
-            native = cast("pl.DataFrame", pl.from_arrow(tbl))
-        return cls(native, backend_version=backend_version, version=version)
+            native = cast("pl.DataFrame", pl.from_arrow(_into_arrow_table(data, context)))
+        return cls(native, backend_version=backend_version, version=context._version)
 
     @classmethod
     def from_dict(

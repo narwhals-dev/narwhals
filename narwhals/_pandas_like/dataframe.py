@@ -32,6 +32,7 @@ from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
+from narwhals.utils import _into_arrow_table
 from narwhals.utils import _remap_full_join_keys
 from narwhals.utils import check_column_exists
 from narwhals.utils import generate_temporary_column_name
@@ -117,16 +118,8 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
 
     @classmethod
     def from_arrow(cls, data: ArrowStreamExportable, /, *, context: _FullContext) -> Self:
-        # TODO @dangotbanned: See `PolarsDataFrame.from_arrow`
-        import pyarrow as pa  # ignore-banned-import
-
-        from narwhals._arrow.namespace import ArrowNamespace
-
         implementation = context._implementation
-        backend_version = context._backend_version
-        version = context._version
-        arrow_ns = ArrowNamespace(backend_version=parse_version(pa), version=version)
-        tbl = arrow_ns._dataframe.from_arrow(data, context=arrow_ns).native
+        tbl = _into_arrow_table(data, context)
         native: pd.DataFrame
         if implementation.is_pandas():
             native = tbl.to_pandas()
@@ -142,8 +135,8 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         return cls(
             native,
             implementation=implementation,
-            backend_version=backend_version,
-            version=version,
+            backend_version=context._backend_version,
+            version=context._version,
             validate_column_names=True,
         )
 
