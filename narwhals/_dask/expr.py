@@ -10,7 +10,6 @@ from typing import Sequence
 from narwhals._compliant import LazyExpr
 from narwhals._compliant.expr import DepthTrackingExpr
 from narwhals._dask.expr_dt import DaskExprDateTimeNamespace
-from narwhals._dask.expr_name import DaskExprNameNamespace
 from narwhals._dask.expr_str import DaskExprStringNamespace
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import maybe_evaluate_expr
@@ -25,6 +24,7 @@ from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import not_implemented
 
 if TYPE_CHECKING:
+    from narwhals._compliant.typing import AliasNames
     from narwhals._expression_parsing import ExprKind
 
     try:
@@ -181,6 +181,18 @@ class DaskExpr(
             backend_version=self._backend_version,
             version=self._version,
             call_kwargs=call_kwargs,
+        )
+
+    def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
+        return type(self)(
+            call=self._call,
+            depth=self._depth,
+            function_name=self._function_name,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=func,
+            backend_version=self._backend_version,
+            version=self._version,
+            call_kwargs=self._call_kwargs,
         )
 
     def alias(self: Self, name: str) -> Self:
@@ -667,10 +679,6 @@ class DaskExpr(
     @property
     def dt(self: Self) -> DaskExprDateTimeNamespace:
         return DaskExprDateTimeNamespace(self)
-
-    @property
-    def name(self: Self) -> DaskExprNameNamespace:
-        return DaskExprNameNamespace(self)
 
     list = not_implemented()  # pyright: ignore[reportAssignmentType]
     struct = not_implemented()  # pyright: ignore[reportAssignmentType]
