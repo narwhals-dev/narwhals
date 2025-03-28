@@ -766,8 +766,8 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             else:
                 order_by_cols = [self._F.asc_nulls_last(_input)]
             window = self._Window().orderBy(order_by_cols)
-            return self._F.when(_input.isNull(), self._F.lit(None)).otherwise(
-                getattr(self._F, func_name)().over(window)
+            return self._F.when(
+                _input.isNotNull(), getattr(self._F, func_name)().over(window)
             )
 
         return self._with_callable(_rank)
