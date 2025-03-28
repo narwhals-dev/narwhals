@@ -699,7 +699,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
         def _rank(_input: duckdb.Expression) -> duckdb.Expression:
             if descending:
-                by_sql = f"{_input} desc nulls first"
+                by_sql = f"{_input} desc nulls last"
             else:
                 by_sql = f"{_input} asc nulls last"
             order_by_sql = f"order by {by_sql}"
