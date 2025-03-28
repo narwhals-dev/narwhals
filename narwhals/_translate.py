@@ -39,6 +39,10 @@ else:  # pragma: no cover
             )
 
 
+class ArrowStreamExportable(Protocol):
+    def __arrow_c_stream__(self, requested_schema: object | None = None) -> object: ...
+
+
 ToNumpyT_co = TypeVar("ToNumpyT_co", covariant=True)
 FromNumpyDT_contra = TypeVar(
     "FromNumpyDT_contra", contravariant=True, default=ToNumpyT_co
@@ -97,4 +101,26 @@ class DictConvertible(
     ToDict[ToDictDT_co],
     FromDict[FromDictDT_contra],
     Protocol[ToDictDT_co, FromDictDT_contra],
+): ...
+
+
+ToArrowT_co = TypeVar("ToArrowT_co", covariant=True)
+FromArrowDT_contra = TypeVar(
+    "FromArrowDT_contra", contravariant=True, default=ArrowStreamExportable
+)
+
+
+class ToArrow(Protocol[ToArrowT_co]):
+    def to_arrow(self, *args: Any, **kwds: Any) -> ToArrowT_co: ...
+
+
+class FromArrow(Protocol[FromArrowDT_contra]):
+    @classmethod
+    def from_arrow(cls, data: FromArrowDT_contra, *args: Any, **kwds: Any) -> Self: ...
+
+
+class ArrowConvertible(
+    ToArrow[ToArrowT_co],
+    FromArrow[FromArrowDT_contra],
+    Protocol[ToArrowT_co, FromArrowDT_contra],
 ): ...
