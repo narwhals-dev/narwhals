@@ -29,7 +29,7 @@ from narwhals._compliant.typing import EagerDataFrameT
 from narwhals._compliant.typing import EagerExprT
 from narwhals._compliant.typing import EagerSeriesT
 from narwhals._compliant.typing import LazyExprT
-from narwhals._compliant.typing import NativeExprT_co
+from narwhals._compliant.typing import NativeExprT
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
@@ -869,9 +869,9 @@ class EagerExpr(
         return EagerExprStructNamespace(self)
 
 
-class LazyExpr(
-    CompliantExpr[CompliantLazyFrameT, NativeExprT_co],
-    Protocol38[CompliantLazyFrameT, NativeExprT_co],
+class LazyExpr(  # type: ignore[misc]
+    CompliantExpr[CompliantLazyFrameT, NativeExprT],
+    Protocol38[CompliantLazyFrameT, NativeExprT],
 ):
     arg_min: not_implemented = not_implemented()
     arg_max: not_implemented = not_implemented()
@@ -892,7 +892,12 @@ class LazyExpr(
     def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:
         return hasattr(obj, "__narwhals_expr__")
 
-    def _with_callable(self: Self, call: Callable[..., Any], /) -> Self: ...
+    def _with_callable(self, call: Callable[..., Any], /) -> Self: ...
+    def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
+
+    @property
+    def name(self) -> LazyExprNameNamespace[Self]:
+        return LazyExprNameNamespace(self)
 
 
 class _ExprNamespace(  # type: ignore[misc]
@@ -1058,6 +1063,17 @@ class EagerExprNameNamespace(
             version=expr._version,
             call_kwargs=expr._call_kwargs,
         )
+
+
+class LazyExprNameNamespace(
+    LazyExprNamespace[LazyExprT],
+    CompliantExprNameNamespace[LazyExprT],
+    Generic[LazyExprT],
+):
+    def _from_callable(self, func: AliasName, /, *, alias: bool = True) -> LazyExprT:
+        expr = self.compliant
+        output_names = self._alias_output_names(func) if alias else None
+        return expr._with_alias_output_names(output_names)
 
 
 class EagerExprStringNamespace(
