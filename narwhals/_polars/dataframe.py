@@ -6,6 +6,7 @@ from typing import Iterator
 from typing import Literal
 from typing import Mapping
 from typing import Sequence
+from typing import cast
 from typing import overload
 
 import polars as pl
@@ -35,6 +36,7 @@ if TYPE_CHECKING:
     from narwhals._polars.group_by import PolarsGroupBy
     from narwhals._polars.group_by import PolarsLazyGroupBy
     from narwhals._polars.series import PolarsSeries
+    from narwhals._translate import ArrowStreamExportable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import CompliantDataFrame
@@ -93,6 +95,20 @@ class PolarsDataFrame:
         self._implementation = Implementation.POLARS
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
+
+    @classmethod
+    def from_arrow(cls, data: ArrowStreamExportable, /, *, context: _FullContext) -> Self:
+        backend_version = context._backend_version
+        if backend_version >= (1, 3):
+            native = pl.DataFrame(data)
+        else:
+            # TODO @dangotbanned: Turn the import guard into a util that all backends use
+            # - Use `find_spec` instead of `try-except-from-None`
+            # - Probably also want to allow `pa.Table` for `pyarrow < (14, 0)`
+            import pyarrow as pa
+
+            native = cast("pl.DataFrame", pl.from_arrow(pa.table(data)))
+        return cls(native, backend_version=backend_version, version=context._version)
 
     @classmethod
     def from_dict(
