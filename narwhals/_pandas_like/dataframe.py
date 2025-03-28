@@ -120,7 +120,6 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
     def from_arrow(cls, data: ArrowStreamExportable, /, *, context: _FullContext) -> Self:
         implementation = context._implementation
         tbl = _into_arrow_table(data, context)
-        native: pd.DataFrame
         if implementation.is_pandas():
             native = tbl.to_pandas()
         elif implementation.is_modin():  # pragma: no cover
