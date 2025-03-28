@@ -55,6 +55,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals._translate import ArrowStreamExportable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import CompliantDataFrame
@@ -113,6 +114,39 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         validate_backend_version(self._implementation, self._backend_version)
         if validate_column_names:
             check_column_names_are_unique(native_dataframe.columns)
+
+    @classmethod
+    def from_arrow(cls, data: ArrowStreamExportable, /, *, context: _FullContext) -> Self:
+        # TODO @dangotbanned: See `PolarsDataFrame.from_arrow`
+        import pyarrow as pa
+
+        from narwhals._arrow.namespace import ArrowNamespace
+
+        implementation = context._implementation
+        backend_version = context._backend_version
+        version = context._version
+        arrow_ns = ArrowNamespace(backend_version=parse_version(pa), version=version)
+        tbl = arrow_ns._dataframe.from_arrow(data, context=arrow_ns).native
+        from_arrow: Constructor
+        if implementation.is_pandas():
+            from_arrow = type(tbl).to_pandas
+        elif implementation.is_modin():  # pragma: no cover
+            from modin.pandas.utils import from_arrow as mpd_from_arrow
+
+            from_arrow = mpd_from_arrow
+        elif implementation.is_cudf():  # pragma: no cover
+            from_arrow = implementation.to_native_namespace().DataFrame.from_arrow
+        else:
+            raise NotImplementedError
+
+        native = from_arrow(tbl)
+        return cls(
+            native,
+            implementation=implementation,
+            backend_version=backend_version,
+            version=version,
+            validate_column_names=True,
+        )
 
     @classmethod
     def from_dict(
