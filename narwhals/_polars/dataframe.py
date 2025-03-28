@@ -99,6 +99,7 @@ class PolarsDataFrame:
     @classmethod
     def from_arrow(cls, data: ArrowStreamExportable, /, *, context: _FullContext) -> Self:
         backend_version = context._backend_version
+        version = context._version
         if backend_version >= (1, 3):
             native = pl.DataFrame(data)
         else:
@@ -109,7 +110,6 @@ class PolarsDataFrame:
 
             from narwhals._arrow.namespace import ArrowNamespace
 
-            version = context._version
             arrow_ns = ArrowNamespace(backend_version=parse_version(pa), version=version)
             tbl = arrow_ns._dataframe.from_arrow(data, context=arrow_ns).native
             native = cast("pl.DataFrame", pl.from_arrow(tbl))
