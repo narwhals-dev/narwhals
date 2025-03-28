@@ -709,7 +709,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             )
             return SQLExpression(sql)
 
-        return self._from_call(_rank)
+        return self._with_callable(_rank)
 
     @property
     def str(self: Self) -> DuckDBExprStringNamespace:

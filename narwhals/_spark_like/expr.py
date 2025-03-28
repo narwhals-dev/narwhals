@@ -770,7 +770,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
                 getattr(self._F, func_name)().over(window)
             )
 
-        return self._from_call(_rank)
+        return self._with_callable(_rank)
 
     @property
     def str(self: Self) -> SparkLikeExprStringNamespace:
