@@ -129,7 +129,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         elif implementation.is_cudf():  # pragma: no cover
             native = implementation.to_native_namespace().DataFrame.from_arrow(tbl)
         else:
-            msg = "congratulations, you entered unreacheable code - please report a bug"
+            msg = "congratulations, you entered unreachable code - please report a bug"
             raise AssertionError(msg)
         return cls(
             native,
