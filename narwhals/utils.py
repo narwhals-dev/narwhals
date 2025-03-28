@@ -69,10 +69,10 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._spark_like.namespace import SparkLikeNamespace
+    from narwhals._translate import ArrowStreamExportable
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
-    from narwhals.functions import ArrowStreamExportable
     from narwhals.series import Series
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
