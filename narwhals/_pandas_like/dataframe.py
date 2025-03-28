@@ -137,7 +137,8 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         elif implementation.is_cudf():  # pragma: no cover
             native = implementation.to_native_namespace().DataFrame.from_arrow(tbl)
         else:
-            raise NotImplementedError
+            msg = "congratulations, you entered unrecheable code - please report a bug"
+            raise AssertionError(msg)
         return cls(
             native,
             implementation=implementation,
