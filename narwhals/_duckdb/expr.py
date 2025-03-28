@@ -18,7 +18,6 @@ from duckdb.typing import DuckDBPyType
 from narwhals._compliant import LazyExpr
 from narwhals._duckdb.expr_dt import DuckDBExprDateTimeNamespace
 from narwhals._duckdb.expr_list import DuckDBExprListNamespace
-from narwhals._duckdb.expr_name import DuckDBExprNameNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
 from narwhals._duckdb.expr_struct import DuckDBExprStructNamespace
 from narwhals._duckdb.utils import WindowInputs
@@ -34,6 +33,7 @@ if TYPE_CHECKING:
     import duckdb
     from typing_extensions import Self
 
+    from narwhals._compliant.typing import AliasNames
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.typing import WindowFunction
@@ -231,6 +231,15 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             func,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+        )
+
+    def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
+        return type(self)(
+            call=self._call,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=func,
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -690,10 +699,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     @property
     def dt(self: Self) -> DuckDBExprDateTimeNamespace:
         return DuckDBExprDateTimeNamespace(self)
-
-    @property
-    def name(self: Self) -> DuckDBExprNameNamespace:
-        return DuckDBExprNameNamespace(self)
 
     @property
     def list(self: Self) -> DuckDBExprListNamespace:
