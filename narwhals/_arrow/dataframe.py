@@ -99,17 +99,14 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
     @classmethod
     def from_arrow(cls, data: ArrowStreamExportable, /, *, context: _FullContext) -> Self:
         backend_version = context._backend_version
-        # NOTE: Placeholder, see `PolarsDataFrame.from_arrow`
-        if backend_version >= (14,):
-            native = pa.table(data)
-        elif isinstance(data, pa.Table):
+        if isinstance(data, pa.Table):
             native = data
-        elif isinstance(data, Collection):
+        elif backend_version >= (14,) or isinstance(data, Collection):
             native = pa.table(data)
-        elif supports_arrow_c_stream(data):
+        elif supports_arrow_c_stream(data):  # pragma: no cover
             msg = f"PyArrow>=14.0.0 is required for `from_arrow` for object of type {type(data).__name__!r}."
             raise ModuleNotFoundError(msg)
-        else:
+        else:  # pragma: no cover
             msg = f"`from_arrow` is not supported for object of type {type(data).__name__!r}."
             raise TypeError(msg)
         return cls(

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sys
+from dataclasses import dataclass
+from typing import Any
 
 import pandas as pd
 import pytest
@@ -11,6 +13,16 @@ from tests.utils import assert_equal_data
 
 pytest.importorskip("pyarrow")
 import pyarrow as pa
+
+from narwhals.utils import Implementation
+from narwhals.utils import Version
+
+
+@dataclass
+class FullContext:
+    _implementation: Implementation
+    _backend_version: tuple[int, ...]
+    _version: Version
 
 
 @pytest.mark.xfail(PYARROW_VERSION < (14,), reason="too old")
@@ -52,3 +64,17 @@ def test_from_arrow_to_pandas() -> None:
 def test_from_arrow_invalid() -> None:
     with pytest.raises(TypeError, match="PyCapsule"):
         nw.from_arrow({"a": [1]}, backend=pa)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    "context", [FullContext(Implementation.POLARS, (1, 0, 0), Version.V1)]
+)
+def test_from_arrow_pre_14(context: FullContext) -> None:
+    pytest.importorskip("polars")
+    from narwhals._polars.dataframe import PolarsDataFrame
+
+    expected: dict[str, Any] = {"ab": [1, 2, 3], "ba": [4, 5, 6]}
+    tbl = pa.table(expected)
+    compliant = PolarsDataFrame.from_arrow(tbl, context=context)
+    result = nw.from_native(compliant.to_polars(), eager_only=True)
+    assert_equal_data(result, expected)

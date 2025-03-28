@@ -1613,8 +1613,9 @@ def _into_arrow_table(data: ArrowStreamExportable, context: _FullContext, /) -> 
         version = context._version
         ns = ArrowNamespace(backend_version=parse_version(pa), version=version)
         return ns._dataframe.from_arrow(data, context=ns).native
-    msg = f"PyArrow>=14.0.0 is required for `from_arrow` for object of type {type(data).__name__!r}."
-    raise ModuleNotFoundError(msg)
+    else:  # pragma: no cover
+        msg = f"PyArrow>=14.0.0 is required for `from_arrow` for object of type {type(data).__name__!r}."
+        raise ModuleNotFoundError(msg)
 
 
 # TODO @dangotbanned: Extend with runtime behavior for `v1.*`
