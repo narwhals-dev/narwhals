@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._compliant.group_by import CompliantGroupBy
-    from narwhals._translate import ArrowStreamExportable
+    from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import SizeUnit
@@ -56,7 +56,7 @@ _ToDict: TypeAlias = "dict[str, CompliantSeriesT] | dict[str, list[Any]]"  # noq
 class CompliantDataFrame(
     NumpyConvertible["_2DArray", "_2DArray"],
     DictConvertible["_ToDict[CompliantSeriesT]", Mapping[str, Any]],
-    ArrowConvertible["pa.Table", "ArrowStreamExportable"],
+    ArrowConvertible["pa.Table", "IntoArrowTable"],
     _StoresNative[NativeFrameT_co],
     Sized,
     Protocol[CompliantSeriesT, CompliantExprT_contra, NativeFrameT_co],
@@ -69,9 +69,7 @@ class CompliantDataFrame(
     def __narwhals_dataframe__(self) -> Self: ...
     def __narwhals_namespace__(self) -> Any: ...
     @classmethod
-    def from_arrow(
-        cls, data: ArrowStreamExportable, /, *, context: _FullContext
-    ) -> Self: ...
+    def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self: ...
     @classmethod
     def from_dict(
         cls,

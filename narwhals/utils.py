@@ -72,6 +72,7 @@ if TYPE_CHECKING:
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals._translate import ArrowStreamExportable
+    from narwhals._translate import IntoArrowTable
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -1595,7 +1596,7 @@ def _remap_full_join_keys(
     return dict(zip(right_on, right_keys_suffixed))
 
 
-def _into_arrow_table(data: ArrowStreamExportable, context: _FullContext, /) -> pa.Table:
+def _into_arrow_table(data: IntoArrowTable, context: _FullContext, /) -> pa.Table:
     """Guards `ArrowDataFrame.from_arrow` w/ safer imports.
 
     Arguments:

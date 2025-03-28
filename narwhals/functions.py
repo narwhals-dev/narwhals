@@ -25,6 +25,7 @@ from narwhals._expression_parsing import is_scalar_like
 from narwhals.dependencies import is_narwhals_series
 from narwhals.dependencies import is_numpy_array
 from narwhals.dependencies import is_numpy_array_2d
+from narwhals.dependencies import is_pyarrow_table
 from narwhals.expr import Expr
 from narwhals.series import Series
 from narwhals.translate import from_native
@@ -50,7 +51,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant import CompliantExpr
     from narwhals._compliant import CompliantNamespace
-    from narwhals._translate import ArrowStreamExportable
+    from narwhals._translate import IntoArrowTable
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -482,7 +483,7 @@ def _is_into_schema(obj: Any) -> TypeIs[_IntoSchema]:
 
 @deprecate_native_namespace(warn_version="1.31.0", required=True)
 def from_arrow(
-    native_frame: ArrowStreamExportable,
+    native_frame: IntoArrowTable,
     *,
     backend: ModuleType | Implementation | str | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
@@ -535,12 +536,12 @@ def from_arrow(
 
 
 def _from_arrow_impl(
-    data: ArrowStreamExportable,
+    data: IntoArrowTable,
     *,
     backend: ModuleType | Implementation | str,
     version: Version,
 ) -> DataFrame[Any]:
-    if not supports_arrow_c_stream(data):
+    if not (supports_arrow_c_stream(data) or is_pyarrow_table(data)):
         msg = f"Given object of type {type(data)} does not support PyCapsule interface"
         raise TypeError(msg)
     implementation = Implementation.from_backend(backend)

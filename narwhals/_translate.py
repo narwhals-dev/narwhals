@@ -7,7 +7,9 @@ from typing import Mapping
 from typing import Protocol
 
 if TYPE_CHECKING:
+    import pyarrow as pa
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
     from typing_extensions import TypeVar
 
 
@@ -104,9 +106,15 @@ class DictConvertible(
 ): ...
 
 
+IntoArrowTable: TypeAlias = "ArrowStreamExportable | pa.Table"
+"""An object supporting the [Arrow PyCapsule Interface], or a native [`pyarrow.Table`].
+
+[Arrow PyCapsule Interface]: https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html#arrowstream-export
+[`pyarrow.Table`]: https://arrow.apache.org/docs/python/generated/pyarrow.Table.html
+"""
 ToArrowT_co = TypeVar("ToArrowT_co", covariant=True)
 FromArrowDT_contra = TypeVar(
-    "FromArrowDT_contra", contravariant=True, default=ArrowStreamExportable
+    "FromArrowDT_contra", contravariant=True, default=IntoArrowTable
 )
 
 

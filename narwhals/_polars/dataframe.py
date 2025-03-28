@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from narwhals._polars.group_by import PolarsGroupBy
     from narwhals._polars.group_by import PolarsLazyGroupBy
     from narwhals._polars.series import PolarsSeries
-    from narwhals._translate import ArrowStreamExportable
+    from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import CompliantDataFrame
@@ -98,7 +98,7 @@ class PolarsDataFrame:
         validate_backend_version(self._implementation, self._backend_version)
 
     @classmethod
-    def from_arrow(cls, data: ArrowStreamExportable, /, *, context: _FullContext) -> Self:
+    def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self:
         backend_version = context._backend_version
         if backend_version >= (1, 3):
             native = pl.DataFrame(data)

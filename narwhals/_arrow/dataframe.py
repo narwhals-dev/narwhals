@@ -54,7 +54,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import Indices  # type: ignore[attr-defined]
     from narwhals._arrow.typing import Mask  # type: ignore[attr-defined]
     from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
-    from narwhals._translate import ArrowStreamExportable
+    from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import CompliantDataFrame
@@ -97,7 +97,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         validate_backend_version(self._implementation, self._backend_version)
 
     @classmethod
-    def from_arrow(cls, data: ArrowStreamExportable, /, *, context: _FullContext) -> Self:
+    def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self:
         backend_version = context._backend_version
         if isinstance(data, pa.Table):
             native = data

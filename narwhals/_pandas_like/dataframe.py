@@ -56,7 +56,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
-    from narwhals._translate import ArrowStreamExportable
+    from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import CompliantDataFrame
@@ -117,7 +117,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             check_column_names_are_unique(native_dataframe.columns)
 
     @classmethod
-    def from_arrow(cls, data: ArrowStreamExportable, /, *, context: _FullContext) -> Self:
+    def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self:
         implementation = context._implementation
         tbl = _into_arrow_table(data, context)
         if implementation.is_pandas():
