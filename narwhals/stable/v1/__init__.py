@@ -2242,7 +2242,7 @@ def from_arrow(
     """
     backend = cast("ModuleType | Implementation | str", backend)
     return _stableify(  # type: ignore[no-any-return]
-        _from_arrow_impl(native_frame, backend=backend)
+        _from_arrow_impl(native_frame, backend=backend, version=Version.V1)
     )
 
 

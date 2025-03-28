@@ -535,11 +535,14 @@ def from_arrow(
         └──────────────────┘
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _from_arrow_impl(native_frame, backend=backend)
+    return _from_arrow_impl(native_frame, backend=backend, version=Version.MAIN)
 
 
 def _from_arrow_impl(
-    data: ArrowStreamExportable, *, backend: ModuleType | Implementation | str
+    data: ArrowStreamExportable,
+    *,
+    backend: ModuleType | Implementation | str,
+    version: Version,  # noqa: ARG001
 ) -> DataFrame[Any]:
     if not hasattr(data, "__arrow_c_stream__"):
         msg = f"Given object of type {type(data)} does not support PyCapsule interface"
