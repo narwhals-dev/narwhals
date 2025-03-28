@@ -33,6 +33,7 @@ from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import scale_bytes
+from narwhals.utils import supports_arrow_c_stream
 from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
@@ -105,8 +106,12 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             native = data
         elif isinstance(data, Collection):
             native = pa.table(data)
+        elif supports_arrow_c_stream(data):
+            msg = f"PyArrow>=14.0.0 is required for `from_arrow` for object of type {type(data).__name__!r}."
+            raise ModuleNotFoundError(msg)
         else:
-            raise NotImplementedError
+            msg = f"`from_arrow` is not supported for object of type {type(data).__name__!r}."
+            raise TypeError(msg)
         return cls(
             native,
             backend_version=backend_version,
