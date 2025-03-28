@@ -107,8 +107,13 @@ class PolarsDataFrame:
             # - Probably also want to allow `pa.Table` for `pyarrow < (14, 0)`
             import pyarrow as pa
 
-            native = cast("pl.DataFrame", pl.from_arrow(pa.table(data)))
-        return cls(native, backend_version=backend_version, version=context._version)
+            from narwhals._arrow.namespace import ArrowNamespace
+
+            version = context._version
+            arrow_ns = ArrowNamespace(backend_version=parse_version(pa), version=version)
+            tbl = arrow_ns._dataframe.from_arrow(data, context=arrow_ns).native
+            native = cast("pl.DataFrame", pl.from_arrow(tbl))
+        return cls(native, backend_version=backend_version, version=version)
 
     @classmethod
     def from_dict(
