@@ -117,25 +117,25 @@ def test_cast_to_enum_polars() -> None:
     pytest.importorskip("polars")
     import polars as pl
 
-    # we don't yet support metadata in dtypes, so for now disallow this
-    # seems like a very niche use case anyway, and allowing it later wouldn't be
-    # backwards-incompatible
     df_pl = pl.DataFrame({"a": ["a", "b"]}, schema={"a": pl.Categorical})
     with pytest.raises(
-        NotImplementedError, match=r"Converting to Enum is not \(yet\) supported"
+        ValueError, match="Can not cast / initialize Enum without categories present"
     ):
         nw.from_native(df_pl).select(nw.col("a").cast(nw.Enum))
+
+    df_nw_pl = nw.from_native(df_pl).select(nw.col("a").cast(nw.Enum(["a", "b"])))
+    assert df_nw_pl.schema == {"a": nw.Enum(["a", "b"])}
 
 
 def test_cast_to_enum_pandas() -> None:
     pytest.importorskip("pandas")
     import pandas as pd
 
-    # we don't yet support metadata in dtypes, so for now disallow this
-    # seems like a very niche use case anyway, and allowing it later wouldn't be
-    # backwards-incompatible
     df_pd = pd.DataFrame({"a": ["a", "b"]}, dtype="category")
     with pytest.raises(
-        NotImplementedError, match=r"Converting to Enum is not \(yet\) supported"
+        ValueError, match="Can not cast / initialize Enum without categories present"
     ):
         nw.from_native(df_pd).select(nw.col("a").cast(nw.Enum))
+
+    df_nw_pd = nw.from_native(df_pd).select(nw.col("a").cast(nw.Enum(["a", "b"])))
+    assert df_nw_pd.schema == {"a": nw.Enum(["a", "b"])}
