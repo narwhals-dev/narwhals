@@ -186,6 +186,8 @@ jobs:
           UV_SYSTEM_PYTHON: 1
         run: |
           cd py-shiny
+          # temporary pin to get ci green
+          uv pip install "pyflakes<3.3.0" --system
           make narwhals-install-shiny
       - name: install-narwhals-dev
         run: |
