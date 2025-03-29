@@ -111,13 +111,17 @@ def native_to_narwhals_dtype(
     if dtype == pl.Date:
         return dtypes.Date()
     if isinstance_or_issubclass(dtype, pl.Datetime):
-        if dtype is pl.Datetime:
-            return dtypes.Datetime()
-        return dtypes.Datetime(dtype.time_unit, dtype.time_zone)
+        return (
+            dtypes.Datetime()
+            if dtype is pl.Datetime
+            else dtypes.Datetime(dtype.time_unit, dtype.time_zone)
+        )
     if isinstance_or_issubclass(dtype, pl.Duration):
-        if dtype is pl.Duration:
-            return dtypes.Duration()
-        return dtypes.Duration(dtype.time_unit)
+        return (
+            dtypes.Duration()
+            if dtype is pl.Duration
+            else dtypes.Duration(dtype.time_unit)
+        )
     if isinstance_or_issubclass(dtype, pl.Struct):
         fields = [
             dtypes.Field(name, native_to_narwhals_dtype(tp, version, backend_version))
