@@ -57,6 +57,10 @@ class PolarsExpr:
 
         return func
 
+    def _renamed_min_periods(self, min_samples: int, /) -> dict[str, Any]:
+        name = "min_periods" if self._backend_version < (1, 21, 0) else "min_samples"
+        return {name: min_samples}
+
     def cast(self: Self, dtype: DType) -> Self:
         dtype_pl = narwhals_to_native_dtype(dtype, self._version, self._backend_version)
         return self._with_native(self.native.cast(dtype_pl))
@@ -72,11 +76,6 @@ class PolarsExpr:
         min_samples: int,
         ignore_nulls: bool,
     ) -> Self:
-        kwds: dict[str, Any] = (
-            {"min_periods": min_samples}
-            if self._backend_version < (1, 21, 0)
-            else {"min_samples": min_samples}
-        )
         native = self.native.ewm_mean(
             com=com,
             span=span,
@@ -84,7 +83,7 @@ class PolarsExpr:
             alpha=alpha,
             adjust=adjust,
             ignore_nulls=ignore_nulls,
-            **kwds,
+            **self._renamed_min_periods(min_samples),
         )
         if self._backend_version < (1,):  # pragma: no cover
             native = pl.when(~self.native.is_null()).then(native).otherwise(None)
@@ -115,11 +114,7 @@ class PolarsExpr:
         if self._backend_version < (1,):  # pragma: no cover
             msg = "`rolling_var` not implemented for polars older than 1.0"
             raise NotImplementedError(msg)
-        kwds: dict[str, Any] = (
-            {"min_periods": min_samples}
-            if self._backend_version < (1, 21, 0)
-            else {"min_samples": min_samples}
-        )
+        kwds = self._renamed_min_periods(min_samples)
         native = self.native.rolling_var(
             window_size=window_size, center=center, ddof=ddof, **kwds
         )
@@ -131,11 +126,7 @@ class PolarsExpr:
         if self._backend_version < (1,):  # pragma: no cover
             msg = "`rolling_std` not implemented for polars older than 1.0"
             raise NotImplementedError(msg)
-        kwds: dict[str, Any] = (
-            {"min_periods": min_samples}
-            if self._backend_version < (1, 21, 0)
-            else {"min_samples": min_samples}
-        )
+        kwds = self._renamed_min_periods(min_samples)
         native = self.native.rolling_std(
             window_size=window_size, center=center, ddof=ddof, **kwds
         )
@@ -144,22 +135,14 @@ class PolarsExpr:
     def rolling_sum(
         self: Self, window_size: int, *, min_samples: int, center: bool
     ) -> Self:
-        kwds: dict[str, Any] = (
-            {"min_periods": min_samples}
-            if self._backend_version < (1, 21, 0)
-            else {"min_samples": min_samples}
-        )
+        kwds = self._renamed_min_periods(min_samples)
         native = self.native.rolling_sum(window_size=window_size, center=center, **kwds)
         return self._with_native(native)
 
     def rolling_mean(
         self: Self, window_size: int, *, min_samples: int, center: bool
     ) -> Self:
-        kwds: dict[str, Any] = (
-            {"min_periods": min_samples}
-            if self._backend_version < (1, 21, 0)
-            else {"min_samples": min_samples}
-        )
+        kwds = self._renamed_min_periods(min_samples)
         native = self.native.rolling_mean(window_size=window_size, center=center, **kwds)
         return self._with_native(native)
 
