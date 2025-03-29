@@ -28,6 +28,7 @@ from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_index
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.dependencies import is_numpy_scalar
+from narwhals.dependencies import is_pandas_like_series
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
@@ -41,6 +42,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     from typing_extensions import Self
+    from typing_extensions import TypeIs
 
     from narwhals._arrow.typing import ArrowArray
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -199,6 +201,19 @@ class PandasLikeSeries(EagerSeries[Any]):
             implementation=implementation,
             backend_version=backend_version,
             version=version,
+        )
+
+    @staticmethod
+    def _is_native(obj: Any) -> TypeIs[Any]:
+        return is_pandas_like_series(obj)
+
+    @classmethod
+    def from_native(cls, data: Any, /, *, context: _FullContext) -> Self:
+        return cls(
+            data,
+            implementation=context._implementation,
+            backend_version=context._backend_version,
+            version=context._version,
         )
 
     @classmethod
