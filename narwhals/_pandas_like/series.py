@@ -205,7 +205,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     @staticmethod
     def _is_native(obj: Any) -> TypeIs[Any]:
-        return is_pandas_like_series(obj)
+        return is_pandas_like_series(obj)  # pragma: no cover
 
     @classmethod
     def from_native(cls, data: Any, /, *, context: _FullContext) -> Self:
