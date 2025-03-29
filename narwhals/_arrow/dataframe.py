@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Iterator
 from typing import Literal
 from typing import Mapping
@@ -16,17 +17,21 @@ import pyarrow.compute as pc
 from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import align_series_full_broadcast
 from narwhals._arrow.utils import convert_str_slice_to_int_slice
+from narwhals._arrow.utils import list_flatten
+from narwhals._arrow.utils import lit
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import select_rows
 from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
 from narwhals.dependencies import is_numpy_array_1d
+from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import check_column_exists
 from narwhals.utils import check_column_names_are_unique
 from narwhals.utils import generate_temporary_column_name
+from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
@@ -389,8 +394,6 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
     def estimated_size(self: Self, unit: SizeUnit) -> int | float:
         sz = self.native.nbytes
         return scale_bytes(sz, unit)
-
-    explode = not_implemented()
 
     @property
     def columns(self: Self) -> list[str]:
@@ -869,3 +872,77 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         )
         # TODO(Unassigned): Even with promote_options="permissive", pyarrow does not
         # upcast numeric to non-numeric (e.g. string) datatypes
+
+    def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
+        dtypes = import_dtypes_module(self._version)
+
+        to_explode = (
+            [columns, *more_columns]
+            if isinstance(columns, str)
+            else [*columns, *more_columns]
+        )
+
+        schema = self.collect_schema()
+        for col_to_explode in to_explode:
+            dtype = schema[col_to_explode]
+
+            if dtype != dtypes.List:
+                msg = (
+                    f"`explode` operation not supported for dtype `{dtype}`, "
+                    "expected List type"
+                )
+
+                raise InvalidOperationError(msg)
+
+        counts = pc.list_value_length(self.native[to_explode[0]])
+
+        if not all(
+            pc.all(pc.equal(pc.list_value_length(self.native[col_name]), counts)).as_py()
+            for col_name in to_explode[1:]
+        ):
+            msg = "exploded columns must have matching element counts"
+            raise ShapeError(msg)
+
+        original_columns = self.columns
+        other_columns = [c for c in original_columns if c not in to_explode]
+        ONE = lit(1)  # noqa: N806
+        fast_path = pc.all(pc.greater_equal(counts, ONE)).as_py()
+        flatten: Callable[..., ArrowChunkedArray]
+        if fast_path:
+            indices = pc.list_parent_indices(self.native[to_explode[0]])
+            flatten = list_flatten
+        else:
+            filled_counts = pc.max_element_wise(counts, ONE, skip_nulls=True)
+            indices = pa.array(
+                [
+                    i
+                    for i, count in enumerate(filled_counts.to_pylist())  # pyright: ignore[reportAttributeAccessIssue]
+                    for _ in range(count)
+                ]
+            )
+            parent_indices = pc.list_parent_indices(self.native[to_explode[0]])
+            is_valid_index = pc.is_in(indices, value_set=parent_indices)
+            exploded_size = len(is_valid_index)
+
+            def _flatten(
+                array: pa.ChunkedArray[pa.ListScalar[Any]], /
+            ) -> ArrowChunkedArray:
+                dtype = array.type.value_type
+                return pc.replace_with_mask(
+                    pa.nulls(exploded_size, dtype),
+                    is_valid_index,
+                    list_flatten(array).combine_chunks(),
+                )
+
+            flatten = _flatten
+
+        arrays = [
+            self.native[col_name].take(indices)
+            if col_name in other_columns
+            else flatten(self.native[col_name])
+            for col_name in original_columns
+        ]
+
+        return self._from_native_frame(
+            pa.Table.from_arrays(arrays, names=original_columns)
+        )
