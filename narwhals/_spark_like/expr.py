@@ -750,7 +750,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         self,
         method: Literal["average", "min", "max", "dense", "ordinal"],
         *,
-        descending: bool = False,
+        descending: bool,
     ) -> Self:
         if method == "min":
             func_name = "rank"
