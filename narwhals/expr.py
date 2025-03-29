@@ -15,6 +15,7 @@ from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import combine_metadata_binary_op
 from narwhals._expression_parsing import extract_compliant
 from narwhals.dtypes import _validate_dtype
+from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.expr_cat import ExprCatNamespace
 from narwhals.expr_dt import ExprDateTimeNamespace
@@ -1593,6 +1594,9 @@ class Expr:
         n_open_windows = self._metadata.n_open_windows
         if flat_order_by is not None and self._metadata.kind.is_window():
             n_open_windows -= 1
+        elif flat_order_by is not None and not n_open_windows:
+            msg = "Cannot use `order_by` in `over` on expression which isn't order-dependent."
+            raise InvalidOperationError(msg)
         current_meta = self._metadata
         next_meta = ExprMetadata(
             kind,
