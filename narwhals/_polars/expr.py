@@ -40,17 +40,11 @@ class PolarsExpr:
         return "PolarsExpr"
 
     def _with_native(self: Self, expr: pl.Expr) -> Self:
-        return self.__class__(
-            expr, version=self._version, backend_version=self._backend_version
-        )
+        return self.__class__(expr, self._version, self._backend_version)
 
     @classmethod
     def _from_series(cls, series: Any) -> Self:
-        return cls(
-            series.native,
-            version=series._version,
-            backend_version=series._backend_version,
-        )
+        return cls(series.native, series._version, series._backend_version)
 
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         # Let Polars do its thing.
@@ -64,9 +58,8 @@ class PolarsExpr:
         return func
 
     def cast(self: Self, dtype: DType) -> Self:
-        expr = self.native
         dtype_pl = narwhals_to_native_dtype(dtype, self._version, self._backend_version)
-        return self._with_native(expr.cast(dtype_pl))
+        return self._with_native(self.native.cast(dtype_pl))
 
     def ewm_mean(
         self: Self,
@@ -79,168 +72,121 @@ class PolarsExpr:
         min_samples: int,
         ignore_nulls: bool,
     ) -> Self:
-        expr = self.native
-
-        extra_kwargs = (
+        kwds: dict[str, Any] = (
             {"min_periods": min_samples}
             if self._backend_version < (1, 21, 0)
             else {"min_samples": min_samples}
         )
-
-        native_expr = expr.ewm_mean(
+        native = self.native.ewm_mean(
             com=com,
             span=span,
             half_life=half_life,
             alpha=alpha,
             adjust=adjust,
             ignore_nulls=ignore_nulls,
-            **extra_kwargs,
+            **kwds,
         )
         if self._backend_version < (1,):  # pragma: no cover
-            return self._with_native(
-                pl.when(~expr.is_null()).then(native_expr).otherwise(None)
-            )
-        return self._with_native(native_expr)
+            native = pl.when(~self.native.is_null()).then(native).otherwise(None)
+        return self._with_native(native)
 
     def is_nan(self: Self) -> Self:
-        if self._backend_version < (1, 18):  # pragma: no cover
-            return self._with_native(
-                pl.when(self.native.is_not_null()).then(self.native.is_nan())
-            )
-        return self._with_native(self.native.is_nan())
+        if self._backend_version >= (1, 18):
+            native = self.native.is_nan()
+        else:  # pragma: no cover
+            native = pl.when(self.native.is_not_null()).then(self.native.is_nan())
+        return self._with_native(native)
 
     def over(
-        self: Self,
-        partition_by: Sequence[str],
-        order_by: Sequence[str] | None,
+        self: Self, partition_by: Sequence[str], order_by: Sequence[str] | None
     ) -> Self:
         if self._backend_version < (1, 9):
             if order_by:
                 msg = "`order_by` in Polars requires version 1.10 or greater"
                 raise NotImplementedError(msg)
-            return self._with_native(self.native.over(partition_by or pl.lit(1)))
-        return self._with_native(
-            self.native.over(partition_by or pl.lit(1), order_by=order_by)
-        )
+            native = self.native.over(partition_by or pl.lit(1))
+        else:
+            native = self.native.over(partition_by or pl.lit(1), order_by=order_by)
+        return self._with_native(native)
 
     def rolling_var(
-        self: Self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
-        ddof: int,
+        self: Self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
         if self._backend_version < (1,):  # pragma: no cover
             msg = "`rolling_var` not implemented for polars older than 1.0"
             raise NotImplementedError(msg)
-
-        extra_kwargs = (
+        kwds: dict[str, Any] = (
             {"min_periods": min_samples}
             if self._backend_version < (1, 21, 0)
             else {"min_samples": min_samples}
         )
-        return self._with_native(
-            self.native.rolling_var(
-                window_size=window_size,
-                center=center,
-                ddof=ddof,
-                **extra_kwargs,  # type: ignore[arg-type]
-            )
+        native = self.native.rolling_var(
+            window_size=window_size, center=center, ddof=ddof, **kwds
         )
+        return self._with_native(native)
 
     def rolling_std(
-        self: Self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
-        ddof: int,
+        self: Self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
         if self._backend_version < (1,):  # pragma: no cover
             msg = "`rolling_std` not implemented for polars older than 1.0"
             raise NotImplementedError(msg)
-        extra_kwargs = (
+        kwds: dict[str, Any] = (
             {"min_periods": min_samples}
             if self._backend_version < (1, 21, 0)
             else {"min_samples": min_samples}
         )
-
-        return self._with_native(
-            self.native.rolling_std(
-                window_size=window_size,
-                center=center,
-                ddof=ddof,
-                **extra_kwargs,  # type: ignore[arg-type]
-            )
+        native = self.native.rolling_std(
+            window_size=window_size, center=center, ddof=ddof, **kwds
         )
+        return self._with_native(native)
 
     def rolling_sum(
         self: Self, window_size: int, *, min_samples: int, center: bool
     ) -> Self:
-        extra_kwargs = (
+        kwds: dict[str, Any] = (
             {"min_periods": min_samples}
             if self._backend_version < (1, 21, 0)
             else {"min_samples": min_samples}
         )
-
-        return self._with_native(
-            self.native.rolling_sum(
-                window_size=window_size,
-                center=center,
-                **extra_kwargs,  # type: ignore[arg-type]
-            )
-        )
+        native = self.native.rolling_sum(window_size=window_size, center=center, **kwds)
+        return self._with_native(native)
 
     def rolling_mean(
-        self: Self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
+        self: Self, window_size: int, *, min_samples: int, center: bool
     ) -> Self:
-        extra_kwargs = (
+        kwds: dict[str, Any] = (
             {"min_periods": min_samples}
             if self._backend_version < (1, 21, 0)
             else {"min_samples": min_samples}
         )
-
-        return self._with_native(
-            self.native.rolling_mean(
-                window_size=window_size,
-                center=center,
-                **extra_kwargs,  # type: ignore[arg-type]
-            )
-        )
+        native = self.native.rolling_mean(window_size=window_size, center=center, **kwds)
+        return self._with_native(native)
 
     def map_batches(
-        self: Self,
-        function: Callable[..., Self],
-        return_dtype: DType | None,
+        self: Self, function: Callable[..., Self], return_dtype: DType | None
     ) -> Self:
-        if return_dtype is not None:
-            return_dtype_pl = narwhals_to_native_dtype(
-                return_dtype, self._version, self._backend_version
-            )
-            return self._with_native(self.native.map_batches(function, return_dtype_pl))
-        else:
-            return self._with_native(self.native.map_batches(function))
-
-    def replace_strict(
-        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
-    ) -> Self:
-        expr = self.native
         return_dtype_pl = (
             narwhals_to_native_dtype(return_dtype, self._version, self._backend_version)
             if return_dtype
             else None
         )
+        native = self.native.map_batches(function, return_dtype_pl)
+        return self._with_native(native)
+
+    def replace_strict(
+        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+    ) -> Self:
         if self._backend_version < (1,):
             msg = f"`replace_strict` is only available in Polars>=1.0, found version {self._backend_version}"
             raise NotImplementedError(msg)
-        return self._with_native(
-            expr.replace_strict(old, new, return_dtype=return_dtype_pl)
+        return_dtype_pl = (
+            narwhals_to_native_dtype(return_dtype, self._version, self._backend_version)
+            if return_dtype
+            else None
         )
+        native = self.native.replace_strict(old, new, return_dtype=return_dtype_pl)
+        return self._with_native(native)
 
     def __eq__(self: Self, other: object) -> Self:  # type: ignore[override]
         return self._with_native(self.native.__eq__(extract_native(other)))  # type: ignore[operator]
@@ -292,11 +238,9 @@ class PolarsExpr:
 
     def cum_count(self: Self, *, reverse: bool) -> Self:
         if self._backend_version < (0, 20, 4):
-            not_null = ~self.native.is_null()
-            result = not_null.cum_sum(reverse=reverse)
+            result = (~self.native.is_null()).cum_sum(reverse=reverse)
         else:
             result = self.native.cum_count(reverse=reverse)
-
         return self._with_native(result)
 
     @property
