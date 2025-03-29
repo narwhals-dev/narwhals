@@ -187,8 +187,8 @@ jobs:
         run: |
           cd py-shiny
           # temporary pin to get ci green
-          uv pip install "pyflakes<3.3.0" "flake8<7.2.0" --system
           make narwhals-install-shiny
+          uv pip install "pyflakes<3.3.0" "flake8<7.2.0" --system
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals --system
