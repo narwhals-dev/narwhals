@@ -197,10 +197,10 @@ def narwhals_to_native_dtype(
         return pl.List(narwhals_to_native_dtype(dtype.inner, version, backend_version))
     if isinstance_or_issubclass(dtype, dtypes.Struct):
         fields = [
-                pl.Field(
+            pl.Field(
                 field.name,
                 narwhals_to_native_dtype(field.dtype, version, backend_version),
-                )
+            )
             for field in dtype.fields
         ]
         return pl.Struct(fields)
