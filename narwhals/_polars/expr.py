@@ -316,7 +316,7 @@ class PolarsExprListNamespace:
         native_result = native_expr.list.len()
 
         if self._expr._backend_version < (1, 16):  # pragma: no cover
-            native_result: pl.Expr = (  # type: ignore[no-redef]
+            native_result = (
                 pl.when(~native_expr.is_null()).then(native_result).cast(pl.UInt32())
             )
         elif self._expr._backend_version < (1, 17):  # pragma: no cover
