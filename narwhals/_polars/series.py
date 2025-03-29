@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from typing import TypeVar
 
     from typing_extensions import Self
+    from typing_extensions import TypeIs
 
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.expr import PolarsExpr
@@ -97,13 +98,20 @@ class PolarsSeries:
             version=version,
         )
 
+    @staticmethod
+    def _is_native(obj: pl.Series | Any) -> TypeIs[pl.Series]:
+        return isinstance(obj, pl.Series)
+
+    @classmethod
+    def from_native(cls, data: pl.Series, /, *, context: _FullContext) -> Self:
+        return cls(
+            data, backend_version=context._backend_version, version=context._version
+        )
+
     @classmethod
     def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
-        return cls(
-            pl.Series(data if is_numpy_array_1d(data) else [data]),
-            backend_version=context._backend_version,
-            version=context._version,
-        )
+        native = pl.Series(data if is_numpy_array_1d(data) else [data])
+        return cls.from_native(native, context=context)
 
     def _with_native(self: Self, series: pl.Series) -> Self:
         return self.__class__(
@@ -122,7 +130,7 @@ class PolarsSeries:
     def _from_native_object(
         self: Self, series: pl.Series | pl.DataFrame | T
     ) -> Self | PolarsDataFrame | T:
-        if isinstance(series, pl.Series):
+        if self._is_native(series):
             return self._with_native(series)
         if isinstance(series, pl.DataFrame):
             from narwhals._polars.dataframe import PolarsDataFrame
