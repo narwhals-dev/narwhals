@@ -8,7 +8,6 @@ from typing import Any
 from typing import Iterable
 from typing import Literal
 from typing import Mapping
-from typing import Protocol
 from typing import Sequence
 from typing import cast
 from typing import overload
@@ -26,6 +25,7 @@ from narwhals._expression_parsing import is_scalar_like
 from narwhals.dependencies import is_narwhals_series
 from narwhals.dependencies import is_numpy_array
 from narwhals.dependencies import is_numpy_array_2d
+from narwhals.dependencies import is_pyarrow_table
 from narwhals.expr import Expr
 from narwhals.series import Series
 from narwhals.translate import from_native
@@ -39,6 +39,7 @@ from narwhals.utils import is_compliant_expr
 from narwhals.utils import is_eager_allowed
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_version
+from narwhals.utils import supports_arrow_c_stream
 from narwhals.utils import validate_laziness
 
 if TYPE_CHECKING:
@@ -50,6 +51,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant import CompliantExpr
     from narwhals._compliant import CompliantNamespace
+    from narwhals._translate import IntoArrowTable
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -64,11 +66,6 @@ if TYPE_CHECKING:
     from narwhals.typing import _2DArray
 
     _IntoSchema: TypeAlias = "Mapping[str, DType] | Schema | Sequence[str] | None"
-
-    class ArrowStreamExportable(Protocol):
-        def __arrow_c_stream__(
-            self, requested_schema: object | None = None
-        ) -> object: ...
 
 
 @overload
@@ -486,7 +483,7 @@ def _is_into_schema(obj: Any) -> TypeIs[_IntoSchema]:
 
 @deprecate_native_namespace(warn_version="1.31.0", required=True)
 def from_arrow(
-    native_frame: ArrowStreamExportable,
+    native_frame: IntoArrowTable,
     *,
     backend: ModuleType | Implementation | str | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
@@ -535,55 +532,25 @@ def from_arrow(
         └──────────────────┘
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _from_arrow_impl(native_frame, backend=backend)
+    return _from_arrow_impl(native_frame, backend=backend, version=Version.MAIN)
 
 
 def _from_arrow_impl(
-    data: ArrowStreamExportable, *, backend: ModuleType | Implementation | str
+    data: IntoArrowTable,
+    *,
+    backend: ModuleType | Implementation | str,
+    version: Version,
 ) -> DataFrame[Any]:
-    if not hasattr(data, "__arrow_c_stream__"):
+    if not (supports_arrow_c_stream(data) or is_pyarrow_table(data)):
         msg = f"Given object of type {type(data)} does not support PyCapsule interface"
         raise TypeError(msg)
-
     implementation = Implementation.from_backend(backend)
-    native_namespace = implementation.to_native_namespace()
-
-    if implementation.is_polars() and parse_version(native_namespace) >= (1, 3):
-        native_frame = native_namespace.DataFrame(data)
-    elif implementation in {
-        Implementation.PANDAS,
-        Implementation.MODIN,
-        Implementation.CUDF,
-        Implementation.POLARS,
-    }:
-        # These don't (yet?) support the PyCapsule Interface for import
-        # so we go via PyArrow
-        try:
-            import pyarrow as pa  # ignore-banned-import
-        except ModuleNotFoundError as exc:  # pragma: no cover
-            msg = f"PyArrow>=14.0.0 is required for `from_arrow` for object of type {native_namespace}"
-            raise ModuleNotFoundError(msg) from exc
-        if parse_version(pa) < (14, 0):  # pragma: no cover
-            msg = f"PyArrow>=14.0.0 is required for `from_arrow` for object of type {native_namespace}"
-            raise ModuleNotFoundError(msg) from None
-
-        tbl = pa.table(data)
-        if implementation is Implementation.PANDAS:
-            native_frame = tbl.to_pandas()
-        elif implementation is Implementation.MODIN:  # pragma: no cover
-            from modin.pandas.utils import from_arrow
-
-            native_frame = from_arrow(tbl)
-        elif implementation is Implementation.CUDF:  # pragma: no cover
-            native_frame = native_namespace.DataFrame.from_arrow(tbl)
-        elif implementation is Implementation.POLARS:  # pragma: no cover
-            native_frame = native_namespace.from_arrow(tbl)
-        else:  # pragma: no cover
-            msg = "congratulations, you entered unrecheable code - please report a bug"
-            raise AssertionError(msg)
-    elif implementation is Implementation.PYARROW:
-        native_frame = native_namespace.table(data)
+    if is_eager_allowed(implementation):
+        ns = _into_compliant_namespace(implementation, version)
+        frame = ns._dataframe.from_arrow(data, context=ns)
+        return from_native(frame, eager_only=True)
     else:  # pragma: no cover
+        native_namespace = implementation.to_native_namespace()
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement PyCapsule support
@@ -591,7 +558,7 @@ def _from_arrow_impl(
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `DataFrame` class which accepts object which supports PyCapsule Interface."
             raise AttributeError(msg) from e
-    return from_native(native_frame, eager_only=True)
+        return from_native(native_frame, eager_only=True)
 
 
 def _get_sys_info() -> dict[str, str]:

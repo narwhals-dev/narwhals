@@ -90,8 +90,8 @@ if TYPE_CHECKING:
     from typing_extensions import Self
     from typing_extensions import TypeVar
 
+    from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
-    from narwhals.functions import ArrowStreamExportable
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
     from narwhals.typing import IntoLazyFrameT
@@ -2213,7 +2213,7 @@ def new_series(
 
 @deprecate_native_namespace(required=True)
 def from_arrow(
-    native_frame: ArrowStreamExportable,
+    native_frame: IntoArrowTable,
     *,
     backend: ModuleType | Implementation | str | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
@@ -2242,7 +2242,7 @@ def from_arrow(
     """
     backend = cast("ModuleType | Implementation | str", backend)
     return _stableify(  # type: ignore[no-any-return]
-        _from_arrow_impl(native_frame, backend=backend)
+        _from_arrow_impl(native_frame, backend=backend, version=Version.V1)
     )
 
 
