@@ -17,8 +17,10 @@ from narwhals._compliant.any_namespace import StringNamespace
 from narwhals._compliant.any_namespace import StructNamespace
 from narwhals._compliant.typing import CompliantSeriesT_co
 from narwhals._compliant.typing import EagerSeriesT_co
+from narwhals._compliant.typing import NativeSeriesT
 from narwhals._compliant.typing import NativeSeriesT_co
 from narwhals._translate import FromIterable
+from narwhals._translate import FromNative
 from narwhals._translate import NumpyConvertible
 from narwhals.utils import _StoresCompliant
 from narwhals.utils import _StoresNative
@@ -50,7 +52,8 @@ __all__ = ["CompliantSeries", "EagerSeries"]
 class CompliantSeries(
     NumpyConvertible["_1DArray", "Into1DArray"],
     FromIterable,
-    Protocol[NativeSeriesT_co],
+    FromNative[NativeSeriesT],
+    Protocol[NativeSeriesT],
 ):
     _implementation: Implementation
     _backend_version: tuple[int, ...]
@@ -61,7 +64,7 @@ class CompliantSeries(
     @property
     def name(self) -> str: ...
     @property
-    def native(self) -> NativeSeriesT_co: ...
+    def native(self) -> NativeSeriesT: ...
     def __narwhals_series__(self) -> Self:
         return self
 
@@ -77,6 +80,8 @@ class CompliantSeries(
     def _with_native(self, series: Any) -> Self: ...
     def _with_version(self, version: Version) -> Self: ...
     def _to_expr(self) -> CompliantExpr[Any, Self]: ...
+    @classmethod
+    def from_native(cls, data: NativeSeriesT, /, *, context: _FullContext) -> Self: ...
     @classmethod
     def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self: ...
     @classmethod
@@ -286,7 +291,7 @@ class CompliantSeries(
     def struct(self) -> Any: ...
 
 
-class EagerSeries(CompliantSeries[NativeSeriesT_co], Protocol[NativeSeriesT_co]):
+class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
     _native_series: Any
     _implementation: Implementation
     _backend_version: tuple[int, ...]
@@ -313,15 +318,15 @@ class EagerSeries(CompliantSeries[NativeSeriesT_co], Protocol[NativeSeriesT_co])
         return self.__narwhals_namespace__()._expr._from_series(self)  # type: ignore[no-any-return]
 
     @property
-    def str(self) -> EagerSeriesStringNamespace[Self, NativeSeriesT_co]: ...
+    def str(self) -> EagerSeriesStringNamespace[Self, NativeSeriesT]: ...
     @property
-    def dt(self) -> EagerSeriesDateTimeNamespace[Self, NativeSeriesT_co]: ...
+    def dt(self) -> EagerSeriesDateTimeNamespace[Self, NativeSeriesT]: ...
     @property
-    def cat(self) -> EagerSeriesCatNamespace[Self, NativeSeriesT_co]: ...
+    def cat(self) -> EagerSeriesCatNamespace[Self, NativeSeriesT]: ...
     @property
-    def list(self) -> EagerSeriesListNamespace[Self, NativeSeriesT_co]: ...
+    def list(self) -> EagerSeriesListNamespace[Self, NativeSeriesT]: ...
     @property
-    def struct(self) -> EagerSeriesStructNamespace[Self, NativeSeriesT_co]: ...
+    def struct(self) -> EagerSeriesStructNamespace[Self, NativeSeriesT]: ...
 
 
 class _SeriesNamespace(  # type: ignore[misc]
