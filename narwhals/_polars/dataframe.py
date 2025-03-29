@@ -6,6 +6,7 @@ from typing import Iterator
 from typing import Literal
 from typing import Mapping
 from typing import Sequence
+from typing import cast
 from typing import overload
 
 import polars as pl
@@ -17,6 +18,7 @@ from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
+from narwhals.utils import _into_arrow_table
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -35,6 +37,7 @@ if TYPE_CHECKING:
     from narwhals._polars.group_by import PolarsGroupBy
     from narwhals._polars.group_by import PolarsLazyGroupBy
     from narwhals._polars.series import PolarsSeries
+    from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import CompliantDataFrame
@@ -93,6 +96,15 @@ class PolarsDataFrame:
         self._implementation = Implementation.POLARS
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
+
+    @classmethod
+    def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self:
+        backend_version = context._backend_version
+        if backend_version >= (1, 3):
+            native = pl.DataFrame(data)
+        else:
+            native = cast("pl.DataFrame", pl.from_arrow(_into_arrow_table(data, context)))
+        return cls(native, backend_version=backend_version, version=context._version)
 
     @classmethod
     def from_dict(

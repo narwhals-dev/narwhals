@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Collection
 from typing import Iterator
 from typing import Literal
 from typing import Mapping
@@ -32,6 +33,7 @@ from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import scale_bytes
+from narwhals.utils import supports_arrow_c_stream
 from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
@@ -52,6 +54,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import Indices  # type: ignore[attr-defined]
     from narwhals._arrow.typing import Mask  # type: ignore[attr-defined]
     from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
+    from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import CompliantDataFrame
@@ -92,6 +95,26 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         self._backend_version = backend_version
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
+
+    @classmethod
+    def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self:
+        backend_version = context._backend_version
+        if isinstance(data, pa.Table):
+            native = data
+        elif backend_version >= (14,) or isinstance(data, Collection):
+            native = pa.table(data)
+        elif supports_arrow_c_stream(data):  # pragma: no cover
+            msg = f"PyArrow>=14.0.0 is required for `from_arrow` for object of type {type(data).__name__!r}."
+            raise ModuleNotFoundError(msg)
+        else:  # pragma: no cover
+            msg = f"`from_arrow` is not supported for object of type {type(data).__name__!r}."
+            raise TypeError(msg)
+        return cls(
+            native,
+            backend_version=backend_version,
+            version=context._version,
+            validate_column_names=True,
+        )
 
     @classmethod
     def from_dict(

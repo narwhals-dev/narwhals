@@ -32,6 +32,7 @@ from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
+from narwhals.utils import _into_arrow_table
 from narwhals.utils import _remap_full_join_keys
 from narwhals.utils import check_column_exists
 from narwhals.utils import generate_temporary_column_name
@@ -55,6 +56,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import CompliantDataFrame
@@ -113,6 +115,29 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         validate_backend_version(self._implementation, self._backend_version)
         if validate_column_names:
             check_column_names_are_unique(native_dataframe.columns)
+
+    @classmethod
+    def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self:
+        implementation = context._implementation
+        tbl = _into_arrow_table(data, context)
+        if implementation.is_pandas():
+            native = tbl.to_pandas()
+        elif implementation.is_modin():  # pragma: no cover
+            from modin.pandas.utils import from_arrow as mpd_from_arrow
+
+            native = mpd_from_arrow(tbl)
+        elif implementation.is_cudf():  # pragma: no cover
+            native = implementation.to_native_namespace().DataFrame.from_arrow(tbl)
+        else:  # pragma: no cover
+            msg = "congratulations, you entered unreachable code - please report a bug"
+            raise AssertionError(msg)
+        return cls(
+            native,
+            implementation=implementation,
+            backend_version=context._backend_version,
+            version=context._version,
+            validate_column_names=True,
+        )
 
     @classmethod
     def from_dict(
