@@ -136,12 +136,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         *,
         preserve_broadcast: bool = False,
     ) -> Self:
-        result = self.__class__(
-            chunked_array(series),
-            name=self._name,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        result = self.from_native(chunked_array(series), name=self.name, context=self)
         if preserve_broadcast:
             result._broadcast = self._broadcast
         return result
@@ -157,11 +152,8 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     ) -> Self:
         version = context._version
         dtype_pa = narwhals_to_native_dtype(dtype, version) if dtype else None
-        return cls(
-            chunked_array([data], dtype_pa),
-            name=name,
-            backend_version=context._backend_version,
-            version=version,
+        return cls.from_native(
+            chunked_array([data], dtype_pa), name=name, context=context
         )
 
     def _from_scalar(self, value: Any) -> Self:
@@ -562,7 +554,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             return self._with_native(self.native.slice(abs(n)))
 
     def is_in(self: Self, other: Any) -> Self:
-        if isinstance(other, pa.ChunkedArray):
+        if self._is_native(other):
             value_set: ArrowChunkedArray | ArrowArray = other
         else:
             value_set = pa.array(other)
