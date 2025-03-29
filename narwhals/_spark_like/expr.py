@@ -12,7 +12,6 @@ from narwhals._compliant import LazyExpr
 from narwhals._expression_parsing import ExprKind
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
-from narwhals._spark_like.expr_name import SparkLikeExprNameNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
 from narwhals._spark_like.expr_struct import SparkLikeExprStructNamespace
 from narwhals._spark_like.utils import WindowInputs
@@ -30,6 +29,7 @@ if TYPE_CHECKING:
     from sqlframe.base.window import Window
     from typing_extensions import Self
 
+    from narwhals._compliant.typing import AliasNames
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
@@ -269,6 +269,16 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             func,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
+        )
+
+    def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
+        return type(self)(
+            call=self._call,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=func,
             backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
@@ -775,10 +785,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     @property
     def str(self: Self) -> SparkLikeExprStringNamespace:
         return SparkLikeExprStringNamespace(self)
-
-    @property
-    def name(self: Self) -> SparkLikeExprNameNamespace:
-        return SparkLikeExprNameNamespace(self)
 
     @property
     def dt(self: Self) -> SparkLikeExprDateTimeNamespace:
