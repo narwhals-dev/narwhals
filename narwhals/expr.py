@@ -2543,11 +2543,10 @@ class Expr:
             )
             raise ValueError(msg)
 
-        return self.__class__(
+        return self._with_callable(
             lambda plx: self._to_compliant_expr(plx).rank(
                 method=method, descending=descending
-            ),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
+            )
         )
 
     @property
