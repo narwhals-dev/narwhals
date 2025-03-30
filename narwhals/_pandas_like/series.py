@@ -196,12 +196,7 @@ class PandasLikeSeries(EagerSeries[Any]):
                 kwds["copy"] = False
             if index is not None and len(index):
                 kwds["index"] = index
-        return cls(
-            ns.Series(data, name=name, **kwds),
-            implementation=implementation,
-            backend_version=backend_version,
-            version=version,
-        )
+        return cls.from_native(ns.Series(data, name=name, **kwds), context=context)
 
     @staticmethod
     def _is_native(obj: Any) -> TypeIs[Any]:
