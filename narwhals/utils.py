@@ -41,6 +41,8 @@ from narwhals.dependencies import is_pandas_like_series
 from narwhals.dependencies import is_pandas_series
 from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
+from narwhals.dependencies import is_pyspark_dataframe
+from narwhals.dependencies import is_sqlframe_dataframe
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import InvalidOperationError
@@ -51,6 +53,7 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import pyarrow as pa
+    import pyspark.sql as pyspark_sql
     from typing_extensions import LiteralString
     from typing_extensions import ParamSpec
     from typing_extensions import Self
@@ -70,6 +73,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._polars.namespace import PolarsNamespace
+    from narwhals._spark_like.dataframe import SQLFrameDataFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals._translate import ArrowStreamExportable
     from narwhals._translate import IntoArrowTable
@@ -90,6 +94,7 @@ if TYPE_CHECKING:
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
     )
+    _SparkLikeDataFrame: TypeAlias = "SQLFrameDataFrame | pyspark_sql.DataFrame"
     _T = TypeVar("_T")
     _T1 = TypeVar("_T1")
     _T2 = TypeVar("_T2")
@@ -1516,6 +1521,10 @@ def passthrough_column_names(names: Sequence[str], /) -> Callable[[Any], Sequenc
 def _hasattr_static(obj: Any, attr: str) -> bool:
     sentinel = object()
     return getattr_static(obj, attr, sentinel) is not sentinel
+
+
+def is_spark_like_dataframe(obj: Any) -> TypeIs[_SparkLikeDataFrame]:
+    return is_sqlframe_dataframe(obj) or is_pyspark_dataframe(obj)
 
 
 def is_compliant_dataframe(
