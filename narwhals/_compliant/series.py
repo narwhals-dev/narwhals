@@ -301,7 +301,9 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
     def _from_scalar(self, value: Any) -> Self:
         return self.from_iterable([value], name=self.name, context=self)
 
-    def _with_native(self, series: Any, *, preserve_broadcast: bool = False) -> Self:
+    def _with_native(
+        self, series: NativeSeriesT, *, preserve_broadcast: bool = False
+    ) -> Self:
         """Return a new `CompliantSeries`, wrapping the native `series`.
 
         In cases when operations are known to not affect whether a result should
@@ -312,7 +314,9 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
         """
         ...
 
-    def __narwhals_namespace__(self) -> EagerNamespace[Any, Self, Any]: ...
+    def __narwhals_namespace__(
+        self,
+    ) -> EagerNamespace[Any, Self, Any, Any, NativeSeriesT]: ...
 
     def _to_expr(self) -> EagerExpr[Any, Any]:
         return self.__narwhals_namespace__()._expr._from_series(self)  # type: ignore[no-any-return]
