@@ -52,7 +52,7 @@ which implements `__arrow_c_stream__`:
 ```python exec="1" source="above" session="conversion" result="python"
 def df_to_polars(df_native: Any) -> pl.DataFrame:
     if hasattr(df_native, "__arrow_c_stream__"):
-        return nw.from_arrow(df_native, native_namespace=pl).to_native()
+        return nw.from_arrow(df_native, backend=pl).to_native()
     msg = (
         f"Expected object which implements '__arrow_c_stream__' got: {type(df_native)}"
     )
@@ -62,7 +62,7 @@ def df_to_polars(df_native: Any) -> pl.DataFrame:
 print(df_to_polars(df_duckdb))  # You can only execute this line of code once.
 ```
 
-It works to pass Polars to `native_namespace` here because Polars supports the [PyCapsule Interface](https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html) for import.
+It works to pass Polars to `backend` here because Polars supports the [PyCapsule Interface](https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html) for import.
 
 Note that the PyCapsule Interface makes no guarantee that you can call it repeatedly, so the approach above only works if you
 only expect to perform the conversion a single time on each input object.

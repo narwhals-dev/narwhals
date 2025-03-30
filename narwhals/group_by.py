@@ -86,15 +86,15 @@ class GroupBy(Generic[DataFrameT]):
         compliant_aggs = (
             *(x._to_compliant_expr(plx) for x in flat_aggs),
             *(
-                value._to_compliant_expr(plx).alias(key)
+                value.alias(key)._to_compliant_expr(plx)
                 for key, value in named_aggs.items()
             ),
         )
-        return self._df._from_compliant_dataframe(self._grouped.agg(*compliant_aggs))
+        return self._df._with_compliant(self._grouped.agg(*compliant_aggs))
 
     def __iter__(self: Self) -> Iterator[tuple[Any, DataFrameT]]:
         yield from (
-            (tupleify(key), self._df._from_compliant_dataframe(df))
+            (tupleify(key), self._df._with_compliant(df))
             for (key, df) in self._grouped.__iter__()
         )
 
@@ -176,8 +176,8 @@ class LazyGroupBy(Generic[LazyFrameT]):
         compliant_aggs = (
             *(x._to_compliant_expr(plx) for x in flat_aggs),
             *(
-                value._to_compliant_expr(plx).alias(key)
+                value.alias(key)._to_compliant_expr(plx)
                 for key, value in named_aggs.items()
             ),
         )
-        return self._df._from_compliant_dataframe(self._grouped.agg(*compliant_aggs))
+        return self._df._with_compliant(self._grouped.agg(*compliant_aggs))

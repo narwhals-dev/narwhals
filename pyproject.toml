@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.30.0"
+version = "1.32.0"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
@@ -20,6 +20,12 @@ classifiers = [
   "Operating System :: OS Independent",
   "Typing :: Typed",
 ]
+
+[project.urls]
+Homepage = "https://github.com/narwhals-dev/narwhals"
+Documentation = "https://narwhals-dev.github.io/narwhals/"
+Repository = "https://github.com/narwhals-dev/narwhals"
+"Bug Tracker" = "https://github.com/narwhals-dev/narwhals/issues"
 
 [project.optional-dependencies]
 # These should be aligned with MIN_VERSIONS in narwhals/utils.py
@@ -38,6 +44,11 @@ dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.0"]
 ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
 sqlframe = ["sqlframe>=3.22.0"]
+
+[dependency-groups]
+core = [
+  "narwhals[duckdb,pandas,polars,pyarrow,sqlframe]"
+] 
 tests = [
   "covdefaults",
   "pytest",
@@ -45,28 +56,21 @@ tests = [
   "pytest-randomly",
   "pytest-env",
   "hypothesis",
-  "typing_extensions",
-]
-typing = [
-  "pandas-stubs",
-  "typing_extensions",
-  "mypy~=1.15.0",
-  "pyright"
-]
-dev = [
-  "pre-commit",
-  "narwhals[tests]",
-  "narwhals[typing]",
-]
-core = [
-  "duckdb",
-  "pandas",
-  "polars",
-  "pyarrow",
-  "pyarrow-stubs",
 ]
 extra = [  # heavier dependencies we don't necessarily need in every testing job
   "scikit-learn",
+]
+typing = [
+  "hypothesis",
+  "pytest",
+  "pandas-stubs==2.2.3.250308",
+  "typing_extensions",
+  "mypy~=1.15.0",
+  "pyright",
+  "pyarrow-stubs==17.18",
+  "sqlframe",
+  "polars==1.25.2",
+  "uv",
 ]
 docs = [
   "black",  # required by mkdocstrings_handlers
@@ -78,16 +82,29 @@ docs = [
   "mkdocs-material",
   "mkdocstrings[python]",
   "mkdocstrings-python>=1.16",
+  "sqlframe",
   "pandas",
   "polars>=1.0.0",
   "pyarrow",
 ]
-
-[project.urls]
-Homepage = "https://github.com/narwhals-dev/narwhals"
-Documentation = "https://narwhals-dev.github.io/narwhals/"
-Repository = "https://github.com/narwhals-dev/narwhals"
-"Bug Tracker" = "https://github.com/narwhals-dev/narwhals/issues"
+dev = [
+  "pre-commit",
+  {include-group = "tests"},
+  {include-group = "typing"},
+]
+dev-core = [
+  {include-group = "dev"},
+  {include-group = "core"},
+]
+core-tests = [
+  {include-group = "core"},
+  {include-group = "tests"},
+]
+local-dev = [
+  {include-group = "dev"},
+  {include-group = "core"},
+  {include-group = "docs"}
+]
 
 [tool.hatch.build]
 exclude = [
@@ -101,7 +118,6 @@ exclude = [
   "mkdocs.yml",
   "noxfile.py",
 ]
-
 
 [tool.ruff]
 line-length = 90
@@ -155,6 +171,9 @@ ignore = [
   "TD003",   # missing-todo-link
   "TD004",   # missing-todo-colon
 ]
+
+[tool.ruff.lint.flake8-builtins]
+builtins-ignorelist = ["format"]
 
 [tool.ruff.lint.per-file-ignores]
 "narwhals/expr_dt.py" = ["RUF002"]
@@ -224,10 +243,10 @@ omit = [
   'narwhals/stable/v1/typing.py',
   'narwhals/this.py',
   'narwhals/_arrow/typing.py',
+  'narwhals/_duckdb/typing.py',
+  'narwhals/_spark_like/typing.py',
   # we can't run this in every environment that we measure coverage on due to upper-bound constraits
   'narwhals/_ibis/*',
-  # the latest pyspark (3.5) doesn't officially support Python 3.12 and 3.13
-  'narwhals/_spark_like/*',
   # we don't run these in every environment
   'tests/ibis_test.py',
   # Remove after finishing eager sub-protocols
@@ -236,7 +255,9 @@ omit = [
 exclude_also = [
   "if sys.version_info() <",
   "if .*implementation is Implementation.CUDF",
+  "if .*implementation is Implementation.PYSPARK",
   "if .*implementation.is_cudf",
+  "if .*implementation.is_pyspark",
   'request.applymarker\(pytest.mark.xfail',
   'backend_version <',
   'if "cudf" in str\(constructor',
@@ -259,7 +280,7 @@ module = [
   "modin.*",
   "numpy.*",
   "sklearn.*",
-  "sqlframe.*",
+  "pyspark.*",
 ]
 # TODO: remove follow_imports
 follow_imports = "skip"

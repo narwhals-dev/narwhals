@@ -4,6 +4,7 @@ import re
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Sequence
 
 import duckdb
 
@@ -19,19 +20,22 @@ if TYPE_CHECKING:
 lit = duckdb.ConstantExpression
 """Alias for `duckdb.ConstantExpression`."""
 
+when = duckdb.CaseExpression
+"""Alias for `duckdb.CaseExpression`."""
 
-def maybe_evaluate_expr(
-    df: DuckDBLazyFrame, obj: DuckDBExpr | object
-) -> duckdb.Expression:
-    from narwhals._duckdb.expr import DuckDBExpr
 
-    if isinstance(obj, DuckDBExpr):
-        column_results = obj._call(df)
-        if len(column_results) != 1:
-            msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
-            raise ValueError(msg)
-        return column_results[0]
-    return duckdb.ConstantExpression(obj)
+class WindowInputs:
+    __slots__ = ("expr", "order_by", "partition_by")
+
+    def __init__(
+        self,
+        expr: duckdb.Expression,
+        partition_by: Sequence[str],
+        order_by: Sequence[str],
+    ) -> None:
+        self.expr = expr
+        self.partition_by = partition_by
+        self.order_by = order_by
 
 
 def evaluate_exprs(
@@ -114,6 +118,10 @@ def native_to_narwhals_dtype(duckdb_dtype: str, version: Version) -> DType:
         )
     if duckdb_dtype.startswith("DECIMAL("):
         return dtypes.Decimal()
+    if duckdb_dtype == "TIME":
+        return dtypes.Time()
+    if duckdb_dtype == "BLOB":
+        return dtypes.Binary()
     return dtypes.Unknown()  # pragma: no cover
 
 
@@ -150,6 +158,10 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
         return "VARCHAR"
     if isinstance_or_issubclass(dtype, dtypes.Boolean):  # pragma: no cover
         return "BOOLEAN"
+    if isinstance_or_issubclass(dtype, dtypes.Time):
+        return "TIME"
+    if isinstance_or_issubclass(dtype, dtypes.Binary):
+        return "BLOB"
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
         msg = "Categorical not supported by DuckDB"
         raise NotImplementedError(msg)
@@ -183,3 +195,18 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
         return f"{duckdb_inner}{duckdb_shape_fmt}"
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
+
+
+def generate_partition_by_sql(*partition_by: str) -> str:
+    if not partition_by:
+        return ""
+    by_sql = ", ".join([f'"{x}"' for x in partition_by])
+    return f"partition by {by_sql}"
+
+
+def generate_order_by_sql(*order_by: str, ascending: bool) -> str:
+    if ascending:
+        by_sql = ", ".join([f'"{x}" asc nulls first' for x in order_by])
+    else:
+        by_sql = ", ".join([f'"{x}" desc nulls last' for x in order_by])
+    return f"order by {by_sql}"

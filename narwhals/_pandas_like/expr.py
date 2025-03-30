@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -8,22 +7,18 @@ from typing import Literal
 from typing import Sequence
 
 from narwhals._compliant import EagerExpr
-from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._expression_parsing import is_elementary_expression
-from narwhals._pandas_like.group_by import AGGREGATIONS_TO_PANDAS_EQUIVALENT
+from narwhals._pandas_like.group_by import PandasLikeGroupBy
 from narwhals._pandas_like.series import PandasLikeSeries
-from narwhals.dependencies import get_numpy
-from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals._expression_parsing import ExprMetadata
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
-    from narwhals.dtypes import DType
     from narwhals.utils import Implementation
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -93,6 +88,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         self._backend_version = backend_version
         self._version = version
         self._call_kwargs = call_kwargs or {}
+        self._metadata: ExprMetadata | None = None
 
     def __narwhals_namespace__(self: Self) -> PandasLikeNamespace:
         from narwhals._pandas_like.namespace import PandasLikeNamespace
@@ -109,8 +105,8 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         evaluate_column_names: Callable[[PandasLikeDataFrame], Sequence[str]],
         /,
         *,
-        function_name: str,
         context: _FullContext,
+        function_name: str = "",
     ) -> Self:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             try:
@@ -200,7 +196,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
     def over(
         self: Self,
         partition_by: Sequence[str],
-        kind: ExprKind,
         order_by: Sequence[str] | None,
     ) -> Self:
         if not partition_by:
@@ -213,12 +208,12 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 df = df.with_row_index(token).sort(
                     *order_by, descending=False, nulls_last=False
                 )
-                results = self(df)
+                results = self(df.drop([token], strict=True))
                 sorting_indices = df[token]
                 for s in results:
                     s._scatter_in_place(sorting_indices, s)
                 return results
-        elif not is_elementary_expression(self):
+        elif not self._is_elementary():
             msg = (
                 "Only elementary expressions are supported for `.over` in pandas-like backends.\n\n"
                 "Please see: "
@@ -226,16 +221,15 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             )
             raise NotImplementedError(msg)
         else:
-            function_name: str = re.sub(r"(\w+->)", "", self._function_name)
+            function_name = PandasLikeGroupBy._leaf_name(self)
             pandas_function_name = WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT.get(
-                function_name,
-                AGGREGATIONS_TO_PANDAS_EQUIVALENT.get(function_name),
+                function_name, PandasLikeGroupBy._REMAP_AGGS.get(function_name)
             )
             if pandas_function_name is None:
                 msg = (
                     f"Unsupported function: {function_name} in `over` context.\n\n"
                     f"Supported functions are {', '.join(WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT)}\n"
-                    f"and {', '.join(AGGREGATIONS_TO_PANDAS_EQUIVALENT)}."
+                    f"and {', '.join(PandasLikeGroupBy._REMAP_AGGS)}."
                 )
                 raise NotImplementedError(msg)
             pandas_kwargs = window_kwargs_to_pandas_equivalent(
@@ -276,7 +270,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     res_native = df._native_frame.groupby(partition_by)[
                         list(output_names)
                     ].transform(pandas_function_name, **pandas_kwargs)
-                result_frame = df._from_native_frame(res_native).rename(
+                result_frame = df._with_native(res_native).rename(
                     dict(zip(output_names, aliases))
                 )
                 results = [result_frame[name] for name in aliases]
@@ -292,39 +286,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             func,
             depth=self._depth + 1,
             function_name=self._function_name + "->over",
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-
-    def map_batches(
-        self: Self,
-        function: Callable[[Any], Any],
-        return_dtype: DType | type[DType] | None,
-    ) -> Self:
-        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            input_series_list = self._call(df)
-            output_names = [input_series.name for input_series in input_series_list]
-            result = [function(series) for series in input_series_list]
-            if is_numpy_array(result[0]) or (
-                (np := get_numpy()) is not None and np.isscalar(result[0])
-            ):
-                result = [
-                    df.__narwhals_namespace__()
-                    ._create_compliant_series(array)
-                    .alias(output_name)
-                    for array, output_name in zip(result, output_names)
-                ]
-            if return_dtype is not None:
-                result = [series.cast(return_dtype) for series in result]
-            return result
-
-        return self.__class__(
-            func,
-            depth=self._depth + 1,
-            function_name=self._function_name + "->map_batches",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             implementation=self._implementation,

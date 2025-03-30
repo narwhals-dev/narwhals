@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import sys
 from contextlib import nullcontext as does_not_raise
+from importlib.util import find_spec
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -8,9 +10,6 @@ from typing import Literal
 from typing import cast
 
 import numpy as np
-import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 
 import narwhals as unstable_nw
@@ -22,22 +21,9 @@ if TYPE_CHECKING:
 
     from narwhals.utils import Version
 
-data: dict[str, Any] = {"a": [1, 2, 3]}
-
-df_pd = pd.DataFrame(data)
-df_pl = pl.DataFrame(data)
-lf_pl = pl.LazyFrame(data)
-df_mpd = maybe_get_modin_df(df_pd)
-df_pa = pa.table(data)
-
-series_pd = pd.Series(data["a"])
-series_pl = pl.Series(data["a"])
-series_mpd = df_mpd["a"]
-series_pa = pa.chunked_array([data["a"]])
-
 
 class MockDataFrame:
-    def _change_version(self: Self, _version: Version) -> MockDataFrame:
+    def _with_version(self: Self, _version: Version) -> MockDataFrame:
         return self
 
     def __narwhals_dataframe__(self: Self) -> Any:
@@ -45,7 +31,7 @@ class MockDataFrame:
 
 
 class MockLazyFrame:
-    def _change_version(self: Self, _version: Version) -> MockLazyFrame:
+    def _with_version(self: Self, _version: Version) -> MockLazyFrame:
         return self
 
     def __narwhals_lazyframe__(self: Self) -> Any:
@@ -53,35 +39,80 @@ class MockLazyFrame:
 
 
 class MockSeries:
-    def _change_version(self: Self, _version: Version) -> MockSeries:
+    def _with_version(self: Self, _version: Version) -> MockSeries:
         return self
 
     def __narwhals_series__(self: Self) -> Any:
         return self
 
 
-eager_frames = [
-    df_pd,
-    df_pl,
-    df_mpd,
-    df_pa,
+data: dict[str, Any] = {"a": [1, 2, 3]}
+
+eager_frames: list[Any] = [
     MockDataFrame(),
 ]
-
-lazy_frames = [
-    lf_pl,
+lazy_frames: list[Any] = [
     MockLazyFrame(),
 ]
-
-all_frames = [*eager_frames, *lazy_frames]
-
-all_series = [
-    series_pd,
-    series_pl,
-    series_mpd,
-    series_pa,
+all_series: list[Any] = [
     MockSeries(),
 ]
+
+if find_spec("pandas") is not None:
+    import pandas as pd
+
+    df_pd: pd.DataFrame | None = pd.DataFrame(data)
+    assert df_pd is not None
+    df_mpd = maybe_get_modin_df(df_pd)
+    series_pd = pd.Series(data["a"])
+    series_mpd = df_mpd["a"]
+
+    eager_frames += [
+        df_pd,
+        df_mpd,
+    ]
+    all_series += [
+        series_pd,
+        series_mpd,
+    ]
+else:  # pragma: no cover
+    df_pd = None
+
+if find_spec("polars") is not None:
+    import polars as pl
+
+    df_pl = pl.DataFrame(data)
+    lf_pl: pl.LazyFrame | None = pl.LazyFrame(data)
+    series_pl = pl.Series(data["a"])
+
+    all_series += [
+        series_pl,
+    ]
+    eager_frames += [
+        df_pl,
+    ]
+    lazy_frames += [
+        lf_pl,
+    ]
+else:  # pragma: no cover
+    lf_pl = None
+
+if find_spec("pyarrow") is not None:  # pragma: no cover
+    import pyarrow as pa
+
+    df_pa = pa.table(data)
+    series_pa = pa.chunked_array([data["a"]])
+
+    eager_frames += [
+        df_pa,
+    ]
+    all_series += [
+        series_pa,
+    ]
+else:  # pragma: no cover
+    pass
+
+all_frames = [*eager_frames, *lazy_frames]
 
 
 @pytest.mark.parametrize(
@@ -176,6 +207,7 @@ def test_invalid_series_combination() -> None:
         nw.from_native(MockSeries(), series_only=True, allow_series=False)  # type: ignore[call-overload]
 
 
+@pytest.mark.skipif(df_pd is None, reason="pandas not found")
 def test_pandas_like_validate() -> None:
     df1 = pd.DataFrame({"a": [1, 2, 3]})
     df2 = pd.DataFrame({"b": [1, 2, 3]})
@@ -187,6 +219,7 @@ def test_pandas_like_validate() -> None:
         nw.from_native(df)
 
 
+@pytest.mark.skipif(lf_pl is None, reason="polars not found")
 def test_init_already_narwhals() -> None:
     df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
     result = nw.from_native(df)
@@ -196,6 +229,7 @@ def test_init_already_narwhals() -> None:
     assert result_s is s
 
 
+@pytest.mark.skipif(lf_pl is None, reason="polars not found")
 def test_init_already_narwhals_unstable() -> None:
     df = unstable_nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
     result = unstable_nw.from_native(df)
@@ -205,6 +239,7 @@ def test_init_already_narwhals_unstable() -> None:
     assert result_s is s
 
 
+@pytest.mark.skipif(df_pd is None, reason="pandas not found")
 def test_series_only_dask() -> None:
     pytest.importorskip("dask")
     import dask.dataframe as dd
@@ -216,6 +251,7 @@ def test_series_only_dask() -> None:
     assert nw.from_native(dframe, series_only=True, strict=False) is dframe
 
 
+@pytest.mark.skipif(df_pd is None, reason="pandas not found")
 @pytest.mark.parametrize(
     ("eager_only", "context"),
     [
@@ -236,6 +272,7 @@ def test_eager_only_lazy_dask(eager_only: Any, context: Any) -> None:
         assert nw.from_native(dframe, eager_only=eager_only, strict=False) is dframe
 
 
+@pytest.mark.skipif(sys.version_info < (3, 9), reason="too old for sqlframe")
 def test_series_only_sqlframe() -> None:  # pragma: no cover
     pytest.importorskip("sqlframe")
     from sqlframe.duckdb import DuckDBSession
@@ -254,6 +291,7 @@ def test_series_only_sqlframe() -> None:  # pragma: no cover
         (True, pytest.raises(TypeError, match="Cannot only use `eager_only`")),
     ],
 )
+@pytest.mark.skipif(sys.version_info < (3, 9), reason="too old for sqlframe")
 def test_eager_only_sqlframe(eager_only: Any, context: Any) -> None:  # pragma: no cover
     pytest.importorskip("sqlframe")
     from sqlframe.duckdb import DuckDBSession
@@ -266,6 +304,7 @@ def test_eager_only_sqlframe(eager_only: Any, context: Any) -> None:  # pragma: 
         assert isinstance(res, nw.LazyFrame)
 
 
+@pytest.mark.skipif(lf_pl is None, reason="polars not found")
 def test_from_native_strict_false_typing() -> None:
     df = pl.DataFrame()
     nw.from_native(df, strict=False)
@@ -296,7 +335,6 @@ def test_from_native_strict_native_series() -> None:
     obj: list[int] = [1, 2, 3, 4]
     array_like = cast("Iterable[Any]", obj)
     not_array_like: Literal[1] = 1
-    np_array = pl.Series(obj).to_numpy()
 
     with pytest.raises(TypeError, match="got.+list"):
         nw.from_native(obj, series_only=True)  # type: ignore[call-overload]
@@ -307,5 +345,25 @@ def test_from_native_strict_native_series() -> None:
     with pytest.raises(TypeError, match="got.+int"):
         nw.from_native(not_array_like, series_only=True)  # type: ignore[call-overload]
 
+
+@pytest.mark.skipif(lf_pl is None, reason="polars not found")
+def test_from_native_strict_native_series_polars() -> None:
+    obj: list[int] = [1, 2, 3, 4]
+    np_array = pl.Series(obj).to_numpy()
     with pytest.raises(TypeError, match="got.+numpy.ndarray"):
         nw.from_native(np_array, series_only=True)  # type: ignore[call-overload]
+
+
+@pytest.mark.skipif(lf_pl is None, reason="polars not found")
+def test_from_native_lazyframe() -> None:
+    assert lf_pl is not None
+    stable_lazy = nw.from_native(lf_pl)
+    unstable_lazy = unstable_nw.from_native(lf_pl)
+    if TYPE_CHECKING:
+        from typing_extensions import assert_type
+
+        assert_type(stable_lazy, nw.LazyFrame[pl.LazyFrame])
+        assert_type(unstable_lazy, unstable_nw.LazyFrame[pl.LazyFrame])
+
+    assert isinstance(stable_lazy, nw.LazyFrame)
+    assert isinstance(unstable_lazy, unstable_nw.LazyFrame)

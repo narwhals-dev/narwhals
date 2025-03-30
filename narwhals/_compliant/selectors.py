@@ -20,7 +20,6 @@ from narwhals.utils import dtype_matches_time_unit_and_time_zone
 from narwhals.utils import get_column_names
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_compliant_dataframe
-from narwhals.utils import is_tracks_depth
 
 if not TYPE_CHECKING:  # pragma: no cover
     # TODO @dangotbanned: Remove after dropping `3.8` (#2084)
@@ -62,12 +61,14 @@ __all__ = [
 ]
 
 
-SeriesOrExprT = TypeVar("SeriesOrExprT", bound="CompliantSeries | NativeExpr")
-SeriesT = TypeVar("SeriesT", bound="CompliantSeries")
+SeriesOrExprT = TypeVar("SeriesOrExprT", bound="CompliantSeries[Any] | NativeExpr")
+SeriesT = TypeVar("SeriesT", bound="CompliantSeries[Any]")
 ExprT = TypeVar("ExprT", bound="NativeExpr")
-FrameT = TypeVar("FrameT", bound="CompliantDataFrame[Any] | CompliantLazyFrame")
-DataFrameT = TypeVar("DataFrameT", bound="CompliantDataFrame[Any]")
-LazyFrameT = TypeVar("LazyFrameT", bound="CompliantLazyFrame")
+FrameT = TypeVar(
+    "FrameT", bound="CompliantDataFrame[Any, Any, Any] | CompliantLazyFrame[Any, Any]"
+)
+DataFrameT = TypeVar("DataFrameT", bound="CompliantDataFrame[Any, Any, Any]")
+LazyFrameT = TypeVar("LazyFrameT", bound="CompliantLazyFrame[Any, Any]")
 SelectorOrExpr: TypeAlias = (
     "CompliantSelector[FrameT, SeriesOrExprT] | CompliantExpr[FrameT, SeriesOrExprT]"
 )
@@ -248,8 +249,7 @@ class CompliantSelector(
                 return [x for x in lhs_names if x not in rhs_names]
 
             return self.selectors._selector(series, names)
-        else:
-            return self._to_expr() - other
+        return self._to_expr() - other
 
     @overload
     def __or__(self: Self, other: Self) -> Self: ...
@@ -274,8 +274,7 @@ class CompliantSelector(
                 return [*(x for x in lhs_names if x not in rhs_names), *rhs_names]
 
             return self.selectors._selector(names, series)
-        else:
-            return self._to_expr() | other
+        return self._to_expr() | other
 
     @overload
     def __and__(self: Self, other: Self) -> Self: ...
@@ -297,19 +296,14 @@ class CompliantSelector(
                 return [x for x in lhs_names if x in rhs_names]
 
             return self.selectors._selector(series, names)
-        else:
-            return self._to_expr() & other
+        return self._to_expr() & other
 
     def __invert__(self: Self) -> CompliantSelector[FrameT, SeriesOrExprT]:
         return self.selectors.all() - self  # type: ignore[no-any-return]
 
-    def __repr__(self: Self) -> str:  # pragma: no cover
-        s = f"depth={self._depth}, " if is_tracks_depth(self._implementation) else ""
-        return f"{type(self).__name__}({s}function_name={self._function_name})"
-
 
 def _eval_lhs_rhs(
-    df: CompliantDataFrame[Any] | CompliantLazyFrame,
+    df: CompliantDataFrame[Any, Any, Any] | CompliantLazyFrame[Any, Any],
     lhs: CompliantExpr[Any, Any],
     rhs: CompliantExpr[Any, Any],
 ) -> tuple[Sequence[str], Sequence[str]]:

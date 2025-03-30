@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
+from typing import Iterable
 from typing import Iterator
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 from typing import cast
 from typing import overload
@@ -13,22 +16,24 @@ import numpy as np
 from narwhals._compliant import EagerDataFrame
 from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
 from narwhals._pandas_like.series import PandasLikeSeries
+from narwhals._pandas_like.utils import align_and_extract_native
 from narwhals._pandas_like.utils import align_series_full_broadcast
 from narwhals._pandas_like.utils import check_column_names_are_unique
 from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
-from narwhals._pandas_like.utils import create_compliant_series
-from narwhals._pandas_like.utils import extract_dataframe_comparand
+from narwhals._pandas_like.utils import get_dtype_backend
 from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
 from narwhals._pandas_like.utils import pivot_table
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
+from narwhals._pandas_like.utils import set_index
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantDataFrame
-from narwhals.typing import CompliantLazyFrame
+from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
+from narwhals.utils import _into_arrow_table
+from narwhals.utils import _remap_full_join_keys
 from narwhals.utils import check_column_exists
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
@@ -46,15 +51,24 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
 
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
+    from narwhals.schema import Schema
+    from narwhals.typing import CompliantDataFrame
+    from narwhals.typing import CompliantLazyFrame
+    from narwhals.typing import DTypeBackend
     from narwhals.typing import SizeUnit
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
+
+    Constructor: TypeAlias = Callable[..., pd.DataFrame]
 
 
 CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
@@ -83,7 +97,7 @@ CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
 )
 
 
-class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame):
+class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "Any"]):
     # --- not in the spec ---
     def __init__(
         self: Self,
@@ -101,6 +115,109 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
         validate_backend_version(self._implementation, self._backend_version)
         if validate_column_names:
             check_column_names_are_unique(native_dataframe.columns)
+
+    @classmethod
+    def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self:
+        implementation = context._implementation
+        tbl = _into_arrow_table(data, context)
+        if implementation.is_pandas():
+            native = tbl.to_pandas()
+        elif implementation.is_modin():  # pragma: no cover
+            from modin.pandas.utils import from_arrow as mpd_from_arrow
+
+            native = mpd_from_arrow(tbl)
+        elif implementation.is_cudf():  # pragma: no cover
+            native = implementation.to_native_namespace().DataFrame.from_arrow(tbl)
+        else:  # pragma: no cover
+            msg = "congratulations, you entered unreachable code - please report a bug"
+            raise AssertionError(msg)
+        return cls(
+            native,
+            implementation=implementation,
+            backend_version=context._backend_version,
+            version=context._version,
+            validate_column_names=True,
+        )
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+        /,
+        *,
+        context: _FullContext,
+        schema: Mapping[str, DType] | Schema | None,
+    ) -> Self:
+        from narwhals.schema import Schema
+
+        implementation = context._implementation
+        backend_version = context._backend_version
+        version = context._version
+        ns = implementation.to_native_namespace()
+        Series = cast("type[pd.Series[Any]]", ns.Series)  # noqa: N806
+        DataFrame = cast("type[pd.DataFrame]", ns.DataFrame)  # noqa: N806
+        aligned_data: dict[str, pd.Series[Any] | Any] = {}
+        left_most: PandasLikeSeries | None = None
+        for name, series in data.items():
+            if isinstance(series, Series):
+                compliant = PandasLikeSeries(
+                    series,
+                    implementation=implementation,
+                    backend_version=backend_version,
+                    version=version,
+                )
+                if left_most is None:
+                    left_most = compliant
+                    aligned_data[name] = series
+                else:
+                    aligned_data[name] = align_and_extract_native(left_most, compliant)[1]
+            else:
+                aligned_data[name] = series
+
+        native = DataFrame.from_dict(aligned_data)
+        if schema:
+            it: Iterable[DTypeBackend] = (
+                get_dtype_backend(dtype, implementation) for dtype in native.dtypes
+            )
+            native = native.astype(Schema(schema).to_pandas(it))
+        return cls(
+            native,
+            implementation=implementation,
+            backend_version=backend_version,
+            version=version,
+            validate_column_names=True,
+        )
+
+    @classmethod
+    def from_numpy(
+        cls,
+        data: _2DArray,
+        /,
+        *,
+        context: _FullContext,
+        schema: Mapping[str, DType] | Schema | Sequence[str] | None,
+    ) -> Self:
+        from narwhals.schema import Schema
+
+        implementation = context._implementation
+        DataFrame: Constructor = implementation.to_native_namespace().DataFrame  # noqa: N806
+        if isinstance(schema, (Mapping, Schema)):
+            it: Iterable[DTypeBackend] = (
+                get_dtype_backend(native_type, implementation)
+                for native_type in schema.values()
+            )
+            native = DataFrame(data, columns=schema.keys()).astype(
+                Schema(schema).to_pandas(it)
+            )
+        else:
+            native = DataFrame(data, columns=cls._numpy_column_names(data, schema))
+        return cls(
+            native,
+            implementation=implementation,
+            backend_version=context._backend_version,
+            version=context._version,
+            validate_column_names=True,
+        )
 
     def __narwhals_dataframe__(self: Self) -> Self:
         return self
@@ -127,20 +244,18 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
         raise AssertionError(msg)
 
     def __len__(self: Self) -> int:
-        return len(self._native_frame)
+        return len(self.native)
 
-    def _change_version(self: Self, version: Version) -> Self:
+    def _with_version(self: Self, version: Version) -> Self:
         return self.__class__(
-            self._native_frame,
+            self.native,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=version,
             validate_column_names=False,
         )
 
-    def _from_native_frame(
-        self: Self, df: Any, *, validate_column_names: bool = True
-    ) -> Self:
+    def _with_native(self: Self, df: Any, *, validate_column_names: bool = True) -> Self:
         return self.__class__(
             df,
             implementation=self._implementation,
@@ -149,9 +264,26 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
             validate_column_names=validate_column_names,
         )
 
+    def _extract_comparand(self, other: PandasLikeSeries) -> pd.Series[Any]:
+        index = self.native.index
+        if other._broadcast:
+            s = other.native
+            return type(s)(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
+        if (len_other := len(other)) != (len_idx := len(index)):
+            msg = f"Expected object of length {len_idx}, got: {len_other}."
+            raise ShapeError(msg)
+        if other.native.index is not index:
+            return set_index(
+                other.native,
+                index,
+                implementation=other._implementation,
+                backend_version=other._backend_version,
+            )
+        return other.native
+
     def get_column(self: Self, name: str) -> PandasLikeSeries:
         return PandasLikeSeries(
-            self._native_frame[name],
+            self.native[name],
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
@@ -200,7 +332,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
 
         if isinstance(item, str):
             return PandasLikeSeries(
-                self._native_frame[item],
+                self.native[item],
                 implementation=self._implementation,
                 backend_version=self._backend_version,
                 version=self._version,
@@ -213,20 +345,20 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
         ):
             if len(item[1]) == 0:
                 # Return empty dataframe
-                return self._from_native_frame(
-                    self._native_frame.__class__(), validate_column_names=False
+                return self._with_native(
+                    self.native.__class__(), validate_column_names=False
                 )
             if all(isinstance(x, int) for x in item[1]):  # type: ignore[var-annotated]
-                return self._from_native_frame(
-                    self._native_frame.iloc[item], validate_column_names=False
+                return self._with_native(
+                    self.native.iloc[item], validate_column_names=False
                 )
             if all(isinstance(x, str) for x in item[1]):  # type: ignore[var-annotated]
                 indexer = (
                     item[0],
-                    self._native_frame.columns.get_indexer(item[1]),
+                    self.native.columns.get_indexer(item[1]),
                 )
-                return self._from_native_frame(
-                    self._native_frame.iloc[indexer], validate_column_names=False
+                return self._with_native(
+                    self.native.iloc[indexer], validate_column_names=False
                 )
             msg = (
                 f"Expected sequence str or int, got: {type(item[1])}"  # pragma: no cover
@@ -234,20 +366,20 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
             raise TypeError(msg)  # pragma: no cover
 
         elif isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], slice):
-            columns = self._native_frame.columns
+            columns = self.native.columns
             if item[1] == slice(None):
-                return self._from_native_frame(
-                    self._native_frame.iloc[item[0], :], validate_column_names=False
+                return self._with_native(
+                    self.native.iloc[item[0], :], validate_column_names=False
                 )
             if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
                 start, stop, step = convert_str_slice_to_int_slice(item[1], columns)
-                return self._from_native_frame(
-                    self._native_frame.iloc[item[0], slice(start, stop, step)],
+                return self._with_native(
+                    self.native.iloc[item[0], slice(start, stop, step)],
                     validate_column_names=False,
                 )
             if isinstance(item[1].start, int) or isinstance(item[1].stop, int):
-                return self._from_native_frame(
-                    self._native_frame.iloc[
+                return self._with_native(
+                    self.native.iloc[
                         item[0], slice(item[1].start, item[1].stop, item[1].step)
                     ],
                     validate_column_names=False,
@@ -257,10 +389,10 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
 
         elif isinstance(item, tuple) and len(item) == 2:
             if isinstance(item[1], str):
-                index = (item[0], self._native_frame.columns.get_loc(item[1]))
-                native_series = self._native_frame.iloc[index]
+                index = (item[0], self.native.columns.get_loc(item[1]))
+                native_series = self.native.iloc[index]
             elif isinstance(item[1], int):
-                native_series = self._native_frame.iloc[item]
+                native_series = self.native.iloc[item]
             else:  # pragma: no cover
                 msg = f"Expected str or int, got: {type(item[1])}"
                 raise TypeError(msg)
@@ -274,31 +406,27 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
 
         elif is_sequence_but_not_str(item) or is_numpy_array_1d(item):
             if all(isinstance(x, str) for x in item) and len(item) > 0:
-                return self._from_native_frame(
+                return self._with_native(
                     select_columns_by_name(
-                        self._native_frame,
+                        self.native,
                         cast("list[str] | _1DArray", item),
                         self._backend_version,
                         self._implementation,
                     ),
                     validate_column_names=False,
                 )
-            return self._from_native_frame(
-                self._native_frame.iloc[item], validate_column_names=False
-            )
+            return self._with_native(self.native.iloc[item], validate_column_names=False)
 
         elif isinstance(item, slice):
             if isinstance(item.start, str) or isinstance(item.stop, str):
                 start, stop, step = convert_str_slice_to_int_slice(
-                    item, self._native_frame.columns
+                    item, self.native.columns
                 )
-                return self._from_native_frame(
-                    self._native_frame.iloc[:, slice(start, stop, step)],
+                return self._with_native(
+                    self.native.iloc[:, slice(start, stop, step)],
                     validate_column_names=False,
                 )
-            return self._from_native_frame(
-                self._native_frame.iloc[item], validate_column_names=False
-            )
+            return self._with_native(self.native.iloc[item], validate_column_names=False)
 
         else:  # pragma: no cover
             msg = f"Expected str or slice, got: {type(item)}"
@@ -307,7 +435,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
     # --- properties ---
     @property
     def columns(self: Self) -> list[str]:
-        return self._native_frame.columns.tolist()
+        return self.native.columns.tolist()
 
     @overload
     def rows(
@@ -337,12 +465,12 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
                 # Extract the row values from the named rows
                 return [tuple(row.values()) for row in self.rows(named=True)]
 
-            return list(self._native_frame.itertuples(index=False, name=None))
+            return list(self.native.itertuples(index=False, name=None))
 
-        return self._native_frame.to_dict(orient="records")
+        return self.native.to_dict(orient="records")
 
     def iter_columns(self) -> Iterator[PandasLikeSeries]:
-        for _name, series in self._native_frame.items():  # noqa: PERF102
+        for _name, series in self.native.items():  # noqa: PERF102
             yield PandasLikeSeries(
                 series,
                 implementation=self._implementation,
@@ -357,30 +485,28 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
         *,
         named: bool,
         buffer_size: int,
-    ) -> Iterator[list[tuple[Any, ...]]] | Iterator[list[dict[str, Any]]]:
+    ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
         # The param ``buffer_size`` is only here for compatibility with the Polars API
         # and has no effect on the output.
         if not named:
-            yield from self._native_frame.itertuples(index=False, name=None)
+            yield from self.native.itertuples(index=False, name=None)
         else:
-            col_names = self._native_frame.columns
-            yield from (
-                dict(zip(col_names, row))
-                for row in self._native_frame.itertuples(index=False)
-            )  # type: ignore[misc]
+            col_names = self.native.columns
+            for row in self.native.itertuples(index=False):
+                yield dict(zip(col_names, row))
 
     @property
     def schema(self: Self) -> dict[str, DType]:
-        native_dtypes = self._native_frame.dtypes
+        native_dtypes = self.native.dtypes
         return {
             col: native_to_narwhals_dtype(
                 native_dtypes[col], self._version, self._implementation
             )
             if native_dtypes[col] != "object"
             else object_native_to_narwhals_dtype(
-                self._native_frame[col], self._version, self._implementation
+                self.native[col], self._version, self._implementation
             )
-            for col in self._native_frame.columns
+            for col in self.native.columns
         }
 
     def collect_schema(self: Self) -> dict[str, DType]:
@@ -388,9 +514,9 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
 
     # --- reshape ---
     def simple_select(self: Self, *column_names: str) -> Self:
-        return self._from_native_frame(
+        return self._with_native(
             select_columns_by_name(
-                self._native_frame,
+                self.native,
                 list(column_names),
                 self._backend_version,
                 self._implementation,
@@ -398,58 +524,49 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
             validate_column_names=False,
         )
 
-    def aggregate(
-        self: PandasLikeDataFrame, *exprs: PandasLikeExpr
-    ) -> PandasLikeDataFrame:
-        return self.select(*exprs)
-
     def select(self: PandasLikeDataFrame, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
         new_series = self._evaluate_into_exprs(*exprs)
         if not new_series:
             # return empty dataframe, like Polars does
-            return self._from_native_frame(
-                self._native_frame.__class__(), validate_column_names=False
-            )
+            return self._with_native(self.native.__class__(), validate_column_names=False)
         new_series = align_series_full_broadcast(*new_series)
         df = horizontal_concat(
-            [s._native_series for s in new_series],
+            [s.native for s in new_series],
             implementation=self._implementation,
             backend_version=self._backend_version,
         )
-        return self._from_native_frame(df, validate_column_names=True)
+        return self._with_native(df, validate_column_names=True)
 
     def drop_nulls(
-        self: PandasLikeDataFrame, subset: list[str] | None
+        self: PandasLikeDataFrame, subset: Sequence[str] | None
     ) -> PandasLikeDataFrame:
         if subset is None:
-            return self._from_native_frame(
-                self._native_frame.dropna(axis=0), validate_column_names=False
+            return self._with_native(
+                self.native.dropna(axis=0), validate_column_names=False
             )
         plx = self.__narwhals_namespace__()
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
     def estimated_size(self: Self, unit: SizeUnit) -> int | float:
-        sz = self._native_frame.memory_usage(deep=True).sum()
+        sz = self.native.memory_usage(deep=True).sum()
         return scale_bytes(sz, unit=unit)
 
     def with_row_index(self: Self, name: str) -> Self:
-        row_index = create_compliant_series(
-            range(len(self._native_frame)),
-            index=self._native_frame.index,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
+        frame = self.native
+        namespace = self.__narwhals_namespace__()
+        row_index = namespace._series.from_iterable(
+            range(len(frame)), context=self, index=frame.index
         ).alias(name)
-        return self._from_native_frame(
+        return self._with_native(
             horizontal_concat(
-                [row_index._native_series, self._native_frame],
+                [row_index.native, frame],
                 implementation=self._implementation,
                 backend_version=self._backend_version,
             )
         )
 
-    def row(self: Self, row: int) -> tuple[Any, ...]:
-        return tuple(x for x in self._native_frame.iloc[row])
+    def row(self: Self, index: int) -> tuple[Any, ...]:
+        return tuple(x for x in self.native.iloc[index])
 
     def filter(
         self: PandasLikeDataFrame, predicate: PandasLikeExpr | list[bool]
@@ -459,16 +576,14 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
         else:
             # `[0]` is safe as the predicate's expression only returns a single column
             mask = self._evaluate_into_exprs(predicate)[0]
-            mask_native = extract_dataframe_comparand(self._native_frame.index, mask)
-
-        return self._from_native_frame(
-            self._native_frame.loc[mask_native], validate_column_names=False
+            mask_native = self._extract_comparand(mask)
+        return self._with_native(
+            self.native.loc[mask_native], validate_column_names=False
         )
 
     def with_columns(
         self: PandasLikeDataFrame, *exprs: PandasLikeExpr
     ) -> PandasLikeDataFrame:
-        index = self._native_frame.index
         new_columns = self._evaluate_into_exprs(*exprs)
         if not new_columns and len(self) == 0:
             return self
@@ -476,17 +591,15 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
         new_column_name_to_new_column_map = {s.name: s for s in new_columns}
         to_concat = []
         # Make sure to preserve column order
-        for name in self._native_frame.columns:
+        for name in self.native.columns:
             if name in new_column_name_to_new_column_map:
                 to_concat.append(
-                    extract_dataframe_comparand(
-                        index, new_column_name_to_new_column_map.pop(name)
-                    )
+                    self._extract_comparand(new_column_name_to_new_column_map.pop(name))
                 )
             else:
-                to_concat.append(self._native_frame[name])
+                to_concat.append(self.native[name])
         to_concat.extend(
-            extract_dataframe_comparand(index, new_column_name_to_new_column_map[s])
+            self._extract_comparand(new_column_name_to_new_column_map[s])
             for s in new_column_name_to_new_column_map
         )
 
@@ -495,24 +608,24 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
             implementation=self._implementation,
             backend_version=self._backend_version,
         )
-        return self._from_native_frame(df, validate_column_names=False)
+        return self._with_native(df, validate_column_names=False)
 
-    def rename(self: Self, mapping: dict[str, str]) -> Self:
-        return self._from_native_frame(
+    def rename(self: Self, mapping: Mapping[str, str]) -> Self:
+        return self._with_native(
             rename(
-                self._native_frame,
+                self.native,
                 columns=mapping,
                 implementation=self._implementation,
                 backend_version=self._backend_version,
             )
         )
 
-    def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
+    def drop(self: Self, columns: Sequence[str], *, strict: bool) -> Self:
         to_drop = parse_columns_to_drop(
             compliant_frame=self, columns=columns, strict=strict
         )
-        return self._from_native_frame(
-            self._native_frame.drop(columns=to_drop), validate_column_names=False
+        return self._with_native(
+            self.native.drop(columns=to_drop), validate_column_names=False
         )
 
     # --- transform ---
@@ -522,13 +635,13 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
         descending: bool | Sequence[bool],
         nulls_last: bool,
     ) -> Self:
-        df = self._native_frame
+        df = self.native
         if isinstance(descending, bool):
             ascending: bool | list[bool] = not descending
         else:
             ascending = [not d for d in descending]
         na_position = "last" if nulls_last else "first"
-        return self._from_native_frame(
+        return self._with_native(
             df.sort_values(list(by), ascending=ascending, na_position=na_position),
             validate_column_names=False,
         )
@@ -538,10 +651,10 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
         self: Self,
         backend: Implementation | None,
         **kwargs: Any,
-    ) -> CompliantDataFrame[Any]:
+    ) -> CompliantDataFrame[Any, Any, Any]:
         if backend is None:
             return PandasLikeDataFrame(
-                self._native_frame,
+                self.native,
                 implementation=self._implementation,
                 backend_version=self._backend_version,
                 version=self._version,
@@ -589,19 +702,15 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
     def group_by(self: Self, *keys: str, drop_null_keys: bool) -> PandasLikeGroupBy:
         from narwhals._pandas_like.group_by import PandasLikeGroupBy
 
-        return PandasLikeGroupBy(
-            self,
-            list(keys),
-            drop_null_keys=drop_null_keys,
-        )
+        return PandasLikeGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
     def join(
         self: Self,
         other: Self,
         *,
-        how: Literal["left", "inner", "cross", "anti", "semi"],
-        left_on: list[str] | None,
-        right_on: list[str] | None,
+        how: Literal["inner", "left", "full", "cross", "semi", "anti"],
+        left_on: Sequence[str] | None,
+        right_on: Sequence[str] | None,
         suffix: str,
     ) -> Self:
         if how == "cross":
@@ -616,34 +725,27 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
                     n_bytes=8, columns=[*self.columns, *other.columns]
                 )
 
-                return self._from_native_frame(
-                    self._native_frame.assign(**{key_token: 0})
+                return self._with_native(
+                    self.native.assign(**{key_token: 0})
                     .merge(
-                        other._native_frame.assign(**{key_token: 0}),
+                        other.native.assign(**{key_token: 0}),
                         how="inner",
                         left_on=key_token,
                         right_on=key_token,
                         suffixes=("", suffix),
                     )
-                    .drop(columns=key_token),
+                    .drop(columns=key_token)
                 )
             else:
-                return self._from_native_frame(
-                    self._native_frame.merge(
-                        other._native_frame,
-                        how="cross",
-                        suffixes=("", suffix),
-                    ),
+                return self._with_native(
+                    self.native.merge(other.native, how="cross", suffixes=("", suffix))
                 )
 
         if how == "anti":
             if self._implementation is Implementation.CUDF:
-                return self._from_native_frame(
-                    self._native_frame.merge(
-                        other._native_frame,
-                        how="leftanti",
-                        left_on=left_on,
-                        right_on=right_on,
+                return self._with_native(
+                    self.native.merge(
+                        other.native, how="leftanti", left_on=left_on, right_on=right_on
                     )
                 )
             else:
@@ -657,8 +759,8 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
                 # rename to avoid creating extra columns in join
                 other_native = rename(
                     select_columns_by_name(
-                        other._native_frame,
-                        right_on,
+                        other.native,
+                        list(right_on),
                         self._backend_version,
                         self._implementation,
                     ),
@@ -666,8 +768,8 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
                     implementation=self._implementation,
                     backend_version=self._backend_version,
                 ).drop_duplicates()
-                return self._from_native_frame(
-                    self._native_frame.merge(
+                return self._with_native(
+                    self.native.merge(
                         other_native,
                         how="outer",
                         indicator=indicator_token,
@@ -686,8 +788,8 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
             other_native = (
                 rename(
                     select_columns_by_name(
-                        other._native_frame,
-                        right_on,
+                        other.native,
+                        list(right_on),
                         self._backend_version,
                         self._implementation,
                     ),
@@ -696,19 +798,15 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
                     backend_version=self._backend_version,
                 ).drop_duplicates()  # avoids potential rows duplication from inner join
             )
-            return self._from_native_frame(
-                self._native_frame.merge(
-                    other_native,
-                    how="inner",
-                    left_on=left_on,
-                    right_on=left_on,
+            return self._with_native(
+                self.native.merge(
+                    other_native, how="inner", left_on=left_on, right_on=left_on
                 )
             )
 
         if how == "left":
-            other_native = other._native_frame
-            result_native = self._native_frame.merge(
-                other_native,
+            result_native = self.native.merge(
+                other.native,
                 how="left",
                 left_on=left_on,
                 right_on=right_on,
@@ -720,16 +818,37 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
                     extra.append(right_key)
                 elif right_key != left_key:
                     extra.append(f"{right_key}{suffix}")
-            return self._from_native_frame(result_native.drop(columns=extra))
+            return self._with_native(result_native.drop(columns=extra))
 
-        return self._from_native_frame(
-            self._native_frame.merge(
-                other._native_frame,
+        if how == "full":
+            # Pandas coalesces keys in full joins unless there's no collision
+
+            # help mypy
+            assert left_on is not None  # noqa: S101
+            assert right_on is not None  # noqa: S101
+
+            right_on_mapper = _remap_full_join_keys(left_on, right_on, suffix)
+            other_native = other.native.rename(columns=right_on_mapper)
+            check_column_names_are_unique(other_native.columns)
+            right_on = list(right_on_mapper.values())  # we now have the suffixed keys
+            return self._with_native(
+                self.native.merge(
+                    other_native,
+                    left_on=left_on,
+                    right_on=right_on,
+                    how="outer",
+                    suffixes=("", suffix),
+                ),
+            )
+
+        return self._with_native(
+            self.native.merge(
+                other.native,
                 left_on=left_on,
                 right_on=right_on,
                 how=how,
                 suffixes=("", suffix),
-            ),
+            )
         )
 
     def join_asof(
@@ -738,16 +857,16 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
         *,
         left_on: str | None,
         right_on: str | None,
-        by_left: list[str] | None,
-        by_right: list[str] | None,
+        by_left: Sequence[str] | None,
+        by_right: Sequence[str] | None,
         strategy: Literal["backward", "forward", "nearest"],
         suffix: str,
     ) -> Self:
         plx = self.__native_namespace__()
-        return self._from_native_frame(
+        return self._with_native(
             plx.merge_asof(
-                self._native_frame,
-                other._native_frame,
+                self.native,
+                other.native,
                 left_on=left_on,
                 right_on=right_on,
                 left_by=by_left,
@@ -760,18 +879,14 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
     # --- partial reduction ---
 
     def head(self: Self, n: int) -> Self:
-        return self._from_native_frame(
-            self._native_frame.head(n), validate_column_names=False
-        )
+        return self._with_native(self.native.head(n), validate_column_names=False)
 
     def tail(self: Self, n: int) -> Self:
-        return self._from_native_frame(
-            self._native_frame.tail(n), validate_column_names=False
-        )
+        return self._with_native(self.native.tail(n), validate_column_names=False)
 
     def unique(
         self: Self,
-        subset: list[str] | None,
+        subset: Sequence[str] | None,
         *,
         keep: Literal["any", "first", "last", "none"],
         maintain_order: bool | None = None,
@@ -780,13 +895,15 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
         # and has no effect on the output.
         mapped_keep = {"none": False, "any": "first"}.get(keep, keep)
         check_column_exists(self.columns, subset)
-        return self._from_native_frame(
-            self._native_frame.drop_duplicates(subset=subset, keep=mapped_keep),
+        return self._with_native(
+            self.native.drop_duplicates(subset=subset, keep=mapped_keep),
             validate_column_names=False,
         )
 
     # --- lazy-only ---
-    def lazy(self: Self, *, backend: Implementation | None = None) -> CompliantLazyFrame:
+    def lazy(
+        self: Self, *, backend: Implementation | None = None
+    ) -> CompliantLazyFrame[Any, Any]:
         from narwhals.utils import parse_version
 
         pandas_df = self.to_pandas()
@@ -801,7 +918,6 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
                 df=duckdb.table("pandas_df"),
                 backend_version=parse_version(duckdb),
                 version=self._version,
-                validate_column_names=False,
             )
         elif backend is Implementation.POLARS:
             import polars as pl  # ignore-banned-import
@@ -823,29 +939,28 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
                 native_dataframe=dd.from_pandas(pandas_df),
                 backend_version=parse_version(dask),
                 version=self._version,
-                validate_column_names=False,
             )
         raise AssertionError  # pragma: no cover
 
     @property
     def shape(self: Self) -> tuple[int, int]:
-        return self._native_frame.shape
+        return self.native.shape
 
     def to_dict(self: Self, *, as_series: bool) -> dict[str, Any]:
         if as_series:
             return {
                 col: PandasLikeSeries(
-                    self._native_frame[col],
+                    self.native[col],
                     implementation=self._implementation,
                     backend_version=self._backend_version,
                     version=self._version,
                 )
                 for col in self.columns
             }
-        return self._native_frame.to_dict(orient="list")
+        return self.native.to_dict(orient="list")
 
     def to_numpy(self: Self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
-        native_dtypes = self._native_frame.dtypes
+        native_dtypes = self.native.dtypes
 
         if copy is None:
             # pandas default differs from Polars, but cuDF default is True
@@ -854,8 +969,8 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
         if native_dtypes.isin(CLASSICAL_NUMPY_DTYPES).all():
             # Fast path, no conversions necessary.
             if dtype is not None:
-                return self._native_frame.to_numpy(dtype=dtype, copy=copy)
-            return self._native_frame.to_numpy(copy=copy)
+                return self.native.to_numpy(dtype=dtype, copy=copy)
+            return self.native.to_numpy(copy=copy)
 
         dtypes = import_dtypes_module(self._version)
 
@@ -870,9 +985,9 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
                 .col(*to_convert)
                 .dt.convert_time_zone("UTC")
                 .dt.replace_time_zone(None)
-            )._native_frame
+            ).native
         else:
-            df = self._native_frame
+            df = self.native
 
         if dtype is not None:
             return df.to_numpy(dtype=dtype, copy=copy)
@@ -896,28 +1011,21 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
 
     def to_pandas(self: Self) -> pd.DataFrame:
         if self._implementation is Implementation.PANDAS:
-            return self._native_frame
+            return self.native
         elif self._implementation is Implementation.CUDF:  # pragma: no cover
-            return self._native_frame.to_pandas()
+            return self.native.to_pandas()
         elif self._implementation is Implementation.MODIN:
-            return self._native_frame._to_pandas()
+            return self.native._to_pandas()
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)
 
     def to_polars(self: Self) -> pl.DataFrame:
         import polars as pl  # ignore-banned-import
 
-        if self._implementation is Implementation.PANDAS:
-            return pl.from_pandas(self._native_frame)
-        elif self._implementation is Implementation.CUDF:  # pragma: no cover
-            return pl.from_pandas(self._native_frame.to_pandas())
-        elif self._implementation is Implementation.MODIN:
-            return pl.from_pandas(self._native_frame._to_pandas())
-        msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
-        raise AssertionError(msg)
+        return pl.from_pandas(self.to_pandas())
 
     def write_parquet(self: Self, file: str | Path | BytesIO) -> None:
-        self._native_frame.to_parquet(file)
+        self.native.to_parquet(file)
 
     @overload
     def write_csv(self: Self, file: None) -> str: ...
@@ -926,12 +1034,12 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
     def write_csv(self: Self, file: str | Path | BytesIO) -> None: ...
 
     def write_csv(self: Self, file: str | Path | BytesIO | None) -> str | None:
-        return self._native_frame.to_csv(file, index=False)
+        return self.native.to_csv(file, index=False)
 
     # --- descriptive ---
     def is_unique(self: Self) -> PandasLikeSeries:
         return PandasLikeSeries(
-            ~self._native_frame.duplicated(keep=False),
+            ~self.native.duplicated(keep=False),
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
@@ -946,24 +1054,20 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
                     f" frame has shape {self.shape!r}"
                 )
                 raise ValueError(msg)
-            return self._native_frame.iloc[0, 0]
+            return self.native.iloc[0, 0]
 
         elif row is None or column is None:
             msg = "cannot call `.item()` with only one of `row` or `column`"
             raise ValueError(msg)
 
         _col = self.columns.index(column) if isinstance(column, str) else column
-        return self._native_frame.iloc[row, _col]
+        return self.native.iloc[row, _col]
 
     def clone(self: Self) -> Self:
-        return self._from_native_frame(
-            self._native_frame.copy(), validate_column_names=False
-        )
+        return self._with_native(self.native.copy(), validate_column_names=False)
 
     def gather_every(self: Self, n: int, offset: int) -> Self:
-        return self._from_native_frame(
-            self._native_frame.iloc[offset::n], validate_column_names=False
-        )
+        return self._with_native(self.native.iloc[offset::n], validate_column_names=False)
 
     def pivot(
         self: Self,
@@ -985,7 +1089,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
             raise NotImplementedError(msg)
         from itertools import product
 
-        frame = self._native_frame
+        frame = self.native
 
         if index is None:
             index = [c for c in self.columns if c not in {*on, *values}]  # type: ignore[misc]
@@ -1014,19 +1118,17 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
         # Put columns in the right order
         if sort_columns and self._implementation is Implementation.CUDF:
             uniques = {
-                col: sorted(self._native_frame[col].unique().to_arrow().to_pylist())
+                col: sorted(self.native[col].unique().to_arrow().to_pylist())
                 for col in on
             }
         elif sort_columns:
-            uniques = {
-                col: sorted(self._native_frame[col].unique().tolist()) for col in on
-            }
+            uniques = {col: sorted(self.native[col].unique().tolist()) for col in on}
         elif self._implementation is Implementation.CUDF:
             uniques = {
-                col: self._native_frame[col].unique().to_arrow().to_pylist() for col in on
+                col: self.native[col].unique().to_arrow().to_pylist() for col in on
             }
         else:
-            uniques = {col: self._native_frame[col].unique().tolist() for col in on}
+            uniques = {col: self.native[col].unique().tolist() for col in on}
         ordered_cols = list(product(values, *uniques.values()))
         result = result.loc[:, ordered_cols]
         columns = result.columns.tolist()
@@ -1046,15 +1148,15 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
             ]
         result.columns = new_columns
         result.columns.names = [""]  # type: ignore[attr-defined]
-        return self._from_native_frame(result.reset_index())
+        return self._with_native(result.reset_index())
 
     def to_arrow(self: Self) -> Any:
         if self._implementation is Implementation.CUDF:
-            return self._native_frame.to_arrow(preserve_index=False)
+            return self.native.to_arrow(preserve_index=False)
 
         import pyarrow as pa  # ignore-banned-import()
 
-        return pa.Table.from_pandas(self._native_frame)
+        return pa.Table.from_pandas(self.native)
 
     def sample(
         self: Self,
@@ -1064,8 +1166,8 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
         with_replacement: bool,
         seed: int | None,
     ) -> Self:
-        return self._from_native_frame(
-            self._native_frame.sample(
+        return self._with_native(
+            self.native.sample(
                 n=n, frac=fraction, replace=with_replacement, random_state=seed
             ),
             validate_column_names=False,
@@ -1073,13 +1175,13 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
 
     def unpivot(
         self: Self,
-        on: list[str] | None,
-        index: list[str] | None,
+        on: Sequence[str] | None,
+        index: Sequence[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:
-        return self._from_native_frame(
-            self._native_frame.melt(
+        return self._with_native(
+            self.native.melt(
                 id_vars=index,
                 value_vars=on,
                 var_name=variable_name,
@@ -1087,7 +1189,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
             )
         )
 
-    def explode(self: Self, columns: list[str]) -> Self:
+    def explode(self: Self, columns: Sequence[str]) -> Self:
         dtypes = import_dtypes_module(self._version)
 
         schema = self.collect_schema()
@@ -1102,11 +1204,11 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
                 raise InvalidOperationError(msg)
 
         if len(columns) == 1:
-            return self._from_native_frame(
-                self._native_frame.explode(columns[0]), validate_column_names=False
+            return self._with_native(
+                self.native.explode(columns[0]), validate_column_names=False
             )
         else:
-            native_frame = self._native_frame
+            native_frame = self.native
             anchor_series = native_frame[columns[0]].list.len()
 
             if not all(
@@ -1129,7 +1231,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries"], CompliantLazyFrame
             ]
 
             plx = self.__native_namespace__()
-            return self._from_native_frame(
+            return self._with_native(
                 plx.concat([exploded_frame, *exploded_series], axis=1)[original_columns],
                 validate_column_names=False,
             )

@@ -3,14 +3,18 @@ from __future__ import annotations
 from typing import Any
 from typing import Mapping
 
-import pandas as pd
-import polars as pl
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 from numpy.testing import assert_allclose
 
 import narwhals.stable.v1 as nw
+
+pytest.importorskip("pandas")
+pytest.importorskip("polars")
+
+import pandas as pd
+import polars as pl
 
 
 @given(

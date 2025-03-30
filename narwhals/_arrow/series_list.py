@@ -15,4 +15,4 @@ if TYPE_CHECKING:
 
 class ArrowSeriesListNamespace(ArrowSeriesNamespace):
     def len(self: Self) -> ArrowSeries:
-        return self.from_native(pc.list_value_length(self.native).cast(pa.uint32()))
+        return self.with_native(pc.list_value_length(self.native).cast(pa.uint32()))

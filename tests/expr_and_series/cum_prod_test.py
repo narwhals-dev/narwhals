@@ -3,8 +3,11 @@ from __future__ import annotations
 import pytest
 
 import narwhals.stable.v1 as nw
+from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
+from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -53,4 +56,56 @@ def test_cum_prod_series(
         cum_prod=df["a"].cum_prod(),
         reverse_cum_prod=df["a"].cum_prod(reverse=True),
     )
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("reverse", "expected_a"),
+    [
+        (False, [2, 2, 6]),
+        (True, [3, 6, 3]),
+    ],
+)
+def test_lazy_cum_prod_grouped(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    *,
+    reverse: bool,
+    expected_a: list[int],
+) -> None:
+    if "pyarrow_table" in str(constructor):
+        # grouped window functions not yet supported
+        request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor):
+        pytest.skip(reason="probably bugged")
+    if "dask" in str(constructor):
+        # https://github.com/dask/dask/issues/11806
+        request.applymarker(pytest.mark.xfail)
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    ):
+        pytest.skip(reason="too old version")
+    if "cudf" in str(constructor):
+        # https://github.com/rapidsai/cudf/issues/18159
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(
+        constructor(
+            {
+                "arg entina": [1, 2, 3],
+                "ban gkok": [1, 0, 2],
+                "i ran": [0, 1, 2],
+                "g": [1, 1, 1],
+            }
+        )
+    )
+    result = df.with_columns(
+        nw.col("arg entina").cum_prod(reverse=reverse).over("g", order_by="ban gkok")
+    ).sort("i ran")
+    expected = {
+        "arg entina": expected_a,
+        "ban gkok": [1, 0, 2],
+        "i ran": [0, 1, 2],
+        "g": [1, 1, 1],
+    }
     assert_equal_data(result, expected)

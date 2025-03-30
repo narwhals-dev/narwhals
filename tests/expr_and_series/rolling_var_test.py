@@ -5,20 +5,22 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 import hypothesis.strategies as st
-import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 from hypothesis import given
 
 import narwhals.stable.v1 as nw
+from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.typing import Frame
+
+pytest.importorskip("pandas")
+import pandas as pd
 
 data = {"a": [1.0, 2.0, 1.0, 3.0, 1.0, 4.0, 1.0]}
 
@@ -112,6 +114,9 @@ def test_rolling_var_series(
 @pytest.mark.filterwarnings("ignore:.*is_sparse is deprecated:DeprecationWarning")
 @pytest.mark.filterwarnings("ignore:.*:narwhals.exceptions.NarwhalsUnstableWarning")
 def test_rolling_var_hypothesis(center: bool, values: list[float]) -> None:  # noqa: FBT001
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     s = pd.Series(values)
     window_size = random.randint(2, len(s))  # noqa: S311
     min_samples = random.randint(2, window_size)  # noqa: S311
@@ -134,6 +139,33 @@ def test_rolling_var_hypothesis(center: bool, values: list[float]) -> None:  # n
     expected_dict = nw.from_native(expected, eager_only=True).to_dict(as_series=False)
     assert_equal_data(result, expected_dict)
 
+
+@given(
+    center=st.booleans(),
+    values=st.lists(st.floats(-10, 10), min_size=5, max_size=10),
+)
+@pytest.mark.skipif(PANDAS_VERSION < (1,), reason="too old for pyarrow")
+@pytest.mark.skipif(POLARS_VERSION < (1,), reason="different null behavior")
+@pytest.mark.filterwarnings("ignore:.*is_sparse is deprecated:DeprecationWarning")
+@pytest.mark.filterwarnings("ignore:.*:narwhals.exceptions.NarwhalsUnstableWarning")
+def test_rolling_var_hypothesis_polars(center: bool, values: list[float]) -> None:  # noqa: FBT001
+    pytest.importorskip("polars")
+    import polars as pl
+
+    s = pd.Series(values)
+    window_size = random.randint(2, len(s))  # noqa: S311
+    min_samples = random.randint(2, window_size)  # noqa: S311
+    ddof = random.randint(0, min_samples - 1)  # noqa: S311
+    mask = random.sample(range(len(s)), 2)
+
+    s[mask] = None
+    df = pd.DataFrame({"a": s})
+    expected = (
+        s.rolling(window=window_size, center=center, min_periods=min_samples)
+        .var(ddof=ddof)
+        .to_frame("a")
+    )
+
     result = nw.from_native(pl.from_pandas(df)).select(
         nw.col("a").rolling_var(
             window_size, center=center, min_samples=min_samples, ddof=ddof
@@ -141,3 +173,143 @@ def test_rolling_var_hypothesis(center: bool, values: list[float]) -> None:  # n
     )
     expected_dict = nw.from_native(expected, eager_only=True).to_dict(as_series=False)
     assert_equal_data(result, expected_dict)
+
+
+@pytest.mark.filterwarnings(
+    "ignore:`Expr.rolling_var` is being called from the stable API although considered an unstable feature."
+)
+@pytest.mark.parametrize(
+    ("expected_a", "window_size", "min_samples", "center", "ddof"),
+    [
+        ([None, None, 0.25, None, None, 1, 6.25], 2, None, False, 0),
+        ([None, None, 0.5, None, None, 2, 12.5], 2, 2, False, 1),
+        ([None, None, 0.5, 0.5, 2, 2, 13], 3, 2, False, 1),
+        ([0, None, 0.25, 0.25, 1, 1, 8.666666666666666], 3, 1, False, 0),
+        ([0.5, None, 0.5, 2, 2, 13, 12.5], 3, 1, True, 1),
+        ([0.5, None, 0.5, 2.333333333333333, 4, 13, 13], 4, 1, True, 1),
+        (
+            [
+                0.25,
+                0.25,
+                1.5555555555555554,
+                3.6874999999999996,
+                11.1875,
+                8.666666666666666,
+                8.666666666666666,
+            ],
+            5,
+            1,
+            True,
+            0,
+        ),
+    ],
+)
+def test_rolling_var_expr_lazy_ungrouped(
+    constructor: Constructor,
+    expected_a: list[float],
+    window_size: int,
+    min_samples: int,
+    *,
+    center: bool,
+    ddof: int,
+) -> None:
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    ):
+        pytest.skip()
+    if "modin" in str(constructor):
+        # unreliable
+        pytest.skip()
+    if "dask" in str(constructor) and ddof != 1:
+        # Only `ddof=1` is supported
+        pytest.skip()
+    data = {
+        "a": [1, None, 2, None, 4, 6, 11],
+        "b": [1, None, 2, 3, 4, 5, 6],
+        "i": list(range(7)),
+    }
+    df = nw.from_native(constructor(data))
+    result = (
+        df.with_columns(
+            nw.col("a")
+            .rolling_var(window_size, min_samples=min_samples, center=center, ddof=ddof)
+            .over(order_by="b")
+        )
+        .select("a", "i")
+        .sort("i")
+    )
+    expected = {"a": expected_a, "i": list(range(7))}
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.filterwarnings(
+    "ignore:`Expr.rolling_var` is being called from the stable API although considered an unstable feature."
+)
+@pytest.mark.parametrize(
+    ("expected_a", "window_size", "min_samples", "center", "ddof"),
+    [
+        ([None, None, 0.25, None, None, 1, 6.25], 2, None, False, 0),
+        ([None, None, 0.5, None, None, 2, 12.5], 2, 2, False, 1),
+        ([None, None, 0.5, 0.5, None, 2, 13], 3, 2, False, 1),
+        ([0, None, 0.25, 0.25, 0, 1, 8.666666666666666], 3, 1, False, 0),
+        ([0.5, None, 0.5, None, 2, 13, 12.5], 3, 1, True, 1),
+        ([0.5, None, 0.5, 0.5, 2, 13, 13], 4, 1, True, 1),
+        (
+            [
+                0.25,
+                0.25,
+                0.25,
+                0.25,
+                8.666666666666666,
+                8.666666666666666,
+                8.666666666666666,
+            ],
+            5,
+            1,
+            True,
+            0,
+        ),
+    ],
+)
+def test_rolling_var_expr_lazy_grouped(
+    constructor: Constructor,
+    expected_a: list[float],
+    window_size: int,
+    min_samples: int,
+    request: pytest.FixtureRequest,
+    *,
+    center: bool,
+    ddof: int,
+) -> None:
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    ):
+        pytest.skip()
+    if "pandas" in str(constructor):
+        pytest.skip()
+    if any(x in str(constructor) for x in ("dask", "pyarrow_table")):
+        request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor) and center:
+        # center is not implemented for offset-based windows
+        request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor):
+        # unreliable
+        pytest.skip()
+    data = {
+        "a": [1, None, 2, None, 4, 6, 11],
+        "g": [1, 1, 1, 1, 2, 2, 2],
+        "b": [1, None, 2, 3, 4, 5, 6],
+        "i": list(range(7)),
+    }
+    df = nw.from_native(constructor(data))
+    result = (
+        df.with_columns(
+            nw.col("a")
+            .rolling_var(window_size, min_samples=min_samples, center=center, ddof=ddof)
+            .over("g", order_by="b")
+        )
+        .sort("i")
+        .select("a")
+    )
+    expected = {"a": expected_a}
+    assert_equal_data(result, expected)

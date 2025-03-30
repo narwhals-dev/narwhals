@@ -11,6 +11,7 @@ from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.exceptions import NarwhalsError
 from tests.utils import DASK_VERSION
+from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
@@ -29,11 +30,9 @@ def test_select(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_empty_select(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "duckdb" in str(constructor) or "sqlframe" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    result = nw.from_native(constructor({"a": [1, 2, 3]})).lazy().select()
-    assert result.collect().shape == (0, 0)
+def test_empty_select(constructor_eager: ConstructorEager) -> None:
+    result = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True).select()
+    assert result.shape == (0, 0)
 
 
 def test_non_string_select() -> None:
@@ -121,9 +120,9 @@ def test_missing_columns(
 def test_left_to_right_broadcasting(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
-        request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     result = df.select(nw.col("a") + nw.col("b").sum())
