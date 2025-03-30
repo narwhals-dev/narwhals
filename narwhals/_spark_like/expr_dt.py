@@ -54,7 +54,7 @@ class SparkLikeExprDateTimeNamespace:
             pyspark_fmt = strptime_to_pyspark_format(format)
             return F.date_format(_input, pyspark_fmt)
 
-        return self._compliant_expr._from_call(_to_string)
+        return self._compliant_expr._with_callable(_to_string)
 
     def date(self: Self) -> SparkLikeExpr:
         return self._compliant_expr._with_callable(self._compliant_expr._F.to_date)

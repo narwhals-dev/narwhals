@@ -141,15 +141,15 @@ def test_dt_to_string_iso_local_datetime_expr(
         request.applymarker(pytest.mark.xfail)
     df = constructor({"a": [data]})
 
-    result = nw.from_native(df).with_columns(
-        _clean_string_expr(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M:%S.%f")).alias("b")
+    result = nw.from_native(df).select(
+        b=_clean_string_expr(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M:%S.%f"))
     )
-    assert_equal_data(result, {"a": [data], "b": [_clean_string(expected)]})
+    assert_equal_data(result, {"b": [_clean_string(expected)]})
 
-    result = nw.from_native(df).with_columns(
-        _clean_string_expr(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M:%S%.f")).alias("b")
+    result = nw.from_native(df).select(
+        b=_clean_string_expr(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M:%S%.f"))
     )
-    assert_equal_data(result, {"a": [data], "b": [_clean_string(expected)]})
+    assert_equal_data(result, {"b": [_clean_string(expected)]})
 
 
 @pytest.mark.parametrize(
@@ -176,7 +176,5 @@ def test_dt_to_string_iso_local_date_expr(
     expected: str,
 ) -> None:
     df = constructor({"a": [data]})
-    result = nw.from_native(df).with_columns(
-        nw.col("a").dt.to_string("%Y-%m-%d").alias("b")
-    )
-    assert_equal_data(result, {"a": [data], "b": [expected]})
+    result = nw.from_native(df).select(b=nw.col("a").dt.to_string("%Y-%m-%d"))
+    assert_equal_data(result, {"b": [expected]})
