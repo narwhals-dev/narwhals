@@ -324,12 +324,9 @@ def test_no_agg(constructor: Constructor) -> None:
 
 def test_group_by_categorical(
     constructor: Constructor,
-    request: pytest.FixtureRequest,
 ) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
-        request.applymarker(
-            pytest.mark.xfail(reason="Categoricals not supported in this backend")
-        )
+        pytest.skip(reason="DuckDB and PySpark do not support categorical types")
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (
         15,
     ):  # pragma: no cover
@@ -363,14 +360,10 @@ def test_double_same_aggregation(
         # bugged in dask https://github.com/dask/dask/issues/11612
         # and modin lol https://github.com/modin-project/modin/issues/7414
         # and cudf https://github.com/rapidsai/cudf/issues/17649
-        request.applymarker(
-            pytest.mark.xfail(
-                reason="Backend does not support multiple aggregations with the same column"
-            )
-        )
+        request.applymarker(pytest.mark.xfail())
     if "pandas" in str(constructor) and PANDAS_VERSION < (1,):
         pytest.skip(
-            "Pandas < 1.0.0 does not support multiple aggregations with the same column"
+            "Pandas does not support multiple aggregations with the same column for now."
         )
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     result = df.group_by("a").agg(c=nw.col("b").mean(), d=nw.col("b").mean()).sort("a")
@@ -385,11 +378,7 @@ def test_all_kind_of_aggs(
         # bugged in dask https://github.com/dask/dask/issues/11612
         # and modin lol https://github.com/modin-project/modin/issues/7414
         # and cudf https://github.com/rapidsai/cudf/issues/17649
-        request.applymarker(
-            pytest.mark.xfail(
-                reason="Backend does not support multiple aggregations with the same column"
-            )
-        )
+        request.applymarker(pytest.mark.xfail())
     if "pandas" in str(constructor) and PANDAS_VERSION < (1, 4):
         pytest.skip(
             "Pandas < 1.4.0 does not support multiple aggregations with the same column"
