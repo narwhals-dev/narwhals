@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 
 class MockDataFrame:
-    def _change_version(self: Self, _version: Version) -> MockDataFrame:
+    def _with_version(self: Self, _version: Version) -> MockDataFrame:
         return self
 
     def __narwhals_dataframe__(self: Self) -> Any:
@@ -31,7 +31,7 @@ class MockDataFrame:
 
 
 class MockLazyFrame:
-    def _change_version(self: Self, _version: Version) -> MockLazyFrame:
+    def _with_version(self: Self, _version: Version) -> MockLazyFrame:
         return self
 
     def __narwhals_lazyframe__(self: Self) -> Any:
@@ -39,7 +39,7 @@ class MockLazyFrame:
 
 
 class MockSeries:
-    def _change_version(self: Self, _version: Version) -> MockSeries:
+    def _with_version(self: Self, _version: Version) -> MockSeries:
         return self
 
     def __narwhals_series__(self: Self) -> Any:

@@ -18,6 +18,9 @@ from narwhals._compliant.typing import EagerExprT_contra
 from narwhals._compliant.typing import EagerSeriesT
 from narwhals._compliant.typing import NativeFrameT_co
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals._translate import ArrowConvertible
+from narwhals._translate import DictConvertible
+from narwhals._translate import NumpyConvertible
 from narwhals.utils import Version
 from narwhals.utils import _StoresNative
 from narwhals.utils import deprecated
@@ -33,10 +36,13 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._compliant.group_by import CompliantGroupBy
+    from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
+    from narwhals.schema import Schema
     from narwhals.typing import SizeUnit
     from narwhals.typing import _2DArray
     from narwhals.utils import Implementation
+    from narwhals.utils import _FullContext
 
     Incomplete: TypeAlias = Any
 
@@ -44,8 +50,13 @@ __all__ = ["CompliantDataFrame", "CompliantLazyFrame", "EagerDataFrame"]
 
 T = TypeVar("T")
 
+_ToDict: TypeAlias = "dict[str, CompliantSeriesT] | dict[str, list[Any]]"  # noqa: PYI047
+
 
 class CompliantDataFrame(
+    NumpyConvertible["_2DArray", "_2DArray"],
+    DictConvertible["_ToDict[CompliantSeriesT]", Mapping[str, Any]],
+    ArrowConvertible["pa.Table", "IntoArrowTable"],
     _StoresNative[NativeFrameT_co],
     Sized,
     Protocol[CompliantSeriesT, CompliantExprT_contra, NativeFrameT_co],
@@ -57,6 +68,26 @@ class CompliantDataFrame(
 
     def __narwhals_dataframe__(self) -> Self: ...
     def __narwhals_namespace__(self) -> Any: ...
+    @classmethod
+    def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self: ...
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+        /,
+        *,
+        context: _FullContext,
+        schema: Mapping[str, DType] | Schema | None,
+    ) -> Self: ...
+    @classmethod
+    def from_numpy(
+        cls,
+        data: _2DArray,
+        /,
+        *,
+        context: _FullContext,
+        schema: Mapping[str, DType] | Schema | Sequence[str] | None,
+    ) -> Self: ...
     def __array__(self, dtype: Any, *, copy: bool | None) -> _2DArray: ...
     def __getitem__(self, item: Any) -> CompliantSeriesT | Self: ...
     def simple_select(self, *column_names: str) -> Self:
@@ -70,6 +101,8 @@ class CompliantDataFrame(
         """
         # NOTE: Ignore is to avoid an intermittent false positive
         return self.select(*exprs)  # pyright: ignore[reportArgumentType]
+
+    def _with_version(self, version: Version) -> Self: ...
 
     @property
     def native(self) -> NativeFrameT_co:
@@ -143,7 +176,6 @@ class CompliantDataFrame(
     ) -> Self: ...
     def tail(self, n: int) -> Self: ...
     def to_arrow(self) -> pa.Table: ...
-    def to_numpy(self) -> _2DArray: ...
     def to_pandas(self) -> pd.DataFrame: ...
     def to_polars(self) -> pl.DataFrame: ...
     @overload
@@ -199,7 +231,7 @@ class CompliantLazyFrame(
         """
         ...
 
-    def _change_version(self, version: Version) -> Self: ...
+    def _with_version(self, version: Version) -> Self: ...
 
     @property
     def native(self) -> NativeFrameT_co:
@@ -286,7 +318,8 @@ class EagerDataFrame(
         return result[0]
 
     def _evaluate_into_exprs(self, *exprs: EagerExprT_contra) -> Sequence[EagerSeriesT]:
-        return list(chain.from_iterable(self._evaluate_into_expr(expr) for expr in exprs))
+        # NOTE: Ignore is to avoid an intermittent false positive
+        return list(chain.from_iterable(self._evaluate_into_expr(expr) for expr in exprs))  # pyright: ignore[reportArgumentType]
 
     def _evaluate_into_expr(self, expr: EagerExprT_contra, /) -> Sequence[EagerSeriesT]:
         """Return list of raw columns.
@@ -308,3 +341,9 @@ class EagerDataFrame(
     def _extract_comparand(self, other: EagerSeriesT, /) -> Any:
         """Extract native Series, broadcasting to `len(self)` if necessary."""
         ...
+
+    @staticmethod
+    def _numpy_column_names(
+        data: _2DArray, columns: Sequence[str] | None, /
+    ) -> list[str]:
+        return list(columns or (f"column_{x}" for x in range(data.shape[1])))

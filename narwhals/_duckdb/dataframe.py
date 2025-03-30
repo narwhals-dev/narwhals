@@ -83,9 +83,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
     def __getitem__(self: Self, item: str) -> DuckDBInterchangeSeries:
         from narwhals._duckdb.series import DuckDBInterchangeSeries
 
-        return DuckDBInterchangeSeries(
-            self._native_frame.select(item), version=self._version
-        )
+        return DuckDBInterchangeSeries(self.native.select(item), version=self._version)
 
     def _iter_columns(self) -> Iterator[duckdb.Expression]:
         for col in self.columns:
@@ -102,7 +100,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
-                native_dataframe=self._native_frame.arrow(),
+                self.native.arrow(),
                 backend_version=parse_version(pa),
                 version=self._version,
                 validate_column_names=True,
@@ -114,7 +112,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
             return PandasLikeDataFrame(
-                native_dataframe=self._native_frame.df(),
+                self.native.df(),
                 implementation=Implementation.PANDAS,
                 backend_version=parse_version(pd),
                 version=self._version,
@@ -127,43 +125,33 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             from narwhals._polars.dataframe import PolarsDataFrame
 
             return PolarsDataFrame(
-                df=self._native_frame.pl(),
-                backend_version=parse_version(pl),
-                version=self._version,
+                self.native.pl(), backend_version=parse_version(pl), version=self._version
             )
 
         msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
         raise ValueError(msg)  # pragma: no cover
 
     def head(self: Self, n: int) -> Self:
-        return self._from_native_frame(self._native_frame.limit(n))
+        return self._with_native(self.native.limit(n))
 
     def simple_select(self, *column_names: str) -> Self:
-        return self._from_native_frame(self._native_frame.select(*column_names))
+        return self._with_native(self.native.select(*column_names))
 
     def aggregate(self: Self, *exprs: DuckDBExpr) -> Self:
-        new_columns_map = evaluate_exprs(self, *exprs)
-        return self._from_native_frame(
-            self._native_frame.aggregate(
-                [val.alias(col) for col, val in new_columns_map]  # type: ignore[arg-type]
-            ),
-        )
+        selection = [val.alias(col) for col, val in evaluate_exprs(self, *exprs)]
+        return self._with_native(self.native.aggregate(selection))  # type: ignore[arg-type]
 
     def select(
         self: Self,
         *exprs: DuckDBExpr,
     ) -> Self:
-        new_columns_map = evaluate_exprs(self, *exprs)
-        return self._from_native_frame(
-            self._native_frame.select(*(val.alias(col) for col, val in new_columns_map)),
-        )
+        selection = (val.alias(col) for col, val in evaluate_exprs(self, *exprs))
+        return self._with_native(self.native.select(*selection))
 
     def drop(self: Self, columns: Sequence[str], *, strict: bool) -> Self:
-        columns_to_drop = parse_columns_to_drop(
-            compliant_frame=self, columns=columns, strict=strict
-        )
+        columns_to_drop = parse_columns_to_drop(self, columns=columns, strict=strict)
         selection = (col for col in self.columns if col not in columns_to_drop)
-        return self._from_native_frame(self._native_frame.select(*selection))
+        return self._with_native(self.native.select(*selection))
 
     def lazy(self: Self, *, backend: Implementation | None = None) -> Self:
         # The `backend`` argument has no effect but we keep it here for
@@ -181,15 +169,15 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             new_columns_map.pop(col).alias(col)
             if col in new_columns_map
             else ColumnExpression(col)
-            for col in self._native_frame.columns
+            for col in self.native.columns
         ]
         result.extend(value.alias(col) for col, value in new_columns_map.items())
-        return self._from_native_frame(self._native_frame.select(*result))
+        return self._with_native(self.native.select(*result))
 
     def filter(self: Self, predicate: DuckDBExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
-        mask = predicate._call(self)[0]
-        return self._from_native_frame(self._native_frame.filter(mask))
+        mask = predicate(self)[0]
+        return self._with_native(self.native.filter(mask))
 
     @property
     def schema(self: Self) -> dict[str, DType]:
@@ -199,7 +187,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             self._cached_schema = {
                 column_name: native_to_narwhals_dtype(str(duckdb_dtype), self._version)
                 for column_name, duckdb_dtype in zip(
-                    self._native_frame.columns, self._native_frame.types
+                    self.native.columns, self.native.types
                 )
             }
         return self._cached_schema
@@ -213,27 +201,23 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
         import pandas as pd  # ignore-banned-import()
 
         if parse_version(pd) >= (1, 0, 0):
-            return self._native_frame.df()
+            return self.native.df()
         else:  # pragma: no cover
             msg = f"Conversion to pandas requires pandas>=1.0.0, found {pd.__version__}"
             raise NotImplementedError(msg)
 
     def to_arrow(self: Self) -> pa.Table:
         # only if version is v1, keep around for backcompat
-        return self._native_frame.arrow()
+        return self.native.arrow()
 
-    def _change_version(self: Self, version: Version) -> Self:
+    def _with_version(self: Self, version: Version) -> Self:
         return self.__class__(
-            self._native_frame,
-            version=version,
-            backend_version=self._backend_version,
+            self.native, version=version, backend_version=self._backend_version
         )
 
-    def _from_native_frame(self: Self, df: duckdb.DuckDBPyRelation) -> Self:
+    def _with_native(self: Self, df: duckdb.DuckDBPyRelation) -> Self:
         return self.__class__(
-            df,
-            backend_version=self._backend_version,
-            version=self._version,
+            df, backend_version=self._backend_version, version=self._version
         )
 
     def group_by(self: Self, *keys: str, drop_null_keys: bool) -> DuckDBGroupBy:
@@ -242,11 +226,11 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
         return DuckDBGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
     def rename(self: Self, mapping: Mapping[str, str]) -> Self:
-        df = self._native_frame
+        df = self.native
         selection = [
             f"{col} as {mapping[col]}" if col in mapping else col for col in df.columns
         ]
-        return self._from_native_frame(df.select(", ".join(selection)))
+        return self._with_native(df.select(", ".join(selection)))
 
     def join(
         self: Self,
@@ -257,35 +241,30 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
         right_on: Sequence[str] | None,
         suffix: str,
     ) -> Self:
-        original_alias = self._native_frame.alias
-
         native_how = "outer" if how == "full" else how
 
         if native_how == "cross":
             if self._backend_version < (1, 1, 4):
                 msg = f"DuckDB>=1.1.4 is required for cross-join, found version: {self._backend_version}"
                 raise NotImplementedError(msg)
-            rel = self._native_frame.set_alias("lhs").cross(  # pragma: no cover
-                other._native_frame.set_alias("rhs")
-            )
+            rel = self.native.set_alias("lhs").cross(
+                other.native.set_alias("rhs")
+            )  # pragma: no cover
         else:
             # help mypy
             assert left_on is not None  # noqa: S101
             assert right_on is not None  # noqa: S101
-
-            conditions = [
+            condition = " and ".join(
                 f'lhs."{left}" = rhs."{right}"' for left, right in zip(left_on, right_on)
-            ]
-
-            condition = " and ".join(conditions)
-            rel = self._native_frame.set_alias("lhs").join(
-                other._native_frame.set_alias("rhs"), condition=condition, how=native_how
+            )
+            rel = self.native.set_alias("lhs").join(
+                other.native.set_alias("rhs"), condition=condition, how=native_how
             )
 
         if native_how in {"inner", "left", "cross", "outer"}:
-            select = [f'lhs."{x}"' for x in self._native_frame.columns]
-            for col in other._native_frame.columns:
-                col_in_lhs: bool = col in self._native_frame.columns
+            select = [f'lhs."{x}"' for x in self.native.columns]
+            for col in other.native.columns:
+                col_in_lhs: bool = col in self.native.columns
                 if native_how == "outer" and not col_in_lhs:
                     select.append(f'rhs."{col}"')
                 elif (native_how == "outer") or (
@@ -297,8 +276,8 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
         else:  # semi
             select = ["lhs.*"]
 
-        res = rel.select(", ".join(select)).set_alias(original_alias)
-        return self._from_native_frame(res)
+        res = rel.select(", ".join(select)).set_alias(self.native.alias)
+        return self._with_native(res)
 
     def join_asof(
         self: Self,
@@ -311,8 +290,8 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
         strategy: Literal["backward", "forward", "nearest"],
         suffix: str,
     ) -> Self:
-        lhs = self._native_frame
-        rhs = other._native_frame
+        lhs = self.native
+        rhs = other.native
         conditions = []
         if by_left is not None and by_right is not None:
             conditions += [
@@ -343,21 +322,19 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             ON {condition}
             """  # noqa: S608
         res = duckdb.sql(query)
-        return self._from_native_frame(res)
+        return self._with_native(res)
 
     def collect_schema(self: Self) -> dict[str, DType]:
         return {
             column_name: native_to_narwhals_dtype(str(duckdb_dtype), self._version)
-            for column_name, duckdb_dtype in zip(
-                self._native_frame.columns, self._native_frame.types
-            )
+            for column_name, duckdb_dtype in zip(self.native.columns, self.native.types)
         }
 
     def unique(
         self: Self, subset: Sequence[str] | None, *, keep: Literal["any", "none"]
     ) -> Self:
         if subset is not None:
-            rel = self._native_frame
+            rel = self.native
             # Sanitise input
             if any(x not in rel.columns for x in subset):
                 msg = f"Columns {set(subset).difference(rel.columns)} not found in {rel.columns}."
@@ -380,10 +357,8 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
                 )
                 select * exclude ({idx_name}, {count_name}) from cte {keep_condition}
                 """  # noqa: S608
-            return self._from_native_frame(duckdb.sql(query))
-        return self._from_native_frame(
-            self._native_frame.unique(", ".join(self.columns)),
-        )
+            return self._with_native(duckdb.sql(query))
+        return self._with_native(self.native.unique(", ".join(self.columns)))
 
     def sort(
         self: Self,
@@ -395,7 +370,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             descending = [descending] * len(by)
         descending_str = ["desc" if x else "" for x in descending]
 
-        result = self._native_frame.order(
+        result = self.native.order(
             ",".join(
                 (
                     f'"{col}" {desc} nulls last'
@@ -405,14 +380,14 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
                 )
             )
         )
-        return self._from_native_frame(result)
+        return self._with_native(result)
 
     def drop_nulls(self: Self, subset: Sequence[str] | None) -> Self:
-        rel = self._native_frame
+        rel = self.native
         subset_ = subset if subset is not None else rel.columns
         keep_condition = " and ".join(f'"{col}" is not null' for col in subset_)
         query = f"select * from rel where {keep_condition}"  # noqa: S608
-        return self._from_native_frame(duckdb.sql(query))
+        return self._with_native(duckdb.sql(query))
 
     def explode(self: Self, columns: Sequence[str]) -> Self:
         dtypes = import_dtypes_module(self._version)
@@ -435,7 +410,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             raise NotImplementedError(msg)
 
         col_to_explode = ColumnExpression(columns[0])
-        rel = self._native_frame
+        rel = self.native
         original_columns = self.columns
 
         not_null_condition = col_to_explode.isnotnull() & FunctionExpression(
@@ -454,7 +429,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             *(lit(None).alias(col) if col in columns else col for col in original_columns)
         )
 
-        return self._from_native_frame(non_null_rel.union(null_rel))
+        return self._with_native(non_null_rel.union(null_rel))
 
     def unpivot(
         self: Self,
@@ -479,7 +454,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
         )
         unpivot_on = ", ".join(f'"{col}"' for col in on_)
 
-        rel = self._native_frame  # noqa: F841
+        rel = self.native  # noqa: F841
         query = f"""
             with unpivot_cte as (
                 unpivot rel
@@ -491,7 +466,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             select {cols_to_select}
             from unpivot_cte;
             """  # noqa: S608
-        return self._from_native_frame(duckdb.sql(query))
+        return self._with_native(duckdb.sql(query))
 
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."

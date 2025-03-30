@@ -163,7 +163,7 @@ class Series(Generic[IntoSeriesT]):
             is_numpy_scalar(idx) and idx.dtype.kind in {"i", "u"}
         ):
             return self._compliant_series[idx]
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series[to_native(idx, pass_through=True)]
         )
 
@@ -264,7 +264,7 @@ class Series(Generic[IntoSeriesT]):
             a: [[999,888,3]]
             b: [[4,5,6]]
         """
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.scatter(indices, self._extract_native(values))
         )
 
@@ -292,11 +292,8 @@ class Series(Generic[IntoSeriesT]):
             return arg._compliant_series
         return arg
 
-    def _from_compliant_series(self: Self, series: Any) -> Self:
-        return self.__class__(
-            series,
-            level=self._level,
-        )
+    def _with_compliant(self: Self, series: Any) -> Self:
+        return self.__class__(series, level=self._level)
 
     def pipe(
         self: Self, function: Callable[[Any], Self], *args: Any, **kwargs: Any
@@ -445,7 +442,7 @@ class Series(Generic[IntoSeriesT]):
             2    2.428571
             Name: a, dtype: float64
         """
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.ewm_mean(
                 com=com,
                 span=span,
@@ -482,7 +479,7 @@ class Series(Generic[IntoSeriesT]):
             ]
         """
         _validate_dtype(dtype)
-        return self._from_compliant_series(self._compliant_series.cast(dtype))
+        return self._with_compliant(self._compliant_series.cast(dtype))
 
     def to_frame(self: Self) -> DataFrame[Any]:
         """Convert to dataframe.
@@ -778,7 +775,7 @@ class Series(Generic[IntoSeriesT]):
             5    3
             dtype: int64
         """
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.clip(
                 lower_bound=self._extract_native(lower_bound),
                 upper_bound=self._extract_native(upper_bound),
@@ -810,7 +807,7 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.is_in(to_native(other, pass_through=True))
         )
 
@@ -835,7 +832,7 @@ class Series(Generic[IntoSeriesT]):
                2
             ]
         """
-        return self._from_compliant_series(self._compliant_series.arg_true())
+        return self._with_compliant(self._compliant_series.arg_true())
 
     def drop_nulls(self: Self) -> Self:
         """Drop null values.
@@ -860,7 +857,7 @@ class Series(Generic[IntoSeriesT]):
             4    5.0
             dtype: float64
         """
-        return self._from_compliant_series(self._compliant_series.drop_nulls())
+        return self._with_compliant(self._compliant_series.drop_nulls())
 
     def abs(self: Self) -> Self:
         """Calculate the absolute value of each element.
@@ -885,7 +882,7 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
-        return self._from_compliant_series(self._compliant_series.abs())
+        return self._with_compliant(self._compliant_series.abs())
 
     def cum_sum(self: Self, *, reverse: bool = False) -> Self:
         """Calculate the cumulative sum.
@@ -907,9 +904,7 @@ class Series(Generic[IntoSeriesT]):
             2    9
             dtype: int64
         """
-        return self._from_compliant_series(
-            self._compliant_series.cum_sum(reverse=reverse)
-        )
+        return self._with_compliant(self._compliant_series.cum_sum(reverse=reverse))
 
     def unique(self: Self, *, maintain_order: bool = False) -> Self:
         """Returns unique values of the series.
@@ -939,7 +934,7 @@ class Series(Generic[IntoSeriesT]):
                6
             ]
         """
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.unique(maintain_order=maintain_order)
         )
 
@@ -975,7 +970,7 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
-        return self._from_compliant_series(self._compliant_series.diff())
+        return self._with_compliant(self._compliant_series.diff())
 
     def shift(self: Self, n: int) -> Self:
         """Shift values by `n` positions.
@@ -1007,7 +1002,7 @@ class Series(Generic[IntoSeriesT]):
             2    4.0
             dtype: float64
         """
-        return self._from_compliant_series(self._compliant_series.shift(n))
+        return self._with_compliant(self._compliant_series.shift(n))
 
     def sample(
         self: Self,
@@ -1052,7 +1047,7 @@ class Series(Generic[IntoSeriesT]):
                4
             ]
         """
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.sample(
                 n=n, fraction=fraction, with_replacement=with_replacement, seed=seed
             )
@@ -1097,7 +1092,7 @@ class Series(Generic[IntoSeriesT]):
             2    3
             Name: bar, dtype: int64
         """
-        return self._from_compliant_series(self._compliant_series.alias(name=name))
+        return self._with_compliant(self._compliant_series.alias(name=name))
 
     def rename(self: Self, name: str) -> Self:
         """Rename the Series.
@@ -1193,7 +1188,7 @@ class Series(Generic[IntoSeriesT]):
             new = list(old.values())
             old = list(old.keys())
 
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.replace_strict(old, new, return_dtype=return_dtype)
         )
 
@@ -1223,7 +1218,7 @@ class Series(Generic[IntoSeriesT]):
                1
             ]
         """
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.sort(descending=descending, nulls_last=nulls_last)
         )
 
@@ -1255,7 +1250,7 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
-        return self._from_compliant_series(self._compliant_series.is_null())
+        return self._with_compliant(self._compliant_series.is_null())
 
     def is_nan(self: Self) -> Self:
         """Returns a boolean Series indicating which values are NaN.
@@ -1279,7 +1274,7 @@ class Series(Generic[IntoSeriesT]):
             2    False
             dtype: boolean
         """
-        return self._from_compliant_series(self._compliant_series.is_nan())
+        return self._with_compliant(self._compliant_series.is_nan())
 
     def fill_null(
         self: Self,
@@ -1333,7 +1328,7 @@ class Series(Generic[IntoSeriesT]):
         if strategy is not None and strategy not in {"forward", "backward"}:
             msg = f"strategy not supported: {strategy}"
             raise ValueError(msg)
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.fill_null(
                 value=self._extract_native(value), strategy=strategy, limit=limit
             )
@@ -1377,7 +1372,7 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.is_between(
                 self._extract_native(lower_bound),
                 self._extract_native(upper_bound),
@@ -1461,128 +1456,128 @@ class Series(Generic[IntoSeriesT]):
         return self._compliant_series.to_polars()
 
     def __add__(self: Self, other: object) -> Self:
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__add__(self._extract_native(other))
         )
 
     def __radd__(self: Self, other: object) -> Self:
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__radd__(self._extract_native(other))
         )
 
     def __sub__(self: Self, other: object) -> Self:
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__sub__(self._extract_native(other))
         )
 
     def __rsub__(self: Self, other: object) -> Self:
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__rsub__(self._extract_native(other))
         )
 
     def __mul__(self: Self, other: object) -> Self:
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__mul__(self._extract_native(other))
         )
 
     def __rmul__(self: Self, other: object) -> Self:
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__rmul__(self._extract_native(other))
         )
 
     def __truediv__(self: Self, other: object) -> Self:
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__truediv__(self._extract_native(other))
         )
 
     def __rtruediv__(self: Self, other: object) -> Self:
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__rtruediv__(self._extract_native(other))
         )
 
     def __floordiv__(self: Self, other: object) -> Self:
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__floordiv__(self._extract_native(other))
         )
 
     def __rfloordiv__(self: Self, other: object) -> Self:
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__rfloordiv__(self._extract_native(other))
         )
 
     def __pow__(self: Self, other: object) -> Self:
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__pow__(self._extract_native(other))
         )
 
     def __rpow__(self: Self, other: object) -> Self:
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__rpow__(self._extract_native(other))
         )
 
     def __mod__(self: Self, other: object) -> Self:
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__mod__(self._extract_native(other))
         )
 
     def __rmod__(self: Self, other: object) -> Self:
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__rmod__(self._extract_native(other))
         )
 
     def __eq__(self: Self, other: object) -> Self:  # type: ignore[override]
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__eq__(self._extract_native(other))
         )
 
     def __ne__(self: Self, other: object) -> Self:  # type: ignore[override]
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__ne__(self._extract_native(other))
         )
 
     def __gt__(self: Self, other: Any) -> Self:
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__gt__(self._extract_native(other))
         )
 
     def __ge__(self: Self, other: Any) -> Self:
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__ge__(self._extract_native(other))
         )
 
     def __lt__(self: Self, other: Any) -> Self:
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__lt__(self._extract_native(other))
         )
 
     def __le__(self: Self, other: Any) -> Self:
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__le__(self._extract_native(other))
         )
 
     def __and__(self: Self, other: Any) -> Self:
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__and__(self._extract_native(other))
         )
 
     def __rand__(self: Self, other: Any) -> Self:
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__rand__(self._extract_native(other))
         )
 
     def __or__(self: Self, other: Any) -> Self:
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__or__(self._extract_native(other))
         )
 
     def __ror__(self: Self, other: Any) -> Self:
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.__ror__(self._extract_native(other))
         )
 
     # unary
     def __invert__(self: Self) -> Self:
-        return self._from_compliant_series(self._compliant_series.__invert__())
+        return self._with_compliant(self._compliant_series.__invert__())
 
     def filter(self: Self, predicate: Any) -> Self:
         """Filter elements in the Series based on a condition.
@@ -1602,7 +1597,7 @@ class Series(Generic[IntoSeriesT]):
             4    50
             dtype: int64
         """
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.filter(self._extract_native(predicate))
         )
 
@@ -1671,7 +1666,7 @@ class Series(Generic[IntoSeriesT]):
             3    False
             dtype: bool
         """
-        return self._from_compliant_series(self._compliant_series.is_unique())
+        return self._with_compliant(self._compliant_series.is_unique())
 
     def null_count(self: Self) -> int:
         r"""Count the number of null values.
@@ -1718,7 +1713,7 @@ class Series(Generic[IntoSeriesT]):
                 false
             ]
         """
-        return self._from_compliant_series(self._compliant_series.is_first_distinct())
+        return self._with_compliant(self._compliant_series.is_first_distinct())
 
     def is_last_distinct(self: Self) -> Self:
         r"""Return a boolean mask indicating the last occurrence of each distinct value.
@@ -1739,7 +1734,7 @@ class Series(Generic[IntoSeriesT]):
             4     True
             dtype: bool
         """
-        return self._from_compliant_series(self._compliant_series.is_last_distinct())
+        return self._with_compliant(self._compliant_series.is_last_distinct())
 
     def is_sorted(self: Self, *, descending: bool = False) -> bool:
         r"""Check if the Series is sorted.
@@ -1877,7 +1872,7 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.zip_with(
                 self._extract_native(mask), self._extract_native(other)
             )
@@ -1924,7 +1919,7 @@ class Series(Generic[IntoSeriesT]):
             2    2
             dtype: int64
         """
-        return self._from_compliant_series(self._compliant_series.head(n))
+        return self._with_compliant(self._compliant_series.head(n))
 
     def tail(self: Self, n: int = 10) -> Self:
         r"""Get the last `n` rows.
@@ -1951,7 +1946,7 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
-        return self._from_compliant_series(self._compliant_series.tail(n))
+        return self._with_compliant(self._compliant_series.tail(n))
 
     def round(self: Self, decimals: int = 0) -> Self:
         r"""Round underlying floating point data by `decimals` digits.
@@ -1985,7 +1980,7 @@ class Series(Generic[IntoSeriesT]):
                3.9
             ]
         """
-        return self._from_compliant_series(self._compliant_series.round(decimals))
+        return self._with_compliant(self._compliant_series.round(decimals))
 
     def to_dummies(
         self: Self, *, separator: str = "_", drop_first: bool = False
@@ -2053,7 +2048,7 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.gather_every(n=n, offset=offset)
         )
 
@@ -2098,7 +2093,7 @@ class Series(Generic[IntoSeriesT]):
             1    2
             dtype: int64
         """
-        return self._from_compliant_series(self._compliant_series.mode())
+        return self._with_compliant(self._compliant_series.mode())
 
     def is_finite(self: Self) -> Self:
         """Returns a boolean Series indicating which values are finite.
@@ -2129,7 +2124,7 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
-        return self._from_compliant_series(self._compliant_series.is_finite())
+        return self._with_compliant(self._compliant_series.is_finite())
 
     def cum_count(self: Self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative count of the non-null values in the series.
@@ -2157,9 +2152,7 @@ class Series(Generic[IntoSeriesT]):
                 1
             ]
         """
-        return self._from_compliant_series(
-            self._compliant_series.cum_count(reverse=reverse)
-        )
+        return self._with_compliant(self._compliant_series.cum_count(reverse=reverse))
 
     def cum_min(self: Self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative min of the non-null values in the series.
@@ -2182,9 +2175,7 @@ class Series(Generic[IntoSeriesT]):
             3    1.0
             dtype: float64
         """
-        return self._from_compliant_series(
-            self._compliant_series.cum_min(reverse=reverse)
-        )
+        return self._with_compliant(self._compliant_series.cum_min(reverse=reverse))
 
     def cum_max(self: Self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative max of the non-null values in the series.
@@ -2214,9 +2205,7 @@ class Series(Generic[IntoSeriesT]):
             ]
 
         """
-        return self._from_compliant_series(
-            self._compliant_series.cum_max(reverse=reverse)
-        )
+        return self._with_compliant(self._compliant_series.cum_max(reverse=reverse))
 
     def cum_prod(self: Self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative product of the non-null values in the series.
@@ -2244,9 +2233,7 @@ class Series(Generic[IntoSeriesT]):
                6
             ]
         """
-        return self._from_compliant_series(
-            self._compliant_series.cum_prod(reverse=reverse)
-        )
+        return self._with_compliant(self._compliant_series.cum_prod(reverse=reverse))
 
     def rolling_sum(
         self: Self,
@@ -2300,11 +2287,9 @@ class Series(Generic[IntoSeriesT]):
         if len(self) == 0:  # pragma: no cover
             return self
 
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.rolling_sum(
-                window_size=window_size,
-                min_samples=min_samples_int,
-                center=center,
+                window_size=window_size, min_samples=min_samples_int, center=center
             )
         )
 
@@ -2364,11 +2349,9 @@ class Series(Generic[IntoSeriesT]):
         if len(self) == 0:  # pragma: no cover
             return self
 
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.rolling_mean(
-                window_size=window_size,
-                min_samples=min_samples,
-                center=center,
+                window_size=window_size, min_samples=min_samples, center=center
             )
         )
 
@@ -2429,7 +2412,7 @@ class Series(Generic[IntoSeriesT]):
         if len(self) == 0:  # pragma: no cover
             return self
 
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.rolling_var(
                 window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
             )
@@ -2489,7 +2472,7 @@ class Series(Generic[IntoSeriesT]):
         if len(self) == 0:  # pragma: no cover
             return self
 
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.rolling_std(
                 window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
             )
@@ -2561,7 +2544,7 @@ class Series(Generic[IntoSeriesT]):
             )
             raise ValueError(msg)
 
-        return self._from_compliant_series(
+        return self._with_compliant(
             self._compliant_series.rank(method=method, descending=descending)
         )
 

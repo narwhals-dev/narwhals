@@ -27,9 +27,9 @@ class SparkLikeLazyGroupBy(LazyGroupBy["SparkLikeLazyFrame", "SparkLikeExpr", "C
 
     def agg(self: Self, *exprs: SparkLikeExpr) -> SparkLikeLazyFrame:
         if agg_columns := list(self._evaluate_exprs(exprs)):
-            return self.compliant._from_native_frame(
+            return self.compliant._with_native(
                 self.compliant.native.groupBy(*self._keys).agg(*agg_columns)
             )
-        return self.compliant._from_native_frame(
+        return self.compliant._with_native(
             self.compliant.native.select(*self._keys).dropDuplicates()
         )

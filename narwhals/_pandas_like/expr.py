@@ -270,7 +270,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     res_native = df._native_frame.groupby(partition_by)[
                         list(output_names)
                     ].transform(pandas_function_name, **pandas_kwargs)
-                result_frame = df._from_native_frame(res_native).rename(
+                result_frame = df._with_native(res_native).rename(
                     dict(zip(output_names, aliases))
                 )
                 results = [result_frame[name] for name in aliases]

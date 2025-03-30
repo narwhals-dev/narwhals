@@ -39,6 +39,6 @@ class SeriesStructNamespace(Generic[SeriesT]):
             >>> s.struct.field("name").to_list()
             ['john', 'jane']
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.struct.field(name)
         )

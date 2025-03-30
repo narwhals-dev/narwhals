@@ -21,18 +21,20 @@ from narwhals._compliant.any_namespace import StructNamespace
 from narwhals._compliant.namespace import CompliantNamespace
 from narwhals._compliant.typing import AliasName
 from narwhals._compliant.typing import AliasNames
+from narwhals._compliant.typing import CompliantExprT_co
 from narwhals._compliant.typing import CompliantFrameT
 from narwhals._compliant.typing import CompliantLazyFrameT
 from narwhals._compliant.typing import CompliantSeriesOrNativeExprT_co
 from narwhals._compliant.typing import EagerDataFrameT
 from narwhals._compliant.typing import EagerExprT
 from narwhals._compliant.typing import EagerSeriesT
-from narwhals._compliant.typing import NativeExprT_co
+from narwhals._compliant.typing import LazyExprT
+from narwhals._compliant.typing import NativeExprT
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
 from narwhals.dtypes import DType
-from narwhals.utils import _ExprNamespace
+from narwhals.utils import _StoresCompliant
 from narwhals.utils import deprecated
 from narwhals.utils import not_implemented
 from narwhals.utils import unstable
@@ -867,9 +869,9 @@ class EagerExpr(
         return EagerExprStructNamespace(self)
 
 
-class LazyExpr(
-    CompliantExpr[CompliantLazyFrameT, NativeExprT_co],
-    Protocol38[CompliantLazyFrameT, NativeExprT_co],
+class LazyExpr(  # type: ignore[misc]
+    CompliantExpr[CompliantLazyFrameT, NativeExprT],
+    Protocol38[CompliantLazyFrameT, NativeExprT],
 ):
     arg_min: not_implemented = not_implemented()
     arg_max: not_implemented = not_implemented()
@@ -878,13 +880,9 @@ class LazyExpr(
     tail: not_implemented = not_implemented()
     mode: not_implemented = not_implemented()
     sort: not_implemented = not_implemented()
-    rank: not_implemented = not_implemented()
     sample: not_implemented = not_implemented()
     map_batches: not_implemented = not_implemented()
     ewm_mean: not_implemented = not_implemented()
-    rolling_mean: not_implemented = not_implemented()
-    rolling_var: not_implemented = not_implemented()
-    rolling_std: not_implemented = not_implemented()
     gather_every: not_implemented = not_implemented()
     replace_strict: not_implemented = not_implemented()
     cat: not_implemented = not_implemented()  # pyright: ignore[reportAssignmentType]
@@ -893,9 +891,31 @@ class LazyExpr(
     def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:
         return hasattr(obj, "__narwhals_expr__")
 
+    def _with_callable(self, call: Callable[..., Any], /) -> Self: ...
+    def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
+
+    @property
+    def name(self) -> LazyExprNameNamespace[Self]:
+        return LazyExprNameNamespace(self)
+
+
+class _ExprNamespace(  # type: ignore[misc]
+    _StoresCompliant[CompliantExprT_co], Protocol[CompliantExprT_co]
+):
+    _compliant_expr: CompliantExprT_co
+
+    @property
+    def compliant(self) -> CompliantExprT_co:
+        return self._compliant_expr
+
 
 class EagerExprNamespace(_ExprNamespace[EagerExprT], Generic[EagerExprT]):
     def __init__(self, expr: EagerExprT, /) -> None:
+        self._compliant_expr = expr
+
+
+class LazyExprNamespace(_ExprNamespace[LazyExprT], Generic[LazyExprT]):
+    def __init__(self, expr: LazyExprT, /) -> None:
         self._compliant_expr = expr
 
 
@@ -986,25 +1006,27 @@ class EagerExprListNamespace(
         return self.compliant._reuse_series_namespace("list", "len")
 
 
-class EagerExprNameNamespace(
-    EagerExprNamespace[EagerExprT], NameNamespace[EagerExprT], Generic[EagerExprT]
+class CompliantExprNameNamespace(  # type: ignore[misc]
+    _ExprNamespace[CompliantExprT_co],
+    NameNamespace[CompliantExprT_co],
+    Protocol[CompliantExprT_co],
 ):
-    def keep(self) -> EagerExprT:
+    def keep(self) -> CompliantExprT_co:
         return self._from_callable(lambda name: name, alias=False)
 
-    def map(self, function: AliasName) -> EagerExprT:
+    def map(self, function: AliasName) -> CompliantExprT_co:
         return self._from_callable(function)
 
-    def prefix(self, prefix: str) -> EagerExprT:
+    def prefix(self, prefix: str) -> CompliantExprT_co:
         return self._from_callable(lambda name: f"{prefix}{name}")
 
-    def suffix(self, suffix: str) -> EagerExprT:
+    def suffix(self, suffix: str) -> CompliantExprT_co:
         return self._from_callable(lambda name: f"{name}{suffix}")
 
-    def to_lowercase(self) -> EagerExprT:
+    def to_lowercase(self) -> CompliantExprT_co:
         return self._from_callable(str.lower)
 
-    def to_uppercase(self) -> EagerExprT:
+    def to_uppercase(self) -> CompliantExprT_co:
         return self._from_callable(str.upper)
 
     @staticmethod
@@ -1014,6 +1036,16 @@ class EagerExprNameNamespace(
 
         return fn
 
+    def _from_callable(
+        self, func: AliasName, /, *, alias: bool = True
+    ) -> CompliantExprT_co: ...
+
+
+class EagerExprNameNamespace(
+    EagerExprNamespace[EagerExprT],
+    CompliantExprNameNamespace[EagerExprT],
+    Generic[EagerExprT],
+):
     def _from_callable(self, func: AliasName, /, *, alias: bool = True) -> EagerExprT:
         expr = self.compliant
         return type(expr)(
@@ -1030,6 +1062,17 @@ class EagerExprNameNamespace(
             version=expr._version,
             call_kwargs=expr._call_kwargs,
         )
+
+
+class LazyExprNameNamespace(
+    LazyExprNamespace[LazyExprT],
+    CompliantExprNameNamespace[LazyExprT],
+    Generic[LazyExprT],
+):
+    def _from_callable(self, func: AliasName, /, *, alias: bool = True) -> LazyExprT:
+        expr = self.compliant
+        output_names = self._alias_output_names(func) if alias else None
+        return expr._with_alias_output_names(output_names)
 
 
 class EagerExprStringNamespace(

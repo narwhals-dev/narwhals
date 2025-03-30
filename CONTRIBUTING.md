@@ -109,7 +109,7 @@ If you want to run PySpark-related tests, you'll need to have Java installed. Re
 
 2. Install Narwhals: `uv pip install -e . --group local-dev"`. This will include fast-ish core libraries and dev dependencies.
    If you also want to test other libraries like Dask , PySpark, and Modin, you can install them too with
-   `uv pip install -e ".[dask, pyspark, modin]" --group local-dev"`.
+   `uv pip install -e ".[dask, pyspark, modin]" --group local-dev`.
 
 You should also install pre-commit:
 
@@ -321,6 +321,42 @@ heavy third-party libraries (pandas, NumPy, Polars, etc...) please follow these 
 
 We're trying to be really lightweight and minimal-overhead, and
 unnecessary imports can slow things down.
+
+## Claiming issues
+
+If you start working on an issue, it's usually a good idea to let others know about this
+in order to avoid duplicating work.
+
+Do:
+
+- When you're about to start working on an issue, and have understood the requirements
+  and have some idea of what a solution would involve, comment "I've started working on this".
+- Push partial work (even if unfinished) to a branch, which you can open in "draft" state.
+- If someone else has commented that they're working on an issue but hadn't made any public
+  work for 1-2 weeks, it's usually OK to assume that they're no longer working on it.
+
+Don't:
+
+- Don't claim issues that you intend to work on at a later date. For example, if it's Monday and
+  you see an issue that interests you and you would like to work on it on Sunday, then the
+  correct time to write "I'm working on this" is on Sunday when you start working on it.
+- Don't ask for permission to work on issues, or to be assigned them. You have permission, we
+  accept (and welcome!) contributions from everyone!
+
+## Behaviour towards other contributors or maintainers
+
+Above all else, please assume good intentions and go the extra mile to be super-extra-nice.
+
+Some general guidelines:
+
+- If in doubt, err on the side of being warm rather than being cold.
+- If in doubt, put one extra positive emoji than one fewer one.
+- Never delete or dismiss other maintainers' comments.
+- Non-maintainers' comments should only be deleted if they are unambiguously spam
+  (e.g. crypto adverts). In cases of rude or abusive behaviour, please contact the
+  project author (`@MarcoGorelli`).
+- Avoid escalating conflicts. People type harder than they speak, and online discourse
+  is especially difficult. Again, please assume good intentions.
 
 ## Happy contributing!
 

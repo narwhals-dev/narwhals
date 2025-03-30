@@ -6,6 +6,7 @@ from datetime import timezone
 from enum import Enum
 from enum import auto
 from functools import wraps
+from importlib.util import find_spec
 from inspect import getattr_static
 from secrets import token_hex
 from typing import TYPE_CHECKING
@@ -49,20 +50,32 @@ if TYPE_CHECKING:
     from typing import AbstractSet as Set
 
     import pandas as pd
+    import pyarrow as pa
     from typing_extensions import LiteralString
     from typing_extensions import ParamSpec
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
+    from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._compliant import CompliantExpr
+    from narwhals._compliant import CompliantExprT
     from narwhals._compliant import CompliantFrameT
+    from narwhals._compliant import CompliantNamespace
     from narwhals._compliant import CompliantSeriesOrNativeExprT_co
+    from narwhals._compliant import CompliantSeriesT
     from narwhals._compliant import NativeFrameT_co
     from narwhals._compliant import NativeSeriesT_co
+    from narwhals._dask.namespace import DaskNamespace
+    from narwhals._duckdb.namespace import DuckDBNamespace
+    from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals._polars.namespace import PolarsNamespace
+    from narwhals._spark_like.namespace import SparkLikeNamespace
+    from narwhals._translate import ArrowStreamExportable
+    from narwhals._translate import IntoArrowTable
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
-    from narwhals.functions import ArrowStreamExportable
     from narwhals.series import Series
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
@@ -84,6 +97,19 @@ if TYPE_CHECKING:
     _Fn = TypeVar("_Fn", bound="Callable[..., Any]")
     P = ParamSpec("P")
     R = TypeVar("R")
+
+    _PandasLike: TypeAlias = (
+        "Literal[Implementation.PANDAS, Implementation.CUDF, Implementation.MODIN]"
+    )
+    _Arrow: TypeAlias = "Literal[Implementation.PYARROW]"
+    _Polars: TypeAlias = "Literal[Implementation.POLARS]"
+    _SparkLike: TypeAlias = "Literal[Implementation.PYSPARK, Implementation.SQLFRAME]"
+    _Dask: TypeAlias = "Literal[Implementation.DASK]"
+    _DuckDB: TypeAlias = "Literal[Implementation.DUCKDB]"
+    _EagerOnly: TypeAlias = "_PandasLike | _Arrow"
+    _EagerAllowed: TypeAlias = "_Polars | _EagerOnly"
+    _LazyOnly: TypeAlias = "_SparkLike | _Dask | _DuckDB"
+    _LazyAllowed: TypeAlias = "_Polars | _LazyOnly"
 
     class _SupportsVersion(Protocol):
         __version__: str
@@ -110,7 +136,7 @@ if TYPE_CHECKING:
         - `_version`
         """
 
-    class _FullContext(_StoresImplementation, _LimitedContext, Protocol):  # noqa: PYI046
+    class _FullContext(_StoresImplementation, _LimitedContext, Protocol):
         """Provides 3 attributes.
 
         - `_implementation`
@@ -125,15 +151,9 @@ if TYPE_CHECKING:
 
 NativeT_co = TypeVar("NativeT_co", covariant=True)
 CompliantT_co = TypeVar("CompliantT_co", covariant=True)
-CompliantExprT_co = TypeVar(
-    "CompliantExprT_co", bound="CompliantExpr[Any, Any]", covariant=True
-)
-CompliantSeriesT_co = TypeVar(
-    "CompliantSeriesT_co", bound="CompliantSeries[Any]", covariant=True
-)
 
 
-class _StoresNative(Protocol[NativeT_co]):
+class _StoresNative(Protocol[NativeT_co]):  # noqa: PYI046
     """Provides access to a native object.
 
     Native objects have types like:
@@ -148,7 +168,7 @@ class _StoresNative(Protocol[NativeT_co]):
         ...
 
 
-class _StoresCompliant(Protocol[CompliantT_co]):
+class _StoresCompliant(Protocol[CompliantT_co]):  # noqa: PYI046
     """Provides access to a compliant object.
 
     Compliant objects have types like:
@@ -161,35 +181,6 @@ class _StoresCompliant(Protocol[CompliantT_co]):
     def compliant(self) -> CompliantT_co:
         """Return the compliant object."""
         ...
-
-
-class _SeriesNamespace(  # type: ignore[misc]  # noqa: PYI046
-    _StoresCompliant[CompliantSeriesT_co],
-    _StoresNative[NativeT_co],
-    Protocol[CompliantSeriesT_co, NativeT_co],
-):
-    _compliant_series: CompliantSeriesT_co
-
-    @property
-    def compliant(self) -> CompliantSeriesT_co:
-        return self._compliant_series
-
-    @property
-    def native(self) -> NativeT_co:
-        return self._compliant_series.native
-
-    def from_native(self, series: Any, /) -> CompliantSeriesT_co:
-        return self.compliant._from_native_series(series)
-
-
-class _ExprNamespace(  # type: ignore[misc] # noqa: PYI046
-    _StoresCompliant[CompliantExprT_co], Protocol[CompliantExprT_co]
-):
-    _compliant_expr: CompliantExprT_co
-
-    @property
-    def compliant(self) -> CompliantExprT_co:
-        return self._compliant_expr
 
 
 class Version(Enum):
@@ -555,6 +546,65 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
 }
 
 
+@overload
+def _into_compliant_namespace(
+    impl: _PandasLike, version: Version, /
+) -> PandasLikeNamespace: ...
+@overload
+def _into_compliant_namespace(impl: _Polars, version: Version, /) -> PolarsNamespace: ...
+@overload
+def _into_compliant_namespace(impl: _Arrow, version: Version, /) -> ArrowNamespace: ...
+@overload
+def _into_compliant_namespace(
+    impl: _SparkLike, version: Version, /
+) -> SparkLikeNamespace: ...
+@overload
+def _into_compliant_namespace(impl: _DuckDB, version: Version, /) -> DuckDBNamespace: ...
+@overload
+def _into_compliant_namespace(impl: _Dask, version: Version, /) -> DaskNamespace: ...
+@overload
+def _into_compliant_namespace(
+    impl: _EagerAllowed, version: Version, /
+) -> PandasLikeNamespace | PolarsNamespace | ArrowNamespace: ...
+def _into_compliant_namespace(
+    impl: Implementation, version: Version, /
+) -> CompliantNamespace[Any, Any]:
+    native = impl.to_native_namespace()
+    into_version = native if not impl.is_sqlframe() else native._version
+    backend_version = parse_version(into_version)
+    if impl.is_pandas_like():
+        from narwhals._pandas_like.namespace import PandasLikeNamespace
+
+        return PandasLikeNamespace(
+            implementation=impl, backend_version=backend_version, version=version
+        )
+    elif impl.is_polars():
+        from narwhals._polars.namespace import PolarsNamespace
+
+        return PolarsNamespace(backend_version=backend_version, version=version)
+    elif impl.is_pyarrow():
+        from narwhals._arrow.namespace import ArrowNamespace
+
+        return ArrowNamespace(backend_version=backend_version, version=version)
+    elif impl.is_spark_like():  # pragma: no cover
+        from narwhals._spark_like.namespace import SparkLikeNamespace
+
+        return SparkLikeNamespace(
+            implementation=impl, backend_version=backend_version, version=version
+        )
+    elif impl.is_duckdb():  # pragma: no cover
+        from narwhals._duckdb.namespace import DuckDBNamespace
+
+        return DuckDBNamespace(backend_version=backend_version, version=version)
+    elif impl.is_dask():  # pragma: no cover
+        from narwhals._dask.namespace import DaskNamespace
+
+        return DaskNamespace(backend_version=backend_version, version=version)
+    else:
+        msg = "Not supported Implementation"  # pragma: no cover
+        raise AssertionError(msg)
+
+
 def validate_backend_version(
     implementation: Implementation, backend_version: tuple[int, ...]
 ) -> None:
@@ -747,48 +797,46 @@ def maybe_align_index(
     if isinstance(
         getattr(lhs_any, "_compliant_frame", None), PandasLikeDataFrame
     ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasLikeDataFrame):
-        _validate_index(lhs_any._compliant_frame._native_frame.index)
-        _validate_index(rhs_any._compliant_frame._native_frame.index)
-        return lhs_any._from_compliant_dataframe(
-            lhs_any._compliant_frame._from_native_frame(
-                lhs_any._compliant_frame._native_frame.loc[
-                    rhs_any._compliant_frame._native_frame.index
-                ]
+        _validate_index(lhs_any._compliant_frame.native.index)
+        _validate_index(rhs_any._compliant_frame.native.index)
+        return lhs_any._with_compliant(
+            lhs_any._compliant_frame._with_native(
+                lhs_any._compliant_frame.native.loc[rhs_any._compliant_frame.native.index]
             )
         )
     if isinstance(
         getattr(lhs_any, "_compliant_frame", None), PandasLikeDataFrame
     ) and isinstance(getattr(rhs_any, "_compliant_series", None), PandasLikeSeries):
-        _validate_index(lhs_any._compliant_frame._native_frame.index)
-        _validate_index(rhs_any._compliant_series._native_series.index)
-        return lhs_any._from_compliant_dataframe(
-            lhs_any._compliant_frame._from_native_frame(
-                lhs_any._compliant_frame._native_frame.loc[
-                    rhs_any._compliant_series._native_series.index
+        _validate_index(lhs_any._compliant_frame.native.index)
+        _validate_index(rhs_any._compliant_series.native.index)
+        return lhs_any._with_compliant(
+            lhs_any._compliant_frame._with_native(
+                lhs_any._compliant_frame.native.loc[
+                    rhs_any._compliant_series.native.index
                 ]
             )
         )
     if isinstance(
         getattr(lhs_any, "_compliant_series", None), PandasLikeSeries
     ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasLikeDataFrame):
-        _validate_index(lhs_any._compliant_series._native_series.index)
-        _validate_index(rhs_any._compliant_frame._native_frame.index)
-        return lhs_any._from_compliant_series(
-            lhs_any._compliant_series._from_native_series(
-                lhs_any._compliant_series._native_series.loc[
-                    rhs_any._compliant_frame._native_frame.index
+        _validate_index(lhs_any._compliant_series.native.index)
+        _validate_index(rhs_any._compliant_frame.native.index)
+        return lhs_any._with_compliant(
+            lhs_any._compliant_series._with_native(
+                lhs_any._compliant_series.native.loc[
+                    rhs_any._compliant_frame.native.index
                 ]
             )
         )
     if isinstance(
         getattr(lhs_any, "_compliant_series", None), PandasLikeSeries
     ) and isinstance(getattr(rhs_any, "_compliant_series", None), PandasLikeSeries):
-        _validate_index(lhs_any._compliant_series._native_series.index)
-        _validate_index(rhs_any._compliant_series._native_series.index)
-        return lhs_any._from_compliant_series(
-            lhs_any._compliant_series._from_native_series(
-                lhs_any._compliant_series._native_series.loc[
-                    rhs_any._compliant_series._native_series.index
+        _validate_index(lhs_any._compliant_series.native.index)
+        _validate_index(rhs_any._compliant_series.native.index)
+        return lhs_any._with_compliant(
+            lhs_any._compliant_series._with_native(
+                lhs_any._compliant_series.native.loc[
+                    rhs_any._compliant_series.native.index
                 ]
             )
         )
@@ -904,8 +952,8 @@ def maybe_set_index(
         keys = column_names
 
     if is_pandas_like_dataframe(native_obj):
-        return df_any._from_compliant_dataframe(
-            df_any._compliant_frame._from_native_frame(native_obj.set_index(keys))
+        return df_any._with_compliant(
+            df_any._compliant_frame._with_native(native_obj.set_index(keys))
         )
     elif is_pandas_like_series(native_obj):
         from narwhals._pandas_like.utils import set_index
@@ -920,9 +968,7 @@ def maybe_set_index(
             implementation=obj._compliant_series._implementation,  # type: ignore[union-attr]
             backend_version=obj._compliant_series._backend_version,  # type: ignore[union-attr]
         )
-        return df_any._from_compliant_series(
-            df_any._compliant_series._from_native_series(native_obj)
-        )
+        return df_any._with_compliant(df_any._compliant_series._with_native(native_obj))
     else:
         return df_any
 
@@ -964,17 +1010,15 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
         native_namespace = obj_any.__native_namespace__()
         if _has_default_index(native_obj, native_namespace):
             return obj_any
-        return obj_any._from_compliant_dataframe(
-            obj_any._compliant_frame._from_native_frame(native_obj.reset_index(drop=True))
+        return obj_any._with_compliant(
+            obj_any._compliant_frame._with_native(native_obj.reset_index(drop=True))
         )
     if is_pandas_like_series(native_obj):
         native_namespace = obj_any.__native_namespace__()
         if _has_default_index(native_obj, native_namespace):
             return obj_any
-        return obj_any._from_compliant_series(
-            obj_any._compliant_series._from_native_series(
-                native_obj.reset_index(drop=True)
-            )
+        return obj_any._with_compliant(
+            obj_any._compliant_series._with_native(native_obj.reset_index(drop=True))
         )
     return obj_any
 
@@ -1035,14 +1079,14 @@ def maybe_convert_dtypes(
     obj_any = cast("Any", obj)
     native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj):
-        return obj_any._from_compliant_dataframe(
-            obj_any._compliant_frame._from_native_frame(
+        return obj_any._with_compliant(
+            obj_any._compliant_frame._with_native(
                 native_obj.convert_dtypes(*args, **kwargs)
             )
         )
     if is_pandas_like_series(native_obj):
-        return obj_any._from_compliant_series(
-            obj_any._compliant_series._from_native_series(
+        return obj_any._with_compliant(
+            obj_any._compliant_series._with_native(
                 native_obj.convert_dtypes(*args, **kwargs)
             )
         )
@@ -1124,7 +1168,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         isinstance(series._compliant_series, InterchangeSeries)
         and series.dtype == dtypes.Categorical
     ):
-        return series._compliant_series._native_series.describe_categorical["is_ordered"]
+        return series._compliant_series.native.describe_categorical["is_ordered"]
     if series.dtype == dtypes.Enum:
         return True
     if series.dtype != dtypes.Categorical:
@@ -1475,15 +1519,14 @@ def _hasattr_static(obj: Any, attr: str) -> bool:
 
 
 def is_compliant_dataframe(
-    obj: CompliantDataFrame[CompliantSeriesT_co, CompliantExprT_co, NativeFrameT_co]
-    | Any,
-) -> TypeIs[CompliantDataFrame[CompliantSeriesT_co, CompliantExprT_co, NativeFrameT_co]]:
+    obj: CompliantDataFrame[CompliantSeriesT, CompliantExprT, NativeFrameT_co] | Any,
+) -> TypeIs[CompliantDataFrame[CompliantSeriesT, CompliantExprT, NativeFrameT_co]]:
     return _hasattr_static(obj, "__narwhals_dataframe__")
 
 
 def is_compliant_lazyframe(
-    obj: CompliantLazyFrame[CompliantExprT_co, NativeFrameT_co] | Any,
-) -> TypeIs[CompliantLazyFrame[CompliantExprT_co, NativeFrameT_co]]:
+    obj: CompliantLazyFrame[CompliantExprT, NativeFrameT_co] | Any,
+) -> TypeIs[CompliantLazyFrame[CompliantExprT, NativeFrameT_co]]:
     return _hasattr_static(obj, "__narwhals_lazyframe__")
 
 
@@ -1497,6 +1540,26 @@ def is_compliant_expr(
     obj: CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | Any,
 ) -> TypeIs[CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co]]:
     return hasattr(obj, "__narwhals_expr__")
+
+
+def is_eager_allowed(obj: Implementation) -> TypeIs[_EagerAllowed]:
+    return obj in {
+        Implementation.PANDAS,
+        Implementation.MODIN,
+        Implementation.CUDF,
+        Implementation.POLARS,
+        Implementation.PYARROW,
+    }
+
+
+def is_lazy_allowed(obj: Implementation) -> TypeIs[_LazyAllowed]:  # pragma: no cover
+    return obj in {
+        Implementation.POLARS,
+        Implementation.PYSPARK,
+        Implementation.SQLFRAME,
+        Implementation.DASK,
+        Implementation.DUCKDB,
+    }
 
 
 def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
@@ -1531,6 +1594,29 @@ def _remap_full_join_keys(
         f"{key}{suffix}" if key in left_on else key for key in right_on
     )
     return dict(zip(right_on, right_keys_suffixed))
+
+
+def _into_arrow_table(data: IntoArrowTable, context: _FullContext, /) -> pa.Table:
+    """Guards `ArrowDataFrame.from_arrow` w/ safer imports.
+
+    Arguments:
+        data: Object which implements `__arrow_c_stream__`.
+        context: Initialized compliant object.
+
+    Returns:
+        A PyArrow Table.
+    """
+    if find_spec("pyarrow"):
+        import pyarrow as pa  # ignore-banned-import
+
+        from narwhals._arrow.namespace import ArrowNamespace
+
+        version = context._version
+        ns = ArrowNamespace(backend_version=parse_version(pa), version=version)
+        return ns._dataframe.from_arrow(data, context=ns).native
+    else:  # pragma: no cover
+        msg = f"PyArrow>=14.0.0 is required for `from_arrow` for object of type {type(data).__name__!r}."
+        raise ModuleNotFoundError(msg)
 
 
 # TODO @dangotbanned: Extend with runtime behavior for `v1.*`

@@ -90,8 +90,8 @@ if TYPE_CHECKING:
     from typing_extensions import Self
     from typing_extensions import TypeVar
 
+    from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
-    from narwhals.functions import ArrowStreamExportable
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
     from narwhals.typing import IntoLazyFrameT
@@ -362,7 +362,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         Returns:
             The LazyFrame containing only the selected rows.
         """
-        return self._from_compliant_dataframe(
+        return self._with_compliant(
             self._compliant_frame.gather_every(n=n, offset=offset)
         )
 
@@ -1143,20 +1143,11 @@ def _stableify(
     | Any,
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT] | Expr | Any:
     if isinstance(obj, NwDataFrame):
-        return DataFrame(
-            obj._compliant_frame._change_version(Version.V1),
-            level=obj._level,
-        )
+        return DataFrame(obj._compliant_frame._with_version(Version.V1), level=obj._level)
     if isinstance(obj, NwLazyFrame):
-        return LazyFrame(
-            obj._compliant_frame._change_version(Version.V1),
-            level=obj._level,
-        )
+        return LazyFrame(obj._compliant_frame._with_version(Version.V1), level=obj._level)
     if isinstance(obj, NwSeries):
-        return Series(
-            obj._compliant_series._change_version(Version.V1),
-            level=obj._level,
-        )
+        return Series(obj._compliant_series._with_version(Version.V1), level=obj._level)
     if isinstance(obj, NwExpr):
         return Expr(obj._to_compliant_expr, obj._metadata)
     return obj
@@ -2222,7 +2213,7 @@ def new_series(
 
 @deprecate_native_namespace(required=True)
 def from_arrow(
-    native_frame: ArrowStreamExportable,
+    native_frame: IntoArrowTable,
     *,
     backend: ModuleType | Implementation | str | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
@@ -2251,7 +2242,7 @@ def from_arrow(
     """
     backend = cast("ModuleType | Implementation | str", backend)
     return _stableify(  # type: ignore[no-any-return]
-        _from_arrow_impl(native_frame, backend=backend)
+        _from_arrow_impl(native_frame, backend=backend, version=Version.V1)
     )
 
 
@@ -2296,7 +2287,7 @@ def from_dict(
         A new DataFrame.
     """
     return _stableify(  # type: ignore[no-any-return]
-        _from_dict_impl(data, schema, backend=backend)
+        _from_dict_impl(data, schema, backend=backend, version=Version.V1)
     )
 
 
@@ -2338,7 +2329,7 @@ def from_numpy(
         A new DataFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(_from_numpy_impl(data, schema, backend=backend))  # type: ignore[no-any-return]
+    return _stableify(_from_numpy_impl(data, schema, backend=backend, version=Version.V1))  # type: ignore[no-any-return]
 
 
 @deprecate_native_namespace(required=True)

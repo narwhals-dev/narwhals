@@ -59,10 +59,14 @@ NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=T
 NativeFrameT_co = TypeVar("NativeFrameT_co", bound="NativeFrame", covariant=True)
 
 CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExprAny)
+CompliantExprT_co = TypeVar("CompliantExprT_co", bound=CompliantExprAny, covariant=True)
 CompliantExprT_contra = TypeVar(
     "CompliantExprT_contra", bound=CompliantExprAny, contravariant=True
 )
 CompliantSeriesT = TypeVar("CompliantSeriesT", bound=CompliantSeriesAny)
+CompliantSeriesT_co = TypeVar(
+    "CompliantSeriesT_co", bound=CompliantSeriesAny, covariant=True
+)
 CompliantSeriesOrNativeExprT = TypeVar(
     "CompliantSeriesOrNativeExprT", bound=CompliantSeriesOrNativeExprAny
 )
@@ -98,6 +102,7 @@ EagerSeriesT_co = TypeVar("EagerSeriesT_co", bound=EagerSeriesAny, covariant=Tru
 # NOTE: `pyright` gives false (8) positives if this uses `EagerDataFrameAny`?
 EagerDataFrameT = TypeVar("EagerDataFrameT", bound="EagerDataFrame[Any, Any, Any]")
 
+LazyExprT = TypeVar("LazyExprT", bound=LazyExprAny)
 LazyExprT_contra = TypeVar("LazyExprT_contra", bound=LazyExprAny, contravariant=True)
 
 AliasNames: TypeAlias = Callable[[Sequence[str]], Sequence[str]]
