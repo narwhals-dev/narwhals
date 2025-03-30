@@ -716,7 +716,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
                 f"CASE WHEN {_input} IS NULL THEN NULL "
                 f"ELSE {func_name}() OVER ({order_by_sql}) END"
             )
-            return SQLExpression(sql)
+            return SQLExpression(sql)  # type: ignore[no-any-return, unused-ignore]
 
         return self._with_callable(_rank)
 
