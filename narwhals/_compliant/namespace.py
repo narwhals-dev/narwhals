@@ -13,10 +13,13 @@ from typing import overload
 
 from narwhals._compliant.typing import CompliantExprT
 from narwhals._compliant.typing import CompliantFrameT
+from narwhals._compliant.typing import CompliantLazyFrameT
 from narwhals._compliant.typing import DepthTrackingExprT
 from narwhals._compliant.typing import EagerDataFrameT
 from narwhals._compliant.typing import EagerExprT
 from narwhals._compliant.typing import EagerSeriesT
+from narwhals._compliant.typing import LazyExprT
+from narwhals._compliant.typing import NativeFrameT_co
 from narwhals._compliant.typing import NativeFrameT_contra
 from narwhals._compliant.typing import NativeSeriesT
 from narwhals.dependencies import is_numpy_array_2d
@@ -112,6 +115,20 @@ class DepthTrackingNamespace(
             function_name="exclude",
             context=self,
         )
+
+
+class LazyNamespace(
+    CompliantNamespace[CompliantLazyFrameT, LazyExprT],
+    Protocol[CompliantLazyFrameT, LazyExprT, NativeFrameT_co],
+):
+    @property
+    def _lazyframe(self) -> type[CompliantLazyFrameT]: ...
+
+    def from_native(self, data: NativeFrameT_co | Any, /) -> CompliantLazyFrameT:
+        if self._lazyframe._is_native(data):
+            return self._lazyframe.from_native(data, context=self)
+        msg = f"Unsupported type: {type(data).__name__!r}"
+        raise TypeError(msg)
 
 
 class EagerNamespace(
