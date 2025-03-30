@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from functools import reduce
+from operator import and_
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
@@ -391,9 +393,10 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
     def drop_nulls(self: Self, subset: Sequence[str] | None) -> Self:
         rel = self.native
         subset_ = subset if subset is not None else rel.columns
-        keep_condition = " and ".join(f'"{col}" is not null' for col in subset_)
-        query = f"select * from rel where {keep_condition}"  # noqa: S608
-        return self._with_native(duckdb.sql(query))
+        keep_condition = reduce(
+            and_, (ColumnExpression(col).isnotnull() for col in subset_)
+        )
+        return self._with_native(self.native.filter(keep_condition))
 
     def explode(self: Self, columns: Sequence[str]) -> Self:
         dtypes = import_dtypes_module(self._version)
