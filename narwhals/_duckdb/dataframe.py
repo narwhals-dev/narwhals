@@ -12,6 +12,7 @@ from typing import Sequence
 import duckdb
 from duckdb import ColumnExpression
 from duckdb import FunctionExpression
+from duckdb import StarExpression
 
 from narwhals._duckdb.utils import evaluate_exprs
 from narwhals._duckdb.utils import generate_partition_by_sql
@@ -341,25 +342,24 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             if any(x not in rel.columns for x in subset):
                 msg = f"Columns {set(subset).difference(rel.columns)} not found in {rel.columns}."
                 raise ColumnNotFoundError(msg)
-            idx_name = f'"{generate_temporary_column_name(8, rel.columns)}"'
-            count_name = (
-                f'"{generate_temporary_column_name(8, [*rel.columns, idx_name])}"'
-            )
+            idx_name = generate_temporary_column_name(8, rel.columns)
+            count_name = generate_temporary_column_name(8, [*rel.columns, idx_name])
             if keep == "none":
-                keep_condition = f"where {count_name}=1"
+                keep_condition = ColumnExpression(count_name) == lit(1)
             else:
-                keep_condition = f"where {idx_name}=1"
+                keep_condition = ColumnExpression(idx_name) == lit(1)
             partition_by_sql = generate_partition_by_sql(*subset)
             query = f"""
-                with cte as (
-                    select *,
-                           row_number() over ({partition_by_sql}) as {idx_name},
-                           count(*) over ({partition_by_sql}) as {count_name}
-                    from rel
-                )
-                select * exclude ({idx_name}, {count_name}) from cte {keep_condition}
+                select *,
+                        row_number() over ({partition_by_sql}) as "{idx_name}",
+                        count(*) over ({partition_by_sql}) as "{count_name}"
+                from rel
                 """  # noqa: S608
-            return self._with_native(duckdb.sql(query))
+            return self._with_native(
+                duckdb.sql(query)
+                .filter(keep_condition)
+                .select(StarExpression(exclude=[count_name, idx_name]))
+            )
         return self._with_native(self.native.unique(", ".join(self.columns)))
 
     def sort(
@@ -458,24 +458,18 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             msg = "`value_name` cannot be empty string for duckdb backend."
             raise NotImplementedError(msg)
 
-        cols_to_select = ", ".join(
-            f'"{col}"' for col in (*index_, variable_name, value_name)
-        )
         unpivot_on = ", ".join(f'"{col}"' for col in on_)
-
         rel = self.native  # noqa: F841
         query = f"""
-            with unpivot_cte as (
-                unpivot rel
-                on {unpivot_on}
-                into
-                    name {variable_name}
-                    value {value_name}
-            )
-            select {cols_to_select}
-            from unpivot_cte;
-            """  # noqa: S608
-        return self._with_native(duckdb.sql(query))
+            unpivot rel
+            on {unpivot_on}
+            into
+                name "{variable_name}"
+                value "{value_name}"
+            """
+        return self._with_native(
+            duckdb.sql(query).select(*[*index_, variable_name, value_name])
+        )
 
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
