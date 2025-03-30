@@ -764,13 +764,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         if sort:
             val_count = val_count.sort_values(value_name_, ascending=False)
 
-        return PandasLikeDataFrame(
-            val_count,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-            validate_column_names=True,
-        )
+        return PandasLikeDataFrame.from_native(val_count, context=self)
 
     def quantile(
         self: Self,
@@ -827,14 +821,7 @@ class PandasLikeSeries(EagerSeries[Any]):
                 implementation=self._implementation,
                 backend_version=self._backend_version,
             )
-
-        return PandasLikeDataFrame(
-            result,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-            validate_column_names=True,
-        )
+        return PandasLikeDataFrame.from_native(result, context=self)
 
     def gather_every(self: Self, n: int, offset: int) -> Self:
         return self._with_native(self.native.iloc[offset::n])
@@ -993,31 +980,16 @@ class PandasLikeSeries(EagerSeries[Any]):
             if include_breakpoint:
                 data["breakpoint"] = []
             data["count"] = []
-
-            return PandasLikeDataFrame(
-                ns.DataFrame(data),
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-                version=self._version,
-                validate_column_names=True,
-            )
+            return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
         elif self.native.count() < 1:
             if bins is not None:
                 data = {"breakpoint": bins[1:], "count": zeros(shape=len(bins) - 1)}
             else:
                 count = cast("int", bin_count)
                 data = {"breakpoint": linspace(0, 1, count), "count": zeros(shape=count)}
-
             if not include_breakpoint:
                 del data["breakpoint"]
-
-            return PandasLikeDataFrame(
-                ns.DataFrame(data),
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-                version=self._version,
-                validate_column_names=True,
-            )
+            return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
 
         elif bin_count is not None:  # use Polars binning behavior
             lower, upper = self.native.min(), self.native.max()
@@ -1046,14 +1018,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         if include_breakpoint:
             data["breakpoint"] = bins[1:] if bins is not None else result.index.right
         data["count"] = result.reset_index(drop=True)
-
-        return PandasLikeDataFrame(
-            ns.DataFrame(data),
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-            validate_column_names=True,
-        )
+        return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
 
     @property
     def str(self: Self) -> PandasLikeSeriesStringNamespace:
