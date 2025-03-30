@@ -107,8 +107,9 @@ class PolarsNamespace:
             return self._series.from_native(data, context=self)
         elif self._lazyframe._is_native(data):
             return self._lazyframe.from_native(data, context=self)
-        msg = f"Unsupported type: {type(data).__name__!r}"
-        raise TypeError(msg)
+        else:  # pragma: no cover
+            msg = f"Unsupported type: {type(data).__name__!r}"
+            raise TypeError(msg)
 
     @overload
     def from_numpy(

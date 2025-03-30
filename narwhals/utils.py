@@ -52,6 +52,7 @@ if TYPE_CHECKING:
     from typing import AbstractSet as Set
 
     import pandas as pd
+    import polars as pl
     import pyarrow as pa
     import pyspark.sql as pyspark_sql
     from typing_extensions import LiteralString
@@ -95,6 +96,7 @@ if TYPE_CHECKING:
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
     )
     _SparkLikeDataFrame: TypeAlias = "SQLFrameDataFrame | pyspark_sql.DataFrame"
+    _NativePolars: TypeAlias = "pl.DataFrame | pl.LazyFrame | pl.Series"
     _T = TypeVar("_T")
     _T1 = TypeVar("_T1")
     _T2 = TypeVar("_T2")
@@ -1525,6 +1527,12 @@ def _hasattr_static(obj: Any, attr: str) -> bool:
 
 def is_spark_like_dataframe(obj: Any) -> TypeIs[_SparkLikeDataFrame]:
     return is_sqlframe_dataframe(obj) or is_pyspark_dataframe(obj)
+
+
+def is_native_polars(obj: Any) -> TypeIs[_NativePolars]:
+    return (pl := get_polars()) is not None and isinstance(
+        obj, (pl.DataFrame, pl.Series, pl.LazyFrame)
+    )
 
 
 def is_compliant_dataframe(
