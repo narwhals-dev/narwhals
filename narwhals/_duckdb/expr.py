@@ -713,8 +713,8 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
                 by_sql = f"{_input} asc nulls last"
             order_by_sql = f"order by {by_sql}"
             sql = (
-                f"CASE WHEN {_input} IS NULL THEN NULL "
-                f"ELSE {func_name}() OVER ({order_by_sql}) END"
+                f"CASE WHEN {_input} IS NOT NULL THEN {func_name}() "
+                f"OVER ({order_by_sql}) END"
             )
             return SQLExpression(sql)  # type: ignore[no-any-return, unused-ignore]
 
