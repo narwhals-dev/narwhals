@@ -265,21 +265,23 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             )
 
         if native_how in {"inner", "left", "cross", "outer"}:
-            select = [f'lhs."{x}"' for x in self.native.columns]
+            select = [ColumnExpression(f'lhs."{x}"') for x in self.native.columns]
             for col in other.native.columns:
                 col_in_lhs: bool = col in self.native.columns
                 if native_how == "outer" and not col_in_lhs:
-                    select.append(f'rhs."{col}"')
+                    select.append(ColumnExpression(f'rhs."{col}"'))
                 elif (native_how == "outer") or (
                     col_in_lhs and (right_on is None or col not in right_on)
                 ):
-                    select.append(f'rhs."{col}" as "{col}{suffix}"')
+                    select.append(
+                        ColumnExpression(f'rhs."{col}"').alias(f"{col}{suffix}")
+                    )
                 elif right_on is None or col not in right_on:
-                    select.append(col)
-        else:  # semi
-            select = ["lhs.*"]
+                    select.append(ColumnExpression(col))
+            res = rel.select(*select).set_alias(self.native.alias)
+        else:  # semi, anti
+            res = rel.select("lhs.*").set_alias(self.native.alias)
 
-        res = rel.select(", ".join(select)).set_alias(self.native.alias)
         return self._with_native(res)
 
     def join_asof(
