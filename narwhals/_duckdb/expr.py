@@ -427,8 +427,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             return FunctionExpression(
                 "array_unique", FunctionExpression("array_agg", _input)
             ) + FunctionExpression(
-                "max",
-                when(_input.isnotnull(), lit(0)).otherwise(lit(1)),
+                "max", when(_input.isnotnull(), lit(0)).otherwise(lit(1))
             )
 
         return self._with_callable(func)
