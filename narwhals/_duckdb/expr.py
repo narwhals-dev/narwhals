@@ -139,7 +139,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
                 raise ValueError(msg)
             sql = (
                 f"case when count({window_inputs.expr}) over {window} >= {min_samples}"
-                f"then {func_}({window_inputs.expr}) over {window} else null end"
+                f"then {func_}({window_inputs.expr}) over {window} end"
             )
             return SQLExpression(sql)  # type: ignore[no-any-return, unused-ignore]
 
@@ -711,12 +711,8 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
                 by_sql = f"{_input} desc nulls last"
             else:
                 by_sql = f"{_input} asc nulls last"
-            order_by_sql = f"order by {by_sql}"
-            sql = (
-                f"CASE WHEN {_input} IS NOT NULL THEN {func_name}() "
-                f"OVER ({order_by_sql}) END"
-            )
-            return SQLExpression(sql)
+            sql = f"{func_name}() OVER (order by {by_sql})"
+            return CaseExpression(_input.isnotnull(), SQLExpression(sql))
 
         return self._with_callable(_rank)
 

@@ -368,18 +368,24 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
     ) -> Self:
         if isinstance(descending, bool):
             descending = [descending] * len(by)
-        descending_str = ["desc" if x else "" for x in descending]
-
-        result = self.native.order(
-            ",".join(
-                (
-                    f'"{col}" {desc} nulls last'
-                    if nulls_last
-                    else f'"{col}" {desc} nulls first'
-                    for col, desc in zip(by, descending_str)
-                )
+        if nulls_last:
+            result = self.native.sort(
+                *[
+                    ColumnExpression(col).nulls_last()
+                    if not desc
+                    else ColumnExpression(col).desc().nulls_last()
+                    for col, desc in zip(by, descending)
+                ]
             )
-        )
+        else:
+            result = self.native.sort(
+                *[
+                    ColumnExpression(col).nulls_first()
+                    if not desc
+                    else ColumnExpression(col).desc().nulls_first()
+                    for col, desc in zip(by, descending)
+                ]
+            )
         return self._with_native(result)
 
     def drop_nulls(self: Self, subset: Sequence[str] | None) -> Self:
