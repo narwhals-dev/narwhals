@@ -12,6 +12,7 @@ from typing import overload
 import polars as pl
 
 from narwhals._polars.namespace import PolarsNamespace
+from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import catch_polars_exception
 from narwhals._polars.utils import convert_str_slice_to_int_slice
 from narwhals._polars.utils import extract_args_kwargs
@@ -33,10 +34,10 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
     from typing_extensions import TypeAlias
+    from typing_extensions import TypeIs
 
     from narwhals._polars.group_by import PolarsGroupBy
     from narwhals._polars.group_by import PolarsLazyGroupBy
-    from narwhals._polars.series import PolarsSeries
     from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
@@ -99,12 +100,11 @@ class PolarsDataFrame:
 
     @classmethod
     def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self:
-        backend_version = context._backend_version
-        if backend_version >= (1, 3):
+        if context._backend_version >= (1, 3):
             native = pl.DataFrame(data)
         else:
             native = cast("pl.DataFrame", pl.from_arrow(_into_arrow_table(data, context)))
-        return cls(native, backend_version=backend_version, version=context._version)
+        return cls.from_native(native, context=context)
 
     @classmethod
     def from_dict(
@@ -118,9 +118,16 @@ class PolarsDataFrame:
         from narwhals.schema import Schema
 
         pl_schema = Schema(schema).to_polars() if schema is not None else schema
-        native = pl.from_dict(data, pl_schema)
+        return cls.from_native(pl.from_dict(data, pl_schema), context=context)
+
+    @staticmethod
+    def _is_native(obj: pl.DataFrame | Any) -> TypeIs[pl.DataFrame]:
+        return isinstance(obj, pl.DataFrame)
+
+    @classmethod
+    def from_native(cls, data: pl.DataFrame, /, *, context: _FullContext) -> Self:
         return cls(
-            native, backend_version=context._backend_version, version=context._version
+            data, backend_version=context._backend_version, version=context._version
         )
 
     @classmethod
@@ -139,10 +146,7 @@ class PolarsDataFrame:
             if isinstance(schema, (Mapping, Schema))
             else schema
         )
-        native = pl.from_numpy(data, pl_schema)
-        return cls(
-            native, backend_version=context._backend_version, version=context._version
-        )
+        return cls.from_native(pl.from_numpy(data, pl_schema), context=context)
 
     @property
     def native(self) -> pl.DataFrame:
@@ -189,12 +193,8 @@ class PolarsDataFrame:
         self: Self, obj: pl.Series | pl.DataFrame | T
     ) -> Self | PolarsSeries | T:
         if isinstance(obj, pl.Series):
-            from narwhals._polars.series import PolarsSeries
-
-            return PolarsSeries(
-                obj, backend_version=self._backend_version, version=self._version
-            )
-        if isinstance(obj, pl.DataFrame):
+            return PolarsSeries.from_native(obj, context=self)
+        if self._is_native(obj):
             return self._with_native(obj)
         # scalar
         return obj
@@ -300,11 +300,7 @@ class PolarsDataFrame:
             else:
                 result = self.native.__getitem__(item)
             if isinstance(result, pl.Series):
-                from narwhals._polars.series import PolarsSeries
-
-                return PolarsSeries(
-                    result, backend_version=self._backend_version, version=self._version
-                )
+                return PolarsSeries.from_native(result, context=self)
             return self._from_native_object(result)
 
     def simple_select(self, *column_names: str) -> Self:
@@ -314,21 +310,11 @@ class PolarsDataFrame:
         return self.select(*exprs)
 
     def get_column(self: Self, name: str) -> PolarsSeries:
-        from narwhals._polars.series import PolarsSeries
-
-        return PolarsSeries(
-            self.native.get_column(name),
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        return PolarsSeries.from_native(self.native.get_column(name), context=self)
 
     def iter_columns(self) -> Iterator[PolarsSeries]:
-        from narwhals._polars.series import PolarsSeries
-
         for series in self.native.iter_columns():
-            yield PolarsSeries(
-                series, backend_version=self._backend_version, version=self._version
-            )
+            yield PolarsSeries.from_native(series, context=self)
 
     @property
     def columns(self: Self) -> list[str]:
@@ -385,12 +371,8 @@ class PolarsDataFrame:
         self: Self, *, as_series: bool
     ) -> dict[str, PolarsSeries] | dict[str, list[Any]]:
         if as_series:
-            from narwhals._polars.series import PolarsSeries
-
             return {
-                name: PolarsSeries(
-                    col, backend_version=self._backend_version, version=self._version
-                )
+                name: PolarsSeries.from_native(col, context=self)
                 for name, col in self.native.to_dict().items()
             }
         else:
