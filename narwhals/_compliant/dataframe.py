@@ -16,10 +16,12 @@ from narwhals._compliant.typing import CompliantExprT_contra
 from narwhals._compliant.typing import CompliantSeriesT
 from narwhals._compliant.typing import EagerExprT_contra
 from narwhals._compliant.typing import EagerSeriesT
+from narwhals._compliant.typing import NativeFrameT
 from narwhals._compliant.typing import NativeFrameT_co
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._translate import ArrowConvertible
 from narwhals._translate import DictConvertible
+from narwhals._translate import FromNative
 from narwhals._translate import NumpyConvertible
 from narwhals.utils import Version
 from narwhals.utils import _StoresNative
@@ -57,11 +59,12 @@ class CompliantDataFrame(
     NumpyConvertible["_2DArray", "_2DArray"],
     DictConvertible["_ToDict[CompliantSeriesT]", Mapping[str, Any]],
     ArrowConvertible["pa.Table", "IntoArrowTable"],
-    _StoresNative[NativeFrameT_co],
+    _StoresNative[NativeFrameT],
+    FromNative[NativeFrameT],
     Sized,
-    Protocol[CompliantSeriesT, CompliantExprT_contra, NativeFrameT_co],
+    Protocol[CompliantSeriesT, CompliantExprT_contra, NativeFrameT],
 ):
-    _native_frame: Any
+    _native_frame: NativeFrameT
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
@@ -79,6 +82,8 @@ class CompliantDataFrame(
         context: _FullContext,
         schema: Mapping[str, DType] | Schema | None,
     ) -> Self: ...
+    @classmethod
+    def from_native(cls, data: NativeFrameT, /, *, context: _FullContext) -> Self: ...
     @classmethod
     def from_numpy(
         cls,
@@ -105,8 +110,8 @@ class CompliantDataFrame(
     def _with_version(self, version: Version) -> Self: ...
 
     @property
-    def native(self) -> NativeFrameT_co:
-        return self._native_frame  # type: ignore[no-any-return]
+    def native(self) -> NativeFrameT:
+        return self._native_frame
 
     @property
     def columns(self) -> Sequence[str]: ...
@@ -307,9 +312,9 @@ class CompliantLazyFrame(
 
 
 class EagerDataFrame(
-    CompliantDataFrame[EagerSeriesT, EagerExprT_contra, NativeFrameT_co],
-    CompliantLazyFrame[EagerExprT_contra, NativeFrameT_co],
-    Protocol[EagerSeriesT, EagerExprT_contra, NativeFrameT_co],
+    CompliantDataFrame[EagerSeriesT, EagerExprT_contra, NativeFrameT],
+    CompliantLazyFrame[EagerExprT_contra, NativeFrameT],
+    Protocol[EagerSeriesT, EagerExprT_contra, NativeFrameT],
 ):
     def _evaluate_expr(self, expr: EagerExprT_contra, /) -> EagerSeriesT:
         """Evaluate `expr` and ensure it has a **single** output."""
