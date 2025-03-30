@@ -317,15 +317,14 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             ):
                 select.append(f'rhs."{col}" as "{col}{suffix}"')
             elif right_on is None or col not in {right_on, *by_right}:
-                select.append(col)
+                select.append(f'"{col}"')
         query = f"""
             SELECT {",".join(select)}
             FROM lhs
             ASOF LEFT JOIN rhs
             ON {condition}
             """  # noqa: S608
-        res = duckdb.sql(query)
-        return self._with_native(res)
+        return self._with_native(duckdb.sql(query))
 
     def collect_schema(self: Self) -> dict[str, DType]:
         return {
