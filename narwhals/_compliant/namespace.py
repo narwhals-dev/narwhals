@@ -136,7 +136,7 @@ class EagerNamespace(
     @overload
     def from_native(self, data: NativeSeriesT, /) -> EagerSeriesT: ...
     def from_native(
-        self, data: NativeFrameT_contra | NativeSeriesT | Any
+        self, data: NativeFrameT_contra | NativeSeriesT | Any, /
     ) -> EagerDataFrameT | EagerSeriesT:
         if self._dataframe._is_native(data):
             return self._dataframe.from_native(data, context=self)

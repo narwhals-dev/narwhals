@@ -331,11 +331,7 @@ class PolarsDataFrame:
         self: Self, *, backend: Implementation | None = None
     ) -> CompliantLazyFrame[Any, Any]:
         if backend is None or backend is Implementation.POLARS:
-            return PolarsLazyFrame(
-                self.native.lazy(),
-                backend_version=self._backend_version,
-                version=self._version,
-            )
+            return PolarsLazyFrame.from_native(self.native.lazy(), context=self)
         elif backend is Implementation.DUCKDB:
             import duckdb  # ignore-banned-import
 
@@ -503,6 +499,16 @@ class PolarsLazyFrame:
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
 
+    @staticmethod
+    def _is_native(obj: pl.LazyFrame | Any) -> TypeIs[pl.LazyFrame]:
+        return isinstance(obj, pl.LazyFrame)
+
+    @classmethod
+    def from_native(cls, data: pl.LazyFrame, /, *, context: _FullContext) -> Self:
+        return cls(
+            data, backend_version=context._backend_version, version=context._version
+        )
+
     def __repr__(self: Self) -> str:  # pragma: no cover
         return "PolarsLazyFrame"
 
@@ -591,9 +597,7 @@ class PolarsLazyFrame:
             raise catch_polars_exception(e, self._backend_version) from None
 
         if backend is None or backend is Implementation.POLARS:
-            return PolarsDataFrame(
-                result, backend_version=self._backend_version, version=self._version
-            )
+            return PolarsDataFrame.from_native(result, context=self)
 
         if backend is Implementation.PANDAS:
             import pandas as pd  # ignore-banned-import
