@@ -15,8 +15,6 @@ from narwhals._spark_like.utils import import_functions
 from narwhals._spark_like.utils import import_native_dtypes
 from narwhals._spark_like.utils import import_window
 from narwhals._spark_like.utils import native_to_narwhals_dtype
-from narwhals.dependencies import is_pyspark_dataframe
-from narwhals.dependencies import is_sqlframe_dataframe
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
@@ -24,6 +22,7 @@ from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
 from narwhals.utils import find_stacklevel
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import is_spark_like_dataframe
 from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -96,10 +95,9 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
         else:
             return import_window(self._implementation)
 
-    # NOTE: Wild that this is allowed?
     @staticmethod
     def _is_native(obj: SQLFrameDataFrame | Any) -> TypeIs[SQLFrameDataFrame]:
-        return is_sqlframe_dataframe(obj) or is_pyspark_dataframe(obj)
+        return is_spark_like_dataframe(obj)
 
     @classmethod
     def from_native(cls, data: SQLFrameDataFrame, /, *, context: _FullContext) -> Self:
