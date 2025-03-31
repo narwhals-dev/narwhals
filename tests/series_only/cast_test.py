@@ -10,6 +10,7 @@ import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
+    from tests.utils import Constructor
     from tests.utils import ConstructorEager
 
 
@@ -113,29 +114,20 @@ def test_unknown_to_int() -> None:
     assert nw.from_native(df).select(nw.col("a").cast(nw.Int64)).schema == {"a": nw.Int64}
 
 
-def test_cast_to_enum_polars() -> None:
-    pytest.importorskip("polars")
-    import polars as pl
+def test_cast_to_enum(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    import narwhals as nw
 
-    df_pl = pl.DataFrame({"a": ["a", "b"]}, schema={"a": pl.Categorical})
+    # Backends that do not support Enum dtype
+    if any(
+        backend in str(constructor) for backend in ["pyarrow_table", "duckdb", "sqlframe"]
+    ):
+        request.applymarker(pytest.mark.xfail)
+
+    df_native = constructor({"a": ["a", "b"]})
     with pytest.raises(
         ValueError, match="Can not cast / initialize Enum without categories present"
     ):
-        nw.from_native(df_pl).select(nw.col("a").cast(nw.Enum))
+        nw.from_native(df_native).select(nw.col("a").cast(nw.Enum))
 
-    df_nw_pl = nw.from_native(df_pl).select(nw.col("a").cast(nw.Enum(["a", "b"])))
-    assert df_nw_pl.schema == {"a": nw.Enum(["a", "b"])}
-
-
-def test_cast_to_enum_pandas() -> None:
-    pytest.importorskip("pandas")
-    import pandas as pd
-
-    df_pd = pd.DataFrame({"a": ["a", "b"]}, dtype="category")
-    with pytest.raises(
-        ValueError, match="Can not cast / initialize Enum without categories present"
-    ):
-        nw.from_native(df_pd).select(nw.col("a").cast(nw.Enum))
-
-    df_nw_pd = nw.from_native(df_pd).select(nw.col("a").cast(nw.Enum(["a", "b"])))
-    assert df_nw_pd.schema == {"a": nw.Enum(["a", "b"])}
+    df_nw = nw.from_native(df_native).select(nw.col("a").cast(nw.Enum(["a", "b"])))
+    assert df_nw.collect_schema() == {"a": nw.Enum(["a", "b"])}
