@@ -10,7 +10,6 @@ from typing import Sequence
 from typing import cast
 
 from duckdb import CoalesceOperator
-from duckdb import ColumnExpression
 from duckdb import FunctionExpression
 from duckdb.typing import DuckDBPyType
 
@@ -20,6 +19,7 @@ from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
 from narwhals._duckdb.expr_struct import DuckDBExprStructNamespace
 from narwhals._duckdb.utils import WindowInputs
+from narwhals._duckdb.utils import col
 from narwhals._duckdb.utils import generate_order_by_sql
 from narwhals._duckdb.utils import generate_partition_by_sql
 from narwhals._duckdb.utils import lit
@@ -174,7 +174,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         context: _FullContext,
     ) -> Self:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            return [ColumnExpression(col_name) for col_name in evaluate_column_names(df)]
+            return [col(name) for name in evaluate_column_names(df)]
 
         return cls(
             func,
@@ -190,8 +190,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     ) -> Self:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             columns = df.columns
-
-            return [ColumnExpression(columns[i]) for i in column_indices]
+            return [col(columns[i]) for i in column_indices]
 
         return cls(
             func,
