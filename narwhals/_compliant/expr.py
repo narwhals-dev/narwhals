@@ -775,9 +775,7 @@ class EagerExpr(
     def is_finite(self) -> Self:
         return self._reuse_series("is_finite")
 
-    def rolling_mean(
-        self, window_size: int, *, min_samples: int | None, center: bool
-    ) -> Self:
+    def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._reuse_series(
             "rolling_mean",
             window_size=window_size,
@@ -786,7 +784,7 @@ class EagerExpr(
         )
 
     def rolling_std(
-        self, window_size: int, *, min_samples: int | None, center: bool, ddof: int
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
         return self._reuse_series(
             "rolling_std",
@@ -802,7 +800,7 @@ class EagerExpr(
         )
 
     def rolling_var(
-        self, window_size: int, *, min_samples: int | None, center: bool, ddof: int
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
         return self._reuse_series(
             "rolling_var",
