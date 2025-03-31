@@ -323,8 +323,6 @@ def test_rolling_std_expr_lazy_grouped(
         "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip()
-    if "pandas" in str(constructor):
-        pytest.skip()
     if any(x in str(constructor) for x in ("dask", "pyarrow_table")):
         request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor) and center:
