@@ -450,15 +450,23 @@ def test_fancy_functions(constructor: Constructor) -> None:
 
 
 def test_group_by_expr(constructor: Constructor) -> None:
-    data = {"a": [1, 1, 2, 2, -1], "b": [0, 1, 2, 3, 4]}
+    data = {"a": [1, 1, 2, 2, -1], "x": [0, 1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
     result = (
         df.group_by(
             nw.col("a").abs(),
             nw.col("a").abs().alias("a_with_alias"),
         )
-        .agg(nw.col("b").sum())
+        .agg(nw.col("x").sum())
         .sort("a")
     )
-    expected = {"a": [1, 2], "a_with_alias": [1, 2], "b": [5, 5]}
+    expected = {"a": [1, 2], "a_with_alias": [1, 2], "x": [5, 5]}
+    assert_equal_data(result, expected)
+
+
+def test_group_by_expr_multioutput(constructor: Constructor) -> None:
+    data = {"a": [1, 1, 2, 2], "b": [1, -1, -2, 2], "x": [1, 2, 3, 4]}
+    df = nw.from_native(constructor(data))
+    result = df.group_by(nw.col("a", "b").abs()).agg(nw.col("x").sum()).sort("a")
+    expected = {"a": [1, 2], "b": [1, 2], "x": [3, 7]}
     assert_equal_data(result, expected)
