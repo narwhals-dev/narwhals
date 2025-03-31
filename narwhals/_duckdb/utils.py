@@ -17,6 +17,9 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
+col = duckdb.ColumnExpression
+"""Alias for `duckdb.ColumnExpression`."""
+
 lit = duckdb.ConstantExpression
 """Alias for `duckdb.ConstantExpression`."""
 
