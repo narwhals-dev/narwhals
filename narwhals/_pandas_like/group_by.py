@@ -40,17 +40,17 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
 
     def __init__(
         self: Self,
-        df: PandasLikeDataFrame,
+        compliant_frame: PandasLikeDataFrame,
         keys: Sequence[PandasLikeExpr],
         /,
         *,
         drop_null_keys: bool,
     ) -> None:
-        self._compliant_frame = df.with_columns(*keys)
+        self._compliant_frame = compliant_frame.with_columns(*keys)
         self._keys: list[str] = [
-            key._alias_output_names(key._evaluate_output_names(df))[0]
+            key._alias_output_names(key._evaluate_output_names(compliant_frame))[0]
             if key._alias_output_names is not None
-            else key._evaluate_output_names(df)[0]
+            else key._evaluate_output_names(compliant_frame)[0]
             for key in keys
         ]
         # Drop index to avoid potential collisions:
