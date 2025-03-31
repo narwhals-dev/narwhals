@@ -178,7 +178,10 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                     )
                     raise NotImplementedError(msg)
 
-                tmp = df.group_by(*partition_by, drop_null_keys=False).agg(self)
+                ns = self.__narwhals_namespace__()
+                tmp = df.group_by(
+                    *[ns.col(p) for p in partition_by], drop_null_keys=False
+                ).agg(self)
                 tmp = df.simple_select(*partition_by).join(
                     tmp,
                     how="left",

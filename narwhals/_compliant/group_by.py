@@ -20,6 +20,7 @@ from narwhals._compliant.typing import CompliantLazyFrameT_co
 from narwhals._compliant.typing import DepthTrackingExprAny
 from narwhals._compliant.typing import DepthTrackingExprT_contra
 from narwhals._compliant.typing import EagerExprT_contra
+from narwhals._compliant.typing import IntoCompliantExpr
 from narwhals._compliant.typing import LazyExprT_contra
 from narwhals._compliant.typing import NativeExprT_co
 
@@ -58,7 +59,7 @@ _RE_LEAF_NAME: re.Pattern[str] = re.compile(r"(\w+->)")
 
 class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     _compliant_frame: Any
-    _keys: Sequence[str]
+    _keys: Sequence[IntoCompliantExpr]
 
     @property
     def compliant(self) -> CompliantFrameT_co:
@@ -67,7 +68,7 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     def __init__(
         self,
         compliant_frame: CompliantFrameT_co,
-        keys: Sequence[str],
+        keys: Sequence[IntoCompliantExpr],
         /,
         *,
         drop_null_keys: bool,

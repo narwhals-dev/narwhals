@@ -27,16 +27,29 @@ class PolarsGroupBy:
         return self._compliant_frame
 
     def __init__(
-        self, df: PolarsDataFrame, keys: Sequence[PolarsExpr], /, *, drop_null_keys: bool
+        self,
+        compliant_frame: PolarsDataFrame,
+        keys: Sequence[PolarsExpr],
+        /,
+        *,
+        drop_null_keys: bool,
     ) -> None:
-        self._compliant_frame = df
-        self._keys = [extract_native(arg) for arg in keys]
-        df = df.drop_nulls(keys) if drop_null_keys else df
-        self._grouped: NativeGroupBy = df._native_frame.group_by(self._keys)
+        if not drop_null_keys:
+            self._compliant_frame = compliant_frame
+            self._keys = [extract_native(arg) for arg in keys]
+        else:
+            compliant_frame = compliant_frame.with_columns(*keys)
+            self._keys = [extract_native(arg).meta.output_name() for arg in keys]
+            self._compliant_frame = compliant_frame.drop_nulls(self._keys)
+
+        self._grouped: NativeGroupBy = self._compliant_frame._native_frame.group_by(
+            self._keys
+        )
 
     def agg(self: Self, *aggs: PolarsExpr) -> PolarsDataFrame:
-        from_native = self.compliant._with_native
-        return from_native(self._grouped.agg(extract_native(arg) for arg in aggs))
+        return self.compliant._with_native(
+            self._grouped.agg(extract_native(arg) for arg in aggs)
+        )
 
     def __iter__(self: Self) -> Iterator[tuple[tuple[str, ...], PolarsDataFrame]]:
         for key, df in self._grouped:
@@ -52,13 +65,26 @@ class PolarsLazyGroupBy:
         return self._compliant_frame
 
     def __init__(
-        self, df: PolarsLazyFrame, keys: Sequence[PolarsExpr], /, *, drop_null_keys: bool
+        self,
+        compliant_frame: PolarsLazyFrame,
+        keys: Sequence[PolarsExpr],
+        /,
+        *,
+        drop_null_keys: bool,
     ) -> None:
-        self._compliant_frame = df
-        self._keys = [extract_native(arg) for arg in keys]
-        df = df.drop_nulls(keys) if drop_null_keys else df
-        self._grouped: NativeLazyGroupBy = df._native_frame.group_by(self._keys)
+        if not drop_null_keys:
+            self._compliant_frame = compliant_frame
+            self._keys = [extract_native(arg) for arg in keys]
+        else:
+            compliant_frame = compliant_frame.with_columns(*keys)
+            self._keys = [extract_native(arg).meta.output_name() for arg in keys]
+            self._compliant_frame = compliant_frame.drop_nulls(self._keys)
+
+        self._grouped: NativeLazyGroupBy = self._compliant_frame._native_frame.group_by(
+            self._keys
+        )
 
     def agg(self: Self, *aggs: PolarsExpr) -> PolarsLazyFrame:
-        from_native = self.compliant._with_native
-        return from_native(self._grouped.agg(extract_native(arg) for arg in aggs))
+        return self.compliant._with_native(
+            self._grouped.agg(extract_native(arg) for arg in aggs)
+        )
