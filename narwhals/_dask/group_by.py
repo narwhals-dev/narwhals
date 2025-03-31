@@ -72,12 +72,22 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
     }
 
     def __init__(
-        self: Self, df: DaskLazyFrame, keys: Sequence[str], /, *, drop_null_keys: bool
+        self: Self,
+        compliant_frame: DaskLazyFrame,
+        keys: Sequence[DaskExpr],
+        /,
+        *,
+        drop_null_keys: bool,
     ) -> None:
-        self._compliant_frame = df
-        self._keys: list[str] = list(keys)
+        self._compliant_frame = compliant_frame.with_columns(*keys)
+        self._keys: list[str] = [
+            key._alias_output_names(key._evaluate_output_names(compliant_frame))[0]
+            if key._alias_output_names is not None
+            else key._evaluate_output_names(compliant_frame)[0]
+            for key in keys
+        ]
         self._grouped = self.compliant.native.groupby(
-            list(self._keys), dropna=drop_null_keys, observed=True
+            self._keys, dropna=drop_null_keys, observed=True
         )
 
     def agg(self: Self, *exprs: DaskExpr) -> DaskLazyFrame:
