@@ -14,6 +14,7 @@ from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import NarwhalsError
 from narwhals.exceptions import ShapeError
+from narwhals.utils import Version
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
@@ -24,7 +25,6 @@ if TYPE_CHECKING:
     from narwhals._polars.series import PolarsSeries
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
-    from narwhals.utils import Version
 
     T = TypeVar("T")
 
@@ -110,6 +110,8 @@ def native_to_narwhals_dtype(
     if dtype == pl.Categorical:
         return dtypes.Categorical()
     if dtype == pl.Enum:
+        if version is Version.V1:
+            return dtypes.Enum()  # type: ignore[call-arg]
         return dtypes.Enum(dtype.categories)  # type: ignore[attr-defined]
     if dtype == pl.Date:
         return dtypes.Date()
