@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -9,7 +10,6 @@ from typing import Literal
 from typing import Sequence
 
 import duckdb
-from duckdb import CaseExpression
 from duckdb import CoalesceOperator
 from duckdb import FunctionExpression
 from duckdb.typing import BIGINT
@@ -20,6 +20,7 @@ from narwhals._compliant import CompliantThen
 from narwhals._compliant import LazyWhen
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.selectors import DuckDBSelectorNamespace
+from narwhals._duckdb.utils import concat_str
 from narwhals._duckdb.utils import lit
 from narwhals._duckdb.utils import narwhals_to_native_dtype
 from narwhals._duckdb.utils import when
@@ -80,11 +81,9 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
         ignore_nulls: bool,
     ) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            cols = [s for _expr in exprs for s in _expr(df)]
-            null_mask = [s.isnull() for s in cols]
-
+            cols = list(chain.from_iterable(expr(df) for expr in exprs))
             if not ignore_nulls:
-                null_mask_result = reduce(operator.or_, null_mask)
+                null_mask_result = reduce(operator.or_, (s.isnull() for s in cols))
                 cols_separated = [
                     y
                     for x in [
@@ -95,29 +94,9 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
                     ]
                     for y in x
                 ]
-                result = CaseExpression(
-                    condition=~null_mask_result,
-                    value=FunctionExpression("concat", *cols_separated),
-                )
+                return [when(~null_mask_result, concat_str(*cols_separated))]
             else:
-                init_value, *values = [
-                    CaseExpression(~nm, col.cast(VARCHAR)).otherwise(lit(""))
-                    for col, nm in zip(cols, null_mask)
-                ]
-                separators = (
-                    CaseExpression(nm, lit("")).otherwise(lit(separator))
-                    for nm in null_mask[:-1]
-                )
-                result = reduce(
-                    lambda x, y: FunctionExpression("concat", x, y),
-                    (
-                        FunctionExpression("concat", s, v)
-                        for s, v in zip(separators, values)
-                    ),
-                    init_value,
-                )
-
-            return [result]
+                return [concat_str(*cols, separator=separator)]
 
         return self._expr(
             call=func,
