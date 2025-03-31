@@ -388,7 +388,7 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
             ),
         )
 
-    def group_by(self: Self, *by: str, drop_null_keys: bool) -> DaskLazyGroupBy:
+    def group_by(self: Self, *by: DaskExpr, drop_null_keys: bool) -> DaskLazyGroupBy:
         from narwhals._dask.group_by import DaskLazyGroupBy
 
         return DaskLazyGroupBy(self, by, drop_null_keys=drop_null_keys)

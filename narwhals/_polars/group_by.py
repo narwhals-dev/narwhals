@@ -8,6 +8,7 @@ from typing import cast
 from narwhals._polars.utils import extract_native
 
 if TYPE_CHECKING:
+    from polars._typing import IntoExpr
     from polars.dataframe.group_by import GroupBy as NativeGroupBy
     from polars.lazyframe.group_by import LazyGroupBy as NativeLazyGroupBy
     from typing_extensions import Self
@@ -19,14 +20,14 @@ if TYPE_CHECKING:
 
 class PolarsGroupBy:
     _compliant_frame: PolarsDataFrame
-    _keys: Sequence[str]
+    _keys: Sequence[IntoExpr]
 
     @property
     def compliant(self) -> PolarsDataFrame:
         return self._compliant_frame
 
     def __init__(
-        self, df: PolarsDataFrame, keys: Sequence[str], /, *, drop_null_keys: bool
+        self, df: PolarsDataFrame, keys: Sequence[PolarsExpr], /, *, drop_null_keys: bool
     ) -> None:
         self._compliant_frame = df
         self._keys = [extract_native(arg) for arg in keys]
@@ -44,14 +45,14 @@ class PolarsGroupBy:
 
 class PolarsLazyGroupBy:
     _compliant_frame: PolarsLazyFrame
-    _keys: Sequence[str]
+    _keys: Sequence[IntoExpr]
 
     @property
     def compliant(self) -> PolarsLazyFrame:
         return self._compliant_frame
 
     def __init__(
-        self, df: PolarsLazyFrame, keys: Sequence[str], /, *, drop_null_keys: bool
+        self, df: PolarsLazyFrame, keys: Sequence[PolarsExpr], /, *, drop_null_keys: bool
     ) -> None:
         self._compliant_frame = df
         self._keys = [extract_native(arg) for arg in keys]

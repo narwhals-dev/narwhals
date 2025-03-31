@@ -223,7 +223,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             df, backend_version=self._backend_version, version=self._version
         )
 
-    def group_by(self: Self, *keys: str, drop_null_keys: bool) -> DuckDBGroupBy:
+    def group_by(self: Self, *keys: DuckDBExpr, drop_null_keys: bool) -> DuckDBGroupBy:
         from narwhals._duckdb.group_by import DuckDBGroupBy
 
         return DuckDBGroupBy(self, keys, drop_null_keys=drop_null_keys)
