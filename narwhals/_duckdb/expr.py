@@ -698,10 +698,12 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         *,
         descending: bool,
     ) -> Self:
-        if method == "min":
+        if method in {"min", "max", "average"}:
             func_name = "rank"
         elif method == "dense":
             func_name = "dense_rank"
+        elif method == "ordinal":
+            func_name = "row_number"
         else:  # pragma: no cover
             msg = f"Method {method} is not yet implemented."
             raise NotImplementedError(msg)
@@ -712,10 +714,25 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             else:
                 by_sql = f"{_input} asc nulls last"
             order_by_sql = f"order by {by_sql}"
-            sql = (
-                f"CASE WHEN {_input} IS NOT NULL THEN {func_name}() "
-                f"OVER ({order_by_sql}) END"
-            )
+
+            if method == "max":
+                sql = (
+                    f"CASE WHEN {_input} IS NOT NULL THEN "
+                    f"{func_name}() OVER ({order_by_sql}) + "
+                    f"COUNT(*) OVER (PARTITION BY {_input}) - 1 END"
+                )
+            elif method == "average":
+                sql = (
+                    f"CASE WHEN {_input} IS NOT NULL THEN "
+                    f"{func_name}() OVER ({order_by_sql}) + "
+                    f"(COUNT(*) OVER (PARTITION BY {_input}) - 1) / 2.0 END"
+                )
+            else:
+                sql = (
+                    f"CASE WHEN {_input} IS NOT NULL THEN {func_name}() "
+                    f"OVER ({order_by_sql}) END"
+                )
+
             return SQLExpression(sql)
 
         return self._with_callable(_rank)
