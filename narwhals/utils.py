@@ -24,6 +24,7 @@ from typing import overload
 from warnings import warn
 
 from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_duckdb
 from narwhals.dependencies import get_ibis
@@ -31,6 +32,7 @@ from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
+from narwhals.dependencies import get_pyspark
 from narwhals.dependencies import get_pyspark_sql
 from narwhals.dependencies import get_sqlframe
 from narwhals.dependencies import is_cudf_series
@@ -534,7 +536,22 @@ class Implementation(Enum):
     @property
     def _backend_version(self) -> tuple[int, ...]:
         native = self.to_native_namespace()
-        return parse_version(native if not self.is_sqlframe() else native._version)
+        into_version: Any
+        if self not in {
+            Implementation.PYSPARK,
+            Implementation.DASK,
+            Implementation.SQLFRAME,
+        }:
+            into_version = native
+        elif self is Implementation.PYSPARK:
+            into_version = get_pyspark()
+        elif self is Implementation.DASK:
+            into_version = get_dask()
+        else:
+            import sqlframe._version
+
+            into_version = sqlframe._version
+        return parse_version(into_version)
 
 
 MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
