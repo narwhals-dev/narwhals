@@ -413,12 +413,6 @@ def test_all_kind_of_aggs(
     assert_equal_data(result, expected)
 
 
-def test_group_by_expr(constructor: Constructor) -> None:
-    df = nw.from_native(constructor({"a": [1, 1, 3], "b": [4, 5, 6]}))
-    with pytest.raises(NotImplementedError, match=r"not \(yet\?\) supported"):
-        df.group_by(nw.col("a")).agg(nw.col("b").mean())  # type: ignore[arg-type]
-
-
 def test_pandas_group_by_index_and_column_overlap() -> None:
     df = pd.DataFrame(
         {"a": [1, 1, 2], "b": [4, 5, 6]}, index=pd.Index([0, 1, 2], name="a")
@@ -452,4 +446,19 @@ def test_fancy_functions(constructor: Constructor) -> None:
         .agg(nw.selectors.matches("b").std(ddof=0).name.map(lambda _x: "c"))
         .sort("a")
     )
+    assert_equal_data(result, expected)
+
+
+def test_group_by_expr(constructor: Constructor) -> None:
+    data = {"a": [1, 1, 2, 2, -1], "b": [0, 1, 2, 3, 4]}
+    df = nw.from_native(constructor(data))
+    result = (
+        df.group_by(
+            nw.col("a").abs(),
+            nw.col("a").abs().alias("a_with_alias"),
+        )
+        .agg(nw.col("b").sum())
+        .sort("a")
+    )
+    expected = {"a": [1, 2], "a_with_alias": [1, 2], "b": [5, 5]}
     assert_equal_data(result, expected)

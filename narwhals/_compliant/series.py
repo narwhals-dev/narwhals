@@ -300,7 +300,7 @@ class EagerSeries(CompliantSeries[NativeSeriesT_co], Protocol[NativeSeriesT_co])
         """Return a new `CompliantSeries`, wrapping the native `series`.
 
         In cases when operations are known to not affect whether a result should
-        be broadcast, we can pass `preverse_broadcast=True`.
+        be broadcast, we can pass `preserve_broadcast=True`.
         Set this with care - it should only be set for unary expressions which don't
         change length or order, such as `.alias` or `.fill_null`. If in doubt, don't
         set it, you probably don't need it.

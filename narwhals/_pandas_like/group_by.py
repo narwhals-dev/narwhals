@@ -41,19 +41,27 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
     def __init__(
         self: Self,
         df: PandasLikeDataFrame,
-        keys: Sequence[str],
+        keys: Sequence[PandasLikeExpr],
         /,
         *,
         drop_null_keys: bool,
     ) -> None:
-        self._compliant_frame = df
-        self._keys: list[str] = list(keys)
+        self._compliant_frame = df.with_columns(*keys)
+        self._keys: list[str] = [
+            key._alias_output_names(key._evaluate_output_names(df))[0]
+            if key._alias_output_names is not None
+            else key._evaluate_output_names(df)[0]
+            for key in keys
+        ]
         # Drop index to avoid potential collisions:
         # https://github.com/narwhals-dev/narwhals/issues/1907.
-        if set(df.native.index.names).intersection(df.columns):
-            native_frame = df.native.reset_index(drop=True)
+
+        if set(self._compliant_frame.native.index.names).intersection(
+            self._compliant_frame.columns
+        ):
+            native_frame = self._compliant_frame.native.reset_index(drop=True)
         else:
-            native_frame = df.native
+            native_frame = self._compliant_frame.native
         if (
             self.compliant._implementation.is_pandas()
             and self.compliant._backend_version < (1, 1)

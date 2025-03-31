@@ -29,9 +29,9 @@ class PolarsGroupBy:
         self, df: PolarsDataFrame, keys: Sequence[str], /, *, drop_null_keys: bool
     ) -> None:
         self._compliant_frame = df
-        self._keys = list(keys)
+        self._keys = [extract_native(arg) for arg in keys]
         df = df.drop_nulls(keys) if drop_null_keys else df
-        self._grouped: NativeGroupBy = df._native_frame.group_by(keys)
+        self._grouped: NativeGroupBy = df._native_frame.group_by(self._keys)
 
     def agg(self: Self, *aggs: PolarsExpr) -> PolarsDataFrame:
         from_native = self.compliant._with_native
@@ -54,9 +54,9 @@ class PolarsLazyGroupBy:
         self, df: PolarsLazyFrame, keys: Sequence[str], /, *, drop_null_keys: bool
     ) -> None:
         self._compliant_frame = df
-        self._keys = list(keys)
+        self._keys = [extract_native(arg) for arg in keys]
         df = df.drop_nulls(keys) if drop_null_keys else df
-        self._grouped: NativeLazyGroupBy = df._native_frame.group_by(keys)
+        self._grouped: NativeLazyGroupBy = df._native_frame.group_by(self._keys)
 
     def agg(self: Self, *aggs: PolarsExpr) -> PolarsLazyFrame:
         from_native = self.compliant._with_native

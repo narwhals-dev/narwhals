@@ -1498,7 +1498,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return super().filter(*predicates, **constraints)
 
     def group_by(
-        self: Self, *keys: str | Iterable[str], drop_null_keys: bool = False
+        self: Self, *keys: IntoExpr | Iterable[IntoExpr], drop_null_keys: bool = False
     ) -> GroupBy[Self]:
         r"""Start a group by operation.
 
@@ -1546,17 +1546,10 @@ class DataFrame(BaseFrame[DataFrameT]):
             2  b  3  2
             3  c  3  1
         """
-        from narwhals.expr import Expr
         from narwhals.group_by import GroupBy
-        from narwhals.series import Series
 
-        flat_keys = flatten(keys)
-        if any(isinstance(x, (Expr, Series)) for x in flat_keys):
-            msg = (
-                "`group_by` with expression or Series keys is not (yet?) supported.\n\n"
-                "Hint: instead of `df.group_by(nw.col('a'))`, use `df.group_by('a')`."
-            )
-            raise NotImplementedError(msg)
+        flat_keys, kinds = self._flatten_and_extract(*keys)
+        # TODO(FBruzzesi): Validate kinds are valid
         return GroupBy(self, *flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
@@ -2795,7 +2788,7 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().filter(*predicates, **constraints)
 
     def group_by(
-        self: Self, *keys: str | Iterable[str], drop_null_keys: bool = False
+        self: Self, *keys: IntoExpr | Iterable[IntoExpr], drop_null_keys: bool = False
     ) -> LazyGroupBy[Self]:
         r"""Start a group by operation.
 
@@ -2826,17 +2819,10 @@ class LazyFrame(BaseFrame[FrameT]):
             └─────────┴────────┘
             <BLANKLINE>
         """
-        from narwhals.expr import Expr
         from narwhals.group_by import LazyGroupBy
-        from narwhals.series import Series
 
-        flat_keys = flatten(keys)
-        if any(isinstance(x, (Expr, Series)) for x in flat_keys):
-            msg = (
-                "`group_by` with expression or Series keys is not (yet?) supported.\n\n"
-                "Hint: instead of `df.group_by(nw.col('a'))`, use `df.group_by('a')`."
-            )
-            raise NotImplementedError(msg)
+        flat_keys, kinds = self._flatten_and_extract(*keys)
+        # TODO(FBruzzesi): Validate kinds are valid
         return LazyGroupBy(self, *flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
