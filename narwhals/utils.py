@@ -531,6 +531,11 @@ class Implementation(Enum):
         """
         return self is Implementation.SQLFRAME  # pragma: no cover
 
+    @property
+    def _backend_version(self) -> tuple[int, ...]:
+        native = self.to_native_namespace()
+        return parse_version(native if not self.is_sqlframe() else native._version)
+
 
 MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.PANDAS: (0, 25, 3),
