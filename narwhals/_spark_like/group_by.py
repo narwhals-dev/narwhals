@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Sequence
 
 from narwhals._compliant import LazyGroupBy
+from narwhals._expression_parsing import evaluate_output_names_and_aliases
 
 if TYPE_CHECKING:
     from sqlframe.base.column import Column  # noqa: F401
@@ -23,12 +25,14 @@ class SparkLikeLazyGroupBy(LazyGroupBy["SparkLikeLazyFrame", "SparkLikeExpr", "C
         drop_null_keys: bool,
     ) -> None:
         compliant_frame = compliant_frame.with_columns(*keys)
-        self._keys = [
-            key._alias_output_names(key._evaluate_output_names(compliant_frame))[0]
-            if key._alias_output_names is not None
-            else key._evaluate_output_names(compliant_frame)[0]
-            for key in keys
-        ]
+        self._keys: list[str] = list(
+            chain.from_iterable(
+                evaluate_output_names_and_aliases(
+                    expr=key, df=compliant_frame, exclude=[]
+                )[1]
+                for key in keys
+            )
+        )
         self._compliant_frame = (
             compliant_frame.drop_nulls(subset=self._keys)
             if drop_null_keys
