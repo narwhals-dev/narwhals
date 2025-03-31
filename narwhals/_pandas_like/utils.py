@@ -357,6 +357,8 @@ def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> 
     if dtype.startswith("dictionary<"):
         return dtypes.Categorical()
     if dtype == "category":
+        if version is Version.V1:
+            return dtypes.Categorical()
         if native_dtype.ordered:
             return dtypes.Enum(categories=native_dtype.categories)
         return dtypes.Categorical()

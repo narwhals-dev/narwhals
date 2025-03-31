@@ -11,7 +11,6 @@ from narwhals.dtypes import Datetime as NwDatetime
 from narwhals.dtypes import Decimal
 from narwhals.dtypes import DType
 from narwhals.dtypes import Duration as NwDuration
-from narwhals.dtypes import Enum
 from narwhals.dtypes import Field
 from narwhals.dtypes import Float32
 from narwhals.dtypes import Float64
@@ -70,6 +69,13 @@ class Duration(NwDuration):
 
     def __hash__(self: Self) -> int:
         return hash(self.__class__)
+
+
+class Enum(DType):
+    """A fixed categorical encoding of a unique set of strings.
+
+    Polars has an Enum data type, while pandas and PyArrow do not.
+    """
 
 
 __all__ = [

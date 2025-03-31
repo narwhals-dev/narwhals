@@ -402,5 +402,13 @@ def test_cast_decimal_to_native() -> None:
     "categories", [["a", "b"], ["a", None], [1, 2], enum.Enum("test", "a b")]
 )
 def test_enum_valid(categories: Iterable[Any] | type[enum.Enum]) -> None:
+    import narwhals as nw
+
     dtype = nw.Enum(categories)
     assert dtype == nw.Enum
+    assert len(dtype.categories) == len([*categories])
+
+    import narwhals.stable.v1 as nw  # type: ignore[no-redef]
+
+    with pytest.raises(TypeError, match=r"Enum\(\) takes no arguments"):
+        dtype = nw.Enum(categories)
