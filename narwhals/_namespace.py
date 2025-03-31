@@ -83,3 +83,110 @@ if TYPE_CHECKING:
     LazyAllowed: TypeAlias = "_lazy_allowed | _LazyAllowed"
 
     IntoBackend: TypeAlias = "BackendName | Implementation | ModuleType"
+
+__all__ = ["Namespace"]
+
+
+class Namespace(Generic[CompliantNamespaceT_co]):
+    _compliant_namespace: CompliantNamespaceT_co
+    _version: ClassVar[Version] = Version.MAIN
+
+    def __init__(self, namespace: CompliantNamespaceT_co, /) -> None:
+        self._compliant_namespace = namespace
+
+    def __repr__(self) -> str:
+        return f"Namespace[{type(self.compliant).__name__}]"
+
+    @property
+    def compliant(self) -> CompliantNamespaceT_co:
+        return self._compliant_namespace
+
+    @property
+    def implementation(self) -> Implementation:
+        return self.compliant._implementation
+
+    @property
+    def version(self) -> Version:
+        return self._version
+
+    @overload
+    @classmethod
+    def from_backend(cls, backend: PandasLike, /) -> Namespace[PandasLikeNamespace]: ...
+
+    @overload
+    @classmethod
+    def from_backend(cls, backend: Polars, /) -> Namespace[PolarsNamespace]: ...
+
+    @overload
+    @classmethod
+    def from_backend(cls, backend: Arrow, /) -> Namespace[ArrowNamespace]: ...
+
+    @overload
+    @classmethod
+    def from_backend(cls, backend: SparkLike, /) -> Namespace[SparkLikeNamespace]: ...
+
+    @overload
+    @classmethod
+    def from_backend(cls, backend: DuckDB, /) -> Namespace[DuckDBNamespace]: ...
+
+    @overload
+    @classmethod
+    def from_backend(cls, backend: Dask, /) -> Namespace[DaskNamespace]: ...
+
+    @overload
+    @classmethod
+    def from_backend(cls, backend: ModuleType, /) -> Namespace[Any]: ...
+
+    @classmethod
+    def from_backend(
+        cls: type[Namespace[Any]], backend: IntoBackend, /
+    ) -> Namespace[Any]:
+        """Instantiate from native namespace module, string, or Implementation.
+
+        Arguments:
+            backend: native namespace module, string, or Implementation.
+
+        Returns:
+            Namespace.
+
+        Examples:
+            >>> Namespace.from_backend("polars")
+            'Namespace[PolarsNamespace]'
+        """
+        impl = Implementation.from_backend(backend)
+        backend_version = impl._backend_version
+        version = cls._version
+        ns: CompliantNamespaceAny
+        if impl.is_pandas_like():
+            from narwhals._pandas_like.namespace import PandasLikeNamespace
+
+            ns = PandasLikeNamespace(
+                implementation=impl, backend_version=backend_version, version=version
+            )
+
+        elif impl.is_polars():
+            from narwhals._polars.namespace import PolarsNamespace
+
+            ns = PolarsNamespace(backend_version=backend_version, version=version)
+        elif impl.is_pyarrow():
+            from narwhals._arrow.namespace import ArrowNamespace
+
+            ns = ArrowNamespace(backend_version=backend_version, version=version)
+        elif impl.is_spark_like():  # pragma: no cover
+            from narwhals._spark_like.namespace import SparkLikeNamespace
+
+            ns = SparkLikeNamespace(
+                implementation=impl, backend_version=backend_version, version=version
+            )
+        elif impl.is_duckdb():  # pragma: no cover
+            from narwhals._duckdb.namespace import DuckDBNamespace
+
+            ns = DuckDBNamespace(backend_version=backend_version, version=version)
+        elif impl.is_dask():  # pragma: no cover
+            from narwhals._dask.namespace import DaskNamespace
+
+            ns = DaskNamespace(backend_version=backend_version, version=version)
+        else:
+            msg = "Not supported Implementation"  # pragma: no cover
+            raise AssertionError(msg)
+        return cls(ns)
