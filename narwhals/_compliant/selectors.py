@@ -10,6 +10,7 @@ from typing import Callable
 from typing import Collection
 from typing import Iterable
 from typing import Iterator
+from typing import Protocol
 from typing import Sequence
 from typing import TypeVar
 from typing import overload
@@ -27,13 +28,12 @@ if not TYPE_CHECKING:  # pragma: no cover
     import sys
 
     if sys.version_info >= (3, 9):
-        from typing import Protocol
+        from typing import Protocol as Protocol38
     else:
-        from typing import Generic
+        from typing import Generic as Protocol38
 
-        Protocol = Generic
 else:  # pragma: no cover
-    from typing import Protocol
+    from typing import Protocol as Protocol38
 
 if TYPE_CHECKING:
     from datetime import timezone
@@ -219,7 +219,7 @@ class LazySelectorNamespace(
 
 
 class CompliantSelector(
-    CompliantExpr[FrameT, SeriesOrExprT], Protocol[FrameT, SeriesOrExprT]
+    CompliantExpr[FrameT, SeriesOrExprT], Protocol38[FrameT, SeriesOrExprT]
 ):
     _call: EvalSeries[FrameT, SeriesOrExprT]
     _function_name: str
