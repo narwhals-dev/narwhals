@@ -345,7 +345,9 @@ def is_native_cudf(obj: Any) -> TypeIs[_NativeCuDF]:
 
 
 def is_native_pandas_like(obj: Any) -> TypeIs[_NativePandasLike]:
-    return is_native_pandas(obj) or is_native_cudf(obj) or is_native_modin(obj)
+    return (
+        is_native_pandas(obj) or is_native_cudf(obj) or is_native_modin(obj)
+    )  # pragma: no cover
 
 
 def is_native_spark_like(obj: Any) -> TypeIs[_NativeSparkLike]:
