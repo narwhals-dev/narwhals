@@ -13,7 +13,6 @@ if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
     from narwhals._compliant import EvalNames
     from narwhals._compliant import EvalSeries
-    from narwhals.utils import _FullContext
 
 
 class ArrowSelectorNamespace(EagerSelectorNamespace["ArrowDataFrame", "ArrowSeries"]):
@@ -32,11 +31,6 @@ class ArrowSelectorNamespace(EagerSelectorNamespace["ArrowDataFrame", "ArrowSeri
             backend_version=self._backend_version,
             version=self._version,
         )
-
-    def __init__(self: Self, context: _FullContext, /) -> None:
-        self._implementation = context._implementation
-        self._backend_version = context._backend_version
-        self._version = context._version
 
 
 class ArrowSelector(CompliantSelector["ArrowDataFrame", "ArrowSeries"], ArrowExpr):  # type: ignore[misc]

@@ -43,7 +43,7 @@ class DaskNamespace(DepthTrackingNamespace[DaskLazyFrame, "DaskExpr"]):
 
     @property
     def selectors(self: Self) -> DaskSelectorNamespace:
-        return DaskSelectorNamespace(self)
+        return DaskSelectorNamespace.from_namespace(self)
 
     @property
     def _expr(self) -> type[DaskExpr]:

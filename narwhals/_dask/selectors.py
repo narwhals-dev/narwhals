@@ -17,7 +17,6 @@ if TYPE_CHECKING:
     from narwhals._compliant import EvalNames
     from narwhals._compliant import EvalSeries
     from narwhals._dask.dataframe import DaskLazyFrame
-    from narwhals.utils import _FullContext
 
 
 class DaskSelectorNamespace(LazySelectorNamespace["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[reportInvalidTypeArguments]
@@ -36,11 +35,6 @@ class DaskSelectorNamespace(LazySelectorNamespace["DaskLazyFrame", "dx.Series"])
             backend_version=self._backend_version,
             version=self._version,
         )
-
-    def __init__(self: Self, context: _FullContext, /) -> None:
-        self._implementation = context._implementation
-        self._backend_version = context._backend_version
-        self._version = context._version
 
 
 class DaskSelector(CompliantSelector["DaskLazyFrame", "dx.Series"], DaskExpr):  # type: ignore[misc]

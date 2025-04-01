@@ -47,7 +47,7 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
 
     @property
     def selectors(self: Self) -> DuckDBSelectorNamespace:
-        return DuckDBSelectorNamespace(self)
+        return DuckDBSelectorNamespace.from_namespace(self)
 
     @property
     def _expr(self) -> type[DuckDBExpr]:

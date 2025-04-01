@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from narwhals._compliant import EvalSeries
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
-    from narwhals.utils import _FullContext
 
 
 class PandasSelectorNamespace(
@@ -37,11 +36,6 @@ class PandasSelectorNamespace(
             backend_version=self._backend_version,
             version=self._version,
         )
-
-    def __init__(self: Self, context: _FullContext, /) -> None:
-        self._implementation = context._implementation
-        self._backend_version = context._backend_version
-        self._version = context._version
 
 
 class PandasSelector(  # type: ignore[misc]

@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from narwhals.typing import TimeUnit
     from narwhals.utils import Implementation
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
 __all__ = [
     "CompliantSelector",
@@ -80,6 +81,14 @@ class CompliantSelectorNamespace(Protocol[FrameT, SeriesOrExprT]):
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
+
+    @classmethod
+    def from_namespace(cls, context: _FullContext, /) -> Self:
+        obj = cls.__new__(cls)
+        obj._implementation = context._implementation
+        obj._backend_version = context._backend_version
+        obj._version = context._version
+        return obj
 
     def _selector(
         self,

@@ -13,7 +13,6 @@ if TYPE_CHECKING:
     from narwhals._compliant import EvalNames
     from narwhals._compliant import EvalSeries
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
-    from narwhals.utils import _FullContext
 
 
 class SparkLikeSelectorNamespace(LazySelectorNamespace["SparkLikeLazyFrame", "Column"]):
@@ -31,11 +30,6 @@ class SparkLikeSelectorNamespace(LazySelectorNamespace["SparkLikeLazyFrame", "Co
             version=self._version,
             implementation=self._implementation,
         )
-
-    def __init__(self: Self, context: _FullContext, /) -> None:
-        self._backend_version = context._backend_version
-        self._version = context._version
-        self._implementation = context._implementation
 
 
 class SparkLikeSelector(CompliantSelector["SparkLikeLazyFrame", "Column"], SparkLikeExpr):  # type: ignore[misc]
