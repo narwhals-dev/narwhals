@@ -133,6 +133,12 @@ if TYPE_CHECKING:
     _NativePySpark: TypeAlias = "pyspark_sql.DataFrame"
     _NativeSparkLike: TypeAlias = "_NativeSQLFrame | _NativePySpark"
 
+    NativeKnown: TypeAlias = "_NativePolars | _NativeArrow | _NativePandasLike | _NativeSparkLike | _NativeDuckDB | _NativeDask"
+    NativeUnknown: TypeAlias = (
+        "NativeFrame | NativeSeries | NativeLazyFrame | DataFrameLike"
+    )
+    NativeAny: TypeAlias = "NativeKnown | NativeUnknown"
+
 __all__ = ["Namespace"]
 
 
@@ -275,11 +281,13 @@ class Namespace(Generic[CompliantNamespaceT_co]):
     @overload
     @classmethod
     def from_native_object(
-        cls, native: NativeFrame | NativeSeries | NativeLazyFrame | DataFrameLike, /
+        cls, native: NativeUnknown, /
     ) -> Namespace[CompliantNamespaceAny]: ...
 
     @classmethod
-    def from_native_object(cls: type[Namespace[Any]], native: Any, /) -> Namespace[Any]:
+    def from_native_object(
+        cls: type[Namespace[Any]], native: NativeAny, /
+    ) -> Namespace[Any]:
         if is_native_polars(native):
             return cls.from_backend(Implementation.POLARS)
         elif is_native_pandas(native):
