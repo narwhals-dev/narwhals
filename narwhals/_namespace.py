@@ -200,7 +200,7 @@ class Namespace(Generic[CompliantNamespaceT_co]):
         Examples:
             >>> from narwhals._namespace import Namespace
             >>> Namespace.from_backend("polars")
-            'Namespace[PolarsNamespace]'
+            Namespace[PolarsNamespace]
         """
         impl = Implementation.from_backend(backend)
         backend_version = impl._backend_version
