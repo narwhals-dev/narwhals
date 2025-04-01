@@ -30,6 +30,8 @@ __all__ = [
     "CompliantFrameT",
     "CompliantLazyFrameT",
     "CompliantSeriesT",
+    "EvalNames",
+    "EvalSeries",
     "IntoCompliantExpr",
     "NativeFrameT_co",
     "NativeSeriesT_co",
@@ -107,3 +109,7 @@ LazyExprT_contra = TypeVar("LazyExprT_contra", bound=LazyExprAny, contravariant=
 
 AliasNames: TypeAlias = Callable[[Sequence[str]], Sequence[str]]
 AliasName: TypeAlias = Callable[[str], str]
+EvalSeries: TypeAlias = Callable[
+    [CompliantFrameT], Sequence[CompliantSeriesOrNativeExprT]
+]
+EvalNames: TypeAlias = Callable[[CompliantFrameT], Sequence[str]]

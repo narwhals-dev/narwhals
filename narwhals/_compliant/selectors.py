@@ -6,7 +6,6 @@ import re
 from functools import partial
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Callable
 from typing import Collection
 from typing import Iterable
 from typing import Iterator
@@ -49,6 +48,8 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._compliant.typing import CompliantSeriesAny
     from narwhals._compliant.typing import CompliantSeriesOrNativeExprAny
+    from narwhals._compliant.typing import EvalNames
+    from narwhals._compliant.typing import EvalSeries
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
     from narwhals.utils import Implementation
@@ -59,8 +60,6 @@ __all__ = [
     "CompliantSelector",
     "CompliantSelectorNamespace",
     "EagerSelectorNamespace",
-    "EvalNames",
-    "EvalSeries",
     "LazySelectorNamespace",
 ]
 
@@ -74,8 +73,6 @@ LazyFrameT = TypeVar("LazyFrameT", bound="CompliantLazyFrameAny")
 SelectorOrExpr: TypeAlias = (
     "CompliantSelector[FrameT, SeriesOrExprT] | CompliantExpr[FrameT, SeriesOrExprT]"
 )
-EvalSeries: TypeAlias = Callable[[FrameT], Sequence[SeriesOrExprT]]
-EvalNames: TypeAlias = Callable[[FrameT], Sequence[str]]
 
 
 class CompliantSelectorNamespace(Protocol[FrameT, SeriesOrExprT]):
