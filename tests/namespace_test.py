@@ -93,7 +93,7 @@ def test_namespace_series_from_iterable(
     compliant_series = compliant._series.from_iterable(
         iterable, context=compliant, name="hello"
     )
-    # BUG: `@overload`(s) for `from_native` fail to mentioned `Compliant` support
+    # BUG: `@overload`(s) for `from_native` fail to mention `Compliant` support
     # Fix *should be*:
     #     `IntoSeries: TypeAlias = Series[Any] | NativeSeries | CompliantSeries[Any]`
     # Can't do that as, `PolarsSeries` is not compliant yet
