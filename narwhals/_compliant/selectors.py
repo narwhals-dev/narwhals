@@ -42,10 +42,13 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
-    from narwhals._compliant.dataframe import CompliantDataFrame
-    from narwhals._compliant.dataframe import CompliantLazyFrame
     from narwhals._compliant.expr import NativeExpr
-    from narwhals._compliant.series import CompliantSeries
+    from narwhals._compliant.typing import CompliantDataFrameAny
+    from narwhals._compliant.typing import CompliantExprAny
+    from narwhals._compliant.typing import CompliantFrameAny
+    from narwhals._compliant.typing import CompliantLazyFrameAny
+    from narwhals._compliant.typing import CompliantSeriesAny
+    from narwhals._compliant.typing import CompliantSeriesOrNativeExprAny
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
     from narwhals.utils import Implementation
@@ -62,14 +65,12 @@ __all__ = [
 ]
 
 
-SeriesOrExprT = TypeVar("SeriesOrExprT", bound="CompliantSeries[Any] | NativeExpr")
-SeriesT = TypeVar("SeriesT", bound="CompliantSeries[Any]")
+SeriesOrExprT = TypeVar("SeriesOrExprT", bound="CompliantSeriesOrNativeExprAny")
+SeriesT = TypeVar("SeriesT", bound="CompliantSeriesAny")
 ExprT = TypeVar("ExprT", bound="NativeExpr")
-FrameT = TypeVar(
-    "FrameT", bound="CompliantDataFrame[Any, Any, Any] | CompliantLazyFrame[Any, Any]"
-)
-DataFrameT = TypeVar("DataFrameT", bound="CompliantDataFrame[Any, Any, Any]")
-LazyFrameT = TypeVar("LazyFrameT", bound="CompliantLazyFrame[Any, Any]")
+FrameT = TypeVar("FrameT", bound="CompliantFrameAny")
+DataFrameT = TypeVar("DataFrameT", bound="CompliantDataFrameAny")
+LazyFrameT = TypeVar("LazyFrameT", bound="CompliantLazyFrameAny")
 SelectorOrExpr: TypeAlias = (
     "CompliantSelector[FrameT, SeriesOrExprT] | CompliantExpr[FrameT, SeriesOrExprT]"
 )
@@ -118,7 +119,7 @@ class CompliantSelectorNamespace(Protocol[FrameT, SeriesOrExprT]):
         return self._selector.from_callables(series, names, context=self)
 
     def by_dtype(
-        self: Self, dtypes: Collection[DType | type[DType]]
+        self, dtypes: Collection[DType | type[DType]]
     ) -> CompliantSelector[FrameT, SeriesOrExprT]:
         def series(df: FrameT) -> Sequence[SeriesOrExprT]:
             return [ser for ser, tp in self._iter_columns_dtypes(df) if tp in dtypes]
@@ -128,7 +129,7 @@ class CompliantSelectorNamespace(Protocol[FrameT, SeriesOrExprT]):
 
         return self._selector.from_callables(series, names, context=self)
 
-    def matches(self: Self, pattern: str) -> CompliantSelector[FrameT, SeriesOrExprT]:
+    def matches(self, pattern: str) -> CompliantSelector[FrameT, SeriesOrExprT]:
         p = re.compile(pattern)
 
         def series(df: FrameT) -> Sequence[SeriesOrExprT]:
@@ -142,7 +143,7 @@ class CompliantSelectorNamespace(Protocol[FrameT, SeriesOrExprT]):
 
         return self._selector.from_callables(series, names, context=self)
 
-    def numeric(self: Self) -> CompliantSelector[FrameT, SeriesOrExprT]:
+    def numeric(self) -> CompliantSelector[FrameT, SeriesOrExprT]:
         def series(df: FrameT) -> Sequence[SeriesOrExprT]:
             return [ser for ser, tp in self._iter_columns_dtypes(df) if tp.is_numeric()]
 
@@ -151,23 +152,23 @@ class CompliantSelectorNamespace(Protocol[FrameT, SeriesOrExprT]):
 
         return self._selector.from_callables(series, names, context=self)
 
-    def categorical(self: Self) -> CompliantSelector[FrameT, SeriesOrExprT]:
+    def categorical(self) -> CompliantSelector[FrameT, SeriesOrExprT]:
         return self._is_dtype(import_dtypes_module(self._version).Categorical)
 
-    def string(self: Self) -> CompliantSelector[FrameT, SeriesOrExprT]:
+    def string(self) -> CompliantSelector[FrameT, SeriesOrExprT]:
         return self._is_dtype(import_dtypes_module(self._version).String)
 
-    def boolean(self: Self) -> CompliantSelector[FrameT, SeriesOrExprT]:
+    def boolean(self) -> CompliantSelector[FrameT, SeriesOrExprT]:
         return self._is_dtype(import_dtypes_module(self._version).Boolean)
 
-    def all(self: Self) -> CompliantSelector[FrameT, SeriesOrExprT]:
+    def all(self) -> CompliantSelector[FrameT, SeriesOrExprT]:
         def series(df: FrameT) -> Sequence[SeriesOrExprT]:
             return list(self._iter_columns(df))
 
         return self._selector.from_callables(series, get_column_names, context=self)
 
     def datetime(
-        self: Self,
+        self,
         time_unit: TimeUnit | Iterable[TimeUnit] | None,
         time_zone: str | timezone | Iterable[str | timezone | None] | None,
     ) -> CompliantSelector[FrameT, SeriesOrExprT]:
@@ -189,8 +190,7 @@ class CompliantSelectorNamespace(Protocol[FrameT, SeriesOrExprT]):
 
 
 class EagerSelectorNamespace(
-    CompliantSelectorNamespace[DataFrameT, SeriesT],
-    Protocol[DataFrameT, SeriesT],
+    CompliantSelectorNamespace[DataFrameT, SeriesT], Protocol[DataFrameT, SeriesT]
 ):
     def _iter_schema(self, df: DataFrameT, /) -> Iterator[tuple[str, DType]]:
         for ser in self._iter_columns(df):
@@ -205,8 +205,7 @@ class EagerSelectorNamespace(
 
 
 class LazySelectorNamespace(
-    CompliantSelectorNamespace[LazyFrameT, ExprT],
-    Protocol[LazyFrameT, ExprT],
+    CompliantSelectorNamespace[LazyFrameT, ExprT], Protocol[LazyFrameT, ExprT]
 ):
     def _iter_schema(self, df: LazyFrameT) -> Iterator[tuple[str, DType]]:
         yield from df.schema.items()
@@ -253,21 +252,21 @@ class CompliantSelector(
     def selectors(self) -> CompliantSelectorNamespace[FrameT, SeriesOrExprT]:
         return self.__narwhals_namespace__().selectors
 
-    def _to_expr(self: Self) -> CompliantExpr[FrameT, SeriesOrExprT]: ...
+    def _to_expr(self) -> CompliantExpr[FrameT, SeriesOrExprT]: ...
 
     def _is_selector(
-        self: Self, other: Self | CompliantExpr[FrameT, SeriesOrExprT]
+        self, other: Self | CompliantExpr[FrameT, SeriesOrExprT]
     ) -> TypeIs[CompliantSelector[FrameT, SeriesOrExprT]]:
         return isinstance(other, type(self))
 
     @overload
-    def __sub__(self: Self, other: Self) -> Self: ...
+    def __sub__(self, other: Self) -> Self: ...
     @overload
     def __sub__(
-        self: Self, other: CompliantExpr[FrameT, SeriesOrExprT]
+        self, other: CompliantExpr[FrameT, SeriesOrExprT]
     ) -> CompliantExpr[FrameT, SeriesOrExprT]: ...
     def __sub__(
-        self: Self, other: SelectorOrExpr[FrameT, SeriesOrExprT]
+        self, other: SelectorOrExpr[FrameT, SeriesOrExprT]
     ) -> SelectorOrExpr[FrameT, SeriesOrExprT]:
         if self._is_selector(other):
 
@@ -285,13 +284,13 @@ class CompliantSelector(
         return self._to_expr() - other
 
     @overload
-    def __or__(self: Self, other: Self) -> Self: ...
+    def __or__(self, other: Self) -> Self: ...
     @overload
     def __or__(
-        self: Self, other: CompliantExpr[FrameT, SeriesOrExprT]
+        self, other: CompliantExpr[FrameT, SeriesOrExprT]
     ) -> CompliantExpr[FrameT, SeriesOrExprT]: ...
     def __or__(
-        self: Self, other: SelectorOrExpr[FrameT, SeriesOrExprT]
+        self, other: SelectorOrExpr[FrameT, SeriesOrExprT]
     ) -> SelectorOrExpr[FrameT, SeriesOrExprT]:
         if self._is_selector(other):
 
@@ -310,13 +309,13 @@ class CompliantSelector(
         return self._to_expr() | other
 
     @overload
-    def __and__(self: Self, other: Self) -> Self: ...
+    def __and__(self, other: Self) -> Self: ...
     @overload
     def __and__(
-        self: Self, other: CompliantExpr[FrameT, SeriesOrExprT]
+        self, other: CompliantExpr[FrameT, SeriesOrExprT]
     ) -> CompliantExpr[FrameT, SeriesOrExprT]: ...
     def __and__(
-        self: Self, other: SelectorOrExpr[FrameT, SeriesOrExprT]
+        self, other: SelectorOrExpr[FrameT, SeriesOrExprT]
     ) -> SelectorOrExpr[FrameT, SeriesOrExprT]:
         if self._is_selector(other):
 
@@ -331,13 +330,11 @@ class CompliantSelector(
             return self.selectors._selector.from_callables(series, names, context=self)
         return self._to_expr() & other
 
-    def __invert__(self: Self) -> CompliantSelector[FrameT, SeriesOrExprT]:
-        return self.selectors.all() - self  # type: ignore[no-any-return]
+    def __invert__(self) -> CompliantSelector[FrameT, SeriesOrExprT]:
+        return self.selectors.all() - self
 
 
 def _eval_lhs_rhs(
-    df: CompliantDataFrame[Any, Any, Any] | CompliantLazyFrame[Any, Any],
-    lhs: CompliantExpr[Any, Any],
-    rhs: CompliantExpr[Any, Any],
+    df: CompliantFrameAny, lhs: CompliantExprAny, rhs: CompliantExprAny
 ) -> tuple[Sequence[str], Sequence[str]]:
     return lhs._evaluate_output_names(df), rhs._evaluate_output_names(df)
