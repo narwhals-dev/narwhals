@@ -11,25 +11,21 @@ if TYPE_CHECKING:
     from narwhals._namespace import BackendName
     from tests.utils import Constructor
 
+_EAGER_ALLOWED = "polars", "pandas", "pyarrow", "modin", "cudf"
+_LAZY_ONLY = "dask", "duckdb", "pyspark", "sqlframe"
+_LAZY_ALLOWED = ("polars", *_LAZY_ONLY)
+_BACKENDS = (*_EAGER_ALLOWED, *_LAZY_ONLY)
 
-@pytest.mark.parametrize(
-    "name",
-    [
-        "polars",
-        "pandas",
-        "pyarrow",
-        "dask",
-        "duckdb",
-        "pyspark",
-        "sqlframe",
-        "modin",
-        "cudf",
-    ],
-)
-def test_namespace_from_backend_name(name: BackendName) -> None:
-    pytest.importorskip(name)
-    namespace = Namespace.from_backend(name)
-    assert namespace.implementation.name.lower() == name
+eager_allowed = pytest.mark.parametrize("backend", _EAGER_ALLOWED)
+lazy_allowed = pytest.mark.parametrize("backend", _LAZY_ALLOWED)
+backends = pytest.mark.parametrize("backend", _BACKENDS)
+
+
+@backends
+def test_namespace_from_backend_name(backend: BackendName) -> None:
+    pytest.importorskip(backend)
+    namespace = Namespace.from_backend(backend)
+    assert namespace.implementation.name.lower() == backend
 
 
 def test_namespace_from_native_object(constructor: Constructor) -> None:
