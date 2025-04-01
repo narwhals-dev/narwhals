@@ -94,7 +94,6 @@ if TYPE_CHECKING:
     _eager_allowed: TypeAlias = "_polars | _eager_only"
     _lazy_only: TypeAlias = "_spark_like | _dask | _duckdb"
     _lazy_allowed: TypeAlias = "_polars | _lazy_only"
-    BackendName: TypeAlias = "_eager_allowed | _lazy_allowed"
 
     Polars: TypeAlias = "_polars | _Polars"
     Arrow: TypeAlias = "_arrow | _Arrow"
@@ -107,6 +106,7 @@ if TYPE_CHECKING:
     LazyOnly: TypeAlias = "_lazy_only | _LazyOnly"
     LazyAllowed: TypeAlias = "_lazy_allowed | _LazyAllowed"
 
+    BackendName: TypeAlias = "_eager_allowed | _lazy_allowed"
     IntoBackend: TypeAlias = "BackendName | Implementation | ModuleType"
 
     _NativePolars: TypeAlias = "pl.DataFrame | pl.LazyFrame | pl.Series"
@@ -209,17 +209,17 @@ class Namespace(Generic[CompliantNamespaceT_co]):
             from narwhals._arrow.namespace import ArrowNamespace
 
             ns = ArrowNamespace(backend_version=backend_version, version=version)
-        elif impl.is_spark_like():  # pragma: no cover
+        elif impl.is_spark_like():
             from narwhals._spark_like.namespace import SparkLikeNamespace
 
             ns = SparkLikeNamespace(
                 implementation=impl, backend_version=backend_version, version=version
             )
-        elif impl.is_duckdb():  # pragma: no cover
+        elif impl.is_duckdb():
             from narwhals._duckdb.namespace import DuckDBNamespace
 
             ns = DuckDBNamespace(backend_version=backend_version, version=version)
-        elif impl.is_dask():  # pragma: no cover
+        elif impl.is_dask():
             from narwhals._dask.namespace import DaskNamespace
 
             ns = DaskNamespace(backend_version=backend_version, version=version)
