@@ -456,17 +456,43 @@ def test_group_by_expr(constructor: Constructor) -> None:
         df.group_by(
             nw.col("a").abs(),
             nw.col("a").abs().alias("a_with_alias"),
+            nw.lit("some_value").alias("lit"),
         )
         .agg(nw.col("x").sum())
         .sort("a")
     )
-    expected = {"a": [1, 2], "a_with_alias": [1, 2], "x": [5, 5]}
+    expected = {
+        "a": [1, 2],
+        "a_with_alias": [1, 2],
+        "lit": ["some_value", "some_value"],
+        "x": [5, 5],
+    }
     assert_equal_data(result, expected)
 
 
-def test_group_by_expr_multioutput(constructor: Constructor) -> None:
+def test_group_by_multioutput_expr(constructor: Constructor) -> None:
     data = {"a": [1, 1, 2, 2], "b": [1, -1, -2, 2], "x": [1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
     result = df.group_by(nw.col("a", "b").abs()).agg(nw.col("x").sum()).sort("a")
     expected = {"a": [1, 2], "b": [1, 2], "x": [3, 7]}
+    assert_equal_data(result, expected)
+
+
+def test_group_by_window_expr(constructor: Constructor) -> None:
+    data = {"a": [1, 2, 2, 1], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
+    df = nw.from_native(constructor(data))
+    result = (
+        df.group_by(nw.col("a").cum_max().over(order_by="b"))
+        .agg(nw.col("x").sum())
+        .sort("a")
+    )
+    expected = {"a": [1, 2], "x": [1, 9]}
+    assert_equal_data(result, expected)
+
+
+def test_group_by_agg_expr(constructor: Constructor) -> None:
+    data = {"a": [1, 2, 2, 1], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
+    df = nw.from_native(constructor(data))
+    result = df.group_by(nw.min("a")).agg(nw.col("x").max())
+    expected = {"a": [1], "x": [4]}
     assert_equal_data(result, expected)

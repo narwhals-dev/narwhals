@@ -1549,7 +1549,18 @@ class DataFrame(BaseFrame[DataFrameT]):
         from narwhals.group_by import GroupBy
 
         flat_keys, kinds = self._flatten_and_extract(*keys)
-        # TODO(FBruzzesi): Validate kinds are valid
+
+        if any(kind is ExprKind.FILTRATION for kind in kinds):
+            from narwhals.exceptions import ShapeError
+
+            msg = "series used as keys should have the same length as the DataFrame"
+            raise ShapeError(msg)
+
+        flat_keys = [
+            compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
+            for compliant_expr, kind in zip(flat_keys, kinds)
+        ]
+
         return GroupBy(self, *flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
@@ -2822,7 +2833,17 @@ class LazyFrame(BaseFrame[FrameT]):
         from narwhals.group_by import LazyGroupBy
 
         flat_keys, kinds = self._flatten_and_extract(*keys)
-        # TODO(FBruzzesi): Validate kinds are valid
+
+        if any(kind is ExprKind.FILTRATION for kind in kinds):
+            from narwhals.exceptions import ShapeError
+
+            msg = "series used as keys should have the same length as the DataFrame"
+            raise ShapeError(msg)
+
+        flat_keys = [
+            compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
+            for compliant_expr, kind in zip(flat_keys, kinds)
+        ]
         return LazyGroupBy(self, *flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
