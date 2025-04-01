@@ -16,7 +16,7 @@ from narwhals.utils import tupleify
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._compliant import IntoCompliantExpr
+    from narwhals._compliant.typing import CompliantExprAny
     from narwhals.dataframe import LazyFrame
     from narwhals.expr import Expr
 
@@ -27,7 +27,7 @@ class GroupBy(Generic[DataFrameT]):
     def __init__(
         self: Self,
         df: DataFrameT,
-        *keys: IntoCompliantExpr[Any, Any],
+        *keys: CompliantExprAny,
         drop_null_keys: bool,
     ) -> None:
         self._df: DataFrameT = df
@@ -109,7 +109,7 @@ class LazyGroupBy(Generic[LazyFrameT]):
     def __init__(
         self: Self,
         df: LazyFrameT,
-        *keys: IntoCompliantExpr[Any, Any],
+        *keys: CompliantExprAny,
         drop_null_keys: bool,
     ) -> None:
         self._df: LazyFrameT = df

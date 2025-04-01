@@ -12,11 +12,11 @@ from typing import Sized
 from typing import TypeVar
 from typing import overload
 
+from narwhals._compliant.typing import CompliantExprAny
 from narwhals._compliant.typing import CompliantExprT_contra
 from narwhals._compliant.typing import CompliantSeriesT
 from narwhals._compliant.typing import EagerExprT_contra
 from narwhals._compliant.typing import EagerSeriesT
-from narwhals._compliant.typing import IntoCompliantExpr
 from narwhals._compliant.typing import NativeFrameT_co
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._translate import ArrowConvertible
@@ -128,7 +128,7 @@ class CompliantDataFrame(
     def gather_every(self, n: int, offset: int) -> Self: ...
     def get_column(self, name: str) -> CompliantSeriesT: ...
     def group_by(
-        self, *keys: IntoCompliantExpr, drop_null_keys: bool
+        self, *keys: CompliantExprAny, drop_null_keys: bool
     ) -> CompliantGroupBy[Self, Any]: ...
     def head(self, n: int) -> Self: ...
     def item(self, row: int | None, column: int | str | None) -> Any: ...
@@ -256,7 +256,7 @@ class CompliantLazyFrame(
     )
     def gather_every(self, n: int, offset: int) -> Self: ...
     def group_by(
-        self, *keys: IntoCompliantExpr, drop_null_keys: bool
+        self, *keys: CompliantExprAny, drop_null_keys: bool
     ) -> CompliantGroupBy[Self, Any]: ...
     def head(self, n: int) -> Self: ...
     def join(

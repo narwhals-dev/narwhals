@@ -10,6 +10,7 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import ShapeError
 from tests.utils import PANDAS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
@@ -496,3 +497,20 @@ def test_group_by_agg_expr(constructor: Constructor) -> None:
     result = df.group_by(nw.min("a")).agg(nw.col("x").max())
     expected = {"a": [1], "x": [4]}
     assert_equal_data(result, expected)
+
+
+def test_group_by_raise_for_filtration(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "pyspark" in str(constructor) or "duckdb" in str(constructor):
+        # spark-like and duckdb do not implement expr filtration (for now)
+        request.applymarker(pytest.mark.xfail)
+
+    data = {"a": [1, 2, 2, None], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
+    df = nw.from_native(constructor(data))
+
+    with pytest.raises(
+        ShapeError,
+        match="series used as keys should have the same length as the DataFrame",
+    ):
+        df.group_by(nw.col("a").drop_nulls()).agg(nw.col("x").max())
