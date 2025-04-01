@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.namespace import ArrowNamespace  # noqa: F401
     from narwhals._namespace import BackendName
-    from narwhals._namespace import _eager_allowed
+    from narwhals._namespace import _EagerAllowed
     from narwhals._pandas_like.namespace import PandasLikeNamespace  # noqa: F401
     from narwhals._polars.namespace import PolarsNamespace  # noqa: F401
     from tests.utils import Constructor
@@ -63,7 +63,7 @@ def test_namespace_from_native_object_invalid() -> None:
 
 
 @eager_allowed
-def test_namespace_from_backend_typing(backend: _eager_allowed) -> None:
+def test_namespace_from_backend_typing(backend: _EagerAllowed) -> None:
     pytest.importorskip(backend)
     namespace = Namespace.from_backend(backend)
     if TYPE_CHECKING:
@@ -81,7 +81,7 @@ def test_namespace_from_backend_typing(backend: _eager_allowed) -> None:
 @pytest.mark.parametrize("into_iter", [list, tuple, deque, iter])
 @eager_allowed
 def test_namespace_series_from_iterable(
-    backend: _eager_allowed, into_iter: IntoIterable
+    backend: _EagerAllowed, into_iter: IntoIterable
 ) -> None:
     pytest.importorskip(backend)
     data = 1, 2, 3

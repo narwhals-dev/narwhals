@@ -71,44 +71,38 @@ if TYPE_CHECKING:
     from narwhals.typing import NativeFrame
     from narwhals.typing import NativeLazyFrame
     from narwhals.typing import NativeSeries
-    from narwhals.utils import _Arrow
-    from narwhals.utils import _Dask
-    from narwhals.utils import _DuckDB
-    from narwhals.utils import _EagerAllowed
-    from narwhals.utils import _EagerOnly
-    from narwhals.utils import _LazyAllowed
-    from narwhals.utils import _LazyOnly
-    from narwhals.utils import _PandasLike
-    from narwhals.utils import _Polars
-    from narwhals.utils import _SparkLike
 
     T = TypeVar("T")
 
     _Guard: TypeAlias = "Callable[[Any], TypeIs[T]]"
 
-    _polars: TypeAlias = Literal["polars"]
-    _arrow: TypeAlias = Literal["pyarrow"]
-    _dask: TypeAlias = Literal["dask"]
-    _duckdb: TypeAlias = Literal["duckdb"]
-    _pandas_like: TypeAlias = Literal["pandas", "cudf", "modin"]
-    _spark_like: TypeAlias = Literal["pyspark", "sqlframe"]
-    _eager_only: TypeAlias = "_pandas_like | _arrow"
-    _eager_allowed: TypeAlias = "_polars | _eager_only"
-    _lazy_only: TypeAlias = "_spark_like | _dask | _duckdb"
-    _lazy_allowed: TypeAlias = "_polars | _lazy_only"
+    _Polars: TypeAlias = Literal["polars"]
+    _Arrow: TypeAlias = Literal["pyarrow"]
+    _Dask: TypeAlias = Literal["dask"]
+    _DuckDB: TypeAlias = Literal["duckdb"]
+    _PandasLike: TypeAlias = Literal["pandas", "cudf", "modin"]
+    _SparkLike: TypeAlias = Literal["pyspark", "sqlframe"]
+    _EagerOnly: TypeAlias = "_PandasLike | _Arrow"
+    _EagerAllowed: TypeAlias = "_Polars | _EagerOnly"
+    _LazyOnly: TypeAlias = "_SparkLike | _Dask | _DuckDB"
+    _LazyAllowed: TypeAlias = "_Polars | _LazyOnly"
 
-    Polars: TypeAlias = "_polars | _Polars"
-    Arrow: TypeAlias = "_arrow | _Arrow"
-    Dask: TypeAlias = "_dask | _Dask"
-    DuckDB: TypeAlias = "_duckdb | _DuckDB"
-    PandasLike: TypeAlias = "_pandas_like | _PandasLike"
-    SparkLike: TypeAlias = "_spark_like | _SparkLike"
-    EagerOnly: TypeAlias = "_eager_only | _EagerOnly"
-    EagerAllowed: TypeAlias = "_eager_allowed | _EagerAllowed"
-    LazyOnly: TypeAlias = "_lazy_only | _LazyOnly"
-    LazyAllowed: TypeAlias = "_lazy_allowed | _LazyAllowed"
+    Polars: TypeAlias = Literal[_Polars, Implementation.POLARS]
+    Arrow: TypeAlias = Literal[_Arrow, Implementation.PYARROW]
+    Dask: TypeAlias = Literal[_Dask, Implementation.DASK]
+    DuckDB: TypeAlias = Literal[_DuckDB, Implementation.DUCKDB]
+    PandasLike: TypeAlias = Literal[
+        _PandasLike, Implementation.PANDAS, Implementation.CUDF, Implementation.MODIN
+    ]
+    SparkLike: TypeAlias = Literal[
+        _SparkLike, Implementation.PYSPARK, Implementation.SQLFRAME
+    ]
+    EagerOnly: TypeAlias = "PandasLike | Arrow"
+    EagerAllowed: TypeAlias = "EagerOnly | Polars"
+    LazyOnly: TypeAlias = "SparkLike | Dask | DuckDB"
+    LazyAllowed: TypeAlias = "LazyOnly | Polars"
 
-    BackendName: TypeAlias = "_eager_allowed | _lazy_allowed"
+    BackendName: TypeAlias = "_EagerAllowed | _LazyAllowed"
     IntoBackend: TypeAlias = "BackendName | Implementation | ModuleType"
 
     class _NativeDask(Protocol):
