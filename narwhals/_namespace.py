@@ -22,7 +22,6 @@ Lacking a better alternative, the current pattern is:
 If this can *also* get those parts typed - then 🎉
 """
 
-# ruff: noqa: PYI042
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
