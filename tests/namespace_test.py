@@ -6,6 +6,7 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 from typing import Sequence
+from typing import cast
 
 import pytest
 
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
     from narwhals._namespace import _EagerAllowed
     from narwhals._pandas_like.namespace import PandasLikeNamespace  # noqa: F401
     from narwhals._polars.namespace import PolarsNamespace  # noqa: F401
+    from narwhals.typing import _2DArray
     from tests.utils import Constructor
 
 IntoIterable: TypeAlias = Callable[[Sequence[Any]], Iterable[Any]]
@@ -98,3 +100,19 @@ def test_namespace_series_from_iterable(
     series = nw.from_native(compliant_series, series_only=True)  # pyright: ignore[reportCallIssue, reportArgumentType]
     assert isinstance(series, nw.Series)
     assert series.to_list() == list(data)
+
+
+def test_namespace_from_numpy_polars() -> None:
+    pytest.importorskip("polars")
+    pytest.importorskip("numpy")
+    import numpy as np
+    import polars as pl
+
+    arr: _2DArray = cast("_2DArray", np.array([[5, 2, 0, 1], [1, 4, 7, 8], [1, 2, 3, 9]]))
+    columns = "a", "b", "c"
+    frame = Namespace.from_backend("polars").compliant.from_numpy(arr, columns).native
+    if TYPE_CHECKING:
+        assert_type(frame, pl.DataFrame)
+
+    assert isinstance(frame, pl.DataFrame)
+    assert frame.columns == list(columns)
