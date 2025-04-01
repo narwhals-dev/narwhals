@@ -544,7 +544,7 @@ class Implementation(Enum):
         }:
             into_version = native
         elif self is Implementation.PYSPARK:
-            into_version = get_pyspark()
+            into_version = get_pyspark()  # pragma: no cover
         elif self is Implementation.DASK:
             into_version = get_dask()
         else:
