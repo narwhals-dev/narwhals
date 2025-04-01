@@ -271,21 +271,23 @@ class Namespace(Generic[CompliantNamespaceT_co]):
             return cls.from_backend(Implementation.PANDAS)
         elif is_native_arrow(native):
             return cls.from_backend(Implementation.PYARROW)
+        elif is_native_spark_like(native):
+            return cls.from_backend(
+                Implementation.SQLFRAME
+                if is_native_sqlframe(native)
+                else Implementation.PYSPARK
+            )
         elif is_native_dask(native):
-            return cls.from_backend(Implementation.DASK)
+            return cls.from_backend(Implementation.DASK)  # pragma: no cover
         elif is_native_duckdb(native):
             return cls.from_backend(Implementation.DUCKDB)
-        elif is_native_sqlframe(native):
-            return cls.from_backend(Implementation.SQLFRAME)
-        elif is_native_pyspark(native):
-            return cls.from_backend(Implementation.PYSPARK)
-        elif is_native_cudf(native):
+        elif is_native_cudf(native):  # pragma: no cover
             return cls.from_backend(Implementation.CUDF)
-        elif is_native_modin(native):
+        elif is_native_modin(native):  # pragma: no cover
             return cls.from_backend(Implementation.MODIN)
         else:
             msg = f"Unsupported type: {type(native).__qualname__!r}"
-            raise NotImplementedError(msg)
+            raise TypeError(msg)
 
 
 def is_native_polars(obj: Any) -> TypeIs[_NativePolars]:
@@ -313,13 +315,13 @@ def is_native_pandas(obj: Any) -> TypeIs[_NativePandas]:
 def is_native_modin(obj: Any) -> TypeIs[_NativeModin]:
     return (mpd := get_modin()) is not None and isinstance(
         obj, (mpd.DataFrame, mpd.Series)
-    )
+    )  # pragma: no cover
 
 
 def is_native_cudf(obj: Any) -> TypeIs[_NativeCuDF]:
     return (cudf := get_cudf()) is not None and isinstance(
         obj, (cudf.DataFrame, cudf.Series)
-    )
+    )  # pragma: no cover
 
 
 def is_native_pandas_like(obj: Any) -> TypeIs[_NativePandasLike]:

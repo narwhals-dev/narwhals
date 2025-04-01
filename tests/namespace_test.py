@@ -11,6 +11,7 @@ import pytest
 
 import narwhals as nw
 from narwhals._namespace import Namespace
+from narwhals.utils import Version
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -40,6 +41,7 @@ def test_namespace_from_backend_name(backend: BackendName) -> None:
     pytest.importorskip(backend)
     namespace = Namespace.from_backend(backend)
     assert namespace.implementation.name.lower() == backend
+    assert namespace.version is Version.MAIN
 
 
 def test_namespace_from_native_object(constructor: Constructor) -> None:
@@ -48,6 +50,12 @@ def test_namespace_from_native_object(constructor: Constructor) -> None:
     namespace = Namespace.from_native_object(frame)
     nw_frame = nw.from_native(frame)
     assert namespace.implementation == nw_frame.implementation
+
+
+def test_namespace_from_native_object_invalid() -> None:
+    data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+    with pytest.raises(TypeError, match=r"dict"):
+        Namespace.from_native_object(data)  # pyright: ignore[reportCallIssue, reportArgumentType]
 
 
 @eager_allowed
