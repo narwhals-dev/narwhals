@@ -30,6 +30,7 @@ from typing import Any
 from typing import Callable
 from typing import Generic
 from typing import Literal
+from typing import Protocol
 from typing import TypeVar
 from typing import overload
 
@@ -51,10 +52,7 @@ if TYPE_CHECKING:
     from types import ModuleType
     from typing import ClassVar
 
-    import cudf
-    import dask.dataframe as dd
     import duckdb
-    import modin.pandas as mpd
     import pandas as pd
     import polars as pl
     import pyarrow as pa
@@ -69,6 +67,10 @@ if TYPE_CHECKING:
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
+    from narwhals.typing import DataFrameLike
+    from narwhals.typing import NativeFrame
+    from narwhals.typing import NativeLazyFrame
+    from narwhals.typing import NativeSeries
     from narwhals.utils import _Arrow
     from narwhals.utils import _Dask
     from narwhals.utils import _DuckDB
@@ -109,13 +111,23 @@ if TYPE_CHECKING:
     BackendName: TypeAlias = "_eager_allowed | _lazy_allowed"
     IntoBackend: TypeAlias = "BackendName | Implementation | ModuleType"
 
+    class _NativeDask(Protocol):
+        _partition_type: type[pd.DataFrame]
+
+    class _NativeCuDF(Protocol):
+        def to_pylibcudf(self, *args: Any, **kwds: Any) -> Any: ...
+
+    class _ModinDataFrame(Protocol):
+        _pandas_class: type[pd.DataFrame]
+
+    class _ModinSeries(Protocol):
+        _pandas_class: type[pd.Series[Any]]
+
     _NativePolars: TypeAlias = "pl.DataFrame | pl.LazyFrame | pl.Series"
     _NativeArrow: TypeAlias = "pa.Table | pa.ChunkedArray[Any] | pa.Array[Any]"
-    _NativeDask: TypeAlias = "dd.DataFrame"
     _NativeDuckDB: TypeAlias = "duckdb.DuckDBPyRelation"
     _NativePandas: TypeAlias = "pd.DataFrame | pd.Series[Any]"
-    _NativeCuDF: TypeAlias = "cudf.DataFrame | cudf.Series[Any]"
-    _NativeModin: TypeAlias = "mpd.DataFrame | mpd.Series"
+    _NativeModin: TypeAlias = "_ModinDataFrame | _ModinSeries"
     _NativePandasLike: TypeAlias = "_NativePandas | _NativeCuDF | _NativeModin"
     _NativeSQLFrame: TypeAlias = "SQLFrameDataFrame"
     _NativePySpark: TypeAlias = "pyspark_sql.DataFrame"
@@ -256,12 +268,15 @@ class Namespace(Generic[CompliantNamespaceT_co]):
         cls, native: _NativeDuckDB, /
     ) -> Namespace[DuckDBNamespace]: ...
 
-    # NOTE: Can fix w/ by disabling `follow_imports = "skip"`
-    # But that introduces 50 errors elsewhere.
-    # https://github.com/narwhals-dev/narwhals/blob/4d2b9d57f70e52b7c78ca3f41e228be2ceb96cfa/pyproject.toml#L285-L286
     @overload
     @classmethod
-    def from_native_object(cls, native: _NativeDask, /) -> Namespace[DaskNamespace]: ...  # type: ignore[overload-cannot-match]
+    def from_native_object(cls, native: _NativeDask, /) -> Namespace[DaskNamespace]: ...
+
+    @overload
+    @classmethod
+    def from_native_object(
+        cls, native: NativeFrame | NativeSeries | NativeLazyFrame | DataFrameLike, /
+    ) -> Namespace[CompliantNamespaceAny]: ...
 
     @classmethod
     def from_native_object(cls: type[Namespace[Any]], native: Any, /) -> Namespace[Any]:
@@ -302,7 +317,10 @@ def is_native_arrow(obj: Any) -> TypeIs[_NativeArrow]:
     )
 
 
-is_native_dask: _Guard[_NativeDask] = is_dask_dataframe
+def is_native_dask(obj: Any) -> TypeIs[_NativeDask]:
+    return is_dask_dataframe(obj)
+
+
 is_native_duckdb: _Guard[_NativeDuckDB] = is_duckdb_relation
 is_native_sqlframe: _Guard[_NativeSQLFrame] = is_sqlframe_dataframe
 is_native_pyspark: _Guard[_NativePySpark] = is_pyspark_dataframe
