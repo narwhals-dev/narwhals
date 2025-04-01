@@ -198,6 +198,7 @@ class Namespace(Generic[CompliantNamespaceT_co]):
             Namespace.
 
         Examples:
+            >>> from narwhals._namespace import Namespace
             >>> Namespace.from_backend("polars")
             'Namespace[PolarsNamespace]'
         """
