@@ -12,6 +12,7 @@ import narwhals.stable.v1 as nw
 from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import ShapeError
 from tests.utils import PANDAS_VERSION
+from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -479,15 +480,19 @@ def test_group_by_multioutput_expr(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+@pytest.mark.skipif(
+    POLARS_VERSION < (1, 10),
+    reason="`order_by` in Polars requires version 1.10 or greater",
+)
 def test_group_by_window_expr(constructor: Constructor) -> None:
-    data = {"a": [1, 2, 2, 1], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
+    data = {"a": [1, None, None, 1], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
     result = (
-        df.group_by(nw.col("a").cum_max().over(order_by="b"))
+        df.group_by(nw.col("a").cum_count().over(order_by="b"))
         .agg(nw.col("x").sum())
         .sort("a")
     )
-    expected = {"a": [1, 2], "x": [1, 9]}
+    expected = {"a": [1, 2], "x": [6, 4]}
     assert_equal_data(result, expected)
 
 
