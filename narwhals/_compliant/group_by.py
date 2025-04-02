@@ -151,6 +151,8 @@ class EagerGroupBy(
     DepthTrackingGroupBy[CompliantDataFrameT_co, EagerExprT_contra, str],
     Protocol38[CompliantDataFrameT_co, EagerExprT_contra],
 ):
+    _keys: list[str]
+
     def __iter__(self) -> Iterator[tuple[Any, CompliantDataFrameT_co]]: ...
 
 
