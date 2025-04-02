@@ -50,7 +50,7 @@ if TYPE_CHECKING:
     from typing_extensions import ParamSpec
     from typing_extensions import Self
 
-    from narwhals._compliant import IntoCompliantExpr
+    from narwhals._compliant.typing import CompliantExprAny
     from narwhals._compliant.typing import EagerNamespaceAny
     from narwhals.group_by import GroupBy
     from narwhals.group_by import LazyGroupBy
@@ -86,7 +86,7 @@ class BaseFrame(Generic[_FrameT]):
 
     def _flatten_and_extract(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> tuple[list[IntoCompliantExpr[Any, Any]], list[ExprKind]]:
+    ) -> tuple[list[CompliantExprAny], list[ExprKind]]:
         """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
         out_exprs = []
         out_kinds = []
