@@ -11,6 +11,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import ShapeError
+from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
@@ -484,7 +485,15 @@ def test_group_by_multioutput_expr(constructor: Constructor) -> None:
     POLARS_VERSION < (1, 10),
     reason="`order_by` in Polars requires version 1.10 or greater",
 )
-def test_group_by_window_expr(constructor: Constructor) -> None:
+def test_group_by_window_expr(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(
+            pytest.mark.xfail(
+                DUCKDB_VERSION < (1, 3), reason="`over` requires version 1.3 or greater"
+            )
+        )
     data = {"a": [1, None, None, 1], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
     result = (
@@ -496,7 +505,15 @@ def test_group_by_window_expr(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_group_by_agg_expr(constructor: Constructor) -> None:
+def test_group_by_agg_expr(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(
+            pytest.mark.xfail(
+                DUCKDB_VERSION < (1, 3), reason="`over` requires version 1.3 or greater"
+            )
+        )
     data = {"a": [1, 2, 2, 1], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
     result = df.group_by(nw.min("a")).agg(nw.col("x").max())
