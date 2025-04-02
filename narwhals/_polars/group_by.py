@@ -29,7 +29,7 @@ class PolarsGroupBy:
 
     def __init__(
         self,
-        compliant_frame: PolarsDataFrame,
+        df: PolarsDataFrame,
         keys: Sequence[IncompletePolarsExpr],
         /,
         *,
@@ -38,10 +38,10 @@ class PolarsGroupBy:
         by: Sequence[pl.Expr | str]
         if not drop_null_keys:
             by = [extract_native(arg) for arg in keys]
-            self._compliant_frame = compliant_frame
+            self._compliant_frame = df
         else:
             by = [extract_native(arg).meta.output_name() for arg in keys]
-            self._compliant_frame = compliant_frame.with_columns(*keys).drop_nulls(by)
+            self._compliant_frame = df.with_columns(*keys).drop_nulls(by)
         self._grouped = self.compliant.native.group_by(by)
 
     def agg(self: Self, *aggs: IncompletePolarsExpr) -> PolarsDataFrame:
@@ -65,7 +65,7 @@ class PolarsLazyGroupBy:
 
     def __init__(
         self,
-        compliant_frame: PolarsLazyFrame,
+        df: PolarsLazyFrame,
         keys: Sequence[IncompletePolarsExpr],
         /,
         *,
@@ -74,10 +74,10 @@ class PolarsLazyGroupBy:
         by: Sequence[pl.Expr | str]
         if not drop_null_keys:
             by = [extract_native(arg) for arg in keys]
-            self._compliant_frame = compliant_frame
+            self._compliant_frame = df
         else:
             by = [extract_native(arg).meta.output_name() for arg in keys]
-            self._compliant_frame = compliant_frame.with_columns(*keys).drop_nulls(by)
+            self._compliant_frame = df.with_columns(*keys).drop_nulls(by)
         self._grouped = self.compliant.native.group_by(by)
 
     def agg(self: Self, *aggs: IncompletePolarsExpr) -> PolarsLazyFrame:
