@@ -15,11 +15,20 @@ from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
 
     from narwhals._expression_parsing import ExprKind
     from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+
+IncompletePolarsExpr: TypeAlias = Any
+"""Use in place of `PolarsExpr` **only** when it breaks something.
+
+Temporary! Don't blindly use this! Exclaim!
+
+See https://github.com/narwhals-dev/narwhals/pull/2325#issuecomment-2770524042
+"""
 
 
 class PolarsExpr:

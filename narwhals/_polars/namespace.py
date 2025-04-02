@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.dataframe import PolarsLazyFrame
+    from narwhals._polars.expr import IncompletePolarsExpr
     from narwhals._polars.typing import FrameT
     from narwhals.schema import Schema
     from narwhals.typing import Into1DArray
@@ -52,7 +53,7 @@ class PolarsNamespace:
     min_horizontal: Method[PolarsExpr]
     max_horizontal: Method[PolarsExpr]
     # NOTE: `PolarsSeries`, `PolarsExpr` still have gaps
-    when: Method[CompliantWhen[PolarsDataFrame, Incomplete, Incomplete]]
+    when: Method[CompliantWhen[PolarsDataFrame, Incomplete, IncompletePolarsExpr]]
 
     def __init__(
         self: Self, *, backend_version: tuple[int, ...], version: Version

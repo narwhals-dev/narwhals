@@ -78,20 +78,6 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
 
     def agg(self, *exprs: CompliantExprT_contra) -> CompliantFrameT_co: ...
 
-    def _parse_keys(
-        self, compliant_frame: CompliantFrameAny, keys: Sequence[CompliantExprT_contra]
-    ) -> list[str]:
-        from narwhals._expression_parsing import evaluate_output_names_and_aliases
-
-        return list(
-            chain.from_iterable(
-                evaluate_output_names_and_aliases(
-                    expr=key, df=compliant_frame, exclude=[]
-                )[1]
-                for key in keys
-            )
-        )
-
 
 class DepthTrackingGroupBy(
     CompliantGroupBy[CompliantFrameT_co, DepthTrackingExprT_contra],
@@ -146,6 +132,20 @@ class DepthTrackingGroupBy(
         """Return the last function name in the chain defined by `expr`."""
         return _RE_LEAF_NAME.sub("", expr._function_name)
 
+    def _parse_keys(
+        self, compliant_frame: CompliantFrameAny, keys: Sequence[CompliantExprT_contra]
+    ) -> list[str]:
+        from narwhals._expression_parsing import evaluate_output_names_and_aliases
+
+        return list(
+            chain.from_iterable(
+                evaluate_output_names_and_aliases(
+                    expr=key, df=compliant_frame, exclude=[]
+                )[1]
+                for key in keys
+            )
+        )
+
 
 class EagerGroupBy(
     DepthTrackingGroupBy[CompliantDataFrameT_co, EagerExprT_contra, str],
@@ -181,3 +181,17 @@ class LazyGroupBy(
     ) -> Iterator[NativeExprT_co]:
         for expr in exprs:
             yield from self._evaluate_expr(expr)
+
+    def _parse_keys(
+        self, compliant_frame: CompliantFrameAny, keys: Sequence[CompliantExprT_contra]
+    ) -> list[str]:
+        from narwhals._expression_parsing import evaluate_output_names_and_aliases
+
+        return list(
+            chain.from_iterable(
+                evaluate_output_names_and_aliases(
+                    expr=key, df=compliant_frame, exclude=[]
+                )[1]
+                for key in keys
+            )
+        )
