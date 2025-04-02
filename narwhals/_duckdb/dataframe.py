@@ -226,7 +226,9 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
     def group_by(self: Self, *keys: DuckDBExpr, drop_null_keys: bool) -> DuckDBGroupBy:
         from narwhals._duckdb.group_by import DuckDBGroupBy
 
-        return DuckDBGroupBy(self, keys, drop_null_keys=drop_null_keys)
+        return DuckDBGroupBy(
+            self.with_columns(*keys), keys, drop_null_keys=drop_null_keys
+        )
 
     def rename(self: Self, mapping: Mapping[str, str]) -> Self:
         df = self.native

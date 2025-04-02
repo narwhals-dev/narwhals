@@ -704,7 +704,9 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
     ) -> PandasLikeGroupBy:
         from narwhals._pandas_like.group_by import PandasLikeGroupBy
 
-        return PandasLikeGroupBy(self, keys, drop_null_keys=drop_null_keys)
+        return PandasLikeGroupBy(
+            self.with_columns(*keys), keys, drop_null_keys=drop_null_keys
+        )
 
     def join(
         self: Self,

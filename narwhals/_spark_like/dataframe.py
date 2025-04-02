@@ -276,7 +276,9 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
     ) -> SparkLikeLazyGroupBy:
         from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
 
-        return SparkLikeLazyGroupBy(self, keys, drop_null_keys=drop_null_keys)
+        return SparkLikeLazyGroupBy(
+            self.with_columns(*keys), keys, drop_null_keys=drop_null_keys
+        )
 
     def sort(
         self: Self,
