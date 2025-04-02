@@ -285,6 +285,12 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         assert self._metadata is not None  # noqa: S101
         return self._metadata.expansion_kind.is_multi_unnamed()
 
+    def _evaluate_aliases(
+        self: CompliantExpr[CompliantFrameT, Any], frame: CompliantFrameT, /
+    ) -> Sequence[str]:
+        names = self._evaluate_output_names(frame)
+        return alias(names) if (alias := self._alias_output_names) else names
+
 
 class DepthTrackingExpr(
     CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co],

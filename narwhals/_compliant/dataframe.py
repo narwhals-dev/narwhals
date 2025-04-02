@@ -17,7 +17,6 @@ from narwhals._compliant.typing import CompliantSeriesT
 from narwhals._compliant.typing import EagerExprT_contra
 from narwhals._compliant.typing import EagerSeriesT
 from narwhals._compliant.typing import NativeFrameT_co
-from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._translate import ArrowConvertible
 from narwhals._translate import DictConvertible
 from narwhals._translate import NumpyConvertible
@@ -305,6 +304,10 @@ class CompliantLazyFrame(
         assert len(result) == 1  # debug assertion  # noqa: S101
         return result[0]
 
+    def _evaluate_aliases(self, *exprs: CompliantExprT_contra) -> list[str]:
+        it = (expr._evaluate_aliases(self) for expr in exprs)
+        return list(chain.from_iterable(it))
+
 
 class EagerDataFrame(
     CompliantDataFrame[EagerSeriesT, EagerExprT_contra, NativeFrameT_co],
@@ -331,7 +334,7 @@ class EagerDataFrame(
 
         Note that for PySpark / DuckDB, we are less free to liberally set aliases whenever we want.
         """
-        _, aliases = evaluate_output_names_and_aliases(expr, self, [])
+        aliases = expr._evaluate_aliases(self)
         result = expr(self)
         if list(aliases) != (result_aliases := [s.name for s in result]):
             msg = f"Safety assertion failed, expected {aliases}, got {result_aliases}"
@@ -341,6 +344,10 @@ class EagerDataFrame(
     def _extract_comparand(self, other: EagerSeriesT, /) -> Any:
         """Extract native Series, broadcasting to `len(self)` if necessary."""
         ...
+
+    def _evaluate_aliases(self, *exprs: EagerExprT_contra) -> list[str]:
+        it = (expr._evaluate_aliases(self) for expr in exprs)
+        return list(chain.from_iterable(it))
 
     @staticmethod
     def _numpy_column_names(

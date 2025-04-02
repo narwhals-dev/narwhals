@@ -16,19 +16,15 @@ if TYPE_CHECKING:
 class SparkLikeLazyGroupBy(LazyGroupBy["SparkLikeLazyFrame", "SparkLikeExpr", "Column"]):
     def __init__(
         self: Self,
-        compliant_frame: SparkLikeLazyFrame,
+        df: SparkLikeLazyFrame,
         keys: Sequence[SparkLikeExpr],
         /,
         *,
         drop_null_keys: bool,
     ) -> None:
-        compliant_frame = compliant_frame.with_columns(*keys)
-        self._keys = self._parse_keys(compliant_frame=compliant_frame, keys=keys)
-        self._compliant_frame = (
-            compliant_frame.drop_nulls(subset=self._keys)
-            if drop_null_keys
-            else compliant_frame
-        )
+        df = df.with_columns(*keys)
+        self._keys = df._evaluate_aliases(*keys)
+        self._compliant_frame = df.drop_nulls(subset=self._keys) if drop_null_keys else df
 
     def agg(self: Self, *exprs: SparkLikeExpr) -> SparkLikeLazyFrame:
         if agg_columns := list(self._evaluate_exprs(exprs)):

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 import sys
-from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -14,14 +13,13 @@ from typing import Mapping
 from typing import Sequence
 from typing import TypeVar
 
-from narwhals._compliant.typing import CompliantDataFrameT_co
 from narwhals._compliant.typing import CompliantExprAny
 from narwhals._compliant.typing import CompliantExprT_contra
-from narwhals._compliant.typing import CompliantFrameAny
 from narwhals._compliant.typing import CompliantFrameT_co
 from narwhals._compliant.typing import CompliantLazyFrameT_co
 from narwhals._compliant.typing import DepthTrackingExprAny
 from narwhals._compliant.typing import DepthTrackingExprT_contra
+from narwhals._compliant.typing import EagerDataFrameT_co
 from narwhals._compliant.typing import EagerExprT_contra
 from narwhals._compliant.typing import LazyExprT_contra
 from narwhals._compliant.typing import NativeExprT_co
@@ -132,28 +130,14 @@ class DepthTrackingGroupBy(
         """Return the last function name in the chain defined by `expr`."""
         return _RE_LEAF_NAME.sub("", expr._function_name)
 
-    def _parse_keys(
-        self, compliant_frame: CompliantFrameAny, keys: Sequence[CompliantExprT_contra]
-    ) -> list[str]:
-        from narwhals._expression_parsing import evaluate_output_names_and_aliases
-
-        return list(
-            chain.from_iterable(
-                evaluate_output_names_and_aliases(
-                    expr=key, df=compliant_frame, exclude=[]
-                )[1]
-                for key in keys
-            )
-        )
-
 
 class EagerGroupBy(
-    DepthTrackingGroupBy[CompliantDataFrameT_co, EagerExprT_contra, str],
-    Protocol38[CompliantDataFrameT_co, EagerExprT_contra],
+    DepthTrackingGroupBy[EagerDataFrameT_co, EagerExprT_contra, str],
+    Protocol38[EagerDataFrameT_co, EagerExprT_contra],
 ):
     _keys: list[str]
 
-    def __iter__(self) -> Iterator[tuple[Any, CompliantDataFrameT_co]]: ...
+    def __iter__(self) -> Iterator[tuple[Any, EagerDataFrameT_co]]: ...
 
 
 class LazyGroupBy(
@@ -181,17 +165,3 @@ class LazyGroupBy(
     ) -> Iterator[NativeExprT_co]:
         for expr in exprs:
             yield from self._evaluate_expr(expr)
-
-    def _parse_keys(
-        self, compliant_frame: CompliantFrameAny, keys: Sequence[CompliantExprT_contra]
-    ) -> list[str]:
-        from narwhals._expression_parsing import evaluate_output_names_and_aliases
-
-        return list(
-            chain.from_iterable(
-                evaluate_output_names_and_aliases(
-                    expr=key, df=compliant_frame, exclude=[]
-                )[1]
-                for key in keys
-            )
-        )
