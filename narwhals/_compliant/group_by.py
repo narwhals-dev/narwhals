@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import sys
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -16,6 +17,7 @@ from typing import TypeVar
 from narwhals._compliant.typing import CompliantDataFrameT_co
 from narwhals._compliant.typing import CompliantExprAny
 from narwhals._compliant.typing import CompliantExprT_contra
+from narwhals._compliant.typing import CompliantFrameAny
 from narwhals._compliant.typing import CompliantFrameT_co
 from narwhals._compliant.typing import CompliantLazyFrameT_co
 from narwhals._compliant.typing import DepthTrackingExprAny
@@ -75,6 +77,20 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     ) -> None: ...
 
     def agg(self, *exprs: CompliantExprT_contra) -> CompliantFrameT_co: ...
+
+    def _parse_keys(
+        self, compliant_frame: CompliantFrameAny, keys: Sequence[CompliantExprT_contra]
+    ) -> list[str]:
+        from narwhals._expression_parsing import evaluate_output_names_and_aliases
+
+        return list(
+            chain.from_iterable(
+                evaluate_output_names_and_aliases(
+                    expr=key, df=compliant_frame, exclude=[]
+                )[1]
+                for key in keys
+            )
+        )
 
 
 class DepthTrackingGroupBy(

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import collections
 import warnings
-from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import ClassVar
@@ -48,14 +47,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
         drop_null_keys: bool,
     ) -> None:
         self._compliant_frame = compliant_frame.with_columns(*keys)
-        self._keys: list[str] = list(
-            chain.from_iterable(
-                evaluate_output_names_and_aliases(
-                    expr=key, df=compliant_frame, exclude=[]
-                )[1]
-                for key in keys
-            )
-        )
+        self._keys = self._parse_keys(compliant_frame=compliant_frame, keys=keys)
         # Drop index to avoid potential collisions:
         # https://github.com/narwhals-dev/narwhals/issues/1907.
 

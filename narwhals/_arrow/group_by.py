@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import collections
-from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import ClassVar
@@ -51,14 +50,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
     ) -> None:
         compliant_frame = compliant_frame.with_columns(*keys)
 
-        self._keys: list[str] = list(
-            chain.from_iterable(
-                evaluate_output_names_and_aliases(
-                    expr=key, df=compliant_frame, exclude=[]
-                )[1]
-                for key in keys
-            )
-        )
+        self._keys = self._parse_keys(compliant_frame=compliant_frame, keys=keys)
         self._compliant_frame = (
             compliant_frame.drop_nulls(self._keys) if drop_null_keys else compliant_frame
         )
