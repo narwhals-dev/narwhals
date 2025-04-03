@@ -9,9 +9,7 @@ from typing import Literal
 from typing import Sequence
 from typing import cast
 
-from duckdb import CaseExpression
 from duckdb import CoalesceOperator
-from duckdb import ColumnExpression
 from duckdb import FunctionExpression
 from duckdb.typing import DuckDBPyType
 
@@ -21,10 +19,12 @@ from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
 from narwhals._duckdb.expr_struct import DuckDBExprStructNamespace
 from narwhals._duckdb.utils import WindowInputs
+from narwhals._duckdb.utils import col
 from narwhals._duckdb.utils import generate_order_by_sql
 from narwhals._duckdb.utils import generate_partition_by_sql
 from narwhals._duckdb.utils import lit
 from narwhals._duckdb.utils import narwhals_to_native_dtype
+from narwhals._duckdb.utils import when
 from narwhals._expression_parsing import ExprKind
 from narwhals.utils import Implementation
 from narwhals.utils import not_implemented
@@ -139,7 +139,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
                 raise ValueError(msg)
             sql = (
                 f"case when count({window_inputs.expr}) over {window} >= {min_samples}"
-                f"then {func_}({window_inputs.expr}) over {window} else null end"
+                f"then {func_}({window_inputs.expr}) over {window} end"
             )
             return SQLExpression(sql)  # type: ignore[no-any-return, unused-ignore]
 
@@ -174,7 +174,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         context: _FullContext,
     ) -> Self:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            return [ColumnExpression(col_name) for col_name in evaluate_column_names(df)]
+            return [col(name) for name in evaluate_column_names(df)]
 
         return cls(
             func,
@@ -190,8 +190,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     ) -> Self:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             columns = df.columns
-
-            return [ColumnExpression(columns[i]) for i in column_indices]
+            return [col(columns[i]) for i in column_indices]
 
         return cls(
             func,
@@ -360,16 +359,15 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     def skew(self: Self) -> Self:
         def func(_input: duckdb.Expression) -> duckdb.Expression:
             count = FunctionExpression("count", _input)
-            return CaseExpression(condition=(count == lit(0)), value=lit(None)).otherwise(
-                CaseExpression(
-                    condition=(count == lit(1)), value=lit(float("nan"))
-                ).otherwise(
-                    CaseExpression(condition=(count == lit(2)), value=lit(0.0)).otherwise(
-                        # Adjust population skewness by correction factor to get sample skewness
-                        FunctionExpression("skewness", _input)
-                        * (count - lit(2))
-                        / FunctionExpression("sqrt", count * (count - lit(1)))
-                    )
+            # Adjust population skewness by correction factor to get sample skewness
+            sample_skewness = (
+                FunctionExpression("skewness", _input)
+                * (count - lit(2))
+                / FunctionExpression("sqrt", count * (count - lit(1)))
+            )
+            return when(count == lit(0), lit(None)).otherwise(
+                when(count == lit(1), lit(float("nan"))).otherwise(
+                    when(count == lit(2), lit(0.0)).otherwise(sample_skewness)
                 )
             )
 
@@ -428,10 +426,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             return FunctionExpression(
                 "array_unique", FunctionExpression("array_agg", _input)
             ) + FunctionExpression(
-                "max",
-                CaseExpression(condition=_input.isnotnull(), value=lit(0)).otherwise(
-                    lit(1)
-                ),
+                "max", when(_input.isnotnull(), lit(0)).otherwise(lit(1))
             )
 
         return self._with_callable(func)
@@ -711,12 +706,8 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
                 by_sql = f"{_input} desc nulls last"
             else:
                 by_sql = f"{_input} asc nulls last"
-            order_by_sql = f"order by {by_sql}"
-            sql = (
-                f"CASE WHEN {_input} IS NULL THEN NULL "
-                f"ELSE {func_name}() OVER ({order_by_sql}) END"
-            )
-            return SQLExpression(sql)
+            sql = f"{func_name}() OVER (order by {by_sql})"
+            return when(_input.isnotnull(), SQLExpression(sql))
 
         return self._with_callable(_rank)
 
