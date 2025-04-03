@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections import deque
 from typing import TYPE_CHECKING
 from typing import Any
@@ -141,3 +142,27 @@ def test_import_namespace() -> None:
 
     with pytest.raises(TypeError):
         import_namespace(data)  # type: ignore[arg-type]
+
+
+def test_namespace_init_subclass() -> None:
+    pytest.importorskip("polars")
+
+    class NamespaceV1Any(Namespace[Any], version=Version.V1): ...
+
+    ns_any = NamespaceV1Any.from_backend("polars")
+    assert ns_any.version is Version.V1
+
+    class NamespaceV1NoTypeVar(Namespace, version=Version.V1): ...  # type: ignore[type-arg]
+
+    ns_no_type_var = NamespaceV1NoTypeVar.from_backend("polars")
+    assert ns_no_type_var.version is Version.V1
+
+    with pytest.raises(
+        TypeError, match=re.compile(r"Namespace.+missing.+required.+argument.+version")
+    ):
+
+        class NamespaceNoVersion(Namespace): ...  # type: ignore[call-arg, type-arg]
+
+    with pytest.raises(TypeError, match=re.compile(r"Expected.+Version.+but got.+str")):
+
+        class NamespaceBadVersion(Namespace, version="invalid version"): ...  # type: ignore[arg-type, type-arg]
