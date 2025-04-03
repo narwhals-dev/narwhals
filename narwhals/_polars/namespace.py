@@ -51,8 +51,8 @@ class PolarsNamespace:
     sum_horizontal: Method[PolarsExpr]
     min_horizontal: Method[PolarsExpr]
     max_horizontal: Method[PolarsExpr]
-    # NOTE: `PolarsSeries`, `PolarsExpr` still have gaps
-    when: Method[CompliantWhen[PolarsDataFrame, Incomplete, Incomplete]]
+    # NOTE: `PolarsExpr` still have gaps
+    when: Method[CompliantWhen[PolarsDataFrame, PolarsSeries, Incomplete]]  # pyright: ignore[reportInvalidTypeArguments]
 
     def __init__(
         self: Self, *, backend_version: tuple[int, ...], version: Version

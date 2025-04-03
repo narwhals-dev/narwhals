@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Iterator
 from typing import Sequence
 from typing import cast
 from typing import overload
@@ -22,8 +23,11 @@ if TYPE_CHECKING:
     from types import ModuleType
     from typing import TypeVar
 
+    import pandas as pd
     from typing_extensions import Self
 
+    from narwhals._arrow.typing import ArrowArray
+    from narwhals._polars.dataframe import Method
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.namespace import PolarsNamespace
@@ -593,6 +597,66 @@ class PolarsSeries:
     @property
     def struct(self: Self) -> PolarsSeriesStructNamespace:
         return PolarsSeriesStructNamespace(self)
+
+    __iter__: Method[Iterator[Any]]
+    __floordiv__: Method[Self]
+    __mod__: Method[Self]
+    __rand__: Method[Self]
+    __rfloordiv__: Method[Self]
+    __rmod__: Method[Self]
+    __ror__: Method[Self]
+    __rtruediv__: Method[Self]
+    __truediv__: Method[Self]
+    abs: Method[Self]
+    all: Method[bool]
+    any: Method[bool]
+    arg_max: Method[int]
+    arg_min: Method[int]
+    arg_true: Method[Self]
+    clip: Method[Self]
+    count: Method[int]
+    cum_max: Method[Self]
+    cum_min: Method[Self]
+    cum_prod: Method[Self]
+    cum_sum: Method[Self]
+    diff: Method[Self]
+    drop_nulls: Method[Self]
+    fill_null: Method[Self]
+    filter: Method[Self]
+    gather_every: Method[Self]
+    head: Method[Self]
+    is_between: Method[Self]
+    is_finite: Method[Self]
+    is_first_distinct: Method[Self]
+    is_in: Method[Self]
+    is_last_distinct: Method[Self]
+    is_null: Method[Self]
+    is_sorted: Method[bool]
+    is_unique: Method[Self]
+    item: Method[Any]
+    len: Method[int]
+    max: Method[Any]
+    mean: Method[float]
+    min: Method[Any]
+    mode: Method[Self]
+    n_unique: Method[int]
+    null_count: Method[int]
+    quantile: Method[float]
+    rank: Method[Self]
+    round: Method[Self]
+    sample: Method[Self]
+    shift: Method[Self]
+    skew: Method[float | None]
+    std: Method[float]
+    sum: Method[float]
+    tail: Method[Self]
+    to_arrow: Method[ArrowArray]
+    to_frame: Method[PolarsDataFrame]
+    to_list: Method[list[Any]]
+    to_pandas: Method[pd.Series[Any]]
+    unique: Method[Self]
+    var: Method[float]
+    zip_with: Method[Self]
 
 
 class PolarsSeriesDateTimeNamespace:
