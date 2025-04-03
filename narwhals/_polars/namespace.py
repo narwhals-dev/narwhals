@@ -230,10 +230,12 @@ class PolarsNamespace:
     # 1. Others have lots of private stuff for code reuse
     #    i. None of that is useful here
     # 2. We don't have a `PolarsSelector` abstraction, and just use `PolarsExpr`
-    # 3. `PolarsExpr` still has it's own gaps in the spec
     @property
-    def selectors(self: Self) -> CompliantSelectorNamespace[Any, Any]:
-        return cast("CompliantSelectorNamespace[Any, Any]", PolarsSelectorNamespace(self))
+    def selectors(self) -> CompliantSelectorNamespace[PolarsDataFrame, PolarsSeries]:
+        return cast(
+            "CompliantSelectorNamespace[PolarsDataFrame, PolarsSeries]",
+            PolarsSelectorNamespace(self),
+        )
 
 
 class PolarsSelectorNamespace:
