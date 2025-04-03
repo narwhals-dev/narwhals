@@ -3,6 +3,9 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
+from typing import Iterator
+from typing import Mapping
 from typing import TypeVar
 from typing import overload
 
@@ -61,10 +64,11 @@ def extract_native(
     return obj
 
 
-def extract_args_kwargs(args: Any, kwargs: Any) -> tuple[list[Any], dict[str, Any]]:
-    return [extract_native(arg) for arg in args], {
-        k: extract_native(v) for k, v in kwargs.items()
-    }
+def extract_args_kwargs(
+    args: Iterable[Any], kwds: Mapping[str, Any], /
+) -> tuple[Iterator[Any], dict[str, Any]]:
+    it_args = (extract_native(arg) for arg in args)
+    return it_args, {k: extract_native(v) for k, v in kwds.items()}
 
 
 @lru_cache(maxsize=16)
