@@ -614,10 +614,14 @@ def validate_backend_version(
 
 
 def import_dtypes_module(version: Version) -> DTypes:
-    if version is Version.V1:
-        from narwhals.stable.v1 import dtypes
-    elif version is Version.MAIN:
-        from narwhals import dtypes  # type: ignore[no-redef]
+    if version is Version.MAIN:
+        from narwhals import dtypes
+
+        return dtypes
+    elif version is Version.V1:
+        from narwhals.stable.v1 import dtypes as v1_dtypes
+
+        return v1_dtypes
     else:  # pragma: no cover
         msg = (
             "Congratulations, you have entered unreachable code.\n"
@@ -625,7 +629,6 @@ def import_dtypes_module(version: Version) -> DTypes:
             f"Version: {version}"
         )
         raise AssertionError(msg)
-    return dtypes  # type: ignore[return-value]
 
 
 def remove_prefix(text: str, prefix: str) -> str:  # pragma: no cover
