@@ -158,7 +158,7 @@ def test_namespace_init_subclass() -> None:
     assert ns_no_type_var.version is Version.V1
 
     with pytest.raises(
-        TypeError, match=re.compile(r"Namespace.+missing.+required.+argument.+version")
+        TypeError, match=re.compile(r"missing.+required.+argument.+version")
     ):
 
         class NamespaceNoVersion(Namespace): ...  # type: ignore[call-arg, type-arg]
