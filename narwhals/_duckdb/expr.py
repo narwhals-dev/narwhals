@@ -699,9 +699,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             func_name = "dense_rank"
         elif method == "ordinal":
             func_name = "row_number"
-        else:  # pragma: no cover
-            msg = f"Method {method} is not yet implemented."
-            raise NotImplementedError(msg)
 
         def _rank(_input: duckdb.Expression) -> duckdb.Expression:
             if descending:
