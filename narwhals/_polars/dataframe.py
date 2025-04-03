@@ -210,11 +210,9 @@ class PolarsDataFrame:
 
     def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
-            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
+            pos, kwds = extract_args_kwargs(args, kwargs)
             try:
-                return self._from_native_object(
-                    getattr(self.native, attr)(*args, **kwargs)
-                )
+                return self._from_native_object(getattr(self.native, attr)(*pos, **kwds))
             except pl.exceptions.ColumnNotFoundError as e:  # pragma: no cover
                 msg = f"{e!s}\n\nHint: Did you mean one of these columns: {self.columns}?"
                 raise ColumnNotFoundError(msg) from e
@@ -539,9 +537,9 @@ class PolarsLazyFrame:
 
     def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
-            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
+            pos, kwds = extract_args_kwargs(args, kwargs)
             try:
-                return self._with_native(getattr(self.native, attr)(*args, **kwargs))
+                return self._with_native(getattr(self.native, attr)(*pos, **kwds))
             except pl.exceptions.ColumnNotFoundError as e:  # pragma: no cover
                 raise ColumnNotFoundError(str(e)) from e
 

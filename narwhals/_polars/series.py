@@ -144,8 +144,8 @@ class PolarsSeries:
             raise AttributeError
 
         def func(*args: Any, **kwargs: Any) -> Any:
-            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
-            return self._from_native_object(getattr(self.native, attr)(*args, **kwargs))
+            pos, kwds = extract_args_kwargs(args, kwargs)
+            return self._from_native_object(getattr(self.native, attr)(*pos, **kwds))
 
         return func
 
@@ -585,9 +585,9 @@ class PolarsSeriesDateTimeNamespace:
 
     def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
-            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
+            pos, kwds = extract_args_kwargs(args, kwargs)
             return self._compliant_series._with_native(
-                getattr(self._compliant_series.native.dt, attr)(*args, **kwargs)
+                getattr(self._compliant_series.native.dt, attr)(*pos, **kwds)
             )
 
         return func
@@ -599,9 +599,9 @@ class PolarsSeriesStringNamespace:
 
     def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
-            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
+            pos, kwds = extract_args_kwargs(args, kwargs)
             return self._compliant_series._with_native(
-                getattr(self._compliant_series.native.str, attr)(*args, **kwargs)
+                getattr(self._compliant_series.native.str, attr)(*pos, **kwds)
             )
 
         return func
@@ -613,9 +613,9 @@ class PolarsSeriesCatNamespace:
 
     def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
-            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
+            pos, kwds = extract_args_kwargs(args, kwargs)
             return self._compliant_series._with_native(
-                getattr(self._compliant_series.native.cat, attr)(*args, **kwargs)
+                getattr(self._compliant_series.native.cat, attr)(*pos, **kwds)
             )
 
         return func
@@ -642,9 +642,9 @@ class PolarsSeriesListNamespace:
     # TODO(FBruzzesi): Remove `pragma: no cover` once other namespace methods are added
     def __getattr__(self: Self, attr: str) -> Any:  # pragma: no cover
         def func(*args: Any, **kwargs: Any) -> Any:
-            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
+            pos, kwds = extract_args_kwargs(args, kwargs)
             return self._series._with_native(
-                getattr(self._series.native.list, attr)(*args, **kwargs)
+                getattr(self._series.native.list, attr)(*pos, **kwds)
             )
 
         return func
@@ -656,9 +656,9 @@ class PolarsSeriesStructNamespace:
 
     def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
-            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
+            pos, kwds = extract_args_kwargs(args, kwargs)
             return self._compliant_series._with_native(
-                getattr(self._compliant_series.native.struct, attr)(*args, **kwargs)
+                getattr(self._compliant_series.native.struct, attr)(*pos, **kwds)
             )
 
         return func
