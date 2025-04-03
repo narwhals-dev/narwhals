@@ -43,7 +43,7 @@ class WindowInputs:
 # NOTE: don't lru_cache this as `ModuleType` isn't hashable
 def native_to_narwhals_dtype(
     dtype: _NativeDType, version: Version, spark_types: ModuleType
-) -> DType:  # pragma: no cover
+) -> DType:
     dtypes = import_dtypes_module(version=version)
     if TYPE_CHECKING:
         native = sqlframe_types

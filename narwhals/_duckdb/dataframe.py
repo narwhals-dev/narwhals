@@ -251,18 +251,20 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             if self._backend_version < (1, 1, 4):
                 msg = f"DuckDB>=1.1.4 is required for cross-join, found version: {self._backend_version}"
                 raise NotImplementedError(msg)
-            rel = self.native.set_alias("lhs").cross(
-                other.native.set_alias("rhs")
-            )  # pragma: no cover
+            rel = self.native.set_alias("lhs").cross(other.native.set_alias("rhs"))
         else:
             # help mypy
             assert left_on is not None  # noqa: S101
             assert right_on is not None  # noqa: S101
-            condition = " and ".join(
-                f'lhs."{left}" = rhs."{right}"' for left, right in zip(left_on, right_on)
+            it = (
+                col(f'lhs."{left}"') == col(f'rhs."{right}"')
+                for left, right in zip(left_on, right_on)
             )
+            condition: duckdb.Expression = reduce(and_, it)
             rel = self.native.set_alias("lhs").join(
-                other.native.set_alias("rhs"), condition=condition, how=native_how
+                other.native.set_alias("rhs"),
+                condition=condition,  # type: ignore[arg-type, unused-ignore]
+                how=native_how,
             )
 
         if native_how in {"inner", "left", "cross", "outer"}:
@@ -319,6 +321,8 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
                 select.append(f'rhs."{name}" as "{name}{suffix}"')
             elif right_on is None or name not in {right_on, *by_right}:
                 select.append(f'"{name}"')
+        # Replace with Python API call once
+        # https://github.com/duckdb/duckdb/discussions/16947 is addressed.
         query = f"""
             SELECT {",".join(select)}
             FROM lhs
@@ -449,6 +453,8 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
 
         unpivot_on = ", ".join(f'"{name}"' for name in on_)
         rel = self.native  # noqa: F841
+        # Replace with Python API once
+        # https://github.com/duckdb/duckdb/discussions/16980 is addressed.
         query = f"""
             unpivot rel
             on {unpivot_on}

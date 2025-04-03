@@ -19,6 +19,7 @@ from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
 from narwhals._duckdb.expr_struct import DuckDBExprStructNamespace
 from narwhals._duckdb.utils import WindowInputs
+from narwhals._duckdb.utils import assert_type
 from narwhals._duckdb.utils import col
 from narwhals._duckdb.utils import generate_order_by_sql
 from narwhals._duckdb.utils import generate_partition_by_sql
@@ -107,6 +108,8 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         min_samples: int,
         ddof: int | None = None,
     ) -> WindowFunction:
+        assert_type(window_size, (int, type(None)))
+        assert_type(min_samples, (int,))
         supported_funcs = ["sum", "mean", "std", "var"]
         if center:
             half = (window_size - 1) // 2
@@ -137,11 +140,10 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             else:  # pragma: no cover
                 msg = f"Only the following functions are supported: {supported_funcs}.\nGot: {func_name}."
                 raise ValueError(msg)
-            sql = (
-                f"case when count({window_inputs.expr}) over {window} >= {min_samples}"
-                f"then {func_}({window_inputs.expr}) over {window} end"
-            )
-            return SQLExpression(sql)  # type: ignore[no-any-return, unused-ignore]
+            condition_sql = f"count({window_inputs.expr}) over {window} >= {min_samples}"
+            condition = SQLExpression(condition_sql)
+            value = SQLExpression(f"{func_}({window_inputs.expr}) over {window}")
+            return when(condition, value)
 
         return func
 
@@ -541,6 +543,8 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         )
 
     def shift(self, n: int) -> Self:
+        assert_type(n, (int,))
+
         def func(window_inputs: WindowInputs) -> duckdb.Expression:
             order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=True)
             partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
@@ -561,8 +565,8 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
                 )
             else:
                 partition_by_sql = f"partition by {window_inputs.expr}"
-            sql = f"row_number() over({partition_by_sql} {order_by_sql}) == 1"
-            return SQLExpression(sql)  # type: ignore[no-any-return, unused-ignore]
+            sql = f"row_number() over({partition_by_sql} {order_by_sql})"
+            return SQLExpression(sql) == lit(1)  # type: ignore[no-any-return, unused-ignore]
 
         return self._with_window_function(func)
 
@@ -576,8 +580,8 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
                 )
             else:
                 partition_by_sql = f"partition by {window_inputs.expr}"
-            sql = f"row_number() over({partition_by_sql} {order_by_sql}) == 1"
-            return SQLExpression(sql)  # type: ignore[no-any-return, unused-ignore]
+            sql = f"row_number() over({partition_by_sql} {order_by_sql})"
+            return SQLExpression(sql) == lit(1)  # type: ignore[no-any-return, unused-ignore]
 
         return self._with_window_function(func)
 
