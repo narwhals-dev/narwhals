@@ -591,10 +591,6 @@ class PolarsSeries:
         return PolarsSeriesCatNamespace(self)
 
     @property
-    def list(self: Self) -> PolarsSeriesListNamespace:
-        return PolarsSeriesListNamespace(self)
-
-    @property
     def struct(self: Self) -> PolarsSeriesStructNamespace:
         return PolarsSeriesStructNamespace(self)
 
@@ -657,6 +653,10 @@ class PolarsSeries:
     unique: Method[Self]
     var: Method[float]
     zip_with: Method[Self]
+
+    @property
+    def list(self: Self) -> PolarsSeriesListNamespace:
+        return PolarsSeriesListNamespace(self)
 
 
 class PolarsSeriesDateTimeNamespace:
