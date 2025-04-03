@@ -426,13 +426,6 @@ class DataFrame(BaseFrame[DataFrameT]):
                 "- Used `pl.col` instead of `nw.col`?"
             )
             raise TypeError(msg)
-        if (
-            self.implementation.is_pandas_like() or self.implementation.is_dask()
-        ):  # pragma: no cover
-            if isinstance(arg, (int, bool)):
-                return plx.col(arg)  # type: ignore[arg-type]
-            if isinstance(arg, Sequence) and all(isinstance(x, (int, bool)) for x in arg):
-                return plx.col(*arg)
         if is_numpy_array(arg):
             return plx._series.from_numpy(arg, context=plx)._to_expr()
         raise InvalidIntoExprError.from_invalid_type(type(arg))
@@ -1555,6 +1548,30 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         from narwhals.group_by import GroupBy
 
+        if (
+            self.implementation.is_pandas_like() or self.implementation.is_dask()
+        ):  # pragma: no cover
+            from narwhals import col
+
+            def _maybe_parse_key_to_expr(
+                key: IntoExpr  # noqa: FBT001
+                | Iterable[IntoExpr]
+                | int
+                | Iterable[int]
+                | bool
+                | Iterable[bool],
+            ) -> IntoExpr:
+                if isinstance(key, (int, bool)):
+                    return col(key)  # type: ignore[arg-type]
+                elif isinstance(key, Iterable) and all(
+                    isinstance(k, (int, bool)) for k in key
+                ):
+                    return col(*key)
+                else:
+                    return key  # type: ignore[return-value]
+
+            keys = tuple(_maybe_parse_key_to_expr(key) for key in keys)
+
         flat_keys, kinds = self._flatten_and_extract(*keys)
 
         if any(kind is ExprKind.FILTRATION for kind in kinds):
@@ -2190,14 +2207,6 @@ class LazyFrame(BaseFrame[FrameT]):
                 "- Used `pl.col` instead of `nw.col`?"
             )
             raise TypeError(msg)
-        if (
-            self.implementation.is_pandas_like() or self.implementation.is_dask()
-        ):  # pragma: no cover
-            plx = self.__narwhals_namespace__()
-            if isinstance(arg, (int, bool)):
-                return plx.col(arg)
-            if isinstance(arg, Sequence) and all(isinstance(x, (int, bool)) for x in arg):
-                return plx.col(*arg)
         raise InvalidIntoExprError.from_invalid_type(type(arg))  # pragma: no cover
 
     @property
@@ -2846,6 +2855,31 @@ class LazyFrame(BaseFrame[FrameT]):
             <BLANKLINE>
         """
         from narwhals.group_by import LazyGroupBy
+
+        # Handle special case for pandas-like and dask, which allow column names to be
+        # non-string values
+        if (
+            self.implementation.is_pandas_like() or self.implementation.is_dask()
+        ):  # pragma: no cover
+            from narwhals import col
+
+            def _maybe_parse_key_to_expr(
+                key: IntoExpr  # noqa: FBT001
+                | Iterable[IntoExpr]
+                | int
+                | Iterable[int]
+                | bool
+                | Iterable[bool],
+            ) -> IntoExpr:
+                if isinstance(key, (int, bool)):
+                    return col(key)  # type: ignore[arg-type]
+                if isinstance(key, Iterable) and all(
+                    isinstance(k, (int, bool)) for k in key
+                ):
+                    return col(*key)
+                return key  # type: ignore[return-value]
+
+            keys = tuple(_maybe_parse_key_to_expr(key) for key in keys)
 
         flat_keys, kinds = self._flatten_and_extract(*keys)
 

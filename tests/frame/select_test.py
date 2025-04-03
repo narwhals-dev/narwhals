@@ -58,9 +58,21 @@ def test_select_boolean_cols(request: pytest.FixtureRequest) -> None:
     if PANDAS_VERSION < (1, 1):
         # bug in old pandas
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(pd.DataFrame({True: [1, 2], False: [3, 4]}), eager_only=True)
-    result = df.group_by(nw.col(True)).agg(nw.col(False).max())  # type: ignore[arg-type]# noqa: FBT003
-    assert_equal_data(result.to_dict(as_series=False), {True: [1, 2]})  # type: ignore[dict-item]
+    df = nw.from_native(
+        pd.DataFrame({True: [1, 2], False: [3, 4], 2: [1, 1]}), eager_only=True
+    )
+    result = df.group_by(True, 2).agg(nw.col(False).max())  # type: ignore[arg-type]# noqa: FBT003
+    assert_equal_data(
+        result.to_dict(as_series=False),
+        {True: [1, 2], 2: [1, 1], False: [3, 4]},  # type: ignore[dict-item]
+    )
+
+    result = df.group_by((True, 2)).agg(nw.col(False).max())  # type: ignore[arg-type]# noqa: FBT003
+    assert_equal_data(
+        result.to_dict(as_series=False),
+        {True: [1, 2], 2: [1, 1], False: [3, 4]},  # type: ignore[dict-item]
+    )
+
     result = df.select(nw.col([False, True]))  # type: ignore[list-item]
     assert_equal_data(result.to_dict(as_series=False), {True: [1, 2], False: [3, 4]})  # type: ignore[dict-item]
 
