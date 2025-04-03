@@ -426,6 +426,13 @@ class DataFrame(BaseFrame[DataFrameT]):
                 "- Used `pl.col` instead of `nw.col`?"
             )
             raise TypeError(msg)
+        if (
+            self.implementation.is_pandas_like() or self.implementation.is_dask()
+        ):  # pragma: no cover
+            if isinstance(arg, (int, bool)):
+                return plx.col(arg)  # type: ignore[arg-type]
+            if isinstance(arg, Sequence) and all(isinstance(x, (int, bool)) for x in arg):
+                return plx.col(*arg)
         if is_numpy_array(arg):
             return plx._series.from_numpy(arg, context=plx)._to_expr()
         raise InvalidIntoExprError.from_invalid_type(type(arg))
@@ -2183,6 +2190,14 @@ class LazyFrame(BaseFrame[FrameT]):
                 "- Used `pl.col` instead of `nw.col`?"
             )
             raise TypeError(msg)
+        if (
+            self.implementation.is_pandas_like() or self.implementation.is_dask()
+        ):  # pragma: no cover
+            plx = self.__narwhals_namespace__()
+            if isinstance(arg, (int, bool)):
+                return plx.col(arg)
+            if isinstance(arg, Sequence) and all(isinstance(x, (int, bool)) for x in arg):
+                return plx.col(*arg)
         raise InvalidIntoExprError.from_invalid_type(type(arg))  # pragma: no cover
 
     @property
