@@ -217,35 +217,64 @@ Into1DArray: TypeAlias = "_1DArray | _NumpyScalar"
 """A 1-dimensional `numpy.ndarray` or scalar that can be converted into one."""
 
 
-class DTypes:
-    Decimal: type[dtypes.Decimal]
-    Int128: type[dtypes.Int128]
-    Int64: type[dtypes.Int64]
-    Int32: type[dtypes.Int32]
-    Int16: type[dtypes.Int16]
-    Int8: type[dtypes.Int8]
-    UInt128: type[dtypes.UInt128]
-    UInt64: type[dtypes.UInt64]
-    UInt32: type[dtypes.UInt32]
-    UInt16: type[dtypes.UInt16]
-    UInt8: type[dtypes.UInt8]
-    Float64: type[dtypes.Float64]
-    Float32: type[dtypes.Float32]
-    String: type[dtypes.String]
-    Boolean: type[dtypes.Boolean]
-    Object: type[dtypes.Object]
-    Categorical: type[dtypes.Categorical]
-    Enum: type[dtypes.Enum]
-    Datetime: type[dtypes.Datetime]
-    Duration: type[dtypes.Duration]
-    Date: type[dtypes.Date]
-    Field: type[dtypes.Field]
-    Struct: type[dtypes.Struct]
-    List: type[dtypes.List]
-    Array: type[dtypes.Array]
-    Unknown: type[dtypes.Unknown]
-    Time: type[dtypes.Time]
-    Binary: type[dtypes.Binary]
+# ruff: noqa: N802
+class DTypes(Protocol):
+    @property
+    def Decimal(self) -> type[dtypes.Decimal]: ...
+    @property
+    def Int128(self) -> type[dtypes.Int128]: ...
+    @property
+    def Int64(self) -> type[dtypes.Int64]: ...
+    @property
+    def Int32(self) -> type[dtypes.Int32]: ...
+    @property
+    def Int16(self) -> type[dtypes.Int16]: ...
+    @property
+    def Int8(self) -> type[dtypes.Int8]: ...
+    @property
+    def UInt128(self) -> type[dtypes.UInt128]: ...
+    @property
+    def UInt64(self) -> type[dtypes.UInt64]: ...
+    @property
+    def UInt32(self) -> type[dtypes.UInt32]: ...
+    @property
+    def UInt16(self) -> type[dtypes.UInt16]: ...
+    @property
+    def UInt8(self) -> type[dtypes.UInt8]: ...
+    @property
+    def Float64(self) -> type[dtypes.Float64]: ...
+    @property
+    def Float32(self) -> type[dtypes.Float32]: ...
+    @property
+    def String(self) -> type[dtypes.String]: ...
+    @property
+    def Boolean(self) -> type[dtypes.Boolean]: ...
+    @property
+    def Object(self) -> type[dtypes.Object]: ...
+    @property
+    def Categorical(self) -> type[dtypes.Categorical]: ...
+    @property
+    def Enum(self) -> type[dtypes.Enum]: ...
+    @property
+    def Datetime(self) -> type[dtypes.Datetime]: ...
+    @property
+    def Duration(self) -> type[dtypes.Duration]: ...
+    @property
+    def Date(self) -> type[dtypes.Date]: ...
+    @property
+    def Field(self) -> type[dtypes.Field]: ...
+    @property
+    def Struct(self) -> type[dtypes.Struct]: ...
+    @property
+    def List(self) -> type[dtypes.List]: ...
+    @property
+    def Array(self) -> type[dtypes.Array]: ...
+    @property
+    def Unknown(self) -> type[dtypes.Unknown]: ...
+    @property
+    def Time(self) -> type[dtypes.Time]: ...
+    @property
+    def Binary(self) -> type[dtypes.Binary]: ...
 
 
 __all__ = [
