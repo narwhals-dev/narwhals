@@ -142,6 +142,15 @@ class Namespace(Generic[CompliantNamespaceT_co]):
     def __init__(self, namespace: CompliantNamespaceT_co, /) -> None:
         self._compliant_namespace = namespace
 
+    def __init_subclass__(cls, *args: Any, version: Version, **kwds: Any) -> None:
+        super().__init_subclass__(*args, **kwds)
+
+        if isinstance(version, Version):
+            cls._version = version
+        else:
+            msg = f"Expected {Version} but got {type(version).__name__!r}"
+            raise TypeError(msg)
+
     def __repr__(self) -> str:
         return f"Namespace[{type(self.compliant).__name__}]"
 

@@ -13,6 +13,7 @@ import pytest
 import narwhals as nw
 from narwhals._namespace import Namespace
 from narwhals.utils import Version
+from narwhals.utils import import_namespace
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -116,3 +117,27 @@ def test_namespace_from_numpy_polars() -> None:
 
     assert isinstance(frame, pl.DataFrame)
     assert frame.columns == list(columns)
+
+
+def test_import_namespace() -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("polars")
+    import pandas as pd
+
+    data = {"a": [1, 2, 3]}
+    native = pd.DataFrame(data)
+    ns = import_namespace(Version.V1).from_native_object(native)
+    assert ns.version is Version.V1
+    assert ns.implementation.is_pandas()
+
+    ns = import_namespace(Version.MAIN).from_native_object(native)
+    assert ns.version is Version.MAIN
+    assert ns.implementation.is_pandas()
+
+    compliant = ns.compliant._dataframe.from_dict(data, context=ns.compliant, schema=None)
+    ns_pl = import_namespace(ns.compliant).from_native_object(compliant.to_polars())
+    assert ns_pl.version is Version.MAIN
+    assert ns_pl.implementation.is_polars()
+
+    with pytest.raises(TypeError):
+        import_namespace(data)  # type: ignore[arg-type]
