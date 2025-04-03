@@ -298,21 +298,22 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
     ) -> Self:
         lhs = self.native
         rhs = other.native
-        conditions = []
+        conditions: list[duckdb.Expression] = []
         if by_left is not None and by_right is not None:
-            conditions += [
-                f'lhs."{left}" = rhs."{right}"' for left, right in zip(by_left, by_right)
-            ]
+            conditions.extend(
+                col(f'lhs."{left}"') == col(f'rhs."{right}"')
+                for left, right in zip(by_left, by_right)
+            )
         else:
             by_left = by_right = []
         if strategy == "backward":
-            conditions += [f'lhs."{left_on}" >= rhs."{right_on}"']
+            conditions.append(col(f'lhs."{left_on}"') >= col(f'rhs."{right_on}"'))
         elif strategy == "forward":
-            conditions += [f'lhs."{left_on}" <= rhs."{right_on}"']
+            conditions.append(col(f'lhs."{left_on}"') <= col(f'rhs."{right_on}"'))
         else:
             msg = "Only 'backward' and 'forward' strategies are currently supported for DuckDB"
             raise NotImplementedError(msg)
-        condition = " and ".join(conditions)
+        condition: duckdb.Expression = reduce(and_, conditions)
         select = ["lhs.*"]
         for name in rhs.columns:
             if name in lhs.columns and (
