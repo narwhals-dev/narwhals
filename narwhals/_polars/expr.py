@@ -232,7 +232,7 @@ class PolarsExpr:
         return self._with_native(result)
 
     def __narwhals_expr__(self) -> None: ...
-    def __narwhals_namespace__(self) -> PolarsNamespace:
+    def __narwhals_namespace__(self) -> PolarsNamespace:  # pragma: no cover
         from narwhals._polars.namespace import PolarsNamespace
 
         return PolarsNamespace(
