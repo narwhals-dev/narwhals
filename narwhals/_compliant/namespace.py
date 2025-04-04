@@ -145,9 +145,6 @@ class EagerNamespace(
         self, predicate: EagerExprT
     ) -> EagerWhen[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeSeriesT]: ...
 
-    # NOTE: Needed extra `TypeVar`s to avoid false positives
-    # E.g. this **should** emit a warning:
-    #     `ArrowNamespace(...).from_native(pd.DataFrame)`
     @overload
     def from_native(self, data: NativeFrameT_contra, /) -> EagerDataFrameT: ...
     @overload
