@@ -237,7 +237,7 @@ def generate_order_by_sql(*order_by: str, ascending: bool) -> str:
     return f"order by {by_sql}"
 
 
-def assert_type(obj: Any, valid_types: tuple[type, ...]) -> None:
+def ensure_type(obj: Any, valid_types: tuple[type, ...]) -> None:
     # Use this for extra (possibly redundant) validation in places where we
     # use SQLExpression, as an extra guard against unsafe inputs.
     if not isinstance(obj, valid_types):  # pragma: no cover

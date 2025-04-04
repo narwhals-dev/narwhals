@@ -19,8 +19,8 @@ from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
 from narwhals._duckdb.expr_struct import DuckDBExprStructNamespace
 from narwhals._duckdb.utils import WindowInputs
-from narwhals._duckdb.utils import assert_type
 from narwhals._duckdb.utils import col
+from narwhals._duckdb.utils import ensure_type
 from narwhals._duckdb.utils import generate_order_by_sql
 from narwhals._duckdb.utils import generate_partition_by_sql
 from narwhals._duckdb.utils import lit
@@ -108,8 +108,8 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         min_samples: int,
         ddof: int | None = None,
     ) -> WindowFunction:
-        assert_type(window_size, (int, type(None)))
-        assert_type(min_samples, (int,))
+        ensure_type(window_size, (int, type(None)))
+        ensure_type(min_samples, (int,))
         supported_funcs = ["sum", "mean", "std", "var"]
         if center:
             half = (window_size - 1) // 2
@@ -543,7 +543,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         )
 
     def shift(self, n: int) -> Self:
-        assert_type(n, (int,))
+        ensure_type(n, (int,))
 
         def func(window_inputs: WindowInputs) -> duckdb.Expression:
             order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=True)
