@@ -28,6 +28,7 @@ from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_index
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.dependencies import is_numpy_scalar
+from narwhals.dependencies import is_pandas_like_series
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
@@ -41,6 +42,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     from typing_extensions import Self
+    from typing_extensions import TypeIs
 
     from narwhals._arrow.typing import ArrowArray
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -194,23 +196,27 @@ class PandasLikeSeries(EagerSeries[Any]):
                 kwds["copy"] = False
             if index is not None and len(index):
                 kwds["index"] = index
+        return cls.from_native(ns.Series(data, name=name, **kwds), context=context)
+
+    @staticmethod
+    def _is_native(obj: Any) -> TypeIs[Any]:
+        return is_pandas_like_series(obj)  # pragma: no cover
+
+    @classmethod
+    def from_native(cls, data: Any, /, *, context: _FullContext) -> Self:
         return cls(
-            ns.Series(data, name=name, **kwds),
-            implementation=implementation,
-            backend_version=backend_version,
-            version=version,
+            data,
+            implementation=context._implementation,
+            backend_version=context._backend_version,
+            version=context._version,
         )
 
     @classmethod
     def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
         implementation = context._implementation
         arr = data if is_numpy_array_1d(data) else [data]
-        return cls(
-            implementation.to_native_namespace().Series(arr, name=""),
-            implementation=implementation,
-            backend_version=context._backend_version,
-            version=context._version,
-        )
+        native = implementation.to_native_namespace().Series(arr, name="")
+        return cls.from_native(native, context=context)
 
     @property
     def name(self: Self) -> str:
@@ -753,13 +759,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         if sort:
             val_count = val_count.sort_values(value_name_, ascending=False)
 
-        return PandasLikeDataFrame(
-            val_count,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-            validate_column_names=True,
-        )
+        return PandasLikeDataFrame.from_native(val_count, context=self)
 
     def quantile(
         self: Self,
@@ -816,14 +816,7 @@ class PandasLikeSeries(EagerSeries[Any]):
                 implementation=self._implementation,
                 backend_version=self._backend_version,
             )
-
-        return PandasLikeDataFrame(
-            result,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-            validate_column_names=True,
-        )
+        return PandasLikeDataFrame.from_native(result, context=self)
 
     def gather_every(self: Self, n: int, offset: int) -> Self:
         return self._with_native(self.native.iloc[offset::n])
@@ -982,31 +975,16 @@ class PandasLikeSeries(EagerSeries[Any]):
             if include_breakpoint:
                 data["breakpoint"] = []
             data["count"] = []
-
-            return PandasLikeDataFrame(
-                ns.DataFrame(data),
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-                version=self._version,
-                validate_column_names=True,
-            )
+            return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
         elif self.native.count() < 1:
             if bins is not None:
                 data = {"breakpoint": bins[1:], "count": zeros(shape=len(bins) - 1)}
             else:
                 count = cast("int", bin_count)
                 data = {"breakpoint": linspace(0, 1, count), "count": zeros(shape=count)}
-
             if not include_breakpoint:
                 del data["breakpoint"]
-
-            return PandasLikeDataFrame(
-                ns.DataFrame(data),
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-                version=self._version,
-                validate_column_names=True,
-            )
+            return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
 
         elif bin_count is not None:  # use Polars binning behavior
             lower, upper = self.native.min(), self.native.max()
@@ -1035,14 +1013,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         if include_breakpoint:
             data["breakpoint"] = bins[1:] if bins is not None else result.index.right
         data["count"] = result.reset_index(drop=True)
-
-        return PandasLikeDataFrame(
-            ns.DataFrame(data),
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-            validate_column_names=True,
-        )
+        return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
 
     @property
     def str(self: Self) -> PandasLikeSeriesStringNamespace:

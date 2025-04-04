@@ -78,12 +78,37 @@ class PolarsNamespace:
         return PolarsDataFrame
 
     @property
+    def _lazyframe(self) -> type[PolarsLazyFrame]:
+        from narwhals._polars.dataframe import PolarsLazyFrame
+
+        return PolarsLazyFrame
+
+    @property
     def _expr(self) -> type[PolarsExpr]:
         return PolarsExpr
 
     @property
     def _series(self) -> type[PolarsSeries]:
         return PolarsSeries
+
+    @overload
+    def from_native(self, data: pl.DataFrame, /) -> PolarsDataFrame: ...
+    @overload
+    def from_native(self, data: pl.LazyFrame, /) -> PolarsLazyFrame: ...
+    @overload
+    def from_native(self, data: pl.Series, /) -> PolarsSeries: ...
+    def from_native(
+        self, data: pl.DataFrame | pl.LazyFrame | pl.Series | Any, /
+    ) -> PolarsDataFrame | PolarsLazyFrame | PolarsSeries:
+        if self._dataframe._is_native(data):
+            return self._dataframe.from_native(data, context=self)
+        elif self._series._is_native(data):
+            return self._series.from_native(data, context=self)
+        elif self._lazyframe._is_native(data):
+            return self._lazyframe.from_native(data, context=self)
+        else:  # pragma: no cover
+            msg = f"Unsupported type: {type(data).__name__!r}"
+            raise TypeError(msg)
 
     @overload
     def from_numpy(
@@ -136,16 +161,12 @@ class PolarsNamespace:
         *,
         how: Literal["vertical", "horizontal", "diagonal"],
     ) -> PolarsDataFrame | PolarsLazyFrame:
-        from narwhals._polars.dataframe import PolarsLazyFrame
-
         result = pl.concat((item.native for item in items), how=how)
         if isinstance(result, pl.DataFrame):
             return self._dataframe(
                 result, backend_version=self._backend_version, version=self._version
             )
-        return PolarsLazyFrame(
-            result, backend_version=self._backend_version, version=self._version
-        )
+        return self._lazyframe.from_native(result, context=self)
 
     def lit(self: Self, value: Any, dtype: DType | type[DType] | None) -> PolarsExpr:
         if dtype is not None:

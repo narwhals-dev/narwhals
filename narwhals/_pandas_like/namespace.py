@@ -32,7 +32,13 @@ if TYPE_CHECKING:
 
 
 class PandasLikeNamespace(
-    EagerNamespace[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr]
+    EagerNamespace[
+        PandasLikeDataFrame,
+        PandasLikeSeries,
+        PandasLikeExpr,
+        "pd.DataFrame",
+        "pd.Series[Any]",
+    ]
 ):
     @property
     def _dataframe(self) -> type[PandasLikeDataFrame]:

@@ -48,9 +48,7 @@ DepthTrackingExprAny: TypeAlias = "DepthTrackingExpr[Any, Any]"
 EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any, Any]"
 EagerSeriesAny: TypeAlias = "EagerSeries[Any]"
 EagerExprAny: TypeAlias = "EagerExpr[Any, Any]"
-EagerNamespaceAny: TypeAlias = (
-    "EagerNamespace[EagerDataFrameAny, EagerSeriesAny, EagerExprAny]"
-)
+EagerNamespaceAny: TypeAlias = "EagerNamespace[EagerDataFrameAny, EagerSeriesAny, EagerExprAny, NativeFrame, NativeSeries]"
 
 LazyExprAny: TypeAlias = "LazyExpr[Any, Any]"
 
@@ -58,7 +56,11 @@ NativeExprT = TypeVar("NativeExprT", bound="NativeExpr")
 NativeExprT_co = TypeVar("NativeExprT_co", bound="NativeExpr", covariant=True)
 NativeSeriesT = TypeVar("NativeSeriesT", bound="NativeSeries")
 NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=True)
+NativeFrameT = TypeVar("NativeFrameT", bound="NativeFrame")
 NativeFrameT_co = TypeVar("NativeFrameT_co", bound="NativeFrame", covariant=True)
+NativeFrameT_contra = TypeVar(
+    "NativeFrameT_contra", bound="NativeFrame", contravariant=True
+)
 
 CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExprAny)
 CompliantExprT_co = TypeVar("CompliantExprT_co", bound=CompliantExprAny, covariant=True)
