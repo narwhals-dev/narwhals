@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals.exceptions import InvalidOperationError
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -27,6 +28,8 @@ def test_concat_horizontal(constructor_eager: ConstructorEager) -> None:
 
     with pytest.raises(ValueError, match="No items"):
         nw.concat([])
+    with pytest.raises(InvalidOperationError):
+        nw.concat([df_left.lazy()], how="horizontal")
 
 
 def test_concat_vertical(constructor: Constructor) -> None:
