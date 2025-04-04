@@ -6,13 +6,10 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-import narwhals as nw_main
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
-    from types import ModuleType
-
     from tests.utils import Constructor
     from tests.utils import ConstructorEager
 
@@ -117,11 +114,10 @@ def test_unknown_to_int() -> None:
     assert nw.from_native(df).select(nw.col("a").cast(nw.Int64)).schema == {"a": nw.Int64}
 
 
-@pytest.mark.parametrize("nw", [nw_main, nw])
-def test_cast_to_enum(
-    request: pytest.FixtureRequest, constructor: Constructor, *, nw: ModuleType
+def test_cast_to_enum_vmain(
+    request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    import narwhals.stable.v1 as nw_v1
+    import narwhals as nw
 
     # Backends that do not (yet) support Enum dtype
     if any(
@@ -137,11 +133,25 @@ def test_cast_to_enum(
     ):
         nw.from_native(df_native).select(nw.col("a").cast(nw.Enum))
 
-    if nw is nw_v1:
-        with pytest.raises(
-            NotImplementedError, match="Converting to Enum is not supported in V1"
-        ):
-            nw.from_native(df_native).select(nw.col("a").cast(nw.Enum))
-
     df_nw = nw.from_native(df_native).select(nw.col("a").cast(nw.Enum(["a", "b"])))
     assert df_nw.collect_schema() == {"a": nw.Enum(["a", "b"])}
+
+
+def test_cast_to_enum_v1(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    import narwhals.stable.v1 as nw
+
+    # Backends that do not (yet) support Enum dtype
+    if any(
+        backend in str(constructor)
+        for backend in ["pyarrow_table", "duckdb", "sqlframe", "modin"]
+    ):
+        request.applymarker(pytest.mark.xfail)
+
+    df_native = constructor({"a": ["a", "b"]})
+
+    with pytest.raises(
+        NotImplementedError, match="Converting to Enum is not supported in V1"
+    ):
+        nw.from_native(df_native).select(nw.col("a").cast(nw.Enum))
