@@ -352,13 +352,12 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
     ) -> Self:
         subset_ = subset if keep == "any" else (subset or self.columns)
         if subset_:
-            rel = self.native
             # Sanitise input
-            if any(x not in rel.columns for x in subset_):
-                msg = f"Columns {set(subset_).difference(rel.columns)} not found in {rel.columns}."
+            if any(x not in self.columns for x in subset_):
+                msg = f"Columns {set(subset_).difference(self.columns)} not found in {self.columns}."
                 raise ColumnNotFoundError(msg)
-            idx_name = generate_temporary_column_name(8, rel.columns)
-            count_name = generate_temporary_column_name(8, [*rel.columns, idx_name])
+            idx_name = generate_temporary_column_name(8, self.columns)
+            count_name = generate_temporary_column_name(8, [*self.columns, idx_name])
             partition_by_sql = generate_partition_by_sql(*(subset_))
             query = f"""
                 select *,
@@ -395,8 +394,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
         return self._with_native(self.native.sort(*it))
 
     def drop_nulls(self: Self, subset: Sequence[str] | None) -> Self:
-        rel = self.native
-        subset_ = subset if subset is not None else rel.columns
+        subset_ = subset if subset is not None else self.columns
         keep_condition = reduce(and_, (col(name).isnotnull() for name in subset_))
         return self._with_native(self.native.filter(keep_condition))
 
