@@ -2073,7 +2073,7 @@ def concat(
     Raises:
         TypeError: The items to concatenate should either all be eager, or all lazy
     """
-    return _stableify(nw.concat(items, how=how))
+    return cast("FrameT", _stableify(nw.concat(items, how=how)))
 
 
 def concat_str(
