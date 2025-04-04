@@ -350,25 +350,26 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
     def unique(
         self: Self, subset: Sequence[str] | None, *, keep: Literal["any", "none"]
     ) -> Self:
-        if subset is not None:
+        subset_ = subset if keep == "any" else (subset or self.columns)
+        if subset_:
             rel = self.native
             # Sanitise input
-            if any(x not in rel.columns for x in subset):
-                msg = f"Columns {set(subset).difference(rel.columns)} not found in {rel.columns}."
+            if any(x not in rel.columns for x in subset_):
+                msg = f"Columns {set(subset_).difference(rel.columns)} not found in {rel.columns}."
                 raise ColumnNotFoundError(msg)
             idx_name = generate_temporary_column_name(8, rel.columns)
             count_name = generate_temporary_column_name(8, [*rel.columns, idx_name])
-            if keep == "none":
-                keep_condition = col(count_name) == lit(1)
-            else:
-                keep_condition = col(idx_name) == lit(1)
-            partition_by_sql = generate_partition_by_sql(*subset)
+            partition_by_sql = generate_partition_by_sql(*(subset_))
             query = f"""
                 select *,
                         row_number() over ({partition_by_sql}) as "{idx_name}",
                         count(*) over ({partition_by_sql}) as "{count_name}"
                 from rel
                 """  # noqa: S608
+            if keep == "none":
+                keep_condition = col(count_name) == lit(1)
+            else:
+                keep_condition = col(idx_name) == lit(1)
             return self._with_native(
                 duckdb.sql(query)
                 .filter(keep_condition)

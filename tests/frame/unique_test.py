@@ -55,13 +55,31 @@ def test_unique(
     subset: str | list[str] | None,
     keep: Literal["any", "none"],
     expected: dict[str, list[float]],
-    request: pytest.FixtureRequest,
 ) -> None:
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
-    if keep == "none" and df.implementation.is_spark_like():
-        request.applymarker(pytest.mark.xfail)
     result = df.unique(subset, keep=keep).sort("z")
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize("subset", [None, ["a", "b"]])
+@pytest.mark.parametrize(
+    ("keep", "expected"),
+    [
+        ("any", {"a": [1, 1, 2], "b": [3, 4, 4]}),
+        ("none", {"a": [1, 2], "b": [4, 4]}),
+    ],
+)
+def test_unique_full_subset(
+    constructor: Constructor,
+    subset: list[str] | None,
+    keep: Literal["any", "none"],
+    expected: dict[str, list[float]],
+) -> None:
+    data = {"a": [1, 1, 1, 2], "b": [3, 3, 4, 4]}
+    df_raw = constructor(data)
+    df = nw.from_native(df_raw)
+    result = df.unique(subset, keep=keep).sort("a", "b")
     assert_equal_data(result, expected)
 
 
