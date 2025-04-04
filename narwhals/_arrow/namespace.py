@@ -37,7 +37,11 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
+class ArrowNamespace(
+    EagerNamespace[
+        ArrowDataFrame, ArrowSeries, ArrowExpr, "pa.Table", "ArrowChunkedArray"
+    ]
+):
     @property
     def _dataframe(self) -> type[ArrowDataFrame]:
         return ArrowDataFrame

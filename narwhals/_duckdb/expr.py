@@ -707,7 +707,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             else:
                 by_sql = f"{_input} asc nulls last"
             sql = f"{func_name}() OVER (order by {by_sql})"
-            return when(_input.isnotnull(), SQLExpression(sql))
+            return when(_input.isnotnull(), SQLExpression(sql))  # type: ignore[no-any-return, unused-ignore]
 
         return self._with_callable(_rank)
 

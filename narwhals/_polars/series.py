@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 
     import pandas as pd
     from typing_extensions import Self
+    from typing_extensions import TypeIs
 
     from narwhals._arrow.typing import ArrowArray
     from narwhals._polars.dataframe import Method
@@ -96,19 +97,23 @@ class PolarsSeries:
         )
         # NOTE: `Iterable` is fine, annotation is overly narrow
         # https://github.com/pola-rs/polars/blob/82d57a4ee41f87c11ca1b1af15488459727efdd7/py-polars/polars/series/series.py#L332-L333
+        native = pl.Series(name=name, values=cast("Sequence[Any]", data), dtype=dtype_pl)
+        return cls.from_native(native, context=context)
+
+    @staticmethod
+    def _is_native(obj: pl.Series | Any) -> TypeIs[pl.Series]:
+        return isinstance(obj, pl.Series)
+
+    @classmethod
+    def from_native(cls, data: pl.Series, /, *, context: _FullContext) -> Self:
         return cls(
-            pl.Series(name=name, values=cast("Sequence[Any]", data), dtype=dtype_pl),
-            backend_version=backend_version,
-            version=version,
+            data, backend_version=context._backend_version, version=context._version
         )
 
     @classmethod
     def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
-        return cls(
-            pl.Series(data if is_numpy_array_1d(data) else [data]),
-            backend_version=context._backend_version,
-            version=context._version,
-        )
+        native = pl.Series(data if is_numpy_array_1d(data) else [data])
+        return cls.from_native(native, context=context)
 
     def _with_native(self: Self, series: pl.Series) -> Self:
         return self.__class__(
@@ -127,14 +132,12 @@ class PolarsSeries:
     def _from_native_object(
         self: Self, series: pl.Series | pl.DataFrame | T
     ) -> Self | PolarsDataFrame | T:
-        if isinstance(series, pl.Series):
+        if self._is_native(series):
             return self._with_native(series)
         if isinstance(series, pl.DataFrame):
             from narwhals._polars.dataframe import PolarsDataFrame
 
-            return PolarsDataFrame(
-                series, backend_version=self._backend_version, version=self._version
-            )
+            return PolarsDataFrame.from_native(series, context=self)
         # scalar
         return series
 
@@ -300,9 +303,7 @@ class PolarsSeries:
         else:
             result = self.native.to_dummies(separator=separator, drop_first=drop_first)
         result = result.with_columns(pl.all().cast(pl.Int8))
-        return PolarsDataFrame(
-            result, backend_version=self._backend_version, version=self._version
-        )
+        return PolarsDataFrame.from_native(result, context=self)
 
     def ewm_mean(
         self: Self,
@@ -462,15 +463,11 @@ class PolarsSeries:
                     else pl.col("count"),
                 }
             )
-
         else:
             result = self.native.value_counts(
                 sort=sort, parallel=parallel, name=name, normalize=normalize
             )
-
-        return PolarsDataFrame(
-            result, backend_version=self._backend_version, version=self._version
-        )
+        return PolarsDataFrame.from_native(result, context=self)
 
     def cum_count(self: Self, *, reverse: bool) -> Self:
         if self._backend_version < (0, 20, 4):
@@ -501,11 +498,7 @@ class PolarsSeries:
             if include_breakpoint:
                 data.append(pl.Series("breakpoint", [], dtype=pl.Float64))
             data.append(pl.Series("count", [], dtype=pl.UInt32))
-            return PolarsDataFrame(
-                pl.DataFrame(data),
-                backend_version=self._backend_version,
-                version=self._version,
-            )
+            return PolarsDataFrame.from_native(pl.DataFrame(data), context=self)
         elif (self._backend_version < (1, 15)) and self.native.count() < 1:
             data_dict: dict[str, Sequence[Any] | pl.Series]
             if bins is not None:
@@ -518,15 +511,9 @@ class PolarsSeries:
                     "breakpoint": pl.int_range(0, bin_count, eager=True) / bin_count,
                     "count": pl.zeros(n=bin_count, dtype=pl.Int64, eager=True),
                 }
-
             if not include_breakpoint:
                 del data_dict["breakpoint"]
-
-            return PolarsDataFrame(
-                pl.DataFrame(data_dict),
-                backend_version=self._backend_version,
-                version=self._version,
-            )
+            return PolarsDataFrame.from_native(pl.DataFrame(data_dict), context=self)
 
         # polars <1.15 does not adjust the bins when they have equivalent min/max
         # polars <1.5 with bin_count=...
@@ -575,10 +562,7 @@ class PolarsSeries:
 
         if self._backend_version < (1, 0) and include_breakpoint:
             df = df.rename({"break_point": "breakpoint"})
-
-        return PolarsDataFrame(
-            df, backend_version=self._backend_version, version=self._version
-        )
+        return PolarsDataFrame.from_native(df, context=self)
 
     def to_polars(self: Self) -> pl.Series:
         return self.native

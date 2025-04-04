@@ -12,6 +12,7 @@ from narwhals._compliant.group_by import EagerGroupBy
 from narwhals._compliant.group_by import LazyGroupBy
 from narwhals._compliant.namespace import CompliantNamespace
 from narwhals._compliant.namespace import EagerNamespace
+from narwhals._compliant.namespace import LazyNamespace
 from narwhals._compliant.selectors import CompliantSelector
 from narwhals._compliant.selectors import CompliantSelectorNamespace
 from narwhals._compliant.selectors import EagerSelectorNamespace
@@ -64,6 +65,7 @@ __all__ = [
     "IntoCompliantExpr",
     "LazyExpr",
     "LazyGroupBy",
+    "LazyNamespace",
     "LazySelectorNamespace",
     "LazyWhen",
     "NativeFrameT_co",

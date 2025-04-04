@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
     from typing_extensions import TypeAlias
+    from typing_extensions import TypeIs
     from typing_extensions import TypeVar
 
 
@@ -132,3 +133,13 @@ class ArrowConvertible(
     FromArrow[FromArrowDT_contra],
     Protocol[ToArrowT_co, FromArrowDT_contra],
 ): ...
+
+
+FromNativeT = TypeVar("FromNativeT")
+
+
+class FromNative(Protocol[FromNativeT]):
+    @classmethod
+    def from_native(cls, data: FromNativeT, *args: Any, **kwds: Any) -> Self: ...
+    @staticmethod
+    def _is_native(obj: FromNativeT | Any, /) -> TypeIs[FromNativeT]: ...
