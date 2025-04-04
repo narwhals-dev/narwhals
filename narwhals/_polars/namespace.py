@@ -24,7 +24,6 @@ if TYPE_CHECKING:
     from datetime import timezone
 
     from typing_extensions import Self
-    from typing_extensions import TypeAlias
 
     from narwhals._compliant import CompliantSelectorNamespace
     from narwhals._compliant import CompliantWhen
@@ -39,8 +38,6 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
-    Incomplete: TypeAlias = Any
-
 
 class PolarsNamespace:
     all: Method[PolarsExpr]
@@ -51,8 +48,10 @@ class PolarsNamespace:
     sum_horizontal: Method[PolarsExpr]
     min_horizontal: Method[PolarsExpr]
     max_horizontal: Method[PolarsExpr]
-    # NOTE: `PolarsSeries`, `PolarsExpr` still have gaps
-    when: Method[CompliantWhen[PolarsDataFrame, Incomplete, Incomplete]]
+
+    # NOTE: `pyright` accepts, `mypy` doesn't highlight the issue
+    #   error: Type argument "PolarsExpr" of "CompliantWhen" must be a subtype of "CompliantExpr[Any, Any]"
+    when: Method[CompliantWhen[PolarsDataFrame, PolarsSeries, PolarsExpr]]  # type: ignore[type-var]
 
     def __init__(
         self: Self, *, backend_version: tuple[int, ...], version: Version
@@ -231,10 +230,12 @@ class PolarsNamespace:
     # 1. Others have lots of private stuff for code reuse
     #    i. None of that is useful here
     # 2. We don't have a `PolarsSelector` abstraction, and just use `PolarsExpr`
-    # 3. `PolarsExpr` still has it's own gaps in the spec
     @property
-    def selectors(self: Self) -> CompliantSelectorNamespace[Any, Any]:
-        return cast("CompliantSelectorNamespace[Any, Any]", PolarsSelectorNamespace(self))
+    def selectors(self) -> CompliantSelectorNamespace[PolarsDataFrame, PolarsSeries]:
+        return cast(
+            "CompliantSelectorNamespace[PolarsDataFrame, PolarsSeries]",
+            PolarsSelectorNamespace(self),
+        )
 
 
 class PolarsSelectorNamespace:

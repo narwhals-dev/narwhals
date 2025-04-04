@@ -236,7 +236,7 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
 
     @property
     def selectors(self: Self) -> ArrowSelectorNamespace:
-        return ArrowSelectorNamespace(self)
+        return ArrowSelectorNamespace.from_namespace(self)
 
     def when(self: Self, predicate: ArrowExpr) -> ArrowWhen:
         return ArrowWhen.from_expr(predicate, context=self)

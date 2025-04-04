@@ -330,7 +330,10 @@ def test_group_by_categorical(
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (
         15,
     ):  # pragma: no cover
-        pytest.skip(reason="Categoricals not supported in pyarrow < 15")
+        # https://github.com/narwhals-dev/narwhals/issues/1078
+        pytest.skip(
+            reason="The defaults for grouping by categories in pandas are different"
+        )
 
     data = {"g1": ["a", "a", "b", "b"], "g2": ["x", "y", "x", "z"], "x": [1, 2, 3, 4]}
     df = nw.from_native(constructor(data))

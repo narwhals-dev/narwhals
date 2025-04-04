@@ -40,7 +40,7 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "SparkLikeExpr
 
     @property
     def selectors(self: Self) -> SparkLikeSelectorNamespace:
-        return SparkLikeSelectorNamespace(self)
+        return SparkLikeSelectorNamespace.from_namespace(self)
 
     @property
     def _expr(self) -> type[SparkLikeExpr]:
