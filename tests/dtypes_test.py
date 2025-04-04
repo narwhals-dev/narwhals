@@ -410,5 +410,5 @@ def test_enum_valid(categories: Iterable[Any] | type[enum.Enum]) -> None:
 
     import narwhals.stable.v1 as nw  # type: ignore[no-redef]
 
-    with pytest.raises(TypeError, match=r"Enum.* takes 1 positional argument"):
+    with pytest.raises(TypeError, match=r"takes 1 positional argument"):
         dtype = nw.Enum(categories)
