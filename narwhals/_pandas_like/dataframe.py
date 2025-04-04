@@ -584,25 +584,19 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
     def with_columns(
         self: PandasLikeDataFrame, *exprs: PandasLikeExpr
     ) -> PandasLikeDataFrame:
-        new_columns = self._evaluate_into_exprs(*exprs)
-        if not new_columns and len(self) == 0:
+        columns = self._evaluate_into_exprs(*exprs)
+        if not columns and len(self) == 0:
             return self
-
-        new_column_name_to_new_column_map = {s.name: s for s in new_columns}
+        name_columns: dict[str, PandasLikeSeries] = {s.name: s for s in columns}
         to_concat = []
         # Make sure to preserve column order
         for name in self.native.columns:
-            if name in new_column_name_to_new_column_map:
-                to_concat.append(
-                    self._extract_comparand(new_column_name_to_new_column_map.pop(name))
-                )
+            if name in name_columns:
+                series = self._extract_comparand(name_columns.pop(name))
             else:
-                to_concat.append(self.native[name])
-        to_concat.extend(
-            self._extract_comparand(new_column_name_to_new_column_map[s])
-            for s in new_column_name_to_new_column_map
-        )
-
+                series = self.native[name]
+            to_concat.append(series)
+        to_concat.extend(self._extract_comparand(s) for s in name_columns.values())
         df = horizontal_concat(
             to_concat,
             implementation=self._implementation,
