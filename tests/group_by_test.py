@@ -360,7 +360,7 @@ def test_double_same_aggregation(
         # bugged in dask https://github.com/dask/dask/issues/11612
         # and modin lol https://github.com/modin-project/modin/issues/7414
         # and cudf https://github.com/rapidsai/cudf/issues/17649
-        request.applymarker(pytest.mark.xfail())
+        request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor) and PANDAS_VERSION < (1,):
         pytest.skip(
             "Pandas does not support multiple aggregations with the same column for now."
