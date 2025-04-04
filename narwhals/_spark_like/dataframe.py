@@ -495,7 +495,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
         else:  # pragma: no cover
             pass
 
-        ids = () if index is None else tuple(index)
+        ids = tuple(index) if index else ()
         values = (
             tuple(set(self.columns).difference(set(ids))) if on is None else tuple(on)
         )
