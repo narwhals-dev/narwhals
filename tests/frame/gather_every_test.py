@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pandas as pd
 import pytest
 
 import narwhals as nw_main
@@ -24,3 +25,15 @@ def test_gather_every(constructor_eager: ConstructorEager, n: int, offset: int) 
         match="is deprecated and will be removed in a future version"
     ):
         lf.gather_every(n=n, offset=offset)
+
+
+@pytest.mark.parametrize("n", [1, 2, 3])
+@pytest.mark.parametrize("offset", [1, 2, 3])
+def test_gather_every_dask_v1(n: int, offset: int) -> None:
+    pytest.importorskip("dask")
+    import dask.dataframe as dd
+
+    df_v1 = nw.from_native(dd.from_pandas(pd.DataFrame(data)))
+    result = df_v1.gather_every(n=n, offset=offset)
+    expected = {"a": data["a"][offset::n]}
+    assert_equal_data(result, expected)
