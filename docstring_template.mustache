@@ -1,0 +1,26 @@
+{{! narwhals docstring template }}
+{{summaryPlaceholder}}.
+{{#parametersExist}}
+
+Arguments:
+{{#args}}
+    {{var}}: {{descriptionPlaceholder}}
+{{/args}}
+{{#kwargs}}
+    {{var}}: {{descriptionPlaceholder}}
+{{/kwargs}}
+{{/parametersExist}}
+{{#returnsExist}}
+
+Returns:
+{{#returns}}
+    {{descriptionPlaceholder}}
+{{/returns}}
+{{/returnsExist}}
+{{#yieldsExist}}
+
+Yields:
+{{#yields}}
+    {{descriptionPlaceholder}}
+{{/yields}}
+{{/yieldsExist}}
