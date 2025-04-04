@@ -37,6 +37,7 @@ if TYPE_CHECKING:
     class NativeLazyFrame(NativeFrame, Protocol):
         def explain(self, *args: Any, **kwargs: Any) -> Any: ...
 
+    # TODO @dangotbanned: `nw.Series` **cannot** be allowed to match this!!!
     class NativeSeries(Sized, Iterable[Any], Protocol):
         def filter(self, *args: Any, **kwargs: Any) -> Any: ...
 
