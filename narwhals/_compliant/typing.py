@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.expr import EagerExpr
     from narwhals._compliant.expr import LazyExpr
     from narwhals._compliant.expr import NativeExpr
+    from narwhals._compliant.namespace import CompliantNamespace
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals._compliant.series import CompliantSeries
     from narwhals._compliant.series import EagerSeries
@@ -42,6 +43,7 @@ CompliantSeriesOrNativeExprAny: TypeAlias = "CompliantSeriesAny | NativeExpr"
 CompliantDataFrameAny: TypeAlias = "CompliantDataFrame[Any, Any, Any]"
 CompliantLazyFrameAny: TypeAlias = "CompliantLazyFrame[Any, Any]"
 CompliantFrameAny: TypeAlias = "CompliantDataFrameAny | CompliantLazyFrameAny"
+CompliantNamespaceAny: TypeAlias = "CompliantNamespace[Any, Any]"
 
 DepthTrackingExprAny: TypeAlias = "DepthTrackingExpr[Any, Any]"
 

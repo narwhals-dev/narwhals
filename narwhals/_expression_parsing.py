@@ -8,7 +8,6 @@ from enum import auto
 from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Callable
 from typing import Literal
 from typing import Sequence
 from typing import TypeVar
@@ -29,10 +28,13 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantExprT
     from narwhals._compliant import CompliantFrameT
     from narwhals._compliant import CompliantNamespace
+    from narwhals._compliant.typing import AliasNames
+    from narwhals._compliant.typing import CompliantExprAny
+    from narwhals._compliant.typing import CompliantFrameAny
+    from narwhals._compliant.typing import CompliantNamespaceAny
     from narwhals._compliant.typing import EagerNamespaceAny
+    from narwhals._compliant.typing import EvalNames
     from narwhals.expr import Expr
-    from narwhals.typing import CompliantDataFrame
-    from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import IntoExpr
     from narwhals.typing import _1DArray
 
@@ -48,7 +50,7 @@ def is_expr(obj: Any) -> TypeIs[Expr]:
 
 def combine_evaluate_output_names(
     *exprs: CompliantExpr[CompliantFrameT, Any],
-) -> Callable[[CompliantFrameT], Sequence[str]]:
+) -> EvalNames[CompliantFrameT]:
     # Follow left-hand-rule for naming. E.g. `nw.sum_horizontal(expr1, expr2)` takes the
     # first name of `expr1`.
     if not is_compliant_expr(exprs[0]):  # pragma: no cover
@@ -61,9 +63,7 @@ def combine_evaluate_output_names(
     return evaluate_output_names
 
 
-def combine_alias_output_names(
-    *exprs: CompliantExpr[Any, Any],
-) -> Callable[[Sequence[str]], Sequence[str]] | None:
+def combine_alias_output_names(*exprs: CompliantExprAny) -> AliasNames | None:
     # Follow left-hand-rule for naming. E.g. `nw.sum_horizontal(expr1.alias(alias), expr2)` takes the
     # aliasing function of `expr1` and apply it to the first output name of `expr1`.
     if exprs[0]._alias_output_names is None:
@@ -91,9 +91,7 @@ def extract_compliant(
 
 
 def evaluate_output_names_and_aliases(
-    expr: CompliantExpr[Any, Any],
-    df: CompliantDataFrame[Any, Any, Any] | CompliantLazyFrame[Any, Any],
-    exclude: Sequence[str],
+    expr: CompliantExprAny, df: CompliantFrameAny, exclude: Sequence[str]
 ) -> tuple[Sequence[str], Sequence[str]]:
     output_names = expr._evaluate_output_names(df)
     if not output_names:
@@ -410,11 +408,8 @@ def infer_kind(obj: IntoExpr | _1DArray | object, *, str_as_lit: bool) -> ExprKi
 
 
 def apply_n_ary_operation(
-    plx: CompliantNamespace[Any, Any],
-    function: Any,
-    *comparands: IntoExpr,
-    str_as_lit: bool,
-) -> CompliantExpr[Any, Any]:
+    plx: CompliantNamespaceAny, function: Any, *comparands: IntoExpr, str_as_lit: bool
+) -> CompliantExprAny:
     compliant_exprs = (
         extract_compliant(plx, comparand, str_as_lit=str_as_lit)
         for comparand in comparands
