@@ -178,6 +178,8 @@ Examples:
 
 LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[Any]")
 
+SeriesT = TypeVar("SeriesT", bound="Series[Any]")
+
 IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries")
 """TypeVar bound to object convertible to Narwhals Series.
 

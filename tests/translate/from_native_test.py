@@ -377,7 +377,7 @@ def test_series_recursive() -> None:
     pl_series = pl.Series(name="test", values=[1, 2, 3])
     nw_series = unstable_nw.from_native(pl_series, series_only=True)
     with pytest.raises(AssertionError):
-        nw_series_depth_2 = unstable_nw.Series(nw_series, level="full")
+        unstable_nw.Series(nw_series, level="full")
 
     nw_series_passthrough = unstable_nw.from_native(nw_series, series_only=True)
 
@@ -387,9 +387,9 @@ def test_series_recursive() -> None:
         assert_type(pl_series, pl.Series)
         assert_type(nw_series, unstable_nw.Series[pl.Series])
 
-        nw_series_depth_2 = unstable_nw.Series(nw_series, level="full")
+        nw_series_depth_2 = unstable_nw.Series(nw_series, level="full")  # type: ignore[var-annotated]
         # NOTE: Checking that the type is `Series[Unknown]`
-        assert_type(nw_series_depth_2, unstable_nw.Series)
+        assert_type(nw_series_depth_2, unstable_nw.Series)  # type: ignore[type-arg]
 
         # TODO @dangotbanned: Fix this one
         # Current:
