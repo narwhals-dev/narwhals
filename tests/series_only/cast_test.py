@@ -115,9 +115,10 @@ def test_unknown_to_int() -> None:
 
 
 def test_cast_to_enum(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    import narwhals as nw
+    import narwhals as nw_main
+    import narwhals.stable.v1 as nw_v1
 
-    # Backends that do not support Enum dtype
+    # Backends that do not (yet) support Enum dtype
     if any(
         backend in str(constructor)
         for backend in ["pyarrow_table", "duckdb", "sqlframe", "modin"]
@@ -125,10 +126,18 @@ def test_cast_to_enum(request: pytest.FixtureRequest, constructor: Constructor) 
         request.applymarker(pytest.mark.xfail)
 
     df_native = constructor({"a": ["a", "b"]})
+
     with pytest.raises(
         ValueError, match="Can not cast / initialize Enum without categories present"
     ):
-        nw.from_native(df_native).select(nw.col("a").cast(nw.Enum))
+        nw_main.from_native(df_native).select(nw_main.col("a").cast(nw_main.Enum))
 
-    df_nw = nw.from_native(df_native).select(nw.col("a").cast(nw.Enum(["a", "b"])))
-    assert df_nw.collect_schema() == {"a": nw.Enum(["a", "b"])}
+    with pytest.raises(
+        NotImplementedError, match="Converting to Enum is not supported in V1"
+    ):
+        nw_v1.from_native(df_native).select(nw_v1.col("a").cast(nw_v1.Enum))
+
+    df_nw = nw_main.from_native(df_native).select(
+        nw.col("a").cast(nw_main.Enum(["a", "b"]))
+    )
+    assert df_nw.collect_schema() == {"a": nw_main.Enum(["a", "b"])}

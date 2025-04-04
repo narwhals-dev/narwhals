@@ -76,7 +76,30 @@ class Enum(NwEnum):
     """A fixed categorical encoding of a unique set of strings.
 
     Polars has an Enum data type, while pandas and PyArrow do not.
+
+    Examples:
+       >>> import polars as pl
+       >>> import narwhals as nw
+       >>> data = ["beluga", "narwhal", "orca"]
+       >>> s_native = pl.Series(data, dtype=pl.Enum(data))
+       >>> nw.from_native(s_native, series_only=True).dtype
+       Enum
     """
+
+    def __new__(cls: type[Self]) -> Self:
+        return super(NwEnum, cls).__new__(cls)
+
+    def __init__(self: Self) -> None:
+        super(NwEnum, self).__init__()
+
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+        return super(NwEnum, self).__eq__(other)
+
+    def __hash__(self) -> int:
+        return super(NwEnum, self).__hash__()
+
+    def __repr__(self) -> str:
+        return super(NwEnum, self).__repr__()
 
 
 __all__ = [

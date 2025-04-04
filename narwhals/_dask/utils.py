@@ -126,16 +126,15 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> An
     if isinstance_or_issubclass(dtype, dtypes.Boolean):
         return "bool"
     if isinstance_or_issubclass(dtype, dtypes.Enum):
-        if isinstance(dtype, dtypes.Enum):
-            if version is Version.V1:
-                msg = f"Unknown dtype: {dtype}"  # pragma: no cover
-                raise AssertionError(msg)
-            return get_pandas().CategoricalDtype(
-                categories=dtype.categories, ordered=True
-            )
-        else:
+        if version is Version.V1:
+            msg = "Converting to Enum is not supported in V1"
+            raise NotImplementedError(msg)
+
+        if dtype is dtypes.Enum:
             msg = "Can not cast / initialize Enum without categories present"
             raise ValueError(msg)
+        return get_pandas().CategoricalDtype(categories=dtype.categories, ordered=True)
+
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
         return "category"
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
