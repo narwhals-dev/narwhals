@@ -359,6 +359,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             idx_name = generate_temporary_column_name(8, self.columns)
             count_name = generate_temporary_column_name(8, [*self.columns, idx_name])
             partition_by_sql = generate_partition_by_sql(*(subset_))
+            rel = self.native  # noqa: F841
             query = f"""
                 select *,
                         row_number() over ({partition_by_sql}) as "{idx_name}",
