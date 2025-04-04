@@ -17,6 +17,7 @@ from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from types import ModuleType
 
     from narwhals.typing import DTypeBackend
     from tests.utils import Constructor
@@ -89,7 +90,8 @@ def test_actual_object(
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="too old")
-def test_dtypes() -> None:
+@pytest.mark.parametrize("nw", [nw_main, nw])
+def test_dtypes(nw: ModuleType) -> None:
     pytest.importorskip("polars")
     import polars as pl
 
@@ -176,6 +178,19 @@ def test_dtypes() -> None:
 
     assert df_from_pd.schema == df_from_pd.collect_schema() == expected
     assert {name: df_from_pd[name].dtype for name in df_from_pd.columns} == expected
+
+    df_from_pd = nw.from_native(df_pl.to_pandas(), eager_only=True)
+
+    pure_pd_expected = {
+        **expected,
+        "n": nw.Datetime,
+        "s": nw.Object,
+        "u": nw.Object,
+    }
+    assert df_from_pd.schema == df_from_pd.collect_schema() == pure_pd_expected
+    assert {
+        name: df_from_pd[name].dtype for name in df_from_pd.columns
+    } == pure_pd_expected
 
     df_from_pa = nw.from_native(df_pl.to_arrow(), eager_only=True)
 

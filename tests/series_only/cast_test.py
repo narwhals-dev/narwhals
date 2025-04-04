@@ -6,10 +6,13 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+import narwhals as nw_main
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from tests.utils import Constructor
     from tests.utils import ConstructorEager
 
@@ -114,8 +117,10 @@ def test_unknown_to_int() -> None:
     assert nw.from_native(df).select(nw.col("a").cast(nw.Int64)).schema == {"a": nw.Int64}
 
 
-def test_cast_to_enum(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    import narwhals as nw_main
+@pytest.mark.parametrize("nw", [nw_main, nw])
+def test_cast_to_enum(
+    request: pytest.FixtureRequest, constructor: Constructor, *, nw: ModuleType
+) -> None:
     import narwhals.stable.v1 as nw_v1
 
     # Backends that do not (yet) support Enum dtype
@@ -130,14 +135,13 @@ def test_cast_to_enum(request: pytest.FixtureRequest, constructor: Constructor) 
     with pytest.raises(
         ValueError, match="Can not cast / initialize Enum without categories present"
     ):
-        nw_main.from_native(df_native).select(nw_main.col("a").cast(nw_main.Enum))
+        nw.from_native(df_native).select(nw.col("a").cast(nw.Enum))
 
-    with pytest.raises(
-        NotImplementedError, match="Converting to Enum is not supported in V1"
-    ):
-        nw_v1.from_native(df_native).select(nw_v1.col("a").cast(nw_v1.Enum))
+    if nw is nw_v1:
+        with pytest.raises(
+            NotImplementedError, match="Converting to Enum is not supported in V1"
+        ):
+            nw.from_native(df_native).select(nw.col("a").cast(nw.Enum))
 
-    df_nw = nw_main.from_native(df_native).select(
-        nw.col("a").cast(nw_main.Enum(["a", "b"]))
-    )
-    assert df_nw.collect_schema() == {"a": nw_main.Enum(["a", "b"])}
+    df_nw = nw.from_native(df_native).select(nw.col("a").cast(nw.Enum(["a", "b"])))
+    assert df_nw.collect_schema() == {"a": nw.Enum(["a", "b"])}
