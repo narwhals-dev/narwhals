@@ -9,6 +9,7 @@ from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow
 from narwhals.utils import Implementation
+from narwhals.utils import Version
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 from narwhals.utils import parse_version
@@ -24,7 +25,6 @@ if TYPE_CHECKING:
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.expr import DaskExpr
     from narwhals.dtypes import DType
-    from narwhals.utils import Version
 
 
 def maybe_evaluate_expr(df: DaskLazyFrame, obj: DaskExpr | object) -> dx.Series | object:
@@ -125,6 +125,17 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> An
         return "object"  # pragma: no cover
     if isinstance_or_issubclass(dtype, dtypes.Boolean):
         return "bool"
+    if isinstance_or_issubclass(dtype, dtypes.Enum):
+        if isinstance(dtype, dtypes.Enum):
+            if version is Version.V1:
+                msg = f"Unknown dtype: {dtype}"  # pragma: no cover
+                raise AssertionError(msg)
+            return get_pandas().CategoricalDtype(
+                categories=dtype.categories, ordered=True
+            )
+        else:
+            msg = "Can not cast / initialize Enum without categories present"
+            raise ValueError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
         return "category"
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
