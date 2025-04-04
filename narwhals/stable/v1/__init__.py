@@ -2061,7 +2061,7 @@ def concat(
 def concat(
     items: Iterable[LazyFrame[IntoFrameT]],
     *,
-    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
+    how: Literal["vertical", "diagonal"] = "vertical",
 ) -> LazyFrame[IntoFrameT]: ...
 
 

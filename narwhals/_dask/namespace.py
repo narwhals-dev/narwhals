@@ -154,7 +154,7 @@ class DaskNamespace(
         self: Self,
         items: Iterable[DaskLazyFrame],
         *,
-        how: Literal["horizontal", "vertical", "diagonal"],
+        how: Literal["vertical", "diagonal"],
     ) -> DaskLazyFrame:
         if not items:
             msg = "No items to concatenate"  # pragma: no cover
@@ -175,24 +175,6 @@ class DaskNamespace(
                     raise TypeError(msg)
             return DaskLazyFrame(
                 dd.concat(dfs, axis=0, join="inner"),
-                backend_version=self._backend_version,
-                version=self._version,
-            )
-        if how == "horizontal":
-            all_column_names: list[str] = [
-                column for frame in dfs for column in frame.columns
-            ]
-            if len(all_column_names) != len(set(all_column_names)):  # pragma: no cover
-                duplicates = [
-                    i for i in all_column_names if all_column_names.count(i) > 1
-                ]
-                msg = (
-                    f"Columns with name(s): {', '.join(duplicates)} "
-                    "have more than one occurrence"
-                )
-                raise AssertionError(msg)
-            return DaskLazyFrame(
-                dd.concat(dfs, axis=1, join="outer"),
                 backend_version=self._backend_version,
                 version=self._version,
             )

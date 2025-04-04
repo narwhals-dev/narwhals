@@ -63,11 +63,8 @@ class DuckDBNamespace(
         self: Self,
         items: Iterable[DuckDBLazyFrame],
         *,
-        how: Literal["horizontal", "vertical", "diagonal"],
+        how: Literal["vertical", "diagonal"],
     ) -> DuckDBLazyFrame:
-        if how == "horizontal":
-            msg = "horizontal concat not supported for duckdb. Please join instead"
-            raise TypeError(msg)
         if how == "diagonal":
             msg = "Not implemented yet"
             raise NotImplementedError(msg)

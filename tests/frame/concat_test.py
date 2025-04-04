@@ -4,19 +4,16 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-def test_concat_horizontal(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_concat_horizontal(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df_left = nw.from_native(constructor(data)).lazy()
+    df_left = nw.from_native(constructor_eager(data), eager_only=True)
 
     data_right = {"c": [6, 12, -1], "d": [0, -4, 2]}
-    df_right = nw.from_native(constructor(data_right)).lazy()
+    df_right = nw.from_native(constructor_eager(data_right), eager_only=True)
 
     result = nw.concat([df_left, df_right], how="horizontal")
     expected = {

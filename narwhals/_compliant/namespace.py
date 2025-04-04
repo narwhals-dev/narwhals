@@ -78,7 +78,7 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
         self,
         items: Iterable[CompliantFrameT],
         *,
-        how: Literal["horizontal", "vertical", "diagonal"],
+        how: Literal["vertical", "diagonal"],
     ) -> CompliantFrameT: ...
     def when(
         self, predicate: CompliantExprT
@@ -184,3 +184,10 @@ class EagerNamespace(
         if is_numpy_array_2d(data):
             return self._dataframe.from_numpy(data, schema=schema, context=self)
         return self._series.from_numpy(data, context=self)
+
+    def concat(
+        self,
+        items: Iterable[EagerDataFrameT],
+        *,
+        how: Literal["horizontal", "vertical", "diagonal"],
+    ) -> EagerDataFrameT: ...
