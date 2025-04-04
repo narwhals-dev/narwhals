@@ -83,6 +83,11 @@ def test_unique_full_subset(
     assert_equal_data(result, expected)
 
 
+def test_unique_invalid_keep(constructor: Constructor) -> None:
+    with pytest.raises(ValueError, match=r"(Got|got): cabbage"):
+        nw.from_native(constructor(data)).unique(keep="cabbage")  # type: ignore[arg-type]
+
+
 @pytest.mark.filterwarnings("ignore:.*backwards-compatibility:UserWarning")
 def test_unique_none(constructor: Constructor) -> None:
     df_raw = constructor(data)
