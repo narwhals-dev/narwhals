@@ -22,6 +22,7 @@ from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
 from narwhals.utils import find_stacklevel
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import is_spark_like_dataframe
 from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -36,12 +37,14 @@ if TYPE_CHECKING:
     from sqlframe.base.window import Window
     from typing_extensions import Self
     from typing_extensions import TypeAlias
+    from typing_extensions import TypeIs
 
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
     SQLFrameDataFrame = BaseDataFrame[Any, Any, Any, Any, Any]
 
@@ -91,6 +94,19 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
             return Window
         else:
             return import_window(self._implementation)
+
+    @staticmethod
+    def _is_native(obj: SQLFrameDataFrame | Any) -> TypeIs[SQLFrameDataFrame]:
+        return is_spark_like_dataframe(obj)
+
+    @classmethod
+    def from_native(cls, data: SQLFrameDataFrame, /, *, context: _FullContext) -> Self:
+        return cls(
+            data,
+            backend_version=context._backend_version,
+            version=context._version,
+            implementation=context._implementation,
+        )
 
     def __native_namespace__(self: Self) -> ModuleType:  # pragma: no cover
         return self._implementation.to_native_namespace()

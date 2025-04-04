@@ -37,12 +37,14 @@ if TYPE_CHECKING:
     import pandas as pd
     import pyarrow as pa
     from typing_extensions import Self
+    from typing_extensions import TypeIs
 
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals._duckdb.group_by import DuckDBGroupBy
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.series import DuckDBInterchangeSeries
     from narwhals.dtypes import DType
+    from narwhals.utils import _FullContext
 
 from narwhals.typing import CompliantLazyFrame
 
@@ -62,6 +64,18 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
         self._backend_version = backend_version
         self._cached_schema: dict[str, DType] | None = None
         validate_backend_version(self._implementation, self._backend_version)
+
+    @staticmethod
+    def _is_native(obj: duckdb.DuckDBPyRelation | Any) -> TypeIs[duckdb.DuckDBPyRelation]:
+        return isinstance(obj, duckdb.DuckDBPyRelation)
+
+    @classmethod
+    def from_native(
+        cls, data: duckdb.DuckDBPyRelation, /, *, context: _FullContext
+    ) -> Self:
+        return cls(
+            data, backend_version=context._backend_version, version=context._version
+        )
 
     def __narwhals_dataframe__(self: Self) -> Self:  # pragma: no cover
         # Keep around for backcompat.

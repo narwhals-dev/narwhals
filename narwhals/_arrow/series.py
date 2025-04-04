@@ -43,6 +43,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     from typing_extensions import Self
+    from typing_extensions import TypeIs
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
@@ -135,12 +136,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         *,
         preserve_broadcast: bool = False,
     ) -> Self:
-        result = self.__class__(
-            chunked_array(series),
-            name=self._name,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        result = self.from_native(chunked_array(series), name=self.name, context=self)
         if preserve_broadcast:
             result._broadcast = self._broadcast
         return result
@@ -156,17 +152,29 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     ) -> Self:
         version = context._version
         dtype_pa = narwhals_to_native_dtype(dtype, version) if dtype else None
-        return cls(
-            chunked_array([data], dtype_pa),
-            name=name,
-            backend_version=context._backend_version,
-            version=version,
+        return cls.from_native(
+            chunked_array([data], dtype_pa), name=name, context=context
         )
 
     def _from_scalar(self, value: Any) -> Self:
         if self._backend_version < (13,) and hasattr(value, "as_py"):
             value = value.as_py()
         return super()._from_scalar(value)
+
+    @staticmethod
+    def _is_native(obj: ArrowChunkedArray | Any) -> TypeIs[ArrowChunkedArray]:
+        return isinstance(obj, pa.ChunkedArray)
+
+    @classmethod
+    def from_native(
+        cls, data: ArrowChunkedArray, /, *, context: _FullContext, name: str = ""
+    ) -> Self:
+        return cls(
+            data,
+            backend_version=context._backend_version,
+            version=context._version,
+            name=name,
+        )
 
     @classmethod
     def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
@@ -546,7 +554,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             return self._with_native(self.native.slice(abs(n)))
 
     def is_in(self: Self, other: Any) -> Self:
-        if isinstance(other, pa.ChunkedArray):
+        if self._is_native(other):
             value_set: ArrowChunkedArray | ArrowArray = other
         else:
             value_set = pa.array(other)

@@ -13,10 +13,15 @@ from typing import overload
 
 from narwhals._compliant.typing import CompliantExprT
 from narwhals._compliant.typing import CompliantFrameT
+from narwhals._compliant.typing import CompliantLazyFrameT
 from narwhals._compliant.typing import DepthTrackingExprT
 from narwhals._compliant.typing import EagerDataFrameT
 from narwhals._compliant.typing import EagerExprT
 from narwhals._compliant.typing import EagerSeriesT
+from narwhals._compliant.typing import LazyExprT
+from narwhals._compliant.typing import NativeFrameT_co
+from narwhals._compliant.typing import NativeFrameT_contra
+from narwhals._compliant.typing import NativeSeriesT
 from narwhals.dependencies import is_numpy_array_2d
 from narwhals.utils import exclude_column_names
 from narwhals.utils import get_column_names
@@ -112,9 +117,25 @@ class DepthTrackingNamespace(
         )
 
 
+class LazyNamespace(
+    CompliantNamespace[CompliantLazyFrameT, LazyExprT],
+    Protocol[CompliantLazyFrameT, LazyExprT, NativeFrameT_co],
+):
+    @property
+    def _lazyframe(self) -> type[CompliantLazyFrameT]: ...
+
+    def from_native(self, data: NativeFrameT_co | Any, /) -> CompliantLazyFrameT:
+        if self._lazyframe._is_native(data):
+            return self._lazyframe.from_native(data, context=self)
+        msg = f"Unsupported type: {type(data).__name__!r}"
+        raise TypeError(msg)
+
+
 class EagerNamespace(
     DepthTrackingNamespace[EagerDataFrameT, EagerExprT],
-    Protocol[EagerDataFrameT, EagerSeriesT, EagerExprT],
+    Protocol[
+        EagerDataFrameT, EagerSeriesT, EagerExprT, NativeFrameT_contra, NativeSeriesT
+    ],
 ):
     @property
     def _dataframe(self) -> type[EagerDataFrameT]: ...
@@ -122,7 +143,21 @@ class EagerNamespace(
     def _series(self) -> type[EagerSeriesT]: ...
     def when(
         self, predicate: EagerExprT
-    ) -> EagerWhen[EagerDataFrameT, EagerSeriesT, EagerExprT, Incomplete]: ...
+    ) -> EagerWhen[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeSeriesT]: ...
+
+    @overload
+    def from_native(self, data: NativeFrameT_contra, /) -> EagerDataFrameT: ...
+    @overload
+    def from_native(self, data: NativeSeriesT, /) -> EagerSeriesT: ...
+    def from_native(
+        self, data: NativeFrameT_contra | NativeSeriesT | Any, /
+    ) -> EagerDataFrameT | EagerSeriesT:
+        if self._dataframe._is_native(data):
+            return self._dataframe.from_native(data, context=self)
+        elif self._series._is_native(data):
+            return self._series.from_native(data, context=self)
+        msg = f"Unsupported type: {type(data).__name__!r}"
+        raise TypeError(msg)
 
     @overload
     def from_numpy(

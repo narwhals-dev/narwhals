@@ -15,9 +15,10 @@ from duckdb import FunctionExpression
 from duckdb.typing import BIGINT
 from duckdb.typing import VARCHAR
 
-from narwhals._compliant import CompliantNamespace
 from narwhals._compliant import CompliantThen
+from narwhals._compliant import LazyNamespace
 from narwhals._compliant import LazyWhen
+from narwhals._duckdb.dataframe import DuckDBLazyFrame
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.selectors import DuckDBSelectorNamespace
 from narwhals._duckdb.utils import concat_str
@@ -31,12 +32,13 @@ from narwhals.utils import Implementation
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
 
-class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
+class DuckDBNamespace(
+    LazyNamespace[DuckDBLazyFrame, DuckDBExpr, duckdb.DuckDBPyRelation]
+):
     _implementation: Implementation = Implementation.DUCKDB
 
     def __init__(
@@ -47,11 +49,15 @@ class DuckDBNamespace(CompliantNamespace["DuckDBLazyFrame", "DuckDBExpr"]):
 
     @property
     def selectors(self: Self) -> DuckDBSelectorNamespace:
-        return DuckDBSelectorNamespace(self)
+        return DuckDBSelectorNamespace.from_namespace(self)
 
     @property
     def _expr(self) -> type[DuckDBExpr]:
         return DuckDBExpr
+
+    @property
+    def _lazyframe(self) -> type[DuckDBLazyFrame]:
+        return DuckDBLazyFrame
 
     def concat(
         self: Self,

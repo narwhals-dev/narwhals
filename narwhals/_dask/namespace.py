@@ -13,6 +13,7 @@ import pandas as pd
 
 from narwhals._compliant import CompliantThen
 from narwhals._compliant import CompliantWhen
+from narwhals._compliant import LazyNamespace
 from narwhals._compliant.namespace import DepthTrackingNamespace
 from narwhals._dask.dataframe import DaskLazyFrame
 from narwhals._dask.expr import DaskExpr
@@ -38,16 +39,23 @@ if TYPE_CHECKING:
         import dask_expr as dx
 
 
-class DaskNamespace(DepthTrackingNamespace[DaskLazyFrame, "DaskExpr"]):
+class DaskNamespace(
+    LazyNamespace[DaskLazyFrame, DaskExpr, dd.DataFrame],
+    DepthTrackingNamespace[DaskLazyFrame, DaskExpr],
+):
     _implementation: Implementation = Implementation.DASK
 
     @property
     def selectors(self: Self) -> DaskSelectorNamespace:
-        return DaskSelectorNamespace(self)
+        return DaskSelectorNamespace.from_namespace(self)
 
     @property
     def _expr(self) -> type[DaskExpr]:
         return DaskExpr
+
+    @property
+    def _lazyframe(self) -> type[DaskLazyFrame]:
+        return DaskLazyFrame
 
     def __init__(
         self: Self, *, backend_version: tuple[int, ...], version: Version
