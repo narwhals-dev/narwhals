@@ -126,4 +126,4 @@ See [underwater unicorn magic](https://narwhals-dev.github.io/narwhals/how_it_wo
 """
 
 EvalNames: TypeAlias = Callable[[CompliantFrameT], Sequence[str]]
-"""**NEEDS DOC**"""
+"""A function from a `Frame` to a sequence of columns names *before* any aliasing takes place."""
