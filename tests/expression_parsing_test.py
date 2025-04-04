@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
+from narwhals.exceptions import InvalidOperationError
 
 
 @pytest.mark.parametrize(
@@ -21,3 +22,10 @@ import narwhals as nw
 )
 def test_has_open_windows(expr: nw.Expr, expected: int) -> None:
     assert expr._metadata.n_open_windows == expected
+
+
+def test_misleading_order_by() -> None:
+    with pytest.raises(InvalidOperationError):
+        nw.col("a").mean().over(order_by="b")
+    with pytest.raises(InvalidOperationError):
+        nw.col("a").rank().over(order_by="b")

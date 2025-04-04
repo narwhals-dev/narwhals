@@ -28,6 +28,6 @@ class DuckDBGroupBy(LazyGroupBy["DuckDBLazyFrame", "DuckDBExpr", "Expression"]):
 
     def agg(self: Self, *exprs: DuckDBExpr) -> DuckDBLazyFrame:
         agg_columns = list(chain(self._keys, self._evaluate_exprs(exprs)))
-        return self.compliant._from_native_frame(
+        return self.compliant._with_native(
             self.compliant.native.aggregate(agg_columns)  # type: ignore[arg-type]
         )

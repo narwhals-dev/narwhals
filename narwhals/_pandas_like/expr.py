@@ -33,6 +33,9 @@ WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
     # So, instead of using "cumcount" we use "cumsum" on notna() to get the same result
     "cum_count": "cumsum",
     "rolling_sum": "sum",
+    "rolling_mean": "mean",
+    "rolling_std": "std",
+    "rolling_var": "var",
     "shift": "shift",
     "rank": "rank",
     "diff": "diff",
@@ -265,12 +268,17 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         list(output_names)
                     ].rolling(**pandas_kwargs)
                     assert pandas_function_name is not None  # help mypy  # noqa: S101
-                    res_native = getattr(rolling, pandas_function_name)()
+                    if pandas_function_name in {"std", "var"}:
+                        res_native = getattr(rolling, pandas_function_name)(
+                            ddof=self._call_kwargs["ddof"]
+                        )
+                    else:
+                        res_native = getattr(rolling, pandas_function_name)()
                 else:
                     res_native = df._native_frame.groupby(partition_by)[
                         list(output_names)
                     ].transform(pandas_function_name, **pandas_kwargs)
-                result_frame = df._from_native_frame(res_native).rename(
+                result_frame = df._with_native(res_native).rename(
                     dict(zip(output_names, aliases))
                 )
                 results = [result_frame[name] for name in aliases]
@@ -314,6 +322,44 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 "window_size": window_size,
                 "min_samples": min_samples,
                 "center": center,
+            },
+        )
+
+    def rolling_mean(
+        self: Self, window_size: int, *, min_samples: int, center: bool
+    ) -> Self:
+        return self._reuse_series(
+            "rolling_mean",
+            call_kwargs={
+                "window_size": window_size,
+                "min_samples": min_samples,
+                "center": center,
+            },
+        )
+
+    def rolling_std(
+        self: Self, window_size: int, *, min_samples: int, center: bool, ddof: int
+    ) -> Self:
+        return self._reuse_series(
+            "rolling_std",
+            call_kwargs={
+                "window_size": window_size,
+                "min_samples": min_samples,
+                "center": center,
+                "ddof": ddof,
+            },
+        )
+
+    def rolling_var(
+        self: Self, window_size: int, *, min_samples: int, center: bool, ddof: int
+    ) -> Self:
+        return self._reuse_series(
+            "rolling_var",
+            call_kwargs={
+                "window_size": window_size,
+                "min_samples": min_samples,
+                "center": center,
+                "ddof": ddof,
             },
         )
 

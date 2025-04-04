@@ -108,7 +108,9 @@ def render_table_and_write_to_output(
     results: pl.DataFrame = (
         pl.concat(results)
         .with_columns(supported=pl.lit(":white_check_mark:"))
-        .pivot(on="Backend", values="supported", index=["Method"])
+        .pivot(
+            on="Backend", values="supported", index=["Method"], aggregate_function="first"
+        )
         .filter(pl.col("narwhals").is_not_null())
         .drop("narwhals")
         .fill_null(":x:")

@@ -17,4 +17,4 @@ class ArrowSeriesCatNamespace(ArrowSeriesNamespace):
     def get_categories(self: Self) -> ArrowSeries:
         # NOTE: Should be `list[pa.DictionaryArray]`, but `DictionaryArray` has no attributes
         chunks: Incomplete = self.native.chunks
-        return self.from_native(pa.concat_arrays(x.dictionary for x in chunks).unique())
+        return self.with_native(pa.concat_arrays(x.dictionary for x in chunks).unique())

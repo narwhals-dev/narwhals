@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
+from typing import Iterator
+from typing import Mapping
 from typing import Sequence
 from typing import cast
 from typing import overload
@@ -21,8 +24,12 @@ if TYPE_CHECKING:
     from types import ModuleType
     from typing import TypeVar
 
+    import pandas as pd
     from typing_extensions import Self
+    from typing_extensions import TypeIs
 
+    from narwhals._arrow.typing import ArrowArray
+    from narwhals._polars.dataframe import Method
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.namespace import PolarsNamespace
@@ -69,20 +76,46 @@ class PolarsSeries:
         msg = f"Expected polars, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
-    def _change_version(self: Self, version: Version) -> Self:
+    def _with_version(self: Self, version: Version) -> Self:
         return self.__class__(
             self.native, backend_version=self._backend_version, version=version
         )
 
     @classmethod
-    def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
+    def from_iterable(
+        cls,
+        data: Iterable[Any],
+        *,
+        context: _FullContext,
+        name: str = "",
+        dtype: DType | type[DType] | None = None,
+    ) -> Self:
+        version = context._version
+        backend_version = context._backend_version
+        dtype_pl = (
+            narwhals_to_native_dtype(dtype, version, backend_version) if dtype else None
+        )
+        # NOTE: `Iterable` is fine, annotation is overly narrow
+        # https://github.com/pola-rs/polars/blob/82d57a4ee41f87c11ca1b1af15488459727efdd7/py-polars/polars/series/series.py#L332-L333
+        native = pl.Series(name=name, values=cast("Sequence[Any]", data), dtype=dtype_pl)
+        return cls.from_native(native, context=context)
+
+    @staticmethod
+    def _is_native(obj: pl.Series | Any) -> TypeIs[pl.Series]:
+        return isinstance(obj, pl.Series)
+
+    @classmethod
+    def from_native(cls, data: pl.Series, /, *, context: _FullContext) -> Self:
         return cls(
-            pl.Series(data if is_numpy_array_1d(data) else [data]),
-            backend_version=context._backend_version,
-            version=context._version,
+            data, backend_version=context._backend_version, version=context._version
         )
 
-    def _from_native_series(self: Self, series: pl.Series) -> Self:
+    @classmethod
+    def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
+        native = pl.Series(data if is_numpy_array_1d(data) else [data])
+        return cls.from_native(native, context=context)
+
+    def _with_native(self: Self, series: pl.Series) -> Self:
         return self.__class__(
             series, backend_version=self._backend_version, version=self._version
         )
@@ -99,14 +132,12 @@ class PolarsSeries:
     def _from_native_object(
         self: Self, series: pl.Series | pl.DataFrame | T
     ) -> Self | PolarsDataFrame | T:
-        if isinstance(series, pl.Series):
-            return self._from_native_series(series)
+        if self._is_native(series):
+            return self._with_native(series)
         if isinstance(series, pl.DataFrame):
             from narwhals._polars.dataframe import PolarsDataFrame
 
-            return PolarsDataFrame(
-                series, backend_version=self._backend_version, version=self._version
-            )
+            return PolarsDataFrame.from_native(series, context=self)
         # scalar
         return series
 
@@ -118,8 +149,8 @@ class PolarsSeries:
             raise AttributeError
 
         def func(*args: Any, **kwargs: Any) -> Any:
-            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
-            return self._from_native_object(getattr(self.native, attr)(*args, **kwargs))
+            pos, kwds = extract_args_kwargs(args, kwargs)
+            return self._from_native_object(getattr(self.native, attr)(*pos, **kwds))
 
         return func
 
@@ -154,12 +185,16 @@ class PolarsSeries:
     ) -> Any | Self:
         return self._from_native_object(self.native.__getitem__(item))
 
-    def cast(self: Self, dtype: DType) -> Self:
+    def cast(self: Self, dtype: DType | type[DType]) -> Self:
         dtype_pl = narwhals_to_native_dtype(dtype, self._version, self._backend_version)
-        return self._from_native_series(self.native.cast(dtype_pl))
+        return self._with_native(self.native.cast(dtype_pl))
 
     def replace_strict(
-        self: Self, old: Sequence[Any], new: Sequence[Any], *, return_dtype: DType | None
+        self: Self,
+        old: Sequence[Any] | Mapping[Any, Any],
+        new: Sequence[Any],
+        *,
+        return_dtype: DType | type[DType] | None,
     ) -> Self:
         ser = self.native
         dtype = (
@@ -170,7 +205,7 @@ class PolarsSeries:
         if self._backend_version < (1,):
             msg = f"`replace_strict` is only available in Polars>=1.0, found version {self._backend_version}"
             raise NotImplementedError(msg)
-        return self._from_native_series(ser.replace_strict(old, new, return_dtype=dtype))
+        return self._with_native(ser.replace_strict(old, new, return_dtype=dtype))
 
     def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
         return self.__array__(dtype, copy=copy)
@@ -181,59 +216,59 @@ class PolarsSeries:
         return self.native.__array__(dtype=dtype, copy=copy)
 
     def __eq__(self: Self, other: object) -> Self:  # type: ignore[override]
-        return self._from_native_series(self.native.__eq__(extract_native(other)))
+        return self._with_native(self.native.__eq__(extract_native(other)))
 
     def __ne__(self: Self, other: object) -> Self:  # type: ignore[override]
-        return self._from_native_series(self.native.__ne__(extract_native(other)))
+        return self._with_native(self.native.__ne__(extract_native(other)))
 
     def __ge__(self: Self, other: Any) -> Self:
-        return self._from_native_series(self.native.__ge__(extract_native(other)))
+        return self._with_native(self.native.__ge__(extract_native(other)))
 
     def __gt__(self: Self, other: Any) -> Self:
-        return self._from_native_series(self.native.__gt__(extract_native(other)))
+        return self._with_native(self.native.__gt__(extract_native(other)))
 
     def __le__(self: Self, other: Any) -> Self:
-        return self._from_native_series(self.native.__le__(extract_native(other)))
+        return self._with_native(self.native.__le__(extract_native(other)))
 
     def __lt__(self: Self, other: Any) -> Self:
-        return self._from_native_series(self.native.__lt__(extract_native(other)))
+        return self._with_native(self.native.__lt__(extract_native(other)))
 
     def __and__(self: Self, other: PolarsSeries | bool | Any) -> Self:
-        return self._from_native_series(self.native.__and__(extract_native(other)))
+        return self._with_native(self.native.__and__(extract_native(other)))
 
     def __or__(self: Self, other: PolarsSeries | bool | Any) -> Self:
-        return self._from_native_series(self.native.__or__(extract_native(other)))
+        return self._with_native(self.native.__or__(extract_native(other)))
 
     def __add__(self: Self, other: PolarsSeries | Any) -> Self:
-        return self._from_native_series(self.native.__add__(extract_native(other)))
+        return self._with_native(self.native.__add__(extract_native(other)))
 
     def __radd__(self: Self, other: PolarsSeries | Any) -> Self:
-        return self._from_native_series(self.native.__radd__(extract_native(other)))
+        return self._with_native(self.native.__radd__(extract_native(other)))
 
     def __sub__(self: Self, other: PolarsSeries | Any) -> Self:
-        return self._from_native_series(self.native.__sub__(extract_native(other)))
+        return self._with_native(self.native.__sub__(extract_native(other)))
 
     def __rsub__(self: Self, other: PolarsSeries | Any) -> Self:
-        return self._from_native_series(self.native.__rsub__(extract_native(other)))
+        return self._with_native(self.native.__rsub__(extract_native(other)))
 
     def __mul__(self: Self, other: PolarsSeries | Any) -> Self:
-        return self._from_native_series(self.native.__mul__(extract_native(other)))
+        return self._with_native(self.native.__mul__(extract_native(other)))
 
     def __rmul__(self: Self, other: PolarsSeries | Any) -> Self:
-        return self._from_native_series(self.native.__rmul__(extract_native(other)))
+        return self._with_native(self.native.__rmul__(extract_native(other)))
 
     def __pow__(self: Self, other: PolarsSeries | Any) -> Self:
-        return self._from_native_series(self.native.__pow__(extract_native(other)))
+        return self._with_native(self.native.__pow__(extract_native(other)))
 
     def __rpow__(self: Self, other: PolarsSeries | Any) -> Self:
         result = self.native.__rpow__(extract_native(other))
         if self._backend_version < (1, 16, 1):
             # Explicitly set alias to work around https://github.com/pola-rs/polars/issues/20071
             result = result.alias(self.name)
-        return self._from_native_series(result)
+        return self._with_native(result)
 
     def __invert__(self: Self) -> Self:
-        return self._from_native_series(self.native.__invert__())
+        return self._with_native(self.native.__invert__())
 
     def is_nan(self: Self) -> Self:
         try:
@@ -242,8 +277,8 @@ class PolarsSeries:
             raise catch_polars_exception(e, self._backend_version) from None
         if self._backend_version < (1, 18):  # pragma: no cover
             select = pl.when(self.native.is_not_null()).then(native_is_nan)
-            return self._from_native_series(pl.select(select)[self.name])
-        return self._from_native_series(native_is_nan)
+            return self._with_native(pl.select(select)[self.name])
+        return self._with_native(native_is_nan)
 
     def median(self: Self) -> Any:
         from narwhals.exceptions import InvalidOperationError
@@ -268,9 +303,7 @@ class PolarsSeries:
         else:
             result = self.native.to_dummies(separator=separator, drop_first=drop_first)
         result = result.with_columns(pl.all().cast(pl.Int8))
-        return PolarsDataFrame(
-            result, backend_version=self._backend_version, version=self._version
-        )
+        return PolarsDataFrame.from_native(result, context=self)
 
     def ewm_mean(
         self: Self,
@@ -299,13 +332,13 @@ class PolarsSeries:
             **extra_kwargs,
         )
         if self._backend_version < (1,):  # pragma: no cover
-            return self._from_native_series(
+            return self._with_native(
                 pl.select(
                     pl.when(~self.native.is_null()).then(native_result).otherwise(None)
                 )[self.native.name]
             )
 
-        return self._from_native_series(native_result)
+        return self._with_native(native_result)
 
     def rolling_var(
         self: Self,
@@ -319,18 +352,15 @@ class PolarsSeries:
             msg = "`rolling_var` not implemented for polars older than 1.0"
             raise NotImplementedError(msg)
 
-        extra_kwargs = (
+        extra_kwargs: dict[str, Any] = (
             {"min_periods": min_samples}
             if self._backend_version < (1, 21, 0)
             else {"min_samples": min_samples}
         )
 
-        return self._from_native_series(
+        return self._with_native(
             self.native.rolling_var(
-                window_size=window_size,
-                center=center,
-                ddof=ddof,
-                **extra_kwargs,  # type: ignore[arg-type]
+                window_size=window_size, center=center, ddof=ddof, **extra_kwargs
             )
         )
 
@@ -346,18 +376,15 @@ class PolarsSeries:
             msg = "`rolling_std` not implemented for polars older than 1.0"
             raise NotImplementedError(msg)
 
-        extra_kwargs = (
+        extra_kwargs: dict[str, Any] = (
             {"min_periods": min_samples}
             if self._backend_version < (1, 21, 0)
             else {"min_samples": min_samples}
         )
 
-        return self._from_native_series(
+        return self._with_native(
             self.native.rolling_std(
-                window_size=window_size,
-                center=center,
-                ddof=ddof,
-                **extra_kwargs,  # type: ignore[arg-type]
+                window_size=window_size, center=center, ddof=ddof, **extra_kwargs
             )
         )
 
@@ -368,17 +395,15 @@ class PolarsSeries:
         min_samples: int,
         center: bool,
     ) -> Self:
-        extra_kwargs = (
+        extra_kwargs: dict[str, Any] = (
             {"min_periods": min_samples}
             if self._backend_version < (1, 21, 0)
             else {"min_samples": min_samples}
         )
 
-        return self._from_native_series(
+        return self._with_native(
             self.native.rolling_sum(
-                window_size=window_size,
-                center=center,
-                **extra_kwargs,  # type: ignore[arg-type]
+                window_size=window_size, center=center, **extra_kwargs
             )
         )
 
@@ -389,17 +414,15 @@ class PolarsSeries:
         min_samples: int,
         center: bool,
     ) -> Self:
-        extra_kwargs = (
+        extra_kwargs: dict[str, Any] = (
             {"min_periods": min_samples}
             if self._backend_version < (1, 21, 0)
             else {"min_samples": min_samples}
         )
 
-        return self._from_native_series(
+        return self._with_native(
             self.native.rolling_mean(
-                window_size=window_size,
-                center=center,
-                **extra_kwargs,  # type: ignore[arg-type]
+                window_size=window_size, center=center, **extra_kwargs
             )
         )
 
@@ -413,11 +436,11 @@ class PolarsSeries:
         else:
             result = self.native.sort(descending=descending, nulls_last=nulls_last)
 
-        return self._from_native_series(result)
+        return self._with_native(result)
 
     def scatter(self: Self, indices: int | Sequence[int], values: Any) -> Self:
         s = self.native.clone().scatter(indices, extract_native(values))
-        return self._from_native_series(s)
+        return self._with_native(s)
 
     def value_counts(
         self: Self,
@@ -440,15 +463,11 @@ class PolarsSeries:
                     else pl.col("count"),
                 }
             )
-
         else:
             result = self.native.value_counts(
                 sort=sort, parallel=parallel, name=name, normalize=normalize
             )
-
-        return PolarsDataFrame(
-            result, backend_version=self._backend_version, version=self._version
-        )
+        return PolarsDataFrame.from_native(result, context=self)
 
     def cum_count(self: Self, *, reverse: bool) -> Self:
         if self._backend_version < (0, 20, 4):
@@ -457,7 +476,7 @@ class PolarsSeries:
         else:
             result = self.native.cum_count(reverse=reverse)
 
-        return self._from_native_series(result)
+        return self._with_native(result)
 
     def __contains__(self: Self, other: Any) -> bool:
         try:
@@ -479,11 +498,7 @@ class PolarsSeries:
             if include_breakpoint:
                 data.append(pl.Series("breakpoint", [], dtype=pl.Float64))
             data.append(pl.Series("count", [], dtype=pl.UInt32))
-            return PolarsDataFrame(
-                pl.DataFrame(data),
-                backend_version=self._backend_version,
-                version=self._version,
-            )
+            return PolarsDataFrame.from_native(pl.DataFrame(data), context=self)
         elif (self._backend_version < (1, 15)) and self.native.count() < 1:
             data_dict: dict[str, Sequence[Any] | pl.Series]
             if bins is not None:
@@ -496,15 +511,9 @@ class PolarsSeries:
                     "breakpoint": pl.int_range(0, bin_count, eager=True) / bin_count,
                     "count": pl.zeros(n=bin_count, dtype=pl.Int64, eager=True),
                 }
-
             if not include_breakpoint:
                 del data_dict["breakpoint"]
-
-            return PolarsDataFrame(
-                pl.DataFrame(data_dict),
-                backend_version=self._backend_version,
-                version=self._version,
-            )
+            return PolarsDataFrame.from_native(pl.DataFrame(data_dict), context=self)
 
         # polars <1.15 does not adjust the bins when they have equivalent min/max
         # polars <1.5 with bin_count=...
@@ -553,10 +562,7 @@ class PolarsSeries:
 
         if self._backend_version < (1, 0) and include_breakpoint:
             df = df.rename({"break_point": "breakpoint"})
-
-        return PolarsDataFrame(
-            df, backend_version=self._backend_version, version=self._version
-        )
+        return PolarsDataFrame.from_native(df, context=self)
 
     def to_polars(self: Self) -> pl.Series:
         return self.native
@@ -574,12 +580,72 @@ class PolarsSeries:
         return PolarsSeriesCatNamespace(self)
 
     @property
-    def list(self: Self) -> PolarsSeriesListNamespace:
-        return PolarsSeriesListNamespace(self)
-
-    @property
     def struct(self: Self) -> PolarsSeriesStructNamespace:
         return PolarsSeriesStructNamespace(self)
+
+    __iter__: Method[Iterator[Any]]
+    __floordiv__: Method[Self]
+    __mod__: Method[Self]
+    __rand__: Method[Self]
+    __rfloordiv__: Method[Self]
+    __rmod__: Method[Self]
+    __ror__: Method[Self]
+    __rtruediv__: Method[Self]
+    __truediv__: Method[Self]
+    abs: Method[Self]
+    all: Method[bool]
+    any: Method[bool]
+    arg_max: Method[int]
+    arg_min: Method[int]
+    arg_true: Method[Self]
+    clip: Method[Self]
+    count: Method[int]
+    cum_max: Method[Self]
+    cum_min: Method[Self]
+    cum_prod: Method[Self]
+    cum_sum: Method[Self]
+    diff: Method[Self]
+    drop_nulls: Method[Self]
+    fill_null: Method[Self]
+    filter: Method[Self]
+    gather_every: Method[Self]
+    head: Method[Self]
+    is_between: Method[Self]
+    is_finite: Method[Self]
+    is_first_distinct: Method[Self]
+    is_in: Method[Self]
+    is_last_distinct: Method[Self]
+    is_null: Method[Self]
+    is_sorted: Method[bool]
+    is_unique: Method[Self]
+    item: Method[Any]
+    len: Method[int]
+    max: Method[Any]
+    mean: Method[float]
+    min: Method[Any]
+    mode: Method[Self]
+    n_unique: Method[int]
+    null_count: Method[int]
+    quantile: Method[float]
+    rank: Method[Self]
+    round: Method[Self]
+    sample: Method[Self]
+    shift: Method[Self]
+    skew: Method[float | None]
+    std: Method[float]
+    sum: Method[float]
+    tail: Method[Self]
+    to_arrow: Method[ArrowArray]
+    to_frame: Method[PolarsDataFrame]
+    to_list: Method[list[Any]]
+    to_pandas: Method[pd.Series[Any]]
+    unique: Method[Self]
+    var: Method[float]
+    zip_with: Method[Self]
+
+    @property
+    def list(self: Self) -> PolarsSeriesListNamespace:
+        return PolarsSeriesListNamespace(self)
 
 
 class PolarsSeriesDateTimeNamespace:
@@ -588,9 +654,9 @@ class PolarsSeriesDateTimeNamespace:
 
     def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
-            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
-            return self._compliant_series._from_native_series(
-                getattr(self._compliant_series.native.dt, attr)(*args, **kwargs)
+            pos, kwds = extract_args_kwargs(args, kwargs)
+            return self._compliant_series._with_native(
+                getattr(self._compliant_series.native.dt, attr)(*pos, **kwds)
             )
 
         return func
@@ -602,9 +668,9 @@ class PolarsSeriesStringNamespace:
 
     def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
-            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
-            return self._compliant_series._from_native_series(
-                getattr(self._compliant_series.native.str, attr)(*args, **kwargs)
+            pos, kwds = extract_args_kwargs(args, kwargs)
+            return self._compliant_series._with_native(
+                getattr(self._compliant_series.native.str, attr)(*pos, **kwds)
             )
 
         return func
@@ -616,9 +682,9 @@ class PolarsSeriesCatNamespace:
 
     def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
-            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
-            return self._compliant_series._from_native_series(
-                getattr(self._compliant_series.native.cat, attr)(*args, **kwargs)
+            pos, kwds = extract_args_kwargs(args, kwargs)
+            return self._compliant_series._with_native(
+                getattr(self._compliant_series.native.cat, attr)(*pos, **kwds)
             )
 
         return func
@@ -640,14 +706,14 @@ class PolarsSeriesListNamespace:
         elif self._series._backend_version < (1, 17):  # pragma: no cover
             native_result = native_series.cast(pl.UInt32())
 
-        return self._series._from_native_series(native_result)
+        return self._series._with_native(native_result)
 
     # TODO(FBruzzesi): Remove `pragma: no cover` once other namespace methods are added
     def __getattr__(self: Self, attr: str) -> Any:  # pragma: no cover
         def func(*args: Any, **kwargs: Any) -> Any:
-            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
-            return self._series._from_native_series(
-                getattr(self._series.native.list, attr)(*args, **kwargs)
+            pos, kwds = extract_args_kwargs(args, kwargs)
+            return self._series._with_native(
+                getattr(self._series.native.list, attr)(*pos, **kwds)
             )
 
         return func
@@ -659,9 +725,9 @@ class PolarsSeriesStructNamespace:
 
     def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
-            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
-            return self._compliant_series._from_native_series(
-                getattr(self._compliant_series.native.struct, attr)(*args, **kwargs)
+            pos, kwds = extract_args_kwargs(args, kwargs)
+            return self._compliant_series._with_native(
+                getattr(self._compliant_series.native.struct, attr)(*pos, **kwds)
             )
 
         return func

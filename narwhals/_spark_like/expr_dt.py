@@ -14,25 +14,25 @@ class SparkLikeExprDateTimeNamespace:
         self._compliant_expr = expr
 
     def date(self: Self) -> SparkLikeExpr:
-        return self._compliant_expr._from_call(self._compliant_expr._F.to_date)
+        return self._compliant_expr._with_callable(self._compliant_expr._F.to_date)
 
     def year(self: Self) -> SparkLikeExpr:
-        return self._compliant_expr._from_call(self._compliant_expr._F.year)
+        return self._compliant_expr._with_callable(self._compliant_expr._F.year)
 
     def month(self: Self) -> SparkLikeExpr:
-        return self._compliant_expr._from_call(self._compliant_expr._F.month)
+        return self._compliant_expr._with_callable(self._compliant_expr._F.month)
 
     def day(self: Self) -> SparkLikeExpr:
-        return self._compliant_expr._from_call(self._compliant_expr._F.day)
+        return self._compliant_expr._with_callable(self._compliant_expr._F.day)
 
     def hour(self: Self) -> SparkLikeExpr:
-        return self._compliant_expr._from_call(self._compliant_expr._F.hour)
+        return self._compliant_expr._with_callable(self._compliant_expr._F.hour)
 
     def minute(self: Self) -> SparkLikeExpr:
-        return self._compliant_expr._from_call(self._compliant_expr._F.minute)
+        return self._compliant_expr._with_callable(self._compliant_expr._F.minute)
 
     def second(self: Self) -> SparkLikeExpr:
-        return self._compliant_expr._from_call(self._compliant_expr._F.second)
+        return self._compliant_expr._with_callable(self._compliant_expr._F.second)
 
     def millisecond(self: Self) -> SparkLikeExpr:
         def _millisecond(_input: Column) -> Column:
@@ -40,26 +40,26 @@ class SparkLikeExprDateTimeNamespace:
                 (self._compliant_expr._F.unix_micros(_input) % 1_000_000) / 1000
             )
 
-        return self._compliant_expr._from_call(_millisecond)
+        return self._compliant_expr._with_callable(_millisecond)
 
     def microsecond(self: Self) -> SparkLikeExpr:
         def _microsecond(_input: Column) -> Column:
             return self._compliant_expr._F.unix_micros(_input) % 1_000_000
 
-        return self._compliant_expr._from_call(_microsecond)
+        return self._compliant_expr._with_callable(_microsecond)
 
     def nanosecond(self: Self) -> SparkLikeExpr:
         def _nanosecond(_input: Column) -> Column:
             return (self._compliant_expr._F.unix_micros(_input) % 1_000_000) * 1000
 
-        return self._compliant_expr._from_call(_nanosecond)
+        return self._compliant_expr._with_callable(_nanosecond)
 
     def ordinal_day(self: Self) -> SparkLikeExpr:
-        return self._compliant_expr._from_call(self._compliant_expr._F.dayofyear)
+        return self._compliant_expr._with_callable(self._compliant_expr._F.dayofyear)
 
     def weekday(self: Self) -> SparkLikeExpr:
         def _weekday(_input: Column) -> Column:
             # PySpark's dayofweek returns 1-7 for Sunday-Saturday
             return (self._compliant_expr._F.dayofweek(_input) + 6) % 7
 
-        return self._compliant_expr._from_call(_weekday)
+        return self._compliant_expr._with_callable(_weekday)

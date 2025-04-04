@@ -90,11 +90,11 @@ class GroupBy(Generic[DataFrameT]):
                 for key, value in named_aggs.items()
             ),
         )
-        return self._df._from_compliant_dataframe(self._grouped.agg(*compliant_aggs))
+        return self._df._with_compliant(self._grouped.agg(*compliant_aggs))
 
     def __iter__(self: Self) -> Iterator[tuple[Any, DataFrameT]]:
         yield from (
-            (tupleify(key), self._df._from_compliant_dataframe(df))
+            (tupleify(key), self._df._with_compliant(df))
             for (key, df) in self._grouped.__iter__()
         )
 
@@ -180,4 +180,4 @@ class LazyGroupBy(Generic[LazyFrameT]):
                 for key, value in named_aggs.items()
             ),
         )
-        return self._df._from_compliant_dataframe(self._grouped.agg(*compliant_aggs))
+        return self._df._with_compliant(self._grouped.agg(*compliant_aggs))

@@ -12,7 +12,6 @@ from narwhals._compliant import LazyExpr
 from narwhals._expression_parsing import ExprKind
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
-from narwhals._spark_like.expr_name import SparkLikeExprNameNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
 from narwhals._spark_like.expr_struct import SparkLikeExprStructNamespace
 from narwhals._spark_like.utils import WindowInputs
@@ -30,6 +29,7 @@ if TYPE_CHECKING:
     from sqlframe.base.window import Window
     from typing_extensions import Self
 
+    from narwhals._compliant.typing import AliasNames
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
@@ -166,7 +166,9 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         center: bool,
         window_size: int,
         min_samples: int,
+        ddof: int | None = None,
     ) -> WindowFunction:
+        supported_funcs = ["sum", "mean", "std", "var"]
         if center:
             half = (window_size - 1) // 2
             remainder = (window_size - 1) % 2
@@ -185,9 +187,25 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
                 )
                 .rowsBetween(start, end)
             )
+            if func_name in {"sum", "mean"}:
+                func_: str = func_name
+            elif func_name == "var" and ddof == 0:
+                func_ = "var_pop"
+            elif func_name in "var" and ddof == 1:
+                func_ = "var_samp"
+            elif func_name == "std" and ddof == 0:
+                func_ = "stddev_pop"
+            elif func_name == "std" and ddof == 1:
+                func_ = "stddev_samp"
+            elif func_name in {"var", "std"}:  # pragma: no cover
+                msg = f"Only ddof=0 and ddof=1 are currently supported for rolling_{func_name}."
+                raise ValueError(msg)
+            else:  # pragma: no cover
+                msg = f"Only the following functions are supported: {supported_funcs}.\nGot: {func_name}."
+                raise ValueError(msg)
             return self._F.when(
                 self._F.count(window_inputs.expr).over(window) >= min_samples,
-                getattr(self._F, func_name)(window_inputs.expr).over(window),
+                getattr(self._F, func_)(window_inputs.expr).over(window),
             )
 
         return func
@@ -229,9 +247,10 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             implementation=context._implementation,
         )
 
-    def _from_call(
+    def _with_callable(
         self: Self,
         call: Callable[..., Column],
+        /,
         **expressifiable_args: Self | Any,
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
@@ -255,33 +274,53 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             implementation=self._implementation,
         )
 
+    def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
+        return type(self)(
+            call=self._call,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=func,
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
+        )
+
     def __eq__(self: Self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
-        return self._from_call(lambda _input, other: _input.__eq__(other), other=other)
+        return self._with_callable(
+            lambda _input, other: _input.__eq__(other), other=other
+        )
 
     def __ne__(self: Self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
-        return self._from_call(lambda _input, other: _input.__ne__(other), other=other)
+        return self._with_callable(
+            lambda _input, other: _input.__ne__(other), other=other
+        )
 
     def __add__(self: Self, other: SparkLikeExpr) -> Self:
-        return self._from_call(lambda _input, other: _input.__add__(other), other=other)
+        return self._with_callable(
+            lambda _input, other: _input.__add__(other), other=other
+        )
 
     def __sub__(self: Self, other: SparkLikeExpr) -> Self:
-        return self._from_call(lambda _input, other: _input.__sub__(other), other=other)
+        return self._with_callable(
+            lambda _input, other: _input.__sub__(other), other=other
+        )
 
     def __rsub__(self: Self, other: SparkLikeExpr) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: other.__sub__(_input), other=other
         ).alias("literal")
 
     def __mul__(self: Self, other: SparkLikeExpr) -> Self:
-        return self._from_call(lambda _input, other: _input.__mul__(other), other=other)
+        return self._with_callable(
+            lambda _input, other: _input.__mul__(other), other=other
+        )
 
     def __truediv__(self: Self, other: SparkLikeExpr) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: _input.__truediv__(other), other=other
         )
 
     def __rtruediv__(self: Self, other: SparkLikeExpr) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: other.__truediv__(_input), other=other
         ).alias("literal")
 
@@ -289,54 +328,68 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         def _floordiv(_input: Column, other: Column) -> Column:
             return self._F.floor(_input / other)
 
-        return self._from_call(_floordiv, other=other)
+        return self._with_callable(_floordiv, other=other)
 
     def __rfloordiv__(self: Self, other: SparkLikeExpr) -> Self:
         def _rfloordiv(_input: Column, other: Column) -> Column:
             return self._F.floor(other / _input)
 
-        return self._from_call(_rfloordiv, other=other).alias("literal")
+        return self._with_callable(_rfloordiv, other=other).alias("literal")
 
     def __pow__(self: Self, other: SparkLikeExpr) -> Self:
-        return self._from_call(lambda _input, other: _input.__pow__(other), other=other)
+        return self._with_callable(
+            lambda _input, other: _input.__pow__(other), other=other
+        )
 
     def __rpow__(self: Self, other: SparkLikeExpr) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: other.__pow__(_input), other=other
         ).alias("literal")
 
     def __mod__(self: Self, other: SparkLikeExpr) -> Self:
-        return self._from_call(lambda _input, other: _input.__mod__(other), other=other)
+        return self._with_callable(
+            lambda _input, other: _input.__mod__(other), other=other
+        )
 
     def __rmod__(self: Self, other: SparkLikeExpr) -> Self:
-        return self._from_call(
+        return self._with_callable(
             lambda _input, other: other.__mod__(_input), other=other
         ).alias("literal")
 
     def __ge__(self: Self, other: SparkLikeExpr) -> Self:
-        return self._from_call(lambda _input, other: _input.__ge__(other), other=other)
+        return self._with_callable(
+            lambda _input, other: _input.__ge__(other), other=other
+        )
 
     def __gt__(self: Self, other: SparkLikeExpr) -> Self:
-        return self._from_call(lambda _input, other: _input > other, other=other)
+        return self._with_callable(lambda _input, other: _input > other, other=other)
 
     def __le__(self: Self, other: SparkLikeExpr) -> Self:
-        return self._from_call(lambda _input, other: _input.__le__(other), other=other)
+        return self._with_callable(
+            lambda _input, other: _input.__le__(other), other=other
+        )
 
     def __lt__(self: Self, other: SparkLikeExpr) -> Self:
-        return self._from_call(lambda _input, other: _input.__lt__(other), other=other)
+        return self._with_callable(
+            lambda _input, other: _input.__lt__(other), other=other
+        )
 
     def __and__(self: Self, other: SparkLikeExpr) -> Self:
-        return self._from_call(lambda _input, other: _input.__and__(other), other=other)
+        return self._with_callable(
+            lambda _input, other: _input.__and__(other), other=other
+        )
 
     def __or__(self: Self, other: SparkLikeExpr) -> Self:
-        return self._from_call(lambda _input, other: _input.__or__(other), other=other)
+        return self._with_callable(
+            lambda _input, other: _input.__or__(other), other=other
+        )
 
     def __invert__(self: Self) -> Self:
         invert = cast("Callable[..., Column]", operator.invert)
-        return self._from_call(invert)
+        return self._with_callable(invert)
 
     def abs(self: Self) -> Self:
-        return self._from_call(self._F.abs)
+        return self._with_callable(self._F.abs)
 
     def alias(self: Self, name: str) -> Self:
         def alias_output_names(names: Sequence[str]) -> Sequence[str]:
@@ -355,10 +408,10 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         )
 
     def all(self: Self) -> Self:
-        return self._from_call(self._F.bool_and)
+        return self._with_callable(self._F.bool_and)
 
     def any(self: Self) -> Self:
-        return self._from_call(self._F.bool_or)
+        return self._with_callable(self._F.bool_or)
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
         def _cast(_input: Column) -> Column:
@@ -367,16 +420,16 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             )
             return _input.cast(spark_dtype)
 
-        return self._from_call(_cast)
+        return self._with_callable(_cast)
 
     def count(self: Self) -> Self:
-        return self._from_call(self._F.count)
+        return self._with_callable(self._F.count)
 
     def max(self: Self) -> Self:
-        return self._from_call(self._F.max)
+        return self._with_callable(self._F.max)
 
     def mean(self: Self) -> Self:
-        return self._from_call(self._F.mean)
+        return self._with_callable(self._F.mean)
 
     def median(self: Self) -> Self:
         def _median(_input: Column) -> Column:
@@ -390,19 +443,19 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
             return self._F.median(_input)
 
-        return self._from_call(_median)
+        return self._with_callable(_median)
 
     def min(self: Self) -> Self:
-        return self._from_call(self._F.min)
+        return self._with_callable(self._F.min)
 
     def null_count(self: Self) -> Self:
         def _null_count(_input: Column) -> Column:
             return self._F.count_if(self._F.isnull(_input))
 
-        return self._from_call(_null_count)
+        return self._with_callable(_null_count)
 
     def sum(self: Self) -> Self:
-        return self._from_call(self._F.sum)
+        return self._with_callable(self._F.sum)
 
     def std(self: Self, ddof: int) -> Self:
         from functools import partial
@@ -419,7 +472,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             implementation=self._implementation,
         )
 
-        return self._from_call(func)
+        return self._with_callable(func)
 
     def var(self: Self, ddof: int) -> Self:
         from functools import partial
@@ -436,7 +489,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             implementation=self._implementation,
         )
 
-        return self._from_call(func)
+        return self._with_callable(func)
 
     def clip(
         self: Self,
@@ -454,15 +507,17 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         def _clip_both(
             _input: Column, lower_bound: Column, upper_bound: Column
         ) -> Column:
-            result = _input
-            result = self._F.when(result < lower_bound, lower_bound).otherwise(result)
-            return self._F.when(result > upper_bound, upper_bound).otherwise(result)
+            return (
+                self._F.when(_input < lower_bound, lower_bound)
+                .when(_input > upper_bound, upper_bound)
+                .otherwise(_input)
+            )
 
         if lower_bound is None:
-            return self._from_call(_clip_upper, upper_bound=upper_bound)
+            return self._with_callable(_clip_upper, upper_bound=upper_bound)
         if upper_bound is None:
-            return self._from_call(_clip_lower, lower_bound=lower_bound)
-        return self._from_call(
+            return self._with_callable(_clip_lower, lower_bound=lower_bound)
+        return self._with_callable(
             _clip_both, lower_bound=lower_bound, upper_bound=upper_bound
         )
 
@@ -479,36 +534,36 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
                 None
             )
 
-        return self._from_call(_is_finite)
+        return self._with_callable(_is_finite)
 
     def is_in(self: Self, values: Sequence[Any]) -> Self:
         def _is_in(_input: Column) -> Column:
             return _input.isin(values) if values else self._F.lit(False)  # noqa: FBT003
 
-        return self._from_call(_is_in)
+        return self._with_callable(_is_in)
 
     def is_unique(self: Self) -> Self:
         def _is_unique(_input: Column) -> Column:
             # Create a window spec that treats each value separately
             return self._F.count("*").over(self._Window.partitionBy(_input)) == 1
 
-        return self._from_call(_is_unique)
+        return self._with_callable(_is_unique)
 
     def len(self: Self) -> Self:
         def _len(_input: Column) -> Column:
             # Use count(*) to count all rows including nulls
             return self._F.count("*")
 
-        return self._from_call(_len)
+        return self._with_callable(_len)
 
     def round(self: Self, decimals: int) -> Self:
         def _round(_input: Column) -> Column:
             return self._F.round(_input, decimals)
 
-        return self._from_call(_round)
+        return self._with_callable(_round)
 
     def skew(self: Self) -> Self:
-        return self._from_call(self._F.skewness)
+        return self._with_callable(self._F.skewness)
 
     def n_unique(self: Self) -> Self:
         def _n_unique(_input: Column) -> Column:
@@ -516,7 +571,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
                 self._F.isnull(_input).cast(self._native_dtypes.IntegerType())
             )
 
-        return self._from_call(_n_unique)
+        return self._with_callable(_n_unique)
 
     def over(
         self: Self,
@@ -549,7 +604,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         )
 
     def is_null(self: Self) -> Self:
-        return self._from_call(self._F.isnull)
+        return self._with_callable(self._F.isnull)
 
     def is_nan(self: Self) -> Self:
         def _is_nan(_input: Column) -> Column:
@@ -557,7 +612,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
                 self._F.isnan(_input)
             )
 
-        return self._from_call(_is_nan)
+        return self._with_callable(_is_nan)
 
     def shift(self, n: int) -> Self:
         def func(window_inputs: WindowInputs) -> Column:
@@ -653,7 +708,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         def _fill_null(_input: Column, value: Column) -> Column:
             return self._F.ifnull(_input, value)
 
-        return self._from_call(_fill_null, value=value)
+        return self._with_callable(_fill_null, value=value)
 
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._with_window_function(
@@ -675,13 +730,61 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             )
         )
 
+    def rolling_var(
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
+    ) -> Self:
+        return self._with_window_function(
+            self._rolling_window_func(
+                func_name="var",
+                center=center,
+                window_size=window_size,
+                min_samples=min_samples,
+                ddof=ddof,
+            )
+        )
+
+    def rolling_std(
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
+    ) -> Self:
+        return self._with_window_function(
+            self._rolling_window_func(
+                func_name="std",
+                center=center,
+                window_size=window_size,
+                min_samples=min_samples,
+                ddof=ddof,
+            )
+        )
+
+    def rank(
+        self,
+        method: Literal["average", "min", "max", "dense", "ordinal"],
+        *,
+        descending: bool,
+    ) -> Self:
+        if method == "min":
+            func_name = "rank"
+        elif method == "dense":
+            func_name = "dense_rank"
+        else:  # pragma: no cover
+            msg = f"Method {method} is not yet implemented."
+            raise NotImplementedError(msg)
+
+        def _rank(_input: Column) -> Column:
+            if descending:
+                order_by_cols = [self._F.desc_nulls_last(_input)]
+            else:
+                order_by_cols = [self._F.asc_nulls_last(_input)]
+            window = self._Window().orderBy(order_by_cols)
+            return self._F.when(
+                _input.isNotNull(), getattr(self._F, func_name)().over(window)
+            )
+
+        return self._with_callable(_rank)
+
     @property
     def str(self: Self) -> SparkLikeExprStringNamespace:
         return SparkLikeExprStringNamespace(self)
-
-    @property
-    def name(self: Self) -> SparkLikeExprNameNamespace:
-        return SparkLikeExprNameNamespace(self)
 
     @property
     def dt(self: Self) -> SparkLikeExprDateTimeNamespace:

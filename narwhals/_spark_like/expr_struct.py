@@ -17,4 +17,4 @@ class SparkLikeExprStructNamespace:
         def func(_input: Column) -> Column:
             return _input.getField(name)
 
-        return self._compliant_expr._from_call(func).alias(name)
+        return self._compliant_expr._with_callable(func).alias(name)

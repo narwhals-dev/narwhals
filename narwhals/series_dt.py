@@ -40,7 +40,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             1    2023-03-10
             dtype: date32[day][pyarrow]
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.date()
         )
 
@@ -64,7 +64,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
                     2023
             ]
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.year()
         )
 
@@ -88,7 +88,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
                     3
             ]
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.month()
         )
 
@@ -115,7 +115,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
               ]
             ]
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.day()
         )
 
@@ -142,7 +142,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
               ]
             ]
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.hour()
         )
 
@@ -165,7 +165,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             1    12
             dtype: int32
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.minute()
         )
 
@@ -188,7 +188,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             1     4
             dtype: int32
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.second()
         )
 
@@ -214,7 +214,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             1      0
             Name: datetime, dtype: int32
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.millisecond()
         )
 
@@ -241,7 +241,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             Name: datetime, dtype: int32
 
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.microsecond()
         )
 
@@ -267,7 +267,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             1            0
             Name: datetime, dtype: int32
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.nanosecond()
         )
 
@@ -294,7 +294,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
               ]
             ]
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.ordinal_day()
         )
 
@@ -322,7 +322,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
               ]
             ]
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.weekday()
         )
 
@@ -353,7 +353,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
                     20
             ]
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.total_minutes()
         )
 
@@ -384,7 +384,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
                     1240
             ]
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.total_seconds()
         )
 
@@ -418,7 +418,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
                     20
             ]
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.total_milliseconds()
         )
 
@@ -452,7 +452,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
                     1200
             ]
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.total_microseconds()
         )
 
@@ -483,7 +483,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
                     1
             ]
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.total_nanoseconds()
         )
 
@@ -549,7 +549,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
               ]
             ]
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.to_string(format)
         )
 
@@ -583,7 +583,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
                     2024-01-02 00:00:00 +0545
             ]
         """
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.replace_time_zone(time_zone)
         )
 
@@ -618,7 +618,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
         if time_zone is None:
             msg = "Target `time_zone` cannot be `None` in `convert_time_zone`. Please use `replace_time_zone(None)` if you want to remove the time zone."
             raise TypeError(msg)
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.convert_time_zone(time_zone)
         )
 
@@ -652,6 +652,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
                 f"\n\nExpected one of {{'ns', 'us', 'ms'}}, got {time_unit!r}."
             )
             raise ValueError(msg)
-        return self._narwhals_series._from_compliant_series(
+        return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.timestamp(time_unit)
         )

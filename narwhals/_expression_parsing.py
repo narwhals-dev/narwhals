@@ -421,7 +421,7 @@ def apply_n_ary_operation(
     )
     kinds = [infer_kind(comparand, str_as_lit=str_as_lit) for comparand in comparands]
 
-    broadcast = any(kind.preserves_length() for kind in kinds)
+    broadcast = any(not kind.is_scalar_like() for kind in kinds)
     compliant_exprs = (
         compliant_expr.broadcast(kind)
         if broadcast and is_compliant_expr(compliant_expr) and is_scalar_like(kind)

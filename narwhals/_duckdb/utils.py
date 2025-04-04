@@ -17,6 +17,9 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
+col = duckdb.ColumnExpression
+"""Alias for `duckdb.ColumnExpression`."""
+
 lit = duckdb.ConstantExpression
 """Alias for `duckdb.ConstantExpression`."""
 
@@ -36,6 +39,28 @@ class WindowInputs:
         self.expr = expr
         self.partition_by = partition_by
         self.order_by = order_by
+
+
+def concat_str(*exprs: duckdb.Expression, separator: str = "") -> duckdb.Expression:
+    """Concatenate many strings, NULL inputs are skipped.
+
+    Wraps [concat] and [concat_ws] `FunctionExpression`(s).
+
+    Arguments:
+        exprs: Native columns.
+        separator: String that will be used to separate the values of each column.
+
+    Returns:
+        A new native expression.
+
+    [concat]: https://duckdb.org/docs/stable/sql/functions/char.html#concatstring-
+    [concat_ws]: https://duckdb.org/docs/stable/sql/functions/char.html#concat_wsseparator-string-
+    """
+    return (
+        duckdb.FunctionExpression("concat_ws", lit(separator), *exprs)
+        if separator
+        else duckdb.FunctionExpression("concat", *exprs)
+    )
 
 
 def evaluate_exprs(

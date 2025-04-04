@@ -13,7 +13,8 @@ from typing import overload
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from narwhals.utils import _SeriesNamespace
+from narwhals._compliant.series import _SeriesNamespace
+from narwhals.exceptions import ShapeError
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
@@ -34,6 +35,7 @@ if TYPE_CHECKING:
     # NOTE: stubs don't allow for `ChunkedArray[StructArray]`
     # Intended to represent the `.chunks` property storing `list[pa.StructArray]`
     ChunkedArrayStructArray: TypeAlias = ArrowChunkedArray
+    ArrayAny: TypeAlias = "ArrowArray | ArrowChunkedArray"
 
     _T = TypeVar("_T")
 
@@ -73,12 +75,12 @@ def extract_py_scalar(value: Any, /) -> Any:
 
 
 def chunked_array(
-    arr: ArrowArray | list[Iterable[pa.Scalar[Any]]] | ArrowChunkedArray,
+    arr: ArrayAny | list[Iterable[Any]], dtype: pa.DataType | None = None, /
 ) -> ArrowChunkedArray:
     if isinstance(arr, pa.ChunkedArray):
         return arr
     if isinstance(arr, list):
-        return pa.chunked_array(cast("Any", arr))
+        return pa.chunked_array(arr, dtype)
     else:
         return pa.chunked_array([arr], arr.type)
 
@@ -232,7 +234,7 @@ def extract_native(
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
 
-    if rhs is None:
+    if rhs is None:  # pragma: no cover
         return lhs.native, lit(None, type=lhs._type)
 
     if isinstance(rhs, ArrowDataFrame):
@@ -260,17 +262,17 @@ def align_series_full_broadcast(*series: ArrowSeries) -> Sequence[ArrowSeries]:
     if fast_path:
         return series
 
-    is_max_length_gt_1 = max_length > 1
     reshaped = []
-    for s, length in zip(series, lengths):
-        if is_max_length_gt_1 and length == 1:
+    for s in series:
+        if s._broadcast:
             value = s.native[0]
             if s._backend_version < (13,) and hasattr(value, "as_py"):
                 value = value.as_py()
-            reshaped.append(
-                s._from_native_series(pa.array([value] * max_length, type=s._type))
-            )
+            reshaped.append(s._with_native(pa.array([value] * max_length, type=s._type)))
         else:
+            if (actual_len := len(s)) != max_length:
+                msg = f"Expected object of length {max_length}, got {actual_len}."
+                raise ShapeError(msg)
             reshaped.append(s)
 
     return reshaped
@@ -528,7 +530,7 @@ def pad_series(
     pad_left = pa.array([None] * offset_left, type=series._type)
     pad_right = pa.array([None] * offset_right, type=series._type)
     concat = pa.concat_arrays([pad_left, *series.native.chunks, pad_right])
-    return series._from_native_series(concat), offset_left + offset_right
+    return series._with_native(concat), offset_left + offset_right
 
 
 def cast_to_comparable_string_types(
