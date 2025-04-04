@@ -37,7 +37,11 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
+class ArrowNamespace(
+    EagerNamespace[
+        ArrowDataFrame, ArrowSeries, ArrowExpr, "pa.Table", "ArrowChunkedArray"
+    ]
+):
     @property
     def _dataframe(self) -> type[ArrowDataFrame]:
         return ArrowDataFrame
@@ -236,7 +240,7 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr]):
 
     @property
     def selectors(self: Self) -> ArrowSelectorNamespace:
-        return ArrowSelectorNamespace(self)
+        return ArrowSelectorNamespace.from_namespace(self)
 
     def when(self: Self, predicate: ArrowExpr) -> ArrowWhen:
         return ArrowWhen.from_expr(predicate, context=self)

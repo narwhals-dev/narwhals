@@ -7,8 +7,8 @@ from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
-from narwhals._compliant import CompliantNamespace
 from narwhals._compliant import CompliantThen
+from narwhals._compliant import LazyNamespace
 from narwhals._compliant import LazyWhen
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
@@ -21,12 +21,15 @@ if TYPE_CHECKING:
     from sqlframe.base.column import Column
     from typing_extensions import Self
 
+    from narwhals._spark_like.dataframe import SQLFrameDataFrame  # noqa: F401
     from narwhals.dtypes import DType
     from narwhals.utils import Implementation
     from narwhals.utils import Version
 
 
-class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "SparkLikeExpr"]):
+class SparkLikeNamespace(
+    LazyNamespace[SparkLikeLazyFrame, SparkLikeExpr, "SQLFrameDataFrame"]
+):
     def __init__(
         self: Self,
         *,
@@ -40,11 +43,15 @@ class SparkLikeNamespace(CompliantNamespace["SparkLikeLazyFrame", "SparkLikeExpr
 
     @property
     def selectors(self: Self) -> SparkLikeSelectorNamespace:
-        return SparkLikeSelectorNamespace(self)
+        return SparkLikeSelectorNamespace.from_namespace(self)
 
     @property
     def _expr(self) -> type[SparkLikeExpr]:
         return SparkLikeExpr
+
+    @property
+    def _lazyframe(self) -> type[SparkLikeLazyFrame]:
+        return SparkLikeLazyFrame
 
     def lit(
         self: Self, value: object, dtype: DType | type[DType] | None
