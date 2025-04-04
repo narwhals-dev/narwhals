@@ -367,3 +367,33 @@ def test_from_native_lazyframe() -> None:
 
     assert isinstance(stable_lazy, nw.LazyFrame)
     assert isinstance(unstable_lazy, unstable_nw.LazyFrame)
+
+
+def test_series_recursive() -> None:
+    """https://github.com/narwhals-dev/narwhals/issues/2239."""
+    pytest.importorskip("polars")
+    import polars as pl
+
+    pl_series = pl.Series(name="test", values=[1, 2, 3])
+    nw_series = unstable_nw.from_native(pl_series, series_only=True)
+    with pytest.raises(AssertionError):
+        nw_series_depth_2 = unstable_nw.Series(nw_series, level="full")
+
+    nw_series_passthrough = unstable_nw.from_native(nw_series, series_only=True)
+
+    if TYPE_CHECKING:
+        from typing_extensions import assert_type
+
+        assert_type(pl_series, pl.Series)
+        assert_type(nw_series, unstable_nw.Series[pl.Series])
+
+        nw_series_depth_2 = unstable_nw.Series(nw_series, level="full")
+        # NOTE: Checking that the type is `Series[Unknown]`
+        assert_type(nw_series_depth_2, unstable_nw.Series)
+
+        # TODO @dangotbanned: Fix this one
+        # Current:
+        #   `unstable_nw.Series[unstable_nw.Series[pl.Series]]``
+        # Goal:
+        #   `unstable_nw.Series[pl.Series]`
+        assert_type(nw_series_passthrough, unstable_nw.Series[pl.Series])
