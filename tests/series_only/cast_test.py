@@ -119,7 +119,8 @@ def test_cast_to_enum(request: pytest.FixtureRequest, constructor: Constructor) 
 
     # Backends that do not support Enum dtype
     if any(
-        backend in str(constructor) for backend in ["pyarrow_table", "duckdb", "sqlframe"]
+        backend in str(constructor)
+        for backend in ["pyarrow_table", "duckdb", "sqlframe", "modin"]
     ):
         request.applymarker(pytest.mark.xfail)
 
