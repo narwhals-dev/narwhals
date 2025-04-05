@@ -55,7 +55,7 @@ def test_invalid_group_by_dask() -> None:
     df_dask = dd.from_pandas(df_pandas)
 
     with pytest.raises(ValueError, match=r"Non-trivial complex aggregation found"):
-        nw.from_native(df_dask).group_by("a").agg(nw.col("b").mean().min())
+        nw.from_native(df_dask).group_by("a").agg(nw.col("b").abs().min())
 
 
 def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
