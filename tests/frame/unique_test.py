@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from contextlib import nullcontext as does_not_raise
-from typing import Any
+from typing import Literal
 
 import pytest
 
@@ -10,6 +9,7 @@ import pytest
 import narwhals as nw
 from narwhals.exceptions import ColumnNotFoundError
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
@@ -21,37 +21,18 @@ data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     [
         ("first", {"a": [1, 2], "b": [4, 6], "z": [7.0, 9.0]}),
         ("last", {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}),
-        ("any", {"a": [1, 2], "b": [4, 6], "z": [7.0, 9.0]}),
-        ("none", {"a": [2], "b": [6], "z": [9]}),
-        ("foo", {"a": [2], "b": [6], "z": [9]}),
     ],
 )
-def test_unique(
-    constructor: Constructor,
+def test_unique_eager(
+    constructor_eager: ConstructorEager,
     subset: str | list[str] | None,
-    keep: str,
+    keep: Literal["first", "last"],
     expected: dict[str, list[float]],
 ) -> None:
-    df_raw = constructor(data)
+    df_raw = constructor_eager(data)
     df = nw.from_native(df_raw)
-    if isinstance(df, nw.LazyFrame) and keep in {
-        "first",
-        "last",
-    }:
-        context: Any = pytest.raises(ValueError, match="row order")
-    elif keep == "none" and df.implementation.is_spark_like():  # pragma: no cover
-        context = pytest.raises(
-            ValueError,
-            match="`LazyFrame.unique` with PySpark backend only supports `keep='any'`.",
-        )
-    elif keep == "foo":
-        context = pytest.raises(ValueError, match=": foo")
-    else:
-        context = does_not_raise()
-
-    with context:
-        result = df.unique(subset, keep=keep).sort("z")  # type: ignore[arg-type]
-        assert_equal_data(result, expected)
+    result = df.unique(subset, keep=keep).sort("z")
+    assert_equal_data(result, expected)
 
 
 def test_unique_invalid_subset(constructor: Constructor) -> None:
@@ -59,6 +40,52 @@ def test_unique_invalid_subset(constructor: Constructor) -> None:
     df = nw.from_native(df_raw)
     with pytest.raises(ColumnNotFoundError):
         df.lazy().unique(["fdssfad"]).collect()
+
+
+@pytest.mark.parametrize("subset", ["b", ["b"]])
+@pytest.mark.parametrize(
+    ("keep", "expected"),
+    [
+        ("any", {"a": [1, 2], "b": [4, 6], "z": [7.0, 9.0]}),
+        ("none", {"a": [2], "b": [6], "z": [9]}),
+    ],
+)
+def test_unique(
+    constructor: Constructor,
+    subset: str | list[str] | None,
+    keep: Literal["any", "none"],
+    expected: dict[str, list[float]],
+) -> None:
+    df_raw = constructor(data)
+    df = nw.from_native(df_raw)
+    result = df.unique(subset, keep=keep).sort("z")
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize("subset", [None, ["a", "b"]])
+@pytest.mark.parametrize(
+    ("keep", "expected"),
+    [
+        ("any", {"a": [1, 1, 2], "b": [3, 4, 4]}),
+        ("none", {"a": [1, 2], "b": [4, 4]}),
+    ],
+)
+def test_unique_full_subset(
+    constructor: Constructor,
+    subset: list[str] | None,
+    keep: Literal["any", "none"],
+    expected: dict[str, list[float]],
+) -> None:
+    data = {"a": [1, 1, 1, 2], "b": [3, 3, 4, 4]}
+    df_raw = constructor(data)
+    df = nw.from_native(df_raw)
+    result = df.unique(subset, keep=keep).sort("a", "b")
+    assert_equal_data(result, expected)
+
+
+def test_unique_invalid_keep(constructor: Constructor) -> None:
+    with pytest.raises(ValueError, match=r"(Got|got): cabbage"):
+        nw.from_native(constructor(data)).unique(keep="cabbage")  # type: ignore[arg-type]
 
 
 @pytest.mark.filterwarnings("ignore:.*backwards-compatibility:UserWarning")

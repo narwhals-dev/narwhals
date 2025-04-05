@@ -21,6 +21,7 @@ from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
 from narwhals.utils import find_stacklevel
+from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_spark_like_dataframe
 from narwhals.utils import not_implemented
@@ -335,11 +336,17 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
         *,
         keep: Literal["any", "none"],
     ) -> Self:
-        if keep != "any":
-            msg = "`LazyFrame.unique` with PySpark backend only supports `keep='any'`."
-            raise ValueError(msg)
         check_column_exists(self.columns, subset)
         subset = list(subset) if subset else None
+        if keep == "none":
+            tmp = generate_temporary_column_name(8, self.columns)
+            window = self._Window().partitionBy(subset or self.columns)
+            df = (
+                self.native.withColumn(tmp, self._F.count("*").over(window))
+                .filter(self._F.col(tmp) == 1)
+                .drop(tmp)
+            )
+            return self._with_native(df)
         return self._with_native(self.native.dropDuplicates(subset=subset))
 
     def join(
