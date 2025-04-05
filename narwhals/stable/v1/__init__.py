@@ -99,6 +99,7 @@ if TYPE_CHECKING:
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
 
+    FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
     SeriesT = TypeVar("SeriesT", bound="Series[Any]")
     IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
     T = TypeVar("T", default=Any)
@@ -2055,35 +2056,11 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return _stableify(nw.max_horizontal(*exprs))
 
 
-@overload
 def concat(
-    items: Iterable[DataFrame[IntoDataFrameT]],
+    items: Iterable[FrameT],
     *,
     how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def concat(
-    items: Iterable[LazyFrame[IntoFrameT]],
-    *,
-    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> LazyFrame[IntoFrameT]: ...
-
-
-@overload
-def concat(
-    items: Iterable[DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]],
-    *,
-    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]: ...
-
-
-def concat(
-    items: Iterable[DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]],
-    *,
-    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]:
+) -> FrameT:
     """Concatenate multiple DataFrames, LazyFrames into a single entity.
 
     Arguments:
@@ -2102,7 +2079,7 @@ def concat(
     Raises:
         TypeError: The items to concatenate should either all be eager, or all lazy
     """
-    return _stableify(nw.concat(items, how=how))
+    return cast("FrameT", _stableify(nw.concat(items, how=how)))
 
 
 def concat_str(
