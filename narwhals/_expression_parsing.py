@@ -8,6 +8,8 @@ from enum import auto
 from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
+from typing import Iterator
 from typing import Literal
 from typing import Sequence
 from typing import TypeVar
@@ -18,6 +20,7 @@ from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.exceptions import MultiOutputExpressionError
 from narwhals.exceptions import ShapeError
+from narwhals.utils import flatten
 from narwhals.utils import is_compliant_expr
 
 if TYPE_CHECKING:
@@ -422,3 +425,26 @@ def apply_n_ary_operation(
         for compliant_expr, kind in zip(compliant_exprs, kinds)
     )
     return function(*compliant_exprs)
+
+
+def _iter_group_by_keys_into_exprs(args: Iterable[Any], /) -> Iterator[IntoExpr | Any]:
+    from narwhals.expr import Expr
+    from narwhals.functions import col
+    from narwhals.series import Series
+
+    for arg in args:
+        if isinstance(arg, (str, Expr, Series)):
+            yield arg
+        elif isinstance(arg, (int, bool)):
+            yield col(arg)  # type: ignore[arg-type]
+        elif isinstance(arg, Iterable):
+            yield from _iter_group_by_keys_into_exprs(arg)
+        else:
+            yield arg
+
+
+def group_by_keys_into_exprs(
+    keys: tuple[IntoExpr | Iterable[IntoExpr], ...], /
+) -> tuple[IntoExpr | Any, ...]:
+    """Handle special case for pandas-like and dask, which allow column names to be non-string values."""
+    return tuple(_iter_group_by_keys_into_exprs(flatten(keys)))

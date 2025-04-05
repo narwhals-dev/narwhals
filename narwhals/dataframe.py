@@ -18,6 +18,7 @@ from warnings import warn
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import all_exprs_are_scalar_like
 from narwhals._expression_parsing import check_expressions_preserve_length
+from narwhals._expression_parsing import group_by_keys_into_exprs
 from narwhals._expression_parsing import infer_kind
 from narwhals._expression_parsing import is_scalar_like
 from narwhals.dependencies import get_polars
@@ -1548,30 +1549,8 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         from narwhals.group_by import GroupBy
 
-        if (
-            self.implementation.is_pandas_like() or self.implementation.is_dask()
-        ):  # pragma: no cover
-            from narwhals import col
-
-            def _maybe_parse_key_to_expr(
-                key: IntoExpr  # noqa: FBT001
-                | Iterable[IntoExpr]
-                | int
-                | Iterable[int]
-                | bool
-                | Iterable[bool],
-            ) -> IntoExpr:
-                if isinstance(key, (int, bool)):
-                    return col(key)  # type: ignore[arg-type]
-                elif isinstance(key, Iterable) and all(
-                    isinstance(k, (int, bool)) for k in key
-                ):
-                    return col(*key)  # pyright: ignore[reportArgumentType]
-                else:
-                    return key  # type: ignore[return-value]
-
-            keys = tuple(_maybe_parse_key_to_expr(key) for key in keys)
-
+        if self.implementation.is_pandas_like() or self.implementation.is_dask():
+            keys = group_by_keys_into_exprs(keys)
         flat_keys, kinds = self._flatten_and_extract(*keys)
 
         if any(kind is ExprKind.FILTRATION for kind in kinds):
@@ -2856,31 +2835,8 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         from narwhals.group_by import LazyGroupBy
 
-        # Handle special case for pandas-like and dask, which allow column names to be
-        # non-string values
-        if (
-            self.implementation.is_pandas_like() or self.implementation.is_dask()
-        ):  # pragma: no cover
-            from narwhals import col
-
-            def _maybe_parse_key_to_expr(
-                key: IntoExpr  # noqa: FBT001
-                | Iterable[IntoExpr]
-                | int
-                | Iterable[int]
-                | bool
-                | Iterable[bool],
-            ) -> IntoExpr:
-                if isinstance(key, (int, bool)):
-                    return col(key)  # type: ignore[arg-type]
-                if isinstance(key, Iterable) and all(
-                    isinstance(k, (int, bool)) for k in key
-                ):
-                    return col(*key)  # pyright: ignore[reportArgumentType]
-                return key  # type: ignore[return-value]
-
-            keys = tuple(_maybe_parse_key_to_expr(key) for key in keys)
-
+        if self.implementation.is_pandas_like() or self.implementation.is_dask():
+            keys = group_by_keys_into_exprs(keys)
         flat_keys, kinds = self._flatten_and_extract(*keys)
 
         if any(kind is ExprKind.FILTRATION for kind in kinds):
