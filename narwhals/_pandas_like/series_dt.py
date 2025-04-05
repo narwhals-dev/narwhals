@@ -61,7 +61,8 @@ class PandasLikeSeriesDateTimeNamespace(
             arr_ns = self.native.array
             arr = arr_ns.__arrow_array__()
             result_arr = pc.add(
-                pc.multiply(pc.millisecond(arr), 1000), pc.microsecond(arr)
+                pc.multiply(pc.millisecond(arr), 1000),  # pyright: ignore[reportArgumentType, reportCallIssue]
+                pc.microsecond(arr),
             )
             result = type(self.native)(type(arr_ns)(result_arr), name=self.native.name)
             return self.with_native(result)

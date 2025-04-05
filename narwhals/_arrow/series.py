@@ -191,11 +191,11 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
 
     def __eq__(self: Self, other: object) -> Self:  # type: ignore[override]
         ser, other = extract_native(self, other)
-        return self._with_native(pc.equal(ser, other))  # type: ignore[arg-type]
+        return self._with_native(pc.equal(ser, other))  # type: ignore[call-overload]
 
     def __ne__(self: Self, other: object) -> Self:  # type: ignore[override]
         ser, other = extract_native(self, other)
-        return self._with_native(pc.not_equal(ser, other))  # type: ignore[arg-type]
+        return self._with_native(pc.not_equal(ser, other))  # type: ignore[call-overload]
 
     def __ge__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
@@ -271,14 +271,14 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         if not isinstance(other, (pa.Array, pa.ChunkedArray)):
             # scalar
             other = lit(other)
-        return self._with_native(pc.divide(*cast_for_truediv(ser, other)))
+        return self._with_native(pc.divide(*cast_for_truediv(ser, other)))  # type: ignore[arg-type, type-var]
 
     def __rtruediv__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
         if not isinstance(other, (pa.Array, pa.ChunkedArray)):
             # scalar
             other = lit(other) if not isinstance(other, pa.Scalar) else other
-        return self._with_native(pc.divide(*cast_for_truediv(other, ser)))  # pyright: ignore[reportArgumentType]
+        return self._with_native(pc.divide(*cast_for_truediv(other, ser)))  # type: ignore[arg-type, type-var]
 
     def __mod__(self: Self, other: Any) -> Self:
         floor_div = (self // other).native
@@ -596,11 +596,11 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         counts = cast("ArrowChunkedArray", val_counts.field("counts"))
 
         if normalize:
-            arrays = [values, pc.divide(*cast_for_truediv(counts, pc.sum(counts)))]
+            arrays = [values, pc.divide(*cast_for_truediv(counts, pc.sum(counts)))]  # type: ignore[type-var]
         else:
             arrays = [values, counts]
 
-        val_count = pa.Table.from_arrays(arrays, names=[index_name_, value_name_])
+        val_count = pa.Table.from_arrays(arrays, names=[index_name_, value_name_])  # type: ignore[arg-type]
 
         if sort:
             val_count = val_count.sort_by([(value_name_, "descending")])
@@ -662,7 +662,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
                 )[::-1]
                 distance = valid_index - indices
             return pc.if_else(
-                pc.and_(pc.is_null(arr), pc.less_equal(distance, lit(limit))),
+                pc.and_(pc.is_null(arr), pc.less_equal(distance, lit(limit))),  # pyright: ignore[reportArgumentType, reportCallIssue]
                 arr.take(valid_index),
                 arr,
             )
@@ -738,9 +738,9 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             msg = f"argument 'descending' should be boolean, found {type(descending)}"
             raise TypeError(msg)
         if descending:
-            result = pc.all(pc.greater_equal(self.native[:-1], self.native[1:]))
+            result = pc.all(pc.greater_equal(self.native[:-1], self.native[1:]))  # type: ignore[call-overload]
         else:
-            result = pc.all(pc.less_equal(self.native[:-1], self.native[1:]))
+            result = pc.all(pc.less_equal(self.native[:-1], self.native[1:]))  # type: ignore[call-overload]
         return maybe_extract_py_scalar(result, return_py_scalar=True)
 
     def unique(self: Self, *, maintain_order: bool) -> Self:
@@ -1084,7 +1084,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
                 lower = pc.subtract(lower, mid)
                 upper = pc.add(upper, mid)
             else:
-                range_ = pc.subtract(upper, lower)
+                range_ = pc.subtract(upper, lower)  # type: ignore[assignment]
                 width = pc.divide(pc.cast(range_, pa_float), lit(float(bin_count)))
 
             bin_proportions = pc.divide(pc.subtract(self.native, lower), width)
@@ -1093,10 +1093,10 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             # shift bins so they are right-closed
             bin_indices = pc.if_else(
                 pc.and_(
-                    pc.equal(bin_indices, bin_proportions),
-                    pc.greater(bin_indices, 0),
+                    pc.equal(bin_indices, bin_proportions),  # type: ignore[call-overload]
+                    pc.greater(bin_indices, 0),  # type: ignore[call-overload]
                 ),
-                pc.subtract(bin_indices, 1),
+                pc.subtract(bin_indices, 1),  # type: ignore[call-overload]
                 bin_indices,
             )
             possible = pa.Table.from_arrays(
