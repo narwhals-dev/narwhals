@@ -5,6 +5,7 @@ from contextlib import nullcontext as does_not_raise
 from importlib.util import find_spec
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Iterable
 from typing import Literal
 from typing import cast
@@ -410,3 +411,14 @@ def test_series_recursive_v1() -> None:
         # NOTE: `Unknown` isn't possible for `v1`, as it has a `TypeVar` default
         assert_type(nw_series_depth_2, nw.Series[Any])
         assert_type(nw_series_early_return, nw.Series[pl.Series])
+
+
+@pytest.mark.parametrize("from_native", [unstable_nw.from_native, nw.from_native])
+def test_from_native_invalid_keywords(from_native: Callable[..., Any]) -> None:
+    pattern = r"from_native.+unexpected.+keyword.+bad_1"
+
+    with pytest.raises(TypeError, match=pattern):
+        from_native(data, bad_1="invalid")
+
+    with pytest.raises(TypeError, match=pattern):
+        from_native(data, bad_1="invalid", bad_2="also invalid")
