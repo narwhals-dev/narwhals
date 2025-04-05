@@ -63,36 +63,36 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
                     result = floordiv_compat(s_cast, 1_000_000)
             elif unit == "us":
                 if time_unit == "ns":
-                    result = cast("ArrowChunkedArray", pc.multiply(s_cast, 1_000))
+                    result = cast("ArrowChunkedArray", pc.multiply(s_cast, 1_000))  # type: ignore[call-overload]
                 elif time_unit == "us":
                     result = s_cast
                 else:
                     result = floordiv_compat(s_cast, 1_000)
             elif unit == "ms":
                 if time_unit == "ns":
-                    result = cast("ArrowChunkedArray", pc.multiply(s_cast, 1_000_000))
+                    result = cast("ArrowChunkedArray", pc.multiply(s_cast, 1_000_000))  # type: ignore[call-overload]
                 elif time_unit == "us":
-                    result = cast("ArrowChunkedArray", pc.multiply(s_cast, 1_000))
+                    result = cast("ArrowChunkedArray", pc.multiply(s_cast, 1_000))  # type: ignore[call-overload]
                 else:
                     result = s_cast
             elif unit == "s":
                 if time_unit == "ns":
-                    result = cast("ArrowChunkedArray", pc.multiply(s_cast, 1_000_000_000))
+                    result = cast("ArrowChunkedArray", pc.multiply(s_cast, 1_000_000_000))  # type: ignore[call-overload]
                 elif time_unit == "us":
-                    result = cast("ArrowChunkedArray", pc.multiply(s_cast, 1_000_000))
+                    result = cast("ArrowChunkedArray", pc.multiply(s_cast, 1_000_000))  # type: ignore[call-overload]
                 else:
-                    result = cast("ArrowChunkedArray", pc.multiply(s_cast, 1_000))
+                    result = cast("ArrowChunkedArray", pc.multiply(s_cast, 1_000))  # type: ignore[call-overload]
             else:  # pragma: no cover
                 msg = f"unexpected time unit {unit}, please report an issue at https://github.com/narwhals-dev/narwhals"
                 raise AssertionError(msg)
         elif isinstance(ser.dtype, dtypes.Date):
-            time_s = pc.multiply(self.native.cast(pa.int32()), 86400)
+            time_s = pc.multiply(self.native.cast(pa.int32()), 86400)  # type: ignore[call-overload]
             if time_unit == "ns":
-                result = cast("ArrowChunkedArray", pc.multiply(time_s, 1_000_000_000))
+                result = cast("ArrowChunkedArray", pc.multiply(time_s, 1_000_000_000))  # pyright: ignore[reportArgumentType, reportCallIssue]
             elif time_unit == "us":
-                result = cast("ArrowChunkedArray", pc.multiply(time_s, 1_000_000))
+                result = cast("ArrowChunkedArray", pc.multiply(time_s, 1_000_000))  # pyright: ignore[reportArgumentType, reportCallIssue]
             else:
-                result = cast("ArrowChunkedArray", pc.multiply(time_s, 1_000))
+                result = cast("ArrowChunkedArray", pc.multiply(time_s, 1_000))  # pyright: ignore[reportArgumentType, reportCallIssue]
         else:
             msg = "Input should be either of Date or Datetime type"
             raise TypeError(msg)
