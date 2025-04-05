@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Callable
 from typing import Literal
 from typing import Sequence
 
@@ -16,6 +15,9 @@ from narwhals.utils import generate_temporary_column_name
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals._compliant.typing import AliasNames
+    from narwhals._compliant.typing import EvalNames
+    from narwhals._compliant.typing import EvalSeries
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
@@ -71,12 +73,12 @@ def window_kwargs_to_pandas_equivalent(
 class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
     def __init__(
         self: Self,
-        call: Callable[[PandasLikeDataFrame], Sequence[PandasLikeSeries]],
+        call: EvalSeries[PandasLikeDataFrame, PandasLikeSeries],
         *,
         depth: int,
         function_name: str,
-        evaluate_output_names: Callable[[PandasLikeDataFrame], Sequence[str]],
-        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
+        evaluate_output_names: EvalNames[PandasLikeDataFrame],
+        alias_output_names: AliasNames | None,
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
@@ -105,7 +107,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
     @classmethod
     def from_column_names(
         cls: type[Self],
-        evaluate_column_names: Callable[[PandasLikeDataFrame], Sequence[str]],
+        evaluate_column_names: EvalNames[PandasLikeDataFrame],
         /,
         *,
         context: _FullContext,

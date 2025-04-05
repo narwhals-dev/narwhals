@@ -9,8 +9,8 @@ from typing import Iterable
 from typing import Literal
 from typing import Mapping
 from typing import Sequence
+from typing import TypeVar
 from typing import cast
-from typing import overload
 
 from narwhals._expression_parsing import ExpansionKind
 from narwhals._expression_parsing import ExprKind
@@ -57,46 +57,21 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.series import Series
-    from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoExpr
-    from narwhals.typing import IntoFrameT
     from narwhals.typing import IntoSeriesT
     from narwhals.typing import NativeFrame
     from narwhals.typing import NativeLazyFrame
     from narwhals.typing import _2DArray
 
     _IntoSchema: TypeAlias = "Mapping[str, DType] | Schema | Sequence[str] | None"
-
-
-@overload
-def concat(
-    items: Iterable[DataFrame[IntoDataFrameT]],
-    *,
-    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def concat(
-    items: Iterable[LazyFrame[IntoFrameT]],
-    *,
-    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> LazyFrame[IntoFrameT]: ...
-
-
-@overload
-def concat(
-    items: Iterable[DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]],
-    *,
-    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]: ...
+    FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
 
 
 def concat(
-    items: Iterable[DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]],
+    items: Iterable[FrameT],
     *,
     how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]:
+) -> FrameT:
     """Concatenate multiple DataFrames, LazyFrames into a single entity.
 
     Arguments:

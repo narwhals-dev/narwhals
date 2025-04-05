@@ -24,14 +24,12 @@ if TYPE_CHECKING:
     from datetime import timezone
 
     from typing_extensions import Self
-    from typing_extensions import TypeAlias
 
     from narwhals._compliant import CompliantSelectorNamespace
     from narwhals._compliant import CompliantWhen
     from narwhals._polars.dataframe import Method
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.dataframe import PolarsLazyFrame
-    from narwhals._polars.expr import IncompletePolarsExpr
     from narwhals._polars.typing import FrameT
     from narwhals.schema import Schema
     from narwhals.typing import Into1DArray
@@ -39,8 +37,6 @@ if TYPE_CHECKING:
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
-
-    Incomplete: TypeAlias = Any
 
 
 class PolarsNamespace:
@@ -52,8 +48,10 @@ class PolarsNamespace:
     sum_horizontal: Method[PolarsExpr]
     min_horizontal: Method[PolarsExpr]
     max_horizontal: Method[PolarsExpr]
-    # NOTE: `PolarsSeries`, `PolarsExpr` still have gaps
-    when: Method[CompliantWhen[PolarsDataFrame, Incomplete, IncompletePolarsExpr]]
+
+    # NOTE: `pyright` accepts, `mypy` doesn't highlight the issue
+    #   error: Type argument "PolarsExpr" of "CompliantWhen" must be a subtype of "CompliantExpr[Any, Any]"
+    when: Method[CompliantWhen[PolarsDataFrame, PolarsSeries, PolarsExpr]]  # type: ignore[type-var]
 
     def __init__(
         self: Self, *, backend_version: tuple[int, ...], version: Version
@@ -64,9 +62,9 @@ class PolarsNamespace:
 
     def __getattr__(self: Self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
-            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
+            pos, kwds = extract_args_kwargs(args, kwargs)
             return self._expr(
-                getattr(pl, attr)(*args, **kwargs),
+                getattr(pl, attr)(*pos, **kwds),
                 version=self._version,
                 backend_version=self._backend_version,
             )
@@ -80,12 +78,37 @@ class PolarsNamespace:
         return PolarsDataFrame
 
     @property
+    def _lazyframe(self) -> type[PolarsLazyFrame]:
+        from narwhals._polars.dataframe import PolarsLazyFrame
+
+        return PolarsLazyFrame
+
+    @property
     def _expr(self) -> type[PolarsExpr]:
         return PolarsExpr
 
     @property
     def _series(self) -> type[PolarsSeries]:
         return PolarsSeries
+
+    @overload
+    def from_native(self, data: pl.DataFrame, /) -> PolarsDataFrame: ...
+    @overload
+    def from_native(self, data: pl.LazyFrame, /) -> PolarsLazyFrame: ...
+    @overload
+    def from_native(self, data: pl.Series, /) -> PolarsSeries: ...
+    def from_native(
+        self, data: pl.DataFrame | pl.LazyFrame | pl.Series | Any, /
+    ) -> PolarsDataFrame | PolarsLazyFrame | PolarsSeries:
+        if self._dataframe._is_native(data):
+            return self._dataframe.from_native(data, context=self)
+        elif self._series._is_native(data):
+            return self._series.from_native(data, context=self)
+        elif self._lazyframe._is_native(data):
+            return self._lazyframe.from_native(data, context=self)
+        else:  # pragma: no cover
+            msg = f"Unsupported type: {type(data).__name__!r}"
+            raise TypeError(msg)
 
     @overload
     def from_numpy(
@@ -138,16 +161,12 @@ class PolarsNamespace:
         *,
         how: Literal["vertical", "horizontal", "diagonal"],
     ) -> PolarsDataFrame | PolarsLazyFrame:
-        from narwhals._polars.dataframe import PolarsLazyFrame
-
         result = pl.concat((item.native for item in items), how=how)
         if isinstance(result, pl.DataFrame):
             return self._dataframe(
                 result, backend_version=self._backend_version, version=self._version
             )
-        return PolarsLazyFrame(
-            result, backend_version=self._backend_version, version=self._version
-        )
+        return self._lazyframe.from_native(result, context=self)
 
     def lit(self: Self, value: Any, dtype: DType | type[DType] | None) -> PolarsExpr:
         if dtype is not None:
@@ -232,10 +251,12 @@ class PolarsNamespace:
     # 1. Others have lots of private stuff for code reuse
     #    i. None of that is useful here
     # 2. We don't have a `PolarsSelector` abstraction, and just use `PolarsExpr`
-    # 3. `PolarsExpr` still has it's own gaps in the spec
     @property
-    def selectors(self: Self) -> CompliantSelectorNamespace[Any, Any]:
-        return cast("CompliantSelectorNamespace[Any, Any]", PolarsSelectorNamespace(self))
+    def selectors(self) -> CompliantSelectorNamespace[PolarsDataFrame, PolarsSeries]:
+        return cast(
+            "CompliantSelectorNamespace[PolarsDataFrame, PolarsSeries]",
+            PolarsSelectorNamespace(self),
+        )
 
 
 class PolarsSelectorNamespace:

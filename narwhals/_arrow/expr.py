@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Callable
 from typing import Literal
 from typing import Sequence
 
@@ -22,6 +21,9 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
+    from narwhals._compliant.typing import AliasNames
+    from narwhals._compliant.typing import EvalNames
+    from narwhals._compliant.typing import EvalSeries
     from narwhals._expression_parsing import ExprMetadata
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -32,12 +34,12 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
 
     def __init__(
         self: Self,
-        call: Callable[[ArrowDataFrame], Sequence[ArrowSeries]],
+        call: EvalSeries[ArrowDataFrame, ArrowSeries],
         *,
         depth: int,
         function_name: str,
-        evaluate_output_names: Callable[[ArrowDataFrame], Sequence[str]],
-        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
+        evaluate_output_names: EvalNames[ArrowDataFrame],
+        alias_output_names: AliasNames | None,
         backend_version: tuple[int, ...],
         version: Version,
         call_kwargs: dict[str, Any] | None = None,
@@ -57,7 +59,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
     @classmethod
     def from_column_names(
         cls: type[Self],
-        evaluate_column_names: Callable[[ArrowDataFrame], Sequence[str]],
+        evaluate_column_names: EvalNames[ArrowDataFrame],
         /,
         *,
         context: _FullContext,
@@ -139,11 +141,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
     def shift(self: Self, n: int) -> Self:
         return self._reuse_series("shift", n=n)
 
-    def over(
-        self: Self,
-        partition_by: Sequence[str],
-        order_by: Sequence[str] | None,
-    ) -> Self:
+    def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
         assert self._metadata is not None  # noqa: S101
         if partition_by and not is_scalar_like(self._metadata.kind):
             msg = "Only aggregation or literal operations are supported in grouped `over` context for PyArrow."

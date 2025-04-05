@@ -34,6 +34,8 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant.typing import AliasNames
+    from narwhals._compliant.typing import EvalNames
+    from narwhals._compliant.typing import EvalSeries
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.typing import WindowFunction
@@ -51,10 +53,10 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
     def __init__(
         self: Self,
-        call: Callable[[DuckDBLazyFrame], Sequence[duckdb.Expression]],
+        call: EvalSeries[DuckDBLazyFrame, duckdb.Expression],
         *,
-        evaluate_output_names: Callable[[DuckDBLazyFrame], Sequence[str]],
-        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
+        evaluate_output_names: EvalNames[DuckDBLazyFrame],
+        alias_output_names: AliasNames | None,
         backend_version: tuple[int, ...],
         version: Version,
     ) -> None:
@@ -168,7 +170,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     @classmethod
     def from_column_names(
         cls: type[Self],
-        evaluate_column_names: Callable[[DuckDBLazyFrame], Sequence[str]],
+        evaluate_column_names: EvalNames[DuckDBLazyFrame],
         /,
         *,
         context: _FullContext,
@@ -243,10 +245,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             version=self._version,
         )
 
-    def _with_window_function(
-        self: Self,
-        window_function: WindowFunction,
-    ) -> Self:
+    def _with_window_function(self, window_function: WindowFunction) -> Self:
         result = self.__class__(
             self._call,
             evaluate_output_names=self._evaluate_output_names,
@@ -707,7 +706,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             else:
                 by_sql = f"{_input} asc nulls last"
             sql = f"{func_name}() OVER (order by {by_sql})"
-            return when(_input.isnotnull(), SQLExpression(sql))
+            return when(_input.isnotnull(), SQLExpression(sql))  # type: ignore[no-any-return, unused-ignore]
 
         return self._with_callable(_rank)
 

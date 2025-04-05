@@ -270,10 +270,4 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             "constructor_eager", eager_constructors, ids=eager_constructors_ids
         )
     elif "constructor" in metafunc.fixturenames:
-        if (
-            any(x in str(metafunc.module) for x in ("from_dict", "from_numpy"))
-            and LAZY_CONSTRUCTORS["duckdb"] in constructors
-        ):
-            constructors.remove(LAZY_CONSTRUCTORS["duckdb"])
-            constructors_ids.remove("duckdb")
         metafunc.parametrize("constructor", constructors, ids=constructors_ids)

@@ -31,12 +31,14 @@ if TYPE_CHECKING:
 
     import dask.dataframe.dask_expr as dx
     from typing_extensions import Self
+    from typing_extensions import TypeIs
 
     from narwhals._dask.expr import DaskExpr
     from narwhals._dask.group_by import DaskLazyGroupBy
     from narwhals._dask.namespace import DaskNamespace
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
 
 class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
@@ -53,6 +55,16 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
         self._version = version
         self._cached_schema: dict[str, DType] | None = None
         validate_backend_version(self._implementation, self._backend_version)
+
+    @staticmethod
+    def _is_native(obj: dd.DataFrame | Any) -> TypeIs[dd.DataFrame]:
+        return isinstance(obj, dd.DataFrame)
+
+    @classmethod
+    def from_native(cls, data: dd.DataFrame, /, *, context: _FullContext) -> Self:
+        return cls(
+            data, backend_version=context._backend_version, version=context._version
+        )
 
     def __native_namespace__(self: Self) -> ModuleType:
         if self._implementation is Implementation.DASK:
