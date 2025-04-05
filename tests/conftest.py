@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Sequence
+from typing import cast
 
 import pytest
 
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    import pyspark.sql as pyspark_sql
+    from pyspark.sql import DataFrame as PySparkDataFrame
     from typing_extensions import TypeAlias
 
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
@@ -100,20 +101,23 @@ def modin_constructor(obj: Data) -> NativeFrame:  # pragma: no cover
     import modin.pandas as mpd
     import pandas as pd
 
-    return mpd.DataFrame(pd.DataFrame(obj))  # type: ignore[no-any-return]
+    df = mpd.DataFrame(pd.DataFrame(obj))
+    return cast("NativeFrame", df)
 
 
 def modin_pyarrow_constructor(obj: Data) -> NativeFrame:  # pragma: no cover
     import modin.pandas as mpd
     import pandas as pd
 
-    return mpd.DataFrame(pd.DataFrame(obj)).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
+    df = mpd.DataFrame(pd.DataFrame(obj)).convert_dtypes(dtype_backend="pyarrow")
+    return cast("NativeFrame", df)
 
 
 def cudf_constructor(obj: Data) -> NativeFrame:  # pragma: no cover
     import cudf
 
-    return cudf.DataFrame(obj)  # type: ignore[no-any-return]
+    df = cudf.DataFrame(obj)
+    return cast("NativeFrame", df)
 
 
 def polars_eager_constructor(obj: Data) -> pl.DataFrame:
@@ -139,13 +143,13 @@ def duckdb_lazy_constructor(obj: Data) -> duckdb.DuckDBPyRelation:
 def dask_lazy_p1_constructor(obj: Data) -> NativeLazyFrame:  # pragma: no cover
     import dask.dataframe as dd
 
-    return dd.from_dict(obj, npartitions=1)  # type: ignore[no-any-return]
+    return cast("NativeLazyFrame", dd.from_dict(obj, npartitions=1))
 
 
 def dask_lazy_p2_constructor(obj: Data) -> NativeLazyFrame:  # pragma: no cover
     import dask.dataframe as dd
 
-    return dd.from_dict(obj, npartitions=2)  # type: ignore[no-any-return]
+    return cast("NativeLazyFrame", dd.from_dict(obj, npartitions=2))
 
 
 def pyarrow_table_constructor(obj: dict[str, Any]) -> pa.Table:
@@ -154,17 +158,12 @@ def pyarrow_table_constructor(obj: dict[str, Any]) -> pa.Table:
     return pa.table(obj)
 
 
-def pyspark_lazy_constructor() -> Callable[
-    [Data], pyspark_sql.DataFrame
-]:  # pragma: no cover
-    try:
-        from pyspark.sql import SparkSession
-    except ImportError:  # pragma: no cover
-        pytest.skip("pyspark is not installed")
-        return None
-
+def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma: no cover
+    pytest.importorskip("pyspark")
     import warnings
     from atexit import register
+
+    from pyspark.sql import SparkSession
 
     with warnings.catch_warnings():
         # The spark session seems to trigger a polars warning.
@@ -172,9 +171,9 @@ def pyspark_lazy_constructor() -> Callable[
         warnings.filterwarnings(
             "ignore", r"Using fork\(\) can cause Polars", category=RuntimeWarning
         )
-
+        builder = cast("SparkSession.Builder", SparkSession.builder)
         session = (
-            SparkSession.builder.appName("unit-tests")  # pyright: ignore[reportAttributeAccessIssue]
+            builder.appName("unit-tests")
             .master("local[1]")
             .config("spark.ui.enabled", "false")
             # executing one task at a time makes the tests faster
@@ -187,7 +186,7 @@ def pyspark_lazy_constructor() -> Callable[
 
         register(session.stop)
 
-        def _constructor(obj: Data) -> pyspark_sql.DataFrame:
+        def _constructor(obj: Data) -> PySparkDataFrame:
             _obj = deepcopy(obj)
             index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
             _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
@@ -241,7 +240,8 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             if x not in GPU_CONSTRUCTORS and x != "modin"  # too slow
         ]
     else:  # pragma: no cover
-        selected_constructors = metafunc.config.getoption("constructors").split(",")  # pyright: ignore[reportAttributeAccessIssue]
+        opt = cast("str", metafunc.config.getoption("constructors"))
+        selected_constructors = opt.split(",")
 
     eager_constructors: list[ConstructorEager] = []
     eager_constructors_ids: list[str] = []
