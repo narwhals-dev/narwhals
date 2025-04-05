@@ -15,10 +15,19 @@ from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     import duckdb
+    import pandas as pd
     import polars as pl
+    import pyarrow as pa
+    import pyspark.sql as pyspark_sql
+    from typing_extensions import TypeAlias
 
-    from narwhals.typing import IntoDataFrame
-    from narwhals.typing import IntoFrame
+    from narwhals._spark_like.dataframe import SQLFrameDataFrame
+    from narwhals.typing import NativeFrame
+    from narwhals.typing import NativeLazyFrame
+    from tests.utils import Constructor
+    from tests.utils import ConstructorEager
+
+    Data: TypeAlias = "dict[str, list[Any]]"
 
 MIN_PANDAS_NULLABLE_VERSION = (2,)
 
@@ -69,59 +78,57 @@ def pytest_collection_modifyitems(
             item.add_marker(skip_slow)
 
 
-def pandas_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+def pandas_constructor(obj: Data) -> pd.DataFrame:
     import pandas as pd
 
     return pd.DataFrame(obj)
 
 
-def pandas_nullable_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+def pandas_nullable_constructor(obj: Data) -> pd.DataFrame:
     import pandas as pd
 
     return pd.DataFrame(obj).convert_dtypes(dtype_backend="numpy_nullable")
 
 
-def pandas_pyarrow_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+def pandas_pyarrow_constructor(obj: Data) -> pd.DataFrame:
     import pandas as pd
 
     return pd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")
 
 
-def modin_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:  # pragma: no cover
+def modin_constructor(obj: Data) -> NativeFrame:  # pragma: no cover
     import modin.pandas as mpd
     import pandas as pd
 
     return mpd.DataFrame(pd.DataFrame(obj))  # type: ignore[no-any-return]
 
 
-def modin_pyarrow_constructor(
-    obj: dict[str, list[Any]],
-) -> IntoDataFrame:  # pragma: no cover
+def modin_pyarrow_constructor(obj: Data) -> NativeFrame:  # pragma: no cover
     import modin.pandas as mpd
     import pandas as pd
 
     return mpd.DataFrame(pd.DataFrame(obj)).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
 
 
-def cudf_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:  # pragma: no cover
+def cudf_constructor(obj: Data) -> NativeFrame:  # pragma: no cover
     import cudf
 
     return cudf.DataFrame(obj)  # type: ignore[no-any-return]
 
 
-def polars_eager_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+def polars_eager_constructor(obj: Data) -> pl.DataFrame:
     import polars as pl
 
     return pl.DataFrame(obj)
 
 
-def polars_lazy_constructor(obj: dict[str, list[Any]]) -> pl.LazyFrame:
+def polars_lazy_constructor(obj: Data) -> pl.LazyFrame:
     import polars as pl
 
     return pl.LazyFrame(obj)
 
 
-def duckdb_lazy_constructor(obj: dict[str, list[Any]]) -> duckdb.DuckDBPyRelation:
+def duckdb_lazy_constructor(obj: Data) -> duckdb.DuckDBPyRelation:
     import duckdb
     import polars as pl
 
@@ -129,25 +136,27 @@ def duckdb_lazy_constructor(obj: dict[str, list[Any]]) -> duckdb.DuckDBPyRelatio
     return duckdb.table("_df")
 
 
-def dask_lazy_p1_constructor(obj: dict[str, list[Any]]) -> IntoFrame:  # pragma: no cover
+def dask_lazy_p1_constructor(obj: Data) -> NativeLazyFrame:  # pragma: no cover
     import dask.dataframe as dd
 
     return dd.from_dict(obj, npartitions=1)  # type: ignore[no-any-return]
 
 
-def dask_lazy_p2_constructor(obj: dict[str, list[Any]]) -> IntoFrame:  # pragma: no cover
+def dask_lazy_p2_constructor(obj: Data) -> NativeLazyFrame:  # pragma: no cover
     import dask.dataframe as dd
 
     return dd.from_dict(obj, npartitions=2)  # type: ignore[no-any-return]
 
 
-def pyarrow_table_constructor(obj: dict[str, Any]) -> IntoDataFrame:
+def pyarrow_table_constructor(obj: dict[str, Any]) -> pa.Table:
     import pyarrow as pa
 
     return pa.table(obj)
 
 
-def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cover
+def pyspark_lazy_constructor() -> Callable[
+    [Data], pyspark_sql.DataFrame
+]:  # pragma: no cover
     try:
         from pyspark.sql import SparkSession
     except ImportError:  # pragma: no cover
@@ -178,12 +187,12 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
 
         register(session.stop)
 
-        def _constructor(obj: dict[str, list[Any]]) -> IntoFrame:
+        def _constructor(obj: Data) -> pyspark_sql.DataFrame:
             _obj = deepcopy(obj)
             index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
             _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
 
-            return (  # type: ignore[no-any-return]
+            return (
                 session.createDataFrame([*zip(*_obj.values())], schema=[*_obj.keys()])
                 .repartition(2)
                 .orderBy(index_col_name)
@@ -193,16 +202,14 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
         return _constructor
 
 
-def sqlframe_pyspark_lazy_constructor(
-    obj: dict[str, Any],
-) -> IntoFrame:  # pragma: no cover
+def sqlframe_pyspark_lazy_constructor(obj: Data) -> SQLFrameDataFrame:  # pragma: no cover
     from sqlframe.duckdb import DuckDBSession
 
     session = DuckDBSession()
     return session.createDataFrame([*zip(*obj.values())], schema=[*obj.keys()])
 
 
-EAGER_CONSTRUCTORS: dict[str, Callable[[Any], IntoDataFrame]] = {
+EAGER_CONSTRUCTORS: dict[str, ConstructorEager] = {
     "pandas": pandas_constructor,
     "pandas[nullable]": pandas_nullable_constructor,
     "pandas[pyarrow]": pandas_pyarrow_constructor,
@@ -212,14 +219,14 @@ EAGER_CONSTRUCTORS: dict[str, Callable[[Any], IntoDataFrame]] = {
     "cudf": cudf_constructor,
     "polars[eager]": polars_eager_constructor,
 }
-LAZY_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {
+LAZY_CONSTRUCTORS: dict[str, Constructor] = {
     "dask": dask_lazy_p2_constructor,
     "polars[lazy]": polars_lazy_constructor,
     "duckdb": duckdb_lazy_constructor,
     "pyspark": pyspark_lazy_constructor,  # type: ignore[dict-item]
     "sqlframe": sqlframe_pyspark_lazy_constructor,
 }
-GPU_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {"cudf": cudf_constructor}
+GPU_CONSTRUCTORS: dict[str, ConstructorEager] = {"cudf": cudf_constructor}
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
@@ -236,9 +243,9 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     else:  # pragma: no cover
         selected_constructors = metafunc.config.getoption("constructors").split(",")  # pyright: ignore[reportAttributeAccessIssue]
 
-    eager_constructors: list[Callable[[Any], IntoDataFrame]] = []
+    eager_constructors: list[ConstructorEager] = []
     eager_constructors_ids: list[str] = []
-    constructors: list[Callable[[Any], IntoFrame]] = []
+    constructors: list[Constructor] = []
     constructors_ids: list[str] = []
 
     for constructor in selected_constructors:
