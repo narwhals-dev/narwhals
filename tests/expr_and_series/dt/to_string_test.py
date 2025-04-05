@@ -59,11 +59,7 @@ def test_dt_to_string_series(constructor_eager: ConstructorEager, fmt: str) -> N
     ],
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
-def test_dt_to_string_expr(
-    constructor: Constructor, fmt: str, request: pytest.FixtureRequest
-) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_dt_to_string_expr(constructor: Constructor, fmt: str) -> None:
     input_frame = nw.from_native(constructor(data))
 
     expected_col = [datetime.strftime(d, fmt) for d in data["a"]]
@@ -141,7 +137,7 @@ def test_dt_to_string_iso_local_datetime_expr(
     expected: str,
     request: pytest.FixtureRequest,
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = constructor({"a": [data]})
 
@@ -178,10 +174,7 @@ def test_dt_to_string_iso_local_date_expr(
     constructor: Constructor,
     data: datetime,
     expected: str,
-    request: pytest.FixtureRequest,
 ) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     df = constructor({"a": [data]})
     result = nw.from_native(df).with_columns(
         nw.col("a").dt.to_string("%Y-%m-%d").alias("b")
