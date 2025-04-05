@@ -86,12 +86,11 @@ class PolarsDataFrame:
     write_csv: Method[Any]
     write_parquet: Method[None]
 
+    # CompliantDataFrame
+    _evaluate_aliases: Any
+
     def __init__(
-        self: Self,
-        df: pl.DataFrame,
-        *,
-        backend_version: tuple[int, ...],
-        version: Version,
+        self, df: pl.DataFrame, *, backend_version: tuple[int, ...], version: Version
     ) -> None:
         self._native_frame = df
         self._backend_version = backend_version
@@ -482,16 +481,13 @@ class PolarsLazyFrame:
     tail: Method[Self]
     unique: Method[Self]
     with_columns: Method[Self]
-    # NOTE: Temporary, just trying to factor out utils
+
+    # CompliantLazyFrame
     _evaluate_expr: Any
     _evaluate_aliases: Any
 
     def __init__(
-        self: Self,
-        df: pl.LazyFrame,
-        *,
-        backend_version: tuple[int, ...],
-        version: Version,
+        self, df: pl.LazyFrame, *, backend_version: tuple[int, ...], version: Version
     ) -> None:
         self._native_frame = df
         self._backend_version = backend_version

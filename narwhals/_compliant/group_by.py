@@ -13,7 +13,6 @@ from typing import Mapping
 from typing import Sequence
 from typing import TypeVar
 
-from narwhals._compliant.typing import CompliantExprAny
 from narwhals._compliant.typing import CompliantExprT_contra
 from narwhals._compliant.typing import CompliantFrameT_co
 from narwhals._compliant.typing import CompliantLazyFrameT_co
@@ -68,7 +67,7 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     def __init__(
         self,
         compliant_frame: CompliantFrameT_co,
-        keys: Sequence[CompliantExprAny],
+        keys: Sequence[CompliantExprT_contra],
         /,
         *,
         drop_null_keys: bool,
