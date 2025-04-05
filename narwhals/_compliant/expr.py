@@ -58,6 +58,9 @@ if TYPE_CHECKING:
     from narwhals._compliant.namespace import CompliantNamespace
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals._compliant.series import CompliantSeries
+    from narwhals._compliant.typing import AliasNames
+    from narwhals._compliant.typing import EvalNames
+    from narwhals._compliant.typing import EvalSeries
     from narwhals._expression_parsing import ExprKind
     from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
@@ -84,21 +87,19 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
-    _evaluate_output_names: Callable[[CompliantFrameT], Sequence[str]]
-    _alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None
+    _evaluate_output_names: EvalNames[CompliantFrameT]
+    _alias_output_names: AliasNames | None
     _metadata: ExprMetadata | None
 
     def __call__(
         self, df: CompliantFrameT
     ) -> Sequence[CompliantSeriesOrNativeExprT_co]: ...
     def __narwhals_expr__(self) -> None: ...
-    def __narwhals_namespace__(
-        self,
-    ) -> CompliantNamespace[CompliantFrameT, Self]: ...
+    def __narwhals_namespace__(self) -> CompliantNamespace[CompliantFrameT, Self]: ...
     @classmethod
     def from_column_names(
         cls,
-        evaluate_column_names: Callable[[CompliantFrameT], Sequence[str]],
+        evaluate_column_names: EvalNames[CompliantFrameT],
         /,
         *,
         context: _FullContext,
@@ -298,7 +299,7 @@ class DepthTrackingExpr(
     @classmethod
     def from_column_names(
         cls: type[Self],
-        evaluate_column_names: Callable[[CompliantFrameT], Sequence[str]],
+        evaluate_column_names: EvalNames[CompliantFrameT],
         /,
         *,
         context: _FullContext,
@@ -330,17 +331,17 @@ class EagerExpr(
     DepthTrackingExpr[EagerDataFrameT, EagerSeriesT],
     Protocol38[EagerDataFrameT, EagerSeriesT],
 ):
-    _call: Callable[[EagerDataFrameT], Sequence[EagerSeriesT]]
+    _call: EvalSeries[EagerDataFrameT, EagerSeriesT]
     _call_kwargs: dict[str, Any]
 
     def __init__(
         self: Self,
-        call: Callable[[EagerDataFrameT], Sequence[EagerSeriesT]],
+        call: EvalSeries[EagerDataFrameT, EagerSeriesT],
         *,
         depth: int,
         function_name: str,
-        evaluate_output_names: Callable[[EagerDataFrameT], Sequence[str]],
-        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
+        evaluate_output_names: EvalNames[EagerDataFrameT],
+        alias_output_names: AliasNames | None,
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
@@ -358,12 +359,12 @@ class EagerExpr(
     @classmethod
     def _from_callable(
         cls,
-        func: Callable[[EagerDataFrameT], Sequence[EagerSeriesT]],
+        func: EvalSeries[EagerDataFrameT, EagerSeriesT],
         *,
         depth: int,
         function_name: str,
-        evaluate_output_names: Callable[[EagerDataFrameT], Sequence[str]],
-        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
+        evaluate_output_names: EvalNames[EagerDataFrameT],
+        alias_output_names: AliasNames | None,
         context: _FullContext,
         call_kwargs: dict[str, Any] | None = None,
     ) -> Self:

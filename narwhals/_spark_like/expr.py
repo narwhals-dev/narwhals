@@ -30,6 +30,8 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant.typing import AliasNames
+    from narwhals._compliant.typing import EvalNames
+    from narwhals._compliant.typing import EvalSeries
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
@@ -42,10 +44,10 @@ if TYPE_CHECKING:
 class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def __init__(
         self: Self,
-        call: Callable[[SparkLikeLazyFrame], Sequence[Column]],
+        call: EvalSeries[SparkLikeLazyFrame, Column],
         *,
-        evaluate_output_names: Callable[[SparkLikeLazyFrame], Sequence[str]],
-        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
+        evaluate_output_names: EvalNames[SparkLikeLazyFrame],
+        alias_output_names: AliasNames | None,
         backend_version: tuple[int, ...],
         version: Version,
         implementation: Implementation,
@@ -119,10 +121,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             implementation=self._implementation,
         )
 
-    def _with_window_function(
-        self: Self,
-        window_function: WindowFunction,
-    ) -> Self:
+    def _with_window_function(self, window_function: WindowFunction) -> Self:
         result = self.__class__(
             self._call,
             evaluate_output_names=self._evaluate_output_names,
@@ -213,7 +212,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     @classmethod
     def from_column_names(
         cls: type[Self],
-        evaluate_column_names: Callable[[SparkLikeLazyFrame], Sequence[str]],
+        evaluate_column_names: EvalNames[SparkLikeLazyFrame],
         /,
         *,
         context: _FullContext,

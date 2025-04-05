@@ -70,6 +70,7 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantSeriesT
     from narwhals._compliant import NativeFrameT_co
     from narwhals._compliant import NativeSeriesT_co
+    from narwhals._compliant.typing import EvalNames
     from narwhals._dask.namespace import DaskNamespace
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._pandas_like.namespace import PandasLikeNamespace
@@ -1516,7 +1517,7 @@ def exclude_column_names(frame: _StoresColumns, names: Container[str]) -> Sequen
     return [col_name for col_name in frame.columns if col_name not in names]
 
 
-def passthrough_column_names(names: Sequence[str], /) -> Callable[[Any], Sequence[str]]:
+def passthrough_column_names(names: Sequence[str], /) -> EvalNames[Any]:
     def fn(_frame: Any, /) -> Sequence[str]:
         return names
 
