@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import enum
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
 from typing import TYPE_CHECKING
+from typing import Any
+from typing import Iterable
 from typing import Literal
 
 import numpy as np
@@ -393,3 +396,19 @@ def test_cast_decimal_to_native() -> None:
                 .with_columns(a=nw.col("a").cast(nw.Decimal()))
                 .to_native()
             )
+
+
+@pytest.mark.parametrize(
+    "categories", [["a", "b"], ["a", None], [1, 2], enum.Enum("test", "a b")]
+)
+def test_enum_valid(categories: Iterable[Any] | type[enum.Enum]) -> None:
+    import narwhals as nw
+
+    dtype = nw.Enum(categories)
+    assert dtype == nw.Enum
+    assert len(dtype.categories) == len([*categories])
+
+    import narwhals.stable.v1 as nw  # type: ignore[no-redef]
+
+    with pytest.raises(TypeError, match=r"takes 1 positional argument"):
+        dtype = nw.Enum(categories)
