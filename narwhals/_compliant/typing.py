@@ -117,8 +117,18 @@ LazyExprT = TypeVar("LazyExprT", bound=LazyExprAny)
 LazyExprT_contra = TypeVar("LazyExprT_contra", bound=LazyExprAny, contravariant=True)
 
 AliasNames: TypeAlias = Callable[[Sequence[str]], Sequence[str]]
+"""A function aliasing a *sequence* of column names."""
+
 AliasName: TypeAlias = Callable[[str], str]
+"""A function aliasing a *single* column name."""
+
 EvalSeries: TypeAlias = Callable[
     [CompliantFrameT], Sequence[CompliantSeriesOrNativeExprT]
 ]
+"""A function from a `Frame` to a sequence of `Series`*.
+
+See [underwater unicorn magic](https://narwhals-dev.github.io/narwhals/how_it_works/).
+"""
+
 EvalNames: TypeAlias = Callable[[CompliantFrameT], Sequence[str]]
+"""A function from a `Frame` to a sequence of columns names *before* any aliasing takes place."""
