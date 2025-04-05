@@ -17,7 +17,6 @@ from narwhals._compliant.typing import CompliantSeriesT
 from narwhals._compliant.typing import EagerExprT_contra
 from narwhals._compliant.typing import EagerSeriesT
 from narwhals._compliant.typing import NativeFrameT
-from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._translate import ArrowConvertible
 from narwhals._translate import DictConvertible
 from narwhals._translate import FromNative
@@ -131,8 +130,8 @@ class CompliantDataFrame(
     def gather_every(self, n: int, offset: int) -> Self: ...
     def get_column(self, name: str) -> CompliantSeriesT: ...
     def group_by(
-        self, *keys: str, drop_null_keys: bool
-    ) -> CompliantGroupBy[Self, Any]: ...
+        self, *keys: CompliantExprT_contra, drop_null_keys: bool
+    ) -> CompliantGroupBy[Self, CompliantExprT_contra]: ...
     def head(self, n: int) -> Self: ...
     def item(self, row: int | None, column: int | str | None) -> Any: ...
     def iter_columns(self) -> Iterator[CompliantSeriesT]: ...
@@ -264,8 +263,8 @@ class CompliantLazyFrame(
     )
     def gather_every(self, n: int, offset: int) -> Self: ...
     def group_by(
-        self, *keys: str, drop_null_keys: bool
-    ) -> CompliantGroupBy[Self, Any]: ...
+        self, *keys: CompliantExprT_contra, drop_null_keys: bool
+    ) -> CompliantGroupBy[Self, CompliantExprT_contra]: ...
     def head(self, n: int) -> Self: ...
     def join(
         self: Self,
@@ -314,6 +313,10 @@ class CompliantLazyFrame(
         assert len(result) == 1  # debug assertion  # noqa: S101
         return result[0]
 
+    def _evaluate_aliases(self, *exprs: CompliantExprT_contra) -> list[str]:
+        it = (expr._evaluate_aliases(self) for expr in exprs)
+        return list(chain.from_iterable(it))
+
 
 class EagerDataFrame(
     CompliantDataFrame[EagerSeriesT, EagerExprT_contra, NativeFrameT],
@@ -340,7 +343,7 @@ class EagerDataFrame(
 
         Note that for PySpark / DuckDB, we are less free to liberally set aliases whenever we want.
         """
-        _, aliases = evaluate_output_names_and_aliases(expr, self, [])
+        aliases = expr._evaluate_aliases(self)
         result = expr(self)
         if list(aliases) != (result_aliases := [s.name for s in result]):
             msg = f"Safety assertion failed, expected {aliases}, got {result_aliases}"
@@ -350,6 +353,10 @@ class EagerDataFrame(
     def _extract_comparand(self, other: EagerSeriesT, /) -> Any:
         """Extract native Series, broadcasting to `len(self)` if necessary."""
         ...
+
+    def _evaluate_aliases(self, *exprs: EagerExprT_contra) -> list[str]:
+        it = (expr._evaluate_aliases(self) for expr in exprs)
+        return list(chain.from_iterable(it))
 
     @staticmethod
     def _numpy_column_names(

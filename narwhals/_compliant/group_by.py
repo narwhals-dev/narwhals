@@ -13,12 +13,12 @@ from typing import Mapping
 from typing import Sequence
 from typing import TypeVar
 
-from narwhals._compliant.typing import CompliantDataFrameT_co
 from narwhals._compliant.typing import CompliantExprT_contra
 from narwhals._compliant.typing import CompliantFrameT_co
 from narwhals._compliant.typing import CompliantLazyFrameT_co
 from narwhals._compliant.typing import DepthTrackingExprAny
 from narwhals._compliant.typing import DepthTrackingExprT_contra
+from narwhals._compliant.typing import EagerDataFrameT_co
 from narwhals._compliant.typing import EagerExprT_contra
 from narwhals._compliant.typing import LazyExprT_contra
 from narwhals._compliant.typing import NativeExprT_co
@@ -67,7 +67,7 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     def __init__(
         self,
         compliant_frame: CompliantFrameT_co,
-        keys: Sequence[str],
+        keys: Sequence[CompliantExprT_contra],
         /,
         *,
         drop_null_keys: bool,
@@ -131,10 +131,12 @@ class DepthTrackingGroupBy(
 
 
 class EagerGroupBy(
-    DepthTrackingGroupBy[CompliantDataFrameT_co, EagerExprT_contra, str],
-    Protocol38[CompliantDataFrameT_co, EagerExprT_contra],
+    DepthTrackingGroupBy[EagerDataFrameT_co, EagerExprT_contra, str],
+    Protocol38[EagerDataFrameT_co, EagerExprT_contra],
 ):
-    def __iter__(self) -> Iterator[tuple[Any, CompliantDataFrameT_co]]: ...
+    _keys: list[str]
+
+    def __iter__(self) -> Iterator[tuple[Any, EagerDataFrameT_co]]: ...
 
 
 class LazyGroupBy(

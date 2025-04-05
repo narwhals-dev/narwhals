@@ -17,8 +17,6 @@ from narwhals._pandas_like.utils import set_columns
 from narwhals.utils import find_stacklevel
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals._compliant.group_by import NarwhalsAggregation
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
@@ -39,21 +37,22 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
     }
 
     def __init__(
-        self: Self,
+        self,
         df: PandasLikeDataFrame,
-        keys: Sequence[str],
+        keys: Sequence[PandasLikeExpr],
         /,
         *,
         drop_null_keys: bool,
     ) -> None:
         self._compliant_frame = df
-        self._keys: list[str] = list(keys)
+        self._keys = df._evaluate_aliases(*keys)
         # Drop index to avoid potential collisions:
         # https://github.com/narwhals-dev/narwhals/issues/1907.
-        if set(df.native.index.names).intersection(df.columns):
-            native_frame = df.native.reset_index(drop=True)
+
+        if set(self.compliant.native.index.names).intersection(self.compliant.columns):
+            native_frame = self.compliant.native.reset_index(drop=True)
         else:
-            native_frame = df.native
+            native_frame = self.compliant.native
         if (
             self.compliant._implementation.is_pandas()
             and self.compliant._backend_version < (1, 1)
@@ -79,7 +78,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
                 observed=True,
             )
 
-    def agg(self: Self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:  # noqa: PLR0915
+    def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:  # noqa: PLR0915
         implementation = self.compliant._implementation
         backend_version = self.compliant._backend_version
         new_names: list[str] = self._keys.copy()
@@ -300,7 +299,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
             )
         )
 
-    def __iter__(self: Self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
+    def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore",

@@ -10,7 +10,10 @@ import pytest
 
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import ShapeError
+from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
+from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -415,12 +418,6 @@ def test_all_kind_of_aggs(
     assert_equal_data(result, expected)
 
 
-def test_group_by_expr(constructor: Constructor) -> None:
-    df = nw.from_native(constructor({"a": [1, 1, 3], "b": [4, 5, 6]}))
-    with pytest.raises(NotImplementedError, match=r"not \(yet\?\) supported"):
-        df.group_by(nw.col("a")).agg(nw.col("b").mean())  # type: ignore[arg-type]
-
-
 def test_pandas_group_by_index_and_column_overlap() -> None:
     df = pd.DataFrame(
         {"a": [1, 1, 2], "b": [4, 5, 6]}, index=pd.Index([0, 1, 2], name="a")
@@ -455,3 +452,89 @@ def test_fancy_functions(constructor: Constructor) -> None:
         .sort("a")
     )
     assert_equal_data(result, expected)
+
+
+def test_group_by_expr(constructor: Constructor) -> None:
+    data = {"a": [1, 1, 2, 2, -1], "x": [0, 1, 2, 3, 4]}
+    df = nw.from_native(constructor(data))
+    result = (
+        df.group_by(
+            nw.col("a").abs(),
+            nw.col("a").abs().alias("a_with_alias"),
+            nw.lit("some_value").alias("lit"),
+        )
+        .agg(nw.col("x").sum())
+        .sort("a")
+    )
+    expected = {
+        "a": [1, 2],
+        "a_with_alias": [1, 2],
+        "lit": ["some_value", "some_value"],
+        "x": [5, 5],
+    }
+    assert_equal_data(result, expected)
+
+
+def test_group_by_multioutput_expr(constructor: Constructor) -> None:
+    data = {"a": [1, 1, 2, 2], "b": [1, -1, -2, 2], "x": [1, 2, 3, 4]}
+    df = nw.from_native(constructor(data))
+    result = df.group_by(nw.col("a", "b").abs()).agg(nw.col("x").sum()).sort("a")
+    expected = {"a": [1, 2], "b": [1, 2], "x": [3, 7]}
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.skipif(
+    POLARS_VERSION < (1, 10),
+    reason="`order_by` in Polars requires version 1.10 or greater",
+)
+def test_group_by_window_expr(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(
+            pytest.mark.xfail(
+                DUCKDB_VERSION < (1, 3), reason="`over` requires version 1.3 or greater"
+            )
+        )
+    data = {"a": [1, None, None, 1], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
+    df = nw.from_native(constructor(data))
+    result = (
+        df.group_by(nw.col("a").cum_count().over(order_by="b"))
+        .agg(nw.col("x").sum())
+        .sort("a")
+    )
+    expected = {"a": [1, 2], "x": [6, 4]}
+    assert_equal_data(result, expected)
+
+
+def test_group_by_agg_expr(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor):
+        request.applymarker(
+            pytest.mark.xfail(
+                DUCKDB_VERSION < (1, 3), reason="`over` requires version 1.3 or greater"
+            )
+        )
+    data = {"a": [1, 2, 2, 1], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
+    df = nw.from_native(constructor(data))
+    result = df.group_by(nw.min("a")).agg(nw.col("x").max())
+    expected = {"a": [1], "x": [4]}
+    assert_equal_data(result, expected)
+
+
+def test_group_by_raise_for_filtration(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "pyspark" in str(constructor) or "duckdb" in str(constructor):
+        # spark-like and duckdb do not implement expr filtration (for now)
+        request.applymarker(pytest.mark.xfail)
+
+    data = {"a": [1, 2, 2, None], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
+    df = nw.from_native(constructor(data))
+
+    with pytest.raises(
+        ShapeError,
+        match="series used as keys should have the same length as the DataFrame",
+    ):
+        df.group_by(nw.col("a").drop_nulls()).agg(nw.col("x").max())
