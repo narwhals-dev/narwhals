@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
-    from narwhals._polars.expr import IncompletePolarsExpr
+    from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.group_by import PolarsGroupBy
     from narwhals._polars.group_by import PolarsLazyGroupBy
     from narwhals._translate import IntoArrowTable
@@ -373,9 +373,7 @@ class PolarsDataFrame:
         else:
             return self.native.to_dict(as_series=False)
 
-    def group_by(
-        self: Self, *keys: IncompletePolarsExpr, drop_null_keys: bool
-    ) -> PolarsGroupBy:
+    def group_by(self: Self, *keys: PolarsExpr, drop_null_keys: bool) -> PolarsGroupBy:
         from narwhals._polars.group_by import PolarsGroupBy
 
         return PolarsGroupBy(self, keys, drop_null_keys=drop_null_keys)
@@ -630,7 +628,7 @@ class PolarsLazyFrame:
         raise ValueError(msg)  # pragma: no cover
 
     def group_by(
-        self: Self, *keys: IncompletePolarsExpr, drop_null_keys: bool
+        self: Self, *keys: PolarsExpr, drop_null_keys: bool
     ) -> PolarsLazyGroupBy:
         from narwhals._polars.group_by import PolarsLazyGroupBy
 
