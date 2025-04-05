@@ -1566,7 +1566,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                 elif isinstance(key, Iterable) and all(
                     isinstance(k, (int, bool)) for k in key
                 ):
-                    return col(*key)
+                    return col(*key)  # type: ignore  # noqa: PGH003
                 else:
                     return key  # type: ignore[return-value]
 
@@ -2876,7 +2876,7 @@ class LazyFrame(BaseFrame[FrameT]):
                 if isinstance(key, Iterable) and all(
                     isinstance(k, (int, bool)) for k in key
                 ):
-                    return col(*key)
+                    return col(*key)  # type: ignore  # noqa: PGH003
                 return key  # type: ignore[return-value]
 
             keys = tuple(_maybe_parse_key_to_expr(key) for key in keys)
