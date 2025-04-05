@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 from typing import cast
 
@@ -554,6 +555,35 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             return self._F.count("*")
 
         return self._with_callable(_len)
+
+    def replace_strict(
+        self: Self,
+        old: ExprKind | Sequence[Any] | Mapping[Any, Any],
+        new: ExprKind | Sequence[Any] | None = None,
+        return_dtype: DType | type[DType] | None = None,
+    ) -> Self:
+        if new is None:
+            if not isinstance(old, Mapping):
+                msg = "`new` argument is required if `old` argument is not a Mapping type"
+                raise TypeError(msg)
+
+            new = list(old.values())
+            old = list(old.keys())
+
+        def _replace_strict(
+            _input: Column,
+            old: Column,  # or a Sequence[Column]
+            new: Column,  # or a Sequence[Column]
+        ) -> Column:
+            mapping_expr = self._F.create_map(old, new)
+            return mapping_expr[_input]
+
+        result = self._from_call(_replace_strict, "replace_strict", old=old, new=new)
+
+        if return_dtype is not None:
+            result = result.cast(return_dtype)
+
+        return result
 
     def round(self: Self, decimals: int) -> Self:
         def _round(_input: Column) -> Column:
