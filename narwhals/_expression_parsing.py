@@ -439,8 +439,12 @@ def _iter_group_by_keys_into_exprs(args: Iterable[Any], /) -> Iterator[IntoExpr 
             yield col(arg)  # type: ignore[arg-type]
         elif isinstance(arg, Iterable):
             yield from _iter_group_by_keys_into_exprs(arg)
-        else:
-            yield arg
+        else:  # pragma: no cover
+            # pandas can have also tuple as column names
+            # TODO(FBruzzesi): What should we do in such case? In the current implementation
+            # that would enter the block above, and most likely end up in a `ColumnNotFoundError`
+            msg = f"Expected argument that can be converted into an expression, got: {type(arg)}. Please report a bug."
+            raise TypeError(msg)
 
 
 def group_by_keys_into_exprs(
