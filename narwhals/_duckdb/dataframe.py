@@ -372,13 +372,10 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
                         count(*) over ({partition_by_sql}) as "{count_name}"
                 from rel
                 """  # noqa: S608
-            if keep == "none":
-                keep_condition = col(count_name) == lit(1)
-            else:
-                keep_condition = col(idx_name) == lit(1)
+            name = count_name if keep == "none" else idx_name
             return self._with_native(
                 duckdb.sql(query)
-                .filter(keep_condition)
+                .filter(col(name) == lit(1))
                 .select(StarExpression(exclude=[count_name, idx_name]))
             )
         return self._with_native(self.native.unique(", ".join(self.columns)))
