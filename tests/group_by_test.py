@@ -554,14 +554,16 @@ def test_group_by_multioutput_expr(
     ],
 )
 def test_group_by_window_expr(
-    constructor: Constructor, request: pytest.FixtureRequest, ns: ModuleType, context: Any
+    constructor: Constructor, ns: ModuleType, context: Any
 ) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(
-            pytest.mark.xfail(
-                DUCKDB_VERSION < (1, 3), reason="`over` requires version 1.3 or greater"
-            )
+    context = (
+        pytest.raises(
+            NotImplementedError,
+            match=r"At least version 1.3 of DuckDB is required for `over` operation.",
         )
+        if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3) and ns is nw_main)
+        else context
+    )
     with context:
         data = {"a": [1, None, None, 1], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
         df = ns.from_native(constructor(data))
@@ -588,14 +590,16 @@ def test_group_by_window_expr(
     ],
 )
 def test_group_by_agg_expr(
-    constructor: Constructor, request: pytest.FixtureRequest, ns: ModuleType, context: Any
+    constructor: Constructor, ns: ModuleType, context: Any
 ) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(
-            pytest.mark.xfail(
-                DUCKDB_VERSION < (1, 3), reason="`over` requires version 1.3 or greater"
-            )
+    context = (
+        pytest.raises(
+            NotImplementedError,
+            match=r"At least version 1.3 of DuckDB is required for binary operations between aggregates and columns.",
         )
+        if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3) and ns is nw_main)
+        else context
+    )
 
     with context:
         data = {"a": [1, 2, 2, 1], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
@@ -605,13 +609,7 @@ def test_group_by_agg_expr(
         assert_equal_data(result, expected)
 
 
-def test_group_by_raise_for_filtration(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "pyspark" in str(constructor) or "duckdb" in str(constructor):
-        # spark-like and duckdb do not implement expr filtration (for now)
-        request.applymarker(pytest.mark.xfail)
-
+def test_group_by_raise_for_filtration(constructor: Constructor) -> None:
     data = {"a": [1, 2, 2, None], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
     df = nw_main.from_native(constructor(data))
 

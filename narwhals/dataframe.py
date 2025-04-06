@@ -2833,12 +2833,6 @@ class LazyFrame(BaseFrame[FrameT]):
 
         flat_keys, kinds = self._flatten_and_extract(*keys)
 
-        if any(kind is ExprKind.FILTRATION for kind in kinds):
-            from narwhals.exceptions import ShapeError
-
-            msg = "series used as keys should have the same length as the DataFrame"
-            raise ShapeError(msg)
-
         flat_keys = [
             compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
             for compliant_expr, kind in zip(flat_keys, kinds)
