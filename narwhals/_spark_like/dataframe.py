@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import JoinStrategy
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -352,7 +353,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
     def join(
         self: Self,
         other: Self,
-        how: Literal["inner", "left", "full", "cross", "semi", "anti"],
+        how: JoinStrategy,
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
         suffix: str,
