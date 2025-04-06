@@ -351,7 +351,7 @@ is `LITERAL` if all of `expr1`, `expr2`, and `expr3` are.
 ### "You open a window to another window to another window to another window"
 
 When we print out an expression, in addition to the expression kind,
-we also see `n_opened_windows` and `n_closed_windows`.
+we also see `n_open_windows` and `has_windows`.
 
 An open window is a non-elementwise operation which depends on row order.
 For example, if we have `nw.col('a').cum_sum()`, then in which order
@@ -371,8 +371,8 @@ are assumed to be eager and in-memory. Therefore, it's allowed to work
 with open windows.
 
 When working with `LazyFrame`s, on the other hand, row order is undefined.
-Therefore, it's only allowed to work with expressions where `n_opened_windows`
-is exactly equal to `n_closed_windows`.
+Therefore, it's only allowed to work with expressions where `n_open_windows`
+is exactly equal to `has_windows`.
 
 ### Broadcasting
 

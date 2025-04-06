@@ -1580,25 +1580,26 @@ class Expr:
             raise ValueError(msg)
 
         kind = ExprKind.TRANSFORM
-        n_opened_windows = self._metadata.n_opened_windows
-        n_closed_windows = self._metadata.n_closed_windows
-        if n_closed_windows:
+        n_open_windows = self._metadata.n_open_windows
+        has_windows = self._metadata.has_windows
+        if has_windows:
             msg = "Nested `over` statements are not allowed."
             raise InvalidOperationError(msg)
         if flat_order_by is not None and self._metadata.kind.is_window():
-            assert n_opened_windows  # noqa: S101
-            n_closed_windows += 1
-        elif flat_order_by is not None and not n_opened_windows:
+            # debug assertion, `n_open_windows` should already have been incremented
+            # by the window function. If it's immediately followed by `over`, then the
+            # window gets closed, so we decrement `n_open_windows`.
+            assert n_open_windows  # noqa: S101
+            n_open_windows -= 1
+        elif flat_order_by is not None and not n_open_windows:
             msg = "Cannot use `order_by` in `over` on expression which isn't order-dependent."
             raise InvalidOperationError(msg)
-        else:
-            n_opened_windows += 1
-            n_closed_windows += 1
+        has_windows = True
         current_meta = self._metadata
         next_meta = ExprMetadata(
             kind,
-            n_opened_windows=n_opened_windows,
-            n_closed_windows=n_closed_windows,
+            n_open_windows=n_open_windows,
+            has_windows=has_windows,
             expansion_kind=current_meta.expansion_kind,
         )
 

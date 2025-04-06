@@ -192,20 +192,20 @@ def is_multi_output(
 
 
 class ExprMetadata:
-    __slots__ = ("_expansion_kind", "_kind", "_n_closed_windows", "_n_opened_windows")
+    __slots__ = ("_expansion_kind", "_has_windows", "_kind", "_n_open_windows")
 
     def __init__(
         self,
         kind: ExprKind,
         /,
         *,
-        n_opened_windows: int,
-        n_closed_windows: int,
+        n_open_windows: int,
+        has_windows: bool,
         expansion_kind: ExpansionKind,
     ) -> None:
         self._kind: ExprKind = kind
-        self._n_opened_windows = n_opened_windows
-        self._n_closed_windows = n_closed_windows
+        self._n_open_windows = n_open_windows
+        self._has_windows = has_windows
         self._expansion_kind = expansion_kind
 
     def __init_subclass__(cls, /, *args: Any, **kwds: Any) -> Never:  # pragma: no cover
@@ -213,19 +213,19 @@ class ExprMetadata:
         raise TypeError(msg)
 
     def __repr__(self) -> str:
-        return f"ExprMetadata(kind: {self._kind}, n_opened_windows: {self._n_opened_windows}, n_closed_windows: {self._n_closed_windows}, expansion_kind: {self._expansion_kind})"
+        return f"ExprMetadata(kind: {self._kind}, n_open_windows: {self._n_open_windows}, has_windows: {self._has_windows}, expansion_kind: {self._expansion_kind})"
 
     @property
     def kind(self) -> ExprKind:
         return self._kind
 
     @property
-    def n_opened_windows(self) -> int:
-        return self._n_opened_windows
+    def n_open_windows(self) -> int:
+        return self._n_open_windows
 
     @property
-    def n_closed_windows(self) -> int:
-        return self._n_closed_windows
+    def has_windows(self) -> bool:
+        return self._has_windows
 
     @property
     def expansion_kind(self) -> ExpansionKind:
@@ -235,26 +235,26 @@ class ExprMetadata:
         """Change metadata kind, leaving all other attributes the same."""
         return ExprMetadata(
             kind,
-            n_opened_windows=self._n_opened_windows,
-            n_closed_windows=self._n_closed_windows,
+            n_open_windows=self._n_open_windows,
+            has_windows=self._has_windows,
             expansion_kind=self._expansion_kind,
         )
 
     def with_extra_open_window(self) -> ExprMetadata:
-        """Increment `n_opened_windows` leaving other attributes the same."""
+        """Increment `n_open_windows` leaving other attributes the same."""
         return ExprMetadata(
             self.kind,
-            n_opened_windows=self._n_opened_windows + 1,
+            n_open_windows=self._n_open_windows + 1,
             expansion_kind=self._expansion_kind,
-            n_closed_windows=self._n_closed_windows,
+            has_windows=self._has_windows,
         )
 
     def with_kind_and_extra_open_window(self, kind: ExprKind, /) -> ExprMetadata:
-        """Change metadata kind and increment `n_opened_windows`."""
+        """Change metadata kind and increment `n_open_windows`."""
         return ExprMetadata(
             kind,
-            n_opened_windows=self._n_opened_windows + 1,
-            n_closed_windows=self._n_closed_windows,
+            n_open_windows=self._n_open_windows + 1,
+            has_windows=self._has_windows,
             expansion_kind=self._expansion_kind,
         )
 
@@ -263,8 +263,8 @@ class ExprMetadata:
         # e.g. `nw.col('a')`, `nw.nth(0)`
         return ExprMetadata(
             ExprKind.TRANSFORM,
-            n_opened_windows=0,
-            n_closed_windows=0,
+            n_open_windows=0,
+            has_windows=False,
             expansion_kind=ExpansionKind.SINGLE,
         )
 
@@ -273,8 +273,8 @@ class ExprMetadata:
         # e.g. `nw.col('a', 'b')`
         return ExprMetadata(
             ExprKind.TRANSFORM,
-            n_opened_windows=0,
-            n_closed_windows=0,
+            n_open_windows=0,
+            has_windows=False,
             expansion_kind=ExpansionKind.MULTI_NAMED,
         )
 
@@ -283,8 +283,8 @@ class ExprMetadata:
         # e.g. `nw.all()`
         return ExprMetadata(
             ExprKind.TRANSFORM,
-            n_opened_windows=0,
-            n_closed_windows=0,
+            n_open_windows=0,
+            has_windows=False,
             expansion_kind=ExpansionKind.MULTI_UNNAMED,
         )
 
@@ -308,8 +308,8 @@ def combine_metadata(
     has_transforms_or_windows = False
     has_aggregations = False
     has_literals = False
-    result_n_opened_windows = 0
-    result_n_closed_windows = 0
+    result_n_open_windows = 0
+    result_has_windows = False
     result_expansion_kind = ExpansionKind.SINGLE
 
     for i, arg in enumerate(args):
@@ -331,8 +331,8 @@ def combine_metadata(
                         result_expansion_kind = resolve_expansion_kind(
                             result_expansion_kind, arg._metadata.expansion_kind
                         )
-            result_n_opened_windows += arg._metadata.n_opened_windows
-            result_n_closed_windows += arg._metadata.n_closed_windows
+            result_n_open_windows += arg._metadata.n_open_windows
+            result_has_windows |= arg._metadata.has_windows
             kind = arg._metadata.kind
             if kind is ExprKind.AGGREGATION:
                 has_aggregations = True
@@ -368,8 +368,8 @@ def combine_metadata(
 
     return ExprMetadata(
         result_kind,
-        n_opened_windows=result_n_opened_windows,
-        n_closed_windows=result_n_closed_windows,
+        n_open_windows=result_n_open_windows,
+        has_windows=result_has_windows,
         expansion_kind=result_expansion_kind,
     )
 
