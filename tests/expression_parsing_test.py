@@ -9,23 +9,23 @@ from narwhals.exceptions import InvalidOperationError
 @pytest.mark.parametrize(
     ("expr", "expected_open", "expected_closed"),
     [
-        (nw.col("a"), 0, 0),
-        (nw.col("a").mean(), 0, 0),
-        (nw.col("a").cum_sum(), 1, 0),
-        (nw.col("a").cum_sum().over(order_by="id"), 1, 1),
-        (nw.col("a").cum_sum().abs().over(order_by="id"), 2, 1),
-        ((nw.col("a").cum_sum() + 1).over(order_by="id"), 2, 1),
-        (nw.col("a").cum_sum().cum_sum().over(order_by="id"), 2, 1),
-        (nw.col("a").cum_sum().cum_sum(), 2, 0),
-        (nw.sum_horizontal(nw.col("a"), nw.col("a").cum_sum()), 1, 0),
-        (nw.sum_horizontal(nw.col("a"), nw.col("a").cum_sum()).over("a"), 2, 1),
+        (nw.col("a"), 0, False),
+        (nw.col("a").mean(), 0, False),
+        (nw.col("a").cum_sum(), 1, False),
+        (nw.col("a").cum_sum().over(order_by="id"), 0, True),
+        (nw.col("a").cum_sum().abs().over(order_by="id"), 1, True),
+        ((nw.col("a").cum_sum() + 1).over(order_by="id"), 1, True),
+        (nw.col("a").cum_sum().cum_sum().over(order_by="id"), 1, True),
+        (nw.col("a").cum_sum().cum_sum(), 2, False),
+        (nw.sum_horizontal(nw.col("a"), nw.col("a").cum_sum()), 1, False),
+        (nw.sum_horizontal(nw.col("a"), nw.col("a").cum_sum()).over("a"), 1, True),
     ],
 )
 def test_has_open_windows(
-    expr: nw.Expr, expected_open: int, expected_closed: int
+    expr: nw.Expr, expected_open: int, *, expected_closed: bool
 ) -> None:
     assert expr._metadata.n_open_windows == expected_open
-    assert expr._metadata.has_closed_windows == expected_closed
+    assert expr._metadata.has_closed_windows is expected_closed
 
 
 def test_misleading_order_by() -> None:
