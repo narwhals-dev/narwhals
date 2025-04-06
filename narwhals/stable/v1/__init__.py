@@ -75,6 +75,7 @@ from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import deprecate_native_namespace
 from narwhals.utils import find_stacklevel
+from narwhals.utils import flatten
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_ordered_categorical
 from narwhals.utils import maybe_align_index
@@ -272,7 +273,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
                 "\nUse main namespace class instead: `narwhals.DataFrame.group_by`"
             )
             raise ComputeError(msg)
-        return super().group_by(*[col(k) for k in keys], drop_null_keys=drop_null_keys)
+        return super().group_by(
+            *[col(k) for k in flatten(keys)], drop_null_keys=drop_null_keys
+        )
 
 
 class LazyFrame(NwLazyFrame[IntoFrameT]):
@@ -429,7 +432,9 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
                 "\nUse main namespace class instead: `narwhals.LazyFrame.group_by`"
             )
             raise ComputeError(msg)
-        return super().group_by(*[col(k) for k in keys], drop_null_keys=drop_null_keys)
+        return super().group_by(
+            *[col(k) for k in flatten(keys)], drop_null_keys=drop_null_keys
+        )
 
 
 class Series(NwSeries[IntoSeriesT]):
