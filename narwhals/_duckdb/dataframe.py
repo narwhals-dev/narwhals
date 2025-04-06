@@ -277,6 +277,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             condition: duckdb.Expression = reduce(and_, it)
             rel = self.native.set_alias("lhs").join(
                 other.native.set_alias("rhs"),
+                # NOTE: Fixed in `--pre` https://github.com/duckdb/duckdb/pull/16933
                 condition=condition,  # type: ignore[arg-type, unused-ignore]
                 how=native_how,
             )
