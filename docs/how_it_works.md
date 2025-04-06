@@ -296,15 +296,16 @@ Each Narwhals expression can be of one of the following kinds:
 - `TRANSFORM`: expressions which don't change length (e.g. `nw.col('a').abs()`).
 - `WINDOW`: like `TRANSFORM`, but the last operation is a (row-order-dependent) 
    window function (`rolling_*`, `cum_*`, `diff`, `shift`, `is_*_distinct`).
-   For example:
+   aggregate (e.g. `nw.col('a').drop_nulls()`).
+- `FILTRATION`: expressions which change length but don't
+
+For example:
 
   - `nw.col('a')` is not order-dependent, so it's `TRANSFORM`.
   - `nw.col('a').abs()` is not order-dependent, so it's a `TRANSFORM`.
   - `nw.col('a').cum_sum()`'s last operation is `cum_sum`, so it's `WINDOW`.
   - `nw.col('a').cum_sum()+1`'s last operation is `__add__`, and it preserves
      the input dataframe's length, so it's a `TRANSFORM`.
-- `FILTRATION`: expressions which change length but don't
-   aggregate (e.g. `nw.col('a').drop_nulls()`).
 
 How these change depends on the operation.
 
@@ -335,8 +336,9 @@ The rules are:
 - If both are `LITERAL`, then the output is `LITERAL`.
 - If one is a `FILTRATION`, then:
 
-  - if the other is `LITERAL` or `AGGREGATION`, then the output is `FILTRATION`.
-  - else, we raise an error.
+    - if the other is `LITERAL` or `AGGREGATION`, then the output is `FILTRATION`.
+    - else, we raise an error.
+
 - If one is `TRANSFORM` or `WINDOW` and the other is not `FILTRATION`,
   then the output is `TRANSFORM`.
 - If one is `AGGREGATION` and the other is `LITERAL` or `AGGREGATION`,
