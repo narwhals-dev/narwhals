@@ -110,8 +110,8 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         min_samples: int,
         ddof: int | None = None,
     ) -> WindowFunction:
-        ensure_type(window_size, (int, type(None)))
-        ensure_type(min_samples, (int,))
+        ensure_type(window_size, int, type(None))
+        ensure_type(min_samples, int)
         supported_funcs = ["sum", "mean", "std", "var"]
         if center:
             half = (window_size - 1) // 2
@@ -542,7 +542,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         )
 
     def shift(self, n: int) -> Self:
-        ensure_type(n, (int,))
+        ensure_type(n, int)
 
         def func(window_inputs: WindowInputs) -> duckdb.Expression:
             order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=True)
