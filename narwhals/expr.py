@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterable
-from typing import Literal
 from typing import Mapping
 from typing import Sequence
 
@@ -39,7 +38,11 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantExpr
     from narwhals._compliant import CompliantNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import ClosedInterval
+    from narwhals.typing import FillNullStrategy
     from narwhals.typing import IntoExpr
+    from narwhals.typing import RankMethod
+    from narwhals.typing import RollingInterpolationMethod
 
     PS = ParamSpec("PS")
     R = TypeVar("R")
@@ -1133,7 +1136,7 @@ class Expr:
         self: Self,
         lower_bound: Any | IntoExpr,
         upper_bound: Any | IntoExpr,
-        closed: Literal["left", "right", "none", "both"] = "both",
+        closed: ClosedInterval = "both",
     ) -> Self:
         """Check if this expression is between the given lower and upper bounds.
 
@@ -1363,7 +1366,7 @@ class Expr:
     def fill_null(
         self: Self,
         value: Expr | Any | None = None,
-        strategy: Literal["forward", "backward"] | None = None,
+        strategy: FillNullStrategy | None = None,
         limit: int | None = None,
     ) -> Self:
         """Fill null values with given value.
@@ -1757,9 +1760,7 @@ class Expr:
         )
 
     def quantile(
-        self: Self,
-        quantile: float,
-        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+        self: Self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> Self:
         r"""Get quantile value.
 
@@ -2481,10 +2482,7 @@ class Expr:
         )
 
     def rank(
-        self: Self,
-        method: Literal["average", "min", "max", "dense", "ordinal"] = "average",
-        *,
-        descending: bool = False,
+        self: Self, method: RankMethod = "average", *, descending: bool = False
     ) -> Self:
         """Assign ranks to data, dealing with ties appropriately.
 

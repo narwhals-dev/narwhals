@@ -55,10 +55,15 @@ if TYPE_CHECKING:
     from narwhals.group_by import GroupBy
     from narwhals.group_by import LazyGroupBy
     from narwhals.series import Series
+    from narwhals.typing import AsofJoinStrategy
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
+    from narwhals.typing import JoinStrategy
+    from narwhals.typing import LazyUniqueKeepStrategy
+    from narwhals.typing import PivotAgg
     from narwhals.typing import SizeUnit
+    from narwhals.typing import UniqueKeepStrategy
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
 
@@ -225,7 +230,7 @@ class BaseFrame(Generic[_FrameT]):
         self: Self,
         other: Self,
         on: str | list[str] | None = None,
-        how: Literal["inner", "left", "full", "cross", "semi", "anti"] = "inner",
+        how: JoinStrategy = "inner",
         *,
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
@@ -285,7 +290,7 @@ class BaseFrame(Generic[_FrameT]):
         by_left: str | list[str] | None = None,
         by_right: str | list[str] | None = None,
         by: str | list[str] | None = None,
-        strategy: Literal["backward", "forward", "nearest"] = "backward",
+        strategy: AsofJoinStrategy = "backward",
         suffix: str = "_right",
     ) -> Self:
         _supported_strategies = ("backward", "forward", "nearest")
@@ -1397,7 +1402,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         self: Self,
         subset: str | list[str] | None = None,
         *,
-        keep: Literal["any", "first", "last", "none"] = "any",
+        keep: UniqueKeepStrategy = "any",
         maintain_order: bool = False,
     ) -> Self:
         """Drop duplicate rows from this dataframe.
@@ -1604,7 +1609,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         self: Self,
         other: Self,
         on: str | list[str] | None = None,
-        how: Literal["inner", "left", "full", "cross", "semi", "anti"] = "inner",
+        how: JoinStrategy = "inner",
         *,
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
@@ -1659,7 +1664,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         by_left: str | list[str] | None = None,
         by_right: str | list[str] | None = None,
         by: str | list[str] | None = None,
-        strategy: Literal["backward", "forward", "nearest"] = "backward",
+        strategy: AsofJoinStrategy = "backward",
         suffix: str = "_right",
     ) -> Self:
         """Perform an asof join.
@@ -1891,10 +1896,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         *,
         index: str | list[str] | None = None,
         values: str | list[str] | None = None,
-        aggregate_function: Literal[
-            "min", "max", "first", "last", "sum", "mean", "median", "len"
-        ]
-        | None = None,
+        aggregate_function: PivotAgg | None = None,
         maintain_order: bool | None = None,
         sort_columns: bool = False,
         separator: str = "_",
@@ -2658,7 +2660,7 @@ class LazyFrame(BaseFrame[FrameT]):
         self: Self,
         subset: str | list[str] | None = None,
         *,
-        keep: Literal["any", "none"] = "any",
+        keep: LazyUniqueKeepStrategy = "any",
     ) -> Self:
         """Drop duplicate rows from this LazyFrame.
 
@@ -2891,7 +2893,7 @@ class LazyFrame(BaseFrame[FrameT]):
         self: Self,
         other: Self,
         on: str | list[str] | None = None,
-        how: Literal["inner", "left", "full", "cross", "semi", "anti"] = "inner",
+        how: JoinStrategy = "inner",
         *,
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
@@ -2955,7 +2957,7 @@ class LazyFrame(BaseFrame[FrameT]):
         by_left: str | list[str] | None = None,
         by_right: str | list[str] | None = None,
         by: str | list[str] | None = None,
-        strategy: Literal["backward", "forward", "nearest"] = "backward",
+        strategy: AsofJoinStrategy = "backward",
         suffix: str = "_right",
     ) -> Self:
         """Perform an asof join.
