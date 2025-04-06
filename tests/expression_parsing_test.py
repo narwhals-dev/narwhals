@@ -25,7 +25,7 @@ def test_has_open_windows(
     expr: nw.Expr, expected_open: int, expected_closed: int
 ) -> None:
     assert expr._metadata.n_open_windows == expected_open
-    assert expr._metadata.has_windows == expected_closed
+    assert expr._metadata.has_closed_windows == expected_closed
 
 
 def test_misleading_order_by() -> None:

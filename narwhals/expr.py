@@ -1581,8 +1581,8 @@ class Expr:
 
         kind = ExprKind.TRANSFORM
         n_open_windows = self._metadata.n_open_windows
-        has_windows = self._metadata.has_windows
-        if has_windows:
+        has_closed_windows = self._metadata.has_closed_windows
+        if has_closed_windows:
             msg = "Nested `over` statements are not allowed."
             raise InvalidOperationError(msg)
         if flat_order_by is not None and self._metadata.kind.is_window():
@@ -1594,12 +1594,12 @@ class Expr:
         elif flat_order_by is not None and not n_open_windows:
             msg = "Cannot use `order_by` in `over` on expression which isn't order-dependent."
             raise InvalidOperationError(msg)
-        has_windows = True
+        has_closed_windows = True
         current_meta = self._metadata
         next_meta = ExprMetadata(
             kind,
             n_open_windows=n_open_windows,
-            has_windows=has_windows,
+            has_closed_windows=has_closed_windows,
             expansion_kind=current_meta.expansion_kind,
         )
 

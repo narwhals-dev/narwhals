@@ -1185,7 +1185,7 @@ def len_() -> Expr:
         ExprMetadata(
             ExprKind.AGGREGATION,
             n_open_windows=0,
-            has_windows=False,
+            has_closed_windows=False,
             expansion_kind=ExpansionKind.SINGLE,
         ),
     )
@@ -1660,7 +1660,7 @@ def lit(value: Any, dtype: DType | type[DType] | None = None) -> Expr:
         ExprMetadata(
             ExprKind.LITERAL,
             n_open_windows=0,
-            has_windows=False,
+            has_closed_windows=False,
             expansion_kind=ExpansionKind.SINGLE,
         ),
     )
