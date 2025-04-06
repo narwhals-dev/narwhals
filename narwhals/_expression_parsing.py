@@ -259,7 +259,7 @@ class ExprMetadata:
         )
 
     @staticmethod
-    def selector_simple() -> ExprMetadata:
+    def selector_single() -> ExprMetadata:
         # e.g. `nw.col('a')`, `nw.nth(0)`
         return ExprMetadata(
             ExprKind.TRANSFORM,

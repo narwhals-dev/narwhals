@@ -1040,7 +1040,7 @@ def col(*names: str | Iterable[str]) -> Expr:
 
     return Expr(
         func,
-        ExprMetadata.selector_simple()
+        ExprMetadata.selector_single()
         if len(flat_names) == 1
         else ExprMetadata.selector_multi_named(),
     )
@@ -1120,7 +1120,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
 
     return Expr(
         func,
-        ExprMetadata.selector_simple()
+        ExprMetadata.selector_single()
         if len(flat_indices) == 1
         else ExprMetadata.selector_multi_unnamed(),
     )
