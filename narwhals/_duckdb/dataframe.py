@@ -5,7 +5,6 @@ from operator import and_
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
-from typing import Literal
 from typing import Mapping
 from typing import Sequence
 
@@ -46,6 +45,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import AsofJoinStrategy
     from narwhals.typing import JoinStrategy
+    from narwhals.typing import LazyUniqueKeepStrategy
     from narwhals.utils import _FullContext
 
 from narwhals.typing import CompliantLazyFrame
@@ -350,7 +350,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
         }
 
     def unique(
-        self: Self, subset: Sequence[str] | None, *, keep: Literal["any", "none"]
+        self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self:
         subset_ = subset if keep == "any" else (subset or self.columns)
         if subset_:

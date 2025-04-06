@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     from narwhals.schema import Schema
     from narwhals.typing import AsofJoinStrategy
     from narwhals.typing import JoinStrategy
+    from narwhals.typing import LazyUniqueKeepStrategy
     from narwhals.typing import SizeUnit
     from narwhals.typing import UniqueKeepStrategy
     from narwhals.typing import _2DArray
@@ -298,10 +299,7 @@ class CompliantLazyFrame(
     @deprecated("`LazyFrame.tail` is deprecated and will be removed in a future version.")
     def tail(self, n: int) -> Self: ...
     def unique(
-        self,
-        subset: Sequence[str] | None,
-        *,
-        keep: Literal["any", "none"],
+        self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self: ...
     def unpivot(
         self,

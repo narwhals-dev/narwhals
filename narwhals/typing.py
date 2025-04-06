@@ -220,6 +220,7 @@ RollingInterpolationMethod: TypeAlias = Literal[
     "nearest", "higher", "lower", "midpoint", "linear"
 ]
 UniqueKeepStrategy: TypeAlias = Literal["any", "first", "last", "none"]
+LazyUniqueKeepStrategy: TypeAlias = Literal["any", "none"]
 
 
 _ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")

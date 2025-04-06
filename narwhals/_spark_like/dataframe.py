@@ -6,7 +6,6 @@ from operator import and_
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
-from typing import Literal
 from typing import Mapping
 from typing import Sequence
 
@@ -45,6 +44,7 @@ if TYPE_CHECKING:
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals.dtypes import DType
     from narwhals.typing import JoinStrategy
+    from narwhals.typing import LazyUniqueKeepStrategy
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -332,10 +332,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
         )
 
     def unique(
-        self: Self,
-        subset: Sequence[str] | None,
-        *,
-        keep: Literal["any", "none"],
+        self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self:
         check_column_exists(self.columns, subset)
         subset = list(subset) if subset else None
