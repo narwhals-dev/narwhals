@@ -1040,9 +1040,9 @@ def col(*names: str | Iterable[str]) -> Expr:
 
     return Expr(
         func,
-        ExprMetadata.simple_selector()
+        ExprMetadata.selector_simple()
         if len(flat_names) == 1
-        else ExprMetadata.multi_output_selector_named(),
+        else ExprMetadata.selector_multi_named(),
     )
 
 
@@ -1080,7 +1080,7 @@ def exclude(*names: str | Iterable[str]) -> Expr:
     def func(plx: Any) -> Any:
         return plx.exclude(exclude_names)
 
-    return Expr(func, ExprMetadata.multi_output_selector_unnamed())
+    return Expr(func, ExprMetadata.selector_multi_unnamed())
 
 
 def nth(*indices: int | Sequence[int]) -> Expr:
@@ -1120,9 +1120,9 @@ def nth(*indices: int | Sequence[int]) -> Expr:
 
     return Expr(
         func,
-        ExprMetadata.simple_selector()
+        ExprMetadata.selector_simple()
         if len(flat_indices) == 1
-        else ExprMetadata.multi_output_selector_unnamed(),
+        else ExprMetadata.selector_multi_unnamed(),
     )
 
 
@@ -1147,7 +1147,7 @@ def all_() -> Expr:
         |   1  4  0.246    |
         └──────────────────┘
     """
-    return Expr(lambda plx: plx.all(), ExprMetadata.multi_output_selector_unnamed())
+    return Expr(lambda plx: plx.all(), ExprMetadata.selector_multi_unnamed())
 
 
 # Add underscore so it doesn't conflict with builtin `len`

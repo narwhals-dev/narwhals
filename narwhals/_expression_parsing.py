@@ -259,7 +259,7 @@ class ExprMetadata:
         )
 
     @staticmethod
-    def simple_selector() -> ExprMetadata:
+    def selector_simple() -> ExprMetadata:
         # e.g. `nw.col('a')`, `nw.nth(0)`
         return ExprMetadata(
             ExprKind.TRANSFORM,
@@ -269,7 +269,7 @@ class ExprMetadata:
         )
 
     @staticmethod
-    def multi_output_selector_named() -> ExprMetadata:
+    def selector_multi_named() -> ExprMetadata:
         # e.g. `nw.col('a', 'b')`
         return ExprMetadata(
             ExprKind.TRANSFORM,
@@ -279,7 +279,7 @@ class ExprMetadata:
         )
 
     @staticmethod
-    def multi_output_selector_unnamed() -> ExprMetadata:
+    def selector_multi_unnamed() -> ExprMetadata:
         # e.g. `nw.all()`
         return ExprMetadata(
             ExprKind.TRANSFORM,
