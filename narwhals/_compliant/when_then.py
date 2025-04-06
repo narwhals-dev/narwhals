@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
     from typing_extensions import TypeAlias
 
+    from narwhals._compliant.typing import EvalSeries
     from narwhals.utils import Implementation
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -82,7 +83,7 @@ class CompliantWhen(Protocol38[FrameT, SeriesT, ExprT]):
 
 
 class CompliantThen(CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, ExprT]):
-    _call: Callable[[FrameT], Sequence[SeriesT]]
+    _call: EvalSeries[FrameT, SeriesT]
     _when_value: CompliantWhen[FrameT, SeriesT, ExprT]
     _function_name: str
     _depth: int

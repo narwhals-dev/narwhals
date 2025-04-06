@@ -355,25 +355,26 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
     def unique(
         self: Self, subset: Sequence[str] | None, *, keep: Literal["any", "none"]
     ) -> Self:
-        if subset is not None:
-            rel = self.native
+        subset_ = subset if keep == "any" else (subset or self.columns)
+        if subset_:
             # Sanitise input
-            if any(x not in rel.columns for x in subset):
-                msg = f"Columns {set(subset).difference(rel.columns)} not found in {rel.columns}."
+            if any(x not in self.columns for x in subset_):
+                msg = f"Columns {set(subset_).difference(self.columns)} not found in {self.columns}."
                 raise ColumnNotFoundError(msg)
-            idx_name = generate_temporary_column_name(8, rel.columns)
-            count_name = generate_temporary_column_name(8, [*rel.columns, idx_name])
-            if keep == "none":
-                keep_condition = col(count_name) == lit(1)
-            else:
-                keep_condition = col(idx_name) == lit(1)
-            partition_by_sql = generate_partition_by_sql(*subset)
+            idx_name = generate_temporary_column_name(8, self.columns)
+            count_name = generate_temporary_column_name(8, [*self.columns, idx_name])
+            partition_by_sql = generate_partition_by_sql(*(subset_))
+            rel = self.native  # noqa: F841
             query = f"""
                 select *,
                         row_number() over ({partition_by_sql}) as "{idx_name}",
                         count(*) over ({partition_by_sql}) as "{count_name}"
                 from rel
                 """  # noqa: S608
+            if keep == "none":
+                keep_condition = col(count_name) == lit(1)
+            else:
+                keep_condition = col(idx_name) == lit(1)
             return self._with_native(
                 duckdb.sql(query)
                 .filter(keep_condition)
@@ -399,8 +400,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
         return self._with_native(self.native.sort(*it))
 
     def drop_nulls(self: Self, subset: Sequence[str] | None) -> Self:
-        rel = self.native
-        subset_ = subset if subset is not None else rel.columns
+        subset_ = subset if subset is not None else self.columns
         keep_condition = reduce(and_, (col(name).isnotnull() for name in subset_))
         return self._with_native(self.native.filter(keep_condition))
 
