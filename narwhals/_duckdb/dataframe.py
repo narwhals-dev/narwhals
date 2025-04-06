@@ -356,8 +356,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
     def unique(
         self: Self, subset: Sequence[str] | None, *, keep: Literal["any", "none"]
     ) -> Self:
-        subset_ = subset if keep == "any" else (subset or self.columns)
-        if subset_:
+        if subset_ := subset if keep == "any" else (subset or self.columns):
             # Sanitise input
             if any(x not in self.columns for x in subset_):
                 msg = f"Columns {set(subset_).difference(self.columns)} not found in {self.columns}."
