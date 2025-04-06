@@ -207,6 +207,21 @@ SizeUnit: TypeAlias = Literal[
 
 TimeUnit: TypeAlias = Literal["ns", "us", "ms", "s"]
 
+AsofJoinStrategy: TypeAlias = Literal["backward", "forward", "nearest"]
+ClosedInterval: TypeAlias = Literal["left", "right", "none", "both"]
+ConcatMethod: TypeAlias = Literal["horizontal", "vertical", "diagonal"]
+FillNullStrategy: TypeAlias = Literal["forward", "backward"]
+JoinStrategy: TypeAlias = Literal["inner", "left", "full", "cross", "semi", "anti"]
+PivotAgg: TypeAlias = Literal[
+    "min", "max", "first", "last", "sum", "mean", "median", "len"
+]
+RankMethod: TypeAlias = Literal["average", "min", "max", "dense", "ordinal"]
+RollingInterpolationMethod: TypeAlias = Literal[
+    "nearest", "higher", "lower", "midpoint", "linear"
+]
+UniqueKeepStrategy: TypeAlias = Literal["any", "first", "last", "none"]
+
+
 _ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
 _NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
 _1DArray: TypeAlias = "_NDArray[tuple[int]]"  # noqa: PYI042
