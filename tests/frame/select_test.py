@@ -53,12 +53,11 @@ def test_invalid_select(constructor: Constructor, invalid_select: Any) -> None:
         nw.from_native(constructor({"a": [1, 2, 3]})).select(invalid_select)
 
 
-@pytest.mark.parametrize("keys", [(True, 2), ((True, 2),), (((True,), 2))])
-def test_select_boolean_cols(keys: tuple[Any, ...]) -> None:
+def test_select_boolean_cols() -> None:
     df = nw.from_native(
         pd.DataFrame({True: [1, 2], False: [3, 4], 2: [1, 1]}), eager_only=True
     )
-    result = df.group_by(*keys).agg(nw.col(False).max())  # type: ignore[arg-type]# noqa: FBT003
+    result = df.group_by(True, 2).agg(nw.col(False).max())  # type: ignore[arg-type]# noqa: FBT003
     assert_equal_data(
         result.to_dict(as_series=False),
         {True: [1, 2], 2: [1, 1], False: [3, 4]},  # type: ignore[dict-item]

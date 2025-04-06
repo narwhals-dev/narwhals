@@ -18,7 +18,6 @@ from warnings import warn
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import all_exprs_are_scalar_like
 from narwhals._expression_parsing import check_expressions_preserve_length
-from narwhals._expression_parsing import group_by_keys_into_exprs
 from narwhals._expression_parsing import infer_kind
 from narwhals._expression_parsing import is_scalar_like
 from narwhals.dependencies import get_polars
@@ -1549,8 +1548,6 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         from narwhals.group_by import GroupBy
 
-        if self.implementation.is_pandas_like() or self.implementation.is_dask():
-            keys = group_by_keys_into_exprs(keys)
         flat_keys, kinds = self._flatten_and_extract(*keys)
 
         if any(kind is ExprKind.FILTRATION for kind in kinds):
@@ -1563,7 +1560,6 @@ class DataFrame(BaseFrame[DataFrameT]):
             compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
             for compliant_expr, kind in zip(flat_keys, kinds)
         ]
-
         return GroupBy(self, *flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
@@ -2835,8 +2831,6 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         from narwhals.group_by import LazyGroupBy
 
-        if self.implementation.is_pandas_like() or self.implementation.is_dask():
-            keys = group_by_keys_into_exprs(keys)
         flat_keys, kinds = self._flatten_and_extract(*keys)
 
         if any(kind is ExprKind.FILTRATION for kind in kinds):
