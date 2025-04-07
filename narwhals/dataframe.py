@@ -2177,10 +2177,7 @@ class LazyFrame(BaseFrame[FrameT]):
         return DataFrame
 
     def __init__(
-        self: Self,
-        df: Any,
-        *,
-        level: Literal["full", "lazy", "interchange"],
+        self: Self, df: Any, *, level: Literal["full", "lazy", "interchange"]
     ) -> None:
         self._level = level
         self._compliant_frame: CompliantLazyFrame[Any, FrameT]  # type: ignore[type-var]
