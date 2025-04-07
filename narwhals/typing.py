@@ -72,9 +72,7 @@ Examples:
 
 IntoLazyFrame: TypeAlias = "NativeLazyFrame | LazyFrame[Any]"
 
-IntoFrame: TypeAlias = Union[
-    "NativeFrame", "DataFrame[Any]", "LazyFrame[Any]", "DataFrameLike"
-]
+IntoFrame: TypeAlias = Union["NativeFrame", "LazyFrame[Any]", "DataFrameLike"]
 """Anything which can be converted to a Narwhals DataFrame or LazyFrame.
 
 Use this if your function can accept an object which can be converted to either
