@@ -1589,19 +1589,20 @@ class Expr:
             msg = "Nested `over` statements are not allowed."
             raise InvalidOperationError(msg)
         if flat_order_by is not None and self._metadata.kind.is_window():
-            # debug assertion, `n_open_windows` should already have been incremented
+            # debug assertion, an open window should already have been set
             # by the window function. If it's immediately followed by `over`, then the
-            # window gets closed, so we decrement `n_open_windows`.
+            # window gets closed.
             assert window_kind.is_open()  # noqa: S101
         elif flat_order_by is not None and not window_kind.is_open():
             msg = "Cannot use `order_by` in `over` on expression which isn't order-dependent."
             raise InvalidOperationError(msg)
         current_meta = self._metadata
+        next_window_kind = (
+            WindowKind.UNCLOSEABLE if window_kind.is_uncloseable() else WindowKind.CLOSED
+        )
         next_meta = ExprMetadata(
             kind,
-            window_kind=WindowKind.UNCLOSEABLE
-            if window_kind.is_uncloseable()
-            else WindowKind.CLOSED,
+            window_kind=next_window_kind,
             expansion_kind=current_meta.expansion_kind,
         )
 
