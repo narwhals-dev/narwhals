@@ -51,6 +51,7 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoLazyFrameT
     from narwhals.typing import IntoSeries
     from narwhals.typing import IntoSeriesT
+    from narwhals.typing import LazyFrameT
     from narwhals.typing import SeriesT
 
 T = TypeVar("T")
@@ -139,14 +140,7 @@ def from_native(native_object: DataFrameT, **kwds: Any) -> DataFrameT: ...
 
 
 @overload
-def from_native(
-    native_object: IntoDataFrameT | IntoSeries,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[IntoDataFrameT]: ...
+def from_native(native_object: LazyFrameT, **kwds: Any) -> LazyFrameT: ...
 
 
 @overload
@@ -240,7 +234,6 @@ def from_native(  # type: ignore[overload-overlap]
 ) -> LazyFrame[IntoLazyFrameT]: ...
 
 
-# NOTE: `pl.LazyFrame` originally matched here
 @overload
 def from_native(
     native_object: IntoDataFrameT,
@@ -283,17 +276,6 @@ def from_native(
     series_only: Literal[True],
     allow_series: None = ...,
 ) -> Series[IntoSeriesT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoFrameT | IntoLazyFrameT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoLazyFrameT]: ...
 
 
 # All params passed in as variables

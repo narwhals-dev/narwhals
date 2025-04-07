@@ -70,9 +70,9 @@ Examples:
     ...     return df.shape
 """
 
-IntoLazyFrame: TypeAlias = "NativeLazyFrame | LazyFrame[Any]"
+IntoLazyFrame: TypeAlias = "NativeLazyFrame"
 
-IntoFrame: TypeAlias = Union["NativeFrame", "LazyFrame[Any]", "DataFrameLike"]
+IntoFrame: TypeAlias = "IntoDataFrame | IntoLazyFrame"
 """Anything which can be converted to a Narwhals DataFrame or LazyFrame.
 
 Use this if your function can accept an object which can be converted to either
