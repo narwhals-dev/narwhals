@@ -413,6 +413,7 @@ def test_lazyframe_recursive() -> None:
 
 
 def test_dataframe_recursive_v1() -> None:
+    """`v1` always returns a Union."""
     pytest.importorskip("polars")
     import polars as pl
 
@@ -426,13 +427,16 @@ def test_dataframe_recursive_v1() -> None:
     if TYPE_CHECKING:
         assert_type(pl_frame, pl.DataFrame)
         # TODO @dangotbanned: Fix without breaking something else (1)
-        assert_type(nw_frame, nw.DataFrame[pl.DataFrame])
+        assert_type(nw_frame, "nw.DataFrame[pl.DataFrame] | nw.LazyFrame[pl.DataFrame]")
 
         nw_frame_depth_2 = nw.DataFrame(nw_frame, level="full")
         # NOTE: Checking that the type is `DataFrame[Unknown]`
         assert_type(nw_frame_depth_2, nw.DataFrame)
         # TODO @dangotbanned: Fix without breaking something else (2)
-        assert_type(nw_frame_early_return, nw.DataFrame[pl.DataFrame])
+        assert_type(
+            nw_frame_early_return,
+            "nw.DataFrame[pl.DataFrame] | nw.LazyFrame[pl.DataFrame]",
+        )
 
 
 def test_lazyframe_recursive_v1() -> None:

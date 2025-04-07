@@ -1171,6 +1171,12 @@ def from_native(native_object: LazyFrameT, **kwds: Any) -> LazyFrameT: ...
 
 @overload
 def from_native(
+    native_object: DataFrameT | LazyFrameT, **kwds: Any
+) -> DataFrameT | LazyFrameT: ...
+
+
+@overload
+def from_native(
     native_object: IntoDataFrameT | IntoSeriesT,
     *,
     strict: Literal[False],
