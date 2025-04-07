@@ -33,10 +33,12 @@ from narwhals.utils import Implementation
 from narwhals.utils import find_stacklevel
 from narwhals.utils import flatten
 from narwhals.utils import generate_repr
+from narwhals.utils import is_compliant_dataframe
 from narwhals.utils import is_compliant_lazyframe
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import issue_deprecation_warning
 from narwhals.utils import parse_version
+from narwhals.utils import supports_arrow_c_stream
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -50,6 +52,7 @@ if TYPE_CHECKING:
     from typing_extensions import ParamSpec
     from typing_extensions import Self
 
+    from narwhals._compliant import CompliantDataFrame
     from narwhals._compliant import IntoCompliantExpr
     from narwhals._compliant.typing import EagerNamespaceAny
     from narwhals.group_by import GroupBy
@@ -447,8 +450,10 @@ class DataFrame(BaseFrame[DataFrameT]):
         level: Literal["full", "lazy", "interchange"],
     ) -> None:
         self._level: Literal["full", "lazy", "interchange"] = level
-        if hasattr(df, "__narwhals_dataframe__"):
-            self._compliant_frame: Any = df.__narwhals_dataframe__()
+        if is_compliant_dataframe(df):
+            self._compliant_frame: CompliantDataFrame[Any, Any, DataFrameT] = (
+                df.__narwhals_dataframe__()
+            )
         else:  # pragma: no cover
             msg = f"Expected an object which implements `__narwhals_dataframe__`, got: {type(df)}"
             raise AssertionError(msg)
@@ -498,7 +503,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         for more.
         """
         native_frame = self._compliant_frame._native_frame
-        if hasattr(native_frame, "__arrow_c_stream__"):
+        if supports_arrow_c_stream(native_frame):
             return native_frame.__arrow_c_stream__(requested_schema=requested_schema)
         try:
             import pyarrow as pa  # ignore-banned-import
