@@ -39,6 +39,12 @@ from narwhals.exceptions import InvalidOperationError
             ),
             WindowKind.UNCLOSEABLE,
         ),
+        (
+            nw.sum_horizontal(nw.col("a").diff().abs(), nw.col("a").cum_sum()).over(
+                order_by="i"
+            ),
+            WindowKind.UNCLOSEABLE,
+        ),
     ],
 )
 def test_window_kind(expr: nw.Expr, expected: WindowKind) -> None:

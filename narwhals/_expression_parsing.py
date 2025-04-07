@@ -15,7 +15,6 @@ from typing import cast
 
 from narwhals.dependencies import is_narwhals_series
 from narwhals.dependencies import is_numpy_array
-from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.exceptions import MultiOutputExpressionError
 from narwhals.exceptions import ShapeError
@@ -272,9 +271,9 @@ class ExprMetadata:
         """Change metadata kind and increment `n_open_windows`."""
         if self._window_kind is WindowKind.NONE:
             window_kind = WindowKind.CLOSEABLE
-        elif self._window_kind is WindowKind.CLOSED:
-            msg = "Cannot chain `over` expressions."
-            raise InvalidOperationError(msg)
+        elif self._window_kind is WindowKind.CLOSED:  # pragma: no cover
+            msg = "Unreachable code, please report a bug."
+            raise AssertionError(msg)
         else:
             window_kind = WindowKind.UNCLOSEABLE
         return ExprMetadata(
