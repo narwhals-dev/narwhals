@@ -100,6 +100,8 @@ if TYPE_CHECKING:
     from narwhals.typing import _2DArray
 
     FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
+    DataFrameT = TypeVar("DataFrameT", bound="DataFrame[Any]")
+    LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[Any]")
     SeriesT = TypeVar("SeriesT", bound="Series[Any]")
     IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
     T = TypeVar("T", default=Any)
@@ -1157,6 +1159,14 @@ def _stableify(
 
 @overload
 def from_native(native_object: SeriesT, **kwds: Any) -> SeriesT: ...
+
+
+@overload
+def from_native(native_object: DataFrameT, **kwds: Any) -> DataFrameT: ...
+
+
+@overload
+def from_native(native_object: LazyFrameT, **kwds: Any) -> LazyFrameT: ...
 
 
 @overload

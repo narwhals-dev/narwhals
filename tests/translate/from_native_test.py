@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# mypy: disallow-any-generics=false, disable-error-code="var-annotated"
 import sys
 from contextlib import nullcontext as does_not_raise
 from importlib.util import find_spec
@@ -384,9 +385,9 @@ def test_dataframe_recursive() -> None:
         assert_type(pl_frame, pl.DataFrame)
         assert_type(nw_frame, unstable_nw.DataFrame[pl.DataFrame])
 
-        nw_frame_depth_2 = unstable_nw.DataFrame(nw_frame, level="full")  # type: ignore[var-annotated]
+        nw_frame_depth_2 = unstable_nw.DataFrame(nw_frame, level="full")
         # NOTE: Checking that the type is `DataFrame[Unknown]`
-        assert_type(nw_frame_depth_2, unstable_nw.DataFrame)  # type: ignore[type-arg]
+        assert_type(nw_frame_depth_2, unstable_nw.DataFrame)
         assert_type(nw_frame_early_return, unstable_nw.DataFrame[pl.DataFrame])
 
 
@@ -405,10 +406,54 @@ def test_lazyframe_recursive() -> None:
         assert_type(pl_frame, pl.LazyFrame)
         assert_type(nw_frame, unstable_nw.LazyFrame[pl.LazyFrame])
 
-        nw_frame_depth_2 = unstable_nw.LazyFrame(nw_frame, level="lazy")  # type: ignore[var-annotated]
+        nw_frame_depth_2 = unstable_nw.LazyFrame(nw_frame, level="lazy")
         # NOTE: Checking that the type is `LazyFrame[Unknown]`
-        assert_type(nw_frame_depth_2, unstable_nw.LazyFrame)  # type: ignore[type-arg]
+        assert_type(nw_frame_depth_2, unstable_nw.LazyFrame)
         assert_type(nw_frame_early_return, unstable_nw.LazyFrame[pl.LazyFrame])
+
+
+def test_dataframe_recursive_v1() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    pl_frame = pl.DataFrame({"a": [1, 2, 3]})
+    nw_frame = nw.from_native(pl_frame)
+    with pytest.raises(AssertionError):
+        nw.DataFrame(nw_frame, level="full")
+
+    nw_frame_early_return = nw.from_native(nw_frame)
+
+    if TYPE_CHECKING:
+        assert_type(pl_frame, pl.DataFrame)
+        # TODO @dangotbanned: Fix without breaking something else (1)
+        assert_type(nw_frame, nw.DataFrame[pl.DataFrame])
+
+        nw_frame_depth_2 = nw.DataFrame(nw_frame, level="full")
+        # NOTE: Checking that the type is `DataFrame[Unknown]`
+        assert_type(nw_frame_depth_2, nw.DataFrame)
+        # TODO @dangotbanned: Fix without breaking something else (2)
+        assert_type(nw_frame_early_return, nw.DataFrame[pl.DataFrame])
+
+
+def test_lazyframe_recursive_v1() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    pl_frame = pl.DataFrame({"a": [1, 2, 3]}).lazy()
+    nw_frame = nw.from_native(pl_frame)
+    with pytest.raises(AssertionError):
+        nw.LazyFrame(nw_frame, level="lazy")
+
+    nw_frame_early_return = nw.from_native(nw_frame)
+
+    if TYPE_CHECKING:
+        assert_type(pl_frame, pl.LazyFrame)
+        assert_type(nw_frame, nw.LazyFrame[pl.LazyFrame])
+
+        nw_frame_depth_2 = nw.LazyFrame(nw_frame, level="lazy")
+        # NOTE: Checking that the type is `LazyFrame[Unknown]`
+        assert_type(nw_frame_depth_2, nw.LazyFrame)
+        assert_type(nw_frame_early_return, nw.LazyFrame[pl.LazyFrame])
 
 
 def test_series_recursive() -> None:
@@ -427,9 +472,9 @@ def test_series_recursive() -> None:
         assert_type(pl_series, pl.Series)
         assert_type(nw_series, unstable_nw.Series[pl.Series])
 
-        nw_series_depth_2 = unstable_nw.Series(nw_series, level="full")  # type: ignore[var-annotated]
+        nw_series_depth_2 = unstable_nw.Series(nw_series, level="full")
         # NOTE: Checking that the type is `Series[Unknown]`
-        assert_type(nw_series_depth_2, unstable_nw.Series)  # type: ignore[type-arg]
+        assert_type(nw_series_depth_2, unstable_nw.Series)
         assert_type(nw_series_early_return, unstable_nw.Series[pl.Series])
 
 
