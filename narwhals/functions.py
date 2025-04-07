@@ -15,6 +15,7 @@ from typing import cast
 from narwhals._expression_parsing import ExpansionKind
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
+from narwhals._expression_parsing import WindowKind
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import check_expressions_preserve_length
 from narwhals._expression_parsing import combine_metadata
@@ -1184,8 +1185,7 @@ def len_() -> Expr:
         func,
         ExprMetadata(
             ExprKind.AGGREGATION,
-            n_open_windows=0,
-            has_closed_windows=False,
+            window_kind=WindowKind.NONE,
             expansion_kind=ExpansionKind.SINGLE,
         ),
     )
@@ -1659,8 +1659,7 @@ def lit(value: Any, dtype: DType | type[DType] | None = None) -> Expr:
         lambda plx: plx.lit(value, dtype),
         ExprMetadata(
             ExprKind.LITERAL,
-            n_open_windows=0,
-            has_closed_windows=False,
+            window_kind=WindowKind.NONE,
             expansion_kind=ExpansionKind.SINGLE,
         ),
     )

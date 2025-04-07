@@ -3,29 +3,46 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
+from narwhals._expression_parsing import WindowKind
 from narwhals.exceptions import InvalidOperationError
 
 
 @pytest.mark.parametrize(
-    ("expr", "expected_open", "expected_closed"),
+    ("expr", "expected"),
     [
-        (nw.col("a"), 0, False),
-        (nw.col("a").mean(), 0, False),
-        (nw.col("a").cum_sum(), 1, False),
-        (nw.col("a").cum_sum().over(order_by="id"), 0, True),
-        (nw.col("a").cum_sum().abs().over(order_by="id"), 1, True),
-        ((nw.col("a").cum_sum() + 1).over(order_by="id"), 1, True),
-        (nw.col("a").cum_sum().cum_sum().over(order_by="id"), 1, True),
-        (nw.col("a").cum_sum().cum_sum(), 2, False),
-        (nw.sum_horizontal(nw.col("a"), nw.col("a").cum_sum()), 1, False),
-        (nw.sum_horizontal(nw.col("a"), nw.col("a").cum_sum()).over("a"), 1, True),
+        (nw.col("a"), WindowKind.NONE),
+        (nw.col("a").mean(), WindowKind.NONE),
+        (nw.col("a").cum_sum(), WindowKind.CLOSEABLE),
+        (nw.col("a").cum_sum().over(order_by="id"), WindowKind.CLOSED),
+        (nw.col("a").cum_sum().abs().over(order_by="id"), WindowKind.UNCLOSEABLE),
+        ((nw.col("a").cum_sum() + 1).over(order_by="id"), WindowKind.UNCLOSEABLE),
+        (nw.col("a").cum_sum().cum_sum().over(order_by="id"), WindowKind.UNCLOSEABLE),
+        (nw.col("a").cum_sum().cum_sum(), WindowKind.UNCLOSEABLE),
+        (nw.sum_horizontal(nw.col("a"), nw.col("a").cum_sum()), WindowKind.UNCLOSEABLE),
+        (
+            nw.sum_horizontal(nw.col("a"), nw.col("a").cum_sum()).over("a"),
+            WindowKind.UNCLOSEABLE,
+        ),
+        (
+            nw.sum_horizontal(nw.col("a"), nw.col("a").cum_sum().over(order_by="i")),
+            WindowKind.CLOSED,
+        ),
+        (
+            nw.sum_horizontal(
+                nw.col("a").diff(), nw.col("a").cum_sum().over(order_by="i")
+            ),
+            WindowKind.UNCLOSEABLE,
+        ),
+        (
+            nw.sum_horizontal(nw.col("a").diff(), nw.col("a").cum_sum()).over(
+                order_by="i"
+            ),
+            WindowKind.UNCLOSEABLE,
+        ),
     ],
 )
-def test_has_open_windows(
-    expr: nw.Expr, expected_open: int, *, expected_closed: bool
-) -> None:
-    assert expr._metadata.n_open_windows == expected_open
-    assert expr._metadata.has_closed_windows is expected_closed
+def test_window_kind(expr: nw.Expr, expected: WindowKind) -> None:
+    assert expr._metadata.window_kind is expected
 
 
 def test_misleading_order_by() -> None:

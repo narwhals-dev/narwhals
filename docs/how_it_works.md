@@ -351,28 +351,23 @@ is `LITERAL` if all of `expr1`, `expr2`, and `expr3` are.
 ### "You open a window to another window to another window to another window"
 
 When we print out an expression, in addition to the expression kind,
-we also see `n_open_windows` and `has_closed_windows`.
+we also see `window_kind`. These are four window kinds:
 
-An open window is a non-elementwise operation which depends on row order.
-For example, if we have `nw.col('a').cum_sum()`, then in which order
-should the cumulative sum be computed? It's not specified. By introducing
-an operation like this one, we say that we've opened a window. An open
-window can only be closed if it's followed by `over` with `order_by`
-specified.
-
-A closed window is a non-elementwise operation which doesn't depend on row
-order. For example:
-
-- `nw.col('a').mean().over('b')`.
-- `nw.col('a').cum_sum().over(order_by='i')`.
+- `NONE`: non-order-dependent operations, like `.abs()` or `.mean()`.
+- `CLOSEABLE`: expression where the last operation is order-dependent. For
+  example, `nw.col('a').diff()`.
+- `UNCLOSEABLE`: expression where some operation is order-dependent but
+  the order-dependent operation wasn't the last one. For example,
+  `nw.col('a').diff().abs()`.
+- `CLOSED`: expression contains `over` at some point, and any order-dependent
+  operation was immediately followed by `over(order_by=...)`.
 
 When working with `DataFrame`s, row order is well-defined, as the dataframes
 are assumed to be eager and in-memory. Therefore, it's allowed to work
-with open windows.
+with all window kinds.
 
 When working with `LazyFrame`s, on the other hand, row order is undefined.
-Therefore, it's only allowed to work with expressions where `n_open_windows`
-is exactly equal to zero.
+Therefore, window kinds must either be `NONE` or `CLOSED`.
 
 ### Broadcasting
 

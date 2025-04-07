@@ -15,6 +15,7 @@ from typing import cast
 
 from narwhals.dependencies import is_narwhals_series
 from narwhals.dependencies import is_numpy_array
+from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.exceptions import MultiOutputExpressionError
 from narwhals.exceptions import ShapeError
@@ -191,21 +192,45 @@ def is_multi_output(
     return expansion_kind in {ExpansionKind.MULTI_NAMED, ExpansionKind.MULTI_UNNAMED}
 
 
+class WindowKind(Enum):
+    """Describe what kind of window the expression contains."""
+
+    NONE = auto()
+    """e.g. `nw.col('a').abs()`, no windows."""
+
+    CLOSEABLE = auto()
+    """e.g. `nw.col('a').cum_sum()` - can be closed if immediately followed by `over(order_by=...)`."""
+
+    UNCLOSEABLE = auto()
+    """e.g. `nw.col('a').cum_sum().abs()` - the window function (`cum_sum`) wasn't immediately followed by
+    `over(order_by=...)`, and so the window is uncloseable."""
+
+    CLOSED = auto()
+    """e.g. `nw.col('a').cum_sum().over(order_by='i')`."""
+
+    def is_open(self) -> bool:
+        return self in {WindowKind.UNCLOSEABLE, WindowKind.CLOSEABLE}
+
+    def is_closed(self) -> bool:
+        return self is WindowKind.CLOSED
+
+    def is_uncloseable(self) -> bool:
+        return self is WindowKind.UNCLOSEABLE
+
+
 class ExprMetadata:
-    __slots__ = ("_expansion_kind", "_has_closed_windows", "_kind", "_n_open_windows")
+    __slots__ = ("_expansion_kind", "_kind", "_window_kind")
 
     def __init__(
         self,
         kind: ExprKind,
         /,
         *,
-        n_open_windows: int,
-        has_closed_windows: bool,
+        window_kind: WindowKind,
         expansion_kind: ExpansionKind,
     ) -> None:
         self._kind: ExprKind = kind
-        self._n_open_windows = n_open_windows
-        self._has_closed_windows = has_closed_windows
+        self._window_kind = window_kind
         self._expansion_kind = expansion_kind
 
     def __init_subclass__(cls, /, *args: Any, **kwds: Any) -> Never:  # pragma: no cover
@@ -213,19 +238,15 @@ class ExprMetadata:
         raise TypeError(msg)
 
     def __repr__(self) -> str:
-        return f"ExprMetadata(kind: {self._kind}, n_open_windows: {self._n_open_windows}, has_closed_windows: {self._has_closed_windows}, expansion_kind: {self._expansion_kind})"
+        return f"ExprMetadata(kind: {self._kind}, window_kind: {self._window_kind}, expansion_kind: {self._expansion_kind})"
 
     @property
     def kind(self) -> ExprKind:
         return self._kind
 
     @property
-    def n_open_windows(self) -> int:
-        return self._n_open_windows
-
-    @property
-    def has_closed_windows(self) -> bool:
-        return self._has_closed_windows
+    def window_kind(self) -> WindowKind:
+        return self._window_kind
 
     @property
     def expansion_kind(self) -> ExpansionKind:
@@ -235,8 +256,7 @@ class ExprMetadata:
         """Change metadata kind, leaving all other attributes the same."""
         return ExprMetadata(
             kind,
-            n_open_windows=self._n_open_windows,
-            has_closed_windows=self._has_closed_windows,
+            window_kind=self._window_kind,
             expansion_kind=self._expansion_kind,
         )
 
@@ -244,17 +264,30 @@ class ExprMetadata:
         """Increment `n_open_windows` leaving other attributes the same."""
         return ExprMetadata(
             self.kind,
-            n_open_windows=self._n_open_windows + 1,
+            window_kind=self._window_kind,
             expansion_kind=self._expansion_kind,
-            has_closed_windows=self._has_closed_windows,
         )
 
     def with_kind_and_extra_open_window(self, kind: ExprKind, /) -> ExprMetadata:
         """Change metadata kind and increment `n_open_windows`."""
+        if self._window_kind is WindowKind.NONE:
+            window_kind = WindowKind.CLOSEABLE
+        elif self._window_kind is WindowKind.CLOSED:
+            msg = "Cannot chain `over` expressions."
+            raise InvalidOperationError(msg)
+        else:
+            window_kind = WindowKind.UNCLOSEABLE
         return ExprMetadata(
             kind,
-            n_open_windows=self._n_open_windows + 1,
-            has_closed_windows=self._has_closed_windows,
+            window_kind=window_kind,
+            expansion_kind=self._expansion_kind,
+        )
+
+    def with_kind_and_uncloseable_window(self, kind: ExprKind, /) -> ExprMetadata:
+        """Change metadata kind and set window kind to uncloseable."""
+        return ExprMetadata(
+            kind,
+            window_kind=WindowKind.UNCLOSEABLE,
             expansion_kind=self._expansion_kind,
         )
 
@@ -263,8 +296,7 @@ class ExprMetadata:
         # e.g. `nw.col('a')`, `nw.nth(0)`
         return ExprMetadata(
             ExprKind.TRANSFORM,
-            n_open_windows=0,
-            has_closed_windows=False,
+            window_kind=WindowKind.NONE,
             expansion_kind=ExpansionKind.SINGLE,
         )
 
@@ -273,8 +305,7 @@ class ExprMetadata:
         # e.g. `nw.col('a', 'b')`
         return ExprMetadata(
             ExprKind.TRANSFORM,
-            n_open_windows=0,
-            has_closed_windows=False,
+            window_kind=WindowKind.NONE,
             expansion_kind=ExpansionKind.MULTI_NAMED,
         )
 
@@ -283,13 +314,12 @@ class ExprMetadata:
         # e.g. `nw.all()`
         return ExprMetadata(
             ExprKind.TRANSFORM,
-            n_open_windows=0,
-            has_closed_windows=False,
+            window_kind=WindowKind.NONE,
             expansion_kind=ExpansionKind.MULTI_UNNAMED,
         )
 
 
-def combine_metadata(
+def combine_metadata(  # noqa: PLR0915
     *args: IntoExpr | object | None,
     str_as_lit: bool,
     allow_multi_output: bool,
@@ -308,9 +338,10 @@ def combine_metadata(
     has_transforms_or_windows = False
     has_aggregations = False
     has_literals = False
-    result_n_open_windows = 0
-    result_has_closed_windows = False
     result_expansion_kind = ExpansionKind.SINGLE
+    has_closeable_windows = False
+    has_uncloseable_windows = False
+    has_closed_windows = False
 
     for i, arg in enumerate(args):
         if isinstance(arg, str) and not str_as_lit:
@@ -331,8 +362,6 @@ def combine_metadata(
                         result_expansion_kind = resolve_expansion_kind(
                             result_expansion_kind, arg._metadata.expansion_kind
                         )
-            result_n_open_windows += arg._metadata.n_open_windows
-            result_has_closed_windows |= arg._metadata.has_closed_windows
             kind = arg._metadata.kind
             if kind is ExprKind.AGGREGATION:
                 has_aggregations = True
@@ -345,6 +374,14 @@ def combine_metadata(
             else:  # pragma: no cover
                 msg = "unreachable code"
                 raise AssertionError(msg)
+
+            window_kind = arg._metadata.window_kind
+            if window_kind is WindowKind.UNCLOSEABLE:
+                has_uncloseable_windows = True
+            elif window_kind is WindowKind.CLOSEABLE:
+                has_closeable_windows = True
+            elif window_kind is WindowKind.CLOSED:
+                has_closed_windows = True
 
     if (
         has_literals
@@ -366,11 +403,15 @@ def combine_metadata(
     else:
         result_kind = ExprKind.AGGREGATION
 
+    if has_uncloseable_windows or has_closeable_windows:
+        result_window_kind = WindowKind.UNCLOSEABLE
+    elif has_closed_windows:
+        result_window_kind = WindowKind.CLOSED
+    else:
+        result_window_kind = WindowKind.NONE
+
     return ExprMetadata(
-        result_kind,
-        n_open_windows=result_n_open_windows,
-        has_closed_windows=result_has_closed_windows,
-        expansion_kind=result_expansion_kind,
+        result_kind, window_kind=result_window_kind, expansion_kind=result_expansion_kind
     )
 
 

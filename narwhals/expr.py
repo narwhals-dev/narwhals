@@ -10,6 +10,7 @@ from typing import Sequence
 
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
+from narwhals._expression_parsing import WindowKind
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import combine_metadata_binary_op
@@ -65,8 +66,11 @@ class Expr:
         # Instantiate new Expr keeping metadata unchanged, unless
         # it's a WINDOW, in which case make it a TRANSFORM.
         if self._metadata.kind.is_window():
+            # We had a window function, but it wasn't immediately followed by
+            # `over(order_by=...)` - it missed its chance, it's now forever uncloseable.
             return self.__class__(
-                to_compliant_expr, self._metadata.with_kind(ExprKind.TRANSFORM)
+                to_compliant_expr,
+                self._metadata.with_kind_and_uncloseable_window(ExprKind.TRANSFORM),
             )
         return self.__class__(to_compliant_expr, self._metadata)
 
@@ -1580,24 +1584,24 @@ class Expr:
             raise ValueError(msg)
 
         kind = ExprKind.TRANSFORM
-        n_open_windows = self._metadata.n_open_windows
-        if self._metadata.has_closed_windows:
+        window_kind = self._metadata.window_kind
+        if window_kind.is_closed():
             msg = "Nested `over` statements are not allowed."
             raise InvalidOperationError(msg)
         if flat_order_by is not None and self._metadata.kind.is_window():
             # debug assertion, `n_open_windows` should already have been incremented
             # by the window function. If it's immediately followed by `over`, then the
             # window gets closed, so we decrement `n_open_windows`.
-            assert n_open_windows  # noqa: S101
-            n_open_windows -= 1
-        elif flat_order_by is not None and not n_open_windows:
+            assert window_kind.is_open()  # noqa: S101
+        elif flat_order_by is not None and not window_kind.is_open():
             msg = "Cannot use `order_by` in `over` on expression which isn't order-dependent."
             raise InvalidOperationError(msg)
         current_meta = self._metadata
         next_meta = ExprMetadata(
             kind,
-            n_open_windows=n_open_windows,
-            has_closed_windows=True,
+            window_kind=WindowKind.UNCLOSEABLE
+            if window_kind.is_uncloseable()
+            else WindowKind.CLOSED,
             expansion_kind=current_meta.expansion_kind,
         )
 

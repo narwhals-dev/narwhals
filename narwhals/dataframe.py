@@ -2150,7 +2150,7 @@ class LazyFrame(BaseFrame[FrameT]):
             plx = self.__narwhals_namespace__()
             return plx.col(arg)
         if isinstance(arg, Expr):
-            if arg._metadata.n_open_windows:
+            if arg._metadata._window_kind.is_open():
                 msg = (
                     "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
                     "Hints:\n"
