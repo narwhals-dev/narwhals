@@ -19,7 +19,7 @@ def test_to_arrow(constructor_eager: ConstructorEager) -> None:
     ].to_arrow()
 
     assert pa.types.is_int64(result.type)
-    assert pc.all(pc.equal(result, pa.array(data, type=pa.int64())))  # type: ignore[call-overload]
+    assert pc.all(pc.equal(result, pa.array(data, type=pa.int64())))
 
 
 def test_to_arrow_with_nulls(
@@ -38,4 +38,4 @@ def test_to_arrow_with_nulls(
     )
 
     assert pa.types.is_int64(result.type)
-    assert pc.all(pc.equal(result, pa.array(data, type=pa.int64())))  # type: ignore[call-overload]
+    assert pc.all(pc.equal(result, pa.array(data, type=pa.int64())))

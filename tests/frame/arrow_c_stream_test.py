@@ -23,7 +23,7 @@ def test_arrow_c_stream_test() -> None:
     df = nw.from_native(pl.Series([1, 2, 3]).to_frame("a"), eager_only=True)
     result = pa.table(df)
     expected = pa.table({"a": [1, 2, 3]})
-    assert pc.all(pc.equal(result["a"], expected["a"])).as_py()  # type: ignore[call-overload]
+    assert pc.all(pc.equal(result["a"], expected["a"])).as_py()
 
 
 @pytest.mark.skipif(POLARS_VERSION < (1, 3), reason="too old for pycapsule in Polars")
@@ -50,4 +50,4 @@ def test_arrow_c_stream_test_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     df = nw.from_native(pl.Series([1, 2, 3]).to_frame("a"), eager_only=True)
     result = pa.table(df)
     expected = pa.table({"a": [1, 2, 3]})
-    assert pc.all(pc.equal(result["a"], expected["a"])).as_py()  # type: ignore[call-overload]
+    assert pc.all(pc.equal(result["a"], expected["a"])).as_py()

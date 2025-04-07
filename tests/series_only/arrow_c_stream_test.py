@@ -23,7 +23,7 @@ def test_arrow_c_stream_test() -> None:
     s = nw.from_native(pl.Series([1, 2, 3]), series_only=True)
     result = pa.chunked_array(s)
     expected = pa.chunked_array([[1, 2, 3]])
-    assert pc.all(pc.equal(result, expected)).as_py()  # type: ignore[call-overload]
+    assert pc.all(pc.equal(result, expected)).as_py()
 
 
 @pytest.mark.skipif(POLARS_VERSION < (1, 3), reason="too old for pycapsule in Polars")
@@ -49,4 +49,4 @@ def test_arrow_c_stream_test_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     s.__arrow_c_stream__()
     result = pa.chunked_array(s)
     expected = pa.chunked_array([[1, 2, 3]])
-    assert pc.all(pc.equal(result, expected)).as_py()  # type: ignore[call-overload]
+    assert pc.all(pc.equal(result, expected)).as_py()

@@ -738,9 +738,9 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             msg = f"argument 'descending' should be boolean, found {type(descending)}"
             raise TypeError(msg)
         if descending:
-            result = pc.all(pc.greater_equal(self.native[:-1], self.native[1:]))  # type: ignore[call-overload]
+            result = pc.all(pc.greater_equal(self.native[:-1], self.native[1:]))
         else:
-            result = pc.all(pc.less_equal(self.native[:-1], self.native[1:]))  # type: ignore[call-overload]
+            result = pc.all(pc.less_equal(self.native[:-1], self.native[1:]))
         return maybe_extract_py_scalar(result, return_py_scalar=True)
 
     def unique(self: Self, *, maintain_order: bool) -> Self:
@@ -1093,10 +1093,10 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             # shift bins so they are right-closed
             bin_indices = pc.if_else(
                 pc.and_(
-                    pc.equal(bin_indices, bin_proportions),  # type: ignore[call-overload]
-                    pc.greater(bin_indices, 0),  # type: ignore[call-overload]
+                    pc.equal(bin_indices, bin_proportions),
+                    pc.greater(bin_indices, lit(0)),
                 ),
-                pc.subtract(bin_indices, 1),  # type: ignore[call-overload]
+                pc.subtract(bin_indices, lit(1)),
                 bin_indices,
             )
             possible = pa.Table.from_arrays(
