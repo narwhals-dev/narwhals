@@ -288,13 +288,14 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
 
     native_df = constructor(data)
 
+    # NOTE: This branch needs to be rewritten to **not depend** on private `SparkLikeLazyFrame` properties
     if "spark" in str(constructor):  # pragma: no cover
         # Special handling for pyspark as it natively maps the input to
         # a column of type MAP<STRING, STRING>
         native_ldf = cast("NativeLazyFrame", native_df)
         _tmp_nw_compliant_frame = nw.from_native(native_ldf)._compliant_frame
-        F = _tmp_nw_compliant_frame._F  # noqa: N806
-        T = _tmp_nw_compliant_frame._native_dtypes  # noqa: N806
+        F = _tmp_nw_compliant_frame._F  # type: ignore[attr-defined] # noqa: N806
+        T = _tmp_nw_compliant_frame._native_dtypes  # type: ignore[attr-defined] # noqa: N806
 
         native_ldf = native_ldf.withColumn(  # type: ignore[attr-defined]
             "a",
