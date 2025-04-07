@@ -26,7 +26,6 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
-    from narwhals.typing import DataFrameT
     from narwhals.typing import FrameT
     from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoSeriesT
@@ -364,8 +363,8 @@ def is_into_dataframe(native_dataframe: Any | IntoDataFrameT) -> TypeIs[IntoData
 
 
 def is_narwhals_dataframe(
-    df: Any | DataFrame[DataFrameT],
-) -> TypeIs[DataFrame[DataFrameT]]:
+    df: DataFrame[IntoDataFrameT] | Any,
+) -> TypeIs[DataFrame[IntoDataFrameT]]:
     """Check whether `df` is a Narwhals DataFrame.
 
     This is useful if you expect a user to pass in a Narwhals

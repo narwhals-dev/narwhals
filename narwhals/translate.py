@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
+    from narwhals.typing import DataFrameT
     from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoFrame
     from narwhals.typing import IntoFrameT
@@ -131,6 +132,10 @@ def to_native(
 
 @overload
 def from_native(native_object: SeriesT, **kwds: Any) -> SeriesT: ...
+
+
+@overload
+def from_native(native_object: DataFrameT, **kwds: Any) -> DataFrameT: ...
 
 
 @overload

@@ -369,6 +369,27 @@ def test_from_native_lazyframe() -> None:
     assert isinstance(unstable_lazy, unstable_nw.LazyFrame)
 
 
+def test_dataframe_recursive() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    pl_frame = pl.DataFrame({"a": [1, 2, 3]})
+    nw_frame = unstable_nw.from_native(pl_frame)
+    with pytest.raises(AssertionError):
+        unstable_nw.DataFrame(nw_frame, level="full")
+
+    nw_frame_early_return = unstable_nw.from_native(nw_frame)
+
+    if TYPE_CHECKING:
+        assert_type(pl_frame, pl.DataFrame)
+        assert_type(nw_frame, unstable_nw.DataFrame[pl.DataFrame])
+
+        nw_frame_depth_2 = unstable_nw.DataFrame(nw_frame, level="full")  # type: ignore[var-annotated]
+        # NOTE: Checking that the type is `DataFrame[Unknown]`
+        assert_type(nw_frame_depth_2, unstable_nw.DataFrame)  # type: ignore[type-arg]
+        assert_type(nw_frame_early_return, unstable_nw.DataFrame[pl.DataFrame])
+
+
 def test_series_recursive() -> None:
     """https://github.com/narwhals-dev/narwhals/issues/2239."""
     pytest.importorskip("polars")
