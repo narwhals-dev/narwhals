@@ -5,6 +5,7 @@ from typing import Any
 from typing import Literal
 from typing import Protocol
 from typing import TypeVar
+from typing import Union
 
 from narwhals._compliant import CompliantDataFrame
 from narwhals._compliant import CompliantLazyFrame
@@ -47,7 +48,7 @@ class SupportsNativeNamespace(Protocol):
     def __native_namespace__(self) -> ModuleType: ...
 
 
-IntoExpr: TypeAlias = "Expr | str | Series[Any]"
+IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]
 """Anything which can be converted to an expression.
 
 Use this to mean "either a Narwhals expression, or something which can be converted
@@ -56,7 +57,7 @@ as it can either accept a `nw.Expr` (e.g. `df.select(nw.col('a'))`) or a string
 which will be interpreted as a `nw.Expr`, e.g. `df.select('a')`.
 """
 
-IntoDataFrame: TypeAlias = "NativeFrame | DataFrameLike"
+IntoDataFrame: TypeAlias = Union["NativeFrame", "DataFrameLike"]
 """Anything which can be converted to a Narwhals DataFrame.
 
 Use this if your function accepts a narwhalifiable object but doesn't care about its backend.
@@ -71,7 +72,7 @@ Examples:
 
 IntoLazyFrame: TypeAlias = "NativeLazyFrame"
 
-IntoFrame: TypeAlias = "IntoDataFrame | IntoLazyFrame"
+IntoFrame: TypeAlias = Union["IntoDataFrame", "IntoLazyFrame"]
 """Anything which can be converted to a Narwhals DataFrame or LazyFrame.
 
 Use this if your function can accept an object which can be converted to either
@@ -85,7 +86,7 @@ Examples:
     ...     return df.collect_schema().names()
 """
 
-Frame: TypeAlias = "DataFrame[Any] | LazyFrame[Any]"
+Frame: TypeAlias = Union["DataFrame[Any]", "LazyFrame[Any]"]
 """Narwhals DataFrame or Narwhals LazyFrame.
 
 Use this if your function can work with either and your function doesn't care
