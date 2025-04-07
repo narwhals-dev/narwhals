@@ -1028,10 +1028,10 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
 
     def pivot(
         self: Self,
-        on: list[str],
+        on: Sequence[str],
         *,
-        index: list[str] | None,
-        values: list[str] | None,
+        index: Sequence[str] | None,
+        values: Sequence[str] | None,
         aggregate_function: Any | None,
         sort_columns: bool,
         separator: str,

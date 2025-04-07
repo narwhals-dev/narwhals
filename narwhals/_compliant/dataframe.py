@@ -161,6 +161,18 @@ class CompliantDataFrame(
         suffix: str,
     ) -> Self: ...
     def lazy(self, *, backend: Implementation | None) -> CompliantLazyFrame[Any, Any]: ...
+    def pivot(
+        self,
+        on: str | Sequence[str],
+        *,
+        index: str | Sequence[str] | None,
+        values: str | Sequence[str] | None,
+        aggregate_function: Literal[
+            "min", "max", "first", "last", "sum", "mean", "median", "len", None
+        ],
+        sort_columns: bool,
+        separator: str,
+    ) -> Self: ...
     def rename(self, mapping: Mapping[str, str]) -> Self: ...
     def row(self, index: int) -> tuple[Any, ...]: ...
     def rows(

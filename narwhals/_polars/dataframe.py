@@ -411,15 +411,14 @@ class PolarsDataFrame:
         )
 
     def pivot(
-        self: Self,
-        on: list[str],
+        self,
+        on: str | Sequence[str],
         *,
-        index: list[str] | None,
-        values: list[str] | None,
+        index: str | Sequence[str] | None,
+        values: str | Sequence[str] | None,
         aggregate_function: Literal[
-            "min", "max", "first", "last", "sum", "mean", "median", "len"
-        ]
-        | None,
+            "min", "max", "first", "last", "sum", "mean", "median", "len", None
+        ],
         sort_columns: bool,
         separator: str,
     ) -> Self:
