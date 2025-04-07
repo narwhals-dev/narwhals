@@ -1041,8 +1041,6 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             )
             raise ValueError(msg)
 
-        # ignore-banned-import
-
         sort_keys: Order = "descending" if descending else "ascending"
         tiebreaker: TieBreaker = "first" if method == "ordinal" else method
 
@@ -1078,13 +1076,13 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             lower, upper = d["min"], d["max"]
             pa_float = pa.type_for_alias("float")
             if lower == upper:
-                range_ = lit(1.0)
+                range_: pa.Scalar[Any] = lit(1.0)
                 mid = lit(0.5)
                 width = pc.divide(range_, lit(bin_count))
                 lower = pc.subtract(lower, mid)
                 upper = pc.add(upper, mid)
             else:
-                range_ = pc.subtract(upper, lower)  # type: ignore[assignment]
+                range_ = pc.subtract(upper, lower)
                 width = pc.divide(pc.cast(range_, pa_float), lit(float(bin_count)))
 
             bin_proportions = pc.divide(pc.subtract(self.native, lower), width)
