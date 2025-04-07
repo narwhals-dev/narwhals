@@ -76,7 +76,6 @@ class PolarsDataFrame:
     select: Method[Self]
     sort: Method[Self]
     to_arrow: Method[pa.Table]
-    to_numpy: Method[_2DArray]
     to_pandas: Method[pd.DataFrame]
     unique: Method[Self]
     with_columns: Method[Self]
@@ -230,6 +229,9 @@ class PolarsDataFrame:
         if self._backend_version < (0, 20, 28):
             return self.native.__array__(dtype)
         return self.native.__array__(dtype)
+
+    def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
+        return self.native.to_numpy()
 
     def collect_schema(self: Self) -> dict[str, DType]:
         if self._backend_version < (1,):
