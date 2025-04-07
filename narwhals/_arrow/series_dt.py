@@ -16,7 +16,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._arrow.series import ArrowSeries
-    from narwhals._arrow.typing import ArrowChunkedArray
     from narwhals.dtypes import Datetime
     from narwhals.typing import TimeUnit
 
@@ -56,47 +55,48 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
             s_cast = self.native.cast(pa.int64())
             if unit == "ns":
                 if time_unit == "ns":
-                    result = s_cast
+                    result_64 = s_cast
                 elif time_unit == "us":
-                    result = floordiv_compat(s_cast, 1_000)
+                    result_64 = floordiv_compat(s_cast, 1_000)
                 else:
-                    result = floordiv_compat(s_cast, 1_000_000)
+                    result_64 = floordiv_compat(s_cast, 1_000_000)
             elif unit == "us":
                 if time_unit == "ns":
-                    result = cast("ArrowChunkedArray", pc.multiply(s_cast, 1_000))
+                    result_64 = pc.multiply(s_cast, lit(1_000))
                 elif time_unit == "us":
-                    result = s_cast
+                    result_64 = s_cast
                 else:
-                    result = floordiv_compat(s_cast, 1_000)
+                    result_64 = floordiv_compat(s_cast, 1_000)
             elif unit == "ms":
                 if time_unit == "ns":
-                    result = cast("ArrowChunkedArray", pc.multiply(s_cast, 1_000_000))
+                    result_64 = pc.multiply(s_cast, lit(1_000_000))
                 elif time_unit == "us":
-                    result = cast("ArrowChunkedArray", pc.multiply(s_cast, 1_000))
+                    result_64 = pc.multiply(s_cast, lit(1_000))
                 else:
-                    result = s_cast
+                    result_64 = s_cast
             elif unit == "s":
                 if time_unit == "ns":
-                    result = cast("ArrowChunkedArray", pc.multiply(s_cast, 1_000_000_000))
+                    result_64 = pc.multiply(s_cast, lit(1_000_000_000))
                 elif time_unit == "us":
-                    result = cast("ArrowChunkedArray", pc.multiply(s_cast, 1_000_000))
+                    result_64 = pc.multiply(s_cast, lit(1_000_000))
                 else:
-                    result = cast("ArrowChunkedArray", pc.multiply(s_cast, 1_000))
+                    result_64 = pc.multiply(s_cast, lit(1_000))
             else:  # pragma: no cover
                 msg = f"unexpected time unit {unit}, please report an issue at https://github.com/narwhals-dev/narwhals"
                 raise AssertionError(msg)
+            return self.with_native(result_64)
         elif isinstance(ser.dtype, dtypes.Date):
-            time_s = pc.multiply(self.native.cast(pa.int32()), 86400)
+            time_s = pc.multiply(self.native.cast(pa.int32()), lit(86_400))
             if time_unit == "ns":
-                result = cast("ArrowChunkedArray", pc.multiply(time_s, 1_000_000_000))
+                result_32 = pc.multiply(time_s, lit(1_000_000_000))
             elif time_unit == "us":
-                result = cast("ArrowChunkedArray", pc.multiply(time_s, 1_000_000))
+                result_32 = pc.multiply(time_s, lit(1_000_000))
             else:
-                result = cast("ArrowChunkedArray", pc.multiply(time_s, 1_000))
+                result_32 = pc.multiply(time_s, lit(1_000))
+            return self.with_native(result_32)
         else:
             msg = "Input should be either of Date or Datetime type"
             raise TypeError(msg)
-        return self.with_native(result)
 
     def date(self: Self) -> ArrowSeries:
         return self.with_native(self.native.cast(pa.date32()))

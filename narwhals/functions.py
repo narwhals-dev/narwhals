@@ -62,6 +62,7 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoSeriesT
     from narwhals.typing import NativeFrame
     from narwhals.typing import NativeLazyFrame
+    from narwhals.typing import NativeSeries
     from narwhals.typing import _2DArray
 
     _IntoSchema: TypeAlias = "Mapping[str, DType] | Schema | Sequence[str] | None"
@@ -237,7 +238,7 @@ def _new_series_impl(
     else:  # pragma: no cover
         native_namespace = implementation.to_native_namespace()
         try:
-            native_series = native_namespace.new_series(name, values, dtype)
+            native_series: NativeSeries = native_namespace.new_series(name, values, dtype)
             return from_native(native_series, series_only=True).alias(name)
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `new_series` constructor."
@@ -322,7 +323,7 @@ def _from_dict_impl(
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement `from_dict` function in the top-level namespace.
-            native_frame = native_namespace.from_dict(data, schema=schema)
+            native_frame: NativeFrame = native_namespace.from_dict(data, schema=schema)
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `from_dict` function."
             raise AttributeError(msg) from e
@@ -438,7 +439,7 @@ def _from_numpy_impl(
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement `from_numpy` function in the top-level namespace.
-            native_frame = native_namespace.from_numpy(data, schema=schema)
+            native_frame: NativeFrame = native_namespace.from_numpy(data, schema=schema)
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `from_numpy` function."
             raise AttributeError(msg) from e
@@ -526,7 +527,7 @@ def _from_arrow_impl(
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement PyCapsule support
-            native_frame = native_namespace.DataFrame(data)
+            native_frame: NativeFrame = native_namespace.DataFrame(data)
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `DataFrame` class which accepts object which supports PyCapsule Interface."
             raise AttributeError(msg) from e

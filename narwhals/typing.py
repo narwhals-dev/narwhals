@@ -102,7 +102,7 @@ Examples:
     ...     return df.columns
 """
 
-IntoSeries: TypeAlias = Union["Series[Any]", "NativeSeries"]
+IntoSeries: TypeAlias = "NativeSeries"
 """Anything which can be converted to a Narwhals Series.
 
 Use this if your function can accept an object which can be converted to `nw.Series`
@@ -176,6 +176,7 @@ Examples:
 """
 
 LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[Any]")
+SeriesT = TypeVar("SeriesT", bound="Series[Any]")
 
 IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries")
 """TypeVar bound to object convertible to Narwhals Series.
