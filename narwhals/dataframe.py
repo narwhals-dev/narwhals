@@ -444,13 +444,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         return LazyFrame
 
     def __init__(
-        self: Self,
-        df: Any,
-        *,
-        level: Literal["full", "lazy", "interchange"],
+        self: Self, df: Any, *, level: Literal["full", "lazy", "interchange"]
     ) -> None:
         self._level: Literal["full", "lazy", "interchange"] = level
-        self._compliant_frame: CompliantDataFrame[Any, Any, DataFrameT]
+        # NOTE: Interchange support (`DataFrameLike`) is the source of the error
+        self._compliant_frame: CompliantDataFrame[Any, Any, DataFrameT]  # type: ignore[type-var]
         if is_compliant_dataframe(df):
             self._compliant_frame = df.__narwhals_dataframe__()
         else:  # pragma: no cover
