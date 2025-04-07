@@ -53,6 +53,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant import CompliantDataFrame
+    from narwhals._compliant import CompliantLazyFrame
     from narwhals._compliant import IntoCompliantExpr
     from narwhals._compliant.typing import EagerNamespaceAny
     from narwhals.group_by import GroupBy
@@ -2182,9 +2183,8 @@ class LazyFrame(BaseFrame[FrameT]):
         level: Literal["full", "lazy", "interchange"],
     ) -> None:
         self._level = level
+        self._compliant_frame: CompliantLazyFrame[Any, FrameT]  # type: ignore[type-var]
         if is_compliant_lazyframe(df):
-            # NOTE: Blocked by (#2239)
-            # self._compliant_frame: CompliantLazyFrame[Any, FrameT] = df.__narwhals_lazyframe__()  # noqa: ERA001
             self._compliant_frame = df.__narwhals_lazyframe__()
         else:  # pragma: no cover
             msg = f"Expected Polars LazyFrame or an object that implements `__narwhals_lazyframe__`, got: {type(df)}"
@@ -2210,7 +2210,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> nw.from_native(lf_native).implementation
             <Implementation.DASK: 7>
         """
-        return self._compliant_frame._implementation  # type: ignore[no-any-return]
+        return self._compliant_frame._implementation
 
     def __getitem__(self: Self, item: str | slice) -> NoReturn:
         msg = "Slicing is not supported on LazyFrame"
