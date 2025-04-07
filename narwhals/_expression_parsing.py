@@ -259,16 +259,22 @@ class ExprMetadata:
             expansion_kind=self._expansion_kind,
         )
 
-    def with_extra_open_window(self) -> ExprMetadata:
-        """Increment `n_open_windows` leaving other attributes the same."""
+    def with_uncloseable_window(self) -> ExprMetadata:
+        """Add uncloseable window, leaving other attributes the same."""
+        if self._window_kind is WindowKind.CLOSED:  # pragma: no cover
+            msg = "Unreachable code, please report a bug."
+            raise AssertionError(msg)
         return ExprMetadata(
             self.kind,
-            window_kind=self._window_kind,
+            window_kind=WindowKind.UNCLOSEABLE,
             expansion_kind=self._expansion_kind,
         )
 
-    def with_kind_and_extra_open_window(self, kind: ExprKind, /) -> ExprMetadata:
-        """Change metadata kind and increment `n_open_windows`."""
+    def with_kind_and_closeable_window(self, kind: ExprKind, /) -> ExprMetadata:
+        """Change metadata kind and add closeable window.
+
+        If we already have an uncloseable window, the window stays uncloseable.
+        """
         if self._window_kind is WindowKind.NONE:
             window_kind = WindowKind.CLOSEABLE
         elif self._window_kind is WindowKind.CLOSED:  # pragma: no cover
