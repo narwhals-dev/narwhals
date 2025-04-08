@@ -26,6 +26,9 @@ if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
     from narwhals._arrow.series import ArrowSeries
+    from narwhals._arrow.typing import ArrayAny
+    from narwhals._arrow.typing import ArrayOrScalarT1
+    from narwhals._arrow.typing import ArrayOrScalarT2
     from narwhals._arrow.typing import ArrowArray
     from narwhals._arrow.typing import ArrowChunkedArray
     from narwhals.dtypes import DType
@@ -35,7 +38,6 @@ if TYPE_CHECKING:
     # NOTE: stubs don't allow for `ChunkedArray[StructArray]`
     # Intended to represent the `.chunks` property storing `list[pa.StructArray]`
     ChunkedArrayStructArray: TypeAlias = ArrowChunkedArray
-    ArrayAny: TypeAlias = "ArrowArray | ArrowChunkedArray"
 
     _T = TypeVar("_T")
 
@@ -356,12 +358,8 @@ def floordiv_compat(left: Any, right: Any) -> Any:
 
 
 def cast_for_truediv(
-    arrow_array: ArrowChunkedArray | pa.Scalar[Any],
-    pa_object: ArrowChunkedArray | ArrowArray | pa.Scalar[Any],
-) -> tuple[
-    ArrowChunkedArray | pa.Scalar[Any],
-    ArrowChunkedArray | ArrowArray | pa.Scalar[Any],
-]:
+    arrow_array: ArrayOrScalarT1, pa_object: ArrayOrScalarT2
+) -> tuple[ArrayOrScalarT1, ArrayOrScalarT2]:
     # Lifted from:
     # https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L108-L122
     # Ensure int / int -> float mirroring Python/Numpy behavior
@@ -369,6 +367,7 @@ def cast_for_truediv(
     if pa.types.is_integer(arrow_array.type) and pa.types.is_integer(pa_object.type):
         # GH: 56645.  # noqa: ERA001
         # https://github.com/apache/arrow/issues/35563
+        # NOTE: `pyarrow==11.*` doesn't allow keywords in `Array.cast`
         return pc.cast(arrow_array, pa.float64(), safe=False), pc.cast(
             pa_object, pa.float64(), safe=False
         )
