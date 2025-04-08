@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import ArrayAny
+    from narwhals._arrow.typing import ArrayOrScalarAny
     from narwhals._arrow.typing import ArrayOrScalarT1
     from narwhals._arrow.typing import ArrayOrScalarT2
     from narwhals._arrow.typing import ArrowArray
@@ -326,14 +327,9 @@ def diagonal_concat(dfs: list[pa.Table], backend_version: tuple[int, ...]) -> pa
     return pa.concat_tables(dfs, **kwargs)
 
 
-def floordiv_compat(left: Any, right: Any) -> Any:
+def floordiv_compat(left: ArrayOrScalarAny, right: ArrayOrScalarAny) -> Any:
     # The following lines are adapted from pandas' pyarrow implementation.
     # Ref: https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L124-L154
-    if isinstance(left, (int, float)):
-        left = lit(left)
-
-    if isinstance(right, (int, float)):
-        right = lit(right)
 
     if pa.types.is_integer(left.type) and pa.types.is_integer(right.type):
         divided = pc.divide_checked(left, right)
