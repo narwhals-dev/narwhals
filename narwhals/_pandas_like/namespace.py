@@ -333,7 +333,11 @@ class PandasWhen(
         return PandasThen
 
     def _if_then_else(
-        self, when: pd.Series[Any], then: pd.Series[Any], otherwise: Any, /
+        self,
+        when: pd.Series[Any],
+        then: pd.Series[Any],
+        otherwise: pd.Series[Any] | NonNestedLiteral,
+        /,
     ) -> pd.Series[Any]:
         return then.where(when) if otherwise is None else then.where(when, otherwise)
 
