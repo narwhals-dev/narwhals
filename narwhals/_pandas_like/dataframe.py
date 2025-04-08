@@ -249,7 +249,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
 
     def _with_native(self: Self, df: Any, *, validate_column_names: bool = True) -> Self:
         return self.__class__(
-            df.rename_axis(columns=self._native_columns_name),
+            df.rename_axis(columns=self._native_columns_name, copy=False),
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
@@ -631,7 +631,9 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             import pandas as pd  # ignore-banned-import
 
             return PandasLikeDataFrame(
-                self.to_pandas().rename_axis(columns=self.native.columns.name),
+                self.to_pandas().rename_axis(
+                    columns=self.native.columns.name, copy=False
+                ),
                 implementation=Implementation.PANDAS,
                 backend_version=parse_version(pd),
                 version=self._version,
