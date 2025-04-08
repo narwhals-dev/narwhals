@@ -61,6 +61,7 @@ def pytest_coverage(session: Session) -> None:
         if session.python != "3.13":
             with NamedTemporaryFile() as f:
                 f.write(b"setuptools<78\n")
+                f.flush()
                 session.install("-b", f.name, "-e", ".[pyspark]")
 
         if session.python == "3.11":
@@ -159,7 +160,8 @@ def not_so_old(session: Session) -> None:
 
 
 @nox.session(python=PYTHON_VERSIONS["nightly"])
-def nightly_versions(session: Session) -> None:
+def nightly(session: Session) -> None:
+    session.install("pip")
     session.install("-e", ".", "--group", "tests")
 
     session.install("--pre", "polars")
@@ -185,6 +187,7 @@ def nightly_versions(session: Session) -> None:
         "numpy",
     )
 
+    session.run("pip", "uninstall", "dask", "dask-expr", "--yes")
     session.run(  # dask nightly
         "pip",
         "install",
