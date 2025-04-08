@@ -34,6 +34,11 @@ if TYPE_CHECKING:
 
     ArrowChunkedArray: TypeAlias = pa.ChunkedArray[Any]
     ArrowArray: TypeAlias = pa.Array[Any]
+    ArrayAny: TypeAlias = "ArrowArray | ArrowChunkedArray"
+    ScalarAny: TypeAlias = pa.Scalar[Any]
+    ArrayOrScalarAny: TypeAlias = "ArrayAny | ScalarAny"
+    ArrayOrScalarT1 = TypeVar("ArrayOrScalarT1", ArrowArray, ArrowChunkedArray, ScalarAny)
+    ArrayOrScalarT2 = TypeVar("ArrayOrScalarT2", ArrowArray, ArrowChunkedArray, ScalarAny)
     _AsPyType = TypeVar("_AsPyType")
 
     class _BasicDataType(pa.DataType, Generic[_AsPyType]): ...
