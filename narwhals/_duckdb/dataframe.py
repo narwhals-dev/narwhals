@@ -265,18 +265,21 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             if self._backend_version < (1, 1, 4):
                 msg = f"DuckDB>=1.1.4 is required for cross-join, found version: {self._backend_version}"
                 raise NotImplementedError(msg)
-            rel = self.native.set_alias("lhs").cross(
-                other.native.set_alias("rhs")
-            )  # pragma: no cover
+            rel = self.native.set_alias("lhs").cross(other.native.set_alias("rhs"))
         else:
             # help mypy
             assert left_on is not None  # noqa: S101
             assert right_on is not None  # noqa: S101
-            condition = " and ".join(
-                f'lhs."{left}" = rhs."{right}"' for left, right in zip(left_on, right_on)
+            it = (
+                col(f'lhs."{left}"') == col(f'rhs."{right}"')
+                for left, right in zip(left_on, right_on)
             )
+            condition: duckdb.Expression = reduce(and_, it)
             rel = self.native.set_alias("lhs").join(
-                other.native.set_alias("rhs"), condition=condition, how=native_how
+                other.native.set_alias("rhs"),
+                # NOTE: Fixed in `--pre` https://github.com/duckdb/duckdb/pull/16933
+                condition=condition,  # type: ignore[arg-type, unused-ignore]
+                how=native_how,
             )
 
         if native_how in {"inner", "left", "cross", "outer"}:
@@ -310,21 +313,22 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
     ) -> Self:
         lhs = self.native
         rhs = other.native
-        conditions = []
+        conditions: list[duckdb.Expression] = []
         if by_left is not None and by_right is not None:
-            conditions += [
-                f'lhs."{left}" = rhs."{right}"' for left, right in zip(by_left, by_right)
-            ]
+            conditions.extend(
+                col(f'lhs."{left}"') == col(f'rhs."{right}"')
+                for left, right in zip(by_left, by_right)
+            )
         else:
             by_left = by_right = []
         if strategy == "backward":
-            conditions += [f'lhs."{left_on}" >= rhs."{right_on}"']
+            conditions.append(col(f'lhs."{left_on}"') >= col(f'rhs."{right_on}"'))
         elif strategy == "forward":
-            conditions += [f'lhs."{left_on}" <= rhs."{right_on}"']
+            conditions.append(col(f'lhs."{left_on}"') <= col(f'rhs."{right_on}"'))
         else:
             msg = "Only 'backward' and 'forward' strategies are currently supported for DuckDB"
             raise NotImplementedError(msg)
-        condition = " and ".join(conditions)
+        condition: duckdb.Expression = reduce(and_, conditions)
         select = ["lhs.*"]
         for name in rhs.columns:
             if name in lhs.columns and (
@@ -333,6 +337,8 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
                 select.append(f'rhs."{name}" as "{name}{suffix}"')
             elif right_on is None or name not in {right_on, *by_right}:
                 select.append(f'"{name}"')
+        # Replace with Python API call once
+        # https://github.com/duckdb/duckdb/discussions/16947 is addressed.
         query = f"""
             SELECT {",".join(select)}
             FROM lhs
@@ -350,8 +356,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
     def unique(
         self: Self, subset: Sequence[str] | None, *, keep: Literal["any", "none"]
     ) -> Self:
-        subset_ = subset if keep == "any" else (subset or self.columns)
-        if subset_:
+        if subset_ := subset if keep == "any" else (subset or self.columns):
             # Sanitise input
             if any(x not in self.columns for x in subset_):
                 msg = f"Columns {set(subset_).difference(self.columns)} not found in {self.columns}."
@@ -366,13 +371,10 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
                         count(*) over ({partition_by_sql}) as "{count_name}"
                 from rel
                 """  # noqa: S608
-            if keep == "none":
-                keep_condition = col(count_name) == lit(1)
-            else:
-                keep_condition = col(idx_name) == lit(1)
+            name = count_name if keep == "none" else idx_name
             return self._with_native(
                 duckdb.sql(query)
-                .filter(keep_condition)
+                .filter(col(name) == lit(1))
                 .select(StarExpression(exclude=[count_name, idx_name]))
             )
         return self._with_native(self.native.unique(", ".join(self.columns)))
@@ -463,6 +465,8 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
 
         unpivot_on = ", ".join(f'"{name}"' for name in on_)
         rel = self.native  # noqa: F841
+        # Replace with Python API once
+        # https://github.com/duckdb/duckdb/discussions/16980 is addressed.
         query = f"""
             unpivot rel
             on {unpivot_on}

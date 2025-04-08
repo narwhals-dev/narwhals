@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.33.0"
+version = "1.34.0"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
@@ -67,7 +67,7 @@ typing = [
   "typing_extensions",
   "mypy~=1.15.0",
   "pyright",
-  "pyarrow-stubs==17.18",
+  "pyarrow-stubs==19.1",
   "sqlframe",
   "polars==1.25.2",
   "uv",
