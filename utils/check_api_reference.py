@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-import os
 import sys
+from pathlib import Path
 
 import polars as pl
 
 import narwhals as nw
 from narwhals._expression_parsing import ExprMetadata
 from narwhals.utils import remove_prefix
-from narwhals.utils import remove_suffix
 
 ret = 0
 
@@ -47,7 +46,7 @@ BASE_DTYPES = {
     "Mapping",
 }
 
-files = {remove_suffix(i, ".py") for i in os.listdir("narwhals")}
+files = {fp.name for fp in Path("narwhals").iterdir()}
 
 # Top level functions
 top_level_functions = [
