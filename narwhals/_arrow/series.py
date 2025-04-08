@@ -274,14 +274,14 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         if not isinstance(other, (pa.Array, pa.ChunkedArray)):
             # scalar
             other = lit(other)
-        return self._with_native(pc.divide(*cast_for_truediv(ser, other)))  # type: ignore[arg-type, type-var]
+        return self._with_native(pc.divide(*cast_for_truediv(ser, other)))  # type: ignore[type-var]
 
     def __rtruediv__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
         if not isinstance(other, (pa.Array, pa.ChunkedArray)):
             # scalar
             other = lit(other) if not isinstance(other, pa.Scalar) else other
-        return self._with_native(pc.divide(*cast_for_truediv(other, ser)))  # type: ignore[arg-type, type-var]
+        return self._with_native(pc.divide(*cast_for_truediv(other, ser)))  # type: ignore[type-var]
 
     def __mod__(self: Self, other: Any) -> Self:
         floor_div = (self // other).native
@@ -596,11 +596,11 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         counts = cast("ArrowChunkedArray", val_counts.field("counts"))
 
         if normalize:
-            arrays = [values, pc.divide(*cast_for_truediv(counts, pc.sum(counts)))]  # type: ignore[type-var]
+            arrays = [values, pc.divide(*cast_for_truediv(counts, pc.sum(counts)))]
         else:
             arrays = [values, counts]
 
-        val_count = pa.Table.from_arrays(arrays, names=[index_name_, value_name_])  # type: ignore[arg-type]
+        val_count = pa.Table.from_arrays(arrays, names=[index_name_, value_name_])
 
         if sort:
             val_count = val_count.sort_by([(value_name_, "descending")])
