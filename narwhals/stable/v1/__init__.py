@@ -96,6 +96,7 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoFrame
     from narwhals.typing import IntoLazyFrameT
     from narwhals.typing import IntoSeries
+    from narwhals.typing import NonNestedLiteral
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
 
@@ -1881,7 +1882,7 @@ def len() -> Expr:
     return _stableify(nw.len())
 
 
-def lit(value: Any, dtype: DType | type[DType] | None = None) -> Expr:
+def lit(value: NonNestedLiteral, dtype: DType | type[DType] | None = None) -> Expr:
     """Return an expression representing a literal value.
 
     Arguments:

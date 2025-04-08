@@ -62,6 +62,7 @@ if TYPE_CHECKING:
     from narwhals.typing import NativeFrame
     from narwhals.typing import NativeLazyFrame
     from narwhals.typing import NativeSeries
+    from narwhals.typing import NonNestedLiteral
     from narwhals.typing import _2DArray
 
     _IntoSchema: TypeAlias = "Mapping[str, DType] | Schema | Sequence[str] | None"
@@ -1617,7 +1618,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     )
 
 
-def lit(value: Any, dtype: DType | type[DType] | None = None) -> Expr:
+def lit(value: NonNestedLiteral, dtype: DType | type[DType] | None = None) -> Expr:
     """Return an expression representing a literal value.
 
     Arguments:
