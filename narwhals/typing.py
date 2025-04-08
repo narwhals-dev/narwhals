@@ -222,7 +222,9 @@ Into1DArray: TypeAlias = "_1DArray | _NumpyScalar"
 
 NumericLiteral: TypeAlias = "int | float | Decimal"
 TemporalLiteral: TypeAlias = "dt.date | dt.datetime | dt.time | dt.timedelta"
-NonNestedLiteral: TypeAlias = "NumericLiteral | TemporalLiteral | str | bool | bytes"
+NonNestedLiteral: TypeAlias = (
+    "NumericLiteral | TemporalLiteral | str | bool | bytes | None"
+)
 PythonLiteral: TypeAlias = "NonNestedLiteral | list[Any] | tuple[Any, ...]"
 
 

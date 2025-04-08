@@ -66,6 +66,6 @@ def test_sumh_transformations(constructor: Constructor) -> None:
     result = df.select(d=nw.sum_horizontal("a", nw.col("b").sum(), "c"))
     expected: dict[str, Any] = {"d": [23, 25, 27]}
     assert_equal_data(result, expected)
-    result = df.select(d=nw.sum_horizontal("a", nw.lit(None, dtype=nw.Float64), "c"))  # type: ignore[arg-type]
+    result = df.select(d=nw.sum_horizontal("a", nw.lit(None, dtype=nw.Float64), "c"))
     expected = {"d": [8.0, 10.0, 12.0]}
     assert_equal_data(result, expected)
