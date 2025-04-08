@@ -6,6 +6,21 @@ from typing import Iterable
 from typing import Mapping
 from typing import Protocol
 
+_MIN_TYPING_EXTENSIONS = 4, 4, 0
+_TYPING_EXTENSIONS = "typing_extensions"
+
+
+def _typing_extensions_has_pep_696() -> bool:  # pragma: no cover
+    from importlib.metadata import version
+    from importlib.util import find_spec
+
+    from narwhals.utils import parse_version
+
+    if find_spec(_TYPING_EXTENSIONS):
+        return parse_version(version(_TYPING_EXTENSIONS)) >= _MIN_TYPING_EXTENSIONS
+    return False
+
+
 if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
@@ -16,12 +31,10 @@ if TYPE_CHECKING:
 
 else:  # pragma: no cover
     import sys
-    from importlib.metadata import version
-    from importlib.util import find_spec
 
     if sys.version_info >= (3, 13):
         from typing import TypeVar
-    elif find_spec("typing_extensions") and version("typing_extensions") >= "4.4.0":
+    elif _typing_extensions_has_pep_696():
         from typing_extensions import TypeVar
     else:
         from typing import TypeVar as _TypeVar
