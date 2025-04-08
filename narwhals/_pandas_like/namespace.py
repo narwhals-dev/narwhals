@@ -231,43 +231,34 @@ class PandasLikeNamespace(
     ) -> PandasLikeDataFrame:
         dfs: list[Any] = [item._native_frame for item in items]
         if how == "horizontal":
-            return PandasLikeDataFrame(
-                horizontal_concat(
-                    dfs,
-                    implementation=self._implementation,
-                    backend_version=self._backend_version,
-                ),
+            native_dataframe = horizontal_concat(
+                dfs,
                 implementation=self._implementation,
                 backend_version=self._backend_version,
-                version=self._version,
-                validate_column_names=True,
             )
-        if how == "vertical":
-            return PandasLikeDataFrame(
-                vertical_concat(
-                    dfs,
-                    implementation=self._implementation,
-                    backend_version=self._backend_version,
-                ),
+        elif how == "vertical":
+            native_dataframe = vertical_concat(
+                dfs,
                 implementation=self._implementation,
                 backend_version=self._backend_version,
-                version=self._version,
-                validate_column_names=True,
             )
+        elif how == "diagonal":
+            native_dataframe = diagonal_concat(
+                dfs,
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+            )
+        else:
+            raise NotImplementedError
 
-        if how == "diagonal":
-            return PandasLikeDataFrame(
-                diagonal_concat(
-                    dfs,
-                    implementation=self._implementation,
-                    backend_version=self._backend_version,
-                ),
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-                version=self._version,
-                validate_column_names=True,
-            )
-        raise NotImplementedError
+        return PandasLikeDataFrame(
+            native_dataframe,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+            version=self._version,
+            validate_column_names=True,
+            native_columns_name=None,  # Pandas concat does not maintain the column name
+        )
 
     def when(self: Self, predicate: PandasLikeExpr) -> PandasWhen:
         return PandasWhen.from_expr(predicate, context=self)
