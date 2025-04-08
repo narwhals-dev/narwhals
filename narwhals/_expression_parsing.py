@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import EvalNames
     from narwhals.expr import Expr
     from narwhals.typing import IntoExpr
+    from narwhals.typing import NonNestedLiteral
     from narwhals.typing import _1DArray
 
     T = TypeVar("T")
@@ -408,7 +409,10 @@ def infer_kind(obj: IntoExpr | _1DArray | object, *, str_as_lit: bool) -> ExprKi
 
 
 def apply_n_ary_operation(
-    plx: CompliantNamespaceAny, function: Any, *comparands: IntoExpr, str_as_lit: bool
+    plx: CompliantNamespaceAny,
+    function: Any,
+    *comparands: IntoExpr | NonNestedLiteral,
+    str_as_lit: bool,
 ) -> CompliantExprAny:
     compliant_exprs = (
         extract_compliant(plx, comparand, str_as_lit=str_as_lit)

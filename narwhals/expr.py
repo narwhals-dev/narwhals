@@ -1987,8 +1987,8 @@ class Expr:
                     exprs[2] if upper_bound is not None else None,
                 ),
                 self,
-                lower_bound,  # type: ignore[arg-type]
-                upper_bound,  # type: ignore[arg-type]
+                lower_bound,
+                upper_bound,
                 str_as_lit=False,
             ),
             combine_metadata(

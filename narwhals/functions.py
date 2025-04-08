@@ -1487,7 +1487,7 @@ class When:
         self._predicate = all_horizontal(*flatten(predicates))
         check_expressions_preserve_length(self._predicate, function_name="when")
 
-    def then(self: Self, value: IntoExpr | Any) -> Then:
+    def then(self: Self, value: IntoExpr | NonNestedLiteral) -> Then:
         return Then(
             lambda plx: apply_n_ary_operation(
                 plx,
@@ -1507,7 +1507,7 @@ class When:
 
 
 class Then(Expr):
-    def otherwise(self: Self, value: IntoExpr | Any) -> Expr:
+    def otherwise(self: Self, value: IntoExpr | NonNestedLiteral) -> Expr:
         kind = infer_kind(value, str_as_lit=False)
 
         def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
