@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.expr import EagerExpr
     from narwhals._compliant.expr import LazyExpr
     from narwhals._compliant.expr import NativeExpr
+    from narwhals._compliant.namespace import CompliantNamespace
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals._compliant.series import CompliantSeries
     from narwhals._compliant.series import EagerSeries
@@ -42,6 +43,7 @@ CompliantSeriesOrNativeExprAny: TypeAlias = "CompliantSeriesAny | NativeExpr"
 CompliantDataFrameAny: TypeAlias = "CompliantDataFrame[Any, Any, Any]"
 CompliantLazyFrameAny: TypeAlias = "CompliantLazyFrame[Any, Any]"
 CompliantFrameAny: TypeAlias = "CompliantDataFrameAny | CompliantLazyFrameAny"
+CompliantNamespaceAny: TypeAlias = "CompliantNamespace[Any, Any]"
 
 DepthTrackingExprAny: TypeAlias = "DepthTrackingExpr[Any, Any]"
 
@@ -110,8 +112,18 @@ LazyExprT = TypeVar("LazyExprT", bound=LazyExprAny)
 LazyExprT_contra = TypeVar("LazyExprT_contra", bound=LazyExprAny, contravariant=True)
 
 AliasNames: TypeAlias = Callable[[Sequence[str]], Sequence[str]]
+"""A function aliasing a *sequence* of column names."""
+
 AliasName: TypeAlias = Callable[[str], str]
+"""A function aliasing a *single* column name."""
+
 EvalSeries: TypeAlias = Callable[
     [CompliantFrameT], Sequence[CompliantSeriesOrNativeExprT]
 ]
+"""A function from a `Frame` to a sequence of `Series`*.
+
+See [underwater unicorn magic](https://narwhals-dev.github.io/narwhals/how_it_works/).
+"""
+
 EvalNames: TypeAlias = Callable[[CompliantFrameT], Sequence[str]]
+"""A function from a `Frame` to a sequence of columns names *before* any aliasing takes place."""

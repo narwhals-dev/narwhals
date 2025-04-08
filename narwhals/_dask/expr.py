@@ -34,6 +34,8 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from narwhals._compliant.typing import EvalNames
+    from narwhals._compliant.typing import EvalSeries
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.namespace import DaskNamespace
     from narwhals._expression_parsing import ExprMetadata
@@ -50,12 +52,12 @@ class DaskExpr(
 
     def __init__(
         self: Self,
-        call: Callable[[DaskLazyFrame], Sequence[dx.Series]],
+        call: EvalSeries[DaskLazyFrame, dx.Series],
         *,
         depth: int,
         function_name: str,
-        evaluate_output_names: Callable[[DaskLazyFrame], Sequence[str]],
-        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
+        evaluate_output_names: EvalNames[DaskLazyFrame],
+        alias_output_names: AliasNames | None,
         backend_version: tuple[int, ...],
         version: Version,
         # Kwargs with metadata which we may need in group-by agg
@@ -101,7 +103,7 @@ class DaskExpr(
     @classmethod
     def from_column_names(
         cls: type[Self],
-        evaluate_column_names: Callable[[DaskLazyFrame], Sequence[str]],
+        evaluate_column_names: EvalNames[DaskLazyFrame],
         /,
         *,
         context: _FullContext,

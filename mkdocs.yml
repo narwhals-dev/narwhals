@@ -116,6 +116,7 @@ plugins:
         options:
           show_signature_annotations: true
           members_order: alphabetical
+          separate_signature: true
     enable_inventory: true
 
 hooks:

@@ -58,10 +58,12 @@ class PandasLikeSeriesDateTimeNamespace(
             # crazy workaround for https://github.com/pandas-dev/pandas/issues/59154
             import pyarrow.compute as pc  # ignore-banned-import()
 
+            from narwhals._arrow.utils import lit
+
             arr_ns = self.native.array
             arr = arr_ns.__arrow_array__()
             result_arr = pc.add(
-                pc.multiply(pc.millisecond(arr), 1000), pc.microsecond(arr)
+                pc.multiply(pc.millisecond(arr), lit(1_000)), pc.microsecond(arr)
             )
             result = type(self.native)(type(arr_ns)(result_arr), name=self.native.name)
             return self.with_native(result)
