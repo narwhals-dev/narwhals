@@ -37,6 +37,8 @@ if TYPE_CHECKING:
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals._spark_like.typing import WindowFunction
     from narwhals.dtypes import DType
+    from narwhals.typing import NumericLiteral
+    from narwhals.typing import TemporalLiteral
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -491,9 +493,9 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_callable(func)
 
     def clip(
-        self: Self,
-        lower_bound: Any | None = None,
-        upper_bound: Any | None = None,
+        self,
+        lower_bound: Self | NumericLiteral | TemporalLiteral | None = None,
+        upper_bound: Self | NumericLiteral | TemporalLiteral | None = None,
     ) -> Self:
         def _clip_lower(_input: Column, lower_bound: Column) -> Column:
             result = _input

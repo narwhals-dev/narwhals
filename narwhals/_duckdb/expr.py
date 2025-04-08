@@ -42,6 +42,8 @@ if TYPE_CHECKING:
     from narwhals._duckdb.typing import WindowFunction
     from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
+    from narwhals.typing import NumericLiteral
+    from narwhals.typing import TemporalLiteral
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -396,7 +398,11 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
         return self._with_callable(func)
 
-    def clip(self: Self, lower_bound: Any, upper_bound: Any) -> Self:
+    def clip(
+        self,
+        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
+        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
+    ) -> Self:
         def _clip_lower(_input: duckdb.Expression, lower_bound: Any) -> duckdb.Expression:
             return FunctionExpression("greatest", _input, lower_bound)
 

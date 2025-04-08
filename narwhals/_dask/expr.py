@@ -24,22 +24,19 @@ from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import not_implemented
 
 if TYPE_CHECKING:
-    from narwhals._compliant.typing import AliasNames
-    from narwhals._expression_parsing import ExprKind
-
-    try:
-        import dask.dataframe.dask_expr as dx
-    except ModuleNotFoundError:
-        import dask_expr as dx
-
+    import dask.dataframe.dask_expr as dx
     from typing_extensions import Self
 
+    from narwhals._compliant.typing import AliasNames
     from narwhals._compliant.typing import EvalNames
     from narwhals._compliant.typing import EvalSeries
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.namespace import DaskNamespace
+    from narwhals._expression_parsing import ExprKind
     from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
+    from narwhals.typing import NumericLiteral
+    from narwhals.typing import TemporalLiteral
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -497,9 +494,9 @@ class DaskExpr(
         return self._with_callable(func, "fillna")
 
     def clip(
-        self: Self,
-        lower_bound: Self | Any | None,
-        upper_bound: Self | Any | None,
+        self,
+        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
+        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
     ) -> Self:
         return self._with_callable(
             lambda _input, lower_bound, upper_bound: _input.clip(
