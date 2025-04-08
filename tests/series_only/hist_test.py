@@ -375,10 +375,9 @@ def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
 )
 @pytest.mark.slow
 def test_hist_bin_hypotheis(
-    constructor_eager: ConstructorEager,
-    data: list[float],
-    bin_deltas: list[float],
+    constructor_eager: ConstructorEager, data: list[float], bin_deltas: list[float]
 ) -> None:
+    pytest.importorskip("polars")
     import polars as pl
 
     if "cudf" in str(constructor_eager):
@@ -388,12 +387,13 @@ def test_hist_bin_hypotheis(
     df = nw.from_native(constructor_eager({"values": data})).select(
         nw.col("values").cast(nw.Float64)
     )
+    df_bins_native = constructor_eager({"bins": bin_deltas})
     bins = (
-        nw.from_native(constructor_eager({"bins": bin_deltas})["bins"], series_only=True)  # type:ignore[index]
+        nw.from_native(df_bins_native, eager_only=True)
+        .get_column("bins")
         .cast(nw.Float64)
         .cum_sum()
     )
-
     result = df["values"].hist(
         bins=bins.to_list(),
         include_breakpoint=True,
@@ -404,7 +404,6 @@ def test_hist_bin_hypotheis(
         include_breakpoint=True,
         include_category=False,
     )
-
     assert_equal_data(result, expected.to_dict(as_series=False))
 
 
