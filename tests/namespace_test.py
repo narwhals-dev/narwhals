@@ -51,10 +51,6 @@ def test_namespace_from_backend_name(backend: BackendName) -> None:
 def test_namespace_from_native_object(constructor: Constructor) -> None:
     data = {"a": [1, 2, 3], "b": [4, 5, 6]}
     frame = constructor(data)
-    # NOTE: Needed to remove those from `IntoFrame`
-    # See (#2239)
-    assert not isinstance(frame, (nw.DataFrame, nw.LazyFrame))
-
     namespace = Namespace.from_native_object(frame)
     nw_frame = nw.from_native(frame)
     assert namespace.implementation == nw_frame.implementation
@@ -95,11 +91,7 @@ def test_namespace_series_from_iterable(
     compliant_series = compliant._series.from_iterable(
         iterable, context=compliant, name="hello"
     )
-    # BUG: `@overload`(s) for `from_native` fail to mention `Compliant` support
-    # Fix *should be*:
-    #     `IntoSeries: TypeAlias = Series[Any] | NativeSeries | CompliantSeries[Any]`
-    # Can't do that as, `PolarsSeries` is not compliant yet
-    series = nw.from_native(compliant_series, series_only=True)  # pyright: ignore[reportCallIssue, reportArgumentType]
+    series = nw.from_native(compliant_series, series_only=True)
     assert isinstance(series, nw.Series)
     assert series.to_list() == list(data)
 
