@@ -31,7 +31,9 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import ArrayOrScalarT2
     from narwhals._arrow.typing import ArrowArray
     from narwhals._arrow.typing import ArrowChunkedArray
+    from narwhals._arrow.typing import ScalarAny
     from narwhals.dtypes import DType
+    from narwhals.typing import PythonLiteral
     from narwhals.typing import _AnyDArray
     from narwhals.utils import Version
 
@@ -77,7 +79,7 @@ def extract_py_scalar(value: Any, /) -> Any:
 
 
 def chunked_array(
-    arr: ArrayAny | list[Iterable[Any]], dtype: pa.DataType | None = None, /
+    arr: ArrayAny | list[Iterable[Any]] | ScalarAny, dtype: pa.DataType | None = None, /
 ) -> ArrowChunkedArray:
     if isinstance(arr, pa.ChunkedArray):
         return arr
@@ -221,10 +223,8 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
 
 
 def extract_native(
-    lhs: ArrowSeries, rhs: ArrowSeries | object
-) -> tuple[
-    ArrowChunkedArray | pa.Scalar[Any], ArrowChunkedArray | pa.Scalar[Any] | object
-]:
+    lhs: ArrowSeries, rhs: ArrowSeries | PythonLiteral | None
+) -> tuple[ArrowChunkedArray | ScalarAny, ArrowChunkedArray | ScalarAny]:
     """Extract native objects in binary  operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -252,7 +252,7 @@ def extract_native(
     if isinstance(rhs, list):
         msg = "Expected Series or scalar, got list."
         raise TypeError(msg)
-    return lhs.native, rhs
+    return lhs.native, lit(rhs)
 
 
 def align_series_full_broadcast(*series: ArrowSeries) -> Sequence[ArrowSeries]:

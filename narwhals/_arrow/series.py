@@ -52,11 +52,15 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import Incomplete
     from narwhals._arrow.typing import NullPlacement
     from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
+    from narwhals._arrow.typing import ScalarAny
     from narwhals._arrow.typing import TieBreaker
     from narwhals._arrow.typing import _AsPyType
     from narwhals._arrow.typing import _BasicDataType
     from narwhals.dtypes import DType
     from narwhals.typing import Into1DArray
+    from narwhals.typing import NumericLiteral
+    from narwhals.typing import PythonLiteral
+    from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
@@ -132,7 +136,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
 
     def _with_native(
         self: Self,
-        series: ArrowArray | ArrowChunkedArray,
+        series: ArrowArray | ArrowChunkedArray | ScalarAny,
         *,
         preserve_broadcast: bool = False,
     ) -> Self:
@@ -190,12 +194,14 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         )
 
     def __eq__(self: Self, other: object) -> Self:  # type: ignore[override]
-        ser, other = extract_native(self, other)
-        return self._with_native(pc.equal(ser, other))  # type: ignore[call-overload]
+        other = cast("PythonLiteral | ArrowSeries | None", other)
+        ser, rhs = extract_native(self, other)
+        return self._with_native(pc.equal(ser, rhs))
 
     def __ne__(self: Self, other: object) -> Self:  # type: ignore[override]
-        ser, other = extract_native(self, other)
-        return self._with_native(pc.not_equal(ser, other))  # type: ignore[call-overload]
+        other = cast("PythonLiteral | ArrowSeries | None", other)
+        ser, rhs = extract_native(self, other)
+        return self._with_native(pc.not_equal(ser, rhs))
 
     def __ge__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
@@ -303,13 +309,14 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         return maybe_extract_py_scalar(len(self.native), _return_py_scalar)
 
     def filter(self: Self, predicate: ArrowSeries | list[bool | None]) -> Self:
+        other_native: Any
         if not (
             isinstance(predicate, list) and all(isinstance(x, bool) for x in predicate)
         ):
             _, other_native = extract_native(self, predicate)
         else:
             other_native = predicate
-        return self._with_native(self.native.filter(other_native))  # pyright: ignore[reportArgumentType]
+        return self._with_native(self.native.filter(other_native))
 
     def mean(self: Self, *, _return_py_scalar: bool = True) -> float:
         return maybe_extract_py_scalar(pc.mean(self.native), _return_py_scalar)
@@ -827,23 +834,19 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         return self._with_native(self.native[offset::n])
 
     def clip(
-        self: Self, lower_bound: Self | Any | None, upper_bound: Self | Any | None
+        self,
+        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
+        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
     ) -> Self:
-        _, lower_bound = (
-            extract_native(self, lower_bound) if lower_bound else (None, None)
-        )
-        _, upper_bound = (
-            extract_native(self, upper_bound) if upper_bound else (None, None)
-        )
+        _, lower = extract_native(self, lower_bound) if lower_bound else (None, None)
+        _, upper = extract_native(self, upper_bound) if upper_bound else (None, None)
 
-        if lower_bound is None:
-            return self._with_native(pc.min_element_wise(self.native, upper_bound))
-        if upper_bound is None:
-            return self._with_native(pc.max_element_wise(self.native, lower_bound))
+        if lower is None:
+            return self._with_native(pc.min_element_wise(self.native, upper))
+        if upper is None:
+            return self._with_native(pc.max_element_wise(self.native, lower))
         return self._with_native(
-            pc.max_element_wise(
-                pc.min_element_wise(self.native, upper_bound), lower_bound
-            )
+            pc.max_element_wise(pc.min_element_wise(self.native, upper), lower)
         )
 
     def to_arrow(self: Self) -> ArrowArray:

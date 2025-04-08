@@ -49,6 +49,8 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.dtypes import DType
     from narwhals.typing import Into1DArray
+    from narwhals.typing import NumericLiteral
+    from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
     from narwhals.typing import _AnyDArray
     from narwhals.utils import Version
@@ -822,16 +824,18 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(self.native.iloc[offset::n])
 
     def clip(
-        self: Self, lower_bound: Self | Any | None, upper_bound: Self | Any | None
+        self,
+        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
+        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
     ) -> Self:
-        _, lower_bound = (
+        _, lower = (
             align_and_extract_native(self, lower_bound) if lower_bound else (None, None)
         )
-        _, upper_bound = (
+        _, upper = (
             align_and_extract_native(self, upper_bound) if upper_bound else (None, None)
         )
         kwargs = {"axis": 0} if self._implementation is Implementation.MODIN else {}
-        return self._with_native(self.native.clip(lower_bound, upper_bound, **kwargs))
+        return self._with_native(self.native.clip(lower, upper, **kwargs))
 
     def to_arrow(self: Self) -> ArrowArray:
         if self._implementation is Implementation.CUDF:
