@@ -37,6 +37,8 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantSeries
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
+    from narwhals.typing import NumericLiteral
+    from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
     from narwhals.utils import Implementation
 
@@ -749,8 +751,8 @@ class Series(Generic[IntoSeriesT]):
 
     def clip(
         self: Self,
-        lower_bound: Self | Any | None = None,
-        upper_bound: Self | Any | None = None,
+        lower_bound: Self | NumericLiteral | TemporalLiteral | None = None,
+        upper_bound: Self | NumericLiteral | TemporalLiteral | None = None,
     ) -> Self:
         r"""Clip values in the Series.
 

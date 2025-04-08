@@ -40,6 +40,8 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantNamespace
     from narwhals.dtypes import DType
     from narwhals.typing import IntoExpr
+    from narwhals.typing import NumericLiteral
+    from narwhals.typing import TemporalLiteral
 
     PS = ParamSpec("PS")
     R = TypeVar("R")
@@ -1948,12 +1950,10 @@ class Expr:
             self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
         )
 
-    # need to allow numeric typing
-    # TODO @aivanoved: make type alias for numeric type
     def clip(
         self: Self,
-        lower_bound: IntoExpr | Any | None = None,
-        upper_bound: IntoExpr | Any | None = None,
+        lower_bound: IntoExpr | NumericLiteral | TemporalLiteral | None = None,
+        upper_bound: IntoExpr | NumericLiteral | TemporalLiteral | None = None,
     ) -> Self:
         r"""Clip values in the Series.
 
