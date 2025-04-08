@@ -253,7 +253,8 @@ def extract_native(
     if isinstance(rhs, list):
         msg = "Expected Series or scalar, got list."
         raise TypeError(msg)
-    return lhs.native, lit(rhs)
+
+    return lhs.native, rhs if isinstance(rhs, pa.Scalar) else lit(rhs)
 
 
 def align_series_full_broadcast(*series: ArrowSeries) -> Sequence[ArrowSeries]:
