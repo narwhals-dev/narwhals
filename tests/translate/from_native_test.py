@@ -1,3 +1,22 @@
+"""`from_native` runtime and static typing tests.
+
+# Static Typing
+The style of the tests is *intentionally* repetitive, aiming to provide an individual scope
+for each attempted `@overload` match.
+
+## `mypy` ignores
+[inline config] is used to prevent [mypy specific errors] from hiding `pyright` diagnostics.
+
+[`--disallow-any-generics`] and [`var-annotated`] are ignored to verify we don't regress to
+**prior false positive** behaviors identified in [#2239].
+
+[inline config]: https://mypy.readthedocs.io/en/stable/inline_config.html
+[mypy specific errors]: https://discuss.python.org/t/ignore-mypy-specific-type-errors/58535
+[`--disallow-any-generics`]: https://mypy.readthedocs.io/en/stable/error_code_list2.html#check-that-type-arguments-exist-type-arg
+[`var-annotated`]: https://mypy.readthedocs.io/en/stable/error_code_list.html#require-annotation-if-variable-type-is-unclear-var-annotated
+[#2239]: https://github.com/narwhals-dev/narwhals/issues/2239
+"""
+
 from __future__ import annotations
 
 # mypy: disallow-any-generics=false, disable-error-code="var-annotated"
@@ -413,7 +432,7 @@ def test_lazyframe_recursive() -> None:
 
 
 def test_dataframe_recursive_v1() -> None:
-    """`v1` always returns a Union."""
+    """`v1` always returns a `Union` for `DataFrame`."""
     pytest.importorskip("polars")
     import polars as pl
 
@@ -426,13 +445,11 @@ def test_dataframe_recursive_v1() -> None:
 
     if TYPE_CHECKING:
         assert_type(pl_frame, pl.DataFrame)
-        # TODO @dangotbanned: Fix without breaking something else (1)
         assert_type(nw_frame, "nw.DataFrame[pl.DataFrame] | nw.LazyFrame[pl.DataFrame]")
 
         nw_frame_depth_2 = nw.DataFrame(nw_frame, level="full")
         # NOTE: Checking that the type is `DataFrame[Unknown]`
         assert_type(nw_frame_depth_2, nw.DataFrame)
-        # TODO @dangotbanned: Fix without breaking something else (2)
         assert_type(
             nw_frame_early_return,
             "nw.DataFrame[pl.DataFrame] | nw.LazyFrame[pl.DataFrame]",
