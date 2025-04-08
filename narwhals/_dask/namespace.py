@@ -3,7 +3,6 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from typing import TYPE_CHECKING
-from typing import Any
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
@@ -31,6 +30,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
+    from narwhals.typing import NonNestedLiteral
     from narwhals.utils import Version
 
     try:
@@ -63,7 +63,7 @@ class DaskNamespace(
         self._backend_version = backend_version
         self._version = version
 
-    def lit(self: Self, value: Any, dtype: DType | type[DType] | None) -> DaskExpr:
+    def lit(self, value: NonNestedLiteral, dtype: DType | type[DType] | None) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             if dtype is not None:
                 native_dtype = narwhals_to_native_dtype(dtype, self._version)

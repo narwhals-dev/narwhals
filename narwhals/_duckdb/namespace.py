@@ -4,7 +4,6 @@ import operator
 from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING
-from typing import Any
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
@@ -33,6 +32,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
+    from narwhals.typing import NonNestedLiteral
     from narwhals.utils import Version
 
 
@@ -198,7 +198,9 @@ class DuckDBNamespace(
     def when(self: Self, predicate: DuckDBExpr) -> DuckDBWhen:
         return DuckDBWhen.from_expr(predicate, context=self)
 
-    def lit(self: Self, value: Any, dtype: DType | type[DType] | None) -> DuckDBExpr:
+    def lit(
+        self, value: NonNestedLiteral, dtype: DType | type[DType] | None
+    ) -> DuckDBExpr:
         def func(_df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             if dtype is not None:
                 return [

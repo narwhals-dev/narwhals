@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 
     from narwhals._spark_like.dataframe import SQLFrameDataFrame  # noqa: F401
     from narwhals.dtypes import DType
+    from narwhals.typing import NonNestedLiteral
     from narwhals.utils import Implementation
     from narwhals.utils import Version
 
@@ -54,7 +55,7 @@ class SparkLikeNamespace(
         return SparkLikeLazyFrame
 
     def lit(
-        self: Self, value: object, dtype: DType | type[DType] | None
+        self, value: NonNestedLiteral, dtype: DType | type[DType] | None
     ) -> SparkLikeExpr:
         def _lit(df: SparkLikeLazyFrame) -> list[Column]:
             column = df._F.lit(value)
