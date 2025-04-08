@@ -178,6 +178,6 @@ def test_collect_with_kwargs(constructor: Constructor) -> None:
 
 def test_collect_empty_pyspark(constructor: Constructor) -> None:
     df = nw_v1.from_native(constructor({"a": [1, 2, 3]}))
-    df = df.filter(nw.col("a").is_null()).with_columns(b=nw.lit(None)).lazy()
+    df = df.filter(nw.col("a").is_null()).with_columns(b=nw.lit(None)).lazy()  # type: ignore[arg-type]
     result = df.collect()
     assert_equal_data(result, {"a": [], "b": []})
