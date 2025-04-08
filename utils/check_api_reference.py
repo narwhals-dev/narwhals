@@ -46,7 +46,7 @@ BASE_DTYPES = {
     "Mapping",
 }
 
-files = {fp.name for fp in Path("narwhals").iterdir()}
+files = {fp.stem for fp in Path("narwhals").iterdir()}
 
 # Top level functions
 top_level_functions = [
