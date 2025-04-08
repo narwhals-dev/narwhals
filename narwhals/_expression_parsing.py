@@ -202,7 +202,10 @@ class WindowKind(Enum):
 
     UNCLOSEABLE = auto()
     """e.g. `nw.col('a').cum_sum().abs()` - the window function (`cum_sum`) wasn't immediately followed by
-    `over(order_by=...)`, and so the window is uncloseable."""
+    `over(order_by=...)`, and so the window is uncloseable.
+
+    Uncloseable windows can be used freely in `nw.DataFrame`, but not in `nw.LazyFrame` where
+    row-order is undefined."""
 
     CLOSED = auto()
     """e.g. `nw.col('a').cum_sum().over(order_by='i')`."""
