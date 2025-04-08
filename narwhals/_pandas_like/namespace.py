@@ -257,7 +257,6 @@ class PandasLikeNamespace(
             backend_version=self._backend_version,
             version=self._version,
             validate_column_names=True,
-            native_columns_name=None,  # Pandas concat does not maintain the column name
         )
 
     def when(self: Self, predicate: PandasLikeExpr) -> PandasWhen:

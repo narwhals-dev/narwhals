@@ -109,7 +109,6 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         backend_version: tuple[int, ...],
         version: Version,
         validate_column_names: bool,
-        native_columns_name: Any | None = None,
     ) -> None:
         self._native_frame = native_dataframe
         self._implementation = implementation
@@ -118,7 +117,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         validate_backend_version(self._implementation, self._backend_version)
         if validate_column_names:
             check_column_names_are_unique(native_dataframe.columns)
-        self._native_columns_name = native_columns_name
+        self._native_columns_name = native_dataframe.columns.name
 
     @classmethod
     def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self:
@@ -246,18 +245,15 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             backend_version=self._backend_version,
             version=version,
             validate_column_names=False,
-            native_columns_name=self._native_columns_name,
         )
 
     def _with_native(self: Self, df: Any, *, validate_column_names: bool = True) -> Self:
-        df.columns.name = self._native_columns_name
         return self.__class__(
-            df,
+            df.rename_axis(columns=self._native_columns_name),
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
             validate_column_names=validate_column_names,
-            native_columns_name=self._native_columns_name,
         )
 
     def _extract_comparand(self, other: PandasLikeSeries) -> pd.Series[Any]:
@@ -629,19 +625,17 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
                 backend_version=self._backend_version,
                 version=self._version,
                 validate_column_names=False,
-                native_columns_name=self._native_columns_name,
             )
 
         if backend is Implementation.PANDAS:
             import pandas as pd  # ignore-banned-import
 
             return PandasLikeDataFrame(
-                self.to_pandas(),
+                self.to_pandas().rename_axis(columns=self.native.columns.name),
                 implementation=Implementation.PANDAS,
                 backend_version=parse_version(pd),
                 version=self._version,
                 validate_column_names=False,
-                native_columns_name=self._native_columns_name,
             )
 
         if backend is Implementation.PYARROW:

@@ -488,11 +488,10 @@ def _from_native_impl(  # noqa: PLR0915
         return DataFrame(
             PandasLikeDataFrame(
                 native_object,
-                backend_version=parse_version(pd),
                 implementation=Implementation.PANDAS,
+                backend_version=parse_version(pd),
                 version=version,
                 validate_column_names=True,
-                native_columns_name=native_object.columns.name,
             ),
             level="full",
         )
@@ -532,7 +531,6 @@ def _from_native_impl(  # noqa: PLR0915
                 backend_version=parse_version(mpd),
                 version=version,
                 validate_column_names=True,
-                native_columns_name=native_object.columns.name,
             ),
             level="full",
         )
@@ -572,7 +570,6 @@ def _from_native_impl(  # noqa: PLR0915
                 backend_version=parse_version(cudf),
                 version=version,
                 validate_column_names=True,
-                native_columns_name=native_object.columns.name,
             ),
             level="full",
         )
