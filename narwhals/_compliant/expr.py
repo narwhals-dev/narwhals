@@ -64,6 +64,8 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprKind
     from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
+    from narwhals.typing import NumericLiteral
+    from narwhals.typing import TemporalLiteral
     from narwhals.typing import TimeUnit
     from narwhals.utils import Implementation
     from narwhals.utils import Version
@@ -189,6 +191,12 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         self,
         function: Callable[[CompliantSeries[Any]], CompliantExpr[Any, Any]],
         return_dtype: DType | type[DType] | None,
+    ) -> Self: ...
+
+    def clip(
+        self,
+        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
+        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
     ) -> Self: ...
 
     @property
@@ -645,7 +653,11 @@ class EagerExpr(
 
     # Other
 
-    def clip(self, lower_bound: Any, upper_bound: Any) -> Self:
+    def clip(
+        self,
+        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
+        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
+    ) -> Self:
         return self._reuse_series(
             "clip", lower_bound=lower_bound, upper_bound=upper_bound
         )
