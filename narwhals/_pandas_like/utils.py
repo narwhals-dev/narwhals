@@ -794,6 +794,21 @@ def check_column_names_are_unique(columns: pd.Index[str]) -> None:
         raise DuplicateError(msg)
 
 
+def rename_axis(
+    obj: T,
+    *args: Any,
+    implementation: Implementation,
+    backend_version: tuple[int, ...],
+    **kwargs: Any,
+) -> T:
+    """Wrapper around pandas' rename_axis so that we can set `copy` based on implementation/version."""
+    if implementation is Implementation.PANDAS and (
+        backend_version >= (3,)
+    ):  # pragma: no cover
+        return obj.rename_axis(*args, **kwargs)  # type: ignore[attr-defined]
+    return obj.rename_axis(*args, **kwargs, copy=False)  # type: ignore[attr-defined]
+
+
 class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]):
     @property
     def implementation(self) -> Implementation:

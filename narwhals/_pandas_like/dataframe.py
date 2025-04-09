@@ -26,6 +26,7 @@ from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
 from narwhals._pandas_like.utils import pivot_table
 from narwhals._pandas_like.utils import rename
+from narwhals._pandas_like.utils import rename_axis
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_index
 from narwhals.dependencies import is_numpy_array_1d
@@ -249,7 +250,12 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
 
     def _with_native(self: Self, df: Any, *, validate_column_names: bool = True) -> Self:
         return self.__class__(
-            df.rename_axis(columns=self._native_columns_name, copy=False),
+            rename_axis(
+                df,
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+                columns=self._native_columns_name,
+            ),
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
@@ -631,8 +637,11 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             import pandas as pd  # ignore-banned-import
 
             return PandasLikeDataFrame(
-                self.to_pandas().rename_axis(
-                    columns=self.native.columns.name, copy=False
+                rename_axis(
+                    self.to_pandas(),
+                    implementation=self._implementation,
+                    backend_version=self._backend_version,
+                    columns=self._native_columns_name,
                 ),
                 implementation=Implementation.PANDAS,
                 backend_version=parse_version(pd),

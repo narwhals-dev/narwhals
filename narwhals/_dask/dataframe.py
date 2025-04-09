@@ -13,6 +13,7 @@ import pandas as pd
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import evaluate_exprs
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._pandas_like.utils import rename_axis
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
@@ -110,7 +111,12 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
             return PandasLikeDataFrame(
-                result.rename_axis(columns=self.native.columns.name, copy=False),
+                rename_axis(
+                    result,
+                    implementation=Implementation.PANDAS,
+                    backend_version=parse_version(pd),
+                    columns=self.native.columns.name,
+                ),
                 implementation=Implementation.PANDAS,
                 backend_version=parse_version(pd),
                 version=self._version,
