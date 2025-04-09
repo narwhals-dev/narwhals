@@ -274,16 +274,10 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
 
     def __truediv__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
-        if not isinstance(other, (pa.Array, pa.ChunkedArray)):
-            # scalar
-            other = lit(other)
         return self._with_native(pc.divide(*cast_for_truediv(ser, other)))  # type: ignore[type-var]
 
     def __rtruediv__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
-        if not isinstance(other, (pa.Array, pa.ChunkedArray)):
-            # scalar
-            other = lit(other) if not isinstance(other, pa.Scalar) else other
         return self._with_native(pc.divide(*cast_for_truediv(other, ser)))  # type: ignore[type-var]
 
     def __mod__(self: Self, other: Any) -> Self:
