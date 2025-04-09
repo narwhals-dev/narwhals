@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Literal
 from typing import Sequence
 
 import pyarrow.compute as pc
@@ -25,6 +24,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import EvalNames
     from narwhals._compliant.typing import EvalSeries
     from narwhals._expression_parsing import ExprMetadata
+    from narwhals.typing import RankMethod
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -208,12 +208,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
     def cum_prod(self: Self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_prod", reverse=reverse)
 
-    def rank(
-        self: Self,
-        method: Literal["average", "min", "max", "dense", "ordinal"],
-        *,
-        descending: bool,
-    ) -> Self:
+    def rank(self, method: RankMethod, *, descending: bool) -> Self:
         return self._reuse_series("rank", method=method, descending=descending)
 
     ewm_mean = not_implemented()
