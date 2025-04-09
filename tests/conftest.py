@@ -229,7 +229,7 @@ GPU_CONSTRUCTORS: dict[str, ConstructorEager] = {"cudf": cudf_constructor}
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
-    if metafunc.config.getoption("all_cpu_constructors"):
+    if metafunc.config.getoption("all_cpu_constructors"):  # pragma: no cover
         selected_constructors: list[str] = [
             *iter(EAGER_CONSTRUCTORS.keys()),
             *iter(LAZY_CONSTRUCTORS.keys()),
