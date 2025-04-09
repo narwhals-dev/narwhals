@@ -6,7 +6,6 @@ from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
-from typing import Literal
 from typing import Sequence
 
 import duckdb
@@ -33,6 +32,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
+    from narwhals.typing import ConcatMethod
     from narwhals.utils import Version
 
 
@@ -60,10 +60,7 @@ class DuckDBNamespace(
         return DuckDBLazyFrame
 
     def concat(
-        self: Self,
-        items: Iterable[DuckDBLazyFrame],
-        *,
-        how: Literal["horizontal", "vertical", "diagonal"],
+        self, items: Iterable[DuckDBLazyFrame], *, how: ConcatMethod
     ) -> DuckDBLazyFrame:
         if how == "horizontal":
             msg = "horizontal concat not supported for duckdb. Please join instead"

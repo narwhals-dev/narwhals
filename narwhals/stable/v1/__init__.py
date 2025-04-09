@@ -92,6 +92,7 @@ if TYPE_CHECKING:
 
     from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
+    from narwhals.typing import ConcatMethod
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
     from narwhals.typing import IntoLazyFrameT
@@ -2059,11 +2060,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return _stableify(nw.max_horizontal(*exprs))
 
 
-def concat(
-    items: Iterable[FrameT],
-    *,
-    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> FrameT:
+def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT:
     """Concatenate multiple DataFrames, LazyFrames into a single entity.
 
     Arguments:
