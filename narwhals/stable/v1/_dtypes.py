@@ -93,7 +93,9 @@ class Enum(NwEnum):
         super(NwEnum, self).__init__()
 
     def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
-        return super(NwEnum, self).__eq__(other)
+        if type(other) is type:
+            return other in {type(self), NwEnum}
+        return isinstance(other, type(self))
 
     def __hash__(self: Self) -> int:  # pragma: no cover
         return super(NwEnum, self).__hash__()

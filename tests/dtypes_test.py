@@ -413,8 +413,9 @@ def test_enum_valid(categories: Iterable[Any] | type[enum.Enum]) -> None:
 
 def test_enum_v1_is_enum_unstable() -> None:
     enum_v1 = nw.Enum()
+    enum_unstable = unstable_nw.Enum(("a", "b", "c"))
     assert isinstance(enum_v1, unstable_nw.Enum)
     assert issubclass(nw.Enum, unstable_nw.Enum)
 
-    # NOTE: Pretty sure this not working is a bug
     assert enum_v1 == unstable_nw.Enum
+    assert enum_v1 != enum_unstable
