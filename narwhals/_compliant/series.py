@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     from narwhals.typing import ClosedInterval
     from narwhals.typing import FillNullStrategy
     from narwhals.typing import Into1DArray
+    from narwhals.typing import NonNestedLiteral
     from narwhals.typing import NumericLiteral
     from narwhals.typing import RankMethod
     from narwhals.typing import RollingInterpolationMethod
@@ -161,7 +162,10 @@ class CompliantSeries(
         ignore_nulls: bool,
     ) -> Self: ...
     def fill_null(
-        self, value: Any | None, strategy: FillNullStrategy | None, limit: int | None
+        self,
+        value: Self | NonNestedLiteral,
+        strategy: FillNullStrategy | None,
+        limit: int | None,
     ) -> Self: ...
     def filter(self, predicate: Any) -> Self: ...
     def gather_every(self, n: int, offset: int) -> Self: ...

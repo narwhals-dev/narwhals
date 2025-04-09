@@ -46,6 +46,7 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
+    from narwhals._arrow.typing import ArrayOrScalarAny
     from narwhals._arrow.typing import ArrowArray
     from narwhals._arrow.typing import ArrowChunkedArray
     from narwhals._arrow.typing import Incomplete
@@ -59,6 +60,7 @@ if TYPE_CHECKING:
     from narwhals.typing import ClosedInterval
     from narwhals.typing import FillNullStrategy
     from narwhals.typing import Into1DArray
+    from narwhals.typing import NonNestedLiteral
     from narwhals.typing import NumericLiteral
     from narwhals.typing import PythonLiteral
     from narwhals.typing import RankMethod
@@ -637,14 +639,15 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         return self._with_native(self.native.take(mask))
 
     def fill_null(
-        self, value: Any | None, strategy: FillNullStrategy | None, limit: int | None
+        self,
+        value: Self | NonNestedLiteral,
+        strategy: FillNullStrategy | None,
+        limit: int | None,
     ) -> Self:
         import numpy as np  # ignore-banned-import
 
         def fill_aux(
-            arr: ArrowArray | ArrowChunkedArray,
-            limit: int,
-            direction: FillNullStrategy | None = None,
+            arr: ArrowChunkedArray, limit: int, direction: FillNullStrategy | None
         ) -> ArrowArray:
             # this algorithm first finds the indices of the valid values to fill all the null value positions
             # then it calculates the distance of each new index and the original index
@@ -666,8 +669,8 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             )
 
         if value is not None:
-            _, value = extract_native(self, value)
-            series = pc.fill_null(self.native, value)
+            _, native_value = extract_native(self, value)
+            series: ArrayOrScalarAny = pc.fill_null(self.native, native_value)
         elif limit is None:
             fill_func = (
                 pc.fill_null_forward if strategy == "forward" else pc.fill_null_backward

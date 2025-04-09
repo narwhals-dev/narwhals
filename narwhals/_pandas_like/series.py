@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from narwhals.typing import ClosedInterval
     from narwhals.typing import FillNullStrategy
     from narwhals.typing import Into1DArray
+    from narwhals.typing import NonNestedLiteral
     from narwhals.typing import NumericLiteral
     from narwhals.typing import RankMethod
     from narwhals.typing import RollingInterpolationMethod
@@ -554,12 +555,17 @@ class PandasLikeSeries(EagerSeries[Any]):
         raise InvalidOperationError(msg)
 
     def fill_null(
-        self, value: Any | None, strategy: FillNullStrategy | None, limit: int | None
+        self,
+        value: Self | NonNestedLiteral,
+        strategy: FillNullStrategy | None,
+        limit: int | None,
     ) -> Self:
         ser = self.native
         if value is not None:
-            _, value = align_and_extract_native(self, value)
-            res_ser = self._with_native(ser.fillna(value=value), preserve_broadcast=True)
+            _, native_value = align_and_extract_native(self, value)
+            res_ser = self._with_native(
+                ser.fillna(value=native_value), preserve_broadcast=True
+            )
         else:
             res_ser = self._with_native(
                 ser.ffill(limit=limit)
