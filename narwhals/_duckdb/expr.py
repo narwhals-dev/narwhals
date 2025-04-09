@@ -696,21 +696,34 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         *,
         descending: bool,
     ) -> Self:
-        if method == "min":
+        if method in {"min", "max", "average"}:
             func_name = "rank"
         elif method == "dense":
             func_name = "dense_rank"
-        else:  # pragma: no cover
-            msg = f"Method {method} is not yet implemented."
-            raise NotImplementedError(msg)
+        else:  # method == "ordinal"
+            func_name = "row_number"
 
         def _rank(_input: duckdb.Expression) -> duckdb.Expression:
             if descending:
                 by_sql = f"{_input} desc nulls last"
             else:
                 by_sql = f"{_input} asc nulls last"
-            sql = f"{func_name}() OVER (order by {by_sql})"
-            return when(_input.isnotnull(), SQLExpression(sql))  # type: ignore[no-any-return, unused-ignore]
+            order_by_sql = f"order by {by_sql}"
+
+            if method == "max":
+                sql = (
+                    f"{func_name}() OVER ({order_by_sql}) + "
+                    f"COUNT(*) OVER (PARTITION BY {_input}) - 1"
+                )
+            elif method == "average":
+                sql = (
+                    f"{func_name}() OVER ({order_by_sql}) + "
+                    f"(COUNT(*) OVER (PARTITION BY {_input}) - 1) / 2.0"
+                )
+            else:
+                sql = f"{func_name}() OVER ({order_by_sql})"
+
+            return when(_input.isnotnull(), SQLExpression(sql))
 
         return self._with_callable(_rank)
 
