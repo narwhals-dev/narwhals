@@ -250,13 +250,9 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
 
     for constructor in selected_constructors:
         if (
-            (
-                constructor in {"pandas[nullable]", "pandas[pyarrow]"}
-                and MIN_PANDAS_NULLABLE_VERSION > PANDAS_VERSION
-            )
-            or (constructor == "sqlframe" and sys.version_info < (3, 9))
-            or (constructor == "pyspark" and sys.version_info >= (3, 12))
-        ):
+            constructor in {"pandas[nullable]", "pandas[pyarrow]"}
+            and MIN_PANDAS_NULLABLE_VERSION > PANDAS_VERSION
+        ) or (constructor == "sqlframe" and sys.version_info < (3, 9)):
             continue  # pragma: no cover
 
         if constructor in EAGER_CONSTRUCTORS:
