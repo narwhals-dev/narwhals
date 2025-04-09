@@ -9,6 +9,7 @@ from typing import Sequence
 
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
+from narwhals._expression_parsing import WindowKind
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import combine_metadata_binary_op
@@ -65,8 +66,43 @@ class Expr:
         self._metadata = metadata
 
     def _with_callable(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
-        # Instantiate new Expr keeping metadata unchanged.
+        # Instantiate new Expr keeping metadata unchanged, unless
+        # it's a WINDOW, in which case make it a TRANSFORM.
+        if self._metadata.kind.is_window():
+            # We had a window function, but it wasn't immediately followed by
+            # `over(order_by=...)` - it missed its chance, it's now forever uncloseable.
+            return self.__class__(
+                to_compliant_expr,
+                self._metadata.with_kind_and_uncloseable_window(ExprKind.TRANSFORM),
+            )
         return self.__class__(to_compliant_expr, self._metadata)
+
+    def _with_aggregation(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
+        if self._metadata.kind.is_scalar_like():
+            msg = "Aggregations can't be applied to scalar-like expressions."
+            raise InvalidOperationError(msg)
+        return self.__class__(
+            to_compliant_expr, self._metadata.with_kind(ExprKind.AGGREGATION)
+        )
+
+    def _with_order_dependent_aggregation(
+        self, to_compliant_expr: Callable[[Any], Any]
+    ) -> Self:
+        if self._metadata.kind.is_scalar_like():
+            msg = "Aggregations can't be applied to scalar-like expressions."
+            raise InvalidOperationError(msg)
+        return self.__class__(
+            to_compliant_expr,
+            self._metadata.with_kind_and_closeable_window(ExprKind.AGGREGATION),
+        )
+
+    def _with_filtration(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
+        if self._metadata.kind.is_scalar_like():
+            msg = "Length-changing can't be applied to scalar-like expressions."
+            raise InvalidOperationError(msg)
+        return self.__class__(
+            to_compliant_expr, self._metadata.with_kind(ExprKind.FILTRATION)
+        )
 
     def __repr__(self: Self) -> str:
         return f"Narwhals Expr\nmetadata: {self._metadata}\n"
@@ -74,9 +110,8 @@ class Expr:
     def _taxicab_norm(self: Self) -> Self:
         # This is just used to test out the stable api feature in a realistic-ish way.
         # It's not intended to be used.
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).abs().sum(),
-            self._metadata.with_kind(ExprKind.AGGREGATION),
+        return self._with_aggregation(
+            lambda plx: self._to_compliant_expr(plx).abs().sum()
         )
 
     # --- convert ---
@@ -382,10 +417,7 @@ class Expr:
             |  0  True  True   |
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).any(),
-            self._metadata.with_kind(ExprKind.AGGREGATION),
-        )
+        return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).any())
 
     def all(self: Self) -> Self:
         """Return whether all values in the column are `True`.
@@ -406,10 +438,7 @@ class Expr:
             |  0  False  True  |
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).all(),
-            self._metadata.with_kind(ExprKind.AGGREGATION),
-        )
+        return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).all())
 
     def ewm_mean(
         self: Self,
@@ -532,10 +561,7 @@ class Expr:
             |   0  0.0  4.0    |
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).mean(),
-            self._metadata.with_kind(ExprKind.AGGREGATION),
-        )
+        return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).mean())
 
     def median(self: Self) -> Self:
         """Get median value.
@@ -559,10 +585,7 @@ class Expr:
             |   0  3.0  4.0    |
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).median(),
-            self._metadata.with_kind(ExprKind.AGGREGATION),
-        )
+        return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).median())
 
     def std(self: Self, *, ddof: int = 1) -> Self:
         """Get standard deviation.
@@ -587,9 +610,8 @@ class Expr:
             |0  17.79513  1.265789|
             └─────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).std(ddof=ddof),
-            self._metadata.with_kind(ExprKind.AGGREGATION),
+        return self._with_aggregation(
+            lambda plx: self._to_compliant_expr(plx).std(ddof=ddof)
         )
 
     def var(self: Self, *, ddof: int = 1) -> Self:
@@ -615,9 +637,8 @@ class Expr:
             |0  316.666667  1.602222|
             └───────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).var(ddof=ddof),
-            self._metadata.with_kind(ExprKind.AGGREGATION),
+        return self._with_aggregation(
+            lambda plx: self._to_compliant_expr(plx).var(ddof=ddof)
         )
 
     def map_batches(
@@ -664,7 +685,7 @@ class Expr:
                 function=function, return_dtype=return_dtype
             ),
             # safest assumptions
-            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
+            self._metadata.with_kind_and_closeable_window(ExprKind.FILTRATION),
         )
 
     def skew(self: Self) -> Self:
@@ -686,10 +707,7 @@ class Expr:
             | 0  0.0  1.472427 |
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).skew(),
-            self._metadata.with_kind(ExprKind.AGGREGATION),
-        )
+        return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).skew())
 
     def sum(self: Self) -> Expr:
         """Return the sum value.
@@ -714,10 +732,7 @@ class Expr:
             |└────────┴────────┘|
             └───────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).sum(),
-            self._metadata.with_kind(ExprKind.AGGREGATION),
-        )
+        return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).sum())
 
     def min(self: Self) -> Self:
         """Returns the minimum value(s) from a column(s).
@@ -738,10 +753,7 @@ class Expr:
             |     0  1  3      |
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).min(),
-            self._metadata.with_kind(ExprKind.AGGREGATION),
-        )
+        return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).min())
 
     def max(self: Self) -> Self:
         """Returns the maximum value(s) from a column(s).
@@ -762,10 +774,7 @@ class Expr:
             |    0  20  100    |
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).max(),
-            self._metadata.with_kind(ExprKind.AGGREGATION),
-        )
+        return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).max())
 
     def arg_min(self: Self) -> Self:
         """Returns the index of the minimum value.
@@ -786,9 +795,8 @@ class Expr:
             |0          0          1|
             └───────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).arg_min(),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.AGGREGATION),
+        return self._with_order_dependent_aggregation(
+            lambda plx: self._to_compliant_expr(plx).arg_min()
         )
 
     def arg_max(self: Self) -> Self:
@@ -810,9 +818,8 @@ class Expr:
             |0          1          0|
             └───────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).arg_max(),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.AGGREGATION),
+        return self._with_order_dependent_aggregation(
+            lambda plx: self._to_compliant_expr(plx).arg_max()
         )
 
     def count(self: Self) -> Self:
@@ -834,10 +841,7 @@ class Expr:
             |     0  3  2      |
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).count(),
-            self._metadata.with_kind(ExprKind.AGGREGATION),
-        )
+        return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).count())
 
     def n_unique(self: Self) -> Self:
         """Returns count of unique values.
@@ -858,10 +862,7 @@ class Expr:
             |     0  5  3      |
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).n_unique(),
-            self._metadata.with_kind(ExprKind.AGGREGATION),
-        )
+        return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).n_unique())
 
     def unique(self: Self) -> Self:
         """Return unique values of this expression.
@@ -882,10 +883,7 @@ class Expr:
             |     0  9  12     |
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).unique(),
-            self._metadata.with_kind(ExprKind.FILTRATION),
-        )
+        return self._with_filtration(lambda plx: self._to_compliant_expr(plx).unique())
 
     def abs(self: Self) -> Self:
         """Return absolute value of each element.
@@ -941,7 +939,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_sum(reverse=reverse),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
+            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
         )
 
     def diff(self: Self) -> Self:
@@ -988,7 +986,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).diff(),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
+            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
         )
 
     def shift(self: Self, n: int) -> Self:
@@ -1038,7 +1036,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).shift(n),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
+            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
         )
 
     def replace_strict(
@@ -1128,7 +1126,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             ),
-            self._metadata.with_extra_open_window(),
+            self._metadata.with_uncloseable_window(),
         )
 
     # --- transform ---
@@ -1358,10 +1356,7 @@ class Expr:
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
         issue_deprecation_warning(msg, _version="1.23.0")
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).arg_true(),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
-        )
+        return self._with_filtration(lambda plx: self._to_compliant_expr(plx).arg_true())
 
     def fill_null(
         self: Self,
@@ -1491,9 +1486,8 @@ class Expr:
             |  └─────┘         |
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).drop_nulls(),
-            self._metadata.with_kind(ExprKind.FILTRATION),
+        return self._with_filtration(
+            lambda plx: self._to_compliant_expr(plx).drop_nulls()
         )
 
     def sample(
@@ -1530,11 +1524,10 @@ class Expr:
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
         issue_deprecation_warning(msg, _version="1.23.0")
-        return self.__class__(
+        return self._with_filtration(
             lambda plx: self._to_compliant_expr(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
-            ),
-            self._metadata.with_kind(ExprKind.FILTRATION),
+            )
         )
 
     def over(
@@ -1594,16 +1587,25 @@ class Expr:
             raise ValueError(msg)
 
         kind = ExprKind.TRANSFORM
-        n_open_windows = self._metadata.n_open_windows
+        window_kind = self._metadata.window_kind
+        if window_kind.is_closed():
+            msg = "Nested `over` statements are not allowed."
+            raise InvalidOperationError(msg)
         if flat_order_by is not None and self._metadata.kind.is_window():
-            n_open_windows -= 1
-        elif flat_order_by is not None and not n_open_windows:
+            # debug assertion, an open window should already have been set
+            # by the window function. If it's immediately followed by `over`, then the
+            # window gets closed.
+            assert window_kind.is_open()  # noqa: S101
+        elif flat_order_by is not None and not window_kind.is_open():
             msg = "Cannot use `order_by` in `over` on expression which isn't order-dependent."
             raise InvalidOperationError(msg)
         current_meta = self._metadata
+        next_window_kind = (
+            WindowKind.UNCLOSEABLE if window_kind.is_uncloseable() else WindowKind.CLOSED
+        )
         next_meta = ExprMetadata(
             kind,
-            n_open_windows=n_open_windows,
+            window_kind=next_window_kind,
             expansion_kind=current_meta.expansion_kind,
         )
 
@@ -1688,9 +1690,8 @@ class Expr:
             |     0  1  2      |
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).null_count(),
-            self._metadata.with_kind(ExprKind.AGGREGATION),
+        return self._with_aggregation(
+            lambda plx: self._to_compliant_expr(plx).null_count()
         )
 
     def is_first_distinct(self: Self) -> Self:
@@ -1723,7 +1724,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_first_distinct(),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
+            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
         )
 
     def is_last_distinct(self: Self) -> Self:
@@ -1756,7 +1757,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).is_last_distinct(),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
+            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
         )
 
     def quantile(
@@ -1793,9 +1794,8 @@ class Expr:
             |  0  24.5  74.5   |
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).quantile(quantile, interpolation),
-            self._metadata.with_kind(ExprKind.AGGREGATION),
+        return self._with_aggregation(
+            lambda plx: self._to_compliant_expr(plx).quantile(quantile, interpolation)
         )
 
     def head(self: Self, n: int = 10) -> Self:
@@ -1821,10 +1821,7 @@ class Expr:
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
         issue_deprecation_warning(msg, _version="1.23.0")
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).head(n),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
-        )
+        return self._with_filtration(lambda plx: self._to_compliant_expr(plx).head(n))
 
     def tail(self: Self, n: int = 10) -> Self:
         r"""Get the last `n` rows.
@@ -1849,10 +1846,7 @@ class Expr:
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
         issue_deprecation_warning(msg, _version="1.23.0")
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).tail(n),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
-        )
+        return self._with_filtration(lambda plx: self._to_compliant_expr(plx).tail(n))
 
     def round(self: Self, decimals: int = 0) -> Self:
         r"""Round underlying floating point data by `decimals` digits.
@@ -1915,10 +1909,7 @@ class Expr:
             |    0   2   1     |
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).len(),
-            self._metadata.with_kind(ExprKind.AGGREGATION),
-        )
+        return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).len())
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         r"""Take every nth value in the Series and return as new Series.
@@ -1944,9 +1935,8 @@ class Expr:
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
         issue_deprecation_warning(msg, _version="1.23.0")
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
+        return self._with_filtration(
+            lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset)
         )
 
     # need to allow numeric typing
@@ -2023,10 +2013,7 @@ class Expr:
             |       0  1       |
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).mode(),
-            self._metadata.with_kind(ExprKind.FILTRATION),
-        )
+        return self._with_filtration(lambda plx: self._to_compliant_expr(plx).mode())
 
     def is_finite(self: Self) -> Self:
         """Returns boolean values indicating which original values are finite.
@@ -2100,7 +2087,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_count(reverse=reverse),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
+            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
         )
 
     def cum_min(self: Self, *, reverse: bool = False) -> Self:
@@ -2137,7 +2124,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_min(reverse=reverse),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
+            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
         )
 
     def cum_max(self: Self, *, reverse: bool = False) -> Self:
@@ -2174,7 +2161,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_max(reverse=reverse),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
+            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
         )
 
     def cum_prod(self: Self, *, reverse: bool = False) -> Self:
@@ -2211,7 +2198,7 @@ class Expr:
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).cum_prod(reverse=reverse),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
+            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
         )
 
     def rolling_sum(
@@ -2277,7 +2264,7 @@ class Expr:
                 min_samples=min_samples_int,
                 center=center,
             ),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
+            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
         )
 
     def rolling_mean(
@@ -2343,7 +2330,7 @@ class Expr:
                 min_samples=min_samples,
                 center=center,
             ),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
+            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
         )
 
     def rolling_var(
@@ -2409,7 +2396,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).rolling_var(
                 window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
             ),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
+            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
         )
 
     def rolling_std(
@@ -2478,7 +2465,7 @@ class Expr:
                 center=center,
                 ddof=ddof,
             ),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.WINDOW),
+            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
         )
 
     def rank(
