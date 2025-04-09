@@ -224,7 +224,7 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
 
 
 def extract_native(
-    lhs: ArrowSeries, rhs: ArrowSeries | PythonLiteral | None
+    lhs: ArrowSeries, rhs: ArrowSeries | PythonLiteral | ScalarAny
 ) -> tuple[ArrowChunkedArray | ScalarAny, ArrowChunkedArray | ScalarAny]:
     """Extract native objects in binary  operation.
 
