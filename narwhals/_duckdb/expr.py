@@ -42,6 +42,8 @@ if TYPE_CHECKING:
     from narwhals._duckdb.typing import WindowFunction
     from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
+    from narwhals.typing import RankMethod
+    from narwhals.typing import RollingInterpolationMethod
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -384,9 +386,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         return self._with_callable(lambda _input: FunctionExpression("bool_or", _input))
 
     def quantile(
-        self: Self,
-        quantile: float,
-        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+        self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> Self:
         def func(_input: duckdb.Expression) -> duckdb.Expression:
             if interpolation == "linear":
@@ -690,12 +690,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
         return self._with_callable(func)
 
-    def rank(
-        self,
-        method: Literal["average", "min", "max", "dense", "ordinal"],
-        *,
-        descending: bool,
-    ) -> Self:
+    def rank(self, method: RankMethod, *, descending: bool) -> Self:
         if method == "min":
             func_name = "rank"
         elif method == "dense":

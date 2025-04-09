@@ -57,6 +57,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.series import Series
+    from narwhals.typing import ConcatMethod
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoSeriesT
     from narwhals.typing import NativeFrame
@@ -68,11 +69,7 @@ if TYPE_CHECKING:
     FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
 
 
-def concat(
-    items: Iterable[FrameT],
-    *,
-    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> FrameT:
+def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT:
     """Concatenate multiple DataFrames, LazyFrames into a single entity.
 
     Arguments:
