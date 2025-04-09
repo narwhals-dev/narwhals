@@ -409,3 +409,12 @@ def test_enum_valid(categories: Iterable[Any] | type[enum.Enum]) -> None:
 
     with pytest.raises(TypeError, match=r"takes 1 positional argument"):
         dtype = nw.Enum(categories)  # type: ignore[call-arg]
+
+
+def test_enum_v1_is_enum_unstable() -> None:
+    enum_v1 = nw.Enum()
+    assert isinstance(enum_v1, unstable_nw.Enum)
+    assert issubclass(nw.Enum, unstable_nw.Enum)
+
+    # NOTE: Pretty sure this not working is a bug
+    assert enum_v1 == unstable_nw.Enum
