@@ -26,6 +26,8 @@ from narwhals.utils import not_implemented
 if TYPE_CHECKING:
     from narwhals._compliant.typing import AliasNames
     from narwhals._expression_parsing import ExprKind
+    from narwhals.typing import FillNullStrategy
+    from narwhals.typing import RollingInterpolationMethod
 
     try:
         import dask.dataframe.dask_expr as dx
@@ -478,11 +480,11 @@ class DaskExpr(
         )
 
     def fill_null(
-        self: Self,
+        self,
         value: Self | Any | None,
-        strategy: Literal["forward", "backward"] | None,
+        strategy: FillNullStrategy | None,
         limit: int | None,
-    ) -> DaskExpr:
+    ) -> Self:
         def func(_input: dx.Series) -> dx.Series:
             if value is not None:
                 res_ser = _input.fillna(value)
@@ -537,9 +539,7 @@ class DaskExpr(
         return self._with_callable(lambda _input: _input.size.to_series(), "len")
 
     def quantile(
-        self: Self,
-        quantile: float,
-        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+        self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> Self:
         if interpolation == "linear":
 

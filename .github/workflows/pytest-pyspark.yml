@@ -1,0 +1,37 @@
+name: PyTest PySpark constructor
+
+on:
+  pull_request:
+    types: [opened, labeled, synchronize]  # Triggers on PR creation, updates, and label changes
+
+env:
+  PY_COLORS: 1
+
+jobs:
+
+  pytest-pyspark-constructor:
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'pyspark') || contains(github.event.pull_request.labels.*.name, 'release') }}
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: "true"
+          cache-suffix: ${{ matrix.python-version }}
+          cache-dependency-glob: "pyproject.toml"
+      - name: install-reqs
+        run: uv pip install -e . --group core-tests --group extra --system
+      - name: install pyspark
+        run: echo "setuptools<78" | uv pip install -b - -e ".[pyspark]" --system
+      - name: show-deps
+        run: uv pip freeze
+      - name: Run pytest
+        run: pytest tests --cov=narwhals/_spark_like --cov-fail-under=95 --runslow --constructors pyspark
