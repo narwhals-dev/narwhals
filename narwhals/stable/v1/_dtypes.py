@@ -79,7 +79,7 @@ class Enum(NwEnum):
 
     Examples:
        >>> import polars as pl
-       >>> import narwhals as nw
+       >>> import narwhals.stable.v1 as nw
        >>> data = ["beluga", "narwhal", "orca"]
        >>> s_native = pl.Series(data, dtype=pl.Enum(data))
        >>> nw.from_native(s_native, series_only=True).dtype

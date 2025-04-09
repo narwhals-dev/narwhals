@@ -122,7 +122,7 @@ def test_cast_to_enum_vmain(
     # Backends that do not (yet) support Enum dtype
     if any(
         backend in str(constructor)
-        for backend in ["pyarrow_table", "duckdb", "sqlframe", "modin"]
+        for backend in ["pyarrow_table", "duckdb", "sqlframe", "pyspark", "modin"]
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -143,9 +143,12 @@ def test_cast_to_enum_v1(
     import narwhals.stable.v1 as nw
 
     # Backends that do not (yet) support Enum dtype
-    if any(
-        backend in str(constructor)
-        for backend in ["pyarrow_table", "duckdb", "sqlframe", "modin"]
+    if (
+        any(
+            backend in str(constructor)
+            for backend in ["pyarrow_table", "duckdb", "sqlframe", "pyspark"]
+        )
+        or str(constructor) == "modin"
     ):
         request.applymarker(pytest.mark.xfail)
 

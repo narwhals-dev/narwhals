@@ -133,7 +133,7 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> An
         if dtype is dtypes.Enum:
             msg = "Can not cast / initialize Enum without categories present"
             raise ValueError(msg)
-        return get_pandas().CategoricalDtype(categories=dtype.categories, ordered=True)
+        return get_pandas().CategoricalDtype(categories=dtype.categories, ordered=True)  # pyright: ignore[reportAttributeAccessIssue]
 
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
         return "category"
