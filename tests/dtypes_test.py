@@ -416,6 +416,7 @@ def test_enum_v1_is_enum_unstable() -> None:
     enum_unstable = unstable_nw.Enum(("a", "b", "c"))
     assert isinstance(enum_v1, unstable_nw.Enum)
     assert issubclass(nw.Enum, unstable_nw.Enum)
-
     assert enum_v1 == unstable_nw.Enum
     assert enum_v1 != enum_unstable
+    assert enum_unstable != nw.Enum
+    assert enum_unstable == unstable_nw.Enum

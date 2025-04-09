@@ -459,8 +459,8 @@ class Enum(DType):
 
     def __eq__(self: Self, other: object) -> bool:
         # allow comparing object instances to class
-        if type(other) is type and issubclass(other, self.__class__):
-            return True
+        if type(other) is type:
+            return other is Enum
         elif isinstance(other, self.__class__):
             return self.categories == other.categories
         return False
