@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Iterator
-from typing import Literal
 from typing import Mapping
 from typing import Sequence
 from typing import cast
@@ -56,7 +55,11 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import _AsPyType
     from narwhals._arrow.typing import _BasicDataType
     from narwhals.dtypes import DType
+    from narwhals.typing import ClosedInterval
+    from narwhals.typing import FillNullStrategy
     from narwhals.typing import Into1DArray
+    from narwhals.typing import RankMethod
+    from narwhals.typing import RollingInterpolationMethod
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
@@ -191,11 +194,11 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
 
     def __eq__(self: Self, other: object) -> Self:  # type: ignore[override]
         ser, other = extract_native(self, other)
-        return self._with_native(pc.equal(ser, other))  # type: ignore[arg-type]
+        return self._with_native(pc.equal(ser, other))  # type: ignore[call-overload]
 
     def __ne__(self: Self, other: object) -> Self:  # type: ignore[override]
         ser, other = extract_native(self, other)
-        return self._with_native(pc.not_equal(ser, other))  # type: ignore[arg-type]
+        return self._with_native(pc.not_equal(ser, other))  # type: ignore[call-overload]
 
     def __ge__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
@@ -271,14 +274,14 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         if not isinstance(other, (pa.Array, pa.ChunkedArray)):
             # scalar
             other = lit(other)
-        return self._with_native(pc.divide(*cast_for_truediv(ser, other)))
+        return self._with_native(pc.divide(*cast_for_truediv(ser, other)))  # type: ignore[type-var]
 
     def __rtruediv__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
         if not isinstance(other, (pa.Array, pa.ChunkedArray)):
             # scalar
             other = lit(other) if not isinstance(other, pa.Scalar) else other
-        return self._with_native(pc.divide(*cast_for_truediv(other, ser)))  # pyright: ignore[reportArgumentType]
+        return self._with_native(pc.divide(*cast_for_truediv(other, ser)))  # type: ignore[type-var]
 
     def __mod__(self: Self, other: Any) -> Self:
         floor_div = (self // other).native
@@ -499,10 +502,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         )
 
     def is_between(
-        self: Self,
-        lower_bound: Any,
-        upper_bound: Any,
-        closed: Literal["left", "right", "none", "both"],
+        self, lower_bound: Any, upper_bound: Any, closed: ClosedInterval
     ) -> Self:
         _, lower_bound = extract_native(self, lower_bound)
         _, upper_bound = extract_native(self, upper_bound)
@@ -636,17 +636,14 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         return self._with_native(self.native.take(mask))
 
     def fill_null(
-        self: Self,
-        value: Any | None,
-        strategy: Literal["forward", "backward"] | None,
-        limit: int | None,
+        self, value: Any | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
         import numpy as np  # ignore-banned-import
 
         def fill_aux(
             arr: ArrowArray | ArrowChunkedArray,
             limit: int,
-            direction: Literal["forward", "backward"] | None = None,
+            direction: FillNullStrategy | None = None,
         ) -> ArrowArray:
             # this algorithm first finds the indices of the valid values to fill all the null value positions
             # then it calculates the distance of each new index and the original index
@@ -662,7 +659,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
                 )[::-1]
                 distance = valid_index - indices
             return pc.if_else(
-                pc.and_(pc.is_null(arr), pc.less_equal(distance, lit(limit))),
+                pc.and_(pc.is_null(arr), pc.less_equal(distance, lit(limit))),  # pyright: ignore[reportArgumentType, reportCallIssue]
                 arr.take(valid_index),
                 arr,
             )
@@ -812,9 +809,9 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         ).simple_select(*output_order)
 
     def quantile(
-        self: Self,
+        self,
         quantile: float,
-        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+        interpolation: RollingInterpolationMethod,
         *,
         _return_py_scalar: bool = True,
     ) -> float:
@@ -1028,20 +1025,13 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             ** 0.5
         )
 
-    def rank(
-        self: Self,
-        method: Literal["average", "min", "max", "dense", "ordinal"],
-        *,
-        descending: bool,
-    ) -> Self:
+    def rank(self, method: RankMethod, *, descending: bool) -> Self:
         if method == "average":
             msg = (
                 "`rank` with `method='average' is not supported for pyarrow backend. "
                 "The available methods are {'min', 'max', 'dense', 'ordinal'}."
             )
             raise ValueError(msg)
-
-        # ignore-banned-import
 
         sort_keys: Order = "descending" if descending else "ascending"
         tiebreaker: TieBreaker = "first" if method == "ordinal" else method
@@ -1078,7 +1068,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             lower, upper = d["min"], d["max"]
             pa_float = pa.type_for_alias("float")
             if lower == upper:
-                range_ = lit(1.0)
+                range_: pa.Scalar[Any] = lit(1.0)
                 mid = lit(0.5)
                 width = pc.divide(range_, lit(bin_count))
                 lower = pc.subtract(lower, mid)
@@ -1094,9 +1084,9 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             bin_indices = pc.if_else(
                 pc.and_(
                     pc.equal(bin_indices, bin_proportions),
-                    pc.greater(bin_indices, 0),
+                    pc.greater(bin_indices, lit(0)),
                 ),
-                pc.subtract(bin_indices, 1),
+                pc.subtract(bin_indices, lit(1)),
                 bin_indices,
             )
             possible = pa.Table.from_arrays(

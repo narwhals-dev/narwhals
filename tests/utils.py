@@ -17,13 +17,15 @@ import pyarrow as pa
 
 import narwhals as nw
 from narwhals.translate import from_native
-from narwhals.typing import IntoDataFrame
-from narwhals.typing import IntoFrame
 from narwhals.utils import Implementation
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
+
+    from narwhals.typing import DataFrameLike
+    from narwhals.typing import NativeFrame
+    from narwhals.typing import NativeLazyFrame
 
 
 def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
@@ -42,8 +44,8 @@ DASK_VERSION: tuple[int, ...] = get_module_version_as_tuple("dask")
 PYARROW_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyarrow")
 PYSPARK_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyspark")
 
-Constructor: TypeAlias = Callable[[Any], IntoFrame]
-ConstructorEager: TypeAlias = Callable[[Any], IntoDataFrame]
+Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | NativeFrame | DataFrameLike"]
+ConstructorEager: TypeAlias = Callable[[Any], "NativeFrame | DataFrameLike"]
 
 
 def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:

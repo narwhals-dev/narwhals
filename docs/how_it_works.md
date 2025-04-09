@@ -272,7 +272,104 @@ print((pn.col("a") + 1).mean())
 For simple aggregations, Narwhals can just look at `_depth` and `function_name` and figure out
 which (efficient) elementary operation this corresponds to in pandas.
 
-## Broadcasting
+## Expression Metadata
+
+Let's try printing out a few expressions to the console to see what they show us:
+
+```python exec="1" result="python" session="metadata" source="above"
+import narwhals as nw
+
+print(nw.col("a"))
+print(nw.col("a").mean())
+print(nw.col("a").mean().over("b"))
+```
+
+Note how they tell us something about their metadata. This section is all about
+making sense of what that all means, what the rules are, and what it enables.
+
+### Expression kinds
+
+Each Narwhals expression can be of one of the following kinds:
+
+- `LITERAL`: expressions which correspond to literal values, such as the `3` in `nw.col('a')+3`.
+- `AGGREGATION`: expressions which reduce a column to a single value (e.g. `nw.col('a').mean()`).
+- `TRANSFORM`: expressions which don't change length (e.g. `nw.col('a').abs()`).
+- `WINDOW`: like `TRANSFORM`, but the last operation is a (row-order-dependent) 
+   window function (`rolling_*`, `cum_*`, `diff`, `shift`, `is_*_distinct`).
+- `FILTRATION`: expressions which change length but don't
+   aggregate (e.g. `nw.col('a').drop_nulls()`).
+
+For example:
+
+  - `nw.col('a')` is not order-dependent, so it's `TRANSFORM`.
+  - `nw.col('a').abs()` is not order-dependent, so it's a `TRANSFORM`.
+  - `nw.col('a').cum_sum()`'s last operation is `cum_sum`, so it's `WINDOW`.
+  - `nw.col('a').cum_sum() + 1`'s last operation is `__add__`, and it preserves
+     the input dataframe's length, so it's a `TRANSFORM`.
+
+How these change depends on the operation.
+
+#### Chaining
+
+Say we have `expr.expr_method()`. How does `expr`'s `ExprMetadata` change?
+This depends on `expr_method`.
+
+- Element-wise expressions such `abs`, `alias`, `cast`, `__invert__`, and
+  many more, preserve the input kind (unless `expr` is a `WINDOW`, in
+  which case it becomes a `TRANSFORM`. This is because for an expression
+  to be `WINDOW`, the last expression needs to be the order-dependent one).
+- `rolling_*`, `cum_*`, `diff`, `shift`, `ewm_mean`, and `is_*_distinct`
+  are window functions and result in `WINDOW`.
+- `mean`, `std`, `median`, and other aggregations result in `AGGREGATION`,
+  and can only be applied to `TRANSFORM` and `WINDOW`.
+- `drop_nulls` and `filter` result in `FILTRATION`, and can only be applied
+  to `TRANSFORM` and `WINDOW`.
+- `over` always results in `TRANSFORM`. This is a bit more complicated,
+  so we elaborate on it in the ["You open a window ..."](#you-open-a-window-to-another-window-to-another-window-to-another-window).
+
+#### Binary operations (e.g. `nw.col('a') + nw.col('b')`)
+
+How do expression kinds change under binary operations? For example,
+if we do `expr1 + expr2`, then what can we say about the output kind?
+The rules are:
+
+- If both are `LITERAL`, then the output is `LITERAL`.
+- If one is a `FILTRATION`, then:
+
+    - if the other is `LITERAL` or `AGGREGATION`, then the output is `FILTRATION`.
+    - else, we raise an error.
+
+- If one is `TRANSFORM` or `WINDOW` and the other is not `FILTRATION`,
+  then the output is `TRANSFORM`.
+- If one is `AGGREGATION` and the other is `LITERAL` or `AGGREGATION`,
+  the output is `AGGREGATION`.
+
+For n-ary operations such as `nw.sum_horizontal`, the above logic is
+extended across inputs. For example, `nw.sum_horizontal(expr1, expr2, expr3)`
+is `LITERAL` if all of `expr1`, `expr2`, and `expr3` are.
+
+### "You open a window to another window to another window to another window"
+
+When we print out an expression, in addition to the expression kind,
+we also see `window_kind`. There are four window kinds:
+
+- `NONE`: non-order-dependent operations, like `.abs()` or `.mean()`.
+- `CLOSEABLE`: expression where the last operation is order-dependent. For
+  example, `nw.col('a').diff()`.
+- `UNCLOSEABLE`: expression where some operation is order-dependent but
+  the order-dependent operation wasn't the last one. For example,
+  `nw.col('a').diff().abs()`.
+- `CLOSED`: expression contains `over` at some point, and any order-dependent
+  operation was immediately followed by `over(order_by=...)`.
+
+When working with `DataFrame`s, row order is well-defined, as the dataframes
+are assumed to be eager and in-memory. Therefore, it's allowed to work
+with all window kinds.
+
+When working with `LazyFrame`s, on the other hand, row order is undefined.
+Therefore, window kinds must either be `NONE` or `CLOSED`.
+
+### Broadcasting
 
 When performing comparisons between columns and aggregations or scalars, we operate as if the
 aggregation or scalar was broadcasted to the length of the whole column. For example, if we
@@ -282,14 +379,7 @@ with values `[-1, 0, 1]`.
 
 Different libraries do broadcasting differently. SQL-like libraries require an empty window
 function for expressions (e.g. `a - sum(a) over ()`), Polars does its own broadcasting of
-length-1 Series, and pandas does its own broadcasting of scalars. Narwhals keeps track of
-when to trigger a broadcast by tracking the `ExprKind` of each expression. `ExprKind` is an
-`Enum` with four variants:
-
-- `TRANSFORM`: expressions which don't change length (e.g. `nw.col('a').abs()`).
-- `AGGREGATION`: expressions which reduce a column to a single value (e.g. `nw.col('a').mean()`).
-- `CHANGE_LENGTH`: expressions which change length but don't necessarily aggregate (e.g. `nw.col('a').drop_nulls()`).
-- `LITERAL`: expressions which correspond to literal values, such as the `3` in `nw.col('a')+3`.
+length-1 Series, and pandas does its own broadcasting of scalars.
 
 Narwhals triggers a broadcast in these situations:
 

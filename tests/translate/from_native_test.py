@@ -5,6 +5,7 @@ from contextlib import nullcontext as does_not_raise
 from importlib.util import find_spec
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Iterable
 from typing import Literal
 from typing import cast
@@ -18,6 +19,7 @@ from tests.utils import maybe_get_modin_df
 
 if TYPE_CHECKING:
     from typing_extensions import Self
+    from typing_extensions import assert_type
 
     from narwhals.utils import Version
 
@@ -360,10 +362,63 @@ def test_from_native_lazyframe() -> None:
     stable_lazy = nw.from_native(lf_pl)
     unstable_lazy = unstable_nw.from_native(lf_pl)
     if TYPE_CHECKING:
-        from typing_extensions import assert_type
-
         assert_type(stable_lazy, nw.LazyFrame[pl.LazyFrame])
         assert_type(unstable_lazy, unstable_nw.LazyFrame[pl.LazyFrame])
 
     assert isinstance(stable_lazy, nw.LazyFrame)
     assert isinstance(unstable_lazy, unstable_nw.LazyFrame)
+
+
+def test_series_recursive() -> None:
+    """https://github.com/narwhals-dev/narwhals/issues/2239."""
+    pytest.importorskip("polars")
+    import polars as pl
+
+    pl_series = pl.Series(name="test", values=[1, 2, 3])
+    nw_series = unstable_nw.from_native(pl_series, series_only=True)
+    with pytest.raises(AssertionError):
+        unstable_nw.Series(nw_series, level="full")
+
+    nw_series_early_return = unstable_nw.from_native(nw_series, series_only=True)
+
+    if TYPE_CHECKING:
+        assert_type(pl_series, pl.Series)
+        assert_type(nw_series, unstable_nw.Series[pl.Series])
+
+        nw_series_depth_2 = unstable_nw.Series(nw_series, level="full")  # type: ignore[var-annotated]
+        # NOTE: Checking that the type is `Series[Unknown]`
+        assert_type(nw_series_depth_2, unstable_nw.Series)  # type: ignore[type-arg]
+        assert_type(nw_series_early_return, unstable_nw.Series[pl.Series])
+
+
+def test_series_recursive_v1() -> None:
+    """https://github.com/narwhals-dev/narwhals/issues/2239."""
+    pytest.importorskip("polars")
+    import polars as pl
+
+    pl_series = pl.Series(name="test", values=[1, 2, 3])
+    nw_series = nw.from_native(pl_series, series_only=True)
+    with pytest.raises(AssertionError):
+        nw.Series(nw_series, level="full")
+
+    nw_series_early_return = nw.from_native(nw_series, series_only=True)
+
+    if TYPE_CHECKING:
+        assert_type(pl_series, pl.Series)
+        assert_type(nw_series, nw.Series[pl.Series])
+
+        nw_series_depth_2 = nw.Series(nw_series, level="full")
+        # NOTE: `Unknown` isn't possible for `v1`, as it has a `TypeVar` default
+        assert_type(nw_series_depth_2, nw.Series[Any])
+        assert_type(nw_series_early_return, nw.Series[pl.Series])
+
+
+@pytest.mark.parametrize("from_native", [unstable_nw.from_native, nw.from_native])
+def test_from_native_invalid_keywords(from_native: Callable[..., Any]) -> None:
+    pattern = r"from_native.+unexpected.+keyword.+bad_1"
+
+    with pytest.raises(TypeError, match=pattern):
+        from_native(data, bad_1="invalid")
+
+    with pytest.raises(TypeError, match=pattern):
+        from_native(data, bad_1="invalid", bad_2="also invalid")
