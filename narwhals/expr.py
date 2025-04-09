@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     from narwhals.typing import ClosedInterval
     from narwhals.typing import FillNullStrategy
     from narwhals.typing import IntoExpr
+    from narwhals.typing import NonNestedLiteral
     from narwhals.typing import NumericLiteral
     from narwhals.typing import RankMethod
     from narwhals.typing import RollingInterpolationMethod
@@ -1362,7 +1363,7 @@ class Expr:
 
     def fill_null(
         self: Self,
-        value: Expr | Any | None = None,
+        value: Expr | NonNestedLiteral = None,
         strategy: FillNullStrategy | None = None,
         limit: int | None = None,
     ) -> Self:

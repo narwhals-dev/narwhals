@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
     from narwhals.typing import FillNullStrategy
+    from narwhals.typing import NonNestedLiteral
     from narwhals.typing import NumericLiteral
     from narwhals.typing import RollingInterpolationMethod
     from narwhals.typing import TemporalLiteral
@@ -478,7 +479,7 @@ class DaskExpr(
 
     def fill_null(
         self,
-        value: Self | Any | None,
+        value: Self | NonNestedLiteral,
         strategy: FillNullStrategy | None,
         limit: int | None,
     ) -> Self:

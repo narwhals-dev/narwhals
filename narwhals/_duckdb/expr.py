@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.typing import WindowFunction
     from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
+    from narwhals.typing import NonNestedLiteral
     from narwhals.typing import NumericLiteral
     from narwhals.typing import RankMethod
     from narwhals.typing import RollingInterpolationMethod
@@ -671,7 +672,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         )
 
     def fill_null(
-        self: Self, value: Self | Any, strategy: Any, limit: int | None
+        self, value: Self | NonNestedLiteral, strategy: Any, limit: int | None
     ) -> Self:
         if strategy is not None:
             msg = "todo"
