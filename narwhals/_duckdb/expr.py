@@ -700,7 +700,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             func_name = "rank"
         elif method == "dense":
             func_name = "dense_rank"
-        elif method == "ordinal":
+        else:  # method == "ordinal"
             func_name = "row_number"
 
         def _rank(_input: duckdb.Expression) -> duckdb.Expression:
