@@ -284,7 +284,7 @@ print(nw.col("a").mean())
 print(nw.col("a").mean().over("b"))
 ```
 
-Note how they tell us something but their metadata. This section is all about
+Note how they tell us something about their metadata. This section is all about
 making sense of what that all means, what the rules are, and what it enables.
 
 ### Expression kinds
@@ -296,15 +296,15 @@ Each Narwhals expression can be of one of the following kinds:
 - `TRANSFORM`: expressions which don't change length (e.g. `nw.col('a').abs()`).
 - `WINDOW`: like `TRANSFORM`, but the last operation is a (row-order-dependent) 
    window function (`rolling_*`, `cum_*`, `diff`, `shift`, `is_*_distinct`).
-   aggregate (e.g. `nw.col('a').drop_nulls()`).
 - `FILTRATION`: expressions which change length but don't
+   aggregate (e.g. `nw.col('a').drop_nulls()`).
 
 For example:
 
   - `nw.col('a')` is not order-dependent, so it's `TRANSFORM`.
   - `nw.col('a').abs()` is not order-dependent, so it's a `TRANSFORM`.
   - `nw.col('a').cum_sum()`'s last operation is `cum_sum`, so it's `WINDOW`.
-  - `nw.col('a').cum_sum()+1`'s last operation is `__add__`, and it preserves
+  - `nw.col('a').cum_sum() + 1`'s last operation is `__add__`, and it preserves
      the input dataframe's length, so it's a `TRANSFORM`.
 
 How these change depends on the operation.
@@ -325,7 +325,7 @@ This depends on `expr_method`.
 - `drop_nulls` and `filter` result in `FILTRATION`, and can only be applied
   to `TRANSFORM` and `WINDOW`.
 - `over` always results in `TRANSFORM`. This is a bit more complicated,
-  so we elaborate on it in the "You open a window" section below.
+  so we elaborate on it in the ["You open a window ..."](#you-open-a-window-to-another-window-to-another-window-to-another-window).
 
 #### Binary operations (e.g. `nw.col('a') + nw.col('b')`)
 
@@ -351,7 +351,7 @@ is `LITERAL` if all of `expr1`, `expr2`, and `expr3` are.
 ### "You open a window to another window to another window to another window"
 
 When we print out an expression, in addition to the expression kind,
-we also see `window_kind`. These are four window kinds:
+we also see `window_kind`. There are four window kinds:
 
 - `NONE`: non-order-dependent operations, like `.abs()` or `.mean()`.
 - `CLOSEABLE`: expression where the last operation is order-dependent. For
