@@ -43,6 +43,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     from typing_extensions import Self
+    from typing_extensions import TypeIs
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
@@ -135,12 +136,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         *,
         preserve_broadcast: bool = False,
     ) -> Self:
-        result = self.__class__(
-            chunked_array(series),
-            name=self._name,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        result = self.from_native(chunked_array(series), name=self.name, context=self)
         if preserve_broadcast:
             result._broadcast = self._broadcast
         return result
@@ -156,17 +152,29 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     ) -> Self:
         version = context._version
         dtype_pa = narwhals_to_native_dtype(dtype, version) if dtype else None
-        return cls(
-            chunked_array([data], dtype_pa),
-            name=name,
-            backend_version=context._backend_version,
-            version=version,
+        return cls.from_native(
+            chunked_array([data], dtype_pa), name=name, context=context
         )
 
     def _from_scalar(self, value: Any) -> Self:
         if self._backend_version < (13,) and hasattr(value, "as_py"):
             value = value.as_py()
         return super()._from_scalar(value)
+
+    @staticmethod
+    def _is_native(obj: ArrowChunkedArray | Any) -> TypeIs[ArrowChunkedArray]:
+        return isinstance(obj, pa.ChunkedArray)
+
+    @classmethod
+    def from_native(
+        cls, data: ArrowChunkedArray, /, *, context: _FullContext, name: str = ""
+    ) -> Self:
+        return cls(
+            data,
+            backend_version=context._backend_version,
+            version=context._version,
+            name=name,
+        )
 
     @classmethod
     def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
@@ -183,11 +191,11 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
 
     def __eq__(self: Self, other: object) -> Self:  # type: ignore[override]
         ser, other = extract_native(self, other)
-        return self._with_native(pc.equal(ser, other))  # type: ignore[arg-type]
+        return self._with_native(pc.equal(ser, other))  # type: ignore[call-overload]
 
     def __ne__(self: Self, other: object) -> Self:  # type: ignore[override]
         ser, other = extract_native(self, other)
-        return self._with_native(pc.not_equal(ser, other))  # type: ignore[arg-type]
+        return self._with_native(pc.not_equal(ser, other))  # type: ignore[call-overload]
 
     def __ge__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
@@ -263,14 +271,14 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         if not isinstance(other, (pa.Array, pa.ChunkedArray)):
             # scalar
             other = lit(other)
-        return self._with_native(pc.divide(*cast_for_truediv(ser, other)))
+        return self._with_native(pc.divide(*cast_for_truediv(ser, other)))  # type: ignore[type-var]
 
     def __rtruediv__(self: Self, other: Any) -> Self:
         ser, other = extract_native(self, other)
         if not isinstance(other, (pa.Array, pa.ChunkedArray)):
             # scalar
             other = lit(other) if not isinstance(other, pa.Scalar) else other
-        return self._with_native(pc.divide(*cast_for_truediv(other, ser)))  # pyright: ignore[reportArgumentType]
+        return self._with_native(pc.divide(*cast_for_truediv(other, ser)))  # type: ignore[type-var]
 
     def __mod__(self: Self, other: Any) -> Self:
         floor_div = (self // other).native
@@ -546,7 +554,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             return self._with_native(self.native.slice(abs(n)))
 
     def is_in(self: Self, other: Any) -> Self:
-        if isinstance(other, pa.ChunkedArray):
+        if self._is_native(other):
             value_set: ArrowChunkedArray | ArrowArray = other
         else:
             value_set = pa.array(other)
@@ -654,7 +662,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
                 )[::-1]
                 distance = valid_index - indices
             return pc.if_else(
-                pc.and_(pc.is_null(arr), pc.less_equal(distance, lit(limit))),
+                pc.and_(pc.is_null(arr), pc.less_equal(distance, lit(limit))),  # pyright: ignore[reportArgumentType, reportCallIssue]
                 arr.take(valid_index),
                 arr,
             )
@@ -1033,8 +1041,6 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             )
             raise ValueError(msg)
 
-        # ignore-banned-import
-
         sort_keys: Order = "descending" if descending else "ascending"
         tiebreaker: TieBreaker = "first" if method == "ordinal" else method
 
@@ -1070,7 +1076,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             lower, upper = d["min"], d["max"]
             pa_float = pa.type_for_alias("float")
             if lower == upper:
-                range_ = lit(1.0)
+                range_: pa.Scalar[Any] = lit(1.0)
                 mid = lit(0.5)
                 width = pc.divide(range_, lit(bin_count))
                 lower = pc.subtract(lower, mid)
@@ -1086,9 +1092,9 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             bin_indices = pc.if_else(
                 pc.and_(
                     pc.equal(bin_indices, bin_proportions),
-                    pc.greater(bin_indices, 0),
+                    pc.greater(bin_indices, lit(0)),
                 ),
-                pc.subtract(bin_indices, 1),
+                pc.subtract(bin_indices, lit(1)),
                 bin_indices,
             )
             possible = pa.Table.from_arrays(

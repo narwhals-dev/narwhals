@@ -41,6 +41,8 @@ from narwhals.dependencies import is_pandas_like_series
 from narwhals.dependencies import is_pandas_series
 from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
+from narwhals.dependencies import is_pyspark_dataframe
+from narwhals.dependencies import is_sqlframe_dataframe
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import InvalidOperationError
@@ -50,7 +52,9 @@ if TYPE_CHECKING:
     from typing import AbstractSet as Set
 
     import pandas as pd
+    import polars as pl
     import pyarrow as pa
+    import pyspark.sql as pyspark_sql
     from typing_extensions import LiteralString
     from typing_extensions import ParamSpec
     from typing_extensions import Self
@@ -66,10 +70,12 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantSeriesT
     from narwhals._compliant import NativeFrameT_co
     from narwhals._compliant import NativeSeriesT_co
+    from narwhals._compliant.typing import EvalNames
     from narwhals._dask.namespace import DaskNamespace
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._polars.namespace import PolarsNamespace
+    from narwhals._spark_like.dataframe import SQLFrameDataFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals._translate import ArrowStreamExportable
     from narwhals._translate import IntoArrowTable
@@ -90,6 +96,8 @@ if TYPE_CHECKING:
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
     )
+    _SparkLikeDataFrame: TypeAlias = "SQLFrameDataFrame | pyspark_sql.DataFrame"
+    _NativePolars: TypeAlias = "pl.DataFrame | pl.LazyFrame | pl.Series"
     _T = TypeVar("_T")
     _T1 = TypeVar("_T1")
     _T2 = TypeVar("_T2")
@@ -614,10 +622,14 @@ def validate_backend_version(
 
 
 def import_dtypes_module(version: Version) -> DTypes:
-    if version is Version.V1:
-        from narwhals.stable.v1 import dtypes
-    elif version is Version.MAIN:
-        from narwhals import dtypes  # type: ignore[no-redef]
+    if version is Version.MAIN:
+        from narwhals import dtypes
+
+        return dtypes
+    elif version is Version.V1:
+        from narwhals.stable.v1 import dtypes as v1_dtypes
+
+        return v1_dtypes
     else:  # pragma: no cover
         msg = (
             "Congratulations, you have entered unreachable code.\n"
@@ -625,7 +637,6 @@ def import_dtypes_module(version: Version) -> DTypes:
             f"Version: {version}"
         )
         raise AssertionError(msg)
-    return dtypes  # type: ignore[return-value]
 
 
 def remove_prefix(text: str, prefix: str) -> str:  # pragma: no cover
@@ -1506,7 +1517,7 @@ def exclude_column_names(frame: _StoresColumns, names: Container[str]) -> Sequen
     return [col_name for col_name in frame.columns if col_name not in names]
 
 
-def passthrough_column_names(names: Sequence[str], /) -> Callable[[Any], Sequence[str]]:
+def passthrough_column_names(names: Sequence[str], /) -> EvalNames[Any]:
     def fn(_frame: Any, /) -> Sequence[str]:
         return names
 
@@ -1516,6 +1527,16 @@ def passthrough_column_names(names: Sequence[str], /) -> Callable[[Any], Sequenc
 def _hasattr_static(obj: Any, attr: str) -> bool:
     sentinel = object()
     return getattr_static(obj, attr, sentinel) is not sentinel
+
+
+def is_spark_like_dataframe(obj: Any) -> TypeIs[_SparkLikeDataFrame]:
+    return is_sqlframe_dataframe(obj) or is_pyspark_dataframe(obj)
+
+
+def is_native_polars(obj: Any) -> TypeIs[_NativePolars]:
+    return (pl := get_polars()) is not None and isinstance(
+        obj, (pl.DataFrame, pl.Series, pl.LazyFrame)
+    )
 
 
 def is_compliant_dataframe(

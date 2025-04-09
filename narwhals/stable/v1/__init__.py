@@ -99,6 +99,8 @@ if TYPE_CHECKING:
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
 
+    FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
+    SeriesT = TypeVar("SeriesT", bound="Series[Any]")
     IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
     T = TypeVar("T", default=Any)
 else:
@@ -1154,6 +1156,10 @@ def _stableify(
 
 
 @overload
+def from_native(native_object: SeriesT, **kwds: Any) -> SeriesT: ...
+
+
+@overload
 def from_native(
     native_object: IntoDataFrameT | IntoSeriesT,
     *,
@@ -1539,7 +1545,7 @@ def from_native(
 ) -> Any: ...
 
 
-def from_native(
+def from_native(  # noqa: D417
     native_object: IntoFrameT | IntoFrame | IntoSeriesT | IntoSeries | T,
     *,
     strict: bool | None = None,
@@ -1548,6 +1554,7 @@ def from_native(
     eager_or_interchange_only: bool = False,
     series_only: bool = False,
     allow_series: bool | None = None,
+    **kwds: Any,
 ) -> LazyFrame[IntoFrameT] | DataFrame[IntoFrameT] | Series[IntoSeriesT] | T:
     """Convert `native_object` to Narwhals Dataframe, Lazyframe, or Series.
 
@@ -1607,6 +1614,9 @@ def from_native(
     pass_through = validate_strict_and_pass_though(
         strict, pass_through, pass_through_default=False, emit_deprecation_warning=False
     )
+    if kwds:
+        msg = f"from_native() got an unexpected keyword argument {next(iter(kwds))!r}"
+        raise TypeError(msg)
 
     result = _from_native_impl(
         native_object,
@@ -2049,35 +2059,11 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return _stableify(nw.max_horizontal(*exprs))
 
 
-@overload
 def concat(
-    items: Iterable[DataFrame[IntoDataFrameT]],
+    items: Iterable[FrameT],
     *,
     how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def concat(
-    items: Iterable[LazyFrame[IntoFrameT]],
-    *,
-    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> LazyFrame[IntoFrameT]: ...
-
-
-@overload
-def concat(
-    items: Iterable[DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]],
-    *,
-    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]: ...
-
-
-def concat(
-    items: Iterable[DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]],
-    *,
-    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]:
+) -> FrameT:
     """Concatenate multiple DataFrames, LazyFrames into a single entity.
 
     Arguments:
@@ -2096,7 +2082,7 @@ def concat(
     Raises:
         TypeError: The items to concatenate should either all be eager, or all lazy
     """
-    return _stableify(nw.concat(items, how=how))
+    return cast("FrameT", _stableify(nw.concat(items, how=how)))
 
 
 def concat_str(

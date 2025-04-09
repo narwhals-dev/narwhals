@@ -6,20 +6,35 @@ from typing import Iterable
 from typing import Mapping
 from typing import Protocol
 
+_MIN_TYPING_EXTENSIONS = 4, 4, 0
+_TYPING_EXTENSIONS = "typing_extensions"
+
+
+def _typing_extensions_has_pep_696() -> bool:  # pragma: no cover
+    from importlib.metadata import version
+    from importlib.util import find_spec
+
+    from narwhals.utils import parse_version
+
+    if find_spec(_TYPING_EXTENSIONS):
+        return parse_version(version(_TYPING_EXTENSIONS)) >= _MIN_TYPING_EXTENSIONS
+    return False
+
+
 if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
     from typing_extensions import TypeAlias
+    from typing_extensions import TypeIs
     from typing_extensions import TypeVar
 
 
 else:  # pragma: no cover
     import sys
-    from importlib.util import find_spec
 
     if sys.version_info >= (3, 13):
         from typing import TypeVar
-    elif find_spec("typing_extensions"):
+    elif _typing_extensions_has_pep_696():
         from typing_extensions import TypeVar
     else:
         from typing import TypeVar as _TypeVar
@@ -132,3 +147,13 @@ class ArrowConvertible(
     FromArrow[FromArrowDT_contra],
     Protocol[ToArrowT_co, FromArrowDT_contra],
 ): ...
+
+
+FromNativeT = TypeVar("FromNativeT")
+
+
+class FromNative(Protocol[FromNativeT]):
+    @classmethod
+    def from_native(cls, data: FromNativeT, *args: Any, **kwds: Any) -> Self: ...
+    @staticmethod
+    def _is_native(obj: FromNativeT | Any, /) -> TypeIs[FromNativeT]: ...

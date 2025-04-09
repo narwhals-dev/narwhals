@@ -21,7 +21,9 @@ from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
 from narwhals.utils import find_stacklevel
+from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import is_spark_like_dataframe
 from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -36,12 +38,14 @@ if TYPE_CHECKING:
     from sqlframe.base.window import Window
     from typing_extensions import Self
     from typing_extensions import TypeAlias
+    from typing_extensions import TypeIs
 
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
     SQLFrameDataFrame = BaseDataFrame[Any, Any, Any, Any, Any]
 
@@ -91,6 +95,19 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
             return Window
         else:
             return import_window(self._implementation)
+
+    @staticmethod
+    def _is_native(obj: SQLFrameDataFrame | Any) -> TypeIs[SQLFrameDataFrame]:
+        return is_spark_like_dataframe(obj)
+
+    @classmethod
+    def from_native(cls, data: SQLFrameDataFrame, /, *, context: _FullContext) -> Self:
+        return cls(
+            data,
+            backend_version=context._backend_version,
+            version=context._version,
+            implementation=context._implementation,
+        )
 
     def __native_namespace__(self: Self) -> ModuleType:  # pragma: no cover
         return self._implementation.to_native_namespace()
@@ -319,11 +336,17 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
         *,
         keep: Literal["any", "none"],
     ) -> Self:
-        if keep != "any":
-            msg = "`LazyFrame.unique` with PySpark backend only supports `keep='any'`."
-            raise ValueError(msg)
         check_column_exists(self.columns, subset)
         subset = list(subset) if subset else None
+        if keep == "none":
+            tmp = generate_temporary_column_name(8, self.columns)
+            window = self._Window().partitionBy(subset or self.columns)
+            df = (
+                self.native.withColumn(tmp, self._F.count("*").over(window))
+                .filter(self._F.col(tmp) == 1)
+                .drop(tmp)
+            )
+            return self._with_native(df)
         return self._with_native(self.native.dropDuplicates(subset=subset))
 
     def join(
@@ -479,7 +502,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
         else:  # pragma: no cover
             pass
 
-        ids = tuple(self.columns) if index is None else tuple(index)
+        ids = tuple(index) if index else ()
         values = (
             tuple(set(self.columns).difference(set(ids))) if on is None else tuple(on)
         )

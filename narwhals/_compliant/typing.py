@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.expr import EagerExpr
     from narwhals._compliant.expr import LazyExpr
     from narwhals._compliant.expr import NativeExpr
+    from narwhals._compliant.namespace import CompliantNamespace
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals._compliant.series import CompliantSeries
     from narwhals._compliant.series import EagerSeries
@@ -30,6 +31,8 @@ __all__ = [
     "CompliantFrameT",
     "CompliantLazyFrameT",
     "CompliantSeriesT",
+    "EvalNames",
+    "EvalSeries",
     "IntoCompliantExpr",
     "NativeFrameT_co",
     "NativeSeriesT_co",
@@ -40,15 +43,14 @@ CompliantSeriesOrNativeExprAny: TypeAlias = "CompliantSeriesAny | NativeExpr"
 CompliantDataFrameAny: TypeAlias = "CompliantDataFrame[Any, Any, Any]"
 CompliantLazyFrameAny: TypeAlias = "CompliantLazyFrame[Any, Any]"
 CompliantFrameAny: TypeAlias = "CompliantDataFrameAny | CompliantLazyFrameAny"
+CompliantNamespaceAny: TypeAlias = "CompliantNamespace[Any, Any]"
 
 DepthTrackingExprAny: TypeAlias = "DepthTrackingExpr[Any, Any]"
 
 EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any, Any]"
 EagerSeriesAny: TypeAlias = "EagerSeries[Any]"
 EagerExprAny: TypeAlias = "EagerExpr[Any, Any]"
-EagerNamespaceAny: TypeAlias = (
-    "EagerNamespace[EagerDataFrameAny, EagerSeriesAny, EagerExprAny]"
-)
+EagerNamespaceAny: TypeAlias = "EagerNamespace[EagerDataFrameAny, EagerSeriesAny, EagerExprAny, NativeFrame, NativeSeries]"
 
 LazyExprAny: TypeAlias = "LazyExpr[Any, Any]"
 
@@ -56,7 +58,11 @@ NativeExprT = TypeVar("NativeExprT", bound="NativeExpr")
 NativeExprT_co = TypeVar("NativeExprT_co", bound="NativeExpr", covariant=True)
 NativeSeriesT = TypeVar("NativeSeriesT", bound="NativeSeries")
 NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=True)
+NativeFrameT = TypeVar("NativeFrameT", bound="NativeFrame")
 NativeFrameT_co = TypeVar("NativeFrameT_co", bound="NativeFrame", covariant=True)
+NativeFrameT_contra = TypeVar(
+    "NativeFrameT_contra", bound="NativeFrame", contravariant=True
+)
 
 CompliantExprT = TypeVar("CompliantExprT", bound=CompliantExprAny)
 CompliantExprT_co = TypeVar("CompliantExprT_co", bound=CompliantExprAny, covariant=True)
@@ -106,4 +112,18 @@ LazyExprT = TypeVar("LazyExprT", bound=LazyExprAny)
 LazyExprT_contra = TypeVar("LazyExprT_contra", bound=LazyExprAny, contravariant=True)
 
 AliasNames: TypeAlias = Callable[[Sequence[str]], Sequence[str]]
+"""A function aliasing a *sequence* of column names."""
+
 AliasName: TypeAlias = Callable[[str], str]
+"""A function aliasing a *single* column name."""
+
+EvalSeries: TypeAlias = Callable[
+    [CompliantFrameT], Sequence[CompliantSeriesOrNativeExprT]
+]
+"""A function from a `Frame` to a sequence of `Series`*.
+
+See [underwater unicorn magic](https://narwhals-dev.github.io/narwhals/how_it_works/).
+"""
+
+EvalNames: TypeAlias = Callable[[CompliantFrameT], Sequence[str]]
+"""A function from a `Frame` to a sequence of columns names *before* any aliasing takes place."""

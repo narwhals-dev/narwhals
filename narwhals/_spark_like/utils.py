@@ -43,7 +43,7 @@ class WindowInputs:
 # NOTE: don't lru_cache this as `ModuleType` isn't hashable
 def native_to_narwhals_dtype(
     dtype: _NativeDType, version: Version, spark_types: ModuleType
-) -> DType:  # pragma: no cover
+) -> DType:
     dtypes = import_dtypes_module(version=version)
     if TYPE_CHECKING:
         native = sqlframe_types
@@ -69,13 +69,15 @@ def native_to_narwhals_dtype(
     if isinstance(dtype, native.DateType):
         return dtypes.Date()
     if isinstance(dtype, native.TimestampNTZType):
-        return dtypes.Datetime()
+        # TODO(marco): cover this
+        return dtypes.Datetime()  # pragma: no cover
     if isinstance(dtype, native.TimestampType):
         # TODO(marco): is UTC correct, or should we be getting the connection timezone?
         # https://github.com/narwhals-dev/narwhals/issues/2165
         return dtypes.Datetime(time_zone="UTC")
     if isinstance(dtype, native.DecimalType):
-        return dtypes.Decimal()
+        # TODO(marco): cover this
+        return dtypes.Decimal()  # pragma: no cover
     if isinstance(dtype, native.ArrayType):
         return dtypes.List(
             inner=native_to_narwhals_dtype(
@@ -96,7 +98,7 @@ def native_to_narwhals_dtype(
         )
     if isinstance(dtype, native.BinaryType):
         return dtypes.Binary()
-    return dtypes.Unknown()
+    return dtypes.Unknown()  # pragma: no cover
 
 
 def narwhals_to_native_dtype(

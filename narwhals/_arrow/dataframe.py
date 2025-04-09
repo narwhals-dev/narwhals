@@ -45,11 +45,11 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import Self
     from typing_extensions import TypeAlias
+    from typing_extensions import TypeIs
 
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.group_by import ArrowGroupBy
     from narwhals._arrow.namespace import ArrowNamespace
-    from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import ArrowChunkedArray
     from narwhals._arrow.typing import Indices  # type: ignore[attr-defined]
     from narwhals._arrow.typing import Mask  # type: ignore[attr-defined]
@@ -99,7 +99,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
     @classmethod
     def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self:
         backend_version = context._backend_version
-        if isinstance(data, pa.Table):
+        if cls._is_native(data):
             native = data
         elif backend_version >= (14,) or isinstance(data, Collection):
             native = pa.table(data)
@@ -109,12 +109,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         else:  # pragma: no cover
             msg = f"`from_arrow` is not supported for object of type {type(data).__name__!r}."
             raise TypeError(msg)
-        return cls(
-            native,
-            backend_version=backend_version,
-            version=context._version,
-            validate_column_names=True,
-        )
+        return cls.from_native(native, context=context)
 
     @classmethod
     def from_dict(
@@ -129,8 +124,16 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
 
         pa_schema = Schema(schema).to_arrow() if schema is not None else schema
         native = pa.Table.from_pydict(data, schema=pa_schema)
+        return cls.from_native(native, context=context)
+
+    @staticmethod
+    def _is_native(obj: pa.Table | Any) -> TypeIs[pa.Table]:
+        return isinstance(obj, pa.Table)
+
+    @classmethod
+    def from_native(cls, data: pa.Table, /, *, context: _FullContext) -> Self:
         return cls(
-            native,
+            data,
             backend_version=context._backend_version,
             version=context._version,
             validate_column_names=True,
@@ -152,12 +155,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             native = pa.Table.from_arrays(arrays, schema=Schema(schema).to_arrow())
         else:
             native = pa.Table.from_arrays(arrays, cls._numpy_column_names(data, schema))
-        return cls(
-            native,
-            backend_version=context._backend_version,
-            version=context._version,
-            validate_column_names=True,
-        )
+        return cls.from_native(native, context=context)
 
     def __narwhals_namespace__(self: Self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
@@ -224,15 +222,8 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         return self.native.to_pylist()
 
     def iter_columns(self) -> Iterator[ArrowSeries]:
-        from narwhals._arrow.series import ArrowSeries
-
         for name, series in zip(self.columns, self.native.itercolumns()):
-            yield ArrowSeries(
-                series,
-                name=name,
-                backend_version=self._backend_version,
-                version=self._version,
-            )
+            yield ArrowSeries.from_native(series, context=self, name=name)
 
     _iter_columns = iter_columns
 
@@ -251,18 +242,10 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
                 yield from df[i : i + buffer_size].to_pylist()
 
     def get_column(self: Self, name: str) -> ArrowSeries:
-        from narwhals._arrow.series import ArrowSeries
-
         if not isinstance(name, str):
             msg = f"Expected str, got: {type(name)}"
             raise TypeError(msg)
-
-        return ArrowSeries(
-            self.native[name],
-            name=name,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        return ArrowSeries.from_native(self.native[name], context=self, name=name)
 
     def __array__(self: Self, dtype: Any, *, copy: bool | None) -> _2DArray:
         return self.native.__array__(dtype, copy=copy)
@@ -304,14 +287,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)  # pyright: ignore[reportAssignmentType]
 
         if isinstance(item, str):
-            from narwhals._arrow.series import ArrowSeries
-
-            return ArrowSeries(
-                self.native[item],
-                name=item,
-                backend_version=self._backend_version,
-                version=self._version,
-            )
+            return ArrowSeries.from_native(self.native[item], context=self, name=item)
         elif (
             isinstance(item, tuple)
             and len(item) == 2
@@ -345,7 +321,6 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
                     )
                 msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
                 raise TypeError(msg)  # pragma: no cover
-            from narwhals._arrow.series import ArrowSeries
 
             # PyArrow columns are always strings
             col_name = (
@@ -357,18 +332,12 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
                 msg = "Can not slice with tuple with the first element as a str"
                 raise TypeError(msg)
             if (isinstance(item[0], slice)) and (item[0] == slice(None)):
-                return ArrowSeries(
-                    self.native[col_name],
-                    name=col_name,
-                    backend_version=self._backend_version,
-                    version=self._version,
+                return ArrowSeries.from_native(
+                    self.native[col_name], context=self, name=col_name
                 )
             selected_rows = select_rows(self.native, item[0])
-            return ArrowSeries(
-                selected_rows[col_name],
-                name=col_name,
-                backend_version=self._backend_version,
-                version=self._version,
+            return ArrowSeries.from_native(
+                selected_rows[col_name], context=self, name=col_name
             )
 
         elif isinstance(item, slice):
@@ -589,18 +558,10 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         self: Self, *, as_series: bool
     ) -> dict[str, ArrowSeries] | dict[str, list[Any]]:
         df = self.native
-
         names_and_values = zip(df.column_names, df.columns)
         if as_series:
-            from narwhals._arrow.series import ArrowSeries
-
             return {
-                name: ArrowSeries(
-                    col,
-                    name=name,
-                    backend_version=self._backend_version,
-                    version=self._version,
-                )
+                name: ArrowSeries.from_native(col, context=self, name=name)
                 for name, col in names_and_values
             }
         else:
@@ -778,8 +739,6 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         return None
 
     def is_unique(self: Self) -> ArrowSeries:
-        from narwhals._arrow.series import ArrowSeries
-
         col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
         row_index = pa.array(range(len(self)))
         keep_idx = (
@@ -787,17 +746,13 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             .group_by(self.columns)
             .aggregate([(col_token, "min"), (col_token, "max")])
         )
-        return ArrowSeries(
-            pa.chunked_array(
-                pc.and_(
-                    pc.is_in(row_index, keep_idx[f"{col_token}_min"]),
-                    pc.is_in(row_index, keep_idx[f"{col_token}_max"]),
-                )
-            ),
-            name="",
-            backend_version=self._backend_version,
-            version=self._version,
+        native = pa.chunked_array(
+            pc.and_(
+                pc.is_in(row_index, keep_idx[f"{col_token}_min"]),
+                pc.is_in(row_index, keep_idx[f"{col_token}_max"]),
+            )
         )
+        return ArrowSeries.from_native(native, context=self)
 
     def unique(
         self: ArrowDataFrame,
