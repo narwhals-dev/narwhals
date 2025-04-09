@@ -5,7 +5,6 @@ from typing import Any
 from typing import Generic
 from typing import Iterable
 from typing import Iterator
-from typing import Literal
 from typing import Mapping
 from typing import Protocol
 from typing import Sequence
@@ -40,8 +39,12 @@ if TYPE_CHECKING:
     from narwhals._compliant.namespace import CompliantNamespace
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import ClosedInterval
+    from narwhals.typing import FillNullStrategy
     from narwhals.typing import Into1DArray
     from narwhals.typing import NumericLiteral
+    from narwhals.typing import RankMethod
+    from narwhals.typing import RollingInterpolationMethod
     from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
     from narwhals.utils import Implementation
@@ -158,10 +161,7 @@ class CompliantSeries(
         ignore_nulls: bool,
     ) -> Self: ...
     def fill_null(
-        self,
-        value: Any | None,
-        strategy: Literal["forward", "backward"] | None,
-        limit: int | None,
+        self, value: Any | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self: ...
     def filter(self, predicate: Any) -> Self: ...
     def gather_every(self, n: int, offset: int) -> Self: ...
@@ -175,10 +175,7 @@ class CompliantSeries(
     ) -> CompliantDataFrame[Self, Any, Any]: ...
     def head(self, n: int) -> Self: ...
     def is_between(
-        self,
-        lower_bound: Any,
-        upper_bound: Any,
-        closed: Literal["left", "right", "none", "both"],
+        self, lower_bound: Any, upper_bound: Any, closed: ClosedInterval
     ) -> Self: ...
     def is_finite(self) -> Self: ...
     def is_first_distinct(self) -> Self: ...
@@ -198,16 +195,9 @@ class CompliantSeries(
     def n_unique(self) -> int: ...
     def null_count(self) -> int: ...
     def quantile(
-        self,
-        quantile: float,
-        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+        self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> float: ...
-    def rank(
-        self,
-        method: Literal["average", "min", "max", "dense", "ordinal"],
-        *,
-        descending: bool,
-    ) -> Self: ...
+    def rank(self, method: RankMethod, *, descending: bool) -> Self: ...
     def replace_strict(
         self,
         old: Sequence[Any] | Mapping[Any, Any],

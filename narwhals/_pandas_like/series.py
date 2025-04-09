@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Iterator
-from typing import Literal
 from typing import Mapping
 from typing import Sequence
 from typing import cast
@@ -48,8 +47,12 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import ClosedInterval
+    from narwhals.typing import FillNullStrategy
     from narwhals.typing import Into1DArray
     from narwhals.typing import NumericLiteral
+    from narwhals.typing import RankMethod
+    from narwhals.typing import RollingInterpolationMethod
     from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
     from narwhals.typing import _AnyDArray
@@ -336,11 +339,8 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self.native.to_arrow().to_pylist() if is_cudf else self.native.to_list()
 
     def is_between(
-        self: Self,
-        lower_bound: Any,
-        upper_bound: Any,
-        closed: Literal["left", "right", "none", "both"],
-    ) -> PandasLikeSeries:
+        self, lower_bound: Any, upper_bound: Any, closed: ClosedInterval
+    ) -> Self:
         ser = self.native
         _, lower_bound = align_and_extract_native(self, lower_bound)
         _, upper_bound = align_and_extract_native(self, upper_bound)
@@ -554,10 +554,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         raise InvalidOperationError(msg)
 
     def fill_null(
-        self: Self,
-        value: Any | None,
-        strategy: Literal["forward", "backward"] | None,
-        limit: int | None,
+        self, value: Any | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
         ser = self.native
         if value is not None:
@@ -764,9 +761,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         return PandasLikeDataFrame.from_native(val_count, context=self)
 
     def quantile(
-        self: Self,
-        quantile: float,
-        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+        self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> float:
         return self.native.quantile(q=quantile, interpolation=interpolation)
 
@@ -925,12 +920,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         s = self.native
         return self._with_native((s > float("-inf")) & (s < float("inf")))
 
-    def rank(
-        self: Self,
-        method: Literal["average", "min", "max", "dense", "ordinal"],
-        *,
-        descending: bool,
-    ) -> Self:
+    def rank(self, method: RankMethod, *, descending: bool) -> Self:
         pd_method = "first" if method == "ordinal" else method
         name = self.name
         if (

@@ -15,6 +15,7 @@ from typing import cast
 from narwhals._expression_parsing import ExpansionKind
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
+from narwhals._expression_parsing import WindowKind
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import check_expressions_preserve_length
 from narwhals._expression_parsing import combine_metadata
@@ -57,6 +58,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.series import Series
+    from narwhals.typing import ConcatMethod
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoSeriesT
     from narwhals.typing import NativeFrame
@@ -70,11 +72,7 @@ if TYPE_CHECKING:
     FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
 
 
-def concat(
-    items: Iterable[FrameT],
-    *,
-    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> FrameT:
+def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT:
     """Concatenate multiple DataFrames, LazyFrames into a single entity.
 
     Arguments:
@@ -1043,9 +1041,9 @@ def col(*names: str | Iterable[str]) -> Expr:
 
     return Expr(
         func,
-        ExprMetadata.simple_selector()
+        ExprMetadata.selector_single()
         if len(flat_names) == 1
-        else ExprMetadata.multi_output_selector_named(),
+        else ExprMetadata.selector_multi_named(),
     )
 
 
@@ -1083,7 +1081,7 @@ def exclude(*names: str | Iterable[str]) -> Expr:
     def func(plx: Any) -> Any:
         return plx.exclude(exclude_names)
 
-    return Expr(func, ExprMetadata.multi_output_selector_unnamed())
+    return Expr(func, ExprMetadata.selector_multi_unnamed())
 
 
 def nth(*indices: int | Sequence[int]) -> Expr:
@@ -1123,9 +1121,9 @@ def nth(*indices: int | Sequence[int]) -> Expr:
 
     return Expr(
         func,
-        ExprMetadata.simple_selector()
+        ExprMetadata.selector_single()
         if len(flat_indices) == 1
-        else ExprMetadata.multi_output_selector_unnamed(),
+        else ExprMetadata.selector_multi_unnamed(),
     )
 
 
@@ -1150,7 +1148,7 @@ def all_() -> Expr:
         |   1  4  0.246    |
         └──────────────────┘
     """
-    return Expr(lambda plx: plx.all(), ExprMetadata.multi_output_selector_unnamed())
+    return Expr(lambda plx: plx.all(), ExprMetadata.selector_multi_unnamed())
 
 
 # Add underscore so it doesn't conflict with builtin `len`
@@ -1186,7 +1184,9 @@ def len_() -> Expr:
     return Expr(
         func,
         ExprMetadata(
-            ExprKind.AGGREGATION, n_open_windows=0, expansion_kind=ExpansionKind.SINGLE
+            ExprKind.AGGREGATION,
+            window_kind=WindowKind.NONE,
+            expansion_kind=ExpansionKind.SINGLE,
         ),
     )
 
@@ -1658,7 +1658,9 @@ def lit(value: NonNestedLiteral, dtype: DType | type[DType] | None = None) -> Ex
     return Expr(
         lambda plx: plx.lit(value, dtype),
         ExprMetadata(
-            ExprKind.LITERAL, n_open_windows=0, expansion_kind=ExpansionKind.SINGLE
+            ExprKind.LITERAL,
+            window_kind=WindowKind.NONE,
+            expansion_kind=ExpansionKind.SINGLE,
         ),
     )
 

@@ -96,7 +96,7 @@ def by_dtype(*dtypes: DType | type[DType] | Iterable[DType | type[DType]]) -> Se
     flattened = flatten(dtypes)
     return Selector(
         lambda plx: plx.selectors.by_dtype(flattened),
-        ExprMetadata.multi_output_selector_unnamed(),
+        ExprMetadata.selector_multi_unnamed(),
     )
 
 
@@ -131,7 +131,7 @@ def matches(pattern: str) -> Selector:
     """
     return Selector(
         lambda plx: plx.selectors.matches(pattern),
-        ExprMetadata.multi_output_selector_unnamed(),
+        ExprMetadata.selector_multi_unnamed(),
     )
 
 
@@ -162,7 +162,7 @@ def numeric() -> Selector:
         └─────┴─────┘
     """
     return Selector(
-        lambda plx: plx.selectors.numeric(), ExprMetadata.multi_output_selector_unnamed()
+        lambda plx: plx.selectors.numeric(), ExprMetadata.selector_multi_unnamed()
     )
 
 
@@ -197,7 +197,7 @@ def boolean() -> Selector:
         └──────────────────┘
     """
     return Selector(
-        lambda plx: plx.selectors.boolean(), ExprMetadata.multi_output_selector_unnamed()
+        lambda plx: plx.selectors.boolean(), ExprMetadata.selector_multi_unnamed()
     )
 
 
@@ -228,7 +228,7 @@ def string() -> Selector:
         └─────┘
     """
     return Selector(
-        lambda plx: plx.selectors.string(), ExprMetadata.multi_output_selector_unnamed()
+        lambda plx: plx.selectors.string(), ExprMetadata.selector_multi_unnamed()
     )
 
 
@@ -262,7 +262,7 @@ def categorical() -> Selector:
     """
     return Selector(
         lambda plx: plx.selectors.categorical(),
-        ExprMetadata.multi_output_selector_unnamed(),
+        ExprMetadata.selector_multi_unnamed(),
     )
 
 
@@ -287,7 +287,7 @@ def all() -> Selector:
         1  2  y   True
     """
     return Selector(
-        lambda plx: plx.selectors.all(), ExprMetadata.multi_output_selector_unnamed()
+        lambda plx: plx.selectors.all(), ExprMetadata.selector_multi_unnamed()
     )
 
 
@@ -348,7 +348,7 @@ def datetime(
     """
     return Selector(
         lambda plx: plx.selectors.datetime(time_unit=time_unit, time_zone=time_zone),
-        ExprMetadata.multi_output_selector_unnamed(),
+        ExprMetadata.selector_multi_unnamed(),
     )
 
 

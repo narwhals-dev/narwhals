@@ -37,7 +37,9 @@ if TYPE_CHECKING:
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals._spark_like.typing import WindowFunction
     from narwhals.dtypes import DType
+    from narwhals.typing import FillNullStrategy
     from narwhals.typing import NumericLiteral
+    from narwhals.typing import RankMethod
     from narwhals.typing import TemporalLiteral
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -697,10 +699,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         )
 
     def fill_null(
-        self,
-        value: Any | None,
-        strategy: Literal["forward", "backward"] | None,
-        limit: int | None,
+        self, value: Any | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
         if strategy is not None:
             msg = "Support for strategies is not yet implemented."
@@ -757,12 +756,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             )
         )
 
-    def rank(
-        self,
-        method: Literal["average", "min", "max", "dense", "ordinal"],
-        *,
-        descending: bool,
-    ) -> Self:
+    def rank(self, method: RankMethod, *, descending: bool) -> Self:
         if method == "min":
             func_name = "rank"
         elif method == "dense":

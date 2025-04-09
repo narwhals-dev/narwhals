@@ -35,7 +35,9 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprKind
     from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
+    from narwhals.typing import FillNullStrategy
     from narwhals.typing import NumericLiteral
+    from narwhals.typing import RollingInterpolationMethod
     from narwhals.typing import TemporalLiteral
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -475,11 +477,11 @@ class DaskExpr(
         )
 
     def fill_null(
-        self: Self,
+        self,
         value: Self | Any | None,
-        strategy: Literal["forward", "backward"] | None,
+        strategy: FillNullStrategy | None,
         limit: int | None,
-    ) -> DaskExpr:
+    ) -> Self:
         def func(_input: dx.Series) -> dx.Series:
             if value is not None:
                 res_ser = _input.fillna(value)
@@ -534,9 +536,7 @@ class DaskExpr(
         return self._with_callable(lambda _input: _input.size.to_series(), "len")
 
     def quantile(
-        self: Self,
-        quantile: float,
-        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+        self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> Self:
         if interpolation == "linear":
 

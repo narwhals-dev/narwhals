@@ -4,7 +4,6 @@ import operator
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Iterable
-from typing import Literal
 from typing import Sequence
 
 import dask.dataframe as dd
@@ -30,6 +29,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
+    from narwhals.typing import ConcatMethod
     from narwhals.typing import NonNestedLiteral
     from narwhals.utils import Version
 
@@ -151,10 +151,7 @@ class DaskNamespace(
         )
 
     def concat(
-        self: Self,
-        items: Iterable[DaskLazyFrame],
-        *,
-        how: Literal["horizontal", "vertical", "diagonal"],
+        self, items: Iterable[DaskLazyFrame], *, how: ConcatMethod
     ) -> DaskLazyFrame:
         if not items:
             msg = "No items to concatenate"  # pragma: no cover

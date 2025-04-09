@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Iterator
-from typing import Literal
 from typing import Mapping
 from typing import Sequence
 from typing import cast
@@ -57,9 +56,13 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import _AsPyType
     from narwhals._arrow.typing import _BasicDataType
     from narwhals.dtypes import DType
+    from narwhals.typing import ClosedInterval
+    from narwhals.typing import FillNullStrategy
     from narwhals.typing import Into1DArray
     from narwhals.typing import NumericLiteral
     from narwhals.typing import PythonLiteral
+    from narwhals.typing import RankMethod
+    from narwhals.typing import RollingInterpolationMethod
     from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
@@ -500,10 +503,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         )
 
     def is_between(
-        self: Self,
-        lower_bound: Any,
-        upper_bound: Any,
-        closed: Literal["left", "right", "none", "both"],
+        self, lower_bound: Any, upper_bound: Any, closed: ClosedInterval
     ) -> Self:
         _, lower_bound = extract_native(self, lower_bound)
         _, upper_bound = extract_native(self, upper_bound)
@@ -637,17 +637,14 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         return self._with_native(self.native.take(mask))
 
     def fill_null(
-        self: Self,
-        value: Any | None,
-        strategy: Literal["forward", "backward"] | None,
-        limit: int | None,
+        self, value: Any | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
         import numpy as np  # ignore-banned-import
 
         def fill_aux(
             arr: ArrowArray | ArrowChunkedArray,
             limit: int,
-            direction: Literal["forward", "backward"] | None = None,
+            direction: FillNullStrategy | None = None,
         ) -> ArrowArray:
             # this algorithm first finds the indices of the valid values to fill all the null value positions
             # then it calculates the distance of each new index and the original index
@@ -813,9 +810,9 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         ).simple_select(*output_order)
 
     def quantile(
-        self: Self,
+        self,
         quantile: float,
-        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+        interpolation: RollingInterpolationMethod,
         *,
         _return_py_scalar: bool = True,
     ) -> float:
@@ -1025,12 +1022,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             ** 0.5
         )
 
-    def rank(
-        self: Self,
-        method: Literal["average", "min", "max", "dense", "ordinal"],
-        *,
-        descending: bool,
-    ) -> Self:
+    def rank(self, method: RankMethod, *, descending: bool) -> Self:
         if method == "average":
             msg = (
                 "`rank` with `method='average' is not supported for pyarrow backend. "

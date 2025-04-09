@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import ArrowChunkedArray
     from narwhals._arrow.typing import Incomplete
     from narwhals.dtypes import DType
+    from narwhals.typing import ConcatMethod
     from narwhals.typing import NonNestedLiteral
     from narwhals.utils import Version
 
@@ -214,10 +215,7 @@ class ArrowNamespace(
         )
 
     def concat(
-        self: Self,
-        items: Iterable[ArrowDataFrame],
-        *,
-        how: Literal["horizontal", "vertical", "diagonal"],
+        self, items: Iterable[ArrowDataFrame], *, how: ConcatMethod
     ) -> ArrowDataFrame:
         dfs = [item.native for item in items]
 
