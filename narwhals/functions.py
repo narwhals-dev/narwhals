@@ -63,6 +63,7 @@ if TYPE_CHECKING:
     from narwhals.typing import NativeLazyFrame
     from narwhals.typing import NativeSeries
     from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
 
     _IntoSchema: TypeAlias = "Mapping[str, DType] | Schema | Sequence[str] | None"
@@ -1487,7 +1488,7 @@ class When:
         self._predicate = all_horizontal(*flatten(predicates))
         check_expressions_preserve_length(self._predicate, function_name="when")
 
-    def then(self: Self, value: IntoExpr | NonNestedLiteral) -> Then:
+    def then(self: Self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
         return Then(
             lambda plx: apply_n_ary_operation(
                 plx,
@@ -1507,7 +1508,7 @@ class When:
 
 
 class Then(Expr):
-    def otherwise(self: Self, value: IntoExpr | NonNestedLiteral) -> Expr:
+    def otherwise(self: Self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
         kind = infer_kind(value, str_as_lit=False)
 
         def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:

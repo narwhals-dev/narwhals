@@ -2118,7 +2118,7 @@ class When(NwWhen):
     def from_when(cls, when: NwWhen) -> When:
         return cls(when._predicate)
 
-    def then(self: Self, value: IntoExpr | NonNestedLiteral) -> Then:
+    def then(self: Self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
         return Then.from_then(super().then(value))
 
 
@@ -2127,7 +2127,7 @@ class Then(NwThen, Expr):
     def from_then(cls, then: NwThen) -> Then:
         return cls(then._to_compliant_expr, then._metadata)
 
-    def otherwise(self: Self, value: IntoExpr | NonNestedLiteral) -> Expr:
+    def otherwise(self: Self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
         return _stableify(super().otherwise(value))
 
 
