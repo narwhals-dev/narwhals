@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Container
 from typing import Iterable
-from typing import Literal
 from typing import Mapping
 from typing import Protocol
 from typing import Sequence
@@ -35,6 +34,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.when_then import EagerWhen
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
+    from narwhals.typing import ConcatMethod
     from narwhals.typing import Into1DArray
     from narwhals.typing import _2DArray
     from narwhals.utils import Implementation
@@ -75,10 +75,7 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
     def min_horizontal(self, *exprs: CompliantExprT) -> CompliantExprT: ...
     def max_horizontal(self, *exprs: CompliantExprT) -> CompliantExprT: ...
     def concat(
-        self,
-        items: Iterable[CompliantFrameT],
-        *,
-        how: Literal["horizontal", "vertical", "diagonal"],
+        self, items: Iterable[CompliantFrameT], *, how: ConcatMethod
     ) -> CompliantFrameT: ...
     def when(
         self, predicate: CompliantExprT
