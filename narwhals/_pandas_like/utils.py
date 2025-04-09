@@ -577,8 +577,8 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
             raise ValueError(msg)
 
         return implementation.to_native_namespace().CategoricalDtype(
-            categories=dtype.categories,
-            ordered=True,  # pyright: ignore[reportAttributeAccessIssue]
+            categories=dtype.categories,  # pyright: ignore[reportAttributeAccessIssue]
+            ordered=True,
         )
 
     if isinstance_or_issubclass(
