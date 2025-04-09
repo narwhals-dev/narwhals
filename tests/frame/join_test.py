@@ -242,8 +242,9 @@ def test_cross_join_non_pandas() -> None:
     import modin.pandas as mpd
 
     data = {"antananarivo": [1, 3, 2]}
-    df = nw.from_native(mpd.DataFrame(pd.DataFrame(data)))
-    result = df.join(df, how="cross")  # type: ignore[arg-type]
+    df1 = nw.from_native(mpd.DataFrame(pd.DataFrame(data)), eager_only=True)
+    df2 = nw.from_native(mpd.DataFrame(pd.DataFrame(data)), eager_only=True)
+    result = df1.join(df2, how="cross")
     expected = {
         "antananarivo": [1, 1, 1, 3, 3, 3, 2, 2, 2],
         "antananarivo_right": [1, 3, 2, 1, 3, 2, 1, 3, 2],
