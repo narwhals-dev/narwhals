@@ -461,9 +461,7 @@ class Enum(DType):
         # allow comparing object instances to class
         if type(other) is type:
             return other is Enum
-        elif isinstance(other, self.__class__):
-            return self.categories == other.categories
-        return False
+        return isinstance(other, type(self)) and self.categories == other.categories
 
     def __hash__(self: Self) -> int:  # pragma: no cover
         return hash((self.__class__, tuple(self.categories)))
