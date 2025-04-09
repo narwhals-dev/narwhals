@@ -14,6 +14,7 @@ import pandas as pd
 import pyarrow as pa
 import pytest
 
+import narwhals as unstable_nw
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
@@ -402,13 +403,9 @@ def test_cast_decimal_to_native() -> None:
     "categories", [["a", "b"], ["a", None], [1, 2], enum.Enum("test", "a b")]
 )
 def test_enum_valid(categories: Iterable[Any] | type[enum.Enum]) -> None:
-    import narwhals as nw
-
-    dtype = nw.Enum(categories)  # pyright: ignore[reportCallIssue]
-    assert dtype == nw.Enum
+    dtype = unstable_nw.Enum(categories)
+    assert dtype == unstable_nw.Enum
     assert len(dtype.categories) == len([*categories])
 
-    import narwhals.stable.v1 as nw  # type: ignore[no-redef]
-
     with pytest.raises(TypeError, match=r"takes 1 positional argument"):
-        dtype = nw.Enum(categories)  # pyright: ignore[reportCallIssue]
+        dtype = nw.Enum(categories)  # type: ignore[call-arg]

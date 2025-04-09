@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+import narwhals as unstable_nw
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 
@@ -117,8 +118,6 @@ def test_unknown_to_int() -> None:
 def test_cast_to_enum_vmain(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    import narwhals as nw
-
     # Backends that do not (yet) support Enum dtype
     if any(
         backend in str(constructor)
@@ -126,22 +125,21 @@ def test_cast_to_enum_vmain(
     ):
         request.applymarker(pytest.mark.xfail)
 
-    df_native = constructor({"a": ["a", "b"]})
+    df_nw = unstable_nw.from_native(constructor({"a": ["a", "b"]}))
+    col_a = unstable_nw.col("a")
 
     with pytest.raises(
         ValueError, match="Can not cast / initialize Enum without categories present"
     ):
-        nw.from_native(df_native).select(nw.col("a").cast(nw.Enum))
+        df_nw.select(col_a.cast(unstable_nw.Enum))
 
-    df_nw = nw.from_native(df_native).select(nw.col("a").cast(nw.Enum(["a", "b"])))
-    assert df_nw.collect_schema() == {"a": nw.Enum(["a", "b"])}
+    df_nw = df_nw.select(col_a.cast(unstable_nw.Enum(["a", "b"])))
+    assert df_nw.collect_schema() == {"a": unstable_nw.Enum(["a", "b"])}
 
 
 def test_cast_to_enum_v1(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    import narwhals.stable.v1 as nw
-
     # Backends that do not (yet) support Enum dtype
     if (
         any(
