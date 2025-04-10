@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from random import Random
 from typing import Any
 
 import hypothesis.strategies as st
@@ -14,8 +15,13 @@ from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-data = {
+rnd = Random(0)  # noqa: S311
+
+data: dict[str, list[int | float]] = {
     "int": [0, 1, 2, 3, 4, 5, 6],
+    "float": [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+    "int_shuffled": [1, 0, 2, 3, 6, 5, 4],
+    "float_shuffled": [1.0, 0.0, 2.0, 3.0, 6.0, 5.0, 4.0],
 }
 
 bins_and_expected = [
