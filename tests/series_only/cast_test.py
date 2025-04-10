@@ -6,10 +6,12 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+import narwhals as unstable_nw
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
+    from tests.utils import Constructor
     from tests.utils import ConstructorEager
 
 
@@ -113,29 +115,44 @@ def test_unknown_to_int() -> None:
     assert nw.from_native(df).select(nw.col("a").cast(nw.Int64)).schema == {"a": nw.Int64}
 
 
-def test_cast_to_enum_polars() -> None:
-    pytest.importorskip("polars")
-    import polars as pl
-
-    # we don't yet support metadata in dtypes, so for now disallow this
-    # seems like a very niche use case anyway, and allowing it later wouldn't be
-    # backwards-incompatible
-    df_pl = pl.DataFrame({"a": ["a", "b"]}, schema={"a": pl.Categorical})
-    with pytest.raises(
-        NotImplementedError, match=r"Converting to Enum is not \(yet\) supported"
+def test_cast_to_enum_vmain(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    # Backends that do not (yet) support Enum dtype
+    if any(
+        backend in str(constructor)
+        for backend in ["pyarrow_table", "duckdb", "sqlframe", "pyspark", "modin"]
     ):
-        nw.from_native(df_pl).select(nw.col("a").cast(nw.Enum))
+        request.applymarker(pytest.mark.xfail)
 
+    df_nw = unstable_nw.from_native(constructor({"a": ["a", "b"]}))
+    col_a = unstable_nw.col("a")
 
-def test_cast_to_enum_pandas() -> None:
-    pytest.importorskip("pandas")
-    import pandas as pd
-
-    # we don't yet support metadata in dtypes, so for now disallow this
-    # seems like a very niche use case anyway, and allowing it later wouldn't be
-    # backwards-incompatible
-    df_pd = pd.DataFrame({"a": ["a", "b"]}, dtype="category")
     with pytest.raises(
-        NotImplementedError, match=r"Converting to Enum is not \(yet\) supported"
+        ValueError, match="Can not cast / initialize Enum without categories present"
     ):
-        nw.from_native(df_pd).select(nw.col("a").cast(nw.Enum))
+        df_nw.select(col_a.cast(unstable_nw.Enum))
+
+    df_nw = df_nw.select(col_a.cast(unstable_nw.Enum(["a", "b"])))
+    assert df_nw.collect_schema() == {"a": unstable_nw.Enum(["a", "b"])}
+
+
+def test_cast_to_enum_v1(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    # Backends that do not (yet) support Enum dtype
+    if (
+        any(
+            backend in str(constructor)
+            for backend in ["pyarrow_table", "duckdb", "sqlframe", "pyspark"]
+        )
+        or str(constructor) == "modin"
+    ):
+        request.applymarker(pytest.mark.xfail)
+
+    df_native = constructor({"a": ["a", "b"]})
+
+    with pytest.raises(
+        NotImplementedError, match="Converting to Enum is not supported in V1"
+    ):
+        nw.from_native(df_native).select(nw.col("a").cast(nw.Enum))

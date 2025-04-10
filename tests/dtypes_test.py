@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import enum
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
 from typing import TYPE_CHECKING
+from typing import Any
+from typing import Iterable
 from typing import Literal
 
 import numpy as np
@@ -11,6 +14,7 @@ import pandas as pd
 import pyarrow as pa
 import pytest
 
+import narwhals as unstable_nw
 import narwhals.stable.v1 as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
@@ -393,3 +397,26 @@ def test_cast_decimal_to_native() -> None:
                 .with_columns(a=nw.col("a").cast(nw.Decimal()))
                 .to_native()
             )
+
+
+@pytest.mark.parametrize(
+    "categories", [["a", "b"], ["a", None], [1, 2], enum.Enum("test", "a b")]
+)
+def test_enum_valid(categories: Iterable[Any] | type[enum.Enum]) -> None:
+    dtype = unstable_nw.Enum(categories)
+    assert dtype == unstable_nw.Enum
+    assert len(dtype.categories) == len([*categories])
+
+    with pytest.raises(TypeError, match=r"takes 1 positional argument"):
+        dtype = nw.Enum(categories)  # type: ignore[call-arg]
+
+
+def test_enum_v1_is_enum_unstable() -> None:
+    enum_v1 = nw.Enum()
+    enum_unstable = unstable_nw.Enum(("a", "b", "c"))
+    assert isinstance(enum_v1, unstable_nw.Enum)
+    assert issubclass(nw.Enum, unstable_nw.Enum)
+    assert enum_v1 == unstable_nw.Enum
+    assert enum_v1 != enum_unstable
+    assert enum_unstable != nw.Enum
+    assert enum_unstable == unstable_nw.Enum
