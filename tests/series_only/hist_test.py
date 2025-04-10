@@ -13,6 +13,10 @@ from tests.utils import PYARROW_VERSION
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
+pytest.skip(
+    reason="https://github.com/narwhals-dev/narwhals/issues/2348", allow_module_level=True
+)
+
 data = {
     "int": [0, 1, 2, 3, 4, 5, 6],
 }
