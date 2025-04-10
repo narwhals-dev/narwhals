@@ -8,9 +8,9 @@ from typing import cast
 from narwhals._polars.utils import extract_native
 
 if TYPE_CHECKING:
+    import polars as pl
     from polars.dataframe.group_by import GroupBy as NativeGroupBy
     from polars.lazyframe.group_by import LazyGroupBy as NativeLazyGroupBy
-    from typing_extensions import Self
 
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.dataframe import PolarsLazyFrame
@@ -20,24 +20,30 @@ if TYPE_CHECKING:
 class PolarsGroupBy:
     _compliant_frame: PolarsDataFrame
     _keys: Sequence[str]
+    _grouped: NativeGroupBy
 
     @property
     def compliant(self) -> PolarsDataFrame:
         return self._compliant_frame
 
     def __init__(
-        self, df: PolarsDataFrame, keys: Sequence[str], /, *, drop_null_keys: bool
+        self, df: PolarsDataFrame, keys: Sequence[PolarsExpr], /, *, drop_null_keys: bool
     ) -> None:
-        self._compliant_frame = df
-        self._keys = list(keys)
-        df = df.drop_nulls(keys) if drop_null_keys else df
-        self._grouped: NativeGroupBy = df._native_frame.group_by(keys)
+        by: Sequence[pl.Expr | str]
+        if not drop_null_keys:
+            by = [extract_native(arg) for arg in keys]
+            self._compliant_frame = df
+        else:
+            by = [extract_native(arg).meta.output_name() for arg in keys]
+            self._compliant_frame = df.with_columns(*keys).drop_nulls(by)
+        self._grouped = self.compliant.native.group_by(by)
 
-    def agg(self: Self, *aggs: PolarsExpr) -> PolarsDataFrame:
-        from_native = self.compliant._with_native
-        return from_native(self._grouped.agg(extract_native(arg) for arg in aggs))
+    def agg(self, *aggs: PolarsExpr) -> PolarsDataFrame:
+        return self.compliant._with_native(
+            self._grouped.agg(extract_native(arg) for arg in aggs)
+        )
 
-    def __iter__(self: Self) -> Iterator[tuple[tuple[str, ...], PolarsDataFrame]]:
+    def __iter__(self) -> Iterator[tuple[tuple[str, ...], PolarsDataFrame]]:
         for key, df in self._grouped:
             yield tuple(cast("str", key)), self.compliant._with_native(df)
 
@@ -45,19 +51,25 @@ class PolarsGroupBy:
 class PolarsLazyGroupBy:
     _compliant_frame: PolarsLazyFrame
     _keys: Sequence[str]
+    _grouped: NativeLazyGroupBy
 
     @property
     def compliant(self) -> PolarsLazyFrame:
         return self._compliant_frame
 
     def __init__(
-        self, df: PolarsLazyFrame, keys: Sequence[str], /, *, drop_null_keys: bool
+        self, df: PolarsLazyFrame, keys: Sequence[PolarsExpr], /, *, drop_null_keys: bool
     ) -> None:
-        self._compliant_frame = df
-        self._keys = list(keys)
-        df = df.drop_nulls(keys) if drop_null_keys else df
-        self._grouped: NativeLazyGroupBy = df._native_frame.group_by(keys)
+        by: Sequence[pl.Expr | str]
+        if not drop_null_keys:
+            by = [extract_native(arg) for arg in keys]
+            self._compliant_frame = df
+        else:
+            by = [extract_native(arg).meta.output_name() for arg in keys]
+            self._compliant_frame = df.with_columns(*keys).drop_nulls(by)
+        self._grouped = self.compliant.native.group_by(by)
 
-    def agg(self: Self, *aggs: PolarsExpr) -> PolarsLazyFrame:
-        from_native = self.compliant._with_native
-        return from_native(self._grouped.agg(extract_native(arg) for arg in aggs))
+    def agg(self, *aggs: PolarsExpr) -> PolarsLazyFrame:
+        return self.compliant._with_native(
+            self._grouped.agg(extract_native(arg) for arg in aggs)
+        )

@@ -50,7 +50,7 @@ if TYPE_CHECKING:
     from typing_extensions import ParamSpec
     from typing_extensions import Self
 
-    from narwhals._compliant import IntoCompliantExpr
+    from narwhals._compliant.typing import CompliantExprAny
     from narwhals._compliant.typing import EagerNamespaceAny
     from narwhals.group_by import GroupBy
     from narwhals.group_by import LazyGroupBy
@@ -91,7 +91,7 @@ class BaseFrame(Generic[_FrameT]):
 
     def _flatten_and_extract(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> tuple[list[IntoCompliantExpr[Any, Any]], list[ExprKind]]:
+    ) -> tuple[list[CompliantExprAny], list[ExprKind]]:
         """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
         out_exprs = []
         out_kinds = []
@@ -1503,7 +1503,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return super().filter(*predicates, **constraints)
 
     def group_by(
-        self: Self, *keys: str | Iterable[str], drop_null_keys: bool = False
+        self: Self, *keys: IntoExpr | Iterable[IntoExpr], drop_null_keys: bool = False
     ) -> GroupBy[Self]:
         r"""Start a group by operation.
 
@@ -1551,17 +1551,20 @@ class DataFrame(BaseFrame[DataFrameT]):
             2  b  3  2
             3  c  3  1
         """
-        from narwhals.expr import Expr
         from narwhals.group_by import GroupBy
-        from narwhals.series import Series
 
-        flat_keys = flatten(keys)
-        if any(isinstance(x, (Expr, Series)) for x in flat_keys):
-            msg = (
-                "`group_by` with expression or Series keys is not (yet?) supported.\n\n"
-                "Hint: instead of `df.group_by(nw.col('a'))`, use `df.group_by('a')`."
-            )
-            raise NotImplementedError(msg)
+        flat_keys, kinds = self._flatten_and_extract(*keys)
+
+        if any(kind is ExprKind.FILTRATION for kind in kinds):
+            from narwhals.exceptions import ShapeError
+
+            msg = "series used as keys should have the same length as the DataFrame"
+            raise ShapeError(msg)
+
+        flat_keys = [
+            compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
+            for compliant_expr, kind in zip(flat_keys, kinds)
+        ]
         return GroupBy(self, *flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
@@ -2797,7 +2800,7 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().filter(*predicates, **constraints)
 
     def group_by(
-        self: Self, *keys: str | Iterable[str], drop_null_keys: bool = False
+        self: Self, *keys: IntoExpr | Iterable[IntoExpr], drop_null_keys: bool = False
     ) -> LazyGroupBy[Self]:
         r"""Start a group by operation.
 
@@ -2828,17 +2831,14 @@ class LazyFrame(BaseFrame[FrameT]):
             └─────────┴────────┘
             <BLANKLINE>
         """
-        from narwhals.expr import Expr
         from narwhals.group_by import LazyGroupBy
-        from narwhals.series import Series
 
-        flat_keys = flatten(keys)
-        if any(isinstance(x, (Expr, Series)) for x in flat_keys):
-            msg = (
-                "`group_by` with expression or Series keys is not (yet?) supported.\n\n"
-                "Hint: instead of `df.group_by(nw.col('a'))`, use `df.group_by('a')`."
-            )
-            raise NotImplementedError(msg)
+        flat_keys, kinds = self._flatten_and_extract(*keys)
+
+        flat_keys = [
+            compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
+            for compliant_expr, kind in zip(flat_keys, kinds)
+        ]
         return LazyGroupBy(self, *flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
