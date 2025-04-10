@@ -76,6 +76,13 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     def agg(self, *exprs: CompliantExprT_contra) -> CompliantFrameT_co: ...
 
 
+class DataFrameGroupBy(
+    CompliantGroupBy[CompliantDataFrameT_co, CompliantExprT_contra],
+    Protocol38[CompliantDataFrameT_co, CompliantExprT_contra],
+):
+    def __iter__(self) -> Iterator[tuple[Any, CompliantDataFrameT_co]]: ...
+
+
 class DepthTrackingGroupBy(
     CompliantGroupBy[CompliantFrameT_co, DepthTrackingExprT_contra],
     Protocol38[CompliantFrameT_co, DepthTrackingExprT_contra, NativeAggregationT_co],
@@ -132,9 +139,9 @@ class DepthTrackingGroupBy(
 
 class EagerGroupBy(
     DepthTrackingGroupBy[CompliantDataFrameT_co, EagerExprT_contra, str],
+    DataFrameGroupBy[CompliantDataFrameT_co, EagerExprT_contra],
     Protocol38[CompliantDataFrameT_co, EagerExprT_contra],
-):
-    def __iter__(self) -> Iterator[tuple[Any, CompliantDataFrameT_co]]: ...
+): ...
 
 
 class LazyGroupBy(

@@ -57,7 +57,7 @@ as it can either accept a `nw.Expr` (e.g. `df.select(nw.col('a'))`) or a string
 which will be interpreted as a `nw.Expr`, e.g. `df.select('a')`.
 """
 
-IntoDataFrame: TypeAlias = Union["NativeFrame", "DataFrame[Any]", "DataFrameLike"]
+IntoDataFrame: TypeAlias = Union["NativeFrame", "DataFrameLike"]
 """Anything which can be converted to a Narwhals DataFrame.
 
 Use this if your function accepts a narwhalifiable object but doesn't care about its backend.
@@ -70,11 +70,9 @@ Examples:
     ...     return df.shape
 """
 
-IntoLazyFrame: TypeAlias = "NativeLazyFrame | LazyFrame[Any]"
+IntoLazyFrame: TypeAlias = "NativeLazyFrame"
 
-IntoFrame: TypeAlias = Union[
-    "NativeFrame", "DataFrame[Any]", "LazyFrame[Any]", "DataFrameLike"
-]
+IntoFrame: TypeAlias = Union["IntoDataFrame", "IntoLazyFrame"]
 """Anything which can be converted to a Narwhals DataFrame or LazyFrame.
 
 Use this if your function can accept an object which can be converted to either
