@@ -46,15 +46,15 @@ def test_lit_error(constructor: Constructor) -> None:
     with pytest.raises(
         ValueError, match="numpy arrays are not supported as literal values"
     ):
-        _ = df.with_columns(nw.lit(np.array([1, 2])).alias("lit"))
+        _ = df.with_columns(nw.lit(np.array([1, 2])).alias("lit"))  # pyright: ignore[reportArgumentType]
     with pytest.raises(
         NotImplementedError, match="Nested datatypes are not supported yet."
     ):
-        _ = df.with_columns(nw.lit((1, 2)).alias("lit"))
+        _ = df.with_columns(nw.lit((1, 2)).alias("lit"))  # type: ignore[arg-type]
     with pytest.raises(
         NotImplementedError, match="Nested datatypes are not supported yet."
     ):
-        _ = df.with_columns(nw.lit([1, 2]).alias("lit"))
+        _ = df.with_columns(nw.lit([1, 2]).alias("lit"))  # type: ignore[arg-type]
 
 
 def test_lit_out_name(constructor: Constructor) -> None:

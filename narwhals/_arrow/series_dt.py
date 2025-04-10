@@ -57,16 +57,16 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
                 if time_unit == "ns":
                     result_64 = s_cast
                 elif time_unit == "us":
-                    result_64 = floordiv_compat(s_cast, 1_000)
+                    result_64 = floordiv_compat(s_cast, lit(1_000))
                 else:
-                    result_64 = floordiv_compat(s_cast, 1_000_000)
+                    result_64 = floordiv_compat(s_cast, lit(1_000_000))
             elif unit == "us":
                 if time_unit == "ns":
                     result_64 = pc.multiply(s_cast, lit(1_000))
                 elif time_unit == "us":
                     result_64 = s_cast
                 else:
-                    result_64 = floordiv_compat(s_cast, 1_000)
+                    result_64 = floordiv_compat(s_cast, lit(1_000))
             elif unit == "ms":
                 if time_unit == "ns":
                     result_64 = pc.multiply(s_cast, lit(1_000_000))

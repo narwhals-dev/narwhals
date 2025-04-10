@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._compliant.typing import EvalSeries
+    from narwhals.typing import NonNestedLiteral
     from narwhals.utils import Implementation
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -47,9 +48,9 @@ SeriesT = TypeVar("SeriesT", bound=CompliantSeriesOrNativeExprAny)
 FrameT = TypeVar("FrameT", bound=CompliantFrameAny)
 
 Scalar: TypeAlias = Any
-"""A native or python literal value."""
+"""A native literal value."""
 
-IntoExpr: TypeAlias = "SeriesT | ExprT | Scalar"
+IntoExpr: TypeAlias = "SeriesT | ExprT | NonNestedLiteral | Scalar"
 """Anything that is convertible into a `CompliantExpr`."""
 
 
@@ -129,7 +130,7 @@ class EagerWhen(
         self,
         when: NativeSeriesT,
         then: NativeSeriesT,
-        otherwise: NativeSeriesT | Scalar | None,
+        otherwise: NativeSeriesT | NonNestedLiteral | Scalar,
         /,
     ) -> NativeSeriesT: ...
 

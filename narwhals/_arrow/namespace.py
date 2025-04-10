@@ -4,7 +4,6 @@ import operator
 from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING
-from typing import Any
 from typing import Iterable
 from typing import Literal
 
@@ -31,10 +30,12 @@ from narwhals.utils import import_dtypes_module
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals._arrow.typing import ArrayOrScalarAny
     from narwhals._arrow.typing import ArrowChunkedArray
     from narwhals._arrow.typing import Incomplete
     from narwhals.dtypes import DType
     from narwhals.typing import ConcatMethod
+    from narwhals.typing import NonNestedLiteral
     from narwhals.utils import Version
 
 
@@ -77,7 +78,9 @@ class ArrowNamespace(
             version=self._version,
         )
 
-    def lit(self: Self, value: Any, dtype: DType | type[DType] | None) -> ArrowExpr:
+    def lit(
+        self, value: NonNestedLiteral, dtype: DType | type[DType] | None
+    ) -> ArrowExpr:
         def _lit_arrow_series(_: ArrowDataFrame) -> ArrowSeries:
             arrow_series = ArrowSeries.from_iterable(
                 data=[value], name="literal", context=self
@@ -287,7 +290,11 @@ class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ArrowChunkedA
         return ArrowThen
 
     def _if_then_else(
-        self, when: ArrowChunkedArray, then: ArrowChunkedArray, otherwise: Any, /
+        self,
+        when: ArrowChunkedArray,
+        then: ArrowChunkedArray,
+        otherwise: ArrayOrScalarAny | NonNestedLiteral,
+        /,
     ) -> ArrowChunkedArray:
         otherwise = pa.nulls(len(when), then.type) if otherwise is None else otherwise
         return pc.if_else(when, then, otherwise)

@@ -42,8 +42,11 @@ if TYPE_CHECKING:
     from narwhals.typing import ClosedInterval
     from narwhals.typing import FillNullStrategy
     from narwhals.typing import IntoExpr
+    from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import NumericLiteral
     from narwhals.typing import RankMethod
     from narwhals.typing import RollingInterpolationMethod
+    from narwhals.typing import TemporalLiteral
 
     PS = ParamSpec("PS")
     R = TypeVar("R")
@@ -1360,7 +1363,7 @@ class Expr:
 
     def fill_null(
         self: Self,
-        value: Expr | Any | None = None,
+        value: Expr | NonNestedLiteral = None,
         strategy: FillNullStrategy | None = None,
         limit: int | None = None,
     ) -> Self:
@@ -1939,12 +1942,10 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset)
         )
 
-    # need to allow numeric typing
-    # TODO @aivanoved: make type alias for numeric type
     def clip(
         self: Self,
-        lower_bound: IntoExpr | Any | None = None,
-        upper_bound: IntoExpr | Any | None = None,
+        lower_bound: IntoExpr | NumericLiteral | TemporalLiteral | None = None,
+        upper_bound: IntoExpr | NumericLiteral | TemporalLiteral | None = None,
     ) -> Self:
         r"""Clip values in the Series.
 
@@ -1978,8 +1979,8 @@ class Expr:
                     exprs[2] if upper_bound is not None else None,
                 ),
                 self,
-                lower_bound,  # type: ignore[arg-type]
-                upper_bound,  # type: ignore[arg-type]
+                lower_bound,
+                upper_bound,
                 str_as_lit=False,
             ),
             combine_metadata(
