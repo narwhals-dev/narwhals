@@ -62,10 +62,13 @@ if TYPE_CHECKING:
     from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
+    from narwhals.typing import AsofJoinStrategy
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import DTypeBackend
+    from narwhals.typing import JoinStrategy
     from narwhals.typing import SizeUnit
+    from narwhals.typing import UniqueKeepStrategy
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
@@ -685,7 +688,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         self: Self,
         other: Self,
         *,
-        how: Literal["inner", "left", "full", "cross", "semi", "anti"],
+        how: JoinStrategy,
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
         suffix: str,
@@ -836,7 +839,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         right_on: str | None,
         by_left: Sequence[str] | None,
         by_right: Sequence[str] | None,
-        strategy: Literal["backward", "forward", "nearest"],
+        strategy: AsofJoinStrategy,
         suffix: str,
     ) -> Self:
         plx = self.__native_namespace__()
@@ -862,10 +865,10 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         return self._with_native(self.native.tail(n), validate_column_names=False)
 
     def unique(
-        self: Self,
+        self,
         subset: Sequence[str] | None,
         *,
-        keep: Literal["any", "first", "last", "none"],
+        keep: UniqueKeepStrategy,
         maintain_order: bool | None = None,
     ) -> Self:
         # The param `maintain_order` is only here for compatibility with the Polars API
