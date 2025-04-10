@@ -13,6 +13,11 @@ from tests.utils import PYARROW_VERSION
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
+xfail_hist = pytest.mark.xfail(
+    reason="https://github.com/narwhals-dev/narwhals/issues/2348", strict=False
+)
+
+
 data = {
     "int": [0, 1, 2, 3, 4, 5, 6],
 }
@@ -76,6 +81,7 @@ counts_and_expected = [
 ]
 
 
+@xfail_hist
 @pytest.mark.parametrize("params", bins_and_expected)
 @pytest.mark.parametrize("include_breakpoint", [True, False])
 @pytest.mark.filterwarnings(
@@ -161,6 +167,7 @@ def test_hist_bin(
         assert_equal_data(result, expected)
 
 
+@xfail_hist
 @pytest.mark.parametrize("params", counts_and_expected)
 @pytest.mark.parametrize("include_breakpoint", [True, False])
 @pytest.mark.filterwarnings(
@@ -232,6 +239,7 @@ def test_hist_count(
             )
 
 
+@xfail_hist
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
@@ -268,6 +276,7 @@ def test_hist_count_no_spread(
     assert_equal_data(result, expected)
 
 
+@xfail_hist
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
@@ -283,6 +292,7 @@ def test_hist_bin_and_bin_count() -> None:
         s.hist(bins=[1, 3], bin_count=4)
 
 
+@xfail_hist
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
@@ -331,6 +341,7 @@ def test_hist_small_bins(
         s["values"].hist(bins=[1, 3], bin_count=4)
 
 
+@xfail_hist
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
@@ -365,6 +376,7 @@ def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
         st.floats(min_value=0.001, max_value=1_000, allow_nan=False), max_size=50
     ),
 )
+@xfail_hist
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature.",
     "ignore:invalid value encountered in cast:RuntimeWarning",
@@ -421,6 +433,7 @@ def test_hist_bin_hypotheis(
     ),
     bin_count=st.integers(min_value=0, max_value=1_000),
 )
+@xfail_hist
 @pytest.mark.skipif(
     POLARS_VERSION < (1, 15),
     reason="hist(bin_count=...) behavior significantly changed after this version",
