@@ -488,8 +488,8 @@ def _from_native_impl(  # noqa: PLR0915
         return DataFrame(
             PandasLikeDataFrame(
                 native_object,
-                backend_version=parse_version(pd),
                 implementation=Implementation.PANDAS,
+                backend_version=parse_version(pd),
                 version=version,
                 validate_column_names=True,
             ),

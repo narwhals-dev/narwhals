@@ -10,7 +10,6 @@ import pytest
 
 import narwhals as nw_main  # use nw_main in some tests for coverage
 import narwhals.stable.v1 as nw
-from narwhals.utils import Implementation
 from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
@@ -238,11 +237,14 @@ def test_cross_join_suffix(
 
 
 def test_cross_join_non_pandas() -> None:
+    _ = pytest.importorskip("modin")
+
+    import modin.pandas as mpd
+
     data = {"antananarivo": [1, 3, 2]}
-    df = nw.from_native(pd.DataFrame(data))
-    # HACK to force testing for a non-pandas codepath
-    df._compliant_frame._implementation = Implementation.MODIN
-    result = df.join(df, how="cross")  # type: ignore[arg-type]
+    df1 = nw.from_native(mpd.DataFrame(pd.DataFrame(data)), eager_only=True)
+    df2 = nw.from_native(mpd.DataFrame(pd.DataFrame(data)), eager_only=True)
+    result = df1.join(df2, how="cross")
     expected = {
         "antananarivo": [1, 1, 1, 3, 3, 3, 2, 2, 2],
         "antananarivo_right": [1, 3, 2, 1, 3, 2, 1, 3, 2],
