@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import operator
+import warnings
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Sequence
 
 from narwhals._compliant import CompliantThen
 from narwhals._compliant import EagerNamespace
@@ -17,7 +19,6 @@ from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_series_full_broadcast
 from narwhals._pandas_like.utils import diagonal_concat
-from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import vertical_concat
 from narwhals.utils import import_dtypes_module
 
@@ -25,6 +26,7 @@ if TYPE_CHECKING:
     import pandas as pd
     from typing_extensions import Self
 
+    from narwhals._pandas_like.typing import NDFrameT
     from narwhals.dtypes import DType
     from narwhals.typing import ConcatMethod
     from narwhals.utils import Implementation
@@ -223,48 +225,49 @@ class PandasLikeNamespace(
             context=self,
         )
 
+    def _horizontal_concat(self, dfs: Sequence[NDFrameT], /) -> NDFrameT:
+        """Concatenate (native) DataFrames horizontally."""
+        concat = self._implementation.to_native_namespace().concat
+        if self._implementation.is_cudf():
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore",
+                    message="The behavior of array concatenation with empty entries is deprecated",
+                    category=FutureWarning,
+                )
+                return concat(dfs, axis=1)
+        elif self._implementation.is_pandas() and self._backend_version < (3,):
+            return concat(dfs, axis=1, copy=False)
+        return concat(dfs, axis=1)
+
     def concat(
         self, items: Iterable[PandasLikeDataFrame], *, how: ConcatMethod
     ) -> PandasLikeDataFrame:
         dfs: list[Any] = [item._native_frame for item in items]
         if how == "horizontal":
-            return PandasLikeDataFrame(
-                horizontal_concat(
-                    dfs,
-                    implementation=self._implementation,
-                    backend_version=self._backend_version,
-                ),
+            native_dataframe = self._horizontal_concat(dfs)
+        elif how == "vertical":
+            native_dataframe = vertical_concat(
+                dfs,
                 implementation=self._implementation,
                 backend_version=self._backend_version,
-                version=self._version,
-                validate_column_names=True,
             )
-        if how == "vertical":
-            return PandasLikeDataFrame(
-                vertical_concat(
-                    dfs,
-                    implementation=self._implementation,
-                    backend_version=self._backend_version,
-                ),
+        elif how == "diagonal":
+            native_dataframe = diagonal_concat(
+                dfs,
                 implementation=self._implementation,
                 backend_version=self._backend_version,
-                version=self._version,
-                validate_column_names=True,
             )
+        else:
+            raise NotImplementedError
 
-        if how == "diagonal":
-            return PandasLikeDataFrame(
-                diagonal_concat(
-                    dfs,
-                    implementation=self._implementation,
-                    backend_version=self._backend_version,
-                ),
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-                version=self._version,
-                validate_column_names=True,
-            )
-        raise NotImplementedError
+        return PandasLikeDataFrame(
+            native_dataframe,
+            implementation=self._implementation,
+            backend_version=self._backend_version,
+            version=self._version,
+            validate_column_names=True,
+        )
 
     def when(self: Self, predicate: PandasLikeExpr) -> PandasWhen:
         return PandasWhen.from_expr(predicate, context=self)
