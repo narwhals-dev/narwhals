@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 import re
+import warnings
 from contextlib import suppress
 from typing import TYPE_CHECKING
 from typing import Any
@@ -127,6 +128,35 @@ def align_and_extract_native(
         raise TypeError(msg)
     # `rhs` must be scalar, so just leave it as-is
     return lhs.native, rhs
+
+
+def horizontal_concat(
+    dfs: list[Any], *, implementation: Implementation, backend_version: tuple[int, ...]
+) -> Any:
+    """Concatenate (native) DataFrames horizontally.
+
+    Should be in namespace.
+    """
+    if implementation is Implementation.CUDF:
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="The behavior of array concatenation with empty entries is deprecated",
+                category=FutureWarning,
+            )
+            return implementation.to_native_namespace().concat(dfs, axis=1)
+
+    if implementation.is_pandas_like():
+        extra_kwargs = (
+            {"copy": False}
+            if implementation is Implementation.PANDAS and backend_version < (3,)
+            else {}
+        )
+        return implementation.to_native_namespace().concat(dfs, axis=1, **extra_kwargs)
+
+    else:  # pragma: no cover
+        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
+        raise TypeError(msg)
 
 
 def vertical_concat(

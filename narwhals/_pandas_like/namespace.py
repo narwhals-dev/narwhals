@@ -1,13 +1,10 @@
 from __future__ import annotations
 
 import operator
-import warnings
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
-from typing import Sequence
-from typing import TypeVar
 
 from narwhals._compliant import CompliantThen
 from narwhals._compliant import EagerNamespace
@@ -20,6 +17,7 @@ from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_series_full_broadcast
 from narwhals._pandas_like.utils import diagonal_concat
+from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import vertical_concat
 from narwhals.utils import import_dtypes_module
 
@@ -31,8 +29,6 @@ if TYPE_CHECKING:
     from narwhals.typing import ConcatMethod
     from narwhals.utils import Implementation
     from narwhals.utils import Version
-
-    NDFrameT = TypeVar("NDFrameT", "pd.DataFrame", "pd.Series[Any]")
 
 
 class PandasLikeNamespace(
@@ -227,27 +223,16 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def _horizontal_concat(self, dfs: Sequence[NDFrameT], /) -> NDFrameT:
-        """Concatenate (native) DataFrames horizontally."""
-        concat = self._implementation.to_native_namespace().concat
-        if self._implementation.is_cudf():
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore",
-                    message="The behavior of array concatenation with empty entries is deprecated",
-                    category=FutureWarning,
-                )
-                return concat(dfs, axis=1)
-        elif self._implementation.is_pandas() and self._backend_version < (3,):
-            return concat(dfs, axis=1, copy=False)
-        return concat(dfs, axis=1)
-
     def concat(
         self, items: Iterable[PandasLikeDataFrame], *, how: ConcatMethod
     ) -> PandasLikeDataFrame:
         dfs: list[Any] = [item._native_frame for item in items]
         if how == "horizontal":
-            native_dataframe = self._horizontal_concat(dfs)
+            native_dataframe = horizontal_concat(
+                dfs,
+                implementation=self._implementation,
+                backend_version=self._backend_version,
+            )
         elif how == "vertical":
             native_dataframe = vertical_concat(
                 dfs,
