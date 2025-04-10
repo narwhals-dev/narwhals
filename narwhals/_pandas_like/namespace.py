@@ -269,23 +269,16 @@ class PandasLikeNamespace(
     def concat(
         self, items: Iterable[PandasLikeDataFrame], *, how: ConcatMethod
     ) -> PandasLikeDataFrame:
-        dfs: list[Any] = [item._native_frame for item in items]
+        dfs: list[pd.DataFrame] = [item.native for item in items]
         if how == "horizontal":
-            native_dataframe = self._horizontal_concat(dfs)
+            native = self._horizontal_concat(dfs)
         elif how == "vertical":
-            native_dataframe = self._vertical_concat(dfs)
+            native = self._vertical_concat(dfs)
         elif how == "diagonal":
-            native_dataframe = self._diagonal_concat(dfs)
+            native = self._diagonal_concat(dfs)
         else:
             raise NotImplementedError
-
-        return PandasLikeDataFrame(
-            native_dataframe,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-            validate_column_names=True,
-        )
+        return PandasLikeDataFrame.from_native(native, context=self)
 
     def when(self: Self, predicate: PandasLikeExpr) -> PandasWhen:
         return PandasWhen.from_expr(predicate, context=self)
