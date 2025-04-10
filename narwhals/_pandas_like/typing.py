@@ -12,5 +12,5 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
 
-    IntoPandasLikeExpr: TypeAlias = "PandasLikeExpr| PandasLikeSeries"
+    IntoPandasLikeExpr: TypeAlias = "PandasLikeExpr | PandasLikeSeries"
     NDFrameT = TypeVar("NDFrameT", "pd.DataFrame", "pd.Series[Any]")
