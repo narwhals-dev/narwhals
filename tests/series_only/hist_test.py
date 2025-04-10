@@ -13,10 +13,6 @@ from tests.utils import PYARROW_VERSION
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-xfail_hist = pytest.mark.xfail(
-    reason="https://github.com/narwhals-dev/narwhals/issues/2348", strict=False
-)
-
 
 data = {
     "int": [0, 1, 2, 3, 4, 5, 6],
@@ -85,7 +81,6 @@ counts_and_expected = [
 ]
 
 
-@xfail_hist
 @pytest.mark.parametrize("params", bins_and_expected)
 @pytest.mark.parametrize("include_breakpoint", [True, False])
 @pytest.mark.filterwarnings(
@@ -171,7 +166,6 @@ def test_hist_bin(
         assert_equal_data(result, expected)
 
 
-@xfail_hist
 @pytest.mark.parametrize("params", counts_and_expected)
 @pytest.mark.parametrize("include_breakpoint", [True, False])
 @pytest.mark.filterwarnings(
@@ -243,7 +237,6 @@ def test_hist_count(
             )
 
 
-@xfail_hist
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
@@ -280,7 +273,6 @@ def test_hist_count_no_spread(
     assert_equal_data(result, expected)
 
 
-@xfail_hist
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
@@ -296,7 +288,7 @@ def test_hist_bin_and_bin_count() -> None:
         s.hist(bins=[1, 3], bin_count=4)
 
 
-@xfail_hist
+@pytest.mark.parametrize("include_breakpoint", [True, False])
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
@@ -304,6 +296,7 @@ def test_hist_no_data(
     constructor_eager: ConstructorEager,
     *,
     request: pytest.FixtureRequest,
+    include_breakpoint: bool,
 ) -> None:
     if "cudf" in str(constructor_eager):
         # TODO(unassigned): too many spurious failures, report and revisit
@@ -313,15 +306,20 @@ def test_hist_no_data(
     s = nw.from_native(constructor_eager({"values": []})).select(
         nw.col("values").cast(nw.Float64)
     )["values"]
-    for include_breakpoint in [True, False]:
-        result = s.hist(bin_count=10, include_breakpoint=include_breakpoint)
-        assert len(result) == 10
+    for bin_count in [1, 10]:
+        result = s.hist(bin_count=bin_count, include_breakpoint=include_breakpoint)
+        assert len(result) == bin_count
         assert result["count"].sum() == 0
 
-    for include_breakpoint in [True, False]:
-        result = s.hist(bins=[1, 5, 10], include_breakpoint=include_breakpoint)
-        assert len(result) == 2
-        assert result["count"].sum() == 0
+        if include_breakpoint:
+            bps = result["breakpoint"].to_list()
+            assert bps[0] == (1 / bin_count)
+            if bin_count > 1:
+                assert bps[-1] == 1
+
+    result = s.hist(bins=[1, 5, 10], include_breakpoint=include_breakpoint)
+    assert len(result) == 2
+    assert result["count"].sum() == 0
 
 
 @pytest.mark.filterwarnings(
@@ -345,7 +343,6 @@ def test_hist_small_bins(
         s["values"].hist(bins=[1, 3], bin_count=4)
 
 
-@xfail_hist
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
@@ -380,7 +377,6 @@ def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
         st.floats(min_value=0.001, max_value=1_000, allow_nan=False), max_size=50
     ),
 )
-@xfail_hist
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature.",
     "ignore:invalid value encountered in cast:RuntimeWarning",
@@ -437,7 +433,6 @@ def test_hist_bin_hypotheis(
     ),
     bin_count=st.integers(min_value=0, max_value=1_000),
 )
-@xfail_hist
 @pytest.mark.skipif(
     POLARS_VERSION < (1, 27),
     reason="polars cannot be used for compatibility checks since narwhals aims to mimic polars>=1.27 behavior",

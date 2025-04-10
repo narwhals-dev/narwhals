@@ -1064,6 +1064,9 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         from narwhals._arrow.dataframe import ArrowDataFrame
 
         def _hist_from_bin_count(bin_count: int):  # type: ignore[no-untyped-def] # noqa: ANN202
+            if pc.count(self._native_series) == pa.scalar(0):
+                return np.zeros(bin_count), np.linspace(0, 1, bin_count + 1)[1:]
+
             d = pc.min_max(self.native)
             lower, upper = d["min"], d["max"]
             pa_float = pa.type_for_alias("float")
