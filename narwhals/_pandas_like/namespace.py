@@ -18,7 +18,6 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_series_full_broadcast
-from narwhals._pandas_like.utils import vertical_concat
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
@@ -248,6 +247,25 @@ class PandasLikeNamespace(
             return concat(dfs, axis=0, copy=False)
         return concat(dfs, axis=0)
 
+    def _vertical_concat(self, dfs: Sequence[pd.DataFrame], /) -> pd.DataFrame:
+        """Concatenate (native) DataFrames vertically."""
+        concat = self._implementation.to_native_namespace().concat
+        cols_0 = dfs[0].columns
+        for i, df in enumerate(dfs[1:], start=1):
+            cols_current = df.columns
+            if not (
+                (len(cols_current) == len(cols_0)) and (cols_current == cols_0).all()
+            ):
+                msg = (
+                    "unable to vstack, column names don't match:\n"
+                    f"   - dataframe 0: {cols_0.to_list()}\n"
+                    f"   - dataframe {i}: {cols_current.to_list()}\n"
+                )
+                raise TypeError(msg)
+        if self._implementation.is_pandas() and self._backend_version < (3,):
+            return concat(dfs, axis=0, copy=False)
+        return concat(dfs, axis=0)
+
     def concat(
         self, items: Iterable[PandasLikeDataFrame], *, how: ConcatMethod
     ) -> PandasLikeDataFrame:
@@ -255,11 +273,7 @@ class PandasLikeNamespace(
         if how == "horizontal":
             native_dataframe = self._horizontal_concat(dfs)
         elif how == "vertical":
-            native_dataframe = vertical_concat(
-                dfs,
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-            )
+            native_dataframe = self._vertical_concat(dfs)
         elif how == "diagonal":
             native_dataframe = self._diagonal_concat(dfs)
         else:

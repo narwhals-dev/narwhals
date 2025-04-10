@@ -129,40 +129,6 @@ def align_and_extract_native(
     return lhs.native, rhs
 
 
-def vertical_concat(
-    dfs: list[Any], *, implementation: Implementation, backend_version: tuple[int, ...]
-) -> Any:
-    """Concatenate (native) DataFrames vertically.
-
-    Should be in namespace.
-    """
-    if not dfs:
-        msg = "No dataframes to concatenate"  # pragma: no cover
-        raise AssertionError(msg)
-    cols_0 = dfs[0].columns
-    for i, df in enumerate(dfs[1:], start=1):
-        cols_current = df.columns
-        if not ((len(cols_current) == len(cols_0)) and (cols_current == cols_0).all()):
-            msg = (
-                "unable to vstack, column names don't match:\n"
-                f"   - dataframe 0: {cols_0.to_list()}\n"
-                f"   - dataframe {i}: {cols_current.to_list()}\n"
-            )
-            raise TypeError(msg)
-
-    if implementation in PANDAS_LIKE_IMPLEMENTATION:
-        extra_kwargs = (
-            {"copy": False}
-            if implementation is Implementation.PANDAS and backend_version < (3,)
-            else {}
-        )
-        return implementation.to_native_namespace().concat(dfs, axis=0, **extra_kwargs)
-
-    else:  # pragma: no cover
-        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
-        raise TypeError(msg)
-
-
 def set_index(
     obj: T,
     index: Any,
