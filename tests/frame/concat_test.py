@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -28,7 +30,8 @@ def test_concat_horizontal(constructor_eager: ConstructorEager) -> None:
 
     with pytest.raises(ValueError, match="No items"):
         nw.concat([])
-    with pytest.raises(InvalidOperationError):
+    pattern = re.compile(r"horizontal.+not supported.+lazyframe", re.IGNORECASE)
+    with pytest.raises(InvalidOperationError, match=pattern):
         nw.concat([df_left.lazy()], how="horizontal")
 
 
