@@ -39,7 +39,11 @@ if TYPE_CHECKING:
     from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
+    from narwhals.typing import AsofJoinStrategy
+    from narwhals.typing import JoinStrategy
+    from narwhals.typing import LazyUniqueKeepStrategy
     from narwhals.typing import SizeUnit
+    from narwhals.typing import UniqueKeepStrategy
     from narwhals.typing import _2DArray
     from narwhals.utils import Implementation
     from narwhals.utils import _FullContext
@@ -143,7 +147,7 @@ class CompliantDataFrame(
         self: Self,
         other: Self,
         *,
-        how: Literal["inner", "left", "full", "cross", "semi", "anti"],
+        how: JoinStrategy,
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
         suffix: str,
@@ -156,7 +160,7 @@ class CompliantDataFrame(
         right_on: str | None,
         by_left: Sequence[str] | None,
         by_right: Sequence[str] | None,
-        strategy: Literal["backward", "forward", "nearest"],
+        strategy: AsofJoinStrategy,
         suffix: str,
     ) -> Self: ...
     def lazy(self, *, backend: Implementation | None) -> CompliantLazyFrame[Any, Any]: ...
@@ -192,7 +196,7 @@ class CompliantDataFrame(
         self,
         subset: Sequence[str] | None,
         *,
-        keep: Literal["any", "first", "last", "none"],
+        keep: UniqueKeepStrategy,
         maintain_order: bool | None = None,
     ) -> Self: ...
     def unpivot(
@@ -283,7 +287,7 @@ class CompliantLazyFrame(
         right_on: str | None,
         by_left: Sequence[str] | None,
         by_right: Sequence[str] | None,
-        strategy: Literal["backward", "forward", "nearest"],
+        strategy: AsofJoinStrategy,
         suffix: str,
     ) -> Self: ...
     def rename(self, mapping: Mapping[str, str]) -> Self: ...
@@ -294,10 +298,7 @@ class CompliantLazyFrame(
     @deprecated("`LazyFrame.tail` is deprecated and will be removed in a future version.")
     def tail(self, n: int) -> Self: ...
     def unique(
-        self,
-        subset: Sequence[str] | None,
-        *,
-        keep: Literal["any", "none"],
+        self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self: ...
     def unpivot(
         self,

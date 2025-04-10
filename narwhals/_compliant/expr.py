@@ -63,6 +63,9 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprKind
     from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
+    from narwhals.typing import FillNullStrategy
+    from narwhals.typing import RankMethod
+    from narwhals.typing import RollingInterpolationMethod
     from narwhals.typing import TimeUnit
     from narwhals.utils import Implementation
     from narwhals.utils import Version
@@ -130,10 +133,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def null_count(self) -> Self: ...
     def drop_nulls(self) -> Self: ...
     def fill_null(
-        self,
-        value: Any | None,
-        strategy: Literal["forward", "backward"] | None,
-        limit: int | None,
+        self, value: Any | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self: ...
     def diff(self) -> Self: ...
     def unique(self) -> Self: ...
@@ -155,12 +155,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def cum_prod(self, *, reverse: bool) -> Self: ...
     def is_in(self, other: Any) -> Self: ...
     def sort(self, *, descending: bool, nulls_last: bool) -> Self: ...
-    def rank(
-        self,
-        method: Literal["average", "min", "max", "dense", "ordinal"],
-        *,
-        descending: bool,
-    ) -> Self: ...
+    def rank(self, method: RankMethod, *, descending: bool) -> Self: ...
     def replace_strict(
         self,
         old: Sequence[Any] | Mapping[Any, Any],
@@ -180,9 +175,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         seed: int | None,
     ) -> Self: ...
     def quantile(
-        self,
-        quantile: float,
-        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+        self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> Self: ...
     def map_batches(
         self,
@@ -662,10 +655,7 @@ class EagerExpr(
         return self._reuse_series("is_nan")
 
     def fill_null(
-        self,
-        value: Any | None,
-        strategy: Literal["forward", "backward"] | None,
-        limit: int | None,
+        self, value: Any | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
         return self._reuse_series(
             "fill_null", value=value, strategy=strategy, limit=limit
@@ -751,9 +741,7 @@ class EagerExpr(
         return self._reuse_series("is_last_distinct")
 
     def quantile(
-        self,
-        quantile: float,
-        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+        self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> Self:
         return self._reuse_series(
             "quantile",

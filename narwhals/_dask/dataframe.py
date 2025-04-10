@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
-from typing import Literal
 from typing import Mapping
 from typing import Sequence
 
@@ -37,6 +36,9 @@ if TYPE_CHECKING:
     from narwhals._dask.group_by import DaskLazyGroupBy
     from narwhals._dask.namespace import DaskNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import AsofJoinStrategy
+    from narwhals.typing import JoinStrategy
+    from narwhals.typing import LazyUniqueKeepStrategy
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -215,10 +217,7 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
         return self._with_native(self.native.head(n=n, compute=False, npartitions=-1))
 
     def unique(
-        self: Self,
-        subset: Sequence[str] | None,
-        *,
-        keep: Literal["any", "none"],
+        self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self:
         check_column_exists(self.columns, subset)
         if keep == "none":
@@ -252,7 +251,7 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
         self: Self,
         other: Self,
         *,
-        how: Literal["inner", "left", "full", "cross", "semi", "anti"],
+        how: JoinStrategy,
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
         suffix: str,
@@ -383,7 +382,7 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
         right_on: str | None,
         by_left: Sequence[str] | None,
         by_right: Sequence[str] | None,
-        strategy: Literal["backward", "forward", "nearest"],
+        strategy: AsofJoinStrategy,
         suffix: str,
     ) -> Self:
         plx = self.__native_namespace__()
