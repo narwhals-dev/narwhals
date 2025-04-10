@@ -29,11 +29,11 @@ bins_and_expected = [
     },
     {
         "bins": [1.0, 2.5, 5.5, float("inf")],
-        "expected": [1, 3, 1],
+        "expected": [2, 3, 1],
     },
     {
         "bins": [1.0, 2.5, 5.5],
-        "expected": [1, 3],
+        "expected": [2, 3],
     },
     {
         "bins": [-10.0, -1.0, 2.5, 5.5],
@@ -41,23 +41,27 @@ bins_and_expected = [
     },
     {
         "bins": [1.0, 2.0625],
-        "expected": [1],
+        "expected": [2],
     },
     {
         "bins": [1],
         "expected": [],
     },
+    {
+        "bins": [0, 10],
+        "expected": [7],
+    },
 ]
 counts_and_expected = [
     {
         "bin_count": 4,
-        "expected_bins": [-0.006, 1.5, 3.0, 4.5, 6.0],
+        "expected_bins": [0, 1.5, 3.0, 4.5, 6.0],
         "expected_count": [2, 2, 1, 2],
     },
     {
         "bin_count": 12,
         "expected_bins": [
-            -0.006,
+            0,
             0.5,
             1.0,
             1.5,
@@ -382,8 +386,8 @@ def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
     "ignore:invalid value encountered in cast:RuntimeWarning",
 )
 @pytest.mark.skipif(
-    POLARS_VERSION < (1, 15),
-    reason="hist(bins=...) cannot be used for compatibility checks since narwhals aims to mimic polars>=1.2.0 behavior",
+    POLARS_VERSION < (1, 27),
+    reason="polars cannot be used for compatibility checks since narwhals aims to mimic polars>=1.27 behavior",
 )
 @pytest.mark.slow
 def test_hist_bin_hypotheis(
@@ -435,8 +439,8 @@ def test_hist_bin_hypotheis(
 )
 @xfail_hist
 @pytest.mark.skipif(
-    POLARS_VERSION < (1, 15),
-    reason="hist(bin_count=...) behavior significantly changed after this version",
+    POLARS_VERSION < (1, 27),
+    reason="polars cannot be used for compatibility checks since narwhals aims to mimic polars>=1.27 behavior",
 )
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature.",

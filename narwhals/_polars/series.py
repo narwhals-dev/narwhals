@@ -526,18 +526,14 @@ class PolarsSeries:
         ):  # pragma: no cover
             lower = cast("float", self.native.min())
             upper = cast("float", self.native.max())
-            pad_lowest_bin = False
             if lower == upper:
                 width = 1 / bin_count
                 lower -= 0.5
                 upper += 0.5
             else:
-                pad_lowest_bin = True
                 width = (upper - lower) / bin_count
 
             bins = (pl.int_range(0, bin_count + 1, eager=True) * width + lower).to_list()
-            if pad_lowest_bin:
-                bins[0] -= 0.001 * abs(bins[0]) if bins[0] != 0 else 0.001
             bin_count = None
 
         # Polars inconsistently handles NaN values when computing histograms
@@ -552,16 +548,22 @@ class PolarsSeries:
             include_category=False,
             include_breakpoint=include_breakpoint,
         )
+
         if not include_breakpoint:
             df.columns = ["count"]
+
+        if self._backend_version < (1, 0) and include_breakpoint:
+            df = df.rename({"break_point": "breakpoint"})
 
         #  polars<1.15 implicitly adds -inf and inf to either end of bins
         if self._backend_version < (1, 15) and bins is not None:  # pragma: no cover
             r = pl.int_range(0, len(df))
             df = df.filter((r > 0) & (r < len(df) - 1))
 
-        if self._backend_version < (1, 0) and include_breakpoint:
-            df = df.rename({"break_point": "breakpoint"})
+        # polars<1.27 makes the lowest bin a left/right closed interval.
+        if self._backend_version < (1, 27) and bins is not None:
+            df[0, "count"] += (series == bins[0]).sum()
+
         return PolarsDataFrame.from_native(df, context=self)
 
     def to_polars(self: Self) -> pl.Series:

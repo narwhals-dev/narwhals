@@ -1117,6 +1117,11 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
 
         def _hist_from_bins(bins: Sequence[int | float]):  # type: ignore[no-untyped-def] # noqa: ANN202
             bin_indices = np.searchsorted(bins, self.native, side="left")
+            bin_indices = pc.if_else(  # lowest bin is inclusive
+                pc.equal(self.native, lit(bins[0])), 1, bin_indices
+            )
+
+            # align unique categories and counts appropriately
             obs_cats, obs_counts = np.unique(bin_indices, return_counts=True)
             obj_cats = np.arange(1, len(bins))
             counts = np.zeros_like(obj_cats)
