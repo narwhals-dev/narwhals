@@ -24,6 +24,7 @@ from typing import overload
 from warnings import warn
 
 from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_duckdb
 from narwhals.dependencies import get_ibis
@@ -31,6 +32,7 @@ from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
+from narwhals.dependencies import get_pyspark
 from narwhals.dependencies import get_pyspark_sql
 from narwhals.dependencies import get_sqlframe
 from narwhals.dependencies import is_cudf_series
@@ -73,6 +75,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import EvalNames
     from narwhals._dask.namespace import DaskNamespace
     from narwhals._duckdb.namespace import DuckDBNamespace
+    from narwhals._namespace import Namespace
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
@@ -539,6 +542,26 @@ class Implementation(Enum):
         """
         return self is Implementation.SQLFRAME  # pragma: no cover
 
+    @property
+    def _backend_version(self) -> tuple[int, ...]:
+        native = self.to_native_namespace()
+        into_version: Any
+        if self not in {
+            Implementation.PYSPARK,
+            Implementation.DASK,
+            Implementation.SQLFRAME,
+        }:
+            into_version = native
+        elif self is Implementation.PYSPARK:
+            into_version = get_pyspark()  # pragma: no cover
+        elif self is Implementation.DASK:
+            into_version = get_dask()
+        else:
+            import sqlframe._version
+
+            into_version = sqlframe._version
+        return parse_version(into_version)
+
 
 MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.PANDAS: (0, 25, 3),
@@ -630,6 +653,34 @@ def import_dtypes_module(version: Version) -> DTypes:
         from narwhals.stable.v1 import dtypes as v1_dtypes
 
         return v1_dtypes
+    else:  # pragma: no cover
+        msg = (
+            "Congratulations, you have entered unreachable code.\n"
+            "Please report an issue at https://github.com/narwhals-dev/narwhals/issues.\n"
+            f"Version: {version}"
+        )
+        raise AssertionError(msg)
+
+
+def _into_version(obj: Version | _StoresVersion, /) -> Version:
+    if isinstance(obj, Version):
+        return obj
+    elif _hasattr_static(obj, "_version"):
+        return obj._version
+    msg = f"Expected {Version} but got {type(obj).__name__!r}"
+    raise TypeError(msg)
+
+
+def import_namespace(version: Version | _StoresVersion, /) -> type[Namespace[Any]]:
+    version = _into_version(version)
+    if version is Version.MAIN:
+        from narwhals._namespace import Namespace
+
+        return Namespace
+    elif version is Version.V1:
+        from narwhals.stable.v1._namespace import Namespace
+
+        return Namespace
     else:  # pragma: no cover
         msg = (
             "Congratulations, you have entered unreachable code.\n"
