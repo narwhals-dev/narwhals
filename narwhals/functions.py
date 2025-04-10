@@ -153,7 +153,7 @@ def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT
         |z: [[null,null],["x","y"]]|
         └──────────────────────────┘
     """
-    from narwhals.dataframe import LazyFrame
+    from narwhals.dependencies import is_narwhals_lazyframe
 
     if not items:
         msg = "No items to concatenate."
@@ -164,14 +164,13 @@ def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT
         msg = "Only vertical, horizontal and diagonal concatenations are supported."
         raise NotImplementedError(msg)
     first_item = items[0]
-    plx = first_item.__narwhals_namespace__()
-    if isinstance(first_item, LazyFrame) and how == "horizontal":
+    if is_narwhals_lazyframe(first_item) and how == "horizontal":
         msg = (
             "Horizontal concatenation is not supported for LazyFrames.\n\n"
             "Hint: you may want to use `join` instead."
         )
         raise InvalidOperationError(msg)
-
+    plx = first_item.__narwhals_namespace__()
     return first_item._with_compliant(
         plx.concat([df._compliant_frame for df in items], how=how),
     )
