@@ -223,7 +223,16 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def _horizontal_concat(self, dfs: Sequence[NDFrameT], /) -> NDFrameT:
+    def _concat_diagonal(self, dfs: Sequence[NDFrameT], /) -> NDFrameT:
+        """Concatenate (native) DataFrames diagonally."""
+        concat = self._implementation.to_native_namespace().concat
+        if self._implementation.is_pandas() and self._backend_version < (3,):
+            if self._backend_version < (1,):
+                return concat(dfs, axis=0, copy=False, sort=False)
+            return concat(dfs, axis=0, copy=False)
+        return concat(dfs, axis=0)
+
+    def _concat_horizontal(self, dfs: Sequence[NDFrameT], /) -> NDFrameT:
         """Concatenate (native) DataFrames horizontally."""
         concat = self._implementation.to_native_namespace().concat
         if self._implementation.is_cudf():
@@ -238,16 +247,7 @@ class PandasLikeNamespace(
             return concat(dfs, axis=1, copy=False)
         return concat(dfs, axis=1)
 
-    def _diagonal_concat(self, dfs: Sequence[NDFrameT], /) -> NDFrameT:
-        """Concatenate (native) DataFrames diagonally."""
-        concat = self._implementation.to_native_namespace().concat
-        if self._implementation.is_pandas() and self._backend_version < (3,):
-            if self._backend_version < (1,):
-                return concat(dfs, axis=0, copy=False, sort=False)
-            return concat(dfs, axis=0, copy=False)
-        return concat(dfs, axis=0)
-
-    def _vertical_concat(self, dfs: Sequence[pd.DataFrame], /) -> pd.DataFrame:
+    def _concat_vertical(self, dfs: Sequence[pd.DataFrame], /) -> pd.DataFrame:
         """Concatenate (native) DataFrames vertically."""
         concat = self._implementation.to_native_namespace().concat
         cols_0 = dfs[0].columns
@@ -271,11 +271,11 @@ class PandasLikeNamespace(
     ) -> PandasLikeDataFrame:
         dfs: list[pd.DataFrame] = [item.native for item in items]
         if how == "horizontal":
-            native = self._horizontal_concat(dfs)
+            native = self._concat_horizontal(dfs)
         elif how == "vertical":
-            native = self._vertical_concat(dfs)
+            native = self._concat_vertical(dfs)
         elif how == "diagonal":
-            native = self._diagonal_concat(dfs)
+            native = self._concat_diagonal(dfs)
         else:
             raise NotImplementedError
         return PandasLikeDataFrame.from_native(native, context=self)

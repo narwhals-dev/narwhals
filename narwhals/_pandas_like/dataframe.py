@@ -504,7 +504,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             return self._with_native(self.native.__class__(), validate_column_names=False)
         new_series = align_series_full_broadcast(*new_series)
         namespace = self.__narwhals_namespace__()
-        df = namespace._horizontal_concat([s.native for s in new_series])
+        df = namespace._concat_horizontal([s.native for s in new_series])
         return self._with_native(df, validate_column_names=True)
 
     def drop_nulls(
@@ -527,7 +527,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         row_index = namespace._series.from_iterable(
             range(len(frame)), context=self, index=frame.index
         ).alias(name)
-        return self._with_native(namespace._horizontal_concat([row_index.native, frame]))
+        return self._with_native(namespace._concat_horizontal([row_index.native, frame]))
 
     def row(self: Self, index: int) -> tuple[Any, ...]:
         return tuple(x for x in self.native.iloc[index])
@@ -562,7 +562,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             to_concat.append(series)
         to_concat.extend(self._extract_comparand(s) for s in name_columns.values())
         namespace = self.__narwhals_namespace__()
-        df = namespace._horizontal_concat(to_concat)
+        df = namespace._concat_horizontal(to_concat)
         return self._with_native(df, validate_column_names=False)
 
     def rename(self: Self, mapping: Mapping[str, str]) -> Self:
