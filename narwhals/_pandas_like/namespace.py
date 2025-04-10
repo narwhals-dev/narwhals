@@ -18,7 +18,6 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_series_full_broadcast
-from narwhals._pandas_like.utils import diagonal_concat
 from narwhals._pandas_like.utils import vertical_concat
 from narwhals.utils import import_dtypes_module
 
@@ -240,6 +239,15 @@ class PandasLikeNamespace(
             return concat(dfs, axis=1, copy=False)
         return concat(dfs, axis=1)
 
+    def _diagonal_concat(self, dfs: Sequence[NDFrameT], /) -> NDFrameT:
+        """Concatenate (native) DataFrames diagonally."""
+        concat = self._implementation.to_native_namespace().concat
+        if self._implementation.is_pandas() and self._backend_version < (3,):
+            if self._backend_version < (1,):
+                return concat(dfs, axis=0, copy=False, sort=False)
+            return concat(dfs, axis=0, copy=False)
+        return concat(dfs, axis=0)
+
     def concat(
         self, items: Iterable[PandasLikeDataFrame], *, how: ConcatMethod
     ) -> PandasLikeDataFrame:
@@ -253,11 +261,7 @@ class PandasLikeNamespace(
                 backend_version=self._backend_version,
             )
         elif how == "diagonal":
-            native_dataframe = diagonal_concat(
-                dfs,
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-            )
+            native_dataframe = self._diagonal_concat(dfs)
         else:
             raise NotImplementedError
 
