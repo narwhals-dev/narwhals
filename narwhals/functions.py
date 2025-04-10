@@ -27,6 +27,7 @@ from narwhals.dependencies import is_narwhals_series
 from narwhals.dependencies import is_numpy_array
 from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dependencies import is_pyarrow_table
+from narwhals.exceptions import InvalidOperationError
 from narwhals.expr import Expr
 from narwhals.series import Series
 from narwhals.translate import from_native
@@ -81,12 +82,13 @@ def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT
 
             - vertical: Concatenate vertically. Column names must match.
             - horizontal: Concatenate horizontally. If lengths don't match, then
-                missing rows are filled with null values.
+                missing rows are filled with null values. This is only supported
+                when all inputs are (eager) DataFrames.
             - diagonal: Finds a union between the column schemas and fills missing column
                 values with null.
 
     Returns:
-        A new DataFrame, Lazyframe resulting from the concatenation.
+        A new DataFrame or LazyFrame resulting from the concatenation.
 
     Raises:
         TypeError: The items to concatenate should either all be eager, or all lazy
@@ -153,15 +155,23 @@ def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT
         |z: [[null,null],["x","y"]]|
         └──────────────────────────┘
     """
-    if how not in {"horizontal", "vertical", "diagonal"}:  # pragma: no cover
-        msg = "Only vertical, horizontal and diagonal concatenations are supported."
-        raise NotImplementedError(msg)
+    from narwhals.dependencies import is_narwhals_lazyframe
+
     if not items:
-        msg = "No items to concatenate"
+        msg = "No items to concatenate."
         raise ValueError(msg)
     items = list(items)
     validate_laziness(items)
+    if how not in {"horizontal", "vertical", "diagonal"}:  # pragma: no cover
+        msg = "Only vertical, horizontal and diagonal concatenations are supported."
+        raise NotImplementedError(msg)
     first_item = items[0]
+    if is_narwhals_lazyframe(first_item) and how == "horizontal":
+        msg = (
+            "Horizontal concatenation is not supported for LazyFrames.\n\n"
+            "Hint: you may want to use `join` instead."
+        )
+        raise InvalidOperationError(msg)
     plx = first_item.__narwhals_namespace__()
     return first_item._with_compliant(
         plx.concat([df._compliant_frame for df in items], how=how),
