@@ -192,13 +192,6 @@ class SparkLikeNamespace(
         self, items: Iterable[SparkLikeLazyFrame], *, how: ConcatMethod
     ) -> SparkLikeLazyFrame:
         dfs = [item._native_frame for item in items]
-        if how == "horizontal":
-            msg = (
-                "Horizontal concatenation is not supported for LazyFrame backed by "
-                "a PySpark DataFrame."
-            )
-            raise NotImplementedError(msg)
-
         if how == "vertical":
             cols_0 = dfs[0].columns
             for i, df in enumerate(dfs[1:], start=1):
