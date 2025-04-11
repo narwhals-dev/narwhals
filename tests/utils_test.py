@@ -530,9 +530,6 @@ def test_requires() -> None:
         def repeat(self, n: int) -> str:
             return self.native * n
 
-        def len(self) -> int:
-            return len(self.native)
-
     v_05 = ProbablyCompliant("123", (0, 5))
     v_201 = ProbablyCompliant("123", (2, 0, 1))
     v_300 = ProbablyCompliant("123", (3, 0, 0))
