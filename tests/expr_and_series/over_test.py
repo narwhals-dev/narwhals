@@ -428,3 +428,12 @@ def test_over_without_partition_by(
     )
     expected = {"a": [1, 2, -1], "b": [1, 3, 4], "i": [0, 1, 2]}
     assert_equal_data(result, expected)
+
+
+def test_len_over_2369(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+    df = nw.from_native(constructor({"a": [1, 2, 4], "b": ["x", "x", "y"]}))
+    result = df.with_columns(a_len_per_group=nw.len().over("b")).sort("a")
+    expected = {"a": [1, 2, 4], "b": ["x", "x", "y"], "a_len_per_group": [2, 2, 1]}
+    assert_equal_data(result, expected)
