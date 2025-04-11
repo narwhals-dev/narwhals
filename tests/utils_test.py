@@ -505,7 +505,7 @@ def test_deprecate_native_namespace() -> None:
     assert func3(param, backend=Implementation.POLARS) is Implementation.POLARS
 
 
-def test_requires_typing() -> None:
+def test_requires() -> None:
     class ProbablyCompliant:
         _implementation: Implementation = Implementation.POLARS
         _version: Version = Version.MAIN
@@ -539,18 +539,26 @@ def test_requires_typing() -> None:
 
     converted = v_201.to_int()
     assert converted == 123
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(
+        NotImplementedError, match=r"`to_int`.+Polars>=\'1.0.0\'.+found.+\'0.5\'"
+    ):
         v_05.to_int()
-
     repeated = v_300.repeat(3)
     assert repeated == "123123123"
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(
+        NotImplementedError, match=r"`repeat`.+Polars>=\'3.0.0\'.+found.+\'2.0.1\'"
+    ):
         v_201.repeat(3)
-
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(
+        NotImplementedError, match=r"`repeat`.+Polars>=\'3.0.0\'.+found.+\'0.5\'"
+    ):
         v_05.repeat(3)
-
     joined = v_201.concat("456", "789")
     assert joined == "123456789"
     joined_sep = v_201.concat("456", "789", separator=" ")
     assert joined_sep == "123 456 789"
+    assert v_300.concat("forever") == "123forever"
+    with pytest.raises(
+        NotImplementedError, match=r"`concat`.+Polars>=\'2\'.+found.+\'0.5\'"
+    ):
+        v_05.concat("never")
