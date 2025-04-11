@@ -17,10 +17,12 @@ class DuckDBGroupBy(LazyGroupBy["DuckDBLazyFrame", "DuckDBExpr", "Expression"]):
     def __init__(
         self, df: DuckDBLazyFrame, keys: Sequence[DuckDBExpr], /, *, drop_null_keys: bool
     ) -> None:
-        self._compliant_frame, self._keys, self._output_key_names = self._magic_parsing(
+        frame, self._keys, self._output_key_names = self._magic_parsing(
             compliant_frame=df, keys=keys
         )
-        self._compliant_frame = df.drop_nulls(subset=self._keys) if drop_null_keys else df
+        self._compliant_frame = (
+            frame.drop_nulls(subset=self._keys) if drop_null_keys else frame
+        )
 
     def agg(self, *exprs: DuckDBExpr) -> DuckDBLazyFrame:
         agg_columns = list(chain(self._keys, self._evaluate_exprs(exprs)))

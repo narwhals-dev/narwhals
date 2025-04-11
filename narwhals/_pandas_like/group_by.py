@@ -309,5 +309,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
             for key, group in self._grouped:
                 yield (
                     key,
-                    self.compliant._with_native(group).drop(self._keys, strict=True),
+                    self.compliant._with_native(group).rename(
+                        dict(zip(self._keys, self._output_key_names))
+                    ),
                 )

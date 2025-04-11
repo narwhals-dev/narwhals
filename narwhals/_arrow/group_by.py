@@ -140,10 +140,13 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
             null_handling="replace",
             null_replacement=null_token,
         )
+        mapping = dict(zip(self._keys, self._output_key_names))
+
         table = table.add_column(i=0, field_=col_token, column=key_values)
+        table = table.rename_columns([mapping.get(c, c) for c in table.column_names])
         for v in pc.unique(key_values):
             t = self.compliant._with_native(
                 table.filter(pc.equal(table[col_token], v)).drop([col_token])
             )
-            row = t.simple_select(*self._keys).row(0)
+            row = t.simple_select(*self._output_key_names).row(0)
             yield tuple(extract_py_scalar(el) for el in row), t
