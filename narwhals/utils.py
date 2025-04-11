@@ -1801,19 +1801,23 @@ def _not_implemented_error(what: str, who: str, /) -> NotImplementedError:
 
 
 class requires:  # noqa: N801
-    """Method decorator for raising under certain constraints."""
+    """Method decorator for raising under certain constraints.
+
+    Arguments:
+        min_version: Minimum backend version.
+        hint: Optional suggested alternative.
+
+    Returns:
+        An exception-raising decorator.
+    """
 
     # NOTE: Decide how constraints should work
     # - [x] min_version
     # - [ ] specific parameters
     # - [x] optional message
-    def __init__(
-        self, *, min_version: tuple[int, ...], hint: str = "", **kwds: Any
-    ) -> None:
-        # Convert the args into something useful
+    def __init__(self, *, min_version: tuple[int, ...], hint: str = "") -> None:
         self._min_version: tuple[int, ...] = min_version
         self._hint: str = hint
-        self._kwds = kwds
         self._wrapped_name: str
 
     @staticmethod
