@@ -1835,5 +1835,5 @@ class requires:  # noqa: N801
             self._ensure_version(instance)
             return fn(instance, *args, **kwds)
 
-        # NOTE: Only getting a compliant from `mypy`
+        # NOTE: Only getting a complaint from `mypy`
         return wrapper  # type: ignore[return-value]
