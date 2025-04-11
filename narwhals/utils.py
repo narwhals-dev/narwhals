@@ -55,6 +55,7 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
     import pyspark.sql as pyspark_sql
+    from typing_extensions import Concatenate
     from typing_extensions import LiteralString
     from typing_extensions import ParamSpec
     from typing_extensions import Self
@@ -159,6 +160,8 @@ if TYPE_CHECKING:
 
 NativeT_co = TypeVar("NativeT_co", covariant=True)
 CompliantT_co = TypeVar("CompliantT_co", covariant=True)
+_ContextT = TypeVar("_ContextT", bound="_FullContext")
+_Method: TypeAlias = "Callable[Concatenate[_ContextT, P], R]"
 
 
 class _StoresNative(Protocol[NativeT_co]):  # noqa: PYI046
@@ -538,6 +541,27 @@ class Implementation(Enum):
             False
         """
         return self is Implementation.SQLFRAME  # pragma: no cover
+
+    @property
+    def _alias(self) -> LiteralString:
+        """Friendly name for errors.
+
+        Returns:
+            String.
+        """
+        mapping: dict[Implementation, LiteralString] = {
+            Implementation.PANDAS: "Pandas",
+            Implementation.POLARS: "Polars",
+            Implementation.DASK: "Dask",
+            Implementation.IBIS: "Ibis",
+            Implementation.MODIN: "Modin",
+            Implementation.CUDF: "cuDF",
+            Implementation.PYARROW: "PyArrow",
+            Implementation.PYSPARK: "PySpark",
+            Implementation.DUCKDB: "DuckDB",
+            Implementation.SQLFRAME: "SQLFrame",
+        }
+        return mapping[self]
 
 
 MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
@@ -1774,3 +1798,47 @@ def _not_implemented_error(what: str, who: str, /) -> NotImplementedError:
         "please open an issue at: https://github.com/narwhals-dev/narwhals/issues"
     )
     return NotImplementedError(msg)
+
+
+class requires:  # noqa: N801
+    """Method decorator for raising under certain constraints."""
+
+    # NOTE: Decide how constraints should work
+    # - [x] min_version
+    # - [ ] specific parameters
+    # - [x] optional message
+    def __init__(
+        self, *, min_version: tuple[int, ...], hint: str = "", **kwds: Any
+    ) -> None:
+        # Convert the args into something useful
+        self._min_version: tuple[int, ...] = min_version
+        self._hint: str = hint
+        self._kwds = kwds
+        self._wrapped_name: str
+
+    @staticmethod
+    def _unparse_version(backend_version: tuple[int, ...], /) -> str:
+        return ".".join(f"{d}" for d in backend_version)
+
+    def _ensure_version(self, instance: _FullContext, /) -> None:
+        if instance._backend_version >= self._min_version:
+            return
+        method = self._wrapped_name
+        backend = instance._implementation._alias
+        minimum = self._unparse_version(self._min_version)
+        found = self._unparse_version(instance._backend_version)
+        msg = f"`{method}` is only available in {backend}>={minimum!r}, found version {found!r}."
+        if self._hint:
+            msg = f"{msg}\n{self._hint}"
+        raise NotImplementedError(msg)
+
+    def __call__(self, fn: _Method[_ContextT, P, R], /) -> _Method[_ContextT, P, R]:
+        self._wrapped_name = fn.__name__
+
+        @wraps(fn)
+        def wrapper(instance: _ContextT, *args: P.args, **kwds: P.kwargs) -> R:
+            self._ensure_version(instance)
+            return fn(instance, *args, **kwds)
+
+        # NOTE: Only getting a complaint from `mypy`
+        return wrapper  # type: ignore[return-value]

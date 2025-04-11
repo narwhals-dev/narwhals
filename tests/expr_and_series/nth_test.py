@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 from typing import Mapping
 
@@ -34,16 +35,12 @@ def test_nth(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.skipif(
-    POLARS_VERSION >= (1, 0, 0),
-    reason="1.0.0",
-)
+@pytest.mark.skipif(POLARS_VERSION >= (1, 0, 0), reason="1.0.0")
 def test_nth_not_supported() -> None:  # pragma: no cover
     pytest.importorskip("polars")
     import polars as pl
 
     df = nw.from_native(pl.DataFrame(data))
-    with pytest.raises(
-        AttributeError, match="`nth` is only supported for Polars>=1.0.0."
-    ):
+    pattern = re.compile(r"`nth` .+ Polars>=\'1.0.0\'.+`col`.+instead", re.DOTALL)
+    with pytest.raises(NotImplementedError, match=pattern):
         df.select(nw.nth(0))

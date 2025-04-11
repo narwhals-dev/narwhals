@@ -34,6 +34,7 @@ from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import not_implemented
+from narwhals.utils import requires
 from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
@@ -864,10 +865,8 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         dtypes = import_dtypes_module(self._version)
         return (~self.is_null()).cast(dtypes.UInt32()).cum_sum(reverse=reverse)
 
-    def cum_min(self: Self, *, reverse: bool) -> Self:
-        if self._backend_version < (13, 0, 0):
-            msg = "cum_min method is not supported for pyarrow < 13.0.0"
-            raise NotImplementedError(msg)
+    @requires(min_version=(13,))
+    def cum_min(self, *, reverse: bool) -> Self:
         result = (
             pc.cumulative_min(self.native, skip_nulls=True)
             if not reverse
@@ -875,10 +874,8 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         )
         return self._with_native(result)
 
-    def cum_max(self: Self, *, reverse: bool) -> Self:
-        if self._backend_version < (13, 0, 0):
-            msg = "cum_max method is not supported for pyarrow < 13.0.0"
-            raise NotImplementedError(msg)
+    @requires(min_version=(13,))
+    def cum_max(self, *, reverse: bool) -> Self:
         result = (
             pc.cumulative_max(self.native, skip_nulls=True)
             if not reverse
@@ -886,10 +883,8 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         )
         return self._with_native(result)
 
-    def cum_prod(self: Self, *, reverse: bool) -> Self:
-        if self._backend_version < (13, 0, 0):
-            msg = "cum_max method is not supported for pyarrow < 13.0.0"
-            raise NotImplementedError(msg)
+    @requires(min_version=(13,))
+    def cum_prod(self, *, reverse: bool) -> Self:
         result = (
             pc.cumulative_prod(self.native, skip_nulls=True)
             if not reverse
@@ -897,13 +892,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         )
         return self._with_native(result)
 
-    def rolling_sum(
-        self: Self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
-    ) -> Self:
+    def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         min_samples = min_samples if min_samples is not None else window_size
         padded_series, offset = pad_series(self, window_size=window_size, center=center)
 
@@ -927,13 +916,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         )
         return result[offset:]
 
-    def rolling_mean(
-        self: Self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
-    ) -> Self:
+    def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         min_samples = min_samples if min_samples is not None else window_size
         padded_series, offset = pad_series(self, window_size=window_size, center=center)
 
@@ -963,12 +946,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         return result[offset:]
 
     def rolling_var(
-        self: Self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
-        ddof: int,
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
         min_samples = min_samples if min_samples is not None else window_size
         padded_series, offset = pad_series(self, window_size=window_size, center=center)
@@ -1011,12 +989,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         return result[offset:]
 
     def rolling_std(
-        self: Self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
-        ddof: int,
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
         return (
             self.rolling_var(
@@ -1049,16 +1022,14 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         result = pc.if_else(null_mask, lit(None, native_series.type), rank)
         return self._with_native(result)
 
-    def hist(  # noqa: PLR0915
-        self: Self,
+    @requires(min_version=(13,))
+    def hist(
+        self,
         bins: list[float | int] | None,
         *,
         bin_count: int | None,
         include_breakpoint: bool,
     ) -> ArrowDataFrame:
-        if self._backend_version < (13,):
-            msg = f"`Series.hist` requires PyArrow>=13.0.0, found PyArrow version: {self._backend_version}"
-            raise NotImplementedError(msg)
         import numpy as np  # ignore-banned-import
 
         from narwhals._arrow.dataframe import ArrowDataFrame
