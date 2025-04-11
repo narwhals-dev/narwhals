@@ -21,9 +21,11 @@ import narwhals as unstable_nw
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
+from narwhals.utils import Version
 from narwhals.utils import check_column_exists
 from narwhals.utils import deprecate_native_namespace
 from narwhals.utils import parse_version
+from narwhals.utils import requires
 from tests.utils import PANDAS_VERSION
 from tests.utils import get_module_version_as_tuple
 
@@ -501,3 +503,45 @@ def test_deprecate_native_namespace() -> None:
         func3(param, backend=pl, native_namespace=pl)
 
     assert func3(param, backend=Implementation.POLARS) is Implementation.POLARS
+
+
+def test_requires_typing() -> None:
+    class ProbablyCompliant:
+        _implementation: Implementation = Implementation.POLARS
+        _version: Version = Version.MAIN
+
+        def __init__(self, native_obj: str, backend_version: tuple[int, ...]) -> None:
+            self._native_obj: str = native_obj
+            self._backend_version: tuple[int, ...] = backend_version
+
+        @property
+        def native(self) -> str:
+            return self._native_obj
+
+        @requires(min_version=(1, 0, 0))
+        def to_int(self) -> int:
+            return int(self.native)
+
+        @requires(min_version=(2, 0, 0))
+        def concat(self, *strings: str, separator: str = "") -> str:
+            return separator.join((self.native, *strings))
+
+        @requires(min_version=(3, 0, 0))
+        def repeat(self, n: int) -> str:
+            return self.native * n
+
+        def len(self) -> int:
+            return len(self.native)
+
+    obj = ProbablyCompliant("123", (2,))
+
+    converted = obj.to_int()
+    assert converted == 123
+
+    repeated = obj.repeat(3)
+    assert repeated == "123123123"
+
+    joined = obj.concat("456", "789")
+    assert joined == "123456789"
+    joined_sep = obj.concat("456", "789", separator=" ")
+    assert joined_sep == "123 456 789"

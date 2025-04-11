@@ -55,6 +55,7 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
     import pyspark.sql as pyspark_sql
+    from typing_extensions import Concatenate
     from typing_extensions import LiteralString
     from typing_extensions import ParamSpec
     from typing_extensions import Self
@@ -159,6 +160,8 @@ if TYPE_CHECKING:
 
 NativeT_co = TypeVar("NativeT_co", covariant=True)
 CompliantT_co = TypeVar("CompliantT_co", covariant=True)
+_ContextT = TypeVar("_ContextT", bound="_FullContext")
+_Method: TypeAlias = "Callable[Concatenate[_ContextT, P], R]"
 
 
 class _StoresNative(Protocol[NativeT_co]):  # noqa: PYI046
@@ -1774,3 +1777,36 @@ def _not_implemented_error(what: str, who: str, /) -> NotImplementedError:
         "please open an issue at: https://github.com/narwhals-dev/narwhals/issues"
     )
     return NotImplementedError(msg)
+
+
+class requires:  # noqa: N801
+    """Method decorator for raising under certain constraints."""
+
+    # NOTE: Decide how constraints should work
+    # - min_version
+    # - specific parameters
+    # - optional message
+    #   - where the default is similar to `PolarsExpr.replace_strict`
+    # - multiple cases?
+    #   - How common is that?
+    #   - Decorator stacking or overloads?
+    def __init__(self, **kwds: Any) -> None:
+        # Convert the args into something useful
+        self._kwds = kwds
+
+    def __call__(self, fn: _Method[_ContextT, P, R], /) -> _Method[_ContextT, P, R]:
+        orig_kwds = self._kwds  # noqa: F841
+        # - Do anything that is *once* per method definition
+        # - Does not have access to the instance
+
+        @wraps(fn)
+        def wrapper(instance: _ContextT, *args: P.args, **kwds: P.kwargs) -> R:
+            # Do anything that checked on every call
+            # Obv, has `instance`
+            instance._backend_version  # noqa: B018
+            instance._implementation  # noqa: B018
+            instance._version  # noqa: B018
+            return fn(instance, *args, **kwds)
+
+        # NOTE: Only getting a compliant from `mypy`
+        return wrapper  # type: ignore[return-value]
