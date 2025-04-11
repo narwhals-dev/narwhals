@@ -198,7 +198,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
     def shift(self: Self, n: int) -> Self:
         return self._reuse_series("shift", call_kwargs={"n": n})
 
-    def over(
+    def over(  # noqa: PLR0915
         self: Self,
         partition_by: Sequence[str],
         order_by: Sequence[str] | None,
@@ -276,6 +276,15 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         )
                     else:
                         res_native = getattr(rolling, pandas_function_name)()
+                elif function_name == "len":
+                    if len(output_names) != 1:
+                        msg = "Safety check failed, please report a bug."
+                        raise AssertionError(msg)
+                    res_native = (
+                        df._native_frame.groupby(partition_by)
+                        .transform("size")
+                        .to_frame(aliases[0])
+                    )
                 else:
                     res_native = df._native_frame.groupby(partition_by)[
                         list(output_names)
