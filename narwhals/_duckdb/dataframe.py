@@ -341,7 +341,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             ):
                 select.append(f'rhs."{name}" as "{name}{suffix}"')
             elif right_on is None or name not in {right_on, *by_right}:
-                select.append(f'"{name}"')
+                select.append(str(col(name)))
         # Replace with Python API call once
         # https://github.com/duckdb/duckdb/discussions/16947 is addressed.
         query = f"""
@@ -376,16 +376,14 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             count_name = generate_temporary_column_name(8, [*self.columns, idx_name])
             partition_by_sql = generate_partition_by_sql(*(subset_))
             name = count_name if keep == "none" else idx_name
+            idx_expr = SQLExpression(
+                f"{FunctionExpression('row_number')} over ({partition_by_sql})"
+            ).alias(idx_name)
+            count_expr = SQLExpression(
+                f"{FunctionExpression('count', StarExpression())} over ({partition_by_sql})"
+            ).alias(count_name)
             return self._with_native(
-                self.native.select(
-                    StarExpression(),
-                    SQLExpression(
-                        f"{FunctionExpression('row_number')} over ({partition_by_sql})"
-                    ).alias(idx_name),
-                    SQLExpression(
-                        f"{FunctionExpression('count', StarExpression())} over ({partition_by_sql})"
-                    ).alias(count_name),
-                )
+                self.native.select(StarExpression(), idx_expr, count_expr)
                 .filter(col(name) == lit(1))
                 .select(StarExpression(exclude=[count_name, idx_name]))
             )
@@ -475,7 +473,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             msg = "`value_name` cannot be empty string for duckdb backend."
             raise NotImplementedError(msg)
 
-        unpivot_on = ", ".join(f'"{name}"' for name in on_)
+        unpivot_on = ", ".join(str(col(name)) for name in on_)
         rel = self.native  # noqa: F841
         # Replace with Python API once
         # https://github.com/duckdb/duckdb/discussions/16980 is addressed.
