@@ -277,7 +277,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     else:
                         res_native = getattr(rolling, pandas_function_name)()
                 elif function_name == "len":
-                    if len(output_names) != 1:
+                    if len(output_names) != 1:  # pragma: no cover
                         msg = "Safety check failed, please report a bug."
                         raise AssertionError(msg)
                     res_native = (

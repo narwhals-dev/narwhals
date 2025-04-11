@@ -644,9 +644,19 @@ class DaskExpr(
                         message=".*`meta` is not specified",
                         category=UserWarning,
                     )
-                    res_native = df.native.groupby(partition_by)[
-                        list(output_names)
-                    ].transform(dask_function_name, **self._call_kwargs)
+                    if dask_function_name == "size":
+                        if len(output_names) != 1:  # pragma: no cover
+                            msg = "Safety check failed, please report a bug."
+                            raise AssertionError(msg)
+                        res_native = (
+                            df.native.groupby(partition_by)
+                            .transform(dask_function_name, **self._call_kwargs)
+                            .to_frame(output_names[0])
+                        )
+                    else:
+                        res_native = df.native.groupby(partition_by)[
+                            list(output_names)
+                        ].transform(dask_function_name, **self._call_kwargs)
                 result_frame = df._with_native(
                     res_native.rename(columns=dict(zip(output_names, aliases)))
                 ).native
