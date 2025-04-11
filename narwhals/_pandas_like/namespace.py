@@ -286,7 +286,7 @@ class PandasLikeNamespace(
             native = self._concat_diagonal(dfs)
         else:
             raise NotImplementedError
-        return PandasLikeDataFrame.from_native(native, context=self)
+        return self._dataframe.from_native(native, context=self)
 
     def when(self: Self, predicate: PandasLikeExpr) -> PandasWhen:
         return PandasWhen.from_expr(predicate, context=self)
