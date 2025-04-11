@@ -6,6 +6,7 @@ from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Literal
 from typing import Sequence
 
 from narwhals._compliant import CompliantThen
@@ -29,6 +30,9 @@ if TYPE_CHECKING:
     from narwhals.typing import ConcatMethod
     from narwhals.utils import Implementation
     from narwhals.utils import Version
+
+VERTICAL: Literal[0] = 0
+HORIZONTAL: Literal[1] = 1
 
 
 class PandasLikeNamespace(
@@ -223,18 +227,24 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def _concat_diagonal(self, dfs: Sequence[NDFrameT], /) -> NDFrameT:
-        """Concatenate (native) DataFrames diagonally."""
-        concat = self._implementation.to_native_namespace().concat
+    @property
+    def _concat(self):  # type: ignore[no-untyped-def] # noqa: ANN202
+        """Return the **native** equivalent of `pd.concat`."""
+        # NOTE: Leave un-annotated to allow `@overload` matching via inference.
+        if TYPE_CHECKING:
+            import pandas as pd
+
+            return pd.concat
+        return self._implementation.to_native_namespace().concat
+
+    def _concat_diagonal(self, dfs: Sequence[NDFrameT], /) -> pd.DataFrame:
         if self._implementation.is_pandas() and self._backend_version < (3,):
             if self._backend_version < (1,):
-                return concat(dfs, axis=0, copy=False, sort=False)
-            return concat(dfs, axis=0, copy=False)
-        return concat(dfs, axis=0)
+                return self._concat(dfs, axis=VERTICAL, copy=False, sort=False)
+            return self._concat(dfs, axis=VERTICAL, copy=False)
+        return self._concat(dfs, axis=VERTICAL)
 
-    def _concat_horizontal(self, dfs: Sequence[NDFrameT], /) -> NDFrameT:
-        """Concatenate (native) DataFrames horizontally."""
-        concat = self._implementation.to_native_namespace().concat
+    def _concat_horizontal(self, dfs: Sequence[NDFrameT], /) -> pd.DataFrame:
         if self._implementation.is_cudf():
             with warnings.catch_warnings():
                 warnings.filterwarnings(
@@ -242,14 +252,12 @@ class PandasLikeNamespace(
                     message="The behavior of array concatenation with empty entries is deprecated",
                     category=FutureWarning,
                 )
-                return concat(dfs, axis=1)
+                return self._concat(dfs, axis=HORIZONTAL)
         elif self._implementation.is_pandas() and self._backend_version < (3,):
-            return concat(dfs, axis=1, copy=False)
-        return concat(dfs, axis=1)
+            return self._concat(dfs, axis=HORIZONTAL, copy=False)
+        return self._concat(dfs, axis=HORIZONTAL)
 
     def _concat_vertical(self, dfs: Sequence[pd.DataFrame], /) -> pd.DataFrame:
-        """Concatenate (native) DataFrames vertically."""
-        concat = self._implementation.to_native_namespace().concat
         cols_0 = dfs[0].columns
         for i, df in enumerate(dfs[1:], start=1):
             cols_current = df.columns
@@ -263,8 +271,8 @@ class PandasLikeNamespace(
                 )
                 raise TypeError(msg)
         if self._implementation.is_pandas() and self._backend_version < (3,):
-            return concat(dfs, axis=0, copy=False)
-        return concat(dfs, axis=0)
+            return self._concat(dfs, axis=VERTICAL, copy=False)
+        return self._concat(dfs, axis=VERTICAL)
 
     def concat(
         self, items: Iterable[PandasLikeDataFrame], *, how: ConcatMethod
