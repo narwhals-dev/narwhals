@@ -522,7 +522,7 @@ def test_requires_typing() -> None:
         def to_int(self) -> int:
             return int(self.native)
 
-        @requires(min_version=(2, 0, 0))
+        @requires(min_version=(2,))
         def concat(self, *strings: str, separator: str = "") -> str:
             return separator.join((self.native, *strings))
 
@@ -533,15 +533,24 @@ def test_requires_typing() -> None:
         def len(self) -> int:
             return len(self.native)
 
-    obj = ProbablyCompliant("123", (2,))
+    v_05 = ProbablyCompliant("123", (0, 5))
+    v_201 = ProbablyCompliant("123", (2, 0, 1))
+    v_300 = ProbablyCompliant("123", (3, 0, 0))
 
-    converted = obj.to_int()
+    converted = v_201.to_int()
     assert converted == 123
+    with pytest.raises(NotImplementedError):
+        v_05.to_int()
 
-    repeated = obj.repeat(3)
+    repeated = v_300.repeat(3)
     assert repeated == "123123123"
+    with pytest.raises(NotImplementedError):
+        v_201.repeat(3)
 
-    joined = obj.concat("456", "789")
+    with pytest.raises(NotImplementedError):
+        v_05.repeat(3)
+
+    joined = v_201.concat("456", "789")
     assert joined == "123456789"
-    joined_sep = obj.concat("456", "789", separator=" ")
+    joined_sep = v_201.concat("456", "789", separator=" ")
     assert joined_sep == "123 456 789"

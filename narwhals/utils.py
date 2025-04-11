@@ -542,6 +542,23 @@ class Implementation(Enum):
         """
         return self is Implementation.SQLFRAME  # pragma: no cover
 
+    @property
+    def _alias(self) -> LiteralString:
+        """Friendly name for errors."""
+        mapping: dict[Implementation, LiteralString] = {
+            Implementation.PANDAS: "Pandas",
+            Implementation.POLARS: "Polars",
+            Implementation.DASK: "Dask",
+            Implementation.IBIS: "Ibis",
+            Implementation.MODIN: "Modin",
+            Implementation.CUDF: "cuDF",
+            Implementation.PYARROW: "PyArrow",
+            Implementation.PYSPARK: "PySpark",
+            Implementation.DUCKDB: "DuckDB",
+            Implementation.SQLFRAME: "SQLFrame",
+        }
+        return mapping[self]
+
 
 MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.PANDAS: (0, 25, 3),
@@ -1783,29 +1800,39 @@ class requires:  # noqa: N801
     """Method decorator for raising under certain constraints."""
 
     # NOTE: Decide how constraints should work
-    # - min_version
-    # - specific parameters
-    # - optional message
+    # - [x] min_version
+    # - [ ] specific parameters
+    # - [ ] optional message
     #   - where the default is similar to `PolarsExpr.replace_strict`
-    # - multiple cases?
+    # - [ ] multiple cases?
     #   - How common is that?
     #   - Decorator stacking or overloads?
-    def __init__(self, **kwds: Any) -> None:
+    def __init__(self, *, min_version: tuple[int, ...], **kwds: Any) -> None:
         # Convert the args into something useful
+        self._min_version: tuple[int, ...] = min_version
         self._kwds = kwds
+        self._wrapped_name: str
+
+    @staticmethod
+    def _unparse_version(backend_version: tuple[int, ...], /) -> str:
+        return ".".join(f"{d}" for d in backend_version)
+
+    def _ensure_version(self, instance: _FullContext, /) -> None:
+        if instance._backend_version >= self._min_version:
+            return
+        method = self._wrapped_name
+        backend = instance._implementation._alias
+        minimum = self._unparse_version(self._min_version)
+        found = self._unparse_version(instance._backend_version)
+        msg = f"`{method}` is only available in {backend}>={minimum!r}, found version {found!r}."
+        raise NotImplementedError(msg)
 
     def __call__(self, fn: _Method[_ContextT, P, R], /) -> _Method[_ContextT, P, R]:
-        orig_kwds = self._kwds  # noqa: F841
-        # - Do anything that is *once* per method definition
-        # - Does not have access to the instance
+        self._wrapped_name = fn.__name__
 
         @wraps(fn)
         def wrapper(instance: _ContextT, *args: P.args, **kwds: P.kwargs) -> R:
-            # Do anything that checked on every call
-            # Obv, has `instance`
-            instance._backend_version  # noqa: B018
-            instance._implementation  # noqa: B018
-            instance._version  # noqa: B018
+            self._ensure_version(instance)
             return fn(instance, *args, **kwds)
 
         # NOTE: Only getting a compliant from `mypy`
