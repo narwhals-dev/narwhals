@@ -1551,9 +1551,13 @@ class DataFrame(BaseFrame[DataFrameT]):
             2  b  3  2
             3  c  3  1
         """
+        from narwhals import col
+        from narwhals.expr import Expr
         from narwhals.group_by import GroupBy
+        from narwhals.series import Series
 
-        flat_keys, kinds = self._flatten_and_extract(*keys)
+        _keys = [k if isinstance(k, (Expr, Series)) else col(k) for k in flatten(keys)]
+        flat_keys, kinds = self._flatten_and_extract(*_keys)
 
         if not all(kind is ExprKind.TRANSFORM for kind in kinds):
             from narwhals.exceptions import ComputeError
@@ -2827,9 +2831,12 @@ class LazyFrame(BaseFrame[FrameT]):
             └─────────┴────────┘
             <BLANKLINE>
         """
+        from narwhals import col
+        from narwhals.expr import Expr
         from narwhals.group_by import LazyGroupBy
 
-        flat_keys, kinds = self._flatten_and_extract(*keys)
+        _keys = [k if isinstance(k, Expr) else col(k) for k in flatten(keys)]
+        flat_keys, kinds = self._flatten_and_extract(*_keys)
 
         if not all(kind is ExprKind.TRANSFORM for kind in kinds):
             from narwhals.exceptions import ComputeError
