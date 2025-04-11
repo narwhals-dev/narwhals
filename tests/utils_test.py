@@ -522,7 +522,7 @@ def test_requires() -> None:
         def to_int(self) -> int:
             return int(self.native)
 
-        @requires(min_version=(2,))
+        @requires(min_version=(2,), hint="Something helpful I suppose")
         def concat(self, *strings: str, separator: str = "") -> str:
             return separator.join((self.native, *strings))
 
@@ -536,26 +536,24 @@ def test_requires() -> None:
 
     converted = v_201.to_int()
     assert converted == 123
-    with pytest.raises(
-        NotImplementedError, match=r"`to_int`.+Polars>=\'1.0.0\'.+found.+\'0.5\'"
-    ):
+    match = r"`to_int`.+Polars>=\'1.0.0\'.+found.+\'0.5\'"
+    with pytest.raises(NotImplementedError, match=match):
         v_05.to_int()
     repeated = v_300.repeat(3)
     assert repeated == "123123123"
-    with pytest.raises(
-        NotImplementedError, match=r"`repeat`.+Polars>=\'3.0.0\'.+found.+\'2.0.1\'"
-    ):
+    match = r"`repeat`.+Polars>=\'3.0.0\'.+found.+\'2.0.1\'"
+    with pytest.raises(NotImplementedError, match=match):
         v_201.repeat(3)
-    with pytest.raises(
-        NotImplementedError, match=r"`repeat`.+Polars>=\'3.0.0\'.+found.+\'0.5\'"
-    ):
+    match = r"`repeat`.+Polars>=\'3.0.0\'.+found.+\'0.5\'"
+    with pytest.raises(NotImplementedError, match=match):
         v_05.repeat(3)
     joined = v_201.concat("456", "789")
     assert joined == "123456789"
     joined_sep = v_201.concat("456", "789", separator=" ")
     assert joined_sep == "123 456 789"
     assert v_300.concat("forever") == "123forever"
-    with pytest.raises(
-        NotImplementedError, match=r"`concat`.+Polars>=\'2\'.+found.+\'0.5\'"
-    ):
+    pattern = re.compile(
+        r"`concat`.+Polars>=\'2\'.+found.+\'0.5\'.+Something helpful I suppose", re.DOTALL
+    )
+    with pytest.raises(NotImplementedError, match=pattern):
         v_05.concat("never")

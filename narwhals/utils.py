@@ -1806,14 +1806,13 @@ class requires:  # noqa: N801
     # NOTE: Decide how constraints should work
     # - [x] min_version
     # - [ ] specific parameters
-    # - [ ] optional message
-    #   - where the default is similar to `PolarsExpr.replace_strict`
-    # - [ ] multiple cases?
-    #   - How common is that?
-    #   - Decorator stacking or overloads?
-    def __init__(self, *, min_version: tuple[int, ...], **kwds: Any) -> None:
+    # - [x] optional message
+    def __init__(
+        self, *, min_version: tuple[int, ...], hint: str = "", **kwds: Any
+    ) -> None:
         # Convert the args into something useful
         self._min_version: tuple[int, ...] = min_version
+        self._hint: str = hint
         self._kwds = kwds
         self._wrapped_name: str
 
@@ -1829,6 +1828,8 @@ class requires:  # noqa: N801
         minimum = self._unparse_version(self._min_version)
         found = self._unparse_version(instance._backend_version)
         msg = f"`{method}` is only available in {backend}>={minimum!r}, found version {found!r}."
+        if self._hint:
+            msg = f"{msg}\n{self._hint}"
         raise NotImplementedError(msg)
 
     def __call__(self, fn: _Method[_ContextT, P, R], /) -> _Method[_ContextT, P, R]:
