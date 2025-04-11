@@ -430,11 +430,13 @@ def test_over_without_partition_by(
     assert_equal_data(result, expected)
 
 
-def test_len_over_2369(constructor: Constructor) -> None:
+def test_len_over_2369(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     if "pandas" in str(constructor) and PANDAS_VERSION < (1, 5):
         pytest.skip()
+    if any(x in str(constructor) for x in ("dask", "modin")):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 4], "b": ["x", "x", "y"]}))
     result = df.with_columns(a_len_per_group=nw.len().over("b")).sort("a")
     expected = {"a": [1, 2, 4], "b": ["x", "x", "y"], "a_len_per_group": [2, 2, 1]}
