@@ -23,6 +23,7 @@ from narwhals.utils import _into_arrow_table
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
+from narwhals.utils import requires
 from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
@@ -44,6 +45,7 @@ if TYPE_CHECKING:
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import JoinStrategy
+    from narwhals.typing import PivotAgg
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -411,22 +413,17 @@ class PolarsDataFrame:
             )
         )
 
+    @requires(min_version=(1,))
     def pivot(
         self: Self,
         on: list[str],
         *,
         index: list[str] | None,
         values: list[str] | None,
-        aggregate_function: Literal[
-            "min", "max", "first", "last", "sum", "mean", "median", "len"
-        ]
-        | None,
+        aggregate_function: PivotAgg | None,
         sort_columns: bool,
         separator: str,
     ) -> Self:
-        if self._backend_version < (1, 0, 0):  # pragma: no cover
-            msg = "`pivot` is only supported for Polars>=1.0.0"
-            raise NotImplementedError(msg)
         try:
             result = self.native.pivot(
                 on,

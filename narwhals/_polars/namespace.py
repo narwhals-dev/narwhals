@@ -136,6 +136,8 @@ class PolarsNamespace:
             return self._dataframe.from_numpy(data, schema=schema, context=self)
         return self._series.from_numpy(data, context=self)  # pragma: no cover
 
+    # TODO @dangotbanned: Allow a suggestion/hint after message
+    # @requires(min_version=(1,))
     def nth(self: Self, *indices: int) -> PolarsExpr:
         if self._backend_version < (1, 0, 0):
             msg = "`nth` is only supported for Polars>=1.0.0. Please use `col` for columns selection instead."
