@@ -983,11 +983,21 @@ class PandasLikeSeries(EagerSeries[Any]):
                 del data["breakpoint"]
             return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
 
-        if bin_count is not None:  # use Polars binning behavior
+        if bin_count is not None:
+            # use Polars binning behavior
             lower, upper = self.native.min(), self.native.max()
             if lower == upper:
                 lower -= 0.5
                 upper += 0.5
+
+            if bin_count == 1:
+                data = {
+                    "breakpoint": [upper],
+                    "count": [self.native.count()],
+                }
+                if not include_breakpoint:
+                    del data["breakpoint"]
+                return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
 
             bins = linspace(lower, upper, bin_count + 1)
             bin_count = None

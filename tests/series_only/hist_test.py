@@ -80,6 +80,11 @@ counts_and_expected = [
         "expected_count": [1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
     },
     {
+        "bin_count": 1,
+        "expected_bins": [0, 6],
+        "expected_count": [7],
+    },
+    {
         "bin_count": 0,
         "expected_bins": [],
         "expected_count": [],
@@ -126,8 +131,7 @@ def test_hist_bin(
         assert_equal_data(result, expected)
 
         # result size property
-        if len(bins) < 2:
-            assert len(result) == 0
+        assert len(result) == max(len(bins) - 1, 0)
 
     # shift bins property
     shift_by = 10
@@ -212,9 +216,9 @@ def test_hist_count(
         assert_equal_data(result, expected)
 
         # result size property
-        if bin_count < 2:
-            assert len(result) == 0
-        else:
+
+        assert len(result) == bin_count
+        if bin_count > 0:
             assert result["count"].sum() == df[col].count()
 
     # missing/nan results
@@ -235,9 +239,8 @@ def test_hist_count(
         assert_equal_data(result, expected)
 
         # result size property
-        if bin_count < 2:
-            assert len(result) == 0
-        else:
+        assert len(result) == bin_count
+        if bin_count > 0:
             assert (
                 result["count"].sum() == (~(df[col].is_nan() | df[col].is_null())).sum()
             )
@@ -485,7 +488,10 @@ def test_hist_count_hypothesis(
     # Bug in Polars <= 1.21; hist becomes unreliable when passing bin_counts
     #   for data with a wide range and a large number of passed bins
     #   https://github.com/pola-rs/polars/issues/20879
-    if expected["count"].sum() != expected_data.count() and "polars" not in str(
+
+    if expected[
+        "count"
+    ].sum() != expected_data.is_not_nan().sum() and "polars" not in str(
         constructor_eager
     ):
         request.applymarker(pytest.mark.xfail)

@@ -1064,59 +1064,13 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         from narwhals._arrow.dataframe import ArrowDataFrame
 
         def _hist_from_bin_count(bin_count: int):  # type: ignore[no-untyped-def] # noqa: ANN202
-            if pc.count(self._native_series) == pa.scalar(0):
-                return np.zeros(bin_count), np.linspace(0, 1, bin_count + 1)[1:]
-
             d = pc.min_max(self.native)
-            lower, upper = d["min"], d["max"]
-            pa_float = pa.type_for_alias("float")
+            lower, upper = d["min"].as_py(), d["max"].as_py()
             if lower == upper:
-                range_: pa.Scalar[Any] = lit(1.0)
-                mid = lit(0.5)
-                width = pc.divide(range_, lit(bin_count))
-                lower = pc.subtract(lower, mid)
-                upper = pc.add(upper, mid)
-            else:
-                range_ = pc.subtract(upper, lower)
-                width = pc.divide(pc.cast(range_, pa_float), lit(float(bin_count)))
-
-            bin_proportions = pc.divide(pc.subtract(self.native, lower), width)
-            bin_indices = pc.floor(bin_proportions)
-
-            # shift bins so they are right-closed
-            bin_indices = pc.if_else(
-                pc.and_(
-                    pc.equal(bin_indices, bin_proportions),
-                    pc.greater(bin_indices, lit(0)),
-                ),
-                pc.subtract(bin_indices, lit(1)),
-                bin_indices,
-            )
-            possible = pa.Table.from_arrays(
-                [pa.Array.from_pandas(np.arange(bin_count, dtype="int64"))], ["values"]
-            )
-            counts = (  # count bin id occurrences
-                pa.Table.from_arrays(
-                    pc.value_counts(bin_indices).flatten(),
-                    names=["values", "counts"],
-                )
-                # nan values are implicitly dropped in value_counts
-                .filter(~pc.field("values").is_nan())
-                .cast(pa.schema([("values", pa.int64()), ("counts", pa.int64())]))
-                # align bin ids to all possible bin ids (populate in missing bins)
-                .join(possible, keys="values", join_type="right outer")
-                .sort_by("values")
-            )
-            # empty bin intervals should have a 0 count
-            counts_coalesce = cast(
-                "ArrowArray", pc.coalesce(counts.column("counts"), lit(0))
-            )
-            counts = counts.set_column(0, "counts", counts_coalesce)
-
-            # extract left/right side of the intervals
-            bin_left = pc.add(lower, pc.multiply(counts.column("values"), width))
-            bin_right = pc.add(bin_left, width)
-            return counts.column("counts"), bin_right
+                lower -= 0.5
+                upper += 0.5
+            bins = np.linspace(lower, upper, bin_count + 1)
+            return _hist_from_bins(bins)
 
         def _hist_from_bins(bins: Sequence[int | float]):  # type: ignore[no-untyped-def] # noqa: ANN202
             bin_indices = np.searchsorted(bins, self.native, side="left")
@@ -1133,15 +1087,51 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             bin_right = bins[1:]
             return counts, bin_right
 
+        counts: Sequence[int | float] | np.typing.ArrayLike
+        bin_right: Sequence[int | float] | np.typing.ArrayLike
+
+        data_count = pc.sum(
+            pc.invert(pc.or_(pc.is_nan(self.native), pc.is_null(self.native))).cast(
+                pa.uint8()
+            ),
+            min_count=0,
+        )
         if bins is not None:
             if len(bins) < 2:
                 counts, bin_right = [], []
+
+            elif data_count == pa.scalar(0, type=pa.uint64()):  # type:ignore[comparison-overlap]
+                counts = np.zeros(len(bins) - 1)
+                bin_right = bins[1:]
+
+            elif len(bins) == 2:
+                counts = [
+                    pc.sum(
+                        pc.and_(
+                            pc.greater_equal(self.native, lit(float(bins[0]))),
+                            pc.less_equal(self.native, lit(float(bins[1]))),
+                        ).cast(pa.uint8())
+                    )
+                ]
+                bin_right = [bins[-1]]
             else:
                 counts, bin_right = _hist_from_bins(bins)
 
         elif bin_count is not None:
             if bin_count == 0:
                 counts, bin_right = [], []
+            elif data_count == pa.scalar(0, type=pa.uint64()):  # type:ignore[comparison-overlap]
+                counts, bin_right = (
+                    np.zeros(bin_count),
+                    np.linspace(0, 1, bin_count + 1)[1:],
+                )
+            elif bin_count == 1:
+                d = pc.min_max(self.native)
+                lower, upper = d["min"], d["max"]
+                if lower == upper:
+                    counts, bin_right = [data_count], [pc.add(upper, pa.scalar(0.5))]
+                else:
+                    counts, bin_right = [data_count], [upper]
             else:
                 counts, bin_right = _hist_from_bin_count(bin_count)
 

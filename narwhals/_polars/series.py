@@ -499,16 +499,19 @@ class PolarsSeries:
                 data.append(pl.Series("breakpoint", [], dtype=pl.Float64))
             data.append(pl.Series("count", [], dtype=pl.UInt32))
             return PolarsDataFrame.from_native(pl.DataFrame(data), context=self)
-        elif (self._backend_version < (1, 15)) and self.native.count() < 1:
+
+        if self.native.count() < 1:
             data_dict: dict[str, Sequence[Any] | pl.Series]
             if bins is not None:
                 data_dict = {
                     "breakpoint": bins[1:],
                     "count": pl.zeros(n=len(bins) - 1, dtype=pl.Int64, eager=True),
                 }
-            elif bin_count is not None:
+            elif (bin_count is not None) and bin_count == 1:
+                data_dict = {"breakpoint": [1.0], "count": [0]}
+            elif (bin_count is not None) and bin_count > 1:
                 data_dict = {
-                    "breakpoint": pl.int_range(0, bin_count, eager=True) / bin_count,
+                    "breakpoint": pl.int_range(1, bin_count + 1, eager=True) / bin_count,
                     "count": pl.zeros(n=bin_count, dtype=pl.Int64, eager=True),
                 }
             if not include_breakpoint:
@@ -519,10 +522,8 @@ class PolarsSeries:
         # polars <1.5 with bin_count=...
         # returns bins that range from -inf to +inf and has bin_count + 1 bins.
         #   for compat: convert `bin_count=` call to `bins=`
-        if (
-            (self._backend_version < (1, 15))
-            and (bin_count is not None)
-            and (self.native.count() > 0)
+        if (self._backend_version < (1, 15)) and (
+            bin_count is not None
         ):  # pragma: no cover
             lower = cast("float", self.native.min())
             upper = cast("float", self.native.max())
