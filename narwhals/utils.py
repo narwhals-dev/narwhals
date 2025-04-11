@@ -544,7 +544,11 @@ class Implementation(Enum):
 
     @property
     def _alias(self) -> LiteralString:
-        """Friendly name for errors."""
+        """Friendly name for errors.
+
+        Returns:
+            String.
+        """
         mapping: dict[Implementation, LiteralString] = {
             Implementation.PANDAS: "Pandas",
             Implementation.POLARS: "Polars",
