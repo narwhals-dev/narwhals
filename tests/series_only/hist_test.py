@@ -372,12 +372,16 @@ def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
     data=st.lists(
         # Bug in Polars <= 1.21; computing histograms with NaN data and passed bins can be unreliable
         #   this leads to flaky hypothesis testing https://github.com/pola-rs/polars/issues/21082
-        # min_value/max_value from PyArrows min/max boundaries
-        st.floats(
-            min_value=-9007199254740992,
-            max_value=9007199254740992,
-            allow_nan=False,
-            allow_infinity=False,
+        # min_value/max_value; avoid issues with floating point value imprecision
+        # small floats around 0 are incorrectly binned by Polars
+        st.one_of(
+            st.just(0.0),
+            st.floats(
+                min_value=-1e10, max_value=-1e-4, allow_nan=False, allow_subnormal=False
+            ),
+            st.floats(
+                min_value=1e-4, max_value=1e10, allow_nan=False, allow_subnormal=False
+            ),
         ),
         min_size=0,
         max_size=100,
@@ -430,17 +434,12 @@ def test_hist_bin_hypotheis(
 
 @given(
     data=st.lists(
-        # min_value/max_value from PyArrows min/max boundaries
-        st.floats(
-            min_value=-9007199254740992,
-            max_value=9007199254740992,
-            allow_nan=False,
-            allow_infinity=False,
-        ),
-        min_size=0,
+        st.integers(
+            min_value=-int(1e9), max_value=int(1e9)
+        ),  # dynamic bin creation & small floating point value distances creates lots of noise
         max_size=100,
     ),
-    bin_count=st.integers(min_value=0, max_value=1_000),
+    bin_count=st.integers(min_value=1, max_value=20),
 )
 @pytest.mark.skipif(
     POLARS_VERSION < (1, 27),
