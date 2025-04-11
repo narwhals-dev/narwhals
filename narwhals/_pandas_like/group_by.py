@@ -44,8 +44,9 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
         *,
         drop_null_keys: bool,
     ) -> None:
-        self._compliant_frame = df
-        self._keys = df._evaluate_aliases(*keys)
+        self._compliant_frame, self._keys, self._output_key_names = self._magic_parsing(
+            compliant_frame=df, keys=keys
+        )
         # Drop index to avoid potential collisions:
         # https://github.com/narwhals-dev/narwhals/issues/1907.
 
@@ -247,7 +248,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
             result.reset_index(inplace=True)  # noqa: PD002
             return self.compliant._with_native(
                 select_columns_by_name(result, new_names, backend_version, implementation)
-            )
+            ).rename(dict(zip(self._keys, self._output_key_names)))
 
         if self.compliant.native.empty:
             # Don't even attempt this, it's way too inconsistent across pandas versions.
@@ -292,12 +293,11 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
         # Keep inplace=True to avoid making a redundant copy.
         # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
         result_complex.reset_index(inplace=True)  # noqa: PD002
-
         return self.compliant._with_native(
             select_columns_by_name(
                 result_complex, new_names, backend_version, implementation
             )
-        )
+        ).rename(dict(zip(self._keys, self._output_key_names)))
 
     def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
         with warnings.catch_warnings():
@@ -307,4 +307,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
                 category=FutureWarning,
             )
             for key, group in self._grouped:
-                yield (key, self.compliant._with_native(group))
+                yield (
+                    key,
+                    self.compliant._with_native(group).drop(self._keys, strict=True),
+                )

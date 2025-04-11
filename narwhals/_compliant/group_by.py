@@ -15,6 +15,7 @@ from typing import TypeVar
 
 from narwhals._compliant.typing import CompliantExprT_contra
 from narwhals._compliant.typing import CompliantFrameT_co
+from narwhals._compliant.typing import CompliantLazyFrameAny
 from narwhals._compliant.typing import CompliantLazyFrameT_co
 from narwhals._compliant.typing import DepthTrackingExprAny
 from narwhals._compliant.typing import DepthTrackingExprT_contra
@@ -58,7 +59,8 @@ _RE_LEAF_NAME: re.Pattern[str] = re.compile(r"(\w+->)")
 
 class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     _compliant_frame: Any
-    _keys: Sequence[str]
+    _output_key_names: list[str]
+    _keys: list[str]
 
     @property
     def compliant(self) -> CompliantFrameT_co:
@@ -74,6 +76,23 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     ) -> None: ...
 
     def agg(self, *exprs: CompliantExprT_contra) -> CompliantFrameT_co: ...
+
+    @staticmethod
+    def _magic_parsing(
+        compliant_frame: CompliantLazyFrameAny, keys: Sequence[CompliantExprT_contra]
+    ) -> tuple[CompliantLazyFrameAny, list[str], list[str]]:
+        suffix_token = "_" * max(len(str(c)) for c in compliant_frame.columns)
+        output_key_names = compliant_frame._evaluate_aliases(*keys)
+        safe_keys = [
+            key.alias(f"{name}{suffix_token}")
+            for key, name in zip(keys, output_key_names)
+        ]
+        safe_key_names = compliant_frame._evaluate_aliases(*safe_keys)
+        return (
+            compliant_frame.with_columns(*safe_keys),
+            safe_key_names,
+            output_key_names,
+        )
 
 
 class DepthTrackingGroupBy(

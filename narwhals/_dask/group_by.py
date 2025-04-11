@@ -73,8 +73,9 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
     def __init__(
         self, df: DaskLazyFrame, keys: Sequence[DaskExpr], /, *, drop_null_keys: bool
     ) -> None:
-        self._compliant_frame = df
-        self._keys = df._evaluate_aliases(*keys)
+        self._compliant_frame, self._keys, self._output_key_names = self._magic_parsing(
+            compliant_frame=df, keys=keys
+        )
         self._grouped = self.compliant.native.groupby(
             self._keys, dropna=drop_null_keys, observed=True
         )
@@ -84,9 +85,12 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
 
         if not exprs:
             # No aggregation provided
-            return self.compliant.simple_select(*self._keys).unique(
-                self._keys, keep="any"
+            return (
+                self.compliant.simple_select(*self._keys)
+                .unique(self._keys, keep="any")
+                .rename(dict(zip(self._keys, self._output_key_names)))
             )
+
         self._ensure_all_simple(exprs)
         # This should be the fastpath, but cuDF is too far behind to use it.
         # - https://github.com/rapidsai/cudf/issues/15118
@@ -115,4 +119,4 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
             self._grouped.agg(**simple_aggregations).reset_index(),
             backend_version=self.compliant._backend_version,
             version=self.compliant._version,
-        )
+        ).rename(dict(zip(self._keys, self._output_key_names)))

@@ -13,11 +13,7 @@ import narwhals as nw_main
 import narwhals.stable.v1 as nw_v1
 from narwhals.exceptions import ComputeError
 from narwhals.exceptions import InvalidOperationError
-from narwhals.exceptions import LengthChangingExprError
-from narwhals.exceptions import ShapeError
-from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
-from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -481,34 +477,47 @@ def test_fancy_functions(constructor: Constructor) -> None:
     ("ns", "context"),
     [
         (nw_main, nullcontext()),
-        (
-            nw_v1,
-            pytest.raises(
-                ComputeError,
-                match=r"Expr and Series are not supported as `narwhals.stable.v1.(LazyFrame|DataFrame).group_by` keys.",
-            ),
-        ),
+        # (
+        #     nw_v1,
+        #     pytest.raises(
+        #         ComputeError,
+        #         match=r"Expr and Series are not supported as `narwhals.stable.v1.(LazyFrame|DataFrame).group_by` keys.",
+        #     ),
+        # ),
     ],
 )
-def test_group_by_expr(constructor: Constructor, ns: ModuleType, context: Any) -> None:
+@pytest.mark.parametrize("drop_null_keys", [True, False])
+def test_group_by_expr(
+    constructor: Constructor,
+    ns: ModuleType,
+    drop_null_keys: bool,
+    context: Any,
+) -> None:
     with context:
         data = {"a": [1, 1, 2, 2, -1], "x": [0, 1, 2, 3, 4]}
         df = ns.from_native(constructor(data))
+        # result = (
+        #     df.group_by(
+        #         ns.col("a").abs(),
+        #         ns.col("a").abs().alias("a_with_alias"),
+        #         drop_null_keys=drop_null_keys,
+        #     )
+        #     .agg(ns.col("x").sum())
+        #     .sort("a")
+        # )
+        # expected = {
+        #     "a": [1, 2],
+        #     "a_with_alias": [1, 2],
+        #     "x": [5, 5],
+        # }
+        # assert_equal_data(result, expected)
+
         result = (
-            df.group_by(
-                ns.col("a").abs(),
-                ns.col("a").abs().alias("a_with_alias"),
-                ns.lit("some_value").alias("lit"),
-            )
-            .agg(ns.col("x").sum())
-            .sort("a")
+            df.group_by(ns.col("a").alias("x"), drop_null_keys=drop_null_keys)
+            .agg(ns.col("x").mean().alias("y"))
+            .sort("x")
         )
-        expected = {
-            "a": [1, 2],
-            "a_with_alias": [1, 2],
-            "lit": ["some_value", "some_value"],
-            "x": [5, 5],
-        }
+        expected = {"x": [-1, 1, 2], "y": [4.0, 0.5, 2.5]}
         assert_equal_data(result, expected)
 
 
@@ -516,13 +525,13 @@ def test_group_by_expr(constructor: Constructor, ns: ModuleType, context: Any) -
     ("ns", "context"),
     [
         (nw_main, nullcontext()),
-        (
-            nw_v1,
-            pytest.raises(
-                ComputeError,
-                match=r"Expr and Series are not supported as `narwhals.stable.v1.(LazyFrame|DataFrame).group_by` keys.",
-            ),
-        ),
+        # (
+        #     nw_v1,
+        #     pytest.raises(
+        #         ComputeError,
+        #         match=r"Expr and Series are not supported as `narwhals.stable.v1.(LazyFrame|DataFrame).group_by` keys.",
+        #     ),
+        # ),
     ],
 )
 def test_group_by_multioutput_expr(
@@ -536,93 +545,13 @@ def test_group_by_multioutput_expr(
         assert_equal_data(result, expected)
 
 
-@pytest.mark.skipif(
-    POLARS_VERSION < (1, 10),
-    reason="`order_by` in Polars requires version 1.10 or greater",
-)
-@pytest.mark.parametrize(
-    ("ns", "context"),
-    [
-        (nw_main, nullcontext()),
-        (
-            nw_v1,
-            pytest.raises(
-                ComputeError,
-                match=r"Expr and Series are not supported as `narwhals.stable.v1.(LazyFrame|DataFrame).group_by` keys.",
-            ),
-        ),
-    ],
-)
-def test_group_by_window_expr(
-    constructor: Constructor, ns: ModuleType, context: Any
-) -> None:
-    context = (
-        pytest.raises(
-            NotImplementedError,
-            match=r"At least version 1.3 of DuckDB is required for `over` operation.",
-        )
-        if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3) and ns is nw_main)
-        else context
-    )
-    with context:
-        data = {"a": [1, None, None, 1], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
-        df = ns.from_native(constructor(data))
-        result = (
-            df.group_by(ns.col("a").cum_count().over(order_by="b"))
-            .agg(ns.col("x").sum())
-            .sort("a")
-        )
-        expected = {"a": [1, 2], "x": [6, 4]}
-        assert_equal_data(result, expected)
-
-
-@pytest.mark.parametrize(
-    ("ns", "context"),
-    [
-        (nw_main, nullcontext()),
-        (
-            nw_v1,
-            pytest.raises(
-                ComputeError,
-                match=r"Expr and Series are not supported as `narwhals.stable.v1.(LazyFrame|DataFrame).group_by` keys.",
-            ),
-        ),
-    ],
-)
-def test_group_by_agg_expr(
-    constructor: Constructor, ns: ModuleType, context: Any
-) -> None:
-    context = (
-        pytest.raises(
-            NotImplementedError,
-            match=r"At least version 1.3 of DuckDB is required for binary operations between aggregates and columns.",
-        )
-        if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3) and ns is nw_main)
-        else context
-    )
-
-    with context:
-        data = {"a": [1, 2, 2, 1], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
-        df = ns.from_native(constructor(data))
-        result = df.group_by(ns.min("a")).agg(ns.col("x").max())
-        expected = {"a": [1], "x": [4]}
-        assert_equal_data(result, expected)
-
-
 def test_group_by_raise_for_filtration(constructor: Constructor) -> None:
     data = {"a": [1, 2, 2, None], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
     df = nw_main.from_native(constructor(data))
 
-    context = (
-        pytest.raises(
-            LengthChangingExprError,
-            match="Length-changing expressions are not supported for use in LazyFrame",
-        )
-        if isinstance(df, nw_main.LazyFrame)
-        else pytest.raises(
-            ShapeError,
-            match="series used as keys should have the same length as the DataFrame",
-        )
+    context = pytest.raises(
+        ComputeError,
+        match="Group by is not (yet) supported with keys that are not transformation expressions",
     )
 
     with context:

@@ -35,6 +35,8 @@ from narwhals.functions import _scan_parquet_impl
 from narwhals.functions import get_level
 from narwhals.functions import show_versions
 from narwhals.functions import when as nw_when
+from narwhals.group_by import GroupBy
+from narwhals.group_by import LazyGroupBy
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.stable.v1 import dtypes
@@ -94,8 +96,6 @@ if TYPE_CHECKING:
 
     from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
-    from narwhals.group_by import GroupBy
-    from narwhals.group_by import LazyGroupBy
     from narwhals.typing import ConcatMethod
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
@@ -256,28 +256,28 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         """
         return self.select(all()._l1_norm())
 
-    def group_by(  # type: ignore[override]
-        self: Self, *keys: str | Iterable[str], drop_null_keys: bool = False
-    ) -> GroupBy[Self]:
-        r"""Start a group by operation.
+    # def group_by(  # type: ignore[override]
+    #     self: Self, *keys: str | Iterable[str], drop_null_keys: bool = False
+    # ) -> GroupBy[Self]:
+    #     r"""Start a group by operation.
 
-        Arguments:
-            *keys: Column(s) to group by. Accepts multiple columns names as a list.
-            drop_null_keys: if True, then groups where any key is null won't be included
-                in the result.
+    #     Arguments:
+    #         *keys: Column(s) to group by. Accepts multiple columns names as a list.
+    #         drop_null_keys: if True, then groups where any key is null won't be included
+    #             in the result.
 
-        Returns:
-            GroupBy: Object which can be used to perform aggregations.
-        """
-        if any(isinstance(k, (Expr, Series)) for k in keys):
-            msg = (
-                "Expr and Series are not supported as `narwhals.stable.v1.DataFrame.group_by` keys."
-                "\nUse main namespace class instead: `narwhals.DataFrame.group_by`"
-            )
-            raise ComputeError(msg)
-        return super().group_by(
-            *[col(k) for k in flatten(keys)], drop_null_keys=drop_null_keys
-        )
+    #     Returns:
+    #         GroupBy: Object which can be used to perform aggregations.
+    #     """
+    #     if any(isinstance(k, (Expr, Series)) for k in keys):
+    #         msg = (
+    #             "Expr and Series are not supported as `narwhals.stable.v1.DataFrame.group_by` keys."
+    #             "\nUse main namespace class instead: `narwhals.DataFrame.group_by`"
+    #         )
+    #         raise ComputeError(msg)
+    #     return super().group_by(
+    #         *[col(k) for k in flatten(keys)], drop_null_keys=drop_null_keys
+    #     )
 
 
 class LazyFrame(NwLazyFrame[IntoFrameT]):
@@ -396,47 +396,47 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             self._compliant_frame.gather_every(n=n, offset=offset)
         )
 
-    def group_by(  # type: ignore[override]
-        self: Self, *keys: str | Iterable[str], drop_null_keys: bool = False
-    ) -> LazyGroupBy[Self]:
-        r"""Start a group by operation.
+    # def group_by(  # type: ignore[override]
+    #     self: Self, *keys: str | Iterable[str], drop_null_keys: bool = False
+    # ) -> LazyGroupBy[Self]:
+    #     r"""Start a group by operation.
 
-        Arguments:
-            *keys:
-                Column(s) to group by. Accepts expression input. Strings are
-                parsed as column names.
-            drop_null_keys: if True, then groups where any key is null won't be
-                included in the result.
+    #     Arguments:
+    #         *keys:
+    #             Column(s) to group by. Accepts expression input. Strings are
+    #             parsed as column names.
+    #         drop_null_keys: if True, then groups where any key is null won't be
+    #             included in the result.
 
-        Returns:
-            Object which can be used to perform aggregations.
+    #     Returns:
+    #         Object which can be used to perform aggregations.
 
-        Examples:
-            >>> import duckdb
-            >>> import narwhals as nw
-            >>> df_native = duckdb.sql(
-            ...     "SELECT * FROM VALUES (1, 'a'), (2, 'b'), (3, 'a') df(a, b)"
-            ... )
-            >>> df = nw.from_native(df_native)
-            >>> df.group_by("b").agg(nw.col("a").sum()).sort("b").to_native()
-            ┌─────────┬────────┐
-            │    b    │   a    │
-            │ varchar │ int128 │
-            ├─────────┼────────┤
-            │ a       │      4 │
-            │ b       │      2 │
-            └─────────┴────────┘
-            <BLANKLINE>
-        """
-        if any(isinstance(k, (Expr, Series)) for k in keys):
-            msg = (
-                "Expr and Series are not supported as `narwhals.stable.v1.LazyFrame.group_by` keys."
-                "\nUse main namespace class instead: `narwhals.LazyFrame.group_by`"
-            )
-            raise ComputeError(msg)
-        return super().group_by(
-            *[col(k) for k in flatten(keys)], drop_null_keys=drop_null_keys
-        )
+    #     Examples:
+    #         >>> import duckdb
+    #         >>> import narwhals as nw
+    #         >>> df_native = duckdb.sql(
+    #         ...     "SELECT * FROM VALUES (1, 'a'), (2, 'b'), (3, 'a') df(a, b)"
+    #         ... )
+    #         >>> df = nw.from_native(df_native)
+    #         >>> df.group_by("b").agg(nw.col("a").sum()).sort("b").to_native()
+    #         ┌─────────┬────────┐
+    #         │    b    │   a    │
+    #         │ varchar │ int128 │
+    #         ├─────────┼────────┤
+    #         │ a       │      4 │
+    #         │ b       │      2 │
+    #         └─────────┴────────┘
+    #         <BLANKLINE>
+    #     """
+    #     if any(isinstance(k, (Expr, Series)) for k in keys):
+    #         msg = (
+    #             "Expr and Series are not supported as `narwhals.stable.v1.LazyFrame.group_by` keys."
+    #             "\nUse main namespace class instead: `narwhals.LazyFrame.group_by`"
+    #         )
+    #         raise ComputeError(msg)
+    #     return super().group_by(
+    #         *[col(k) for k in flatten(keys)], drop_null_keys=drop_null_keys
+    #     )
 
 
 class Series(NwSeries[IntoSeriesT]):
@@ -2562,6 +2562,7 @@ __all__ = [
     "Binary",
     "Boolean",
     "Categorical",
+    "ComputeError",
     "DataFrame",
     "Date",
     "Datetime",
@@ -2572,6 +2573,7 @@ __all__ = [
     "Field",
     "Float32",
     "Float64",
+    "GroupBy",
     "Implementation",
     "Int8",
     "Int16",
@@ -2579,6 +2581,7 @@ __all__ = [
     "Int64",
     "Int128",
     "LazyFrame",
+    "LazyGroupBy",
     "List",
     "Object",
     "Schema",
@@ -2602,6 +2605,7 @@ __all__ = [
     "dtypes",
     "exceptions",
     "exclude",
+    "flatten",
     "from_arrow",
     "from_dict",
     "from_native",
