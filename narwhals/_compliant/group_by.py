@@ -23,6 +23,7 @@ from narwhals._compliant.typing import EagerDataFrameT_co
 from narwhals._compliant.typing import EagerExprT_contra
 from narwhals._compliant.typing import LazyExprT_contra
 from narwhals._compliant.typing import NativeExprT_co
+from narwhals._expression_parsing import ExpansionKind
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -81,17 +82,29 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     def _magic_parsing(
         compliant_frame: CompliantLazyFrameAny, keys: Sequence[CompliantExprT_contra]
     ) -> tuple[CompliantLazyFrameAny, list[str], list[str]]:
+        plx = compliant_frame.__narwhals_namespace__()
         suffix_token = "_" * max(len(str(c)) for c in compliant_frame.columns)
-        output_key_names = compliant_frame._evaluate_aliases(*keys)
+        original_names = compliant_frame._evaluate_aliases(*[k.name.keep() for k in keys])
+        output_names = compliant_frame._evaluate_aliases(*keys)
+
         safe_keys = [
-            key.alias(f"{name}{suffix_token}")
-            for key, name in zip(keys, output_key_names)
+            key.name.suffix(suffix_token)
+            if key._metadata is not None
+            and key._metadata.expansion_kind is ExpansionKind.MULTI_NAMED
+            else key.alias(f"{new_name}{suffix_token}")
+            for key, new_name in zip(keys, output_names)
         ]
-        safe_key_names = compliant_frame._evaluate_aliases(*safe_keys)
+
+        key_names = compliant_frame._evaluate_aliases(*safe_keys)
+
+        remaining_columns = [
+            plx.col(c) for c in compliant_frame.columns if c not in original_names
+        ]
+
         return (
-            compliant_frame.with_columns(*safe_keys),
-            safe_key_names,
-            output_key_names,
+            compliant_frame.select(*safe_keys, *remaining_columns),
+            key_names,
+            output_names,
         )
 
 
