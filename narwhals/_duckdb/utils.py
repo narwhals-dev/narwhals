@@ -225,15 +225,15 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
 def generate_partition_by_sql(*partition_by: str) -> str:
     if not partition_by:
         return ""
-    by_sql = ", ".join([f'"{x}"' for x in partition_by])
+    by_sql = ", ".join([f"{col(x)}" for x in partition_by])
     return f"partition by {by_sql}"
 
 
 def generate_order_by_sql(*order_by: str, ascending: bool) -> str:
     if ascending:
-        by_sql = ", ".join([f'"{x}" asc nulls first' for x in order_by])
+        by_sql = ", ".join([f"{col(x)} asc nulls first" for x in order_by])
     else:
-        by_sql = ", ".join([f'"{x}" desc nulls last' for x in order_by])
+        by_sql = ", ".join([f"{col(x)} desc nulls last" for x in order_by])
     return f"order by {by_sql}"
 
 
