@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
+import narwhals.stable.v1 as nw_v1
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -26,6 +27,11 @@ def test_ewm_mean_expr(
     }
     assert_equal_data(result, expected)
 
+    # v1
+    df_v1 = nw_v1.from_native(constructor_eager(data))
+    result_v1 = df_v1.select(nw_v1.col("a", "b").ewm_mean(com=1))
+    assert_equal_data(result_v1, expected)
+
 
 @pytest.mark.filterwarnings(
     "ignore:`Series.ewm_mean` is being called from the stable API although considered an unstable feature."
@@ -39,6 +45,10 @@ def test_ewm_mean_series(
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = series.ewm_mean(com=1)
     expected = {"a": [1.0, 1.0, 1.5714285714285714]}
+    assert_equal_data({"a": result}, expected)
+
+    series = nw_v1.from_native(constructor_eager(data), eager_only=True)["a"]
+    result = series.ewm_mean(com=1)
     assert_equal_data({"a": result}, expected)
 
 
