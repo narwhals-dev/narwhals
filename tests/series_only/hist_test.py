@@ -11,6 +11,7 @@ import pytest
 from hypothesis import given
 
 import narwhals as nw
+import narwhals.stable.v1 as nw_v1
 from narwhals.exceptions import ComputeError
 from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
@@ -96,9 +97,6 @@ counts_and_expected = [
 
 @pytest.mark.parametrize("params", bins_and_expected)
 @pytest.mark.parametrize("include_breakpoint", [True, False])
-@pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
-)
 @pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
 def test_hist_bin(
     library: str,
@@ -185,9 +183,6 @@ def test_hist_bin(
 
 @pytest.mark.parametrize("params", counts_and_expected)
 @pytest.mark.parametrize("include_breakpoint", [True, False])
-@pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
-)
 @pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
 def test_hist_count(
     library: str,
@@ -258,9 +253,6 @@ def test_hist_count(
             )
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
-)
 @pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
 def test_hist_count_no_spread(library: str) -> None:
     if library == "pandas":
@@ -296,9 +288,6 @@ def test_hist_count_no_spread(library: str) -> None:
     assert_equal_data(result, expected)
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
-)
 def test_hist_bin_and_bin_count() -> None:
     pytest.importorskip("polars")
     import polars as pl
@@ -312,9 +301,6 @@ def test_hist_bin_and_bin_count() -> None:
 
 
 @pytest.mark.parametrize("include_breakpoint", [True, False])
-@pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
-)
 @pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
 def test_hist_no_data(
     library: str,
@@ -350,9 +336,6 @@ def test_hist_no_data(
     assert result["count"].sum() == 0
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
-)
 @pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
 def test_hist_small_bins(library: str) -> None:
     if library == "pandas":
@@ -373,9 +356,6 @@ def test_hist_small_bins(library: str) -> None:
         s["values"].hist(bins=[1, 3], bin_count=4)
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
-)
 def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
     if "cudf" in str(constructor_eager):
         # TODO(unassigned): too many spurious failures, report and revisit
@@ -410,10 +390,6 @@ def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
     bin_deltas=st.lists(
         st.floats(min_value=0.001, max_value=1_000, allow_nan=False), max_size=50
     ),
-)
-@pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature.",
-    "ignore:invalid value encountered in cast:RuntimeWarning",
 )
 @pytest.mark.skipif(
     POLARS_VERSION < (1, 27),
@@ -472,7 +448,6 @@ def test_hist_bin_hypotheis(
     reason="polars cannot be used for compatibility checks since narwhals aims to mimic polars>=1.27 behavior",
 )
 @pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature.",
     "ignore:invalid value encountered in cast:RuntimeWarning",
 )
 @pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
@@ -530,3 +505,13 @@ def test_hist_count_hypothesis(
         request.applymarker(pytest.mark.xfail)
 
     assert_equal_data(result, expected.to_dict(as_series=False))
+
+
+@pytest.mark.filterwarnings(
+    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature.",
+)
+def test_hist_v1(constructor_eager: ConstructorEager) -> None:
+    df = nw_v1.from_native(constructor_eager({"a": [1, 1, 2]}), eager_only=True)
+    result = df["a"].hist(bins=[-1, 1, 2])
+    expected = {"breakpoint": [1, 2], "count": [2, 1]}
+    assert_equal_data(result, expected)
