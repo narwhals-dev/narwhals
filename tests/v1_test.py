@@ -9,11 +9,15 @@ import pytest
 
 import narwhals.stable.v1 as nw_v1
 from tests.utils import PANDAS_VERSION
+from tests.utils import POLARS_VERSION
+from tests.utils import PYARROW_VERSION
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
 def test_toplevel(constructor_eager: ConstructorEager) -> None:
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
+        pytest.skip()
     df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = df.select(
         min=nw_v1.min("a"),
@@ -62,6 +66,9 @@ def test_when_then(constructor_eager: ConstructorEager) -> None:
 
 
 def test_constructors() -> None:
+    pytest.importorskip("pyarrow")
+    if PANDAS_VERSION < (2, 2):
+        pytest.skip()
     assert nw_v1.new_series("a", [1, 2, 3], backend="pandas").to_list() == [1, 2, 3]
     arr: np.ndarray[tuple[int, int], Any] = np.array([[1, 2], [3, 4]])  # pyright: ignore[reportAssignmentType]
     assert_equal_data(
@@ -106,6 +113,8 @@ def test_values_counts_v1(constructor_eager: ConstructorEager) -> None:
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature.",
 )
 def test_hist_v1(constructor_eager: ConstructorEager) -> None:
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
+        pytest.skip()
     df = nw_v1.from_native(constructor_eager({"a": [1, 1, 2]}), eager_only=True)
     result = df["a"].hist(bins=[-1, 1, 2])
     expected = {"breakpoint": [1, 2], "count": [2, 1]}
