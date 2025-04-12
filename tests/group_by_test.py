@@ -522,10 +522,17 @@ def test_group_by_expr(
 
     result_all = (
         df.group_by("a")
-        .agg(nw.col("a").count().alias("foo"), nw.all().sum())  # inspired by Validoopsie
+        .agg(
+            nw.col("a").count().alias("foo-bar"), nw.all().sum()
+        )  # inspired by Validoopsie
         .sort("a")
     )
-    expected_all = {"a": [-1, 1, 2], "foo": [1, 2, 2], "x": [4, 1, 5], "y": [1.5, 0, 0]}
+    expected_all = {
+        "a": [-1, 1, 2],
+        "foo-bar": [1, 2, 2],
+        "x": [4, 1, 5],
+        "y": [1.5, 0, 0],
+    }
     assert_equal_data(result_all, expected_all)
 
 

@@ -249,11 +249,8 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
 
     def rename(self: Self, mapping: Mapping[str, str]) -> Self:
         df = self.native
-        selection = [
-            f"{name} as {mapping[name]}" if name in mapping else name
-            for name in df.columns
-        ]
-        return self._with_native(df.select(", ".join(selection)))
+        selection = (col(name).alias(mapping.get(name, name)) for name in df.columns)
+        return self._with_native(self.native.select(*selection))
 
     def join(
         self: Self,
