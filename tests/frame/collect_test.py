@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-import narwhals as nw_v1
+import narwhals.stable.v1 as nw_v1
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.utils import Implementation
