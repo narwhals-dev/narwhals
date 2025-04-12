@@ -5,6 +5,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import pytest
 
 import narwhals.stable.v1 as nw_v1
 from tests.utils import ConstructorEager
@@ -97,4 +98,14 @@ def test_values_counts_v1(constructor_eager: ConstructorEager) -> None:
     df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
     result = df["a"].value_counts().sort("a")
     expected = {"a": [1, 2, 3], "count": [1, 1, 1]}
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.filterwarnings(
+    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature.",
+)
+def test_hist_v1(constructor_eager: ConstructorEager) -> None:
+    df = nw_v1.from_native(constructor_eager({"a": [1, 1, 2]}), eager_only=True)
+    result = df["a"].hist(bins=[-1, 1, 2])
+    expected = {"breakpoint": [1, 2], "count": [2, 1]}
     assert_equal_data(result, expected)

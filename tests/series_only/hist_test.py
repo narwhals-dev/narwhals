@@ -11,7 +11,6 @@ import pytest
 from hypothesis import given
 
 import narwhals as nw
-import narwhals.stable.v1 as nw_v1
 from narwhals.exceptions import ComputeError
 from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
@@ -505,13 +504,3 @@ def test_hist_count_hypothesis(
         request.applymarker(pytest.mark.xfail)
 
     assert_equal_data(result, expected.to_dict(as_series=False))
-
-
-@pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature.",
-)
-def test_hist_v1(constructor_eager: ConstructorEager) -> None:
-    df = nw_v1.from_native(constructor_eager({"a": [1, 1, 2]}), eager_only=True)
-    result = df["a"].hist(bins=[-1, 1, 2])
-    expected = {"breakpoint": [1, 2], "count": [2, 1]}
-    assert_equal_data(result, expected)
