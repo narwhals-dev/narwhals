@@ -8,6 +8,7 @@ import pytest
 # becomes LazyFrame instead of DataFrame
 import narwhals as nw
 from narwhals.exceptions import ColumnNotFoundError
+from tests.utils import DUCKDB_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -36,6 +37,8 @@ def test_unique_eager(
 
 
 def test_unique_invalid_subset(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
     with pytest.raises(ColumnNotFoundError):
@@ -56,6 +59,8 @@ def test_unique(
     keep: Literal["any", "none"],
     expected: dict[str, list[float]],
 ) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
     result = df.unique(subset, keep=keep).sort("z")
@@ -76,6 +81,8 @@ def test_unique_full_subset(
     keep: Literal["any", "none"],
     expected: dict[str, list[float]],
 ) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     data = {"a": [1, 1, 1, 2], "b": [3, 3, 4, 4]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw)

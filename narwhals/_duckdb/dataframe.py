@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from functools import reduce
 from operator import and_
 from typing import TYPE_CHECKING
@@ -21,6 +22,7 @@ from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantDataFrame
+from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import generate_temporary_column_name
@@ -48,7 +50,8 @@ if TYPE_CHECKING:
     from narwhals.typing import LazyUniqueKeepStrategy
     from narwhals.utils import _FullContext
 
-from narwhals.typing import CompliantLazyFrame
+with contextlib.suppress(ImportError):  # requires duckdb>=1.3.0
+    from duckdb import SQLExpression  # type: ignore[attr-defined, unused-ignore]
 
 
 class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"]):
@@ -338,7 +341,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             ):
                 select.append(f'rhs."{name}" as "{name}{suffix}"')
             elif right_on is None or name not in {right_on, *by_right}:
-                select.append(f'"{name}"')
+                select.append(str(col(name)))
         # Replace with Python API call once
         # https://github.com/duckdb/duckdb/discussions/16947 is addressed.
         query = f"""
@@ -359,6 +362,12 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
         self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self:
         if subset_ := subset if keep == "any" else (subset or self.columns):
+            if self._backend_version < (1, 3):
+                msg = (
+                    "At least version 1.3 of DuckDB is required for `unique` operation\n"
+                    "with `subset` specified."
+                )
+                raise NotImplementedError(msg)
             # Sanitise input
             if any(x not in self.columns for x in subset_):
                 msg = f"Columns {set(subset_).difference(self.columns)} not found in {self.columns}."
@@ -366,16 +375,15 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             idx_name = generate_temporary_column_name(8, self.columns)
             count_name = generate_temporary_column_name(8, [*self.columns, idx_name])
             partition_by_sql = generate_partition_by_sql(*(subset_))
-            rel = self.native  # noqa: F841
-            query = f"""
-                select *,
-                        row_number() over ({partition_by_sql}) as "{idx_name}",
-                        count(*) over ({partition_by_sql}) as "{count_name}"
-                from rel
-                """  # noqa: S608
             name = count_name if keep == "none" else idx_name
+            idx_expr = SQLExpression(
+                f"{FunctionExpression('row_number')} over ({partition_by_sql})"
+            ).alias(idx_name)
+            count_expr = SQLExpression(
+                f"{FunctionExpression('count', StarExpression())} over ({partition_by_sql})"
+            ).alias(count_name)
             return self._with_native(
-                duckdb.sql(query)
+                self.native.select(StarExpression(), idx_expr, count_expr)
                 .filter(col(name) == lit(1))
                 .select(StarExpression(exclude=[count_name, idx_name]))
             )
@@ -465,7 +473,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             msg = "`value_name` cannot be empty string for duckdb backend."
             raise NotImplementedError(msg)
 
-        unpivot_on = ", ".join(f'"{name}"' for name in on_)
+        unpivot_on = ", ".join(str(col(name)) for name in on_)
         rel = self.native  # noqa: F841
         # Replace with Python API once
         # https://github.com/duckdb/duckdb/discussions/16980 is addressed.
