@@ -467,7 +467,11 @@ def test_group_by_expr(
         # See: https://github.com/pola-rs/polars/issues/22238
         request.applymarker(pytest.mark.xfail)
 
-    if "polars_lazy" in str(constructor) and POLARS_VERSION <= (0, 20, 16):
+    if (
+        "polars_lazy" in str(constructor)
+        and POLARS_VERSION <= (0, 20, 16)
+        and drop_null_keys
+    ):
         # The following repro works for polars>=0.20.17, but fails with `ColumnNotFoundError`
         # for previous versions:
         # ```
