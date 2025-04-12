@@ -130,3 +130,10 @@ def test_all_nulls_pandas() -> None:
         nw_v1.from_native(pd.Series([None] * 3, dtype="object"), series_only=True).dtype
         == nw_v1.Object
     )
+
+
+def test_expr_sort(constructor_eager: ConstructorEager) -> None:
+    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3], "b": [4, 2, 1]}))
+    result = df.select("b", nw_v1.col("a").sort(descending=True))
+    expected = {"b": [4, 2, 1], "a": [3, 2, 1]}
+    assert_equal_data(result, expected)
