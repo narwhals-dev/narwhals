@@ -514,6 +514,11 @@ class PolarsSeries:
                     "breakpoint": pl.int_range(1, bin_count + 1, eager=True) / bin_count,
                     "count": pl.zeros(n=bin_count, dtype=pl.Int64, eager=True),
                 }
+            else:  # pragma: no cover
+                msg = (
+                    "congratulations, you entered unreachable code - please report a bug"
+                )
+                raise AssertionError(msg)
             if not include_breakpoint:
                 del data_dict["breakpoint"]
             return PolarsDataFrame.from_native(pl.DataFrame(data_dict), context=self)
