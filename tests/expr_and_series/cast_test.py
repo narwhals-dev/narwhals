@@ -277,7 +277,7 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     data = {
         "a": [
@@ -330,7 +330,7 @@ def test_raise_if_polars_dtype(constructor: Constructor) -> None:
 
 def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     if any(
         backend in str(constructor) for backend in ("dask", "pyspark", "modin", "cudf")
@@ -345,7 +345,7 @@ def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> 
 
 def test_cast_binary(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     if any(backend in str(constructor) for backend in ("cudf", "dask", "modin")):
         request.applymarker(pytest.mark.xfail)

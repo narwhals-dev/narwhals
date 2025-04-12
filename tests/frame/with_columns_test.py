@@ -62,7 +62,7 @@ def test_with_columns_dtypes_single_row(
     request: pytest.FixtureRequest,
 ) -> None:
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (15,):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"a": ["foo"]}
