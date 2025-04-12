@@ -153,6 +153,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
             original_table = original_table.drop_nulls(subset=list(mapping.values()))
 
         for v in pc.unique(key_values):
+            # TODO(FBruzzesi): Can we avoid to double filter?
             _mask = pc.equal(table[col_token], v)
             group = self.compliant._with_native(original_table.native.filter(_mask))
             t = self.compliant._with_native(table.filter(_mask))

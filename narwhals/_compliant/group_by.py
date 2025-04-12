@@ -84,14 +84,31 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     def _init_parsing(
         compliant_frame: CompliantLazyFrameAny, keys: Sequence[CompliantExprT_contra]
     ) -> tuple[CompliantLazyFrameAny, list[str], list[str], list[str]]:
+        """Parses key expressions to set up `.agg` operation with correct information.
+
+        Since keys are expressions, it's possible to incour in aliases that match
+        other dataframe column names.
+
+        In order to match polars behavior and not overwrite columns when evaluating keys:
+
+        - We store original key names: these are later ignored/excluded from unnamed
+            expression in `.agg(...)` context.
+        - We evaluate what the output key names should be, in order to remap temporary column
+            names to the expected ones.
+        - Create temporary names for evaluated key expressions that are guaranteed to have
+            no overlap with any existing column name.
+        - Add these temporary columns to the compliant dataframe.
+        """
         suffix_token = "_" * max(len(str(c)) for c in compliant_frame.columns)
         original_names = compliant_frame._evaluate_aliases(*[k.name.keep() for k in keys])
         output_names = compliant_frame._evaluate_aliases(*keys)
 
         safe_keys = [
+            # multi_named expression cannot have duplicate names, hence it's safe to suffix
             key.name.suffix(suffix_token)
             if key._metadata is not None
             and key._metadata.expansion_kind is ExpansionKind.MULTI_NAMED
+            # otherwise it's single named and we can use Expr.alias
             else key.alias(f"{new_name}{suffix_token}")
             for key, new_name in zip(keys, output_names)
         ]

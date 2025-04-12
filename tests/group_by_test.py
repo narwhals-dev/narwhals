@@ -11,6 +11,9 @@ import pyarrow as pa
 import pytest
 
 import narwhals.stable.v1 as nw
+from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import infer_kind
+from narwhals.exceptions import ComputeError
 from narwhals.exceptions import InvalidOperationError
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
@@ -544,10 +547,39 @@ def test_group_by_multioutput_expr(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_group_by_raise_for_filtration(constructor: Constructor) -> None:
+@pytest.mark.parametrize(
+    "keys",
+    [
+        [nw.col("a").drop_nulls()],  # Filtration
+        [
+            nw.col("a").alias("foo"),
+            nw.col("a").drop_nulls(),
+        ],  # Transform and Filtration
+        [nw.col("a").alias("foo"), nw.col("a").max()],  # Transform and Aggregation
+        [
+            nw.col("a").alias("foo"),
+            nw.col("a").cum_max(),
+        ],  # Transform and Window
+        [nw.lit(42)],  # Literal
+    ],
+)
+def test_group_by_raise_if_not_transform(
+    constructor: Constructor, keys: list[nw.Expr]
+) -> None:
     data = {"a": [1, 2, 2, None], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
 
-    # TODO(FBruzzesi): provide exception and matching message
-    with pytest.raises(Exception):  # noqa: B017, PT011
-        df.group_by(nw.col("a").drop_nulls()).agg(nw.col("x").max())
+    context: Any = (
+        pytest.raises(
+            NotImplementedError,
+            match="'drop_nulls' is not implemented for",
+        )
+        if (df.implementation.is_spark_like() or df.implementation.is_duckdb())
+        and any(infer_kind(expr, str_as_lit=True) is ExprKind.FILTRATION for expr in keys)
+        else pytest.raises(
+            ComputeError,
+            match=r"Group by is not \(yet\) supported with keys that are not transformation expressions",
+        )
+    )
+    with context:
+        df.group_by(keys).agg(nw.col("x").max())
