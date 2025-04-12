@@ -44,6 +44,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
         *,
         drop_null_keys: bool,
     ) -> None:
+        self._df = df
         self._compliant_frame, self._keys, self._output_key_names = self._init_parsing(
             compliant_frame=df, keys=keys
         )
@@ -306,10 +307,8 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
                 message=".*a length 1 tuple will be returned",
                 category=FutureWarning,
             )
-            for key, group in self._grouped:
+            for key, _indices in self._grouped.indices.items():
                 yield (
                     key,
-                    self.compliant._with_native(group).rename(
-                        dict(zip(self._keys, self._output_key_names))
-                    ),
+                    self.compliant._with_native(self._df.native.iloc[_indices]),
                 )

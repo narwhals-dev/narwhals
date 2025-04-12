@@ -41,11 +41,13 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
     def __init__(
         self, df: ArrowDataFrame, keys: Sequence[ArrowExpr], /, *, drop_null_keys: bool
     ) -> None:
+        self._df = df
         frame, self._keys, self._output_key_names = self._init_parsing(
             compliant_frame=df, keys=keys
         )
         self._compliant_frame = frame.drop_nulls(self._keys) if drop_null_keys else frame
         self._grouped = pa.TableGroupBy(self.compliant.native, self._keys)
+        self._drop_null_keys = drop_null_keys
 
     def agg(self, *exprs: ArrowExpr) -> ArrowDataFrame:
         self._ensure_all_simple(exprs)
@@ -141,10 +143,15 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
         mapping = dict(zip(self._keys, self._output_key_names))
 
         table = table.add_column(i=0, field_=col_token, column=key_values)
-        table = table.rename_columns([mapping.get(c, c) for c in table.column_names])
+
+        original_table = self._df
+        if self._drop_null_keys:
+            original_table = original_table.drop_nulls(subset=list(mapping.values()))
+
         for v in pc.unique(key_values):
-            t = self.compliant._with_native(
-                table.filter(pc.equal(table[col_token], v)).drop([col_token])
-            )
-            row = t.simple_select(*self._output_key_names).row(0)
-            yield tuple(extract_py_scalar(el) for el in row), t
+            _mask = pc.equal(table[col_token], v)
+            group = self.compliant._with_native(original_table.native.filter(_mask))
+            t = self.compliant._with_native(table.filter(_mask))
+
+            row = t.simple_select(*self._keys).row(0)
+            yield tuple(extract_py_scalar(el) for el in row), group

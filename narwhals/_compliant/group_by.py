@@ -19,6 +19,7 @@ from narwhals._compliant.typing import CompliantLazyFrameAny
 from narwhals._compliant.typing import CompliantLazyFrameT_co
 from narwhals._compliant.typing import DepthTrackingExprAny
 from narwhals._compliant.typing import DepthTrackingExprT_contra
+from narwhals._compliant.typing import EagerDataFrameAny
 from narwhals._compliant.typing import EagerDataFrameT_co
 from narwhals._compliant.typing import EagerExprT_contra
 from narwhals._compliant.typing import LazyExprT_contra
@@ -167,6 +168,7 @@ class EagerGroupBy(
     Protocol38[EagerDataFrameT_co, EagerExprT_contra],
 ):
     _keys: list[str]
+    _df: EagerDataFrameAny
 
     def __iter__(self) -> Iterator[tuple[Any, EagerDataFrameT_co]]: ...
 
