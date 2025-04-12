@@ -565,7 +565,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
                 )
             else:
                 partition_by_sql = f"partition by {window_inputs.expr}"
-            sql = f"row_number() over({partition_by_sql} {order_by_sql})"
+            sql = f"{FunctionExpression('row_number')} over({partition_by_sql} {order_by_sql})"
             return SQLExpression(sql) == lit(1)  # type: ignore[no-any-return, unused-ignore]
 
         return self._with_window_function(func)
@@ -580,7 +580,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
                 )
             else:
                 partition_by_sql = f"partition by {window_inputs.expr}"
-            sql = f"row_number() over({partition_by_sql} {order_by_sql})"
+            sql = f"{FunctionExpression('row_number')} over({partition_by_sql} {order_by_sql})"
             return SQLExpression(sql) == lit(1)  # type: ignore[no-any-return, unused-ignore]
 
         return self._with_window_function(func)
