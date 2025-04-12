@@ -976,34 +976,50 @@ class PandasLikeSeries(EagerSeries[Any]):
                 data["breakpoint"] = []
             data["count"] = []
             return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
-        elif self.native.count() < 1:
+
+        if self.native.count() < 1:
             if bins is not None:
                 data = {"breakpoint": bins[1:], "count": zeros(shape=len(bins) - 1)}
             else:
                 count = cast("int", bin_count)
-                data = {"breakpoint": linspace(0, 1, count), "count": zeros(shape=count)}
+                if bin_count == 1:
+                    data = {"breakpoint": [1.0], "count": [0]}
+                else:
+                    data = {
+                        "breakpoint": linspace(0, 1, count + 1)[1:],
+                        "count": zeros(shape=count),
+                    }
             if not include_breakpoint:
                 del data["breakpoint"]
             return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
 
-        elif bin_count is not None:  # use Polars binning behavior
+        if bin_count is not None:
+            # use Polars binning behavior
             lower, upper = self.native.min(), self.native.max()
-            pad_lowest_bin = False
             if lower == upper:
                 lower -= 0.5
                 upper += 0.5
-            else:
-                pad_lowest_bin = True
+
+            if bin_count == 1:
+                data = {
+                    "breakpoint": [upper],
+                    "count": [self.native.count()],
+                }
+                if not include_breakpoint:
+                    del data["breakpoint"]
+                return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
 
             bins = linspace(lower, upper, bin_count + 1)
-            if pad_lowest_bin and bins is not None:
-                bins[0] -= 0.001 * abs(bins[0]) if bins[0] != 0 else 0.001
             bin_count = None
 
         # pandas (2.2.*) .value_counts(bins=int) adjusts the lowest bin twice, result in improper counts.
         # pandas (2.2.*) .value_counts(bins=[...]) adjusts the lowest bin which should not happen since
         #   the bins were explicitly passed in.
-        categories = ns.cut(self.native, bins=bins if bin_count is None else bin_count)
+        categories = ns.cut(
+            self.native,
+            bins=bins if bin_count is None else bin_count,
+            include_lowest=True,  # Polars 1.27.0 always includes the lowest bin
+        )
         # modin (0.32.0) .value_counts(...) silently drops bins with empty observations, .reindex
         #   is necessary to restore these bins.
         result = categories.value_counts(dropna=True, sort=False).reindex(
