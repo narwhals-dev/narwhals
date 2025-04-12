@@ -395,6 +395,7 @@ def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
     reason="polars cannot be used for compatibility checks since narwhals aims to mimic polars>=1.27 behavior",
 )
 @pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
+@pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
 @pytest.mark.slow
 def test_hist_bin_hypotheis(
     library: str, data: list[float], bin_deltas: list[float]

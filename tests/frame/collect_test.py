@@ -6,7 +6,6 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-import narwhals.stable.v1 as nw_v1
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.utils import Implementation
@@ -164,11 +163,11 @@ def test_collect_with_kwargs(constructor: Constructor) -> None:
         nw.Implementation.PYARROW: {},
     }
 
-    df = nw_v1.from_native(constructor(data))
+    df = nw.from_native(constructor(data))
 
     result = (
         df.lazy()
-        .select(nw_v1.col("a", "b").sum())
+        .select(nw.col("a", "b").sum())
         .collect(**collect_kwargs.get(df.implementation, {}))  # type: ignore[arg-type]
     )
 
