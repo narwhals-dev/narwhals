@@ -11,8 +11,8 @@ from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-def test_agg_shorthands(constructor_eager: ConstructorEager) -> None:
-    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]}))
+def test_toplevel(constructor_eager: ConstructorEager) -> None:
+    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = df.select(
         min=nw_v1.min("a"),
         max=nw_v1.max("a"),
@@ -24,6 +24,11 @@ def test_agg_shorthands(constructor_eager: ConstructorEager) -> None:
         max_h=nw_v1.max_horizontal("a"),
         mean_h=nw_v1.mean_horizontal("a"),
         len=nw_v1.len(),
+        concat_str=nw_v1.concat_str(nw_v1.lit("a"), nw_v1.lit("b")),
+        any_h=nw_v1.any_horizontal(nw_v1.lit(True), nw_v1.lit(True)),  # noqa: FBT003
+        all_h=nw_v1.all_horizontal(nw_v1.lit(True), nw_v1.lit(True)),  # noqa: FBT003
+        first=nw_v1.nth(0),
+        no_first=nw_v1.exclude("a"),
     )
     expected = {
         "min": [1, 1, 1],
@@ -36,6 +41,11 @@ def test_agg_shorthands(constructor_eager: ConstructorEager) -> None:
         "max_h": [1, 2, 3],
         "mean_h": [1, 2, 3],
         "len": [3, 3, 3],
+        "concat_str": ["ab", "ab", "ab"],
+        "any_h": [True, True, True],
+        "all_h": [True, True, True],
+        "first": [1, 2, 3],
+        "no_first": [4, 5, 6],
     }
     assert_equal_data(result, expected)
 
