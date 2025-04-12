@@ -123,3 +123,10 @@ def test_is_ordered_categorical_interchange_protocol() -> None:
     assert nw_v1.is_ordered_categorical(
         nw_v1.from_native(df, eager_or_interchange_only=True)["a"]
     )
+
+
+def test_all_nulls_pandas() -> None:
+    assert (
+        nw_v1.from_native(pd.Series([None] * 3, dtype="object"), series_only=True).dtype
+        == nw_v1.Object
+    )

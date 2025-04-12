@@ -12,7 +12,6 @@ import pandas as pd
 import pytest
 
 import narwhals as nw
-import narwhals.stable.v1 as nw_v1
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
@@ -337,10 +336,6 @@ def test_all_nulls_pandas() -> None:
     assert (
         nw.from_native(pd.Series([None] * 3, dtype="object"), series_only=True).dtype
         == nw.String
-    )
-    assert (
-        nw_v1.from_native(pd.Series([None] * 3, dtype="object"), series_only=True).dtype
-        == nw_v1.Object
     )
 
 
