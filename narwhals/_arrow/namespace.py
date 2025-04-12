@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Literal
+from typing import Sequence
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -17,9 +18,6 @@ from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import align_series_full_broadcast
 from narwhals._arrow.utils import cast_to_comparable_string_types
-from narwhals._arrow.utils import diagonal_concat
-from narwhals._arrow.utils import horizontal_concat
-from narwhals._arrow.utils import vertical_concat
 from narwhals._compliant import CompliantThen
 from narwhals._compliant import EagerNamespace
 from narwhals._compliant import EagerWhen
@@ -211,30 +209,46 @@ class ArrowNamespace(
             context=self,
         )
 
+    def _concat_diagonal(self, dfs: Sequence[pa.Table], /) -> pa.Table:
+        if self._backend_version >= (14,):
+            return pa.concat_tables(dfs, promote_options="default")
+        return pa.concat_tables(dfs, promote=True)
+
+    def _concat_horizontal(self, dfs: Sequence[pa.Table], /) -> pa.Table:
+        names = [name for df in dfs for name in df.column_names]
+
+        if len(set(names)) < len(names):  # pragma: no cover
+            msg = "Expected unique column names"
+            raise ValueError(msg)
+        arrays = list(chain.from_iterable(df.itercolumns() for df in dfs))
+        return pa.Table.from_arrays(arrays, names=names)
+
+    def _concat_vertical(self, dfs: Sequence[pa.Table], /) -> pa.Table:
+        cols_0 = dfs[0].column_names
+        for i, df in enumerate(dfs[1:], start=1):
+            cols_current = df.column_names
+            if cols_current != cols_0:
+                msg = (
+                    "unable to vstack, column names don't match:\n"
+                    f"   - dataframe 0: {cols_0}\n"
+                    f"   - dataframe {i}: {cols_current}\n"
+                )
+                raise TypeError(msg)
+        return pa.concat_tables(dfs)
+
     def concat(
         self, items: Iterable[ArrowDataFrame], *, how: ConcatMethod
     ) -> ArrowDataFrame:
         dfs = [item.native for item in items]
-
-        if not dfs:
-            msg = "No dataframes to concatenate"  # pragma: no cover
-            raise AssertionError(msg)
-
         if how == "horizontal":
-            result_table = horizontal_concat(dfs)
+            native = self._concat_horizontal(dfs)
         elif how == "vertical":
-            result_table = vertical_concat(dfs)
+            native = self._concat_vertical(dfs)
         elif how == "diagonal":
-            result_table = diagonal_concat(dfs, self._backend_version)
+            native = self._concat_diagonal(dfs)
         else:
             raise NotImplementedError
-
-        return ArrowDataFrame(
-            result_table,
-            backend_version=self._backend_version,
-            version=self._version,
-            validate_column_names=True,
-        )
+        return self._dataframe.from_native(native, context=self)
 
     @property
     def selectors(self: Self) -> ArrowSelectorNamespace:
