@@ -11,6 +11,7 @@ from typing import cast
 
 from duckdb import CoalesceOperator
 from duckdb import FunctionExpression
+from duckdb import StarExpression
 from duckdb.typing import DuckDBPyType
 
 from narwhals._compliant import LazyExpr
@@ -692,11 +693,11 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
         if method in {"min", "max", "average"}:
-            func_name = "rank"
+            func = FunctionExpression("rank")
         elif method == "dense":
-            func_name = "dense_rank"
+            func = FunctionExpression("dense_rank")
         else:  # method == "ordinal"
-            func_name = "row_number"
+            func = FunctionExpression("row_number")
 
         def _rank(_input: duckdb.Expression) -> duckdb.Expression:
             if descending:
@@ -704,21 +705,22 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             else:
                 by_sql = f"{_input} asc nulls last"
             order_by_sql = f"order by {by_sql}"
+            count_expr = FunctionExpression("count", StarExpression())
 
             if method == "max":
-                sql = (
-                    f"{func_name}() OVER ({order_by_sql}) + "
-                    f"COUNT(*) OVER (PARTITION BY {_input}) - 1"
+                expr = (
+                    SQLExpression(f"{func} OVER ({order_by_sql})")
+                    + SQLExpression(f"{count_expr} OVER (PARTITION BY {_input})")
+                    - lit(1)
                 )
             elif method == "average":
-                sql = (
-                    f"{func_name}() OVER ({order_by_sql}) + "
-                    f"(COUNT(*) OVER (PARTITION BY {_input}) - 1) / 2.0"
-                )
+                expr = SQLExpression(f"{func} OVER ({order_by_sql})") + (
+                    SQLExpression(f"{count_expr} OVER (PARTITION BY {_input})") - lit(1)
+                ) / lit(2.0)
             else:
-                sql = f"{func_name}() OVER ({order_by_sql})"
+                expr = SQLExpression(f"{func} OVER ({order_by_sql})")
 
-            return when(_input.isnotnull(), SQLExpression(sql))
+            return when(_input.isnotnull(), expr)
 
         return self._with_callable(_rank)
 
