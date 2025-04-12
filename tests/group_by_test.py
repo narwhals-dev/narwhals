@@ -1,5 +1,7 @@
+# ruff: noqa: ERA001
 from __future__ import annotations
 
+import os
 from contextlib import nullcontext
 from typing import Any
 from typing import Mapping
@@ -11,6 +13,7 @@ import pytest
 import narwhals.stable.v1 as nw
 from narwhals.exceptions import InvalidOperationError
 from tests.utils import PANDAS_VERSION
+from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -19,6 +22,8 @@ from tests.utils import assert_equal_data
 data: Mapping[str, Any] = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
 
 df_pandas = pd.DataFrame(data)
+
+POLARS_COLLECT_STREAMING_ENGINE = os.environ.get("NARWHALS_POLARS_NEW_STREAMING", None)
 
 
 def test_group_by_complex() -> None:
@@ -454,7 +459,33 @@ def test_fancy_functions(constructor: Constructor) -> None:
 
 
 @pytest.mark.parametrize("drop_null_keys", [True, False])
-def test_group_by_expr(constructor: Constructor, *, drop_null_keys: bool) -> None:
+def test_group_by_expr(
+    request: pytest.FixtureRequest, constructor: Constructor, *, drop_null_keys: bool
+) -> None:
+    if "polars_lazy" in str(constructor) and POLARS_COLLECT_STREAMING_ENGINE:
+        # Blocked by upstream issue as of polars==1.27.1
+        # See: https://github.com/pola-rs/polars/issues/22238
+        request.applymarker(pytest.mark.xfail)
+
+    if "polars_lazy" in str(constructor) and POLARS_VERSION <= (0, 20, 16):
+        # The following repro works for polars>=0.20.17, but fails with `ColumnNotFoundError`
+        # for previous versions:
+        # ```
+        # import polars as pl
+        # data = {"a": [1, 1, 2, 2, -1], "x": [0, 1, 2, 3, 4]}
+        # df = pl.LazyFrame(data)
+        # result = (
+        #     df.group_by(
+        #         pl.col("a").abs(),
+        #         pl.col("a").abs().alias("a_with_alias"),
+        #     )
+        #     .agg(pl.col("x").sum())
+        #     .drop_nulls(["a", "a_with_alias"])
+        #     .collect()
+        # )
+        # ```
+        request.applymarker(pytest.mark.xfail)
+
     data = {"a": [1, 1, 2, 2, -1], "x": [0, 1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
     result = (
