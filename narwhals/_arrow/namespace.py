@@ -213,7 +213,7 @@ class ArrowNamespace(
     def _concat_diagonal(self, dfs: Sequence[pa.Table], /) -> pa.Table:
         if self._backend_version >= (14,):
             return pa.concat_tables(dfs, promote_options="default")  # type: ignore[arg-type]
-        return pa.concat_tables(dfs, promote=True)  # type: ignore[arg-type]
+        return pa.concat_tables(dfs, promote=True)  # type: ignore[arg-type] # pragma: no cover
 
     def _concat_horizontal(self, dfs: Sequence[pa.Table], /) -> pa.Table:
         names = [name for df in dfs for name in df.column_names]
