@@ -6,7 +6,7 @@ import pandas as pd
 import pyarrow as pa
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.exceptions import NarwhalsError

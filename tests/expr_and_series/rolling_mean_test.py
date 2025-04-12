@@ -9,7 +9,7 @@ import pyarrow as pa
 import pytest
 from hypothesis import given
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
@@ -40,9 +40,6 @@ kwargs_and_expected: dict[str, dict[str, Any]] = {
 }
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Expr.rolling_mean` is being called from the stable API although considered an unstable feature."
-)
 def test_rolling_mean_expr(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
     result = df.select(
@@ -100,9 +97,6 @@ def test_rolling_mean_hypothesis(center: bool, values: list[float]) -> None:  # 
     assert_equal_data(result, expected_dict)
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Expr.rolling_mean` is being called from the stable API although considered an unstable feature."
-)
 @pytest.mark.parametrize(
     ("expected_a", "window_size", "min_samples", "center"),
     [
@@ -158,9 +152,6 @@ def test_rolling_mean_expr_lazy_grouped(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Expr.rolling_mean` is being called from the stable API although considered an unstable feature."
-)
 @pytest.mark.parametrize(
     ("expected_a", "window_size", "min_samples", "center"),
     [

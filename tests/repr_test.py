@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 
 
 def test_repr() -> None:
@@ -50,7 +50,7 @@ def test_repr() -> None:
     result = nw.from_native(duckdb.table("df")).__repr__()
     expected = (
         "┌───────────────────┐\n"
-        "|Narwhals DataFrame |\n"
+        "|Narwhals LazyFrame |\n"
         "|-------------------|\n"
         "|┌───────┬─────────┐|\n"
         "|│   a   │    b    │|\n"
@@ -68,7 +68,7 @@ def test_repr() -> None:
     result = nw.from_native(duckdb.table("df")).__repr__()
     expected = (
         "┌───────────────────────────────────────┐\n"
-        "|          Narwhals DataFrame           |\n"
+        "|          Narwhals LazyFrame           |\n"
         "| Use `.to_native` to see native output |\n"
         "└───────────────────────────────────────┘"
     )

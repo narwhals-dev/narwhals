@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import is_windows

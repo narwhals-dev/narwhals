@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import pyarrow as pa
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals._arrow.utils import parse_datetime_format
 from tests.utils import PANDAS_VERSION
 from tests.utils import PYARROW_VERSION
