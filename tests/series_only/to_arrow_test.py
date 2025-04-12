@@ -6,7 +6,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager

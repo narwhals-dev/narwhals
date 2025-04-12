@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import MultiOutputExpressionError
 from narwhals.exceptions import ShapeError
 from tests.utils import Constructor
