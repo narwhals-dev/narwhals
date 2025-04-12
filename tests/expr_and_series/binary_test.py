@@ -8,9 +8,9 @@ from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
 
-def test_expr_binary(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_expr_binary(constructor: Constructor) -> None:
     if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df_raw = constructor(data)
     result = nw.from_native(df_raw).with_columns(
