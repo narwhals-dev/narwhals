@@ -51,12 +51,9 @@ def test_allh_all(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_allh_nth(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
-) -> None:
+def test_allh_nth(constructor: Constructor) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 0):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     data = {
         "a": [False, False, True],
         "b": [False, True, True],

@@ -119,13 +119,11 @@ def test_missing_columns(
             df.select(nw.col("fdfa"))
 
 
-def test_left_to_right_broadcasting(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
+def test_left_to_right_broadcasting(constructor: Constructor) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     result = df.select(nw.col("a") + nw.col("b").sum())
     expected = {"a": [16, 16, 17]}
