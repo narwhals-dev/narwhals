@@ -10,7 +10,7 @@ import pandas as pd
 import pyarrow as pa
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.stable.v1.dependencies import get_cudf
 from tests.utils import PANDAS_VERSION
 

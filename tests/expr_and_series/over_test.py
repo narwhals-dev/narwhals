@@ -7,7 +7,7 @@ import pandas as pd
 import pyarrow as pa
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import LengthChangingExprError
 from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
