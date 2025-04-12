@@ -194,7 +194,6 @@ def test_hist_count(
     *,
     params: dict[str, Any],
     include_breakpoint: bool,
-    request: pytest.FixtureRequest,
 ) -> None:
     if library == "pandas":
         constructor_eager: Any = pd.DataFrame
@@ -204,8 +203,8 @@ def test_hist_count(
     elif library == "pyarrow":
         pa = pytest.importorskip("pyarrow")
         constructor_eager = pa.table
-    if "pyarrow" in str(constructor_eager) and PYARROW_VERSION < (13,):
-        request.applymarker(pytest.mark.xfail)
+    if library == "pyarrow" and PYARROW_VERSION < (13,):
+        pytest.skip()
 
     df = nw.from_native(constructor_eager(data)).with_columns(
         float=nw.col("int").cast(nw.Float64),
@@ -263,11 +262,7 @@ def test_hist_count(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
 @pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
-def test_hist_count_no_spread(
-    library: str,
-    *,
-    request: pytest.FixtureRequest,
-) -> None:
+def test_hist_count_no_spread(library: str) -> None:
     if library == "pandas":
         constructor_eager: Any = pd.DataFrame
     elif library == "polars":
@@ -276,8 +271,8 @@ def test_hist_count_no_spread(
     elif library == "pyarrow":
         pa = pytest.importorskip("pyarrow")
         constructor_eager = pa.table
-    if "pyarrow" in str(constructor_eager) and PYARROW_VERSION < (13,):
-        request.applymarker(pytest.mark.xfail)
+    if library == "pyarrow" and PYARROW_VERSION < (13,):
+        pytest.skip()
 
     data = {
         "all_zero": [0, 0, 0],
@@ -324,7 +319,6 @@ def test_hist_bin_and_bin_count() -> None:
 def test_hist_no_data(
     library: str,
     *,
-    request: pytest.FixtureRequest,
     include_breakpoint: bool,
 ) -> None:
     if library == "pandas":
@@ -335,8 +329,8 @@ def test_hist_no_data(
     elif library == "pyarrow":
         pa = pytest.importorskip("pyarrow")
         constructor_eager = pa.table
-    if "pyarrow" in str(constructor_eager) and PYARROW_VERSION < (13,):
-        request.applymarker(pytest.mark.xfail)
+    if library == "pyarrow" and PYARROW_VERSION < (13,):
+        pytest.skip()
     s = nw.from_native(constructor_eager({"values": []})).select(
         nw.col("values").cast(nw.Float64)
     )["values"]
@@ -369,7 +363,7 @@ def test_hist_small_bins(library: str) -> None:
     elif library == "pyarrow":
         pa = pytest.importorskip("pyarrow")
         constructor_eager = pa.table
-    if "pyarrow" in str(constructor_eager) and PYARROW_VERSION < (13,):
+    if library == "pyarrow" and PYARROW_VERSION < (13,):
         pytest.skip()
     s = nw.from_native(constructor_eager({"values": [1, 2, 3]}))
     result = s["values"].hist(bins=None, bin_count=None)
@@ -499,6 +493,8 @@ def test_hist_count_hypothesis(
     elif library == "pyarrow":
         pa = pytest.importorskip("pyarrow")
         constructor_eager = pa.table
+    if library == "pyarrow" and PYARROW_VERSION < (13,):
+        pytest.skip()
 
     df = nw.from_native(constructor_eager({"values": data})).select(
         nw.col("values").cast(nw.Float64)
