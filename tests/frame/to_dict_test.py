@@ -3,7 +3,6 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-import narwhals.stable.v1 as nw_v1
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -14,16 +13,6 @@ from tests.utils import assert_equal_data
 def test_to_dict(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    result = df.to_dict(as_series=False)
-    assert result == data
-
-
-@pytest.mark.filterwarnings(
-    "ignore:.*all arguments of to_dict except for the argument:FutureWarning"
-)
-def test_to_dict_v1(constructor_eager: ConstructorEager) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
-    df = nw_v1.from_native(constructor_eager(data), eager_only=True)
     result = df.to_dict(as_series=False)
     assert result == data
 

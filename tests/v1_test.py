@@ -91,3 +91,10 @@ def test_by_name(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
     result_eager = df.collect().select(nw_v1.col("a").alias("b"), "a")
     assert_equal_data(result_eager, expected)
+
+
+def test_values_counts_v1(constructor_eager: ConstructorEager) -> None:
+    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
+    result = df["a"].value_counts().sort("a")
+    expected = {"a": [1, 2, 3], "count": [1, 1, 1]}
+    assert_equal_data(result, expected)

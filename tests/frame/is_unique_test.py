@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import narwhals as nw
-import narwhals.stable.v1 as nw_v1
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -12,10 +11,6 @@ def test_is_unique(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(df_raw, eager_only=True)
     result = nw.concat([df, df.head(1)]).is_unique()
     expected = {"is_unique": [False, True, True, False]}
-    assert_equal_data({"is_unique": result}, expected)
-
-    df = nw_v1.from_native(df_raw, eager_only=True)
-    result = nw_v1.concat([df, df.head(1)]).is_unique()
     assert_equal_data({"is_unique": result}, expected)
 
 

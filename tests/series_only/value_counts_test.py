@@ -5,7 +5,6 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-import narwhals.stable.v1 as nw_v1
 from tests.utils import PANDAS_VERSION
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -48,10 +47,3 @@ def test_value_counts(
         sort=False, name=name, normalize=normalize
     ).sort(expected_name, descending=True)
     assert_equal_data(unsorted_result, expected)
-
-
-def test_values_counts_v1(constructor_eager: ConstructorEager) -> None:
-    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
-    result = df["a"].value_counts().sort("a")
-    expected = {"a": [1, 2, 3], "count": [1, 1, 1]}
-    assert_equal_data(result, expected)
