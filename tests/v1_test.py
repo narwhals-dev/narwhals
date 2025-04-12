@@ -29,6 +29,7 @@ def test_agg_shorthands(constructor_eager: ConstructorEager) -> None:
         "sum_h": [1, 2, 3],
         "min_h": [1, 2, 3],
         "max_h": [1, 2, 3],
+        "mean_h": [1, 2, 3],
         "len": [3, 3, 3],
     }
     assert_equal_data(result, expected)
