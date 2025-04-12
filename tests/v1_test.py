@@ -86,8 +86,8 @@ def test_join(constructor_eager: ConstructorEager) -> None:
 
 def test_by_name(constructor_eager: ConstructorEager) -> None:
     df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]})).lazy()
-    result = df.select("a")
-    expected = {"a": [1, 2, 3]}
+    result = df.select(nw_v1.col("a").alias("b"), "a")
+    expected = {"b": [1, 2, 3], "a": [1, 2, 3]}
     assert_equal_data(result, expected)
-    result_eager = df.collect().select("a")
+    result_eager = df.collect().select(nw_v1.col("a").alias("b"), "a")
     assert_equal_data(result_eager, expected)
