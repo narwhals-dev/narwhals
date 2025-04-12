@@ -43,6 +43,7 @@ if TYPE_CHECKING:
     from narwhals.schema import Schema
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
+    from narwhals.typing import JoinStrategy
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -446,7 +447,7 @@ class PolarsDataFrame:
         self: Self,
         other: Self,
         *,
-        how: Literal["inner", "left", "full", "cross", "semi", "anti"],
+        how: JoinStrategy,
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
         suffix: str,
@@ -672,7 +673,7 @@ class PolarsLazyFrame:
         self: Self,
         other: Self,
         *,
-        how: Literal["inner", "left", "full", "cross", "semi", "anti"],
+        how: JoinStrategy,
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
         suffix: str,

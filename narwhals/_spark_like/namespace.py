@@ -4,7 +4,6 @@ import operator
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Iterable
-from typing import Literal
 from typing import Sequence
 
 from narwhals._compliant import CompliantThen
@@ -23,6 +22,7 @@ if TYPE_CHECKING:
 
     from narwhals._spark_like.dataframe import SQLFrameDataFrame  # noqa: F401
     from narwhals.dtypes import DType
+    from narwhals.typing import ConcatMethod
     from narwhals.utils import Implementation
     from narwhals.utils import Version
 
@@ -189,19 +189,9 @@ class SparkLikeNamespace(
         )
 
     def concat(
-        self: Self,
-        items: Iterable[SparkLikeLazyFrame],
-        *,
-        how: Literal["horizontal", "vertical", "diagonal"],
+        self, items: Iterable[SparkLikeLazyFrame], *, how: ConcatMethod
     ) -> SparkLikeLazyFrame:
         dfs = [item._native_frame for item in items]
-        if how == "horizontal":
-            msg = (
-                "Horizontal concatenation is not supported for LazyFrame backed by "
-                "a PySpark DataFrame."
-            )
-            raise NotImplementedError(msg)
-
         if how == "vertical":
             cols_0 = dfs[0].columns
             for i, df in enumerate(dfs[1:], start=1):

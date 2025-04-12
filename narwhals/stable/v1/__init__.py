@@ -92,6 +92,7 @@ if TYPE_CHECKING:
 
     from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
+    from narwhals.typing import ConcatMethod
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
     from narwhals.typing import IntoLazyFrameT
@@ -996,7 +997,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).head(n),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
+            self._metadata.with_kind_and_closeable_window(ExprKind.FILTRATION),
         )
 
     def tail(self: Self, n: int = 10) -> Self:
@@ -1010,7 +1011,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).tail(n),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
+            self._metadata.with_kind_and_closeable_window(ExprKind.FILTRATION),
         )
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
@@ -1025,7 +1026,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
+            self._metadata.with_kind_and_closeable_window(ExprKind.FILTRATION),
         )
 
     def unique(self: Self, *, maintain_order: bool | None = None) -> Self:
@@ -1064,7 +1065,7 @@ class Expr(NwExpr):
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             ),
-            self._metadata.with_extra_open_window(),
+            self._metadata.with_uncloseable_window(),
         )
 
     def arg_true(self: Self) -> Self:
@@ -1075,7 +1076,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_true(),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
+            self._metadata.with_kind_and_closeable_window(ExprKind.FILTRATION),
         )
 
     def sample(
@@ -2059,11 +2060,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return _stableify(nw.max_horizontal(*exprs))
 
 
-def concat(
-    items: Iterable[FrameT],
-    *,
-    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> FrameT:
+def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT:
     """Concatenate multiple DataFrames, LazyFrames into a single entity.
 
     Arguments:
@@ -2072,12 +2069,13 @@ def concat(
 
             - vertical: Concatenate vertically. Column names must match.
             - horizontal: Concatenate horizontally. If lengths don't match, then
-                missing rows are filled with null values.
+                missing rows are filled with null values. This is only supported
+                when all inputs are (eager) DataFrames.
             - diagonal: Finds a union between the column schemas and fills missing column
                 values with null.
 
     Returns:
-        A new DataFrame, Lazyframe resulting from the concatenation.
+        A new DataFrame or LazyFrame resulting from the concatenation.
 
     Raises:
         TypeError: The items to concatenate should either all be eager, or all lazy
