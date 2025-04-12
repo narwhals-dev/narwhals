@@ -73,3 +73,21 @@ def test_constructors() -> None:
         nw_v1.from_arrow(pd.DataFrame({"a": [1, 2, 3]}), backend="pandas"),
         {"a": [1, 2, 3]},
     )
+
+
+def test_join(constructor_eager: ConstructorEager) -> None:
+    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]})).lazy()
+    result = df.join(df, how="inner", on="a")  # type: ignore[arg-type]
+    expected = {"a": [1, 2, 3]}
+    assert_equal_data(result, expected)
+    result_eager = df.collect().join(df.collect(), how="inner", on="a")
+    assert_equal_data(result_eager, expected)
+
+
+def test_by_name(constructor_eager: ConstructorEager) -> None:
+    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]})).lazy()
+    result = df.select("a")
+    expected = {"a": [1, 2, 3]}
+    assert_equal_data(result, expected)
+    result_eager = df.collect().select("a")
+    assert_equal_data(result_eager, expected)
