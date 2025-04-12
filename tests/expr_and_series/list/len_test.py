@@ -38,7 +38,7 @@ def test_len_series(
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
 

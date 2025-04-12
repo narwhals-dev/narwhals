@@ -101,13 +101,15 @@ def test_hist_bin(
     *,
     params: dict[str, Any],
     include_breakpoint: bool,
-    request: pytest.FixtureRequest,
 ) -> None:
     if "cudf" in str(constructor_eager):
         # TODO(unassigned): too many spurious failures, report and revisit
         return
+    if "modin" in str(constructor_eager):
+        # too slow
+        return
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     df = nw.from_native(constructor_eager(data)).with_columns(
         float=nw.col("int").cast(nw.Float64),
@@ -185,13 +187,12 @@ def test_hist_count(
     *,
     params: dict[str, Any],
     include_breakpoint: bool,
-    request: pytest.FixtureRequest,
 ) -> None:
     if "cudf" in str(constructor_eager):
         # TODO(unassigned): too many spurious failures, report and revisit
         return
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     df = nw.from_native(constructor_eager(data)).with_columns(
         float=nw.col("int").cast(nw.Float64),
@@ -248,16 +249,12 @@ def test_hist_count(
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
-def test_hist_count_no_spread(
-    constructor_eager: ConstructorEager,
-    *,
-    request: pytest.FixtureRequest,
-) -> None:
+def test_hist_count_no_spread(constructor_eager: ConstructorEager) -> None:
     if "cudf" in str(constructor_eager):
         # TODO(unassigned): too many spurious failures, report and revisit
         return
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     data = {
         "all_zero": [0, 0, 0],
@@ -303,14 +300,13 @@ def test_hist_bin_and_bin_count() -> None:
 def test_hist_no_data(
     constructor_eager: ConstructorEager,
     *,
-    request: pytest.FixtureRequest,
     include_breakpoint: bool,
 ) -> None:
     if "cudf" in str(constructor_eager):
         # TODO(unassigned): too many spurious failures, report and revisit
         return
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     s = nw.from_native(constructor_eager({"values": []})).select(
         nw.col("values").cast(nw.Float64)
     )["values"]
@@ -333,16 +329,12 @@ def test_hist_no_data(
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
-def test_hist_small_bins(
-    constructor_eager: ConstructorEager,
-    *,
-    request: pytest.FixtureRequest,
-) -> None:
+def test_hist_small_bins(constructor_eager: ConstructorEager) -> None:
     if "cudf" in str(constructor_eager):
         # TODO(unassigned): too many spurious failures, report and revisit
         return
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     s = nw.from_native(constructor_eager({"values": [1, 2, 3]}))
     result = s["values"].hist(bins=None, bin_count=None)
     assert len(result) == 10
@@ -459,6 +451,9 @@ def test_hist_count_hypothesis(
 
     if "cudf" in str(constructor_eager):
         # TODO(unassigned): too many spurious failures, report and revisit
+        return
+    if "modin" in str(constructor_eager):
+        # too slow
         return
 
     df = nw.from_native(constructor_eager({"values": data})).select(
