@@ -209,14 +209,16 @@ class ArrowNamespace(
             context=self,
         )
 
+    # NOTE: Stub issue fixed in https://github.com/zen-xu/pyarrow-stubs/pull/203
     def _concat_diagonal(self, dfs: Sequence[pa.Table], /) -> pa.Table:
         if self._backend_version >= (14,):
-            return pa.concat_tables(dfs, promote_options="default")
-        return pa.concat_tables(dfs, promote=True)
+            return pa.concat_tables(dfs, promote_options="default")  # type: ignore[arg-type]
+        return pa.concat_tables(dfs, promote=True)  # type: ignore[arg-type]
 
     def _concat_horizontal(self, dfs: Sequence[pa.Table], /) -> pa.Table:
         names = [name for df in dfs for name in df.column_names]
 
+        # NOTE: Think this is redundant, since we have `validate_column_names=True` later
         if len(set(names)) < len(names):  # pragma: no cover
             msg = "Expected unique column names"
             raise ValueError(msg)
@@ -234,7 +236,7 @@ class ArrowNamespace(
                     f"   - dataframe {i}: {cols_current}\n"
                 )
                 raise TypeError(msg)
-        return pa.concat_tables(dfs)
+        return pa.concat_tables(dfs)  # type: ignore[arg-type]
 
     def concat(
         self, items: Iterable[ArrowDataFrame], *, how: ConcatMethod
