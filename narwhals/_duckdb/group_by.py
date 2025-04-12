@@ -17,7 +17,7 @@ class DuckDBGroupBy(LazyGroupBy["DuckDBLazyFrame", "DuckDBExpr", "Expression"]):
     def __init__(
         self, df: DuckDBLazyFrame, keys: Sequence[DuckDBExpr], /, *, drop_null_keys: bool
     ) -> None:
-        frame, self._keys, self._output_key_names = self._magic_parsing(
+        frame, self._keys, self._output_key_names = self._init_parsing(
             compliant_frame=df, keys=keys
         )
         self._compliant_frame = (

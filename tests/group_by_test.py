@@ -471,13 +471,13 @@ def test_group_by_expr(constructor: Constructor, *, drop_null_keys: bool) -> Non
     }
     assert_equal_data(result, expected)
 
-    result = (
+    result_aliases = (
         df.group_by(nw.col("a").alias("x"), drop_null_keys=drop_null_keys)
         .agg(nw.col("x").mean().alias("y"))
         .sort("x")
     )
-    expected = {"x": [-1, 1, 2], "y": [4.0, 0.5, 2.5]}
-    assert_equal_data(result, expected)
+    expected_aliases = {"x": [-1, 1, 2], "y": [4.0, 0.5, 2.5]}
+    assert_equal_data(result_aliases, expected_aliases)
 
 
 def test_group_by_multioutput_expr(constructor: Constructor) -> None:

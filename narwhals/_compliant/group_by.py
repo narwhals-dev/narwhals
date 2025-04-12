@@ -79,7 +79,7 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     def agg(self, *exprs: CompliantExprT_contra) -> CompliantFrameT_co: ...
 
     @staticmethod
-    def _magic_parsing(
+    def _init_parsing(
         compliant_frame: CompliantLazyFrameAny, keys: Sequence[CompliantExprT_contra]
     ) -> tuple[CompliantLazyFrameAny, list[str], list[str]]:
         plx = compliant_frame.__narwhals_namespace__()
