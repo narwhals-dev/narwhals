@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 

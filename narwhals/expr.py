@@ -456,10 +456,6 @@ class Expr:
     ) -> Self:
         r"""Compute exponentially-weighted moving average.
 
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
-
         Arguments:
             com: Specify decay in terms of center of mass, $\gamma$, with <br> $\alpha = \frac{1}{1+\gamma}\forall\gamma\geq0$
             span: Specify decay in terms of span, $\theta$, with <br> $\alpha = \frac{2}{\theta + 1} \forall \theta \geq 1$
@@ -2211,10 +2207,6 @@ class Expr:
     ) -> Self:
         """Apply a rolling sum (moving sum) over the values.
 
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
-
         A window of length `window_size` will traverse the values. The resulting values
         will be aggregated to their sum.
 
@@ -2276,10 +2268,6 @@ class Expr:
         center: bool = False,
     ) -> Self:
         """Apply a rolling mean (moving mean) over the values.
-
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
 
         A window of length `window_size` will traverse the values. The resulting values
         will be aggregated to their mean.
@@ -2344,10 +2332,6 @@ class Expr:
     ) -> Self:
         """Apply a rolling variance (moving variance) over the values.
 
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
-
         A window of length `window_size` will traverse the values. The resulting values
         will be aggregated to their variance.
 
@@ -2409,10 +2393,6 @@ class Expr:
         ddof: int = 1,
     ) -> Self:
         """Apply a rolling standard deviation (moving standard deviation) over the values.
-
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
 
         A window of length `window_size` will traverse the values. The resulting values
         will be aggregated to their standard deviation.
