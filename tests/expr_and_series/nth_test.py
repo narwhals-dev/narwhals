@@ -26,10 +26,9 @@ def test_nth(
     constructor: Constructor,
     idx: int | list[int],
     expected: dict[str, list[int]],
-    request: pytest.FixtureRequest,
 ) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 0, 0):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     df = nw.from_native(constructor(data))
     result = df.select(nw.nth(idx))
     assert_equal_data(result, expected)
