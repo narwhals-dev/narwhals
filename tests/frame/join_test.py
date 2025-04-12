@@ -9,7 +9,6 @@ import pandas as pd
 import pytest
 
 import narwhals as nw
-import narwhals.stable.v1 as nw_v1
 from narwhals.utils import Implementation
 from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
@@ -108,7 +107,7 @@ def test_full_join_duplicate(constructor: Constructor) -> None:
     df_left = nw.from_native(constructor(df1)).lazy()
     df_right = nw.from_native(constructor(df2)).lazy()
 
-    exceptions: list[type[Exception]] = [nw_v1.exceptions.NarwhalsError]
+    exceptions: list[type[Exception]] = [nw.exceptions.NarwhalsError]
     if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
         from pyspark.errors import AnalysisException
 
@@ -255,17 +254,17 @@ def test_cross_join_non_pandas() -> None:
     [
         (
             ["antananarivo", "bob"],
-            (nw_v1.col("bob") < 5),
+            (nw.col("bob") < 5),
             {"antananarivo": [2], "bob": [6], "zor ro": [9]},
         ),
         (
             ["bob"],
-            (nw_v1.col("bob") < 5),
+            (nw.col("bob") < 5),
             {"antananarivo": [2], "bob": [6], "zor ro": [9]},
         ),
         (
             ["bob"],
-            (nw_v1.col("bob") > 5),
+            (nw.col("bob") > 5),
             {"antananarivo": [1, 3], "bob": [4, 4], "zor ro": [7.0, 8.0]},
         ),
     ],
@@ -273,7 +272,7 @@ def test_cross_join_non_pandas() -> None:
 def test_anti_join(
     constructor: Constructor,
     join_key: list[str],
-    filter_expr: nw_v1.Expr,
+    filter_expr: nw.Expr,
     expected: dict[str, list[Any]],
 ) -> None:
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
@@ -288,22 +287,22 @@ def test_anti_join(
     [
         (
             "antananarivo",
-            (nw_v1.col("bob") > 5),
+            (nw.col("bob") > 5),
             {"antananarivo": [2], "bob": [6], "zor ro": [9]},
         ),
         (
             ["antananarivo"],
-            (nw_v1.col("bob") > 5),
+            (nw.col("bob") > 5),
             {"antananarivo": [2], "bob": [6], "zor ro": [9]},
         ),
         (
             ["bob"],
-            (nw_v1.col("bob") < 5),
+            (nw.col("bob") < 5),
             {"antananarivo": [1, 3], "bob": [4, 4], "zor ro": [7, 8]},
         ),
         (
             ["antananarivo", "bob"],
-            (nw_v1.col("bob") < 5),
+            (nw.col("bob") < 5),
             {"antananarivo": [1, 3], "bob": [4, 4], "zor ro": [7, 8]},
         ),
     ],
@@ -311,7 +310,7 @@ def test_anti_join(
 def test_semi_join(
     constructor: Constructor,
     join_key: list[str],
-    filter_expr: nw_v1.Expr,
+    filter_expr: nw.Expr,
     expected: dict[str, list[Any]],
 ) -> None:
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
@@ -796,7 +795,7 @@ def test_join_duplicate_column_names(
     elif "modin" in str(constructor):
         exception = NotImplementedError
     else:
-        exception = nw_v1.exceptions.DuplicateError
+        exception = nw.exceptions.DuplicateError
     df = constructor({"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]})
     dfn = nw.from_native(df)
     with pytest.raises(exception):
