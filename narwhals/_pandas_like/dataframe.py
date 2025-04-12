@@ -1017,7 +1017,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         return self._with_native(self.native.iloc[offset::n], validate_column_names=False)
 
     def pivot(
-        self: Self,
+        self,
         on: Sequence[str],
         *,
         index: Sequence[str] | None,

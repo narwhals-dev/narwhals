@@ -168,10 +168,10 @@ class CompliantDataFrame(
     def lazy(self, *, backend: Implementation | None) -> CompliantLazyFrame[Any, Any]: ...
     def pivot(
         self,
-        on: str | Sequence[str],
+        on: Sequence[str],
         *,
-        index: str | Sequence[str] | None,
-        values: str | Sequence[str] | None,
+        index: Sequence[str] | None,
+        values: Sequence[str] | None,
         aggregate_function: Literal[
             "min", "max", "first", "last", "sum", "mean", "median", "len", None
         ],
