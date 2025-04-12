@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
+import narwhals.stable.v1 as nw_v1
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -11,6 +12,10 @@ def test_is_duplicated(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(df_raw, eager_only=True)
     result = nw.concat([df, df.head(1)]).is_duplicated()
     expected = {"is_duplicated": [True, False, False, True]}
+    assert_equal_data({"is_duplicated": result}, expected)
+
+    df = nw_v1.from_native(df_raw, eager_only=True)
+    result = nw_v1.concat([df, df.head(1)]).is_duplicated()
     assert_equal_data({"is_duplicated": result}, expected)
 
 

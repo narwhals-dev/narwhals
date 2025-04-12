@@ -5,7 +5,7 @@ import sys
 import pandas as pd
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 
 
 def test_polars(monkeypatch: pytest.MonkeyPatch) -> None:

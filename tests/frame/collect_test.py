@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-import narwhals.stable.v1 as nw_v1
+import narwhals as nw_v1
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.utils import Implementation
@@ -176,8 +176,8 @@ def test_collect_with_kwargs(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_collect_empty_pyspark(constructor: Constructor) -> None:
-    df = nw_v1.from_native(constructor({"a": [1, 2, 3]}))
-    df = df.filter(nw.col("a").is_null()).with_columns(b=nw.lit(None)).lazy()
-    result = df.collect()
+def test_collect_empty(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3]}))
+    lf = df.filter(nw.col("a").is_null()).with_columns(b=nw.lit(None)).lazy()
+    result = lf.collect()
     assert_equal_data(result, {"a": [], "b": []})

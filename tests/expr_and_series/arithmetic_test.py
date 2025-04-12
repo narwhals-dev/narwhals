@@ -7,7 +7,7 @@ import pytest
 from hypothesis import assume
 from hypothesis import given
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import DASK_VERSION
 from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION

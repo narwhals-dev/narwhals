@@ -4,7 +4,7 @@ from typing import Sequence
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import ShapeError
 from tests.utils import PANDAS_VERSION

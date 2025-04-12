@@ -255,6 +255,7 @@ omit = [
 exclude_also = [
   "if sys.version_info() <",
   "if .*implementation is Implementation.CUDF",
+  "if .*implementation is Implementation.MODIN",
   "if .*implementation is Implementation.PYSPARK",
   "if .*implementation.is_cudf",
   "if .*implementation.is_pyspark",

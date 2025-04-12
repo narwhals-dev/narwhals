@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import ShapeError
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor

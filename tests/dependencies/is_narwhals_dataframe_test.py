@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import narwhals as nw
-import narwhals.stable.v1 as nws
+import narwhals as nws
 from narwhals.stable.v1.dependencies import is_narwhals_dataframe
 
 if TYPE_CHECKING:
