@@ -962,9 +962,9 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
     def to_pandas(self: Self) -> pd.DataFrame:
         if self._implementation is Implementation.PANDAS:
             return self.native
-        elif self._implementation is Implementation.CUDF:  # pragma: no cover
+        elif self._implementation is Implementation.CUDF:
             return self.native.to_pandas()
-        elif self._implementation is Implementation.MODIN:  # pragma: no cover
+        elif self._implementation is Implementation.MODIN:
             return self.native._to_pandas()
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)

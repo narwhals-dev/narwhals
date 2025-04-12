@@ -258,10 +258,12 @@ exclude_also = [
   "if .*implementation is Implementation.MODIN",
   "if .*implementation is Implementation.PYSPARK",
   "if .*implementation.is_cudf",
+  "if .*implementation.is_modin",
   "if .*implementation.is_pyspark",
   'request.applymarker\(pytest.mark.xfail',
   'backend_version <',
   'if "cudf" in str\(constructor',
+  'if "modin" in str\(constructor',
   'if "pyspark" in str\(constructor',
   'pytest.skip\('
 ]
