@@ -10,7 +10,7 @@ import pandas as pd
 import pyarrow as pa
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import infer_kind
 from narwhals.exceptions import ComputeError

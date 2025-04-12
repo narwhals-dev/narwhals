@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
