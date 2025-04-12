@@ -8,6 +8,7 @@ import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw_v1
+from tests.utils import PANDAS_VERSION
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -109,3 +110,16 @@ def test_hist_v1(constructor_eager: ConstructorEager) -> None:
     result = df["a"].hist(bins=[-1, 1, 2])
     expected = {"breakpoint": [1, 2], "count": [2, 1]}
     assert_equal_data(result, expected)
+
+
+@pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="requires interchange protocol")
+def test_is_ordered_categorical_interchange_protocol() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = pd.DataFrame(
+        {"a": ["a", "b"]}, dtype=pd.CategoricalDtype(ordered=True)
+    ).__dataframe__()
+    assert nw_v1.is_ordered_categorical(
+        nw_v1.from_native(df, eager_or_interchange_only=True)["a"]
+    )
