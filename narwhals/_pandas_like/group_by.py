@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import collections
 import warnings
+from math import isnan
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import ClassVar
@@ -14,6 +15,7 @@ from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_columns
 from narwhals.utils import find_stacklevel
+from narwhals.utils import tupleify
 
 if TYPE_CHECKING:
     from narwhals._compliant.group_by import NarwhalsAggregation
@@ -44,6 +46,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
         drop_null_keys: bool,
     ) -> None:
         self._df = df
+        self._drop_null_keys = drop_null_keys
         (
             self._compliant_frame,
             self._keys,
@@ -306,5 +309,12 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
                 message=".*a length 1 tuple will be returned",
                 category=FutureWarning,
             )
-            for key, _indices in self._grouped.indices.items():
+
+            for key, _indices in self._grouped.groups.items():
+                tuplefied_key = tupleify(key)
+                if self._drop_null_keys and any(
+                    (k is None) or (isinstance(k, float) and isnan(k))
+                    for k in tuplefied_key
+                ):
+                    continue
                 yield (key, self.compliant._with_native(self._df.native.iloc[_indices]))

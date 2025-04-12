@@ -36,9 +36,8 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
+    from narwhals._compliant import CompliantGroupBy
     from narwhals._polars.expr import PolarsExpr
-    from narwhals._polars.group_by import PolarsGroupBy
-    from narwhals._polars.group_by import PolarsLazyGroupBy
     from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
@@ -373,10 +372,15 @@ class PolarsDataFrame:
         else:
             return self.native.to_dict(as_series=False)
 
-    def group_by(self: Self, *keys: PolarsExpr, drop_null_keys: bool) -> PolarsGroupBy:
+    def group_by(
+        self: Self, *keys: PolarsExpr, drop_null_keys: bool
+    ) -> CompliantGroupBy[PolarsDataFrame, Any]:
         from narwhals._polars.group_by import PolarsGroupBy
 
-        return PolarsGroupBy(self, keys, drop_null_keys=drop_null_keys)
+        return cast(
+            "CompliantGroupBy[PolarsDataFrame, Any]",
+            PolarsGroupBy(self, keys, drop_null_keys=drop_null_keys),
+        )
 
     def with_row_index(self: Self, name: str) -> Self:
         if self._backend_version < (0, 20, 4):
@@ -626,10 +630,13 @@ class PolarsLazyFrame:
 
     def group_by(
         self: Self, *keys: PolarsExpr, drop_null_keys: bool
-    ) -> PolarsLazyGroupBy:
+    ) -> CompliantGroupBy[PolarsLazyFrame, Any]:
         from narwhals._polars.group_by import PolarsLazyGroupBy
 
-        return PolarsLazyGroupBy(self, keys, drop_null_keys=drop_null_keys)
+        return cast(
+            "CompliantGroupBy[PolarsLazyFrame, Any]",
+            PolarsLazyGroupBy(self, keys, drop_null_keys=drop_null_keys),
+        )
 
     def with_row_index(self: Self, name: str) -> Self:
         if self._backend_version < (0, 20, 4):

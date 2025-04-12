@@ -299,7 +299,11 @@ def test_key_with_nulls_iter(
 ) -> None:
     if PANDAS_VERSION < (1, 0) and "pandas_constructor" in str(constructor_eager):
         pytest.skip("Grouping by null values is not supported in pandas < 1.0.0")
-    data = {"b": ["4", "5", None, "7"], "a": [1, 2, 3, 4], "c": ["4", "3", None, None]}
+    data = {
+        "b": [None, "4", "5", None, "7"],
+        "a": [None, 1, 2, 3, 4],
+        "c": [None, "4", "3", None, None],
+    }
     result = dict(
         nw.from_native(constructor_eager(data), eager_only=True)
         .group_by("b", "c", drop_null_keys=True)
