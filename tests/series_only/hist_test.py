@@ -111,7 +111,7 @@ def test_hist_bin(
     elif library == "polars":
         pl = pytest.importorskip("polars")
         constructor_eager = pl.DataFrame
-    elif library == "pyarrow":
+    else:
         pa = pytest.importorskip("pyarrow")
         constructor_eager = pa.table
 
@@ -200,7 +200,7 @@ def test_hist_count(
     elif library == "polars":
         pl = pytest.importorskip("polars")
         constructor_eager = pl.DataFrame
-    elif library == "pyarrow":
+    else:
         pa = pytest.importorskip("pyarrow")
         constructor_eager = pa.table
     if library == "pyarrow" and PYARROW_VERSION < (13,):
@@ -268,7 +268,7 @@ def test_hist_count_no_spread(library: str) -> None:
     elif library == "polars":
         pl = pytest.importorskip("polars")
         constructor_eager = pl.DataFrame
-    elif library == "pyarrow":
+    else:
         pa = pytest.importorskip("pyarrow")
         constructor_eager = pa.table
     if library == "pyarrow" and PYARROW_VERSION < (13,):
@@ -326,7 +326,7 @@ def test_hist_no_data(
     elif library == "polars":
         pl = pytest.importorskip("polars")
         constructor_eager = pl.DataFrame
-    elif library == "pyarrow":
+    else:
         pa = pytest.importorskip("pyarrow")
         constructor_eager = pa.table
     if library == "pyarrow" and PYARROW_VERSION < (13,):
@@ -360,7 +360,7 @@ def test_hist_small_bins(library: str) -> None:
     elif library == "polars":
         pl = pytest.importorskip("polars")
         constructor_eager = pl.DataFrame
-    elif library == "pyarrow":
+    else:
         pa = pytest.importorskip("pyarrow")
         constructor_eager = pa.table
     if library == "pyarrow" and PYARROW_VERSION < (13,):
@@ -429,7 +429,7 @@ def test_hist_bin_hypotheis(
     elif library == "polars":
         pl = pytest.importorskip("polars")
         constructor_eager = pl.DataFrame
-    elif library == "pyarrow":
+    else:
         pa = pytest.importorskip("pyarrow")
         constructor_eager = pa.table
     pytest.importorskip("polars")
@@ -490,7 +490,7 @@ def test_hist_count_hypothesis(
         constructor_eager: Any = pd.DataFrame
     elif library == "polars":
         constructor_eager = pl.DataFrame
-    elif library == "pyarrow":
+    else:
         pa = pytest.importorskip("pyarrow")
         constructor_eager = pa.table
     if library == "pyarrow" and PYARROW_VERSION < (13,):
