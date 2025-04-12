@@ -86,7 +86,7 @@ def test_constructors() -> None:
 
 def test_join(constructor_eager: ConstructorEager) -> None:
     df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]})).lazy()
-    result = df.join(df, how="inner", on="a")  # type: ignore[arg-type]
+    result = df.join(df, how="inner", on="a").sort("a")  # type: ignore[arg-type]
     expected = {"a": [1, 2, 3]}
     assert_equal_data(result, expected)
     result_eager = df.collect().join(df.collect(), how="inner", on="a")
@@ -122,6 +122,9 @@ def test_concat(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
+@pytest.mark.filterwarnings(
+    "ignore:.*all arguments of to_dict except for the argument:FutureWarning"
+)
 def test_to_dict(constructor_eager: ConstructorEager) -> None:
     df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
     result = df.to_dict(as_series=False)
