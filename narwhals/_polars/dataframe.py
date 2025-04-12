@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import JoinStrategy
+    from narwhals.typing import PivotAgg
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -419,9 +420,7 @@ class PolarsDataFrame:
         *,
         index: Sequence[str] | None,
         values: Sequence[str] | None,
-        aggregate_function: Literal[
-            "min", "max", "first", "last", "sum", "mean", "median", "len", None
-        ],
+        aggregate_function: PivotAgg | None,
         sort_columns: bool,
         separator: str,
     ) -> Self:

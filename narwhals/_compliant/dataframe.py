@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from narwhals.typing import AsofJoinStrategy
     from narwhals.typing import JoinStrategy
     from narwhals.typing import LazyUniqueKeepStrategy
+    from narwhals.typing import PivotAgg
     from narwhals.typing import SizeUnit
     from narwhals.typing import UniqueKeepStrategy
     from narwhals.typing import _2DArray
@@ -172,9 +173,7 @@ class CompliantDataFrame(
         *,
         index: Sequence[str] | None,
         values: Sequence[str] | None,
-        aggregate_function: Literal[
-            "min", "max", "first", "last", "sum", "mean", "median", "len", None
-        ],
+        aggregate_function: PivotAgg | None,
         sort_columns: bool,
         separator: str,
     ) -> Self: ...
