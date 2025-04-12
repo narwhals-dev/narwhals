@@ -10,9 +10,6 @@ from tests.utils import assert_equal_data
 data = {"a": [1, 1, 2], "b": [1, 2, 3]}
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Expr.ewm_mean` is being called from the stable API although considered an unstable feature."
-)
 def test_ewm_mean_expr(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
@@ -33,9 +30,6 @@ def test_ewm_mean_expr(
     assert_equal_data(result_v1, expected)
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Series.ewm_mean` is being called from the stable API although considered an unstable feature."
-)
 def test_ewm_mean_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
@@ -52,9 +46,6 @@ def test_ewm_mean_series(
     assert_equal_data({"a": result}, expected)
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Expr.ewm_mean` is being called from the stable API although considered an unstable feature."
-)
 @pytest.mark.parametrize(
     ("adjust", "expected"),
     [
@@ -88,9 +79,6 @@ def test_ewm_mean_expr_adjust(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Expr.ewm_mean` is being called from the stable API although considered an unstable feature."
-)
 @pytest.mark.parametrize(
     ("ignore_nulls", "expected"),
     [
@@ -132,9 +120,6 @@ def test_ewm_mean_nulls(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Expr.ewm_mean` is being called from the stable API although considered an unstable feature."
-)
 def test_ewm_mean_params(
     request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
@@ -172,9 +157,6 @@ def test_ewm_mean_params(
         df.select(nw.col("a").ewm_mean(span=1.5, half_life=0.75, ignore_nulls=False))
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Expr.ewm_mean` is being called from the stable API although considered an unstable feature."
-)
 def test_ewm_mean_cudf_raise() -> None:  # pragma: no cover
     pytest.importorskip("cudf")
     import cudf

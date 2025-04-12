@@ -37,7 +37,6 @@ from narwhals.dtypes import DType
 from narwhals.utils import _StoresCompliant
 from narwhals.utils import deprecated
 from narwhals.utils import not_implemented
-from narwhals.utils import unstable
 
 if not TYPE_CHECKING:  # pragma: no cover
     if sys.version_info >= (3, 9):
@@ -197,7 +196,6 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     @property
     def struct(self) -> Any: ...
 
-    @unstable
     def ewm_mean(
         self,
         *,
@@ -210,7 +208,6 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         ignore_nulls: bool,
     ) -> Self: ...
 
-    @unstable
     def rolling_sum(
         self,
         window_size: int,
@@ -219,7 +216,6 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         center: bool,
     ) -> Self: ...
 
-    @unstable
     def rolling_mean(
         self,
         window_size: int,
@@ -228,7 +224,6 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         center: bool,
     ) -> Self: ...
 
-    @unstable
     def rolling_var(
         self,
         window_size: int,
@@ -238,7 +233,6 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         ddof: int,
     ) -> Self: ...
 
-    @unstable
     def rolling_std(
         self,
         window_size: int,

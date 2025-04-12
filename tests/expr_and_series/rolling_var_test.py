@@ -58,9 +58,6 @@ kwargs_and_expected = (
 )
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Expr.rolling_var` is being called from the stable API although considered an unstable feature."
-)
 @pytest.mark.parametrize("kwargs_and_expected", kwargs_and_expected)
 def test_rolling_var_expr(
     request: pytest.FixtureRequest,
@@ -174,9 +171,6 @@ def test_rolling_var_hypothesis_polars(center: bool, values: list[float]) -> Non
     assert_equal_data(result, expected_dict)
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Expr.rolling_var` is being called from the stable API although considered an unstable feature."
-)
 @pytest.mark.parametrize(
     ("expected_a", "window_size", "min_samples", "center", "ddof"),
     [
@@ -241,9 +235,6 @@ def test_rolling_var_expr_lazy_ungrouped(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Expr.rolling_var` is being called from the stable API although considered an unstable feature."
-)
 @pytest.mark.parametrize(
     ("expected_a", "window_size", "min_samples", "center", "ddof"),
     [

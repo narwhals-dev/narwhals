@@ -66,9 +66,6 @@ kwargs_and_expected = (
 )
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Expr.rolling_std` is being called from the stable API although considered an unstable feature."
-)
 @pytest.mark.parametrize("kwargs_and_expected", kwargs_and_expected)
 def test_rolling_std_expr(
     constructor_eager: ConstructorEager,
@@ -108,9 +105,6 @@ def test_rolling_std_series(
     assert_equal_data(result, {name: expected})
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Expr.rolling_std` is being called from the stable API although considered an unstable feature."
-)
 @pytest.mark.parametrize(
     ("expected_a", "window_size", "min_samples", "center", "ddof"),
     [
@@ -231,9 +225,6 @@ def test_rolling_std_expr_lazy_ungrouped(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Expr.rolling_std` is being called from the stable API although considered an unstable feature."
-)
 @pytest.mark.parametrize(
     ("expected_a", "window_size", "min_samples", "center", "ddof"),
     [

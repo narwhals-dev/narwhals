@@ -142,7 +142,6 @@ class CompliantSeries(
     def cum_sum(self, *, reverse: bool) -> Self: ...
     def diff(self) -> Self: ...
     def drop_nulls(self) -> Self: ...
-    @unstable
     def ewm_mean(
         self,
         *,
@@ -199,7 +198,6 @@ class CompliantSeries(
         *,
         return_dtype: DType | type[DType] | None,
     ) -> Self: ...
-    @unstable
     def rolling_mean(
         self,
         window_size: int,
@@ -207,7 +205,6 @@ class CompliantSeries(
         min_samples: int,
         center: bool,
     ) -> Self: ...
-    @unstable
     def rolling_std(
         self,
         window_size: int,
@@ -216,7 +213,6 @@ class CompliantSeries(
         center: bool,
         ddof: int,
     ) -> Self: ...
-    @unstable
     def rolling_sum(
         self,
         window_size: int,
@@ -224,7 +220,6 @@ class CompliantSeries(
         min_samples: int,
         center: bool,
     ) -> Self: ...
-    @unstable
     def rolling_var(
         self,
         window_size: int,
