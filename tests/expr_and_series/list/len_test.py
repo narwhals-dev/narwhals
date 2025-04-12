@@ -21,7 +21,7 @@ def test_len_expr(
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     result = nw.from_native(constructor(data)).select(
         nw.col("a").cast(nw.List(nw.Int32())).list.len()

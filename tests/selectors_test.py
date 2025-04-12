@@ -228,15 +228,12 @@ def test_set_ops(
     assert sorted(result) == expected
 
 
-def test_subtract_expr(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
-) -> None:
+def test_subtract_expr(constructor: Constructor) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 27):
         # In old Polars versions, cs.numeric() - col('a')
         # would exclude column 'a' from the result, as opposed to
         # subtracting it.
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     df = nw.from_native(constructor(data))
     result = df.select(ncs.numeric() - nw.col("a"))
     expected = {"a": [0, 0, 0], "c": [3.1, 4.0, 4.0]}
@@ -263,10 +260,10 @@ def test_set_ops_invalid(constructor: Constructor) -> None:
 def test_tz_aware(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 19):
         # bug in old polars
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,):
         # bug in old pyarrow
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     if "duckdb" in str(constructor) or "pyspark" in str(constructor):
         # replace_time_zone not implemented
         request.applymarker(pytest.mark.xfail)

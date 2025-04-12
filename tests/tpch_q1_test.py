@@ -22,11 +22,11 @@ if TYPE_CHECKING:
     ["pandas", "polars", "pyarrow", "dask"],
 )
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
-def test_q1(library: str, request: pytest.FixtureRequest) -> None:
+def test_q1(library: str) -> None:
     if library == "dask" and DASK_VERSION < (2024, 10):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     if library == "pandas" and PANDAS_VERSION < (1, 5):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     elif library == "pandas":
         df_raw: IntoFrame = pd.read_csv("tests/data/lineitem.csv")
     elif library == "polars":
@@ -109,9 +109,9 @@ def test_q1(library: str, request: pytest.FixtureRequest) -> None:
     "ignore:.*Passing a BlockManager.*:DeprecationWarning",
     "ignore:.*Complex.*:UserWarning",
 )
-def test_q1_w_generic_funcs(library: str, request: pytest.FixtureRequest) -> None:
+def test_q1_w_generic_funcs(library: str) -> None:
     if library == "pandas" and PANDAS_VERSION < (1, 5):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     elif library == "pandas":
         df_raw: IntoFrame = pd.read_csv("tests/data/lineitem.csv")
     else:
