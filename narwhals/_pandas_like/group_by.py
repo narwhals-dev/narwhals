@@ -308,7 +308,4 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
                 category=FutureWarning,
             )
             for key, _indices in self._grouped.indices.items():
-                yield (
-                    key,
-                    self.compliant._with_native(self._df.native.iloc[_indices]),
-                )
+                yield (key, self.compliant._with_native(self._df.native.iloc[_indices]))

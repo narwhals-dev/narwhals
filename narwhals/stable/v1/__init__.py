@@ -19,7 +19,6 @@ from narwhals._expression_parsing import ExprKind
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
 from narwhals.dependencies import get_polars
-from narwhals.exceptions import ComputeError
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.expr import Expr as NwExpr
 from narwhals.functions import Then as NwThen
@@ -35,8 +34,6 @@ from narwhals.functions import _scan_parquet_impl
 from narwhals.functions import get_level
 from narwhals.functions import show_versions
 from narwhals.functions import when as nw_when
-from narwhals.group_by import GroupBy
-from narwhals.group_by import LazyGroupBy
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.stable.v1 import dtypes
@@ -77,7 +74,6 @@ from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import deprecate_native_namespace
 from narwhals.utils import find_stacklevel
-from narwhals.utils import flatten
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import is_ordered_categorical
 from narwhals.utils import maybe_align_index
@@ -2497,7 +2493,6 @@ __all__ = [
     "Binary",
     "Boolean",
     "Categorical",
-    "ComputeError",
     "DataFrame",
     "Date",
     "Datetime",
@@ -2508,7 +2503,6 @@ __all__ = [
     "Field",
     "Float32",
     "Float64",
-    "GroupBy",
     "Implementation",
     "Int8",
     "Int16",
@@ -2516,7 +2510,6 @@ __all__ = [
     "Int64",
     "Int128",
     "LazyFrame",
-    "LazyGroupBy",
     "List",
     "Object",
     "Schema",
@@ -2540,7 +2533,6 @@ __all__ = [
     "dtypes",
     "exceptions",
     "exclude",
-    "flatten",
     "from_arrow",
     "from_dict",
     "from_native",
