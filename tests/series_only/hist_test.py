@@ -4,6 +4,7 @@ from random import Random
 from typing import Any
 
 import hypothesis.strategies as st
+import pandas as pd
 import pytest
 from hypothesis import given
 
@@ -96,22 +97,29 @@ counts_and_expected = [
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
+@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
 def test_hist_bin(
-    constructor_eager: ConstructorEager,
+    library: str,
     *,
     params: dict[str, Any],
     include_breakpoint: bool,
 ) -> None:
-    if "cudf" in str(constructor_eager):
-        # TODO(unassigned): too many spurious failures, report and revisit
-        return
-    if "modin" in str(constructor_eager):
-        # too slow
-        return
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
+    if library == "pandas":
+        native: Any = pd.DataFrame(data)
+    elif library == "polars":
+        pytest.importorskip("polars")
+        import polars as pl
+
+        native = pl.DataFrame(data)
+    else:
+        pytest.importorskip("pyarrow")
+        import pyarrow as pa
+
+        native = pa.table(data)  # type: ignore[arg-type]
+    if library == "pyarrow" and PYARROW_VERSION < (13,):
         pytest.skip()
 
-    df = nw.from_native(constructor_eager(data)).with_columns(
+    df = nw.from_native(native).with_columns(
         float=nw.col("int").cast(nw.Float64),
     )
     bins = params["bins"]
@@ -152,14 +160,23 @@ def test_hist_bin(
         assert_equal_data(result, expected)
 
     # missing/nan results
-    df = nw.from_native(
-        constructor_eager(
-            {
-                "has_nan": [float("nan"), *data["int"]],
-                "has_null": [None, *data["int"]],
-            }
-        )
-    )
+    test_data: dict[str, list[Any]] = {
+        "has_nan": [float("nan"), *data["int"]],
+        "has_null": [None, *data["int"]],
+    }
+    if library == "pandas":
+        native = pd.DataFrame(test_data)
+    elif library == "polars":
+        pytest.importorskip("polars")
+        import polars as pl
+
+        native = pl.DataFrame(test_data)
+    else:
+        pytest.importorskip("pyarrow")
+        import pyarrow as pa
+
+        native = pa.table(test_data)  # type: ignore[arg-type]
+    df = nw.from_native(native)
     bins = params["bins"]
     expected = {
         "breakpoint": bins[1:],
@@ -440,25 +457,30 @@ def test_hist_bin_hypotheis(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature.",
     "ignore:invalid value encountered in cast:RuntimeWarning",
 )
+@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
 @pytest.mark.slow
 def test_hist_count_hypothesis(
-    constructor_eager: ConstructorEager,
+    library: str,
     data: list[float],
     bin_count: int,
     request: pytest.FixtureRequest,
 ) -> None:
     import polars as pl
 
-    if "cudf" in str(constructor_eager):
-        # TODO(unassigned): too many spurious failures, report and revisit
-        return
-    if "modin" in str(constructor_eager):
-        # too slow
-        return
+    if library == "pandas":
+        native: Any = pd.DataFrame({"values": data})
+    elif library == "polars":
+        pytest.importorskip("polars")
+        import polars as pl
 
-    df = nw.from_native(constructor_eager({"values": data})).select(
-        nw.col("values").cast(nw.Float64)
-    )
+        native = pl.DataFrame({"values": data})
+    else:
+        pytest.importorskip("pyarrow")
+        import pyarrow as pa
+
+        native = pa.table({"values": data})
+
+    df = nw.from_native(native).select(nw.col("values").cast(nw.Float64))
 
     try:
         result = df["values"].hist(
@@ -482,10 +504,9 @@ def test_hist_count_hypothesis(
     #   for data with a wide range and a large number of passed bins
     #   https://github.com/pola-rs/polars/issues/20879
 
-    if expected[
-        "count"
-    ].sum() != expected_data.is_not_nan().sum() and "polars" not in str(
-        constructor_eager
+    if (
+        expected["count"].sum() != expected_data.is_not_nan().sum()
+        and library != "polars"
     ):
         request.applymarker(pytest.mark.xfail)
 
