@@ -109,6 +109,26 @@ def test_values_counts_v1(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
+def test_is_duplicated_unique(constructor_eager: ConstructorEager) -> None:
+    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
+    assert df.is_duplicated().to_list() == [False, False, False]
+    assert df.is_unique().to_list() == [True, True, True]
+
+
+def test_concat(constructor_eager: ConstructorEager) -> None:
+    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
+    result = nw_v1.concat([df, df], how="vertical")
+    expected = {"a": [1, 2, 3, 1, 2, 3]}
+    assert_equal_data(result, expected)
+
+
+def test_to_dict(constructor_eager: ConstructorEager) -> None:
+    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
+    result = df.to_dict(as_series=False)
+    expected = {"a": [1, 2, 3]}
+    assert result == expected
+
+
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature.",
 )
@@ -139,3 +159,15 @@ def test_all_nulls_pandas() -> None:
         nw_v1.from_native(pd.Series([None] * 3, dtype="object"), series_only=True).dtype
         == nw_v1.Object
     )
+
+
+def test_int_select_pandas() -> None:
+    df = nw_v1.from_native(pd.DataFrame({0: [1, 2], "b": [3, 4]}))
+    with pytest.raises(
+        nw_v1.exceptions.InvalidIntoExprError, match="\n\nHint:\n- if you were trying"
+    ):
+        nw_v1.to_native(df.select(0))  # type: ignore[arg-type]
+    with pytest.raises(
+        nw_v1.exceptions.InvalidIntoExprError, match="\n\nHint:\n- if you were trying"
+    ):
+        nw_v1.to_native(df.lazy().select(0))  # type: ignore[arg-type]
