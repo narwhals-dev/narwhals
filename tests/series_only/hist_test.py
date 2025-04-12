@@ -1,9 +1,12 @@
+# TODO(unassigned): cudf has too many spurious failures. Report and revisit?
+# Modin is too slow so is excluded.
 from __future__ import annotations
 
 from random import Random
 from typing import Any
 
 import hypothesis.strategies as st
+import pandas as pd
 import pytest
 from hypothesis import given
 
@@ -96,19 +99,24 @@ counts_and_expected = [
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
+@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
 def test_hist_bin(
-    constructor_eager: ConstructorEager,
+    library: str,
     *,
     params: dict[str, Any],
     include_breakpoint: bool,
-    request: pytest.FixtureRequest,
 ) -> None:
-    if "cudf" in str(constructor_eager):
-        # TODO(unassigned): too many spurious failures, report and revisit
-        return
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
-        request.applymarker(pytest.mark.xfail)
+    if library == "pandas":
+        constructor_eager: Any = pd.DataFrame
+    elif library == "polars":
+        pl = pytest.importorskip("polars")
+        constructor_eager = pl.DataFrame
+    else:
+        pa = pytest.importorskip("pyarrow")
+        constructor_eager = pa.table
 
+    if library == "pyarrow" and PYARROW_VERSION < (13,):
+        pytest.skip()
     df = nw.from_native(constructor_eager(data)).with_columns(
         float=nw.col("int").cast(nw.Float64),
     )
@@ -180,18 +188,23 @@ def test_hist_bin(
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
+@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
 def test_hist_count(
-    constructor_eager: ConstructorEager,
+    library: str,
     *,
     params: dict[str, Any],
     include_breakpoint: bool,
-    request: pytest.FixtureRequest,
 ) -> None:
-    if "cudf" in str(constructor_eager):
-        # TODO(unassigned): too many spurious failures, report and revisit
-        return
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
-        request.applymarker(pytest.mark.xfail)
+    if library == "pandas":
+        constructor_eager: Any = pd.DataFrame
+    elif library == "polars":
+        pl = pytest.importorskip("polars")
+        constructor_eager = pl.DataFrame
+    else:
+        pa = pytest.importorskip("pyarrow")
+        constructor_eager = pa.table
+    if library == "pyarrow" and PYARROW_VERSION < (13,):
+        pytest.skip()
 
     df = nw.from_native(constructor_eager(data)).with_columns(
         float=nw.col("int").cast(nw.Float64),
@@ -248,16 +261,18 @@ def test_hist_count(
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
-def test_hist_count_no_spread(
-    constructor_eager: ConstructorEager,
-    *,
-    request: pytest.FixtureRequest,
-) -> None:
-    if "cudf" in str(constructor_eager):
-        # TODO(unassigned): too many spurious failures, report and revisit
-        return
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
-        request.applymarker(pytest.mark.xfail)
+@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
+def test_hist_count_no_spread(library: str) -> None:
+    if library == "pandas":
+        constructor_eager: Any = pd.DataFrame
+    elif library == "polars":
+        pl = pytest.importorskip("polars")
+        constructor_eager = pl.DataFrame
+    else:
+        pa = pytest.importorskip("pyarrow")
+        constructor_eager = pa.table
+    if library == "pyarrow" and PYARROW_VERSION < (13,):
+        pytest.skip()
 
     data = {
         "all_zero": [0, 0, 0],
@@ -300,17 +315,22 @@ def test_hist_bin_and_bin_count() -> None:
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
+@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
 def test_hist_no_data(
-    constructor_eager: ConstructorEager,
+    library: str,
     *,
-    request: pytest.FixtureRequest,
     include_breakpoint: bool,
 ) -> None:
-    if "cudf" in str(constructor_eager):
-        # TODO(unassigned): too many spurious failures, report and revisit
-        return
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
-        request.applymarker(pytest.mark.xfail)
+    if library == "pandas":
+        constructor_eager: Any = pd.DataFrame
+    elif library == "polars":
+        pl = pytest.importorskip("polars")
+        constructor_eager = pl.DataFrame
+    else:
+        pa = pytest.importorskip("pyarrow")
+        constructor_eager = pa.table
+    if library == "pyarrow" and PYARROW_VERSION < (13,):
+        pytest.skip()
     s = nw.from_native(constructor_eager({"values": []})).select(
         nw.col("values").cast(nw.Float64)
     )["values"]
@@ -333,16 +353,18 @@ def test_hist_no_data(
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
-def test_hist_small_bins(
-    constructor_eager: ConstructorEager,
-    *,
-    request: pytest.FixtureRequest,
-) -> None:
-    if "cudf" in str(constructor_eager):
-        # TODO(unassigned): too many spurious failures, report and revisit
-        return
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
-        request.applymarker(pytest.mark.xfail)
+@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
+def test_hist_small_bins(library: str) -> None:
+    if library == "pandas":
+        constructor_eager: Any = pd.DataFrame
+    elif library == "polars":
+        pl = pytest.importorskip("polars")
+        constructor_eager = pl.DataFrame
+    else:
+        pa = pytest.importorskip("pyarrow")
+        constructor_eager = pa.table
+    if library == "pyarrow" and PYARROW_VERSION < (13,):
+        pytest.skip()
     s = nw.from_native(constructor_eager({"values": [1, 2, 3]}))
     result = s["values"].hist(bins=None, bin_count=None)
     assert len(result) == 10
@@ -397,16 +419,21 @@ def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
     POLARS_VERSION < (1, 27),
     reason="polars cannot be used for compatibility checks since narwhals aims to mimic polars>=1.27 behavior",
 )
+@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
 @pytest.mark.slow
 def test_hist_bin_hypotheis(
-    constructor_eager: ConstructorEager, data: list[float], bin_deltas: list[float]
+    library: str, data: list[float], bin_deltas: list[float]
 ) -> None:
+    if library == "pandas":
+        constructor_eager: Any = pd.DataFrame
+    elif library == "polars":
+        pl = pytest.importorskip("polars")
+        constructor_eager = pl.DataFrame
+    else:
+        pa = pytest.importorskip("pyarrow")
+        constructor_eager = pa.table
     pytest.importorskip("polars")
     import polars as pl
-
-    if "cudf" in str(constructor_eager):
-        # TODO(unassigned): too many spurious failures, report and revisit
-        return
 
     df = nw.from_native(constructor_eager({"values": data})).select(
         nw.col("values").cast(nw.Float64)
@@ -448,18 +475,26 @@ def test_hist_bin_hypotheis(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature.",
     "ignore:invalid value encountered in cast:RuntimeWarning",
 )
+@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
 @pytest.mark.slow
 def test_hist_count_hypothesis(
-    constructor_eager: ConstructorEager,
+    library: str,
     data: list[float],
     bin_count: int,
     request: pytest.FixtureRequest,
 ) -> None:
+    pytest.importorskip("polars")
     import polars as pl
 
-    if "cudf" in str(constructor_eager):
-        # TODO(unassigned): too many spurious failures, report and revisit
-        return
+    if library == "pandas":
+        constructor_eager: Any = pd.DataFrame
+    elif library == "polars":
+        constructor_eager = pl.DataFrame
+    else:
+        pa = pytest.importorskip("pyarrow")
+        constructor_eager = pa.table
+    if library == "pyarrow" and PYARROW_VERSION < (13,):
+        pytest.skip()
 
     df = nw.from_native(constructor_eager({"values": data})).select(
         nw.col("values").cast(nw.Float64)

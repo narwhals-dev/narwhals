@@ -88,12 +88,11 @@ def test_rolling_var_expr(
 )
 @pytest.mark.parametrize("kwargs_and_expected", kwargs_and_expected)
 def test_rolling_var_series(
-    request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
     kwargs_and_expected: dict[str, Any],
 ) -> None:
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     name = kwargs_and_expected["name"]
     kwargs = kwargs_and_expected["kwargs"]

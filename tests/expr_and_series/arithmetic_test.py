@@ -69,7 +69,7 @@ def test_right_arithmetic_expr(
     request: pytest.FixtureRequest,
 ) -> None:
     if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     if attr == "__rmod__" and any(
         x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]
     ):

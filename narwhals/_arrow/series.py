@@ -1087,8 +1087,8 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             bin_right = bins[1:]
             return counts, bin_right
 
-        counts: Sequence[int | float] | np.typing.ArrayLike
-        bin_right: Sequence[int | float] | np.typing.ArrayLike
+        counts: Sequence[int | float | pa.Scalar[Any]] | np.typing.ArrayLike
+        bin_right: Sequence[int | float | pa.Scalar[Any]] | np.typing.ArrayLike
 
         data_count = pc.sum(
             pc.invert(pc.or_(pc.is_nan(self.native), pc.is_null(self.native))).cast(

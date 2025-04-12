@@ -43,7 +43,7 @@ def test_explode_single_col(
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     result = (
         nw.from_native(constructor(data))
@@ -93,7 +93,7 @@ def test_explode_multiple_cols(
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     result = (
         nw.from_native(constructor(data))
@@ -114,7 +114,7 @@ def test_explode_shape_error(
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     with pytest.raises(
         (ShapeError, NotImplementedError),
@@ -136,7 +136,7 @@ def test_explode_invalid_operation_error(
         request.applymarker(pytest.mark.xfail)
 
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     with pytest.raises(
         InvalidOperationError,
