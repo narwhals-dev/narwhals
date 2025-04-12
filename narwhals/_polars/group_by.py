@@ -5,8 +5,6 @@ from typing import Iterator
 from typing import Sequence
 from typing import cast
 
-from narwhals._polars.utils import extract_native
-
 if TYPE_CHECKING:
     import polars as pl
     from polars.dataframe.group_by import GroupBy as NativeGroupBy
@@ -31,17 +29,15 @@ class PolarsGroupBy:
     ) -> None:
         by: Sequence[pl.Expr | str]
         if not drop_null_keys:
-            by = [extract_native(arg) for arg in keys]
+            by = [arg.native for arg in keys]
             self._compliant_frame = df
         else:
-            by = [extract_native(arg).meta.output_name() for arg in keys]
+            by = [arg.native.meta.output_name() for arg in keys]
             self._compliant_frame = df.with_columns(*keys).drop_nulls(by)
         self._grouped = self.compliant.native.group_by(by)
 
     def agg(self, *aggs: PolarsExpr) -> PolarsDataFrame:
-        return self.compliant._with_native(
-            self._grouped.agg(extract_native(arg) for arg in aggs)
-        )
+        return self.compliant._with_native(self._grouped.agg(arg.native for arg in aggs))
 
     def __iter__(self) -> Iterator[tuple[tuple[str, ...], PolarsDataFrame]]:
         for key, df in self._grouped:
@@ -62,14 +58,12 @@ class PolarsLazyGroupBy:
     ) -> None:
         by: Sequence[pl.Expr | str]
         if not drop_null_keys:
-            by = [extract_native(arg) for arg in keys]
+            by = [arg.native for arg in keys]
             self._compliant_frame = df
         else:
-            by = [extract_native(arg).meta.output_name() for arg in keys]
+            by = [arg.native.meta.output_name() for arg in keys]
             self._compliant_frame = df.with_columns(*keys).drop_nulls(by)
         self._grouped = self.compliant.native.group_by(by)
 
     def agg(self, *aggs: PolarsExpr) -> PolarsLazyFrame:
-        return self.compliant._with_native(
-            self._grouped.agg(extract_native(arg) for arg in aggs)
-        )
+        return self.compliant._with_native(self._grouped.agg(arg.native for arg in aggs))
