@@ -14,7 +14,6 @@ from tests.utils import PYARROW_VERSION
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-
 rnd = Random(0)  # noqa: S311
 
 data: dict[str, list[int | float]] = {
