@@ -61,8 +61,9 @@ _RE_LEAF_NAME: re.Pattern[str] = re.compile(r"(\w+->)")
 
 class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     _compliant_frame: Any
-    _output_key_names: list[str]
     _keys: list[str]
+    _output_key_names: list[str]
+    _original_key_names: list[str]
 
     @property
     def compliant(self) -> CompliantFrameT_co:
@@ -82,8 +83,7 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     @staticmethod
     def _init_parsing(
         compliant_frame: CompliantLazyFrameAny, keys: Sequence[CompliantExprT_contra]
-    ) -> tuple[CompliantLazyFrameAny, list[str], list[str]]:
-        plx = compliant_frame.__narwhals_namespace__()
+    ) -> tuple[CompliantLazyFrameAny, list[str], list[str], list[str]]:
         suffix_token = "_" * max(len(str(c)) for c in compliant_frame.columns)
         original_names = compliant_frame._evaluate_aliases(*[k.name.keep() for k in keys])
         output_names = compliant_frame._evaluate_aliases(*keys)
@@ -98,14 +98,11 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
 
         key_names = compliant_frame._evaluate_aliases(*safe_keys)
 
-        remaining_columns = [
-            plx.col(c) for c in compliant_frame.columns if c not in original_names
-        ]
-
         return (
-            compliant_frame.select(*safe_keys, *remaining_columns),
+            compliant_frame.with_columns(*safe_keys),
             key_names,
             output_names,
+            original_names,
         )
 
 
@@ -187,7 +184,7 @@ class LazyGroupBy(
         native_exprs = expr(self.compliant)
         if expr._is_multi_output_unnamed():
             for native_expr, name, alias in zip(native_exprs, output_names, aliases):
-                if name not in self._keys:
+                if name not in {*self._keys, *self._original_key_names}:
                     yield native_expr.alias(alias)
         else:
             for native_expr, alias in zip(native_exprs, aliases):

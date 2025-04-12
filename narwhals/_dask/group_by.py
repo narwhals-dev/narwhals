@@ -73,9 +73,12 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
     def __init__(
         self, df: DaskLazyFrame, keys: Sequence[DaskExpr], /, *, drop_null_keys: bool
     ) -> None:
-        self._compliant_frame, self._keys, self._output_key_names = self._init_parsing(
-            compliant_frame=df, keys=keys
-        )
+        (
+            self._compliant_frame,
+            self._keys,
+            self._output_key_names,
+            self._original_key_names,
+        ) = self._init_parsing(compliant_frame=df, keys=keys)
         self._grouped = self.compliant.native.groupby(
             self._keys, dropna=drop_null_keys, observed=True
         )
@@ -98,7 +101,7 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
         simple_aggregations: dict[str, tuple[str, Aggregation]] = {}
         for expr in exprs:
             output_names, aliases = evaluate_output_names_and_aliases(
-                expr, self.compliant, self._keys
+                expr, self.compliant, [*self._keys, *self._original_key_names]
             )
             if expr._depth == 0:
                 # e.g. `agg(nw.len())`

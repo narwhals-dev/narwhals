@@ -490,7 +490,7 @@ def test_group_by_expr(
         # ```
         request.applymarker(pytest.mark.xfail)
 
-    data = {"a": [1, 1, 2, 2, -1], "x": [0, 1, 2, 3, 4]}
+    data = {"a": [1, 1, 2, 2, -1], "x": [0, 1, 2, 3, 4], "y": [0.5, -0.5, 1, -1, 1.5]}
     df = nw.from_native(constructor(data))
     result = (
         df.group_by(
@@ -515,6 +515,14 @@ def test_group_by_expr(
     )
     expected_aliases = {"x": [-1, 1, 2], "y": [4.0, 0.5, 2.5]}
     assert_equal_data(result_aliases, expected_aliases)
+
+    result_all = (
+        df.group_by("a")
+        .agg(nw.col("a").count().alias("foo"), nw.all().sum())  # inspired by Validoopsie
+        .sort("a")
+    )
+    expected_all = {"a": [-1, 1, 2], "foo": [1, 2, 2], "x": [4, 1, 5], "y": [1.5, 0, 0]}
+    assert_equal_data(result_all, expected_all)
 
 
 def test_group_by_multioutput_expr(constructor: Constructor) -> None:
