@@ -15,6 +15,8 @@ from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import infer_kind
 from narwhals.exceptions import ComputeError
 from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import LengthChangingExprError
+from narwhals.exceptions import OrderDependentExprError
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
@@ -569,17 +571,25 @@ def test_group_by_raise_if_not_transform(
     data = {"a": [1, 2, 2, None], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
 
-    context: Any = (
-        pytest.raises(
-            NotImplementedError,
-            match="'drop_nulls' is not implemented for",
+    context: Any
+    if isinstance(df, nw.LazyFrame) and any(
+        infer_kind(expr, str_as_lit=True) is ExprKind.FILTRATION for expr in keys
+    ):
+        context = pytest.raises(
+            LengthChangingExprError,
+            match="Length-changing expressions are not supported for use in LazyFrame",
         )
-        if (df.implementation.is_spark_like() or df.implementation.is_duckdb())
-        and any(infer_kind(expr, str_as_lit=True) is ExprKind.FILTRATION for expr in keys)
-        else pytest.raises(
+    elif isinstance(df, nw.LazyFrame) and any(
+        infer_kind(expr, str_as_lit=True) is ExprKind.WINDOW for expr in keys
+    ):
+        context = pytest.raises(
+            OrderDependentExprError,
+            match="Order-dependent expressions are not supported for use in LazyFrame",
+        )
+    else:
+        context = pytest.raises(
             ComputeError,
             match=r"Group by is not \(yet\) supported with keys that are not transformation expressions",
         )
-    )
     with context:
         df.group_by(keys).agg(nw.col("x").max())
