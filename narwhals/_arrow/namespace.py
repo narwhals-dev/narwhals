@@ -214,7 +214,7 @@ class ArrowNamespace(
         return pa.concat_tables(dfs, promote=True)  # type: ignore[arg-type] # pragma: no cover
 
     def _concat_horizontal(self, dfs: Sequence[pa.Table], /) -> pa.Table:
-        names = [name for df in dfs for name in df.column_names]
+        names = list(chain.from_iterable(df.column_names for df in dfs))
         arrays = list(chain.from_iterable(df.itercolumns() for df in dfs))
         return pa.Table.from_arrays(arrays, names=names)
 
