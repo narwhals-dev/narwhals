@@ -103,6 +103,7 @@ Here are exceptions to our backwards compatibility policy:
   need to rethink Narwhals. However, we expect such radical changes to be exceedingly unlikely.
 - We may consider making some type hints more precise.
 - Anything labelled "unstable".
+- We may sometimes need to bump the minimum versions of supported backends.
 
 In general, decision are driven by use-cases, and we conduct a search of public GitHub repositories
 before making any change.
@@ -112,6 +113,11 @@ before making any change.
 ### After `stable.v1`
 
 The following are differences between the main Narwhals namespace and `narwhals.stable.v1`:
+
+- Since Narwhals 1.35:
+
+  - pandas' ordered categoricals get mapped to `nw.Enum` instead of `nw.Categorical`.
+  - `nw.Enum` must accept categories at instantiation.
 
 - Since Narwhals 1.29.0, `LazyFrame.gather_every` has been deprecated from the main namespace.
 
