@@ -469,8 +469,7 @@ class Enum(DType):
         return hash((self.__class__, tuple(self.categories)))
 
     def __repr__(self: Self) -> str:  # pragma: no cover
-        class_name = self.__class__.__name__
-        return f"{class_name}(categories={self.categories!r})"
+        return f"{type(self).__name__}(categories={list(self.categories)!r})"
 
 
 class Field:
