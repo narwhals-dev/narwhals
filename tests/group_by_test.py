@@ -518,8 +518,12 @@ def test_group_by_expr(
 
     if (
         "polars_lazy" in str(constructor)
-        and POLARS_VERSION <= (0, 20, 16)
         and drop_null_keys
+        and POLARS_VERSION <= (0, 20, 16)
+    ) or (
+        "polars" in str(constructor)
+        and drop_null_keys
+        and any(key._metadata.expansion_kind.is_multi_output() for key in keys)
     ):
         # The following repro works for polars>=0.20.17, but fails with `ColumnNotFoundError`
         # for previous versions:

@@ -179,8 +179,17 @@ class ExpansionKind(Enum):
     MULTI_UNNAMED = auto()
     """e.g. `nw.all()`, nw.nth(0, 1)"""
 
+    def is_single(self) -> bool:  # pragma: no cover
+        return self is ExpansionKind.SINGLE
+
+    def is_multi_named(self) -> bool:  # pragma: no cover
+        return self is ExpansionKind.MULTI_NAMED
+
     def is_multi_unnamed(self) -> bool:
         return self is ExpansionKind.MULTI_UNNAMED
+
+    def is_multi_output(self) -> bool:
+        return self in {ExpansionKind.MULTI_NAMED, ExpansionKind.MULTI_UNNAMED}
 
 
 def is_multi_output(
