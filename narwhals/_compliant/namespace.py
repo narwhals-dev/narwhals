@@ -181,12 +181,10 @@ class EagerNamespace(
         return self._series.from_numpy(data, context=self)
 
     def _concat_diagonal(self, dfs: Sequence[NativeFrameT], /) -> NativeFrameT: ...
-    # NOTE: `pandas` also accepts `NativeSeriesT`
-    def _concat_horizontal(self, dfs: Sequence[Any], /) -> NativeFrameT: ...
-    # NOTE: Could very easily add support for `Series`
-    # - Arrow would use `pa.concat_arrays`
+    def _concat_horizontal(
+        self, dfs: Sequence[NativeFrameT | Any], /
+    ) -> NativeFrameT: ...
     def _concat_vertical(self, dfs: Sequence[NativeFrameT], /) -> NativeFrameT: ...
-
     def concat(
         self, items: Iterable[EagerDataFrameT], *, how: ConcatMethod
     ) -> EagerDataFrameT:
