@@ -1820,6 +1820,15 @@ class requires:  # noqa: N801
         self._hint: str = hint
         self._wrapped_name: str
 
+    @classmethod
+    def backend_version(
+        cls, min_version: tuple[int, ...], /, hint: str = ""
+    ) -> Self:  # pragma: no cover
+        obj = cls.__new__(cls)
+        obj._min_version = min_version
+        obj._hint = hint
+        return obj
+
     @staticmethod
     def _unparse_version(backend_version: tuple[int, ...], /) -> str:
         return ".".join(f"{d}" for d in backend_version)
