@@ -6,7 +6,7 @@ from typing import Mapping
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals.stable.v1 as nw_v1
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -42,7 +42,7 @@ class CustomDataFrame:
 
 def test_interchange() -> None:
     df = CustomDataFrame({"a": [1, 2, 3], "b": [4, 5, 6], "z": [1, 4, 2]})
-    result = nw.from_native(df, eager_or_interchange_only=True).select("a", "z")
+    result = nw_v1.from_native(df, eager_or_interchange_only=True).select("a", "z")
     assert result.columns == ["a", "z"]
 
 
@@ -65,7 +65,7 @@ def test_interchange_ibis(
     df_pl.write_parquet(filepath)
 
     tbl = ibis.read_parquet(filepath)
-    df = nw.from_native(tbl, eager_or_interchange_only=True)
+    df = nw_v1.from_native(tbl, eager_or_interchange_only=True)
 
     out_cols = df.select("a", "z").schema.names()
 
@@ -81,7 +81,7 @@ def test_interchange_duckdb() -> None:
 
     df_pl = pl.DataFrame(data)  # noqa: F841
     rel = duckdb.sql("select * from df_pl")
-    df = nw.from_native(rel, eager_or_interchange_only=True)
+    df = nw_v1.from_native(rel, eager_or_interchange_only=True)
 
     out_cols = df.select("a", "z").schema.names()
 

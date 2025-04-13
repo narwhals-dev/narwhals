@@ -13,8 +13,8 @@ from typing import cast
 import numpy as np
 import pytest
 
-import narwhals as unstable_nw
-import narwhals.stable.v1 as nw
+import narwhals as nw
+import narwhals.stable.v1 as nw_v1
 from tests.utils import maybe_get_modin_df
 
 if TYPE_CHECKING:
@@ -134,7 +134,7 @@ def test_strict(strict: Any, context: Any) -> None:
     arr = np.array([1, 2, 3])
 
     with context:
-        res = nw.from_native(arr, strict=strict)
+        res = nw_v1.from_native(arr, strict=strict)
         assert isinstance(res, np.ndarray)
 
 
@@ -148,17 +148,17 @@ def test_strict(strict: Any, context: Any) -> None:
 )
 def test_eager_only_lazy(dframe: Any, eager_only: Any, context: Any) -> None:
     with context:
-        res = nw.from_native(dframe, eager_only=eager_only)
-        assert isinstance(res, nw.LazyFrame)
+        res = nw_v1.from_native(dframe, eager_only=eager_only)
+        assert isinstance(res, nw_v1.LazyFrame)
     if eager_only:
-        assert nw.from_native(dframe, eager_only=eager_only, strict=False) is dframe
+        assert nw_v1.from_native(dframe, eager_only=eager_only, strict=False) is dframe
 
 
 @pytest.mark.parametrize("dframe", eager_frames)
 @pytest.mark.parametrize("eager_only", [True, False])
 def test_eager_only_eager(dframe: Any, eager_only: Any) -> None:
-    res = nw.from_native(dframe, eager_only=eager_only)
-    assert isinstance(res, nw.DataFrame)
+    res = nw_v1.from_native(dframe, eager_only=eager_only)
+    assert isinstance(res, nw_v1.DataFrame)
 
 
 @pytest.mark.parametrize(
@@ -173,10 +173,10 @@ def test_eager_only_eager(dframe: Any, eager_only: Any) -> None:
 )
 def test_series_only(obj: Any, context: Any) -> None:
     with context:
-        res = nw.from_native(obj, series_only=True)
-        assert isinstance(res, nw.Series)
-    assert nw.from_native(obj, series_only=True, strict=False) is obj or isinstance(
-        res, nw.Series
+        res = nw_v1.from_native(obj, series_only=True)
+        assert isinstance(res, nw_v1.Series)
+    assert nw_v1.from_native(obj, series_only=True, strict=False) is obj or isinstance(
+        res, nw_v1.Series
     )
 
 
@@ -195,10 +195,12 @@ def test_series_only(obj: Any, context: Any) -> None:
 )
 def test_allow_series(series: Any, allow_series: Any, context: Any) -> None:
     with context:
-        res = nw.from_native(series, allow_series=allow_series)
-        assert isinstance(res, nw.Series)
+        res = nw_v1.from_native(series, allow_series=allow_series)
+        assert isinstance(res, nw_v1.Series)
     if not allow_series:
-        assert nw.from_native(series, allow_series=allow_series, strict=False) is series
+        assert (
+            nw_v1.from_native(series, allow_series=allow_series, strict=False) is series
+        )
 
 
 def test_invalid_series_combination() -> None:
@@ -206,7 +208,7 @@ def test_invalid_series_combination() -> None:
         ValueError,
         match="Invalid parameter combination: `series_only=True` and `allow_series=False`",
     ):
-        nw.from_native(MockSeries(), series_only=True, allow_series=False)  # type: ignore[call-overload]
+        nw_v1.from_native(MockSeries(), series_only=True, allow_series=False)  # type: ignore[call-overload]
 
 
 @pytest.mark.skipif(df_pd is None, reason="pandas not found")
@@ -218,26 +220,26 @@ def test_pandas_like_validate() -> None:
     with pytest.raises(
         ValueError, match=r"Expected unique column names, got:\n- 'b' 2 times"
     ):
-        nw.from_native(df)
+        nw_v1.from_native(df)
 
 
 @pytest.mark.skipif(lf_pl is None, reason="polars not found")
 def test_init_already_narwhals() -> None:
-    df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
-    result = nw.from_native(df)
+    df = nw_v1.from_native(pl.DataFrame({"a": [1, 2, 3]}))
+    result = nw_v1.from_native(df)
     assert result is df
     s = df["a"]
-    result_s = nw.from_native(s, allow_series=True)
+    result_s = nw_v1.from_native(s, allow_series=True)
     assert result_s is s
 
 
 @pytest.mark.skipif(lf_pl is None, reason="polars not found")
 def test_init_already_narwhals_unstable() -> None:
-    df = unstable_nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
-    result = unstable_nw.from_native(df)
+    df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
+    result = nw.from_native(df)
     assert result is df
     s = df["a"]
-    result_s = unstable_nw.from_native(s, allow_series=True)
+    result_s = nw.from_native(s, allow_series=True)
     assert result_s is s
 
 
@@ -249,8 +251,8 @@ def test_series_only_dask() -> None:
     dframe = dd.from_pandas(df_pd)
 
     with pytest.raises(TypeError, match="Cannot only use `series_only`"):
-        nw.from_native(dframe, series_only=True)
-    assert nw.from_native(dframe, series_only=True, strict=False) is dframe
+        nw_v1.from_native(dframe, series_only=True)
+    assert nw_v1.from_native(dframe, series_only=True, strict=False) is dframe
 
 
 @pytest.mark.skipif(df_pd is None, reason="pandas not found")
@@ -268,10 +270,10 @@ def test_eager_only_lazy_dask(eager_only: Any, context: Any) -> None:
     dframe = dd.from_pandas(df_pd)
 
     with context:
-        res = nw.from_native(dframe, eager_only=eager_only)
-        assert isinstance(res, nw.LazyFrame)
+        res = nw_v1.from_native(dframe, eager_only=eager_only)
+        assert isinstance(res, nw_v1.LazyFrame)
     if eager_only:
-        assert nw.from_native(dframe, eager_only=eager_only, strict=False) is dframe
+        assert nw_v1.from_native(dframe, eager_only=eager_only, strict=False) is dframe
 
 
 @pytest.mark.skipif(sys.version_info < (3, 9), reason="too old for sqlframe")
@@ -283,7 +285,7 @@ def test_series_only_sqlframe() -> None:  # pragma: no cover
     df = session.createDataFrame([*zip(*data.values())], schema=[*data.keys()])
 
     with pytest.raises(TypeError, match="Cannot only use `series_only`"):
-        nw.from_native(df, series_only=True)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        nw_v1.from_native(df, series_only=True)  # pyright: ignore[reportArgumentType, reportCallIssue]
 
 
 @pytest.mark.parametrize(
@@ -302,25 +304,25 @@ def test_eager_only_sqlframe(eager_only: Any, context: Any) -> None:  # pragma: 
     df = session.createDataFrame([*zip(*data.values())], schema=[*data.keys()])
 
     with context:
-        res = nw.from_native(df, eager_only=eager_only)
-        assert isinstance(res, nw.LazyFrame)
+        res = nw_v1.from_native(df, eager_only=eager_only)
+        assert isinstance(res, nw_v1.LazyFrame)
 
 
 @pytest.mark.skipif(lf_pl is None, reason="polars not found")
 def test_from_native_strict_false_typing() -> None:
     df = pl.DataFrame()
-    nw.from_native(df, strict=False)
-    nw.from_native(df, strict=False, eager_only=True)
-    nw.from_native(df, strict=False, eager_or_interchange_only=True)
+    nw_v1.from_native(df, strict=False)
+    nw_v1.from_native(df, strict=False, eager_only=True)
+    nw_v1.from_native(df, strict=False, eager_or_interchange_only=True)
 
     with pytest.deprecated_call(match="please use `pass_through` instead"):
-        unstable_nw.from_native(df, strict=False)  # type: ignore[call-overload]
-        unstable_nw.from_native(df, strict=False, eager_only=True)  # type: ignore[call-overload]
+        nw.from_native(df, strict=False)  # type: ignore[call-overload]
+        nw.from_native(df, strict=False, eager_only=True)  # type: ignore[call-overload]
 
 
 def test_from_native_strict_false_invalid() -> None:
     with pytest.raises(ValueError, match="Cannot pass both `strict`"):
-        nw.from_native({"a": [1, 2, 3]}, strict=True, pass_through=False)  # type: ignore[call-overload]
+        nw_v1.from_native({"a": [1, 2, 3]}, strict=True, pass_through=False)  # type: ignore[call-overload]
 
 
 def test_from_mock_interchange_protocol_non_strict() -> None:
@@ -329,7 +331,7 @@ def test_from_mock_interchange_protocol_non_strict() -> None:
             pass
 
     mockdf = MockDf()
-    result = nw.from_native(mockdf, eager_only=True, strict=False)
+    result = nw_v1.from_native(mockdf, eager_only=True, strict=False)
     assert result is mockdf
 
 
@@ -339,13 +341,13 @@ def test_from_native_strict_native_series() -> None:
     not_array_like: Literal[1] = 1
 
     with pytest.raises(TypeError, match="got.+list"):
-        nw.from_native(obj, series_only=True)  # type: ignore[call-overload]
+        nw_v1.from_native(obj, series_only=True)  # type: ignore[call-overload]
 
     with pytest.raises(TypeError, match="got.+list"):
-        nw.from_native(array_like, series_only=True)  # type: ignore[call-overload]
+        nw_v1.from_native(array_like, series_only=True)  # type: ignore[call-overload]
 
     with pytest.raises(TypeError, match="got.+int"):
-        nw.from_native(not_array_like, series_only=True)  # type: ignore[call-overload]
+        nw_v1.from_native(not_array_like, series_only=True)  # type: ignore[call-overload]
 
 
 @pytest.mark.skipif(lf_pl is None, reason="polars not found")
@@ -353,45 +355,23 @@ def test_from_native_strict_native_series_polars() -> None:
     obj: list[int] = [1, 2, 3, 4]
     np_array = pl.Series(obj).to_numpy()
     with pytest.raises(TypeError, match="got.+numpy.ndarray"):
-        nw.from_native(np_array, series_only=True)  # type: ignore[call-overload]
+        nw_v1.from_native(np_array, series_only=True)  # type: ignore[call-overload]
 
 
 @pytest.mark.skipif(lf_pl is None, reason="polars not found")
 def test_from_native_lazyframe() -> None:
     assert lf_pl is not None
-    stable_lazy = nw.from_native(lf_pl)
-    unstable_lazy = unstable_nw.from_native(lf_pl)
+    stable_lazy = nw_v1.from_native(lf_pl)
+    unstable_lazy = nw.from_native(lf_pl)
     if TYPE_CHECKING:
-        assert_type(stable_lazy, nw.LazyFrame[pl.LazyFrame])
-        assert_type(unstable_lazy, unstable_nw.LazyFrame[pl.LazyFrame])
+        assert_type(stable_lazy, nw_v1.LazyFrame[pl.LazyFrame])
+        assert_type(unstable_lazy, nw.LazyFrame[pl.LazyFrame])
 
-    assert isinstance(stable_lazy, nw.LazyFrame)
-    assert isinstance(unstable_lazy, unstable_nw.LazyFrame)
+    assert isinstance(stable_lazy, nw_v1.LazyFrame)
+    assert isinstance(unstable_lazy, nw.LazyFrame)
 
 
 def test_series_recursive() -> None:
-    """https://github.com/narwhals-dev/narwhals/issues/2239."""
-    pytest.importorskip("polars")
-    import polars as pl
-
-    pl_series = pl.Series(name="test", values=[1, 2, 3])
-    nw_series = unstable_nw.from_native(pl_series, series_only=True)
-    with pytest.raises(AssertionError):
-        unstable_nw.Series(nw_series, level="full")
-
-    nw_series_early_return = unstable_nw.from_native(nw_series, series_only=True)
-
-    if TYPE_CHECKING:
-        assert_type(pl_series, pl.Series)
-        assert_type(nw_series, unstable_nw.Series[pl.Series])
-
-        nw_series_depth_2 = unstable_nw.Series(nw_series, level="full")  # type: ignore[var-annotated]
-        # NOTE: Checking that the type is `Series[Unknown]`
-        assert_type(nw_series_depth_2, unstable_nw.Series)  # type: ignore[type-arg]
-        assert_type(nw_series_early_return, unstable_nw.Series[pl.Series])
-
-
-def test_series_recursive_v1() -> None:
     """https://github.com/narwhals-dev/narwhals/issues/2239."""
     pytest.importorskip("polars")
     import polars as pl
@@ -407,13 +387,35 @@ def test_series_recursive_v1() -> None:
         assert_type(pl_series, pl.Series)
         assert_type(nw_series, nw.Series[pl.Series])
 
-        nw_series_depth_2 = nw.Series(nw_series, level="full")
-        # NOTE: `Unknown` isn't possible for `v1`, as it has a `TypeVar` default
-        assert_type(nw_series_depth_2, nw.Series[Any])
+        nw_series_depth_2 = nw.Series(nw_series, level="full")  # type: ignore[var-annotated]
+        # NOTE: Checking that the type is `Series[Unknown]`
+        assert_type(nw_series_depth_2, nw.Series)  # type: ignore[type-arg]
         assert_type(nw_series_early_return, nw.Series[pl.Series])
 
 
-@pytest.mark.parametrize("from_native", [unstable_nw.from_native, nw.from_native])
+def test_series_recursive_v1() -> None:
+    """https://github.com/narwhals-dev/narwhals/issues/2239."""
+    pytest.importorskip("polars")
+    import polars as pl
+
+    pl_series = pl.Series(name="test", values=[1, 2, 3])
+    nw_series = nw_v1.from_native(pl_series, series_only=True)
+    with pytest.raises(AssertionError):
+        nw_v1.Series(nw_series, level="full")
+
+    nw_series_early_return = nw_v1.from_native(nw_series, series_only=True)
+
+    if TYPE_CHECKING:
+        assert_type(pl_series, pl.Series)
+        assert_type(nw_series, nw_v1.Series[pl.Series])
+
+        nw_series_depth_2 = nw_v1.Series(nw_series, level="full")
+        # NOTE: `Unknown` isn't possible for `v1`, as it has a `TypeVar` default
+        assert_type(nw_series_depth_2, nw_v1.Series[Any])
+        assert_type(nw_series_early_return, nw_v1.Series[pl.Series])
+
+
+@pytest.mark.parametrize("from_native", [nw.from_native, nw_v1.from_native])
 def test_from_native_invalid_keywords(from_native: Callable[..., Any]) -> None:
     pattern = r"from_native.+unexpected.+keyword.+bad_1"
 

@@ -5,7 +5,7 @@ from typing import Any
 import pandas as pd
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import MultiOutputExpressionError
 from tests.utils import assert_equal_data
 
@@ -17,8 +17,6 @@ def test_reindex(df_raw: Any) -> None:
     df = nw.from_native(df_raw, eager_only=True)
     result = df.select("b", df["a"].sort(descending=True))
     expected = {"b": [4, 4, 6], "a": [3, 2, 1]}
-    assert_equal_data(result, expected)
-    result = df.select("b", nw.col("a").sort(descending=True))
     assert_equal_data(result, expected)
 
     s = df["a"]

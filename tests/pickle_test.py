@@ -6,7 +6,7 @@ from typing import Sequence
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 
 
 # https://github.com/narwhals-dev/narwhals/issues/1486

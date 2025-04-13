@@ -6,7 +6,7 @@ from typing import TypeVar
 import pandas as pd
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import MultiOutputExpressionError
 from tests.utils import NUMPY_VERSION
 from tests.utils import POLARS_VERSION

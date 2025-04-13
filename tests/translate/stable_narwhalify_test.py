@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals.stable.v1 as nw_v1
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -19,9 +19,9 @@ def test_narwhalify() -> None:
     pytest.importorskip("pandas")
     import pandas as pd
 
-    @nw.narwhalify
-    def func(df: nw.DataFrame[IntoDataFrameT]) -> nw.DataFrame[IntoDataFrameT]:
-        return df.with_columns(nw.all() + 1)
+    @nw_v1.narwhalify
+    def func(df: nw_v1.DataFrame[IntoDataFrameT]) -> nw_v1.DataFrame[IntoDataFrameT]:
+        return df.with_columns(nw_v1.all() + 1)
 
     df = pd.DataFrame({"a": [1, 2, 3]})
     result = func(df)
@@ -35,11 +35,11 @@ def test_narwhalify_method() -> None:
     import pandas as pd
 
     class Foo:
-        @nw.narwhalify
+        @nw_v1.narwhalify
         def func(
-            self: Self, df: nw.DataFrame[IntoDataFrameT], a: int = 1
-        ) -> nw.DataFrame[IntoDataFrameT]:
-            return df.with_columns(nw.all() + a)
+            self: Self, df: nw_v1.DataFrame[IntoDataFrameT], a: int = 1
+        ) -> nw_v1.DataFrame[IntoDataFrameT]:
+            return df.with_columns(nw_v1.all() + a)
 
     df = pd.DataFrame({"a": [1, 2, 3]})
     result = Foo().func(df)
@@ -53,11 +53,11 @@ def test_narwhalify_method_called() -> None:
     import pandas as pd
 
     class Foo:
-        @nw.narwhalify
+        @nw_v1.narwhalify
         def func(
-            self: Self, df: nw.DataFrame[IntoDataFrameT], a: int = 1
-        ) -> nw.DataFrame[IntoDataFrameT]:
-            return df.with_columns(nw.all() + a)
+            self: Self, df: nw_v1.DataFrame[IntoDataFrameT], a: int = 1
+        ) -> nw_v1.DataFrame[IntoDataFrameT]:
+            return df.with_columns(nw_v1.all() + a)
 
     df = pd.DataFrame({"a": [1, 2, 3]})
     result = Foo().func(df)
@@ -70,11 +70,11 @@ def test_narwhalify_method_called() -> None:
 
 def test_narwhalify_method_invalid() -> None:
     class Foo:
-        @nw.narwhalify(strict=True, eager_only=True)
+        @nw_v1.narwhalify(strict=True, eager_only=True)
         def func(self) -> Foo:  # pragma: no cover
             return self
 
-        @nw.narwhalify(strict=True, eager_only=True)
+        @nw_v1.narwhalify(strict=True, eager_only=True)
         def fun2(self, df: Any) -> Any:  # pragma: no cover
             return df
 
@@ -83,7 +83,7 @@ def test_narwhalify_method_invalid() -> None:
 
 
 def test_narwhalify_invalid() -> None:
-    @nw.narwhalify(strict=True)
+    @nw_v1.narwhalify(strict=True)
     def func() -> None:  # pragma: no cover
         return None
 
@@ -95,7 +95,7 @@ def test_narwhalify_backends_pandas() -> None:
     pytest.importorskip("pandas")
     import pandas as pd
 
-    @nw.narwhalify
+    @nw_v1.narwhalify
     def func(
         arg1: Any, arg2: Any, extra: int = 1
     ) -> tuple[Any, Any, int]:  # pragma: no cover
@@ -108,7 +108,7 @@ def test_narwhalify_backends_polars() -> None:
     pytest.importorskip("polars")
     import polars as pl
 
-    @nw.narwhalify
+    @nw_v1.narwhalify
     def func(
         arg1: Any, arg2: Any, extra: int = 1
     ) -> tuple[Any, Any, int]:  # pragma: no cover
@@ -124,7 +124,7 @@ def test_narwhalify_backends_cross() -> None:
     import pandas as pd
     import polars as pl
 
-    @nw.narwhalify
+    @nw_v1.narwhalify
     def func(
         arg1: Any, arg2: Any, extra: int = 1
     ) -> tuple[Any, Any, int]:  # pragma: no cover
@@ -144,7 +144,7 @@ def test_narwhalify_backends_cross2() -> None:
     import pandas as pd
     import polars as pl
 
-    @nw.narwhalify
+    @nw_v1.narwhalify
     def func(
         arg1: Any, arg2: Any, extra: int = 1
     ) -> tuple[Any, Any, int]:  # pragma: no cover
