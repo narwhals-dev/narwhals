@@ -412,3 +412,9 @@ def test_enum_valid(categories: Iterable[Any] | type[enum.Enum]) -> None:
     dtype = nw.Enum(categories)
     assert dtype == nw.Enum
     assert len(dtype.categories) == len([*categories])
+
+
+def test_enum_categories_immutable() -> None:
+    dtype = nw.Enum(["a", "b"])
+    with pytest.raises(TypeError, match="does not support item assignment"):
+        dtype.categories[0] = "c"  # type: ignore[index]

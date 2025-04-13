@@ -455,7 +455,7 @@ class Enum(DType):
         #       should the intersection of the above be caught at the narwhals layer?
         if isinstance(categories, type) and issubclass(categories, enum.Enum):
             categories = (getattr(v, "value", v) for v in categories.__members__.values())
-        self.categories = [*categories]
+        self.categories = (*categories,)
 
     def __eq__(self: Self, other: object) -> bool:
         # allow comparing object instances to class
