@@ -212,3 +212,20 @@ def test_cast_to_enum_v1(
         match="Converting to Enum is not supported in narwhals.stable.v1",
     ):
         nw_v1.from_native(df_native).select(nw_v1.col("a").cast(nw_v1.Enum))
+
+
+def test_v1_ordered_categorical_pandas() -> None:
+    s = nw_v1.from_native(
+        pd.Series([0, 1], dtype=pd.CategoricalDtype(ordered=True)), series_only=True
+    )
+    assert s.dtype == nw_v1.Categorical
+
+
+def test_v1_enum_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    s = nw_v1.from_native(
+        pl.Series(["a", "b"], dtype=pl.Enum(["a", "b"])), series_only=True
+    )
+    assert s.dtype == nw_v1.Enum
