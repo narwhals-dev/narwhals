@@ -332,11 +332,11 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
                 return self._with_native(
                     self.native.__class__(), validate_column_names=False
                 )
-            if all(isinstance(x, int) for x in item[1]):  # type: ignore[var-annotated]
+            if isinstance(item[1][0], int):
                 return self._with_native(
                     self.native.iloc[item], validate_column_names=False
                 )
-            if all(isinstance(x, str) for x in item[1]):  # type: ignore[var-annotated]
+            if isinstance(item[1][0], str):
                 indexer = (
                     item[0],
                     self.native.columns.get_indexer(item[1]),
@@ -384,7 +384,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             return PandasLikeSeries.from_native(native_series, context=self)
 
         elif is_sequence_but_not_str(item) or is_numpy_array_1d(item):
-            if all(isinstance(x, str) for x in item) and len(item) > 0:
+            if len(item) > 0 and isinstance(item[0], str):
                 return self._with_native(
                     select_columns_by_name(
                         self.native,
