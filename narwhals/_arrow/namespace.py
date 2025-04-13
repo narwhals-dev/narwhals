@@ -5,7 +5,6 @@ from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
@@ -32,7 +31,6 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import ArrowChunkedArray
     from narwhals._arrow.typing import Incomplete
     from narwhals.dtypes import DType
-    from narwhals.typing import ConcatMethod
     from narwhals.utils import Version
 
 
@@ -217,7 +215,6 @@ class ArrowNamespace(
 
     def _concat_horizontal(self, dfs: Sequence[pa.Table], /) -> pa.Table:
         names = [name for df in dfs for name in df.column_names]
-
         # NOTE: Think this is redundant, since we have `validate_column_names=True` later
         if len(set(names)) < len(names):  # pragma: no cover
             msg = "Expected unique column names"
@@ -237,20 +234,6 @@ class ArrowNamespace(
                 )
                 raise TypeError(msg)
         return pa.concat_tables(dfs)  # type: ignore[arg-type]
-
-    def concat(
-        self, items: Iterable[ArrowDataFrame], *, how: ConcatMethod
-    ) -> ArrowDataFrame:
-        dfs = [item.native for item in items]
-        if how == "horizontal":
-            native = self._concat_horizontal(dfs)
-        elif how == "vertical":
-            native = self._concat_vertical(dfs)
-        elif how == "diagonal":
-            native = self._concat_diagonal(dfs)
-        else:
-            raise NotImplementedError
-        return self._dataframe.from_native(native, context=self)
 
     @property
     def selectors(self: Self) -> ArrowSelectorNamespace:

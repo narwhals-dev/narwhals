@@ -18,8 +18,8 @@ from narwhals._compliant.typing import EagerDataFrameT
 from narwhals._compliant.typing import EagerExprT
 from narwhals._compliant.typing import EagerSeriesT
 from narwhals._compliant.typing import LazyExprT
+from narwhals._compliant.typing import NativeFrameT
 from narwhals._compliant.typing import NativeFrameT_co
-from narwhals._compliant.typing import NativeFrameT_contra
 from narwhals._compliant.typing import NativeSeriesT
 from narwhals.dependencies import is_numpy_array_2d
 from narwhals.utils import exclude_column_names
@@ -130,9 +130,7 @@ class LazyNamespace(
 
 class EagerNamespace(
     DepthTrackingNamespace[EagerDataFrameT, EagerExprT],
-    Protocol[
-        EagerDataFrameT, EagerSeriesT, EagerExprT, NativeFrameT_contra, NativeSeriesT
-    ],
+    Protocol[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
 ):
     @property
     def _dataframe(self) -> type[EagerDataFrameT]: ...
@@ -143,11 +141,11 @@ class EagerNamespace(
     ) -> EagerWhen[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeSeriesT]: ...
 
     @overload
-    def from_native(self, data: NativeFrameT_contra, /) -> EagerDataFrameT: ...
+    def from_native(self, data: NativeFrameT, /) -> EagerDataFrameT: ...
     @overload
     def from_native(self, data: NativeSeriesT, /) -> EagerSeriesT: ...
     def from_native(
-        self, data: NativeFrameT_contra | NativeSeriesT | Any, /
+        self, data: NativeFrameT | NativeSeriesT | Any, /
     ) -> EagerDataFrameT | EagerSeriesT:
         if self._dataframe._is_native(data):
             return self._dataframe.from_native(data, context=self)
@@ -181,3 +179,24 @@ class EagerNamespace(
         if is_numpy_array_2d(data):
             return self._dataframe.from_numpy(data, schema=schema, context=self)
         return self._series.from_numpy(data, context=self)
+
+    def _concat_diagonal(self, dfs: Sequence[NativeFrameT], /) -> NativeFrameT: ...
+    # NOTE: `pandas` also accepts `NativeSeriesT`
+    def _concat_horizontal(self, dfs: Sequence[Any], /) -> NativeFrameT: ...
+    # NOTE: Could very easily add support for `Series`
+    # - Arrow would use `pa.concat_arrays`
+    def _concat_vertical(self, dfs: Sequence[NativeFrameT], /) -> NativeFrameT: ...
+
+    def concat(
+        self, items: Iterable[EagerDataFrameT], *, how: ConcatMethod
+    ) -> EagerDataFrameT:
+        dfs = [item.native for item in items]
+        if how == "horizontal":
+            native = self._concat_horizontal(dfs)
+        elif how == "vertical":
+            native = self._concat_vertical(dfs)
+        elif how == "diagonal":
+            native = self._concat_diagonal(dfs)
+        else:
+            raise NotImplementedError
+        return self._dataframe.from_native(native, context=self)
