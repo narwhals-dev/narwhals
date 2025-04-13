@@ -11,8 +11,6 @@ import pyarrow as pa
 import pytest
 
 import narwhals as nw
-from narwhals._expression_parsing import ExprKind
-from narwhals._expression_parsing import infer_kind
 from narwhals.exceptions import ComputeError
 from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import LengthChangingExprError
@@ -573,14 +571,14 @@ def test_group_by_raise_if_not_transform(
 
     context: Any
     if isinstance(df, nw.LazyFrame) and any(
-        infer_kind(expr, str_as_lit=True) is ExprKind.FILTRATION for expr in keys
+        expr._metadata.kind.is_filtration() for expr in keys
     ):
         context = pytest.raises(
             LengthChangingExprError,
             match="Length-changing expressions are not supported for use in LazyFrame",
         )
     elif isinstance(df, nw.LazyFrame) and any(
-        infer_kind(expr, str_as_lit=True) is ExprKind.WINDOW for expr in keys
+        expr._metadata.kind.is_window() for expr in keys
     ):
         context = pytest.raises(
             OrderDependentExprError,
