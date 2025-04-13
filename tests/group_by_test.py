@@ -499,6 +499,7 @@ def test_fancy_functions(constructor: Constructor) -> None:
             ["y"],
         ),
     ],
+    ids=range(5),
 )
 @pytest.mark.parametrize("drop_null_keys", [True, False])
 def test_group_by_expr(
@@ -511,7 +512,12 @@ def test_group_by_expr(
     *,
     drop_null_keys: bool,
 ) -> None:
-    if "polars_lazy" in str(constructor) and POLARS_COLLECT_STREAMING_ENGINE:
+    request_id = request.node.callspec.id
+    if (
+        POLARS_COLLECT_STREAMING_ENGINE
+        and request_id.startswith("polars[lazy]")
+        and request_id.endswith("0")
+    ):
         # Blocked by upstream issue as of polars==1.27.1
         # See: https://github.com/pola-rs/polars/issues/22238
         request.applymarker(pytest.mark.xfail)
