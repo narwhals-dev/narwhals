@@ -523,16 +523,20 @@ def test_group_by_expr(
         request.applymarker(pytest.mark.xfail)
 
     if (
-        "polars_lazy" in str(constructor)
-        and drop_null_keys
-        and POLARS_VERSION <= (0, 20, 16)
-    ) or (
         "polars" in str(constructor)
         and drop_null_keys
         and any(key._metadata.expansion_kind.is_multi_output() for key in keys)
     ):
-        # The following repro works for polars>=0.20.17, but fails with `ColumnNotFoundError`
-        # for previous versions:
+        request.applymarker(pytest.mark.xfail)
+
+    if (
+        "polars_lazy" in str(constructor)
+        and drop_null_keys
+        and POLARS_VERSION <= (0, 20, 16)
+        and request_id.endswith(("0", "4"))
+    ):
+        # For id=0: the following repro works for polars>=0.20.17, but fails with
+        # `ColumnNotFoundError` for previous versions:
         # ```
         # import polars as pl
         # data = {"a": [1, 1, 2, 2, -1], "x": [0, 1, 2, 3, 4]}
@@ -547,6 +551,7 @@ def test_group_by_expr(
         #     .collect()
         # )
         # ```
+        # For id=4: similarly, `ColumnNotFoundError` ("y")
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 1, 2, 2, -1], "x": [0, 1, 2, 3, 4], "y": [0.5, -0.5, 1, -1, 1.5]}
