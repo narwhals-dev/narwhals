@@ -215,10 +215,6 @@ class ArrowNamespace(
 
     def _concat_horizontal(self, dfs: Sequence[pa.Table], /) -> pa.Table:
         names = [name for df in dfs for name in df.column_names]
-        # NOTE: Think this is redundant, since we have `validate_column_names=True` later
-        if len(set(names)) < len(names):  # pragma: no cover
-            msg = "Expected unique column names"
-            raise ValueError(msg)
         arrays = list(chain.from_iterable(df.itercolumns() for df in dfs))
         return pa.Table.from_arrays(arrays, names=names)
 
