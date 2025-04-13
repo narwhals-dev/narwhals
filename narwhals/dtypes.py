@@ -10,7 +10,6 @@ from typing import Mapping
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    from collections.abc import Hashable
     from typing import Iterable
     from typing import Iterator
     from typing import Sequence
@@ -449,13 +448,16 @@ class Enum(DType):
        Enum(categories=['beluga', 'narwhal', 'orca'])
     """
 
-    def __init__(self, categories: Iterable[Hashable] | type[enum.Enum]) -> None:
+    def __init__(self, categories: Iterable[str] | type[enum.Enum]) -> None:
         # TODO(Unassigned): pandas errors on NaN, NA, NaT OR duplicated value category
         #       Polars errors on Null, NaN OR duplicated OR any non-string category
         #       should the intersection of the above be caught at the narwhals layer?
         if isinstance(categories, type) and issubclass(categories, enum.Enum):
-            categories = (getattr(v, "value", v) for v in categories.__members__.values())
-        self.categories = (*categories,)
+            self.categories = tuple(
+                getattr(v, "value", v) for v in categories.__members__.values()
+            )
+        else:
+            self.categories = tuple(categories)
 
     def __eq__(self: Self, other: object) -> bool:
         # allow comparing object instances to class
