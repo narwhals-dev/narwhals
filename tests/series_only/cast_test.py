@@ -152,6 +152,7 @@ def test_cast_to_enum_v1(
     df_native = constructor({"a": ["a", "b"]})
 
     with pytest.raises(
-        NotImplementedError, match="Converting to Enum is not supported in V1"
+        NotImplementedError,
+        match="Converting to Enum is not supported in narwhals.stable.v1",
     ):
         nw.from_native(df_native).select(nw.col("a").cast(nw.Enum))

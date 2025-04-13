@@ -189,7 +189,7 @@ def narwhals_to_native_dtype(
         return pl.Categorical()
     if dtype == dtypes.Enum:
         if version is Version.V1:
-            msg = "Converting to Enum is not supported in V1"
+            msg = "Converting to Enum is not supported in narwhals.stable.v1"
             raise NotImplementedError(msg)
 
         if dtype is dtypes.Enum:

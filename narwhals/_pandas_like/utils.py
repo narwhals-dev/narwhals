@@ -479,7 +479,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
         return "date32[pyarrow]"
     if isinstance_or_issubclass(dtype, dtypes.Enum):
         if version is Version.V1:
-            msg = "Converting to Enum is not supported in V1"
+            msg = "Converting to Enum is not supported in narwhals.stable.v1"
             raise NotImplementedError(msg)
 
         if dtype is dtypes.Enum:
