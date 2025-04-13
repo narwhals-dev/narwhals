@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import NarwhalsError
 from tests.conftest import dask_lazy_p1_constructor
 from tests.conftest import dask_lazy_p2_constructor
