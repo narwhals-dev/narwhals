@@ -33,6 +33,7 @@ from narwhals.utils import Implementation
 from narwhals.utils import find_stacklevel
 from narwhals.utils import flatten
 from narwhals.utils import generate_repr
+from narwhals.utils import is_boolean_list
 from narwhals.utils import is_compliant_lazyframe
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import issue_deprecation_warning
@@ -192,11 +193,9 @@ class BaseFrame(Generic[_FrameT]):
         *predicates: IntoExpr | Iterable[IntoExpr] | list[bool],
         **constraints: Any,
     ) -> Self:
-        if not (
-            len(predicates) == 1
-            and isinstance(predicates[0], list)
-            and all(isinstance(x, bool) for x in predicates[0])
-        ):
+        if len(predicates) == 1 and is_boolean_list(predicates[0]):
+            predicate = predicates[0]
+        else:
             from narwhals.functions import col
 
             flat_predicates = flatten(predicates)
@@ -210,8 +209,6 @@ class BaseFrame(Generic[_FrameT]):
             predicate = plx.all_horizontal(
                 *chain(compliant_predicates, compliant_constraints)
             )
-        else:
-            predicate = predicates[0]
         return self._with_compliant(self._compliant_frame.filter(predicate))
 
     def sort(
@@ -2786,10 +2783,7 @@ class LazyFrame(BaseFrame[FrameT]):
             <BLANKLINE>
         """
         if (
-            len(predicates) == 1
-            and isinstance(predicates[0], list)
-            and all(isinstance(x, bool) for x in predicates[0])
-            and not constraints
+            len(predicates) == 1 and is_boolean_list(predicates[0]) and not constraints
         ):  # pragma: no cover
             msg = "`LazyFrame.filter` is not supported with Python boolean masks - use expressions instead."
             raise TypeError(msg)
