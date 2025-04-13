@@ -63,7 +63,6 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     _compliant_frame: Any
     _keys: list[str]
     _output_key_names: list[str]
-    _original_key_names: list[str]
 
     @property
     def compliant(self) -> CompliantFrameT_co:
@@ -83,7 +82,7 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     @staticmethod
     def _init_parsing(
         compliant_frame: CompliantLazyFrameAny, keys: Sequence[CompliantExprT_contra]
-    ) -> tuple[CompliantLazyFrameAny, list[str], list[str], list[str]]:
+    ) -> tuple[CompliantLazyFrameAny, list[str], list[str]]:
         """Parses key expressions to set up `.agg` operation with correct information.
 
         Since keys are expressions, it's possible to incour in aliases that match
@@ -91,16 +90,14 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
 
         In order to match polars behavior and not overwrite columns when evaluating keys:
 
-        - We store original key names: these are later ignored/excluded from unnamed
-            expression in `.agg(...)` context.
         - We evaluate what the output key names should be, in order to remap temporary column
-            names to the expected ones.
+            names to the expected ones, and to exclude those from unnamed expressions in
+            `.agg(...)` context (see https://github.com/narwhals-dev/narwhals/pull/2325#issuecomment-2800004520)
         - Create temporary names for evaluated key expressions that are guaranteed to have
             no overlap with any existing column name.
         - Add these temporary columns to the compliant dataframe.
         """
         suffix_token = "_" * max(len(str(c)) for c in compliant_frame.columns)
-        original_names = compliant_frame._evaluate_aliases(*[k.name.keep() for k in keys])
         output_names = compliant_frame._evaluate_aliases(*keys)
 
         safe_keys = [
@@ -115,12 +112,7 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
 
         key_names = compliant_frame._evaluate_aliases(*safe_keys)
 
-        return (
-            compliant_frame.with_columns(*safe_keys),
-            key_names,
-            output_names,
-            original_names,
-        )
+        return compliant_frame.with_columns(*safe_keys), key_names, output_names
 
 
 class DepthTrackingGroupBy(
@@ -201,7 +193,7 @@ class LazyGroupBy(
         native_exprs = expr(self.compliant)
         if expr._is_multi_output_unnamed():
             for native_expr, name, alias in zip(native_exprs, output_names, aliases):
-                if name not in {*self._keys, *self._original_key_names}:
+                if name not in {*self._keys, *self._output_key_names}:
                     yield native_expr.alias(alias)
         else:
             for native_expr, alias in zip(native_exprs, aliases):

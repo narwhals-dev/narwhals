@@ -465,9 +465,51 @@ def test_fancy_functions(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize(
+    ("keys", "aggs", "expected", "sort_by"),
+    [
+        (
+            [nw.col("a").abs(), nw.col("a").abs().alias("a_with_alias")],
+            [nw.col("x").sum()],
+            {"a": [1, 2], "a_with_alias": [1, 2], "x": [5, 5]},
+            ["a"],
+        ),
+        (
+            [nw.col("a").alias("x")],
+            [nw.col("x").mean().alias("y")],
+            {"x": [-1, 1, 2], "y": [4.0, 0.5, 2.5]},
+            ["x"],
+        ),
+        (
+            [nw.col("a")],
+            [nw.col("a").count().alias("foo-bar"), nw.all().sum()],
+            {"a": [-1, 1, 2], "foo-bar": [1, 2, 2], "x": [4, 1, 5], "y": [1.5, 0, 0]},
+            ["a"],
+        ),
+        (
+            [nw.col("a", "y").abs()],
+            [nw.col("x").sum()],
+            {"a": [1, 1, 2], "y": [0.5, 1.5, 1], "x": [1, 4, 5]},
+            ["a", "y"],
+        ),
+        (
+            [nw.col("a").abs().alias("y")],
+            [nw.all().sum().name.suffix("c")],
+            {"y": [1, 2], "ac": [1, 4], "xc": [5, 5]},
+            ["y"],
+        ),
+    ],
+)
 @pytest.mark.parametrize("drop_null_keys", [True, False])
 def test_group_by_expr(
-    request: pytest.FixtureRequest, constructor: Constructor, *, drop_null_keys: bool
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    keys: list[nw.Expr],
+    aggs: list[nw.Expr],
+    expected: dict[str, list[Any]],
+    sort_by: list[str],
+    *,
+    drop_null_keys: bool,
 ) -> None:
     if "polars_lazy" in str(constructor) and POLARS_COLLECT_STREAMING_ENGINE:
         # Blocked by upstream issue as of polars==1.27.1
@@ -499,51 +541,7 @@ def test_group_by_expr(
 
     data = {"a": [1, 1, 2, 2, -1], "x": [0, 1, 2, 3, 4], "y": [0.5, -0.5, 1, -1, 1.5]}
     df = nw.from_native(constructor(data))
-    result = (
-        df.group_by(
-            nw.col("a").abs(),
-            nw.col("a").abs().alias("a_with_alias"),
-            drop_null_keys=drop_null_keys,
-        )
-        .agg(nw.col("x").sum())
-        .sort("a")
-    )
-    expected = {
-        "a": [1, 2],
-        "a_with_alias": [1, 2],
-        "x": [5, 5],
-    }
-    assert_equal_data(result, expected)
-
-    result_aliases = (
-        df.group_by(nw.col("a").alias("x"), drop_null_keys=drop_null_keys)
-        .agg(nw.col("x").mean().alias("y"))
-        .sort("x")
-    )
-    expected_aliases = {"x": [-1, 1, 2], "y": [4.0, 0.5, 2.5]}
-    assert_equal_data(result_aliases, expected_aliases)
-
-    result_all = (
-        df.group_by("a")
-        .agg(
-            nw.col("a").count().alias("foo-bar"), nw.all().sum()
-        )  # inspired by Validoopsie
-        .sort("a")
-    )
-    expected_all = {
-        "a": [-1, 1, 2],
-        "foo-bar": [1, 2, 2],
-        "x": [4, 1, 5],
-        "y": [1.5, 0, 0],
-    }
-    assert_equal_data(result_all, expected_all)
-
-
-def test_group_by_multioutput_expr(constructor: Constructor) -> None:
-    data = {"a": [1, 1, 2, 2], "b": [1, -1, -2, 2], "x": [1, 2, 3, 4]}
-    df = nw.from_native(constructor(data))
-    result = df.group_by(nw.col("a", "b").abs()).agg(nw.col("x").sum()).sort("a")
-    expected = {"a": [1, 2], "b": [1, 2], "x": [3, 7]}
+    result = df.group_by(*keys, drop_null_keys=drop_null_keys).agg(*aggs).sort(*sort_by)
     assert_equal_data(result, expected)
 
 

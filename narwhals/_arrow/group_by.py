@@ -46,7 +46,6 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
             frame,
             self._keys,
             self._output_key_names,
-            self._original_key_names,
         ) = self._init_parsing(compliant_frame=df, keys=keys)
 
         self._compliant_frame = frame.drop_nulls(self._keys) if drop_null_keys else frame
@@ -61,7 +60,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
 
         for expr in exprs:
             output_names, aliases = evaluate_output_names_and_aliases(
-                expr, self.compliant, [*self._keys, *self._original_key_names]
+                expr, self.compliant, [*self._keys, *self._output_key_names]
             )
 
             if expr._depth == 0:

@@ -51,7 +51,6 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
             self._compliant_frame,
             self._keys,
             self._output_key_names,
-            self._original_key_names,
         ) = self._init_parsing(compliant_frame=df, keys=keys)
         # Drop index to avoid potential collisions:
         # https://github.com/narwhals-dev/narwhals/issues/1907.
@@ -93,7 +92,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
         all_aggs_are_simple = True
         for expr in exprs:
             _, aliases = evaluate_output_names_and_aliases(
-                expr, self.compliant, [*self._keys, *self._original_key_names]
+                expr, self.compliant, [*self._keys, *self._output_key_names]
             )
             new_names.extend(aliases)
             if not self._is_simple(expr):
@@ -120,7 +119,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
         if all_aggs_are_simple:
             for expr in exprs:
                 output_names, aliases = evaluate_output_names_and_aliases(
-                    expr, self.compliant, [*self._keys, *self._original_key_names]
+                    expr, self.compliant, [*self._keys, *self._output_key_names]
                 )
                 if expr._depth == 0:
                     # e.g. `agg(nw.len())`
