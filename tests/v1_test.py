@@ -12,6 +12,7 @@ import narwhals.stable.v1 as nw_v1
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -189,3 +190,25 @@ def test_enum_v1_is_enum_unstable() -> None:
 
     with pytest.raises(TypeError, match=r"takes 1 positional argument"):
         nw_v1.Enum(("a", "b"))  # type: ignore[call-arg]
+
+
+def test_cast_to_enum_v1(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    # Backends that do not (yet) support Enum dtype
+    if (
+        any(
+            backend in str(constructor)
+            for backend in ["pyarrow_table", "duckdb", "sqlframe", "pyspark"]
+        )
+        or str(constructor) == "modin"
+    ):
+        request.applymarker(pytest.mark.xfail)
+
+    df_native = constructor({"a": ["a", "b"]})
+
+    with pytest.raises(
+        NotImplementedError,
+        match="Converting to Enum is not supported in narwhals.stable.v1",
+    ):
+        nw_v1.from_native(df_native).select(nw_v1.col("a").cast(nw_v1.Enum))

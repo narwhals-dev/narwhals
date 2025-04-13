@@ -86,9 +86,6 @@ class Enum(NwEnum):
        Enum
     """
 
-    def __new__(cls: type[Self]) -> Self:
-        return super(NwEnum, cls).__new__(cls)
-
     def __init__(self: Self) -> None:
         super(NwEnum, self).__init__()
 

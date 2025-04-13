@@ -134,25 +134,3 @@ def test_cast_to_enum_vmain(
 
     df_nw = df_nw.select(col_a.cast(nw.Enum(["a", "b"])))
     assert df_nw.collect_schema() == {"a": nw.Enum(["a", "b"])}
-
-
-def test_cast_to_enum_v1(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
-    # Backends that do not (yet) support Enum dtype
-    if (
-        any(
-            backend in str(constructor)
-            for backend in ["pyarrow_table", "duckdb", "sqlframe", "pyspark"]
-        )
-        or str(constructor) == "modin"
-    ):
-        request.applymarker(pytest.mark.xfail)
-
-    df_native = constructor({"a": ["a", "b"]})
-
-    with pytest.raises(
-        NotImplementedError,
-        match="Converting to Enum is not supported in narwhals.stable.v1",
-    ):
-        nw.from_native(df_native).select(nw.col("a").cast(nw.Enum))
