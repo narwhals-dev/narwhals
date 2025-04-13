@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import operator
+import warnings
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Literal
+from typing import Sequence
 
 from narwhals._compliant import CompliantThen
 from narwhals._compliant import EagerNamespace
@@ -17,18 +19,20 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_series_full_broadcast
-from narwhals._pandas_like.utils import diagonal_concat
-from narwhals._pandas_like.utils import horizontal_concat
-from narwhals._pandas_like.utils import vertical_concat
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
     import pandas as pd
     from typing_extensions import Self
 
+    from narwhals._pandas_like.typing import NDFrameT
     from narwhals.dtypes import DType
+    from narwhals.typing import ConcatMethod
     from narwhals.utils import Implementation
     from narwhals.utils import Version
+
+VERTICAL: Literal[0] = 0
+HORIZONTAL: Literal[1] = 1
 
 
 class PandasLikeNamespace(
@@ -223,51 +227,66 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def concat(
-        self: Self,
-        items: Iterable[PandasLikeDataFrame],
-        *,
-        how: Literal["horizontal", "vertical", "diagonal"],
-    ) -> PandasLikeDataFrame:
-        dfs: list[Any] = [item._native_frame for item in items]
-        if how == "horizontal":
-            return PandasLikeDataFrame(
-                horizontal_concat(
-                    dfs,
-                    implementation=self._implementation,
-                    backend_version=self._backend_version,
-                ),
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-                version=self._version,
-                validate_column_names=True,
-            )
-        if how == "vertical":
-            return PandasLikeDataFrame(
-                vertical_concat(
-                    dfs,
-                    implementation=self._implementation,
-                    backend_version=self._backend_version,
-                ),
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-                version=self._version,
-                validate_column_names=True,
-            )
+    @property
+    def _concat(self):  # type: ignore[no-untyped-def] # noqa: ANN202
+        """Return the **native** equivalent of `pd.concat`."""
+        # NOTE: Leave un-annotated to allow `@overload` matching via inference.
+        if TYPE_CHECKING:
+            import pandas as pd
 
-        if how == "diagonal":
-            return PandasLikeDataFrame(
-                diagonal_concat(
-                    dfs,
-                    implementation=self._implementation,
-                    backend_version=self._backend_version,
-                ),
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-                version=self._version,
-                validate_column_names=True,
-            )
-        raise NotImplementedError
+            return pd.concat
+        return self._implementation.to_native_namespace().concat
+
+    def _concat_diagonal(self, dfs: Sequence[pd.DataFrame], /) -> pd.DataFrame:
+        if self._implementation.is_pandas() and self._backend_version < (3,):
+            if self._backend_version < (1,):
+                return self._concat(dfs, axis=VERTICAL, copy=False, sort=False)
+            return self._concat(dfs, axis=VERTICAL, copy=False)
+        return self._concat(dfs, axis=VERTICAL)
+
+    def _concat_horizontal(self, dfs: Sequence[NDFrameT], /) -> pd.DataFrame:
+        if self._implementation.is_cudf():
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore",
+                    message="The behavior of array concatenation with empty entries is deprecated",
+                    category=FutureWarning,
+                )
+                return self._concat(dfs, axis=HORIZONTAL)
+        elif self._implementation.is_pandas() and self._backend_version < (3,):
+            return self._concat(dfs, axis=HORIZONTAL, copy=False)
+        return self._concat(dfs, axis=HORIZONTAL)
+
+    def _concat_vertical(self, dfs: Sequence[pd.DataFrame], /) -> pd.DataFrame:
+        cols_0 = dfs[0].columns
+        for i, df in enumerate(dfs[1:], start=1):
+            cols_current = df.columns
+            if not (
+                (len(cols_current) == len(cols_0)) and (cols_current == cols_0).all()
+            ):
+                msg = (
+                    "unable to vstack, column names don't match:\n"
+                    f"   - dataframe 0: {cols_0.to_list()}\n"
+                    f"   - dataframe {i}: {cols_current.to_list()}\n"
+                )
+                raise TypeError(msg)
+        if self._implementation.is_pandas() and self._backend_version < (3,):
+            return self._concat(dfs, axis=VERTICAL, copy=False)
+        return self._concat(dfs, axis=VERTICAL)
+
+    def concat(
+        self, items: Iterable[PandasLikeDataFrame], *, how: ConcatMethod
+    ) -> PandasLikeDataFrame:
+        dfs: list[pd.DataFrame] = [item.native for item in items]
+        if how == "horizontal":
+            native = self._concat_horizontal(dfs)
+        elif how == "vertical":
+            native = self._concat_vertical(dfs)
+        elif how == "diagonal":
+            native = self._concat_diagonal(dfs)
+        else:
+            raise NotImplementedError
+        return self._dataframe.from_native(native, context=self)
 
     def when(self: Self, predicate: PandasLikeExpr) -> PandasWhen:
         return PandasWhen.from_expr(predicate, context=self)

@@ -208,6 +208,90 @@ SizeUnit: TypeAlias = Literal[
 
 TimeUnit: TypeAlias = Literal["ns", "us", "ms", "s"]
 
+AsofJoinStrategy: TypeAlias = Literal["backward", "forward", "nearest"]
+"""Join strategy.
+
+- *"backward"*: Selects the last row in the right DataFrame whose `on` key
+    is less than or equal to the left's key.
+- *"forward"*: Selects the first row in the right DataFrame whose `on` key
+    is greater than or equal to the left's key.
+- *"nearest"*: Search selects the last row in the right DataFrame whose value
+    is nearest to the left's key.
+"""
+
+ClosedInterval: TypeAlias = Literal["left", "right", "none", "both"]
+"""Define which sides of the interval are closed (inclusive)."""
+
+ConcatMethod: TypeAlias = Literal["horizontal", "vertical", "diagonal"]
+"""Concatenating strategy.
+
+- *"vertical"*: Concatenate vertically. Column names must match.
+- *"horizontal"*: Concatenate horizontally. If lengths don't match, then
+    missing rows are filled with null values.
+- *"diagonal"*: Finds a union between the column schemas and fills missing
+    column values with null.
+"""
+
+FillNullStrategy: TypeAlias = Literal["forward", "backward"]
+"""Strategy used to fill null values."""
+
+JoinStrategy: TypeAlias = Literal["inner", "left", "full", "cross", "semi", "anti"]
+"""Join strategy.
+
+- *"inner"*: Returns rows that have matching values in both tables.
+- *"left"*: Returns all rows from the left table, and the matched rows from
+    the right table.
+- *"full"*: Returns all rows in both dataframes, with the `suffix` appended to
+    the right join keys.
+- *"cross"*: Returns the Cartesian product of rows from both tables.
+- *"semi"*: Filter rows that have a match in the right table.
+- *"anti"*: Filter rows that do not have a match in the right table.
+"""
+
+PivotAgg: TypeAlias = Literal[
+    "min", "max", "first", "last", "sum", "mean", "median", "len"
+]
+"""A predefined aggregate function string."""
+
+RankMethod: TypeAlias = Literal["average", "min", "max", "dense", "ordinal"]
+"""The method used to assign ranks to tied elements.
+
+- *"average"*: The average of the ranks that would have been assigned to
+    all the tied values is assigned to each value.
+- *"min"*: The minimum of the ranks that would have been assigned to all
+    the tied values is assigned to each value. (This is also referred to
+    as "competition" ranking.)
+- *"max"*: The maximum of the ranks that would have been assigned to all
+    the tied values is assigned to each value.
+- *"dense"*: Like "min", but the rank of the next highest element is
+    assigned the rank immediately after those assigned to the tied elements.
+- *"ordinal"*: All values are given a distinct rank, corresponding to the
+    order that the values occur in the Series.
+"""
+
+RollingInterpolationMethod: TypeAlias = Literal[
+    "nearest", "higher", "lower", "midpoint", "linear"
+]
+"""Interpolation method."""
+
+UniqueKeepStrategy: TypeAlias = Literal["any", "first", "last", "none"]
+"""Which of the duplicate rows to keep.
+
+- *"any"*: Does not give any guarantee of which row is kept.
+    This allows more optimizations.
+- *"none"*: Don't keep duplicate rows.
+- *"first"*: Keep first unique row.
+- *"last"*: Keep last unique row.
+"""
+
+LazyUniqueKeepStrategy: TypeAlias = Literal["any", "none"]
+"""Which of the duplicate rows to keep.
+
+- *"any"*: Does not give any guarantee of which row is kept.
+- *"none"*: Don't keep duplicate rows.
+"""
+
+
 _ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
 _NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
 _1DArray: TypeAlias = "_NDArray[tuple[int]]"  # noqa: PYI042

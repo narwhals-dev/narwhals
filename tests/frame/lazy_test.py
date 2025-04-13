@@ -6,7 +6,6 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-import narwhals.stable.v1 as nw_v1
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.utils import Implementation
@@ -22,9 +21,9 @@ def test_lazy_to_default(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.lazy()
     assert isinstance(result, nw.LazyFrame)
-    df = nw_v1.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.lazy()
-    assert isinstance(result, nw_v1.LazyFrame)
+    assert isinstance(result, nw.LazyFrame)
 
     expected_cls: Any
     if "polars" in str(constructor_eager):

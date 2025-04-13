@@ -8,7 +8,7 @@ import pandas as pd
 import pyarrow as pa
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
 from tests.utils import PANDAS_VERSION
 from tests.utils import PYARROW_VERSION
@@ -55,7 +55,7 @@ def test_invalid_group_by_dask() -> None:
     df_dask = dd.from_pandas(df_pandas)
 
     with pytest.raises(ValueError, match=r"Non-trivial complex aggregation found"):
-        nw.from_native(df_dask).group_by("a").agg(nw.col("b").mean().min())
+        nw.from_native(df_dask).group_by("a").agg(nw.col("b").abs().min())
 
 
 def test_group_by_iter(constructor_eager: ConstructorEager) -> None:

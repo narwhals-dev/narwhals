@@ -14,8 +14,7 @@ import pandas as pd
 import pyarrow as pa
 import pytest
 
-import narwhals as unstable_nw
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
@@ -312,7 +311,13 @@ def test_dtype_is_x() -> None:
     )
 
     is_signed_integer = {nw.Int8, nw.Int16, nw.Int32, nw.Int64, nw.Int128}
-    is_unsigned_integer = {nw.UInt8, nw.UInt16, nw.UInt32, nw.UInt64, nw.UInt128}
+    is_unsigned_integer = {
+        nw.UInt8,
+        nw.UInt16,
+        nw.UInt32,
+        nw.UInt64,
+        nw.UInt128,
+    }
     is_float = {nw.Float32, nw.Float64}
     is_decimal = {nw.Decimal}
     is_temporal = {nw.Datetime, nw.Date, nw.Duration, nw.Time}
@@ -357,7 +362,8 @@ def test_huge_int_to_native() -> None:
     result = (
         nw.from_native(rel)
         .with_columns(
-            a_int=nw.col("a").cast(nw.Int128()), a_unit=nw.col("a").cast(nw.UInt128())
+            a_int=nw.col("a").cast(nw.Int128()),
+            a_unit=nw.col("a").cast(nw.UInt128()),
         )
         .select("a_int", "a_unit")
         .to_native()
@@ -403,20 +409,6 @@ def test_cast_decimal_to_native() -> None:
     "categories", [["a", "b"], ["a", None], [1, 2], enum.Enum("test", "a b")]
 )
 def test_enum_valid(categories: Iterable[Any] | type[enum.Enum]) -> None:
-    dtype = unstable_nw.Enum(categories)
-    assert dtype == unstable_nw.Enum
+    dtype = nw.Enum(categories)
+    assert dtype == nw.Enum
     assert len(dtype.categories) == len([*categories])
-
-    with pytest.raises(TypeError, match=r"takes 1 positional argument"):
-        dtype = nw.Enum(categories)  # type: ignore[call-arg]
-
-
-def test_enum_v1_is_enum_unstable() -> None:
-    enum_v1 = nw.Enum()
-    enum_unstable = unstable_nw.Enum(("a", "b", "c"))
-    assert isinstance(enum_v1, unstable_nw.Enum)
-    assert issubclass(nw.Enum, unstable_nw.Enum)
-    assert enum_v1 == unstable_nw.Enum
-    assert enum_v1 != enum_unstable
-    assert enum_unstable != nw.Enum
-    assert enum_unstable == unstable_nw.Enum

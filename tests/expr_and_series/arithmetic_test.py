@@ -7,7 +7,7 @@ import pytest
 from hypothesis import assume
 from hypothesis import given
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import DASK_VERSION
 from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
@@ -69,7 +69,7 @@ def test_right_arithmetic_expr(
     request: pytest.FixtureRequest,
 ) -> None:
     if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     if attr == "__rmod__" and any(
         x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]
     ):

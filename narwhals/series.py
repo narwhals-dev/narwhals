@@ -37,6 +37,10 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantSeries
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
+    from narwhals.typing import ClosedInterval
+    from narwhals.typing import FillNullStrategy
+    from narwhals.typing import RankMethod
+    from narwhals.typing import RollingInterpolationMethod
     from narwhals.typing import _1DArray
     from narwhals.utils import Implementation
 
@@ -389,10 +393,6 @@ class Series(Generic[IntoSeriesT]):
         ignore_nulls: bool = False,
     ) -> Self:
         r"""Compute exponentially-weighted moving average.
-
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
 
         Arguments:
             com: Specify decay in terms of center of mass, $\gamma$, with <br> $\alpha = \frac{1}{1+\gamma}\forall\gamma\geq0$
@@ -1279,7 +1279,7 @@ class Series(Generic[IntoSeriesT]):
     def fill_null(
         self: Self,
         value: Any | None = None,
-        strategy: Literal["forward", "backward"] | None = None,
+        strategy: FillNullStrategy | None = None,
         limit: int | None = None,
     ) -> Self:
         """Fill null values using the specified value.
@@ -1338,7 +1338,7 @@ class Series(Generic[IntoSeriesT]):
         self: Self,
         lower_bound: Any | Self,
         upper_bound: Any | Self,
-        closed: Literal["left", "right", "none", "both"] = "both",
+        closed: ClosedInterval = "both",
     ) -> Self:
         """Get a boolean mask of the values that are between the given lower/upper bounds.
 
@@ -1804,9 +1804,7 @@ class Series(Generic[IntoSeriesT]):
         )
 
     def quantile(
-        self: Self,
-        quantile: float,
-        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+        self: Self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> float:
         """Get quantile value of the series.
 
@@ -2244,10 +2242,6 @@ class Series(Generic[IntoSeriesT]):
     ) -> Self:
         """Apply a rolling sum (moving sum) over the values.
 
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
-
         A window of length `window_size` will traverse the values. The resulting values
         will be aggregated to their sum.
 
@@ -2301,10 +2295,6 @@ class Series(Generic[IntoSeriesT]):
         center: bool = False,
     ) -> Self:
         """Apply a rolling mean (moving mean) over the values.
-
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
 
         A window of length `window_size` will traverse the values. The resulting values
         will be aggregated to their mean.
@@ -2365,10 +2355,6 @@ class Series(Generic[IntoSeriesT]):
     ) -> Self:
         """Apply a rolling variance (moving variance) over the values.
 
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
-
         A window of length `window_size` will traverse the values. The resulting values
         will be aggregated to their variance.
 
@@ -2428,10 +2414,6 @@ class Series(Generic[IntoSeriesT]):
     ) -> Self:
         """Apply a rolling standard deviation (moving standard deviation) over the values.
 
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
-
         A window of length `window_size` will traverse the values. The resulting values
         will be aggregated to their standard deviation.
 
@@ -2485,10 +2467,7 @@ class Series(Generic[IntoSeriesT]):
         return self._compliant_series.__contains__(other)
 
     def rank(
-        self: Self,
-        method: Literal["average", "min", "max", "dense", "ordinal"] = "average",
-        *,
-        descending: bool = False,
+        self: Self, method: RankMethod = "average", *, descending: bool = False
     ) -> Self:
         """Assign ranks to data, dealing with ties appropriately.
 

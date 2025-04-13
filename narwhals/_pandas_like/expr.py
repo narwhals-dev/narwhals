@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Literal
 from typing import Sequence
 
 from narwhals._compliant import EagerExpr
@@ -21,6 +20,7 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals.typing import RankMethod
     from narwhals.utils import Implementation
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -198,7 +198,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
     def shift(self: Self, n: int) -> Self:
         return self._reuse_series("shift", call_kwargs={"n": n})
 
-    def over(
+    def over(  # noqa: PLR0915
         self: Self,
         partition_by: Sequence[str],
         order_by: Sequence[str] | None,
@@ -265,10 +265,9 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 elif reverse:
                     columns = list(set(partition_by).union(output_names))
                     df = df[columns][::-1]
+                grouped = df._native_frame.groupby(partition_by)
                 if function_name.startswith("rolling"):
-                    rolling = df._native_frame.groupby(partition_by)[
-                        list(output_names)
-                    ].rolling(**pandas_kwargs)
+                    rolling = grouped[list(output_names)].rolling(**pandas_kwargs)
                     assert pandas_function_name is not None  # help mypy  # noqa: S101
                     if pandas_function_name in {"std", "var"}:
                         res_native = getattr(rolling, pandas_function_name)(
@@ -276,10 +275,15 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         )
                     else:
                         res_native = getattr(rolling, pandas_function_name)()
+                elif function_name == "len":
+                    if len(output_names) != 1:  # pragma: no cover
+                        msg = "Safety check failed, please report a bug."
+                        raise AssertionError(msg)
+                    res_native = grouped.transform("size").to_frame(aliases[0])
                 else:
-                    res_native = df._native_frame.groupby(partition_by)[
-                        list(output_names)
-                    ].transform(pandas_function_name, **pandas_kwargs)
+                    res_native = grouped[list(output_names)].transform(
+                        pandas_function_name, **pandas_kwargs
+                    )
                 result_frame = df._with_native(res_native).rename(
                     dict(zip(output_names, aliases))
                 )
@@ -365,12 +369,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             },
         )
 
-    def rank(
-        self: Self,
-        method: Literal["average", "min", "max", "dense", "ordinal"],
-        *,
-        descending: bool,
-    ) -> Self:
+    def rank(self, method: RankMethod, *, descending: bool) -> Self:
         return self._reuse_series(
             "rank", call_kwargs={"method": method, "descending": descending}
         )

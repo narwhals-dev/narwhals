@@ -21,7 +21,6 @@ from narwhals._pandas_like.utils import align_series_full_broadcast
 from narwhals._pandas_like.utils import check_column_names_are_unique
 from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
 from narwhals._pandas_like.utils import get_dtype_backend
-from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
 from narwhals._pandas_like.utils import pivot_table
@@ -61,10 +60,13 @@ if TYPE_CHECKING:
     from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
+    from narwhals.typing import AsofJoinStrategy
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import DTypeBackend
+    from narwhals.typing import JoinStrategy
     from narwhals.typing import SizeUnit
+    from narwhals.typing import UniqueKeepStrategy
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
@@ -501,11 +503,8 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             # return empty dataframe, like Polars does
             return self._with_native(self.native.__class__(), validate_column_names=False)
         new_series = align_series_full_broadcast(*new_series)
-        df = horizontal_concat(
-            [s.native for s in new_series],
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-        )
+        namespace = self.__narwhals_namespace__()
+        df = namespace._concat_horizontal([s.native for s in new_series])
         return self._with_native(df, validate_column_names=True)
 
     def drop_nulls(
@@ -528,13 +527,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         row_index = namespace._series.from_iterable(
             range(len(frame)), context=self, index=frame.index
         ).alias(name)
-        return self._with_native(
-            horizontal_concat(
-                [row_index.native, frame],
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-            )
-        )
+        return self._with_native(namespace._concat_horizontal([row_index.native, frame]))
 
     def row(self: Self, index: int) -> tuple[Any, ...]:
         return tuple(x for x in self.native.iloc[index])
@@ -568,11 +561,8 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
                 series = self.native[name]
             to_concat.append(series)
         to_concat.extend(self._extract_comparand(s) for s in name_columns.values())
-        df = horizontal_concat(
-            to_concat,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-        )
+        namespace = self.__narwhals_namespace__()
+        df = namespace._concat_horizontal(to_concat)
         return self._with_native(df, validate_column_names=False)
 
     def rename(self: Self, mapping: Mapping[str, str]) -> Self:
@@ -673,7 +663,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         self: Self,
         other: Self,
         *,
-        how: Literal["inner", "left", "full", "cross", "semi", "anti"],
+        how: JoinStrategy,
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
         suffix: str,
@@ -824,7 +814,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         right_on: str | None,
         by_left: Sequence[str] | None,
         by_right: Sequence[str] | None,
-        strategy: Literal["backward", "forward", "nearest"],
+        strategy: AsofJoinStrategy,
         suffix: str,
     ) -> Self:
         plx = self.__native_namespace__()
@@ -850,10 +840,10 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         return self._with_native(self.native.tail(n), validate_column_names=False)
 
     def unique(
-        self: Self,
+        self,
         subset: Sequence[str] | None,
         *,
-        keep: Literal["any", "first", "last", "none"],
+        keep: UniqueKeepStrategy,
         maintain_order: bool | None = None,
     ) -> Self:
         # The param `maintain_order` is only here for compatibility with the Polars API
@@ -972,7 +962,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
     def to_pandas(self: Self) -> pd.DataFrame:
         if self._implementation is Implementation.PANDAS:
             return self.native
-        elif self._implementation is Implementation.CUDF:  # pragma: no cover
+        elif self._implementation is Implementation.CUDF:
             return self.native.to_pandas()
         elif self._implementation is Implementation.MODIN:
             return self.native._to_pandas()

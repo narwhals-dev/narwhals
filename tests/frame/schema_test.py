@@ -11,13 +11,11 @@ from typing import Any
 import pandas as pd
 import pytest
 
-import narwhals as nw_main
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from types import ModuleType
 
     from narwhals.typing import DTypeBackend
     from tests.utils import Constructor
@@ -90,8 +88,7 @@ def test_actual_object(
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="too old")
-@pytest.mark.parametrize("nw", [nw_main, nw])
-def test_dtypes(nw: ModuleType) -> None:
+def test_dtypes() -> None:
     pytest.importorskip("polars")
     import polars as pl
 
@@ -317,7 +314,10 @@ def test_nested_dtypes_ibis(request: pytest.FixtureRequest) -> None:  # pragma: 
     )
     tbl = ibis.memtable(df[["a", "c"]])
     nwdf = nw.from_native(tbl)
-    assert nwdf.schema == {"a": nw.List(nw.Int64), "c": nw.Struct({"a": nw.Int64})}
+    assert nwdf.schema == {
+        "a": nw.List(nw.Int64),
+        "c": nw.Struct({"a": nw.Int64}),
+    }
 
 
 @pytest.mark.skipif(
@@ -347,12 +347,8 @@ def test_nested_dtypes_dask() -> None:
 
 def test_all_nulls_pandas() -> None:
     assert (
-        nw_main.from_native(pd.Series([None] * 3, dtype="object"), series_only=True).dtype
-        == nw_main.String
-    )
-    assert (
         nw.from_native(pd.Series([None] * 3, dtype="object"), series_only=True).dtype
-        == nw.Object
+        == nw.String
     )
 
 

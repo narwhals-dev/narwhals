@@ -7,7 +7,7 @@ import pandas as pd
 import pyarrow as pa
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import LengthChangingExprError
 from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
@@ -427,4 +427,18 @@ def test_over_without_partition_by(
         .select("a", "b", "i")
     )
     expected = {"a": [1, 2, -1], "b": [1, 3, 4], "i": [0, 1, 2]}
+    assert_equal_data(result, expected)
+
+
+def test_len_over_2369(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 5):
+        pytest.skip()
+    if any(x in str(constructor) for x in ("modin",)):
+        # https://github.com/modin-project/modin/issues/7508
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor({"a": [1, 2, 4], "b": ["x", "x", "y"]}))
+    result = df.with_columns(a_len_per_group=nw.len().over("b")).sort("a")
+    expected = {"a": [1, 2, 4], "b": ["x", "x", "y"], "a_len_per_group": [2, 2, 1]}
     assert_equal_data(result, expected)

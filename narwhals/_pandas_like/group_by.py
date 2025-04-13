@@ -11,7 +11,6 @@ from typing import Sequence
 
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._pandas_like.utils import horizontal_concat
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_columns
 from narwhals.utils import find_stacklevel
@@ -233,11 +232,8 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
                             pass
                     msg = f"Expected unique output names, got:{msg}"
                     raise ValueError(msg)
-                result = horizontal_concat(
-                    dfs=result_aggs,
-                    implementation=implementation,
-                    backend_version=backend_version,
-                )
+                namespace = self.compliant.__narwhals_namespace__()
+                result = namespace._concat_horizontal(result_aggs)
             else:
                 # No aggregation provided
                 result = self.compliant.__native_namespace__().DataFrame(

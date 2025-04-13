@@ -6,8 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-import narwhals as unstable_nw
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
@@ -125,16 +124,16 @@ def test_cast_to_enum_vmain(
     ):
         request.applymarker(pytest.mark.xfail)
 
-    df_nw = unstable_nw.from_native(constructor({"a": ["a", "b"]}))
-    col_a = unstable_nw.col("a")
+    df_nw = nw.from_native(constructor({"a": ["a", "b"]}))
+    col_a = nw.col("a")
 
     with pytest.raises(
         ValueError, match="Can not cast / initialize Enum without categories present"
     ):
-        df_nw.select(col_a.cast(unstable_nw.Enum))
+        df_nw.select(col_a.cast(nw.Enum))
 
-    df_nw = df_nw.select(col_a.cast(unstable_nw.Enum(["a", "b"])))
-    assert df_nw.collect_schema() == {"a": unstable_nw.Enum(["a", "b"])}
+    df_nw = df_nw.select(col_a.cast(nw.Enum(["a", "b"])))
+    assert df_nw.collect_schema() == {"a": nw.Enum(["a", "b"])}
 
 
 def test_cast_to_enum_v1(
