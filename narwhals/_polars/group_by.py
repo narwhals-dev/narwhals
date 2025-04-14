@@ -36,20 +36,21 @@ class PolarsGroupBy:
         drop_null_keys: bool,
     ) -> None:
         self._compliant_frame = df
-        self._keys = list(keys)
         self._drop_null_keys = drop_null_keys
 
         if all(isinstance(k, str) for k in keys):
-            self._output_names = list(keys)
+            self._keys = cast("list[str]", list(keys))
+            self._output_names = self._keys.copy()
             self._grouped = self.compliant.native.group_by(self._keys)
 
         else:
+            self._keys = cast("list[PolarsExpr]", list(keys))
             self._output_names = flatten(
                 [
                     arg.native.meta.root_names()
                     if arg.native.meta.has_multiple_outputs()
                     else arg.native.meta.output_name()
-                    for arg in keys
+                    for arg in self._keys
                 ]
             )
 
@@ -78,6 +79,7 @@ class PolarsLazyGroupBy:
     _keys: list[PolarsExpr]
     _grouped: NativeLazyGroupBy
     _drop_null_keys: bool
+    _output_names: list[str]
 
     @property
     def compliant(self) -> PolarsLazyFrame:
@@ -92,20 +94,21 @@ class PolarsLazyGroupBy:
         drop_null_keys: bool,
     ) -> None:
         self._compliant_frame = df
-        self._keys = list(keys)
         self._drop_null_keys = drop_null_keys
 
         if all(isinstance(k, str) for k in keys):
-            self._output_names = list(keys)
+            self._keys = cast("list[str]", list(keys))
+            self._output_names = self._keys.copy()
             self._grouped = self.compliant.native.group_by(self._keys)
 
         else:
+            self._keys = cast("list[PolarsExpr]", list(keys))
             self._output_names = flatten(
                 [
                     arg.native.meta.root_names()
                     if arg.native.meta.has_multiple_outputs()
                     else arg.native.meta.output_name()
-                    for arg in keys
+                    for arg in self._keys
                 ]
             )
 

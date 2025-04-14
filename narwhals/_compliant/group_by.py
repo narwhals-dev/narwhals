@@ -12,9 +12,11 @@ from typing import Literal
 from typing import Mapping
 from typing import Sequence
 from typing import TypeVar
+from typing import cast
 
 from narwhals._compliant.typing import CompliantExprT_contra
 from narwhals._compliant.typing import CompliantFrameT_co
+from narwhals._compliant.typing import CompliantLazyFrameAny
 from narwhals._compliant.typing import CompliantLazyFrameT_co
 from narwhals._compliant.typing import DepthTrackingExprAny
 from narwhals._compliant.typing import DepthTrackingExprT_contra
@@ -74,7 +76,25 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
         /,
         *,
         drop_null_keys: bool,
-    ) -> None:
+    ) -> None: ...
+
+    def _parse_keys(
+        self,
+        compliant_frame: CompliantLazyFrameAny,
+        keys: Sequence[CompliantExprT_contra] | Sequence[str],
+    ) -> tuple[CompliantLazyFrameAny, list[str], list[str]]:
+        if all(isinstance(k, str) for k in keys):
+            keys = cast("list[str]", list(keys))
+
+            return self._parse_string_keys(compliant_frame, keys=keys)
+        else:
+            keys = cast("list[CompliantExprT_contra]", list(keys))
+            return self._parse_expr_keys(compliant_frame, keys=keys)
+
+    @staticmethod
+    def _parse_expr_keys(
+        compliant_frame: CompliantLazyFrameAny, keys: Sequence[CompliantExprT_contra]
+    ) -> tuple[CompliantLazyFrameAny, list[str], list[str]]:
         """Parses key expressions to set up `.agg` operation with correct information.
 
         Since keys are expressions, it's possible to incour in aliases that match
@@ -89,28 +109,31 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
             no overlap with any existing column name.
         - Add these temporary columns to the compliant dataframe.
         """
-        if all(isinstance(k, str) for k in keys):
-            self._keys = list(keys)
-            self._output_key_names = list(keys)
-            self._compliant_frame = compliant_frame
-        else:
-            suffix_token = "_" * max(len(str(c)) for c in compliant_frame.columns)
-            output_names = compliant_frame._evaluate_aliases(*keys)
+        suffix_token = "_" * max(len(str(c)) for c in compliant_frame.columns)
+        output_names = compliant_frame._evaluate_aliases(*keys)
 
-            safe_keys = [
-                # multi_named expression cannot have duplicate names, hence it's safe to suffix
-                key.name.suffix(suffix_token)
-                if key._metadata is not None
-                and key._metadata.expansion_kind is ExpansionKind.MULTI_NAMED
-                # otherwise it's single named and we can use Expr.alias
-                else key.alias(f"{new_name}{suffix_token}")
-                for key, new_name in zip(keys, output_names)
-            ]
+        safe_keys = [
+            # multi_named expression cannot have duplicate names, hence it's safe to suffix
+            key.name.suffix(suffix_token)
+            if key._metadata is not None
+            and key._metadata.expansion_kind is ExpansionKind.MULTI_NAMED
+            # otherwise it's single named and we can use Expr.alias
+            else key.alias(f"{new_name}{suffix_token}")
+            for key, new_name in zip(keys, output_names)
+        ]
 
-            self._keys = compliant_frame._evaluate_aliases(*safe_keys)
+        return (
+            compliant_frame.with_columns(*safe_keys),
+            compliant_frame._evaluate_aliases(*safe_keys),
+            output_names,
+        )
 
-            self._output_key_names = output_names
-            self._compliant_frame = compliant_frame.with_columns(*safe_keys)
+    @staticmethod
+    def _parse_string_keys(
+        compliant_frame: CompliantLazyFrameAny,
+        keys: Sequence[str],
+    ) -> tuple[CompliantLazyFrameAny, list[str], list[str]]:
+        return compliant_frame, list(keys), list(keys)
 
     def agg(self, *exprs: CompliantExprT_contra) -> CompliantFrameT_co: ...
 

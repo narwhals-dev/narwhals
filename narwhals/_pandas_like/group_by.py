@@ -40,14 +40,16 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
     def __init__(
         self,
         df: PandasLikeDataFrame,
-        keys: Sequence[PandasLikeExpr],
+        keys: Sequence[PandasLikeExpr] | Sequence[str],
         /,
         *,
         drop_null_keys: bool,
     ) -> None:
         self._df = df
         self._drop_null_keys = drop_null_keys
-        super().__init__(df, keys, drop_null_keys=drop_null_keys)
+        self._compliant_frame, self._keys, self._output_key_names = self._parse_keys(
+            df, keys=keys
+        )
         # Drop index to avoid potential collisions:
         # https://github.com/narwhals-dev/narwhals/issues/1907.
 

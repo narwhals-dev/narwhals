@@ -15,13 +15,16 @@ if TYPE_CHECKING:
 
 class DuckDBGroupBy(LazyGroupBy["DuckDBLazyFrame", "DuckDBExpr", "Expression"]):
     def __init__(
-        self, df: DuckDBLazyFrame, keys: Sequence[DuckDBExpr], /, *, drop_null_keys: bool
+        self,
+        df: DuckDBLazyFrame,
+        keys: Sequence[DuckDBExpr] | Sequence[str],
+        /,
+        *,
+        drop_null_keys: bool,
     ) -> None:
-        super().__init__(df, keys, drop_null_keys=drop_null_keys)
+        frame, self._keys, self._output_key_names = self._parse_keys(df, keys=keys)
         self._compliant_frame = (
-            self.compliant.drop_nulls(subset=self._keys)
-            if drop_null_keys
-            else self.compliant
+            frame.drop_nulls(subset=self._keys) if drop_null_keys else frame
         )
 
     def agg(self, *exprs: DuckDBExpr) -> DuckDBLazyFrame:

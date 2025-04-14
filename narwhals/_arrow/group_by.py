@@ -39,14 +39,16 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
     }
 
     def __init__(
-        self, df: ArrowDataFrame, keys: Sequence[ArrowExpr], /, *, drop_null_keys: bool
+        self,
+        df: ArrowDataFrame,
+        keys: Sequence[ArrowExpr] | Sequence[str],
+        /,
+        *,
+        drop_null_keys: bool,
     ) -> None:
         self._df = df
-        super().__init__(df, keys, drop_null_keys=drop_null_keys)
-
-        self._compliant_frame = (
-            self.compliant.drop_nulls(self._keys) if drop_null_keys else self.compliant
-        )
+        frame, self._keys, self._output_key_names = self._parse_keys(df, keys=keys)
+        self._compliant_frame = frame.drop_nulls(self._keys) if drop_null_keys else frame
         self._grouped = pa.TableGroupBy(self.compliant.native, self._keys)
         self._drop_null_keys = drop_null_keys
 
