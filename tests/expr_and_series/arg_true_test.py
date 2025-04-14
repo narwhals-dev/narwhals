@@ -14,7 +14,9 @@ def test_arg_true(constructor_eager: ConstructorEager) -> None:
     expected = {"a": [1, 2]}
     assert_equal_data(result, expected)
 
-    with pytest.deprecated_call():
+    with pytest.deprecated_call(
+        match="is deprecated and will be removed in a future version"
+    ):
         df.select(nw.col("a").is_null().arg_true())
 
 

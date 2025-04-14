@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -14,6 +14,14 @@ def test_expr_is_in(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").is_in([4, 5]))
     expected = {"a": [False, True, False, True]}
+
+    assert_equal_data(result, expected)
+
+
+def test_expr_is_in_empty_list(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.col("a").is_in([]))
+    expected = {"a": [False, False, False, False]}
 
     assert_equal_data(result, expected)
 

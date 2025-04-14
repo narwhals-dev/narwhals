@@ -54,3 +54,17 @@ def test_filter_raise_on_shape_mismatch(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     with pytest.raises((LengthChangingExprError, ShapeError)):
         df.filter(nw.col("b").unique() > 2).lazy().collect()
+
+
+def test_filter_with_constrains(constructor: Constructor) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6]}
+    df = nw.from_native(constructor(data))
+    result_scalar = df.filter(a=3)
+    expected_scalar = {"a": [3], "b": [4]}
+
+    assert_equal_data(result_scalar, expected_scalar)
+
+    result_expr = df.filter(a=nw.col("b") // 3)
+    expected_expr = {"a": [1, 2], "b": [4, 6]}
+
+    assert_equal_data(result_expr, expected_expr)

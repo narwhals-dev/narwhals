@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 import numpy as np
+import pyarrow as pa
 import pytest
 
-import narwhals.stable.v1 as nw
-from tests.utils import DASK_VERSION
+import narwhals as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
@@ -88,15 +88,7 @@ def test_lit_operation_in_select(
     col_name: str,
     expr: nw.Expr,
     expected_result: list[int],
-    request: pytest.FixtureRequest,
 ) -> None:
-    if (
-        "dask" in str(constructor)
-        and col_name in ("left_lit", "left_scalar")
-        and DASK_VERSION < (2024, 10)
-    ):
-        request.applymarker(pytest.mark.xfail)
-
     data = {"a": [1, 3, 2]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()
@@ -138,3 +130,11 @@ def test_date_lit(constructor: Constructor, request: pytest.FixtureRequest) -> N
         assert result == {"a": nw.Int64, "literal": nw.Datetime}
     else:
         assert result == {"a": nw.Int64, "literal": nw.Date}
+
+
+def test_pyarrow_lit_string() -> None:
+    df = nw.from_native(pa.table({"a": [1, 2, 3]}))
+    result = df.select(nw.lit("foo")).to_native().schema.field("literal")
+    assert pa.types.is_string(result.type)
+    result = df.select(nw.lit("foo", dtype=nw.String)).to_native().schema.field("literal")
+    assert pa.types.is_string(result.type)

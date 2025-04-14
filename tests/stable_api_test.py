@@ -4,11 +4,11 @@ from datetime import datetime
 from datetime import timedelta
 from typing import Any
 
-import polars as pl
 import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
+from tests.utils import DUCKDB_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -19,11 +19,9 @@ def remove_docstring_examples(doc: str) -> str:
     return doc.rstrip()
 
 
-def test_renamed_taxicab_norm(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_renamed_taxicab_norm(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     # Suppose we need to rename `_l1_norm` to `_taxicab_norm`.
     # We need `narwhals.stable.v1` to stay stable. So, we
     # make the change in `narwhals`, and then add the new method
@@ -93,7 +91,7 @@ def test_stable_api_docstrings() -> None:
     for item in main_namespace_api:
         if getattr(nw, item).__doc__ is None:
             continue
-        if item in ("from_native", "narwhalify"):
+        if item in {"from_native", "narwhalify"}:
             # `eager_or_interchange` param was removed from main namespace,
             # but is still present in v1 docstring.
             continue
@@ -103,6 +101,9 @@ def test_stable_api_docstrings() -> None:
 
 
 def test_dataframe_docstrings() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     stable_df = nw_v1.from_native(pl.DataFrame())
     df = nw.from_native(pl.DataFrame())
     api = [i for i in df.__dir__() if not i.startswith("_")]
@@ -115,14 +116,17 @@ def test_dataframe_docstrings() -> None:
 
 
 def test_lazyframe_docstrings() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     stable_df = nw_v1.from_native(pl.LazyFrame())
     df = nw.from_native(pl.LazyFrame())
     api = [i for i in df.__dir__() if not i.startswith("_")]
     for item in api:
-        if item in ("schema", "columns"):
+        if item in {"schema", "columns"}:
             # to avoid performance warning
             continue
-        if item in ("tail",):
+        if item in {"tail", "gather_every"}:
             # deprecated
             continue
         assert remove_docstring_examples(
@@ -133,6 +137,9 @@ def test_lazyframe_docstrings() -> None:
 
 
 def test_series_docstrings() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
     stable_df = nw_v1.from_native(pl.Series(), series_only=True)
     df = nw.from_native(pl.Series(), series_only=True)
     api = [i for i in df.__dir__() if not i.startswith("_")]

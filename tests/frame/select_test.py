@@ -6,14 +6,16 @@ import pandas as pd
 import pyarrow as pa
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.exceptions import NarwhalsError
 from tests.utils import DASK_VERSION
+from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
@@ -28,11 +30,9 @@ def test_select(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_empty_select(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "duckdb" in str(constructor) or "ibis" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    result = nw.from_native(constructor({"a": [1, 2, 3]})).lazy().select()
-    assert result.collect().shape == (0, 0)
+def test_empty_select(constructor_eager: ConstructorEager) -> None:
+    result = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True).select()
+    assert result.shape == (0, 0)
 
 
 def test_non_string_select() -> None:
@@ -66,10 +66,10 @@ def test_select_boolean_cols(request: pytest.FixtureRequest) -> None:
 
 
 def test_comparison_with_list_error_message() -> None:
-    msg = "Expected scalar value, Series, or Expr, got list of : <class 'int'>"
-    with pytest.raises(ValueError, match=msg):
+    msg = "Expected Series or scalar, got list."
+    with pytest.raises(TypeError, match=msg):
         nw.from_native(pa.chunked_array([[1, 2, 3]]), series_only=True) == [1, 2, 3]  # noqa: B015
-    with pytest.raises(ValueError, match=msg):
+    with pytest.raises(TypeError, match=msg):
         nw.from_native(pd.Series([[1, 2, 3]]), series_only=True) == [1, 2, 3]  # noqa: B015
 
 
@@ -81,6 +81,7 @@ def test_missing_columns(
         or "duckdb" in str(constructor)
         or "ibis" in str(constructor)
     ):
+        request.applymarker(pytest.mark.xfail)
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
@@ -121,13 +122,11 @@ def test_missing_columns(
             df.select(nw.col("fdfa"))
 
 
-def test_left_to_right_broadcasting(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
+def test_left_to_right_broadcasting(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
-        request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     result = df.select(nw.col("a") + nw.col("b").sum())
     expected = {"a": [16, 16, 17]}
@@ -144,3 +143,29 @@ def test_alias_invalid(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
     with pytest.raises((NarwhalsError, ValueError)):
         df.lazy().select(nw.all().alias("c")).collect()
+
+
+def test_filtration_vs_aggregation(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager({"a": [1, None, 3]}))
+    result = df.select(nw.col("a").drop_nulls(), b=nw.col("a").mean())
+    expected: dict[str, Any] = {"a": [1, 3], "b": [2.0, 2.0]}
+    assert_equal_data(result, expected)
+    result = df.select(nw.sum_horizontal(nw.col("a").drop_nulls(), nw.col("a").mean()))
+    expected = {"a": [3.0, 5.0]}
+    assert_equal_data(result, expected)
+
+
+def test_select_duplicates(constructor: Constructor) -> None:
+    if "cudf" in str(constructor):
+        # cudf already raises its own error
+        pytest.skip()
+    df = nw.from_native(constructor({"a": [1, 2]})).lazy()
+    with pytest.raises(ValueError, match="Expected unique|duplicate|more than one"):
+        df.select("a", nw.col("a") + 1).collect()
+
+
+def test_binary_window_aggregation(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager({"a": [1, 1, 2]}))
+    result = df.select(nw.col("a").cum_sum() + nw.col("a").sum())
+    expected = {"a": [5, 6, 8]}
+    assert_equal_data(result, expected)

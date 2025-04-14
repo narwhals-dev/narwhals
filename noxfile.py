@@ -8,18 +8,18 @@ if TYPE_CHECKING:
     from nox.sessions import Session
 
 nox.options.default_venv_backend = "uv"
-nox.options.reuse_venv = True
+nox.options.reuse_venv = "yes"
 
 PYTHON_VERSIONS = ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
 
 def run_common(session: Session, coverage_threshold: float) -> None:
     if session.python == "3.8":
-        session.install("-e .[dev,core]")
+        session.install("-e . --group dev-core")
     elif session.python == "3.12":
-        session.install("-e .[dev,core,extra,dask,modin]")
+        session.install("-e .[dask,modin] --group dev-core --group extra")
     else:
-        session.install("-e .[dev,core,extra,dask,modin,pyspark,ibis]")
+        session.install("-e .[dask,modin,pyspark,ibis] --group dev-core --group extra")
 
     session.run(
         "pytest",

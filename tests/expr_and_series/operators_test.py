@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import DASK_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -90,7 +90,7 @@ def test_logic_operators_expr_scalar(
     if (
         "dask" in str(constructor)
         and DASK_VERSION < (2024, 10)
-        and operator in ("__rand__", "__ror__")
+        and operator in {"__rand__", "__ror__"}
     ):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [True, True, False, False]}

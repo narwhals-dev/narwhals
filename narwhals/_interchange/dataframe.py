@@ -89,7 +89,7 @@ class InterchangeFrame:
         self._interchange_frame = df.__dataframe__()
         self._version = version
 
-    def _change_version(self: Self, version: Version) -> Self:
+    def _with_version(self: Self, version: Version) -> Self:
         return self.__class__(
             WrapInterchangeFrame(self._interchange_frame), version=version
         )
@@ -125,7 +125,9 @@ class InterchangeFrame:
             raise NotImplementedError(msg)
 
     def to_arrow(self: Self) -> pa.Table:
-        from pyarrow.interchange import from_dataframe  # ignore-banned-import()
+        from pyarrow.interchange.from_dataframe import (  # ignore-banned-import()
+            from_dataframe,
+        )
 
         return from_dataframe(self._interchange_frame)
 

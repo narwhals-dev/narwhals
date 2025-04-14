@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import ColumnNotFoundError
 from tests.utils import POLARS_VERSION
 

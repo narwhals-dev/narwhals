@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
@@ -41,7 +41,8 @@ def test_replace_time_zone(
     result = df.select(nw.col("a").dt.replace_time_zone("Asia/Kathmandu"))
     result_dtype = result.collect_schema()["a"]
     assert result_dtype == nw.Datetime
-    assert result_dtype.time_zone == "Asia/Kathmandu"  # type: ignore[attr-defined]
+    assert isinstance(result_dtype, nw.Datetime)
+    assert result_dtype.time_zone == "Asia/Kathmandu"
     result_str = result.select(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M%z"))
     expected = {"a": ["2020-01-01T00:00+0545", "2020-01-02T00:00+0545"]}
     assert_equal_data(result_str, expected)
@@ -70,7 +71,8 @@ def test_replace_time_zone_none(
     result = df.select(nw.col("a").dt.replace_time_zone(None))
     result_dtype = result.collect_schema()["a"]
     assert result_dtype == nw.Datetime
-    assert result_dtype.time_zone is None  # type: ignore[attr-defined]
+    assert isinstance(result_dtype, nw.Datetime)
+    assert result_dtype.time_zone is None
     result_str = result.select(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M"))
     expected = {"a": ["2020-01-01T00:00", "2020-01-02T00:00"]}
     assert_equal_data(result_str, expected)
@@ -97,7 +99,8 @@ def test_replace_time_zone_series(
     result = df.select(df["a"].dt.replace_time_zone("Asia/Kathmandu"))
     result_dtype = result.collect_schema()["a"]
     assert result_dtype == nw.Datetime
-    assert result_dtype.time_zone == "Asia/Kathmandu"  # type: ignore[attr-defined]
+    assert isinstance(result_dtype, nw.Datetime)
+    assert result_dtype.time_zone == "Asia/Kathmandu"
     result_str = result.select(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M%z"))
     expected = {"a": ["2020-01-01T00:00+0545", "2020-01-02T00:00+0545"]}
     assert_equal_data(result_str, expected)
@@ -123,7 +126,8 @@ def test_replace_time_zone_none_series(
     result = df.select(df["a"].dt.replace_time_zone(None))
     result_dtype = result.collect_schema()["a"]
     assert result_dtype == nw.Datetime
-    assert result_dtype.time_zone is None  # type: ignore[attr-defined]
+    assert isinstance(result_dtype, nw.Datetime)
+    assert result_dtype.time_zone is None
     result_str = result.select(df["a"].dt.to_string("%Y-%m-%dT%H:%M"))
     expected = {"a": ["2020-01-01T00:00", "2020-01-02T00:00"]}
     assert_equal_data(result_str, expected)

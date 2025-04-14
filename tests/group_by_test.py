@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from contextlib import nullcontext
+from typing import Any
+from typing import Mapping
 
 import pandas as pd
-import polars as pl
+import pyarrow as pa
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
 from tests.utils import PANDAS_VERSION
 from tests.utils import PYARROW_VERSION
@@ -14,10 +16,9 @@ from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-data = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
+data: Mapping[str, Any] = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
 
 df_pandas = pd.DataFrame(data)
-df_lazy = pl.LazyFrame(data)
 
 
 def test_group_by_complex() -> None:
@@ -25,14 +26,26 @@ def test_group_by_complex() -> None:
 
     df = nw.from_native(df_pandas)
     with pytest.warns(UserWarning, match="complex group-by"):
-        result = nw.to_native(
+        result_pd = nw.to_native(
             df.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
         )
-    assert_equal_data(result, expected)
+    assert_equal_data(result_pd, expected)
+    with pytest.raises(ValueError, match="complex aggregation"):
+        nw.from_native(pa.table({"a": [1, 1, 2], "b": [4, 5, 6]})).group_by("a").agg(
+            (nw.col("b") - nw.col("c").mean()).mean()
+        )
 
+
+def test_group_by_complex_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    expected = {"a": [1, 3], "b": [-3.5, -3.0]}
+
+    df_lazy = pl.LazyFrame(data)
     lf = nw.from_native(df_lazy).lazy()
-    result = lf.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
-    assert_equal_data(result, expected)
+    result_pl = lf.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
+    assert_equal_data(result_pl, expected)
 
 
 def test_invalid_group_by_dask() -> None:
@@ -42,7 +55,7 @@ def test_invalid_group_by_dask() -> None:
     df_dask = dd.from_pandas(df_pandas)
 
     with pytest.raises(ValueError, match=r"Non-trivial complex aggregation found"):
-        nw.from_native(df_dask).group_by("a").agg(nw.col("b").mean().min())
+        nw.from_native(df_dask).group_by("a").agg(nw.col("b").abs().min())
 
 
 def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
@@ -95,11 +108,11 @@ def test_group_by_depth_1_agg(
     constructor: Constructor,
     attr: str,
     expected: dict[str, list[int | float]],
-    request: pytest.FixtureRequest,
 ) -> None:
     if "pandas_pyarrow" in str(constructor) and attr == "var" and PANDAS_VERSION < (2, 1):
-        # Known issue with variance calculation in pandas 2.0.x with pyarrow backend in groupby operations"
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip(
+            "Known issue with variance calculation in pandas 2.0.x with pyarrow backend in groupby operations"
+        )
     data = {"a": [1, 1, 1, 2], "b": [1, None, 2, 3]}
     expr = getattr(nw.col("b"), attr)()
     result = nw.from_native(constructor(data)).group_by("a").agg(expr).sort("a")
@@ -166,8 +179,6 @@ def test_group_by_n_unique_w_missing(constructor: Constructor) -> None:
 
 
 def test_group_by_same_name_twice() -> None:
-    import pandas as pd
-
     df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     with pytest.raises(ValueError, match="Expected unique output names"):
         nw.from_native(df).group_by("a").agg(nw.col("b").sum(), nw.col("b").n_unique())
@@ -245,8 +256,7 @@ def test_key_with_nulls(
     request: pytest.FixtureRequest,
 ) -> None:
     if "modin" in str(constructor):
-        # TODO(unassigned): Modin flaky here?
-        request.applymarker(pytest.mark.skip)
+        request.applymarker(pytest.mark.xfail(reason="Modin flaky here", strict=False))
 
     context = (
         pytest.raises(NotImplementedError, match="null values")
@@ -281,11 +291,9 @@ def test_key_with_nulls_ignored(constructor: Constructor) -> None:
 
 def test_key_with_nulls_iter(
     constructor_eager: ConstructorEager,
-    request: pytest.FixtureRequest,
 ) -> None:
     if PANDAS_VERSION < (1, 0) and "pandas_constructor" in str(constructor_eager):
-        # Grouping by null values is not supported in pandas < 1.0.0
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip("Grouping by null values is not supported in pandas < 1.0.0")
     data = {"b": ["4", "5", None, "7"], "a": [1, 2, 3, 4], "c": ["4", "3", None, None]}
     result = dict(
         nw.from_native(constructor_eager(data), eager_only=True)
@@ -316,14 +324,16 @@ def test_no_agg(constructor: Constructor) -> None:
 
 def test_group_by_categorical(
     constructor: Constructor,
-    request: pytest.FixtureRequest,
 ) -> None:
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip(reason="DuckDB and PySpark do not support categorical types")
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (
         15,
     ):  # pragma: no cover
-        request.applymarker(pytest.mark.xfail)
+        # https://github.com/narwhals-dev/narwhals/issues/1078
+        pytest.skip(
+            reason="The defaults for grouping by categories in pandas are different"
+        )
 
     data = {"g1": ["a", "a", "b", "b"], "g2": ["x", "y", "x", "z"], "x": [1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
@@ -355,7 +365,9 @@ def test_double_same_aggregation(
         # and cudf https://github.com/rapidsai/cudf/issues/17649
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor) and PANDAS_VERSION < (1,):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip(
+            "Pandas does not support multiple aggregations with the same column for now."
+        )
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     result = df.group_by("a").agg(c=nw.col("b").mean(), d=nw.col("b").mean()).sort("a")
     expected = {"a": [1, 2], "c": [4.5, 6], "d": [4.5, 6]}
@@ -371,8 +383,9 @@ def test_all_kind_of_aggs(
         # and cudf https://github.com/rapidsai/cudf/issues/17649
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor) and PANDAS_VERSION < (1, 4):
-        # Bug in old pandas, can't do DataFrameGroupBy[['b', 'b']]
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip(
+            "Pandas < 1.4.0 does not support multiple aggregations with the same column"
+        )
     df = nw.from_native(constructor({"a": [1, 1, 1, 2, 2, 2], "b": [4, 5, 6, 0, 5, 5]}))
     result = (
         df.group_by("a")
@@ -420,3 +433,25 @@ def test_pandas_group_by_index_and_column_overlap() -> None:
     assert key == (1,)
     expected_native = pd.DataFrame({"a": [1, 1], "b": [4, 5]})
     pd.testing.assert_frame_equal(result.to_native(), expected_native)
+
+
+def test_fancy_functions(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    result = df.group_by("a").agg(nw.all().std(ddof=0)).sort("a")
+    expected = {"a": [1, 2], "b": [0.5, 0.0]}
+    assert_equal_data(result, expected)
+    result = df.group_by("a").agg(nw.selectors.numeric().std(ddof=0)).sort("a")
+    assert_equal_data(result, expected)
+    result = df.group_by("a").agg(nw.selectors.matches("b").std(ddof=0)).sort("a")
+    assert_equal_data(result, expected)
+    result = (
+        df.group_by("a").agg(nw.selectors.matches("b").std(ddof=0).alias("c")).sort("a")
+    )
+    expected = {"a": [1, 2], "c": [0.5, 0.0]}
+    assert_equal_data(result, expected)
+    result = (
+        df.group_by("a")
+        .agg(nw.selectors.matches("b").std(ddof=0).name.map(lambda _x: "c"))
+        .sort("a")
+    )
+    assert_equal_data(result, expected)

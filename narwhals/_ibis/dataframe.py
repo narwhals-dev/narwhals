@@ -5,15 +5,17 @@ from typing import Any
 from typing import Literal
 from typing import Sequence
 
+import ibis.selectors as s
+
 from narwhals._ibis.utils import native_to_narwhals_dtype
 from narwhals._ibis.utils import parse_exprs
 from narwhals.dependencies import get_ibis
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantDataFrame
+from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import Version
-from narwhals.utils import check_column_names_are_unique
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -33,10 +35,8 @@ if TYPE_CHECKING:
     from narwhals._ibis.series import IbisInterchangeSeries
     from narwhals.dtypes import DType
 
-from narwhals.typing import CompliantLazyFrame
 
-
-class IbisLazyFrame(CompliantLazyFrame):
+class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
     _implementation = Implementation.IBIS
 
     def __init__(
@@ -45,10 +45,7 @@ class IbisLazyFrame(CompliantLazyFrame):
         *,
         backend_version: tuple[int, ...],
         version: Version,
-        validate_column_names: bool,
     ) -> None:
-        if validate_column_names:
-            check_column_names_are_unique(list(df.columns))
         self._native_frame: ir.Table = df
         self._version = version
         self._backend_version = backend_version
@@ -65,7 +62,7 @@ class IbisLazyFrame(CompliantLazyFrame):
         return self
 
     def __native_namespace__(self: Self) -> ModuleType:
-        return get_ibis()  # type: ignore[no-any-return]
+        return get_ibis()
 
     def __narwhals_namespace__(self: Self) -> IbisNamespace:
         from narwhals._ibis.namespace import IbisNamespace
@@ -129,9 +126,7 @@ class IbisLazyFrame(CompliantLazyFrame):
         )
 
     def simple_select(self, *column_names: str) -> Self:
-        return self._from_native_frame(
-            self._native_frame.select(*column_names), validate_column_names=False
-        )
+        return self._with_native(self._native_frame.select(s.cols(*column_names)))
 
     def aggregate(self: Self, *exprs: IbisExpr) -> Self:
         new_columns_map = parse_exprs(self, *exprs)
@@ -220,7 +215,7 @@ class IbisLazyFrame(CompliantLazyFrame):
         # only if version is v1, keep around for backcompat
         return self._native_frame.to_pyarrow()
 
-    def _change_version(self: Self, version: Version) -> Self:
+    def _with_version(self: Self, version: Version) -> Self:
         return self.__class__(
             self._native_frame,
             version=version,
@@ -228,14 +223,11 @@ class IbisLazyFrame(CompliantLazyFrame):
             validate_column_names=False,
         )
 
-    def _from_native_frame(
-        self: Self, df: ir.Table, *, validate_column_names: bool = True
-    ) -> Self:
+    def _with_native(self: Self, df: ir.Table) -> Self:
         return self.__class__(
             df,
             backend_version=self._backend_version,
             version=self._version,
-            validate_column_names=validate_column_names,
         )
 
     def group_by(self: Self, *keys: str, drop_null_keys: bool) -> IbisGroupBy:

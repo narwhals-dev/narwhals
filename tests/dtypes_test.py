@@ -8,15 +8,16 @@ from typing import Literal
 
 import numpy as np
 import pandas as pd
-import polars as pl
 import pyarrow as pa
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
+from tests.utils import PYARROW_VERSION
 
 if TYPE_CHECKING:
+    from narwhals.typing import IntoSeries
     from tests.utils import Constructor
 
 
@@ -87,10 +88,8 @@ def test_array_valid() -> None:
     assert dtype != nw.Array(nw.Array(nw.Float32, 2), 2)
     assert dtype in {nw.Array(nw.Array(nw.Int64, 2), 2)}
 
-    with pytest.raises(
-        TypeError, match="Array constructor is missing the required argument `shape`"
-    ):
-        nw.Array(nw.Int64)
+    with pytest.raises(TypeError, match="invalid input for shape"):
+        nw.Array(nw.Int64(), shape=None)  # type: ignore[arg-type]
 
     with pytest.raises(TypeError, match="invalid input for shape"):
         nw.Array(nw.Int64(), shape="invalid_type")  # type: ignore[arg-type]
@@ -133,10 +132,25 @@ def test_struct_hashes() -> None:
     assert len({hash(tp) for tp in (dtypes)}) == 3
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (2, 2), reason="old pandas")
 def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    version_conditions = [
+        (PANDAS_VERSION < (2, 2), "Requires pandas 2.2+ for 2D array support"),
+        (
+            "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14,),
+            "PyArrow 14+ required for 2D array support",
+        ),
+    ]
+    for condition, reason in version_conditions:
+        if condition:
+            pytest.skip(reason)
+
     if any(x in str(constructor) for x in ("dask", "modin", "cudf", "pyspark")):
-        request.applymarker(pytest.mark.xfail)
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="2D array operations not supported in these backends"
+            )
+        )
+
     data = {"a": [[[1, 2], [3, 4], [5, 6]]]}
     df = nw.from_native(constructor(data)).with_columns(
         a=nw.col("a").cast(nw.Array(nw.Int64(), (3, 2)))
@@ -146,34 +160,38 @@ def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> N
 
 
 def test_second_time_unit() -> None:
-    s = pd.Series(np.array([np.datetime64("2020-01-01", "s")]))
+    s: IntoSeries = pd.Series(np.array([np.datetime64("2020-01-01", "s")]))
     result = nw.from_native(s, series_only=True)
-    if PANDAS_VERSION < (2,):  # pragma: no cover
-        assert result.dtype == nw.Datetime("ns")
-    else:
-        assert result.dtype == nw.Datetime("s")
-    s = pa.chunked_array([pa.array([datetime(2020, 1, 1)], type=pa.timestamp("s"))])
+    expected_unit: Literal["ns", "us", "ms", "s"] = (
+        "s" if PANDAS_VERSION >= (2,) else "ns"
+    )
+    assert result.dtype == nw.Datetime(expected_unit)
+
+    ts_sec = pa.timestamp("s")
+    s = pa.chunked_array([pa.array([datetime(2020, 1, 1)], type=ts_sec)], type=ts_sec)
     result = nw.from_native(s, series_only=True)
     assert result.dtype == nw.Datetime("s")
+
     s = pd.Series(np.array([np.timedelta64(1, "s")]))
     result = nw.from_native(s, series_only=True)
-    if PANDAS_VERSION < (2,):  # pragma: no cover
-        assert result.dtype == nw.Duration("ns")
-    else:
-        assert result.dtype == nw.Duration("s")
-    s = pa.chunked_array([pa.array([timedelta(1)], type=pa.duration("s"))])
+    assert result.dtype == nw.Duration(expected_unit)
+
+    dur_sec = pa.duration("s")
+    s = pa.chunked_array([pa.array([timedelta(1)], type=dur_sec)], type=dur_sec)
     result = nw.from_native(s, series_only=True)
     assert result.dtype == nw.Duration("s")
 
 
+@pytest.mark.skipif(
+    PANDAS_VERSION >= (3,),
+    reason="pandas 3.0+ disallows this kind of inplace modification",
+)
+@pytest.mark.skipif(
+    PANDAS_VERSION < (1, 4),
+    reason="pandas pre 1.4 doesn't change the type on inplace modification",
+)
 @pytest.mark.filterwarnings("ignore:Setting an item of incompatible")
-def test_pandas_inplace_modification_1267(request: pytest.FixtureRequest) -> None:
-    if PANDAS_VERSION >= (3,):
-        # pandas 3.0+ won't allow this kind of inplace modification
-        request.applymarker(pytest.mark.xfail)
-    if PANDAS_VERSION < (1, 4):
-        # pandas pre 1.4 wouldn't change the type?
-        request.applymarker(pytest.mark.xfail)
+def test_pandas_inplace_modification_1267() -> None:
     s = pd.Series([1, 2, 3])
     snw = nw.from_native(s, series_only=True)
     assert snw.dtype == nw.Int64
@@ -186,10 +204,9 @@ def test_pandas_fixed_offset_1302() -> None:
         pd.Series(pd.to_datetime(["2020-01-01T00:00:00.000000000+01:00"])),
         series_only=True,
     ).dtype
-    if PANDAS_VERSION >= (2,):
-        assert result == nw.Datetime("ns", "UTC+01:00")
-    else:  # pragma: no cover
-        assert result == nw.Datetime("ns", "pytz.FixedOffset(60)")
+    expected_timezone = "UTC+01:00" if PANDAS_VERSION >= (2,) else "pytz.FixedOffset(60)"
+    assert result == nw.Datetime("ns", expected_timezone)
+
     if PANDAS_VERSION >= (2,):
         result = nw.from_native(
             pd.Series(
@@ -203,20 +220,28 @@ def test_pandas_fixed_offset_1302() -> None:
 
 
 def test_huge_int() -> None:
-    duckdb = pytest.importorskip("duckdb")
+    pytest.importorskip("duckdb")
+    pytest.importorskip("polars")
+
+    import duckdb
+    import polars as pl
+
     df = pl.DataFrame({"a": [1, 2, 3]})
-    if POLARS_VERSION >= (1, 18):  # pragma: no cover
+
+    if POLARS_VERSION >= (1, 18):
         result = nw.from_native(df.select(pl.col("a").cast(pl.Int128))).schema
         assert result["a"] == nw.Int128
     else:  # pragma: no cover
         # Int128 was not available yet
         pass
+
     rel = duckdb.sql("""
         select cast(a as int128) as a
         from df
                      """)
     result = nw.from_native(rel).schema
     assert result["a"] == nw.Int128
+
     rel = duckdb.sql("""
         select cast(a as uint128) as a
         from df
@@ -230,7 +255,12 @@ def test_huge_int() -> None:
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_decimal() -> None:
-    duckdb = pytest.importorskip("duckdb")
+    pytest.importorskip("duckdb")
+    pytest.importorskip("polars")
+
+    import duckdb
+    import polars as pl
+
     df = pl.DataFrame({"a": [1]}, schema={"a": pl.Decimal})
     result = nw.from_native(df).schema
     assert result["a"] == nw.Decimal
@@ -267,19 +297,27 @@ def test_dtype_is_x() -> None:
         nw.Object,
         nw.String,
         nw.Struct,
+        nw.Time,
         nw.UInt8,
         nw.UInt16,
         nw.UInt32,
         nw.UInt64,
         nw.UInt128,
         nw.Unknown,
+        nw.Binary,
     )
 
     is_signed_integer = {nw.Int8, nw.Int16, nw.Int32, nw.Int64, nw.Int128}
-    is_unsigned_integer = {nw.UInt8, nw.UInt16, nw.UInt32, nw.UInt64, nw.UInt128}
+    is_unsigned_integer = {
+        nw.UInt8,
+        nw.UInt16,
+        nw.UInt32,
+        nw.UInt64,
+        nw.UInt128,
+    }
     is_float = {nw.Float32, nw.Float64}
     is_decimal = {nw.Decimal}
-    is_temporal = {nw.Datetime, nw.Date, nw.Duration}
+    is_temporal = {nw.Datetime, nw.Date, nw.Duration, nw.Time}
     is_nested = {nw.Array, nw.List, nw.Struct}
 
     for dtype in dtypes:
@@ -300,19 +338,20 @@ def test_dtype_is_x() -> None:
         assert dtype.is_nested() == (dtype in is_nested)
 
 
+@pytest.mark.skipif(POLARS_VERSION < (1, 18), reason="too old for Int128")
 def test_huge_int_to_native() -> None:
-    duckdb = pytest.importorskip("duckdb")
+    pytest.importorskip("duckdb")
+    pytest.importorskip("polars")
+
+    import duckdb
+    import polars as pl
+
     df = pl.DataFrame({"a": [1, 2, 3]})
-    if POLARS_VERSION >= (1, 18):  # pragma: no cover
-        df_casted = (
-            nw.from_native(df)
-            .with_columns(a_int=nw.col("a").cast(nw.Int128()))
-            .to_native()
-        )
-        assert df_casted.schema["a_int"] == pl.Int128
-    else:  # pragma: no cover
-        # Int128 was not available yet
-        pass
+    df_casted = (
+        nw.from_native(df).with_columns(a_int=nw.col("a").cast(nw.Int128())).to_native()
+    )
+    assert df_casted.schema["a_int"] == pl.Int128
+
     rel = duckdb.sql("""
         select cast(a as int64) as a
         from df
@@ -320,7 +359,8 @@ def test_huge_int_to_native() -> None:
     result = (
         nw.from_native(rel)
         .with_columns(
-            a_int=nw.col("a").cast(nw.Int128()), a_unit=nw.col("a").cast(nw.UInt128())
+            a_int=nw.col("a").cast(nw.Int128()),
+            a_unit=nw.col("a").cast(nw.UInt128()),
         )
         .select("a_int", "a_unit")
         .to_native()
@@ -331,7 +371,12 @@ def test_huge_int_to_native() -> None:
 
 
 def test_cast_decimal_to_native() -> None:
-    duckdb = pytest.importorskip("duckdb")
+    pytest.importorskip("duckdb")
+    pytest.importorskip("polars")
+
+    import duckdb
+    import polars as pl
+
     data = {"a": [1, 2, 3]}
 
     df = pl.DataFrame(data)
@@ -351,7 +396,7 @@ def test_cast_decimal_to_native() -> None:
             NotImplementedError, match="Casting to Decimal is not supported yet."
         ):
             (
-                nw.from_native(obj)
+                nw.from_native(obj)  # type: ignore[call-overload]
                 .with_columns(a=nw.col("a").cast(nw.Decimal()))
                 .to_native()
             )

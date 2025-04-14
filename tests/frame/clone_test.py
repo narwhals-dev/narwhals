@@ -1,27 +1,19 @@
 from __future__ import annotations
 
-import pytest
-
-import narwhals.stable.v1 as nw
-from tests.utils import Constructor
+import narwhals as nw
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-def test_clone(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    if (
-        ("pyspark" in str(constructor))
-        or "duckdb" in str(constructor)
-        or "ibis" in str(constructor)
-    ):
-        request.applymarker(pytest.mark.xfail)
-    if "pyarrow_table" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_clone(constructor_eager: ConstructorEager) -> None:
     expected = {"a": [1, 2], "b": [3, 4]}
-    df = nw.from_native(constructor(expected))
+    expected_mod = {"a": [1, 2], "b": [3, 4], "c": [4, 6]}
+    df = nw.from_native(constructor_eager(expected), eager_only=True)
     df_clone = df.clone()
     assert df is not df_clone
     assert df._compliant_frame is not df_clone._compliant_frame
     assert_equal_data(df_clone, expected)
+    df_clone_mod = df_clone.with_columns((nw.col("a") + nw.col("b")).alias("c"))
+    assert_equal_data(df, expected)
+    assert_equal_data(df_clone, expected)
+    assert_equal_data(df_clone_mod, expected_mod)

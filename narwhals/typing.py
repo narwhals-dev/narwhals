@@ -2,28 +2,28 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Callable
-from typing import Generic
 from typing import Literal
 from typing import Protocol
-from typing import Sequence
 from typing import TypeVar
 from typing import Union
 
+from narwhals._compliant import CompliantDataFrame
+from narwhals._compliant import CompliantLazyFrame
+from narwhals._compliant import CompliantSeries
+
 if TYPE_CHECKING:
     from types import ModuleType
+    from typing import Iterable
+    from typing import Sized
 
     import numpy as np
-    from typing_extensions import Self
     from typing_extensions import TypeAlias
 
     from narwhals import dtypes
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
-    from narwhals.dtypes import DType
     from narwhals.expr import Expr
     from narwhals.series import Series
-    from narwhals.utils import Implementation
 
     # All dataframes supported by Narwhals have a
     # `columns` property. Their similarities don't extend
@@ -34,79 +34,14 @@ if TYPE_CHECKING:
 
         def join(self, *args: Any, **kwargs: Any) -> Any: ...
 
-    class NativeSeries(Protocol):
-        def __len__(self) -> int: ...
+    class NativeLazyFrame(NativeFrame, Protocol):
+        def explain(self, *args: Any, **kwargs: Any) -> Any: ...
+
+    class NativeSeries(Sized, Iterable[Any], Protocol):
+        def filter(self, *args: Any, **kwargs: Any) -> Any: ...
 
     class DataFrameLike(Protocol):
         def __dataframe__(self, *args: Any, **kwargs: Any) -> Any: ...
-
-
-class CompliantSeries(Protocol):
-    @property
-    def name(self) -> str: ...
-    def __narwhals_series__(self) -> CompliantSeries: ...
-    def alias(self, name: str) -> Self: ...
-
-
-class CompliantDataFrame(Protocol):
-    def __narwhals_dataframe__(self) -> Self: ...
-    def __narwhals_namespace__(self) -> Any: ...
-    def simple_select(
-        self, *column_names: str
-    ) -> Self: ...  # `select` where all args are column names.
-    def aggregate(self, *exprs: Any) -> Self:
-        ...  # `select` where all args are aggregations or literals
-        # (so, no broadcasting is necessary).
-
-
-class CompliantLazyFrame(Protocol):
-    def __narwhals_lazyframe__(self) -> Self: ...
-    def __narwhals_namespace__(self) -> Any: ...
-    def simple_select(
-        self, *column_names: str
-    ) -> Self: ...  # `select` where all args are column names.
-    def aggregate(self, *exprs: Any) -> Self:
-        ...  # `select` where all args are aggregations or literals
-        # (so, no broadcasting is necessary).
-
-
-CompliantSeriesT_co = TypeVar(
-    "CompliantSeriesT_co", bound=CompliantSeries, covariant=True
-)
-
-
-class CompliantExpr(Protocol, Generic[CompliantSeriesT_co]):
-    _implementation: Implementation
-    _backend_version: tuple[int, ...]
-    _evaluate_output_names: Callable[
-        [CompliantDataFrame | CompliantLazyFrame], Sequence[str]
-    ]
-    _alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None
-    _depth: int
-    _function_name: str
-
-    def __call__(self, df: Any) -> Sequence[CompliantSeriesT_co]: ...
-    def __narwhals_expr__(self) -> None: ...
-    def __narwhals_namespace__(self) -> CompliantNamespace[CompliantSeriesT_co]: ...
-    def is_null(self) -> Self: ...
-    def alias(self, name: str) -> Self: ...
-    def cast(self, dtype: DType) -> Self: ...
-    def __and__(self, other: Any) -> Self: ...
-    def __or__(self, other: Any) -> Self: ...
-    def __add__(self, other: Any) -> Self: ...
-    def __sub__(self, other: Any) -> Self: ...
-    def __mul__(self, other: Any) -> Self: ...
-    def __floordiv__(self, other: Any) -> Self: ...
-    def __truediv__(self, other: Any) -> Self: ...
-    def __mod__(self, other: Any) -> Self: ...
-    def __pow__(self, other: Any) -> Self: ...
-
-
-class CompliantNamespace(Protocol, Generic[CompliantSeriesT_co]):
-    def col(self, *column_names: str) -> CompliantExpr[CompliantSeriesT_co]: ...
-    def lit(
-        self, value: Any, dtype: DType | None
-    ) -> CompliantExpr[CompliantSeriesT_co]: ...
 
 
 class SupportsNativeNamespace(Protocol):
@@ -134,6 +69,8 @@ Examples:
     ...     df = nw.from_native(df_native, eager_only=True)
     ...     return df.shape
 """
+
+IntoLazyFrame: TypeAlias = "NativeLazyFrame | LazyFrame[Any]"
 
 IntoFrame: TypeAlias = Union[
     "NativeFrame", "DataFrame[Any]", "LazyFrame[Any]", "DataFrameLike"
@@ -165,7 +102,7 @@ Examples:
     ...     return df.columns
 """
 
-IntoSeries: TypeAlias = Union["Series[Any]", "NativeSeries"]
+IntoSeries: TypeAlias = "NativeSeries"
 """Anything which can be converted to a Narwhals Series.
 
 Use this if your function can accept an object which can be converted to `nw.Series`
@@ -208,6 +145,8 @@ Examples:
     ...     return df.with_columns(c=df["a"] + 1).to_native()
 """
 
+IntoLazyFrameT = TypeVar("IntoLazyFrameT", bound="IntoLazyFrame")
+
 FrameT = TypeVar("FrameT", bound="Frame")
 """TypeVar bound to Narwhals DataFrame or Narwhals LazyFrame.
 
@@ -235,6 +174,9 @@ Examples:
     >>> def func(df: DataFrameT) -> DataFrameT:
     ...     return df.with_columns(c=df["a"] + 1)
 """
+
+LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[Any]")
+SeriesT = TypeVar("SeriesT", bound="Series[Any]")
 
 IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries")
 """TypeVar bound to object convertible to Narwhals Series.
@@ -266,48 +208,158 @@ SizeUnit: TypeAlias = Literal[
 
 TimeUnit: TypeAlias = Literal["ns", "us", "ms", "s"]
 
+AsofJoinStrategy: TypeAlias = Literal["backward", "forward", "nearest"]
+"""Join strategy.
+
+- *"backward"*: Selects the last row in the right DataFrame whose `on` key
+    is less than or equal to the left's key.
+- *"forward"*: Selects the first row in the right DataFrame whose `on` key
+    is greater than or equal to the left's key.
+- *"nearest"*: Search selects the last row in the right DataFrame whose value
+    is nearest to the left's key.
+"""
+
+ClosedInterval: TypeAlias = Literal["left", "right", "none", "both"]
+"""Define which sides of the interval are closed (inclusive)."""
+
+ConcatMethod: TypeAlias = Literal["horizontal", "vertical", "diagonal"]
+"""Concatenating strategy.
+
+- *"vertical"*: Concatenate vertically. Column names must match.
+- *"horizontal"*: Concatenate horizontally. If lengths don't match, then
+    missing rows are filled with null values.
+- *"diagonal"*: Finds a union between the column schemas and fills missing
+    column values with null.
+"""
+
+FillNullStrategy: TypeAlias = Literal["forward", "backward"]
+"""Strategy used to fill null values."""
+
+JoinStrategy: TypeAlias = Literal["inner", "left", "full", "cross", "semi", "anti"]
+"""Join strategy.
+
+- *"inner"*: Returns rows that have matching values in both tables.
+- *"left"*: Returns all rows from the left table, and the matched rows from
+    the right table.
+- *"full"*: Returns all rows in both dataframes, with the `suffix` appended to
+    the right join keys.
+- *"cross"*: Returns the Cartesian product of rows from both tables.
+- *"semi"*: Filter rows that have a match in the right table.
+- *"anti"*: Filter rows that do not have a match in the right table.
+"""
+
+PivotAgg: TypeAlias = Literal[
+    "min", "max", "first", "last", "sum", "mean", "median", "len"
+]
+"""A predefined aggregate function string."""
+
+RankMethod: TypeAlias = Literal["average", "min", "max", "dense", "ordinal"]
+"""The method used to assign ranks to tied elements.
+
+- *"average"*: The average of the ranks that would have been assigned to
+    all the tied values is assigned to each value.
+- *"min"*: The minimum of the ranks that would have been assigned to all
+    the tied values is assigned to each value. (This is also referred to
+    as "competition" ranking.)
+- *"max"*: The maximum of the ranks that would have been assigned to all
+    the tied values is assigned to each value.
+- *"dense"*: Like "min", but the rank of the next highest element is
+    assigned the rank immediately after those assigned to the tied elements.
+- *"ordinal"*: All values are given a distinct rank, corresponding to the
+    order that the values occur in the Series.
+"""
+
+RollingInterpolationMethod: TypeAlias = Literal[
+    "nearest", "higher", "lower", "midpoint", "linear"
+]
+"""Interpolation method."""
+
+UniqueKeepStrategy: TypeAlias = Literal["any", "first", "last", "none"]
+"""Which of the duplicate rows to keep.
+
+- *"any"*: Does not give any guarantee of which row is kept.
+    This allows more optimizations.
+- *"none"*: Don't keep duplicate rows.
+- *"first"*: Keep first unique row.
+- *"last"*: Keep last unique row.
+"""
+
+LazyUniqueKeepStrategy: TypeAlias = Literal["any", "none"]
+"""Which of the duplicate rows to keep.
+
+- *"any"*: Does not give any guarantee of which row is kept.
+- *"none"*: Don't keep duplicate rows.
+"""
+
+
 _ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
 _NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
-_1DArray: TypeAlias = "_NDArray[tuple[int]]"  # noqa: PYI042, PYI047
+_1DArray: TypeAlias = "_NDArray[tuple[int]]"  # noqa: PYI042
 _2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI042, PYI047
 _AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
+_NumpyScalar: TypeAlias = "np.generic[Any]"
+Into1DArray: TypeAlias = "_1DArray | _NumpyScalar"
+"""A 1-dimensional `numpy.ndarray` or scalar that can be converted into one."""
 
 
-class DTypes:
-    Decimal: type[dtypes.Decimal]
-    Int128: type[dtypes.Int128]
-    Int64: type[dtypes.Int64]
-    Int32: type[dtypes.Int32]
-    Int16: type[dtypes.Int16]
-    Int8: type[dtypes.Int8]
-    UInt128: type[dtypes.UInt128]
-    UInt64: type[dtypes.UInt64]
-    UInt32: type[dtypes.UInt32]
-    UInt16: type[dtypes.UInt16]
-    UInt8: type[dtypes.UInt8]
-    Float64: type[dtypes.Float64]
-    Float32: type[dtypes.Float32]
-    String: type[dtypes.String]
-    Boolean: type[dtypes.Boolean]
-    Object: type[dtypes.Object]
-    Categorical: type[dtypes.Categorical]
-    Enum: type[dtypes.Enum]
-    Datetime: type[dtypes.Datetime]
-    Duration: type[dtypes.Duration]
-    Date: type[dtypes.Date]
-    Field: type[dtypes.Field]
-    Struct: type[dtypes.Struct]
-    List: type[dtypes.List]
-    Array: type[dtypes.Array]
-    Unknown: type[dtypes.Unknown]
-
-
-if TYPE_CHECKING:
-    # This one needs to be in TYPE_CHECKING to pass on 3.9,
-    # and can only be defined after CompliantExpr has been defined
-    IntoCompliantExpr: TypeAlias = (
-        CompliantExpr[CompliantSeriesT_co] | CompliantSeriesT_co
-    )
+# ruff: noqa: N802
+class DTypes(Protocol):
+    @property
+    def Decimal(self) -> type[dtypes.Decimal]: ...
+    @property
+    def Int128(self) -> type[dtypes.Int128]: ...
+    @property
+    def Int64(self) -> type[dtypes.Int64]: ...
+    @property
+    def Int32(self) -> type[dtypes.Int32]: ...
+    @property
+    def Int16(self) -> type[dtypes.Int16]: ...
+    @property
+    def Int8(self) -> type[dtypes.Int8]: ...
+    @property
+    def UInt128(self) -> type[dtypes.UInt128]: ...
+    @property
+    def UInt64(self) -> type[dtypes.UInt64]: ...
+    @property
+    def UInt32(self) -> type[dtypes.UInt32]: ...
+    @property
+    def UInt16(self) -> type[dtypes.UInt16]: ...
+    @property
+    def UInt8(self) -> type[dtypes.UInt8]: ...
+    @property
+    def Float64(self) -> type[dtypes.Float64]: ...
+    @property
+    def Float32(self) -> type[dtypes.Float32]: ...
+    @property
+    def String(self) -> type[dtypes.String]: ...
+    @property
+    def Boolean(self) -> type[dtypes.Boolean]: ...
+    @property
+    def Object(self) -> type[dtypes.Object]: ...
+    @property
+    def Categorical(self) -> type[dtypes.Categorical]: ...
+    @property
+    def Enum(self) -> type[dtypes.Enum]: ...
+    @property
+    def Datetime(self) -> type[dtypes.Datetime]: ...
+    @property
+    def Duration(self) -> type[dtypes.Duration]: ...
+    @property
+    def Date(self) -> type[dtypes.Date]: ...
+    @property
+    def Field(self) -> type[dtypes.Field]: ...
+    @property
+    def Struct(self) -> type[dtypes.Struct]: ...
+    @property
+    def List(self) -> type[dtypes.List]: ...
+    @property
+    def Array(self) -> type[dtypes.Array]: ...
+    @property
+    def Unknown(self) -> type[dtypes.Unknown]: ...
+    @property
+    def Time(self) -> type[dtypes.Time]: ...
+    @property
+    def Binary(self) -> type[dtypes.Binary]: ...
 
 
 __all__ = [

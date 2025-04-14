@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import NarwhalsError
 from tests.utils import POLARS_VERSION
 from tests.utils import Constructor

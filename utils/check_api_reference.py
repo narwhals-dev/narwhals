@@ -1,19 +1,17 @@
 from __future__ import annotations
 
-import os
 import sys
+from pathlib import Path
 
 import polars as pl
 
 import narwhals as nw
-from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
 from narwhals.utils import remove_prefix
-from narwhals.utils import remove_suffix
 
 ret = 0
 
-NAMESPACES = {"dt", "str", "cat", "name", "list"}
+NAMESPACES = {"dt", "str", "cat", "name", "list", "struct"}
 EXPR_ONLY_METHODS = {"over", "map_batches"}
 SERIES_ONLY_METHODS = {
     "dtype",
@@ -48,7 +46,7 @@ BASE_DTYPES = {
     "Mapping",
 }
 
-files = {remove_suffix(i, ".py") for i in os.listdir("narwhals")}
+files = {fp.stem for fp in Path("narwhals").iterdir()}
 
 # Top level functions
 top_level_functions = [
@@ -164,9 +162,7 @@ for namespace in NAMESPACES.difference({"name"}):
 # Expr methods
 expr_methods = [
     i
-    for i in nw.Expr(
-        lambda: 0, ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False)
-    ).__dir__()
+    for i in nw.Expr(lambda: 0, ExprMetadata.selector_single()).__dir__()
     if not i[0].isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/expr.md") as fd:
@@ -190,9 +186,7 @@ for namespace in NAMESPACES:
     expr_methods = [
         i
         for i in getattr(
-            nw.Expr(
-                lambda: 0, ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False)
-            ),
+            nw.Expr(lambda: 0, ExprMetadata.selector_single()),
             namespace,
         ).__dir__()
         if not i[0].isupper() and i[0] != "_"
@@ -236,9 +230,7 @@ if extra := set(documented).difference(dtypes):
 # Check Expr vs Series
 expr = [
     i
-    for i in nw.Expr(
-        lambda: 0, ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False)
-    ).__dir__()
+    for i in nw.Expr(lambda: 0, ExprMetadata.selector_single()).__dir__()
     if not i[0].isupper() and i[0] != "_"
 ]
 series = [
@@ -260,9 +252,7 @@ for namespace in NAMESPACES.difference({"name"}):
     expr_internal = [
         i
         for i in getattr(
-            nw.Expr(
-                lambda: 0, ExprMetadata(kind=ExprKind.TRANSFORM, is_order_dependent=False)
-            ),
+            nw.Expr(lambda: 0, ExprMetadata.selector_single()),
             namespace,
         ).__dir__()
         if not i[0].isupper() and i[0] != "_"

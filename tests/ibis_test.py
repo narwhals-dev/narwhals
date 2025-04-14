@@ -3,17 +3,18 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-import polars as pl
 import pytest
 
 import narwhals as nw
 
 if TYPE_CHECKING:
     import ibis
+    import polars as pl
 
     from tests.utils import Constructor
-
-ibis = pytest.importorskip("ibis")
+else:
+    ibis = pytest.importorskip("ibis")
+    pl = pytest.importorskip("polars")
 
 
 @pytest.fixture

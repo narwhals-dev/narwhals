@@ -10,7 +10,7 @@ import pandas as pd
 import pyarrow as pa
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.stable.v1.dependencies import get_cudf
 from tests.utils import PANDAS_VERSION
 
@@ -43,7 +43,7 @@ def test_to_py_scalar(
 ) -> None:
     output = nw.to_py_scalar(input_value)
     if expected == 1:
-        assert not isinstance(output, np.int64)
+        assert not isinstance(output, np.generic)
     assert output == expected
 
 

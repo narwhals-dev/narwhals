@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
@@ -15,35 +15,59 @@ if TYPE_CHECKING:
     from narwhals.stable.v1.dtypes import DType
 
 data = {
-    "a": ["x", "y", "z"],
+    "a": [7, 8, 9],
     "b": [1, 3, 5],
     "c": [2, 4, 6],
 }
 
-expected_b_only = {
-    "a": ["x", "y", "z"],
+expected_on_b_idx_a = {
+    "a": [7, 8, 9],
     "variable": ["b", "b", "b"],
     "value": [1, 3, 5],
 }
 
-expected_b_c = {
-    "a": ["x", "y", "z", "x", "y", "z"],
+expected_on_b_c_idx_a = {
+    "a": [7, 8, 9, 7, 8, 9],
     "variable": ["b", "b", "b", "c", "c", "c"],
     "value": [1, 3, 5, 2, 4, 6],
 }
 
+expected_on_none_idx_a = {
+    "a": [7, 8, 9, 7, 8, 9],
+    "variable": ["b", "b", "b", "c", "c", "c"],
+    "value": [1, 3, 5, 2, 4, 6],
+}
+
+expected_on_b_c_idx_none = {
+    "variable": ["b", "b", "b", "c", "c", "c"],
+    "value": [1, 3, 5, 2, 4, 6],
+}
+
+expected_on_none_idx_none = {
+    "variable": ["a", "a", "a", "b", "b", "b", "c", "c", "c"],
+    "value": [7, 8, 9, 1, 3, 5, 2, 4, 6],
+}
+
 
 @pytest.mark.parametrize(
-    ("on", "expected"),
-    [("b", expected_b_only), (["b", "c"], expected_b_c), (None, expected_b_c)],
+    ("on", "index", "expected"),
+    [
+        ("b", ["a"], expected_on_b_idx_a),
+        (["b", "c"], ["a"], expected_on_b_c_idx_a),
+        (None, ["a"], expected_on_none_idx_a),
+        (["b", "c"], None, expected_on_b_c_idx_none),
+        (None, None, expected_on_none_idx_none),
+    ],
 )
-def test_unpivot_on(
+def test_unpivot(
     constructor: Constructor,
     on: str | list[str] | None,
+    index: list[str] | None,
     expected: dict[str, list[float]],
 ) -> None:
     df = nw.from_native(constructor(data))
-    result = df.unpivot(on=on, index=["a"]).sort("variable", "a")
+    sort_columns = ["variable"] if index is None else ["variable", "a"]
+    result = df.unpivot(on=on, index=index).sort(by=sort_columns)
     assert_equal_data(result, expected)
 
 
@@ -62,7 +86,15 @@ def test_unpivot_var_value_names(
 ) -> None:
     context = (
         pytest.raises(NotImplementedError)
-        if ("duckdb" in str(constructor) and any([variable_name == "", value_name == ""]))
+        if (
+            any([variable_name == "", value_name == ""])
+            and (
+                "duckdb" in str(constructor)
+                # This might depend from the dialect we use in sqlframe.
+                # Since for now we use only duckdb, we need to xfail it
+                or "sqlframe" in str(constructor)
+            )
+        )
         else does_not_raise()
     )
 

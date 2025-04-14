@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -21,7 +21,7 @@ def test_len_expr(
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     result = nw.from_native(constructor(data)).select(
         nw.col("a").cast(nw.List(nw.Int32())).list.len()
@@ -38,7 +38,7 @@ def test_len_series(
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
@@ -56,3 +56,15 @@ def test_pandas_preserve_index(request: pytest.FixtureRequest) -> None:
     result = df["a"].cast(nw.List(nw.Int32())).list.len()
     assert_equal_data({"a": result}, expected)
     assert (result.to_native().index == index).all()
+
+
+def test_pandas_object_series() -> None:
+    import pandas as pd
+
+    import narwhals as nw
+
+    s_native = pd.Series(data=data["a"])
+    s = nw.from_native(s_native, series_only=True)
+
+    with pytest.raises(TypeError):
+        s.list.len()

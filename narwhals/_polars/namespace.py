@@ -5,7 +5,9 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
+from typing import cast
 from typing import overload
 
 import polars as pl
@@ -14,6 +16,7 @@ from narwhals._polars.expr import PolarsExpr
 from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import narwhals_to_native_dtype
+from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dtypes import DType
 from narwhals.utils import Implementation
 
@@ -22,13 +25,34 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from narwhals._compliant import CompliantSelectorNamespace
+    from narwhals._compliant import CompliantWhen
+    from narwhals._polars.dataframe import Method
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.dataframe import PolarsLazyFrame
+    from narwhals._polars.typing import FrameT
+    from narwhals.schema import Schema
+    from narwhals.typing import Into1DArray
     from narwhals.typing import TimeUnit
+    from narwhals.typing import _2DArray
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
 
 class PolarsNamespace:
+    all: Method[PolarsExpr]
+    col: Method[PolarsExpr]
+    exclude: Method[PolarsExpr]
+    all_horizontal: Method[PolarsExpr]
+    any_horizontal: Method[PolarsExpr]
+    sum_horizontal: Method[PolarsExpr]
+    min_horizontal: Method[PolarsExpr]
+    max_horizontal: Method[PolarsExpr]
+
+    # NOTE: `pyright` accepts, `mypy` doesn't highlight the issue
+    #   error: Type argument "PolarsExpr" of "CompliantWhen" must be a subtype of "CompliantExpr[Any, Any]"
+    when: Method[CompliantWhen[PolarsDataFrame, PolarsSeries, PolarsExpr]]  # type: ignore[type-var]
+
     def __init__(
         self: Self, *, backend_version: tuple[int, ...], version: Version
     ) -> None:
@@ -37,96 +61,116 @@ class PolarsNamespace:
         self._version = version
 
     def __getattr__(self: Self, attr: str) -> Any:
-        from narwhals._polars.expr import PolarsExpr
-
         def func(*args: Any, **kwargs: Any) -> Any:
-            args, kwargs = extract_args_kwargs(args, kwargs)  # type: ignore[assignment]
-            return PolarsExpr(
-                getattr(pl, attr)(*args, **kwargs),
+            pos, kwds = extract_args_kwargs(args, kwargs)
+            return self._expr(
+                getattr(pl, attr)(*pos, **kwds),
                 version=self._version,
                 backend_version=self._backend_version,
             )
 
         return func
 
-    def _create_compliant_series(self, value: Any) -> PolarsSeries:
-        return PolarsSeries(
-            pl.Series(value), backend_version=self._backend_version, version=self._version
-        )
+    @property
+    def _dataframe(self) -> type[PolarsDataFrame]:
+        from narwhals._polars.dataframe import PolarsDataFrame
 
-    def _create_expr_from_series(self, value: Any) -> PolarsExpr:
-        # Let Polars do its own thing.
-        return PolarsExpr(
-            value._native_series,
-            version=self._version,
-            backend_version=self._backend_version,
-        )
+        return PolarsDataFrame
+
+    @property
+    def _lazyframe(self) -> type[PolarsLazyFrame]:
+        from narwhals._polars.dataframe import PolarsLazyFrame
+
+        return PolarsLazyFrame
+
+    @property
+    def _expr(self) -> type[PolarsExpr]:
+        return PolarsExpr
+
+    @property
+    def _series(self) -> type[PolarsSeries]:
+        return PolarsSeries
+
+    @overload
+    def from_native(self, data: pl.DataFrame, /) -> PolarsDataFrame: ...
+    @overload
+    def from_native(self, data: pl.LazyFrame, /) -> PolarsLazyFrame: ...
+    @overload
+    def from_native(self, data: pl.Series, /) -> PolarsSeries: ...
+    def from_native(
+        self, data: pl.DataFrame | pl.LazyFrame | pl.Series | Any, /
+    ) -> PolarsDataFrame | PolarsLazyFrame | PolarsSeries:
+        if self._dataframe._is_native(data):
+            return self._dataframe.from_native(data, context=self)
+        elif self._series._is_native(data):
+            return self._series.from_native(data, context=self)
+        elif self._lazyframe._is_native(data):
+            return self._lazyframe.from_native(data, context=self)
+        else:  # pragma: no cover
+            msg = f"Unsupported type: {type(data).__name__!r}"
+            raise TypeError(msg)
+
+    @overload
+    def from_numpy(
+        self,
+        data: Into1DArray,
+        /,
+        schema: None = ...,
+    ) -> PolarsSeries: ...
+
+    @overload
+    def from_numpy(
+        self,
+        data: _2DArray,
+        /,
+        schema: Mapping[str, DType] | Schema | Sequence[str] | None,
+    ) -> PolarsDataFrame: ...
+
+    def from_numpy(
+        self,
+        data: Into1DArray | _2DArray,
+        /,
+        schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
+    ) -> PolarsDataFrame | PolarsSeries:
+        if is_numpy_array_2d(data):
+            return self._dataframe.from_numpy(data, schema=schema, context=self)
+        return self._series.from_numpy(data, context=self)  # pragma: no cover
 
     def nth(self: Self, *indices: int) -> PolarsExpr:
-        from narwhals._polars.expr import PolarsExpr
-
         if self._backend_version < (1, 0, 0):
             msg = "`nth` is only supported for Polars>=1.0.0. Please use `col` for columns selection instead."
             raise AttributeError(msg)
-        return PolarsExpr(
+        return self._expr(
             pl.nth(*indices), version=self._version, backend_version=self._backend_version
         )
 
     def len(self: Self) -> PolarsExpr:
-        from narwhals._polars.expr import PolarsExpr
-
         if self._backend_version < (0, 20, 5):
-            return PolarsExpr(
+            return self._expr(
                 pl.count().alias("len"),
                 version=self._version,
                 backend_version=self._backend_version,
             )
-        return PolarsExpr(
+        return self._expr(
             pl.len(), version=self._version, backend_version=self._backend_version
         )
 
-    @overload
     def concat(
         self: Self,
-        items: Sequence[PolarsDataFrame],
-        *,
-        how: Literal["vertical", "horizontal", "diagonal"],
-    ) -> PolarsDataFrame: ...
-
-    @overload
-    def concat(
-        self: Self,
-        items: Sequence[PolarsLazyFrame],
-        *,
-        how: Literal["vertical", "horizontal", "diagonal"],
-    ) -> PolarsLazyFrame: ...
-
-    def concat(
-        self: Self,
-        items: Sequence[PolarsDataFrame] | Sequence[PolarsLazyFrame],
+        items: Iterable[FrameT],
         *,
         how: Literal["vertical", "horizontal", "diagonal"],
     ) -> PolarsDataFrame | PolarsLazyFrame:
-        from narwhals._polars.dataframe import PolarsDataFrame
-        from narwhals._polars.dataframe import PolarsLazyFrame
-
-        dfs: list[Any] = [item._native_frame for item in items]
-        result = pl.concat(dfs, how=how)
+        result = pl.concat((item.native for item in items), how=how)
         if isinstance(result, pl.DataFrame):
-            return PolarsDataFrame(
-                result,
-                backend_version=items[0]._backend_version,
-                version=items[0]._version,
+            return self._dataframe(
+                result, backend_version=self._backend_version, version=self._version
             )
-        return PolarsLazyFrame(
-            result, backend_version=items[0]._backend_version, version=items[0]._version
-        )
+        return self._lazyframe.from_native(result, context=self)
 
-    def lit(self: Self, value: Any, dtype: DType | None) -> PolarsExpr:
-        from narwhals._polars.expr import PolarsExpr
-
+    def lit(self: Self, value: Any, dtype: DType | type[DType] | None) -> PolarsExpr:
         if dtype is not None:
-            return PolarsExpr(
+            return self._expr(
                 pl.lit(
                     value,
                     dtype=narwhals_to_native_dtype(
@@ -136,22 +180,20 @@ class PolarsNamespace:
                 version=self._version,
                 backend_version=self._backend_version,
             )
-        return PolarsExpr(
+        return self._expr(
             pl.lit(value), version=self._version, backend_version=self._backend_version
         )
 
     def mean_horizontal(self: Self, *exprs: PolarsExpr) -> PolarsExpr:
-        from narwhals._polars.expr import PolarsExpr
-
         if self._backend_version < (0, 20, 8):
-            return PolarsExpr(
+            return self._expr(
                 pl.sum_horizontal(e._native_expr for e in exprs)
                 / pl.sum_horizontal(1 - e.is_null()._native_expr for e in exprs),
                 version=self._version,
                 backend_version=self._backend_version,
             )
 
-        return PolarsExpr(
+        return self._expr(
             pl.mean_horizontal(e._native_expr for e in exprs),
             version=self._version,
             backend_version=self._backend_version,
@@ -163,8 +205,6 @@ class PolarsNamespace:
         separator: str,
         ignore_nulls: bool,
     ) -> PolarsExpr:
-        from narwhals._polars.expr import PolarsExpr
-
         pl_exprs: list[pl.Expr] = [expr._native_expr for expr in exprs]
 
         if self._backend_version < (0, 20, 6):
@@ -193,11 +233,11 @@ class PolarsNamespace:
                     exprs=[s + v for s, v in zip(separators, values)],
                 )
 
-            return PolarsExpr(
+            return self._expr(
                 result, version=self._version, backend_version=self._backend_version
             )
 
-        return PolarsExpr(
+        return self._expr(
             pl.concat_str(
                 pl_exprs,
                 separator=separator,
@@ -207,19 +247,25 @@ class PolarsNamespace:
             backend_version=self._backend_version,
         )
 
+    # NOTE: Implementation is too different to annotate correctly (vs other `*SelectorNamespace`)
+    # 1. Others have lots of private stuff for code reuse
+    #    i. None of that is useful here
+    # 2. We don't have a `PolarsSelector` abstraction, and just use `PolarsExpr`
     @property
-    def selectors(self: Self) -> PolarsSelectors:
-        return PolarsSelectors(self._version, backend_version=self._backend_version)
+    def selectors(self) -> CompliantSelectorNamespace[PolarsDataFrame, PolarsSeries]:
+        return cast(
+            "CompliantSelectorNamespace[PolarsDataFrame, PolarsSeries]",
+            PolarsSelectorNamespace(self),
+        )
 
 
-class PolarsSelectors:
-    def __init__(self: Self, version: Version, backend_version: tuple[int, ...]) -> None:
-        self._version = version
-        self._backend_version = backend_version
+class PolarsSelectorNamespace:
+    def __init__(self: Self, context: _FullContext, /) -> None:
+        self._implementation = context._implementation
+        self._backend_version = context._backend_version
+        self._version = context._version
 
     def by_dtype(self: Self, dtypes: Iterable[DType]) -> PolarsExpr:
-        from narwhals._polars.expr import PolarsExpr
-
         native_dtypes = [
             narwhals_to_native_dtype(
                 dtype, self._version, self._backend_version
@@ -235,10 +281,6 @@ class PolarsSelectors:
         )
 
     def matches(self: Self, pattern: str) -> PolarsExpr:
-        import polars as pl
-
-        from narwhals._polars.expr import PolarsExpr
-
         return PolarsExpr(
             pl.selectors.matches(pattern=pattern),
             version=self._version,
@@ -246,8 +288,6 @@ class PolarsSelectors:
         )
 
     def numeric(self: Self) -> PolarsExpr:
-        from narwhals._polars.expr import PolarsExpr
-
         return PolarsExpr(
             pl.selectors.numeric(),
             version=self._version,
@@ -255,8 +295,6 @@ class PolarsSelectors:
         )
 
     def boolean(self: Self) -> PolarsExpr:
-        from narwhals._polars.expr import PolarsExpr
-
         return PolarsExpr(
             pl.selectors.boolean(),
             version=self._version,
@@ -264,8 +302,6 @@ class PolarsSelectors:
         )
 
     def string(self: Self) -> PolarsExpr:
-        from narwhals._polars.expr import PolarsExpr
-
         return PolarsExpr(
             pl.selectors.string(),
             version=self._version,
@@ -273,8 +309,6 @@ class PolarsSelectors:
         )
 
     def categorical(self: Self) -> PolarsExpr:
-        from narwhals._polars.expr import PolarsExpr
-
         return PolarsExpr(
             pl.selectors.categorical(),
             version=self._version,
@@ -282,8 +316,6 @@ class PolarsSelectors:
         )
 
     def all(self: Self) -> PolarsExpr:
-        from narwhals._polars.expr import PolarsExpr
-
         return PolarsExpr(
             pl.selectors.all(),
             version=self._version,
@@ -295,10 +327,6 @@ class PolarsSelectors:
         time_unit: TimeUnit | Iterable[TimeUnit] | None,
         time_zone: str | timezone | Iterable[str | timezone | None] | None,
     ) -> PolarsExpr:
-        import polars as pl
-
-        from narwhals._polars.expr import PolarsExpr
-
         return PolarsExpr(
             pl.selectors.datetime(time_unit=time_unit, time_zone=time_zone),  # type: ignore[arg-type]
             version=self._version,

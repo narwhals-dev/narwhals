@@ -2,17 +2,19 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
+from typing import TYPE_CHECKING
 from unittest import mock
 
 import pandas as pd
-import polars as pl
-import pyarrow.csv as pa_csv
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import DASK_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import assert_equal_data
+
+if TYPE_CHECKING:
+    from narwhals.stable.v1.typing import IntoFrame
 
 
 @pytest.mark.parametrize(
@@ -20,14 +22,17 @@ from tests.utils import assert_equal_data
     ["pandas", "polars", "pyarrow", "dask"],
 )
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
-def test_q1(library: str, request: pytest.FixtureRequest) -> None:
+def test_q1(library: str) -> None:
     if library == "dask" and DASK_VERSION < (2024, 10):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     if library == "pandas" and PANDAS_VERSION < (1, 5):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     elif library == "pandas":
-        df_raw = pd.read_csv("tests/data/lineitem.csv")
+        df_raw: IntoFrame = pd.read_csv("tests/data/lineitem.csv")
     elif library == "polars":
+        pytest.importorskip("polars")
+        import polars as pl
+
         df_raw = pl.scan_csv("tests/data/lineitem.csv")
     elif library == "dask":
         pytest.importorskip("dask")
@@ -37,6 +42,9 @@ def test_q1(library: str, request: pytest.FixtureRequest) -> None:
             pd.read_csv("tests/data/lineitem.csv", dtype_backend="pyarrow")
         )
     else:
+        pytest.importorskip("pyarrow.csv")
+        import pyarrow.csv as pa_csv
+
         df_raw = pa_csv.read_csv("tests/data/lineitem.csv")
     var_1 = datetime(1998, 9, 2)
     df = nw.from_native(df_raw).lazy()
@@ -101,12 +109,15 @@ def test_q1(library: str, request: pytest.FixtureRequest) -> None:
     "ignore:.*Passing a BlockManager.*:DeprecationWarning",
     "ignore:.*Complex.*:UserWarning",
 )
-def test_q1_w_generic_funcs(library: str, request: pytest.FixtureRequest) -> None:
+def test_q1_w_generic_funcs(library: str) -> None:
     if library == "pandas" and PANDAS_VERSION < (1, 5):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     elif library == "pandas":
-        df_raw = pd.read_csv("tests/data/lineitem.csv")
+        df_raw: IntoFrame = pd.read_csv("tests/data/lineitem.csv")
     else:
+        pytest.importorskip("polars")
+        import polars as pl
+
         df_raw = pl.read_csv("tests/data/lineitem.csv")
     var_1 = datetime(1998, 9, 2)
     df = nw.from_native(df_raw, eager_only=True)

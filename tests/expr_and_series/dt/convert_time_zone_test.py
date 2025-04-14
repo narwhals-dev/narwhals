@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
@@ -43,7 +43,8 @@ def test_convert_time_zone(
     result = df.select(nw.col("a").dt.convert_time_zone("Asia/Kathmandu"))
     result_dtype = result.collect_schema()["a"]
     assert result_dtype == nw.Datetime
-    assert result_dtype.time_zone == "Asia/Kathmandu"  # type: ignore[attr-defined]
+    assert isinstance(result_dtype, nw.Datetime)
+    assert result_dtype.time_zone == "Asia/Kathmandu"
     result_str = result.select(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M%z"))
     expected = {"a": ["2020-01-01T05:45+0545", "2020-01-02T05:45+0545"]}
     assert_equal_data(result_str, expected)
@@ -71,7 +72,8 @@ def test_convert_time_zone_series(
     result = df.select(df["a"].dt.convert_time_zone("Asia/Kathmandu"))
     result_dtype = result.collect_schema()["a"]
     assert result_dtype == nw.Datetime
-    assert result_dtype.time_zone == "Asia/Kathmandu"  # type: ignore[attr-defined]
+    assert isinstance(result_dtype, nw.Datetime)
+    assert result_dtype.time_zone == "Asia/Kathmandu"
     result_str = result.select(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M%z"))
     expected = {"a": ["2020-01-01T05:45+0545", "2020-01-02T05:45+0545"]}
     assert_equal_data(result_str, expected)
@@ -107,7 +109,8 @@ def test_convert_time_zone_from_none(
     )
     result_dtype = result.collect_schema()["a"]
     assert result_dtype == nw.Datetime
-    assert result_dtype.time_zone == "Asia/Kathmandu"  # type: ignore[attr-defined]
+    assert isinstance(result_dtype, nw.Datetime)
+    assert result_dtype.time_zone == "Asia/Kathmandu"
     result_str = result.select(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M%z"))
     expected = {"a": ["2020-01-01T05:45+0545", "2020-01-02T05:45+0545"]}
     assert_equal_data(result_str, expected)

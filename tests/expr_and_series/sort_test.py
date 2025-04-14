@@ -4,8 +4,8 @@ from typing import Any
 
 import pytest
 
-import narwhals as nw_main
-import narwhals.stable.v1 as nw
+import narwhals as nw
+import narwhals.stable.v1 as nw_v1
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -24,16 +24,18 @@ data = {"a": [0, 0, 2, -1], "b": [1, 3, 2, None]}
 def test_sort_expr(
     constructor_eager: ConstructorEager, descending: Any, nulls_last: Any, expected: Any
 ) -> None:
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw_v1.from_native(constructor_eager(data), eager_only=True)
     result = df.select(
         "a",
-        nw.col("b").sort(descending=descending, nulls_last=nulls_last),
+        nw_v1.col("b").sort(descending=descending, nulls_last=nulls_last),
     )
     assert_equal_data(result, expected)
-    with pytest.deprecated_call():
+    with pytest.deprecated_call(
+        match="is deprecated and will be removed in a future version"
+    ):
         df.select(
             "a",
-            nw_main.col("b").sort(descending=descending, nulls_last=nulls_last),
+            nw.col("b").sort(descending=descending, nulls_last=nulls_last),
         )
 
 
@@ -49,8 +51,9 @@ def test_sort_expr(
 def test_sort_series(
     constructor_eager: ConstructorEager, descending: Any, nulls_last: Any, expected: Any
 ) -> None:
-    series = nw.from_native(constructor_eager(data), eager_only=True)["b"]
+    series = nw_v1.from_native(constructor_eager(data), eager_only=True)["b"]
     result = series.sort(descending=descending, nulls_last=nulls_last)
     assert (
-        result == nw.from_native(constructor_eager({"a": expected}), eager_only=True)["a"]
+        result
+        == nw_v1.from_native(constructor_eager({"a": expected}), eager_only=True)["a"]
     )

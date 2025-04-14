@@ -3,7 +3,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
+from narwhals.exceptions import MultiOutputExpressionError
 from narwhals.exceptions import ShapeError
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -155,3 +156,15 @@ def test_when_then_otherwise_both_lit(constructor: Constructor) -> None:
     )
     expected = {"x1": [-1, 42, 42], "x2": [-1, -1, 42]}
     assert_equal_data(result, expected)
+
+
+def test_when_then_otherwise_multi_output(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    with pytest.raises(MultiOutputExpressionError):
+        df.select(
+            x1=nw.when(nw.all() > 1).then(nw.col("a", "b")),
+        )
+    with pytest.raises(MultiOutputExpressionError):
+        df.select(
+            x1=nw.when(nw.all() > 1).then(nw.lit(1)).otherwise(nw.all()),
+        )

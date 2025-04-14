@@ -16,8 +16,10 @@ from typing import overload
 from warnings import warn
 
 from narwhals._expression_parsing import ExprKind
-from narwhals._expression_parsing import all_exprs_are_aggs_or_literals
-from narwhals._expression_parsing import check_expressions_transform
+from narwhals._expression_parsing import all_exprs_are_scalar_like
+from narwhals._expression_parsing import check_expressions_preserve_length
+from narwhals._expression_parsing import infer_kind
+from narwhals._expression_parsing import is_scalar_like
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
 from narwhals.dependencies import is_numpy_array_1d
@@ -31,7 +33,10 @@ from narwhals.utils import Implementation
 from narwhals.utils import find_stacklevel
 from narwhals.utils import flatten
 from narwhals.utils import generate_repr
+from narwhals.utils import is_compliant_lazyframe
+from narwhals.utils import is_list_of
 from narwhals.utils import is_sequence_but_not_str
+from narwhals.utils import issue_deprecation_warning
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -46,14 +51,20 @@ if TYPE_CHECKING:
     from typing_extensions import ParamSpec
     from typing_extensions import Self
 
+    from narwhals._compliant import IntoCompliantExpr
+    from narwhals._compliant.typing import EagerNamespaceAny
     from narwhals.group_by import GroupBy
     from narwhals.group_by import LazyGroupBy
     from narwhals.series import Series
-    from narwhals.typing import IntoCompliantExpr
+    from narwhals.typing import AsofJoinStrategy
     from narwhals.typing import IntoDataFrame
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
+    from narwhals.typing import JoinStrategy
+    from narwhals.typing import LazyUniqueKeepStrategy
+    from narwhals.typing import PivotAgg
     from narwhals.typing import SizeUnit
+    from narwhals.typing import UniqueKeepStrategy
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
 
@@ -75,20 +86,25 @@ class BaseFrame(Generic[_FrameT]):
     def __narwhals_namespace__(self: Self) -> Any:
         return self._compliant_frame.__narwhals_namespace__()
 
-    def _from_compliant_dataframe(self: Self, df: Any) -> Self:
+    def _with_compliant(self: Self, df: Any) -> Self:
         # construct, preserving properties
         return self.__class__(df, level=self._level)  # type: ignore[call-arg]
 
     def _flatten_and_extract(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> tuple[IntoCompliantExpr[Any]]:
+    ) -> tuple[list[IntoCompliantExpr[Any, Any]], list[ExprKind]]:
         """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
-        compliant_exprs = (self._extract_compliant(expr) for expr in flatten(exprs))
-        compliant_named_exprs = (
-            self._extract_compliant(value).alias(key)
-            for key, value in named_exprs.items()
-        )
-        return tuple(chain(compliant_exprs, compliant_named_exprs))
+        out_exprs = []
+        out_kinds = []
+        for expr in flatten(exprs):
+            compliant_expr = self._extract_compliant(expr)
+            out_exprs.append(compliant_expr)
+            out_kinds.append(infer_kind(expr, str_as_lit=False))
+        for alias, expr in named_exprs.items():
+            compliant_expr = self._extract_compliant(expr).alias(alias)
+            out_exprs.append(compliant_expr)
+            out_kinds.append(infer_kind(expr, str_as_lit=False))
+        return out_exprs, out_kinds
 
     @abstractmethod
     def _extract_compliant(self: Self, arg: Any) -> Any:
@@ -112,15 +128,11 @@ class BaseFrame(Generic[_FrameT]):
         return function(self, *args, **kwargs)
 
     def with_row_index(self: Self, name: str = "index") -> Self:
-        return self._from_compliant_dataframe(
-            self._compliant_frame.with_row_index(name),
-        )
+        return self._with_compliant(self._compliant_frame.with_row_index(name))
 
     def drop_nulls(self: Self, subset: str | list[str] | None) -> Self:
         subset = [subset] if isinstance(subset, str) else subset
-        return self._from_compliant_dataframe(
-            self._compliant_frame.drop_nulls(subset=subset),
-        )
+        return self._with_compliant(self._compliant_frame.drop_nulls(subset=subset))
 
     @property
     def columns(self: Self) -> list[str]:
@@ -129,10 +141,12 @@ class BaseFrame(Generic[_FrameT]):
     def with_columns(
         self: Self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
-        compliant_exprs = self._flatten_and_extract(*exprs, **named_exprs)
-        return self._from_compliant_dataframe(
-            self._compliant_frame.with_columns(*compliant_exprs),
-        )
+        compliant_exprs, kinds = self._flatten_and_extract(*exprs, **named_exprs)
+        compliant_exprs = [
+            compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
+            for compliant_expr, kind in zip(compliant_exprs, kinds)
+        ]
+        return self._with_compliant(self._compliant_frame.with_columns(*compliant_exprs))
 
     def select(
         self: Self,
@@ -143,8 +157,8 @@ class BaseFrame(Generic[_FrameT]):
         if flat_exprs and all(isinstance(x, str) for x in flat_exprs) and not named_exprs:
             # fast path!
             try:
-                return self._from_compliant_dataframe(
-                    self._compliant_frame.simple_select(*flat_exprs),
+                return self._with_compliant(
+                    self._compliant_frame.simple_select(*flat_exprs)
                 )
             except Exception as e:
                 # Column not found is the only thing that can realistically be raised here.
@@ -153,57 +167,49 @@ class BaseFrame(Generic[_FrameT]):
                 raise ColumnNotFoundError.from_missing_and_available_column_names(
                     missing_columns, available_columns
                 ) from e
-        compliant_exprs = self._flatten_and_extract(*flat_exprs, **named_exprs)
-        if (flat_exprs or named_exprs) and all_exprs_are_aggs_or_literals(
-            *flat_exprs, **named_exprs
-        ):
-            return self._from_compliant_dataframe(
-                self._compliant_frame.aggregate(*compliant_exprs),
-            )
-
-        return self._from_compliant_dataframe(
-            self._compliant_frame.select(*compliant_exprs),
-        )
+        compliant_exprs, kinds = self._flatten_and_extract(*flat_exprs, **named_exprs)
+        if compliant_exprs and all_exprs_are_scalar_like(*flat_exprs, **named_exprs):
+            return self._with_compliant(self._compliant_frame.aggregate(*compliant_exprs))
+        compliant_exprs = [
+            compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
+            for compliant_expr, kind in zip(compliant_exprs, kinds)
+        ]
+        return self._with_compliant(self._compliant_frame.select(*compliant_exprs))
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
-        return self._from_compliant_dataframe(self._compliant_frame.rename(mapping))
+        return self._with_compliant(self._compliant_frame.rename(mapping))
 
     def head(self: Self, n: int) -> Self:
-        return self._from_compliant_dataframe(self._compliant_frame.head(n))
+        return self._with_compliant(self._compliant_frame.head(n))
 
     def tail(self: Self, n: int) -> Self:
-        return self._from_compliant_dataframe(self._compliant_frame.tail(n))
+        return self._with_compliant(self._compliant_frame.tail(n))
 
     def drop(self: Self, *columns: Iterable[str], strict: bool) -> Self:
-        return self._from_compliant_dataframe(
-            self._compliant_frame.drop(columns, strict=strict)
-        )
+        return self._with_compliant(self._compliant_frame.drop(columns, strict=strict))
 
     def filter(
         self: Self,
         *predicates: IntoExpr | Iterable[IntoExpr] | list[bool],
         **constraints: Any,
     ) -> Self:
-        if not (
-            len(predicates) == 1
-            and isinstance(predicates[0], list)
-            and all(isinstance(x, bool) for x in predicates[0])
-        ):
-            flat_predicates = flatten(predicates)
-            check_expressions_transform(*flat_predicates, function_name="filter")
-            compliant_predicates = self._flatten_and_extract(*flat_predicates)
-            plx = self.__narwhals_namespace__()
-            predicate = plx.all_horizontal(
-                *chain(
-                    compliant_predicates,
-                    (plx.col(name) == v for name, v in constraints.items()),
-                )
-            )
-        else:
+        if len(predicates) == 1 and is_list_of(predicates[0], bool):
             predicate = predicates[0]
-        return self._from_compliant_dataframe(
-            self._compliant_frame.filter(predicate),
-        )
+        else:
+            from narwhals.functions import col
+
+            flat_predicates = flatten(predicates)
+            check_expressions_preserve_length(*flat_predicates, function_name="filter")
+            plx = self.__narwhals_namespace__()
+            compliant_predicates, _kinds = self._flatten_and_extract(*flat_predicates)
+            compliant_constraints = (
+                (col(name) == v)._to_compliant_expr(plx)
+                for name, v in constraints.items()
+            )
+            predicate = plx.all_horizontal(
+                *chain(compliant_predicates, compliant_constraints)
+            )
+        return self._with_compliant(self._compliant_frame.filter(predicate))
 
     def sort(
         self: Self,
@@ -213,7 +219,7 @@ class BaseFrame(Generic[_FrameT]):
         nulls_last: bool = False,
     ) -> Self:
         by = flatten([*flatten([by]), *more_by])
-        return self._from_compliant_dataframe(
+        return self._with_compliant(
             self._compliant_frame.sort(*by, descending=descending, nulls_last=nulls_last)
         )
 
@@ -221,18 +227,19 @@ class BaseFrame(Generic[_FrameT]):
         self: Self,
         other: Self,
         on: str | list[str] | None = None,
-        how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
+        how: JoinStrategy = "inner",
         *,
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
         suffix: str = "_right",
     ) -> Self:
-        _supported_joins = ("inner", "left", "cross", "anti", "semi")
         on = [on] if isinstance(on, str) else on
         left_on = [left_on] if isinstance(left_on, str) else left_on
         right_on = [right_on] if isinstance(right_on, str) else right_on
 
-        if how not in _supported_joins:
+        if how not in (
+            _supported_joins := ("inner", "left", "full", "cross", "anti", "semi")
+        ):
             msg = f"Only the following join strategies are supported: {_supported_joins}; found '{how}'."
             raise NotImplementedError(msg)
 
@@ -255,7 +262,7 @@ class BaseFrame(Generic[_FrameT]):
         if on is not None:
             left_on = right_on = on
 
-        return self._from_compliant_dataframe(
+        return self._with_compliant(
             self._compliant_frame.join(
                 self._extract_compliant(other),
                 how=how,
@@ -265,11 +272,8 @@ class BaseFrame(Generic[_FrameT]):
             )
         )
 
-    def clone(self: Self) -> Self:
-        return self._from_compliant_dataframe(self._compliant_frame.clone())
-
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
-        return self._from_compliant_dataframe(
+        return self._with_compliant(
             self._compliant_frame.gather_every(n=n, offset=offset)
         )
 
@@ -283,7 +287,7 @@ class BaseFrame(Generic[_FrameT]):
         by_left: str | list[str] | None = None,
         by_right: str | list[str] | None = None,
         by: str | list[str] | None = None,
-        strategy: Literal["backward", "forward", "nearest"] = "backward",
+        strategy: AsofJoinStrategy = "backward",
         suffix: str = "_right",
     ) -> Self:
         _supported_strategies = ("backward", "forward", "nearest")
@@ -317,7 +321,7 @@ class BaseFrame(Generic[_FrameT]):
             by_left = [by_left]
         if isinstance(by_right, str):
             by_right = [by_right]
-        return self._from_compliant_dataframe(
+        return self._with_compliant(
             self._compliant_frame.join_asof(
                 self._extract_compliant(other),
                 left_on=left_on,
@@ -340,12 +344,9 @@ class BaseFrame(Generic[_FrameT]):
         on = [on] if isinstance(on, str) else on
         index = [index] if isinstance(index, str) else index
 
-        return self._from_compliant_dataframe(
+        return self._with_compliant(
             self._compliant_frame.unpivot(
-                on=on,
-                index=index,
-                variable_name=variable_name,
-                value_name=value_name,
+                on=on, index=index, variable_name=variable_name, value_name=value_name
             )
         )
 
@@ -378,9 +379,7 @@ class BaseFrame(Generic[_FrameT]):
             else [*columns, *more_columns]
         )
 
-        return self._from_compliant_dataframe(
-            self._compliant_frame.explode(columns=to_explode)
-        )
+        return self._with_compliant(self._compliant_frame.explode(columns=to_explode))
 
 
 class DataFrame(BaseFrame[DataFrameT]):
@@ -403,7 +402,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             ```py
             narwhals.from_dict(
                 data={"a": [1, 2, 3]},
-                native_namespace=narwhals.get_native_namespace(another_object),
+                backend=narwhals.get_native_namespace(another_object),
             )
             ```
     """
@@ -412,11 +411,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         from narwhals.expr import Expr
         from narwhals.series import Series
 
-        plx = self.__narwhals_namespace__()
+        plx: EagerNamespaceAny = self.__narwhals_namespace__()
         if isinstance(arg, BaseFrame):
             return arg._compliant_frame
         if isinstance(arg, Series):
-            return plx._create_expr_from_series(arg._compliant_series)
+            return arg._compliant_series._to_expr()
         if isinstance(arg, Expr):
             return arg._to_compliant_expr(self.__narwhals_namespace__())
         if isinstance(arg, str):
@@ -430,7 +429,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             )
             raise TypeError(msg)
         if is_numpy_array(arg):
-            return plx._create_expr_from_series(plx._create_compliant_series(arg))
+            return plx._series.from_numpy(arg, context=plx)._to_expr()
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     @property
@@ -485,8 +484,8 @@ class DataFrame(BaseFrame[DataFrameT]):
     def __len__(self: Self) -> int:
         return self._compliant_frame.__len__()  # type: ignore[no-any-return]
 
-    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> _2DArray:
-        return self._compliant_frame.__array__(dtype, copy=copy)
+    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> _2DArray:  # noqa: FBT001
+        return self._compliant_frame.__array__(dtype, copy=copy)  # type: ignore[no-any-return]
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         return generate_repr("Narwhals DataFrame", self.to_native().__repr__())
@@ -512,7 +511,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             msg = f"PyArrow>=14.0.0 is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
             raise ModuleNotFoundError(msg) from None
         pa_table = self.to_arrow()
-        return pa_table.__arrow_c_stream__(requested_schema=requested_schema)
+        return pa_table.__arrow_c_stream__(requested_schema=requested_schema)  # type: ignore[no-untyped-call]
 
     def lazy(
         self: Self,
@@ -602,41 +601,18 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
+            >>> df_native = pd.DataFrame(
+            ...     {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            ... )
 
             Calling `to_native` on a Narwhals DataFrame returns the native object:
 
-            >>> nw.from_native(df_pd).to_native()
+            >>> nw.from_native(df_native).to_native()
                foo  bar ham
             0    1  6.0   a
             1    2  7.0   b
             2    3  8.0   c
-            >>> nw.from_native(df_pl).to_native()
-            shape: (3, 3)
-            ┌─────┬─────┬─────┐
-            │ foo ┆ bar ┆ ham │
-            │ --- ┆ --- ┆ --- │
-            │ i64 ┆ f64 ┆ str │
-            ╞═════╪═════╪═════╡
-            │ 1   ┆ 6.0 ┆ a   │
-            │ 2   ┆ 7.0 ┆ b   │
-            │ 3   ┆ 8.0 ┆ c   │
-            └─────┴─────┴─────┘
-            >>> nw.from_native(df_pa).to_native()
-            pyarrow.Table
-            foo: int64
-            bar: double
-            ham: string
-            ----
-            foo: [[1,2,3]]
-            bar: [[6,7,8]]
-            ham: [["a","b","c"]]
         """
         return self._compliant_frame._native_frame  # type: ignore[no-any-return]
 
@@ -647,44 +623,19 @@ class DataFrame(BaseFrame[DataFrameT]):
             A pandas DataFrame.
 
         Examples:
-            Construct pandas, Polars (eager) and PyArrow DataFrames:
-
-            >>> import pandas as pd
             >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoDataFrame
-            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_to_pandas(df_native: IntoDataFrame) -> pd.DataFrame:
-            ...     df = nw.from_native(df_native)
-            ...     return df.to_pandas()
-
-            We can then pass any supported library such as pandas, Polars (eager), or
-            PyArrow to `agnostic_to_pandas`:
-
-            >>> agnostic_to_pandas(df_pd)
-               foo  bar ham
-            0    1  6.0   a
-            1    2  7.0   b
-            2    3  8.0   c
-            >>> agnostic_to_pandas(df_pl)
-               foo  bar ham
-            0    1  6.0   a
-            1    2  7.0   b
-            2    3  8.0   c
-            >>> agnostic_to_pandas(df_pa)
+            >>> df_native = pl.DataFrame(
+            ...     {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.to_pandas()
                foo  bar ham
             0    1  6.0   a
             1    2  7.0   b
             2    3  8.0   c
         """
-        return self._compliant_frame.to_pandas()
+        return self._compliant_frame.to_pandas()  # type: ignore[no-any-return]
 
     def to_polars(self: Self) -> pl.DataFrame:
         """Convert this DataFrame to a polars DataFrame.
@@ -727,32 +678,14 @@ class DataFrame(BaseFrame[DataFrameT]):
             String or None.
 
         Examples:
-            Construct pandas, Polars (eager) and PyArrow DataFrames:
-
             >>> import pandas as pd
-            >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoDataFrame
-            >>> data = {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-            >>> df_pa = pa.table(data)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_write_csv(df_native: IntoDataFrame) -> str:
-            ...     df = nw.from_native(df_native)
-            ...     return df.write_csv()
-
-            We can pass any supported library such as pandas, Polars or PyArrow to `agnostic_write_csv`:
-
-            >>> agnostic_write_csv(df_pd)
+            >>> df_native = pd.DataFrame(
+            ...     {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.write_csv()
             'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
-            >>> agnostic_write_csv(df_pl)
-            'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
-            >>> agnostic_write_csv(df_pa)
-            '"foo","bar","ham"\n1,6,"a"\n2,7,"b"\n3,8,"c"\n'
 
             If we had passed a file name to `write_csv`, it would have been
             written to that file.
@@ -793,7 +726,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             array([[1. , 6.5],
                    [2. , 7. ]])
         """
-        return self._compliant_frame.to_numpy()
+        return self._compliant_frame.to_numpy()  # type: ignore[no-any-return]
 
     @property
     def shape(self: Self) -> tuple[int, int]:
@@ -969,19 +902,16 @@ class DataFrame(BaseFrame[DataFrameT]):
         ):
             if item[1] == slice(None) and item[0] == slice(None):
                 return self
-            return self._from_compliant_dataframe(self._compliant_frame[item])
+            return self._with_compliant(self._compliant_frame[item])
         if isinstance(item, str) or (isinstance(item, tuple) and len(item) == 2):
-            return self._series(
-                self._compliant_frame[item],
-                level=self._level,
-            )
+            return self._series(self._compliant_frame[item], level=self._level)
 
         elif (
             is_sequence_but_not_str(item)
             or isinstance(item, slice)
             or (is_numpy_array_1d(item))
         ):
-            return self._from_compliant_dataframe(self._compliant_frame[item])
+            return self._with_compliant(self._compliant_frame[item])
 
         else:
             msg = f"Expected str or slice, got: {type(item)}"
@@ -1224,6 +1154,37 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return self._compliant_frame.rows(named=named)  # type: ignore[no-any-return]
 
+    def iter_columns(self: Self) -> Iterator[Series[Any]]:
+        """Returns an iterator over the columns of this DataFrame.
+
+        Yields:
+            A Narwhals Series, backed by a native series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame({"foo": [1, 2], "bar": [6.0, 7.0]})
+            >>> iter_columns = nw.from_native(df_native).iter_columns()
+            >>> next(iter_columns)
+            ┌───────────────────────┐
+            |    Narwhals Series    |
+            |-----------------------|
+            |0    1                 |
+            |1    2                 |
+            |Name: foo, dtype: int64|
+            └───────────────────────┘
+            >>> next(iter_columns)
+            ┌─────────────────────────┐
+            |     Narwhals Series     |
+            |-------------------------|
+            |0    6.0                 |
+            |1    7.0                 |
+            |Name: bar, dtype: float64|
+            └─────────────────────────┘
+        """
+        for series in self._compliant_frame.iter_columns():
+            yield self._series(series, level=self._level)
+
     @overload
     def iter_rows(
         self: Self, *, named: Literal[False], buffer_size: int = ...
@@ -1438,7 +1399,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         self: Self,
         subset: str | list[str] | None = None,
         *,
-        keep: Literal["any", "first", "last", "none"] = "any",
+        keep: UniqueKeepStrategy = "any",
         maintain_order: bool = False,
     ) -> Self:
         """Drop duplicate rows from this dataframe.
@@ -1474,7 +1435,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             raise ValueError(msg)
         if isinstance(subset, str):
             subset = [subset]
-        return self._from_compliant_dataframe(
+        return self._with_compliant(
             self._compliant_frame.unique(
                 subset=subset, keep=keep, maintain_order=maintain_order
             )
@@ -1645,7 +1606,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         self: Self,
         other: Self,
         on: str | list[str] | None = None,
-        how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
+        how: JoinStrategy = "inner",
         *,
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
@@ -1661,6 +1622,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
                   * *inner*: Returns rows that have matching values in both tables.
                   * *left*: Returns all rows from the left table, and the matched rows from the right table.
+                  * *full*: Returns all rows in both dataframes, with the suffix appended to the right join keys.
                   * *cross*: Returns the Cartesian product of rows from both tables.
                   * *semi*: Filter rows that have a match in the right table.
                   * *anti*: Filter rows that do not have a match in the right table.
@@ -1699,7 +1661,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         by_left: str | list[str] | None = None,
         by_right: str | list[str] | None = None,
         by: str | list[str] | None = None,
-        strategy: Literal["backward", "forward", "nearest"] = "backward",
+        strategy: AsofJoinStrategy = "backward",
         suffix: str = "_right",
     ) -> Self:
         """Perform an asof join.
@@ -1866,7 +1828,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         plx = self._compliant_frame.__narwhals_namespace__()
         result = self._compliant_frame.select(plx.all().null_count())
-        return self._from_compliant_dataframe(result)
+        return self._with_compliant(result)
 
     def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:
         r"""Return the DataFrame as a scalar, or return the element at the given row/column.
@@ -1897,7 +1859,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         Returns:
             An identical copy of the original dataframe.
         """
-        return super().clone()
+        return self._with_compliant(self._compliant_frame.clone())
 
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         r"""Take every nth row in the DataFrame and return as a new DataFrame.
@@ -1931,10 +1893,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         *,
         index: str | list[str] | None = None,
         values: str | list[str] | None = None,
-        aggregate_function: Literal[
-            "min", "max", "first", "last", "sum", "mean", "median", "len"
-        ]
-        | None = None,
+        aggregate_function: PivotAgg | None = None,
         maintain_order: bool | None = None,
         sort_columns: bool = False,
         separator: str = "_",
@@ -1999,7 +1958,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         values = [values] if isinstance(values, str) else values
         index = [index] if isinstance(index, str) else index
 
-        return self._from_compliant_dataframe(
+        return self._with_compliant(
             self._compliant_frame.pivot(
                 on=on,
                 index=index,
@@ -2028,7 +1987,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             foo: [[1,null]]
             bar: [[2,3]]
         """
-        return self._compliant_frame.to_arrow()
+        return self._compliant_frame.to_arrow()  # type: ignore[no-any-return]
 
     def sample(
         self: Self,
@@ -2066,7 +2025,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             |   1    2   32    |
             └──────────────────┘
         """
-        return self._from_compliant_dataframe(
+        return self._with_compliant(
             self._compliant_frame.sample(
                 n=n, fraction=fraction, with_replacement=with_replacement, seed=seed
             )
@@ -2190,18 +2149,17 @@ class LazyFrame(BaseFrame[FrameT]):
             plx = self.__narwhals_namespace__()
             return plx.col(arg)
         if isinstance(arg, Expr):
-            if arg._metadata["is_order_dependent"]:
+            if arg._metadata._window_kind.is_open():
                 msg = (
                     "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
                     "Hints:\n"
-                    "- Instead of `lf.select(nw.col('a').sort())`, use `lf.select('a').sort()\n"
-                    "- Instead of `lf.select(nw.col('a').head())`, use `lf.select('a').head()\n"
-                    "- `Expr.cum_sum`, and other such expressions, are not currently supported.\n"
-                    "  In a future version of Narwhals, a `order_by` argument will be added and \n"
-                    "  they will be supported."
+                    "- Instead of `lf.select(nw.col('a').sort())`, use `lf.select('a').sort()`.\n"
+                    "- Instead of `lf.select(nw.col('a').cum_sum())`, use\n"
+                    "  `lf.select(nw.col('a').cum_sum().over(order_by='date'))`.\n\n"
+                    "See https://narwhals-dev.github.io/narwhals/basics/order_dependence/."
                 )
                 raise OrderDependentExprError(msg)
-            if arg._metadata["kind"] is ExprKind.CHANGES_LENGTH:
+            if arg._metadata.kind.is_filtration():
                 msg = (
                     "Length-changing expressions are not supported for use in LazyFrame, unless\n"
                     "followed by an aggregation.\n\n"
@@ -2233,8 +2191,10 @@ class LazyFrame(BaseFrame[FrameT]):
         level: Literal["full", "lazy", "interchange"],
     ) -> None:
         self._level = level
-        if hasattr(df, "__narwhals_lazyframe__"):
-            self._compliant_frame: Any = df.__narwhals_lazyframe__()
+        if is_compliant_lazyframe(df):
+            # NOTE: Blocked by (#2239)
+            # self._compliant_frame: CompliantLazyFrame[Any, FrameT] = df.__narwhals_lazyframe__()  # noqa: ERA001
+            self._compliant_frame = df.__narwhals_lazyframe__()
         else:  # pragma: no cover
             msg = f"Expected Polars LazyFrame or an object that implements `__narwhals_lazyframe__`, got: {type(df)}"
             raise AssertionError(msg)
@@ -2542,6 +2502,9 @@ class LazyFrame(BaseFrame[FrameT]):
             |└───────┴──────────────┴───────┘|
             └────────────────────────────────┘
         """
+        if not exprs and not named_exprs:
+            msg = "At least one expression must be passed to LazyFrame.with_columns"
+            raise ValueError(msg)
         return super().with_columns(*exprs, **named_exprs)
 
     def select(
@@ -2583,6 +2546,9 @@ class LazyFrame(BaseFrame[FrameT]):
             |└───────┴──────────┘|
             └────────────────────┘
         """
+        if not exprs and not named_exprs:
+            msg = "At least one expression must be passed to LazyFrame.select"
+            raise ValueError(msg)
         return super().select(*exprs, **named_exprs)
 
     def rename(self: Self, mapping: dict[str, str]) -> Self:
@@ -2691,21 +2657,18 @@ class LazyFrame(BaseFrame[FrameT]):
         self: Self,
         subset: str | list[str] | None = None,
         *,
-        keep: Literal["any", "none"] = "any",
-        maintain_order: bool | None = None,
+        keep: LazyUniqueKeepStrategy = "any",
     ) -> Self:
         """Drop duplicate rows from this LazyFrame.
 
         Arguments:
             subset: Column name(s) to consider when identifying duplicate rows.
                      If set to `None`, use all columns.
-            keep: {'first', 'none'}
+            keep: {'any', 'none'}
                 Which of the duplicate rows to keep.
 
                 * 'any': Does not give any guarantee of which row is kept.
-                        This allows more optimizations.
                 * 'none': Don't keep duplicate rows.
-            maintain_order: Has no effect and is kept around only for backwards-compatibility.
 
         Returns:
             The LazyFrame with unique rows.
@@ -2733,18 +2696,9 @@ class LazyFrame(BaseFrame[FrameT]):
                 f"'any' and 'none' are supported for `keep` in `unique`. Got: {keep}."
             )
             raise ValueError(msg)
-        if maintain_order:
-            msg = "`maintain_order=True` is not supported for LazyFrame.unique."
-            raise ValueError(msg)
-        if maintain_order is not None:
-            msg = (
-                "`maintain_order` has no effect and is only kept around for backwards-compatibility. "
-                "You can safely remove this argument."
-            )
-            warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
         if isinstance(subset, str):
             subset = [subset]
-        return self._from_compliant_dataframe(
+        return self._with_compliant(
             self._compliant_frame.unique(subset=subset, keep=keep)
         )
 
@@ -2829,10 +2783,7 @@ class LazyFrame(BaseFrame[FrameT]):
             <BLANKLINE>
         """
         if (
-            len(predicates) == 1
-            and isinstance(predicates[0], list)
-            and all(isinstance(x, bool) for x in predicates[0])
-            and not constraints
+            len(predicates) == 1 and is_list_of(predicates[0], bool) and not constraints
         ):  # pragma: no cover
             msg = "`LazyFrame.filter` is not supported with Python boolean masks - use expressions instead."
             raise TypeError(msg)
@@ -2936,7 +2887,7 @@ class LazyFrame(BaseFrame[FrameT]):
         self: Self,
         other: Self,
         on: str | list[str] | None = None,
-        how: Literal["inner", "left", "cross", "semi", "anti"] = "inner",
+        how: JoinStrategy = "inner",
         *,
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
@@ -2952,6 +2903,7 @@ class LazyFrame(BaseFrame[FrameT]):
 
                   * *inner*: Returns rows that have matching values in both tables.
                   * *left*: Returns all rows from the left table, and the matched rows from the right table.
+                  * *full*: Returns all rows in both dataframes, with the suffix appended to the right join keys.
                   * *cross*: Returns the Cartesian product of rows from both tables.
                   * *semi*: Filter rows that have a match in the right table.
                   * *anti*: Filter rows that do not have a match in the right table.
@@ -2999,7 +2951,7 @@ class LazyFrame(BaseFrame[FrameT]):
         by_left: str | list[str] | None = None,
         by_right: str | list[str] | None = None,
         by: str | list[str] | None = None,
-        strategy: Literal["backward", "forward", "nearest"] = "backward",
+        strategy: AsofJoinStrategy = "backward",
         suffix: str = "_right",
     ) -> Self:
         """Perform an asof join.
@@ -3077,14 +3029,6 @@ class LazyFrame(BaseFrame[FrameT]):
             suffix=suffix,
         )
 
-    def clone(self: Self) -> Self:
-        r"""Create a copy of this DataFrame.
-
-        Returns:
-            An identical copy of the original LazyFrame.
-        """
-        return super().clone()
-
     def lazy(self: Self) -> Self:
         """Restrict available API methods to lazy-only ones.
 
@@ -3098,6 +3042,11 @@ class LazyFrame(BaseFrame[FrameT]):
     def gather_every(self: Self, n: int, offset: int = 0) -> Self:
         r"""Take every nth row in the DataFrame and return as a new DataFrame.
 
+        !!! warning
+            `LazyFrame.gather_every` is deprecated and will be removed in a future version.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
+
         Arguments:
             n: Gather every *n*-th row.
             offset: Starting index.
@@ -3105,6 +3054,13 @@ class LazyFrame(BaseFrame[FrameT]):
         Returns:
             The LazyFrame containing only the selected rows.
         """
+        msg = (
+            "`LazyFrame.gather_every` is deprecated and will be removed in a future version.\n\n"
+            "Note: this will remain available in `narwhals.stable.v1`.\n"
+            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+        )
+        issue_deprecation_warning(msg, _version="1.29.0")
+
         return super().gather_every(n=n, offset=offset)
 
     def unpivot(

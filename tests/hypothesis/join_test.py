@@ -1,20 +1,27 @@
 from __future__ import annotations
 
+from typing import Any
+from typing import Mapping
 from typing import cast
 
-import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 from hypothesis import assume
 from hypothesis import given
 from hypothesis import strategies as st
 from pandas.testing import assert_frame_equal
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import assert_equal_data
+
+pytest.importorskip("pandas")
+pytest.importorskip("polars")
+pytest.importorskip("pyarrow")
+
+import pandas as pd
+import polars as pl
+import pyarrow as pa
 
 
 @given(
@@ -49,8 +56,8 @@ def test_join(  # pragma: no cover
     floats: st.SearchStrategy[list[float]],
     cols: st.SearchStrategy[list[str]],
 ) -> None:
-    data = {"a": integers, "b": other_integers, "c": floats}
-    join_cols = cast(list[str], cols)
+    data: Mapping[str, Any] = {"a": integers, "b": other_integers, "c": floats}
+    join_cols = cast("list[str]", cols)
 
     df_polars = pl.DataFrame(data)
     df_polars2 = pl.DataFrame(data)
@@ -67,12 +74,12 @@ def test_join(  # pragma: no cover
 
     dframe_pd1 = nw.to_native(dframe_pl).to_pandas()
     dframe_pd1 = dframe_pd1.sort_values(
-        by=dframe_pd1.columns.to_list(), ignore_index=True
+        by=dframe_pd1.columns.to_list(), ignore_index=True, inplace=False
     )
 
     dframe_pd2 = nw.to_native(dframe_pd)
     dframe_pd2 = dframe_pd2.sort_values(
-        by=dframe_pd2.columns.to_list(), ignore_index=True
+        by=dframe_pd2.columns.to_list(), ignore_index=True, inplace=False
     )
 
     assert_frame_equal(dframe_pd1, dframe_pd2)
@@ -96,7 +103,7 @@ def test_cross_join(  # pragma: no cover
     integers: st.SearchStrategy[list[int]],
     other_integers: st.SearchStrategy[list[int]],
 ) -> None:
-    data = {"a": integers, "b": other_integers}
+    data: Mapping[str, Any] = {"a": integers, "b": other_integers}
 
     df_polars = pl.DataFrame(data)
     df_polars2 = pl.DataFrame(data)
@@ -112,12 +119,12 @@ def test_cross_join(  # pragma: no cover
 
     dframe_pd1 = nw.to_native(dframe_pl).to_pandas()
     dframe_pd1 = dframe_pd1.sort_values(
-        by=dframe_pd1.columns.to_list(), ignore_index=True
+        by=dframe_pd1.columns.to_list(), ignore_index=True, inplace=False
     )
 
     dframe_pd2 = nw.to_native(dframe_pd)
     dframe_pd2 = dframe_pd2.sort_values(
-        by=dframe_pd2.columns.to_list(), ignore_index=True
+        by=dframe_pd2.columns.to_list(), ignore_index=True, inplace=False
     )
 
     assert_frame_equal(dframe_pd1, dframe_pd2)
@@ -149,8 +156,12 @@ def test_left_join(  # pragma: no cover
     right_key: list[str],
 ) -> None:
     assume(len(left_key) == len(right_key))
-    data_left = {"a": a_left_data, "b": b_left_data, "c": c_left_data}
-    data_right = {"a": a_right_data, "b": b_right_data, "d": d_right_data}
+    data_left: dict[str, Any] = {"a": a_left_data, "b": b_left_data, "c": c_left_data}
+    data_right: dict[str, Any] = {
+        "a": a_right_data,
+        "b": b_right_data,
+        "d": d_right_data,
+    }
     result_pd = nw.from_native(pd.DataFrame(data_left), eager_only=True).join(
         nw.from_native(pd.DataFrame(data_right), eager_only=True),
         how="left",

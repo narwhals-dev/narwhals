@@ -15,8 +15,6 @@ class DuckDBExprListNamespace:
         self._compliant_expr = expr
 
     def len(self: Self) -> DuckDBExpr:
-        return self._compliant_expr._from_call(
-            lambda _input: FunctionExpression("len", _input),
-            "len",
-            expr_kind=self._compliant_expr._expr_kind,
+        return self._compliant_expr._with_callable(
+            lambda _input: FunctionExpression("len", _input)
         )

@@ -3,13 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-import pandas as pd
-import polars as pl
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
-import narwhals.stable.v1 as nw_v1
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
 from narwhals.utils import Implementation
@@ -25,14 +21,18 @@ def test_lazy_to_default(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.lazy()
     assert isinstance(result, nw.LazyFrame)
-    df = nw_v1.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.lazy()
-    assert isinstance(result, nw_v1.LazyFrame)
+    assert isinstance(result, nw.LazyFrame)
 
     expected_cls: Any
     if "polars" in str(constructor_eager):
+        import polars as pl
+
         expected_cls = pl.LazyFrame
     elif "pandas" in str(constructor_eager):
+        import pandas as pd
+
         expected_cls = pd.DataFrame
     elif "modin" in str(constructor_eager):
         mpd = get_modin()
@@ -41,6 +41,8 @@ def test_lazy_to_default(constructor_eager: ConstructorEager) -> None:
         cudf = get_cudf()
         expected_cls = cudf.DataFrame
     else:  # pyarrow
+        import pyarrow as pa
+
         expected_cls = pa.Table
 
     assert isinstance(result.to_native(), expected_cls)
@@ -65,6 +67,8 @@ def test_lazy_backend(
         pytest.importorskip("dask")
     if (backend is Implementation.DUCKDB) or backend == "duckdb":
         pytest.importorskip("duckdb")
+    if (backend is Implementation.POLARS) or backend == "polars":
+        pytest.importorskip("polars")
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.lazy(backend=backend)
     assert isinstance(result, nw.LazyFrame)
