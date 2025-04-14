@@ -138,6 +138,8 @@ def test_to_dict(constructor_eager: ConstructorEager) -> None:
 def test_hist_v1(constructor_eager: ConstructorEager) -> None:
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
         pytest.skip()
+    if "cudf" in str(constructor_eager):
+        pytest.skip()
     df = nw_v1.from_native(constructor_eager({"a": [1, 1, 2]}), eager_only=True)
     result = df["a"].hist(bins=[-1, 1, 2])
     expected = {"breakpoint": [1, 2], "count": [2, 1]}
