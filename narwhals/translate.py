@@ -692,7 +692,6 @@ def _from_native_impl(  # noqa: PLR0915
                     native_object,
                     backend_version=backend_version,
                     version=version,
-                    validate_column_names=True,
                 ),
                 level="interchange",
             )
@@ -701,7 +700,6 @@ def _from_native_impl(  # noqa: PLR0915
                 native_object,
                 backend_version=backend_version,
                 version=version,
-                validate_column_names=True,
             ),
             level="lazy",
         )

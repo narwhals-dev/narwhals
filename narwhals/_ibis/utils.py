@@ -5,6 +5,7 @@ from enum import auto
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Sequence
 
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
@@ -16,6 +17,20 @@ if TYPE_CHECKING:
     from narwhals._ibis.expr import IbisExpr
     from narwhals.dtypes import DType
     from narwhals.utils import Version
+
+
+class WindowInputs:
+    __slots__ = ("expr", "order_by", "partition_by")
+
+    def __init__(
+        self,
+        expr: ir.Expr,
+        partition_by: Sequence[str],
+        order_by: Sequence[str],
+    ) -> None:
+        self.expr = expr
+        self.partition_by = partition_by
+        self.order_by = order_by
 
 
 class ExprKind(Enum):
