@@ -33,6 +33,7 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import is_list_of
 from narwhals.utils import not_implemented
 from narwhals.utils import validate_backend_version
 
@@ -306,9 +307,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         return maybe_extract_py_scalar(len(self.native), _return_py_scalar)
 
     def filter(self: Self, predicate: ArrowSeries | list[bool | None]) -> Self:
-        if not (
-            isinstance(predicate, list) and all(isinstance(x, bool) for x in predicate)
-        ):
+        if not is_list_of(predicate, bool):
             _, other_native = extract_native(self, predicate)
         else:
             other_native = predicate

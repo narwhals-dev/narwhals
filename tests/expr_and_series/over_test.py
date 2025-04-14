@@ -435,8 +435,9 @@ def test_len_over_2369(constructor: Constructor, request: pytest.FixtureRequest)
         pytest.skip()
     if "pandas" in str(constructor) and PANDAS_VERSION < (1, 5):
         pytest.skip()
-    if any(x in str(constructor) for x in ("modin",)):
+    if any(x in str(constructor) for x in ("modin", "cudf")):
         # https://github.com/modin-project/modin/issues/7508
+        # https://github.com/rapidsai/cudf/issues/18491
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 4], "b": ["x", "x", "y"]}))
     result = df.with_columns(a_len_per_group=nw.len().over("b")).sort("a")
