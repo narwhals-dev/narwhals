@@ -414,6 +414,17 @@ def test_enum_valid(categories: Iterable[Any] | type[enum.Enum]) -> None:
     assert len(dtype.categories) == len([*categories])
 
 
+def test_enum_from_series() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    elements = "a", "d", "e", "b", "c"
+    categories = pl.Series(elements)
+    categories_nw = nw.from_native(categories, series_only=True)
+    assert nw.Enum(categories_nw).categories == elements
+    assert nw.Enum(categories).categories == elements
+
+
 def test_enum_categories_immutable() -> None:
     dtype = nw.Enum(["a", "b"])
     with pytest.raises(TypeError, match="does not support item assignment"):
