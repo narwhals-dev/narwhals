@@ -285,6 +285,9 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
                         joined = joined.drop(right + suffix)
 
             for pred in predicates:
+                if isinstance(pred, str):
+                    continue
+
                 left = pred.op().left.name
                 right = pred.op().right.name
 
@@ -339,11 +342,11 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
                 if to_drop in joined.columns:
                     joined = joined.drop(right + suffix)
 
-        return self._from_native_frame(joined)
+        return self._with_native(joined)
 
     def _convert_predicates(
         self, other: Self, left_on: str | Sequence[str], right_on: str | Sequence[str]
-    ) -> list[ir.BooleanValue]:
+    ) -> list[ir.BooleanValue] | list[str]:
         if isinstance(left_on, str):
             left_on = [left_on]
         if isinstance(right_on, str):
@@ -352,6 +355,9 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         if len(left_on) != len(right_on):
             msg = "'left_on' and 'right_on' must have the same number of columns."
             raise ValueError(msg)
+
+        if left_on == right_on:
+            return left_on
 
         return [
             self.native[left] == other.native[right]
@@ -367,11 +373,10 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
     def unique(
         self: Self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self:
-        if subset is not None:
-            rel = self.native
+        if subset_ := subset if keep == "any" else (subset or self.columns):
             # Sanitise input
-            if any(x not in rel.columns for x in subset):
-                msg = f"Columns {set(subset).difference(rel.columns)} not found in {rel.columns}."
+            if any(x not in self.columns for x in subset_):
+                msg = f"Columns {set(subset_).difference(self.columns)} not found in {self.columns}."
                 raise ColumnNotFoundError(msg)
 
             mapped_keep: dict[str, Literal["first"] | None] = {
@@ -379,8 +384,8 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
                 "none": None,
             }
             to_keep = mapped_keep[keep]
-            return self._with_native(self.native.distinct(on=subset, keep=to_keep))
-        return self._with_native(self.native.distinct(on=self.columns))
+            return self._with_native(self.native.distinct(on=subset_, keep=to_keep))
+        return self._with_native(self.native.distinct(on=subset))
 
     def sort(
         self: Self,
@@ -451,7 +456,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         )
 
         # Discard columns not in the index
-        final_columns = list(dict.fromkeys([*index, variable_name, value_name]))
+        final_columns = list(dict.fromkeys([*index_, variable_name, value_name]))
 
         unpivoted = self.native.pivot_longer(
             s.cols(*on_),

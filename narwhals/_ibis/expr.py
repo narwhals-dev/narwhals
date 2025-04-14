@@ -4,10 +4,12 @@ import operator
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Literal
 from typing import Sequence
 from typing import cast
 
 from narwhals._compliant import LazyExpr
+from narwhals._expression_parsing import ExprKind
 from narwhals._ibis.expr_dt import IbisExprDateTimeNamespace
 from narwhals._ibis.expr_list import IbisExprListNamespace
 from narwhals._ibis.expr_str import IbisExprStringNamespace
@@ -134,25 +136,20 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
     #
     #     return func
     #
-    # def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
-    #     if kind is ExprKind.LITERAL:
-    #         return self
-    #     if self._backend_version < (1, 3):
-    #         msg = "At least version 1.3 of DuckDB is required for binary operations between aggregates and columns."
-    #         raise NotImplementedError(msg)
-    #
-    #     template = "{expr} over ()"
-    #
-    #     def func(df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
-    #         return [SQLExpression(template.format(expr=expr)) for expr in self(df)]
-    #
-    #     return self.__class__(
-    #         func,
-    #         evaluate_output_names=self._evaluate_output_names,
-    #         alias_output_names=self._alias_output_names,
-    #         backend_version=self._backend_version,
-    #         version=self._version,
-    #     )
+    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
+        if kind is ExprKind.LITERAL:
+            return self
+
+        def func(df: IbisLazyFrame) -> Sequence[ir.Expr]:
+            return [expr.over() for expr in self(df)]
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+        )
 
     @classmethod
     def from_column_names(
@@ -412,7 +409,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
 
             return _input.std(how="sample" if ddof == 1 else "pop")
 
-        return self._with_callable(_std)
+        return self._with_callable(lambda _input: _std(_input, ddof))
 
     def var(self: Self, ddof: int) -> Self:
         def _var(_input: ir.Expr, ddof: int) -> ir.Expr:
