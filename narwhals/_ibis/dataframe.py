@@ -2,13 +2,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterator
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 
+import ibis.expr.types as ir
 import ibis.selectors as s
 
+from narwhals._ibis.utils import evaluate_exprs
 from narwhals._ibis.utils import native_to_narwhals_dtype
-from narwhals._ibis.utils import parse_exprs
 from narwhals.dependencies import get_ibis
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
@@ -17,6 +20,7 @@ from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import validate_backend_version
@@ -24,16 +28,20 @@ from narwhals.utils import validate_backend_version
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import ibis.expr.types as ir
     import pandas as pd
     import pyarrow as pa
     from typing_extensions import Self
+    from typing_extensions import TypeIs
 
     from narwhals._ibis.expr import IbisExpr
     from narwhals._ibis.group_by import IbisGroupBy
     from narwhals._ibis.namespace import IbisNamespace
     from narwhals._ibis.series import IbisInterchangeSeries
     from narwhals.dtypes import DType
+    from narwhals.typing import AsofJoinStrategy
+    from narwhals.typing import JoinStrategy
+    from narwhals.typing import LazyUniqueKeepStrategy
+    from narwhals.utils import _FullContext
 
 
 class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
@@ -49,12 +57,23 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         self._native_frame: ir.Table = df
         self._version = version
         self._backend_version = backend_version
+        self._cached_schema: dict[str, DType] | None = None
         validate_backend_version(self._implementation, self._backend_version)
+
+    @staticmethod
+    def _is_native(obj: ir.Table | Any) -> TypeIs[ir.Table]:
+        return isinstance(obj, ir.Table)
+
+    @classmethod
+    def from_native(cls, data: ir.Table, /, *, context: _FullContext) -> Self:
+        return cls(
+            data, backend_version=context._backend_version, version=context._version
+        )
 
     def __narwhals_dataframe__(self: Self) -> Self:  # pragma: no cover
         # Keep around for backcompat.
         if self._version is not Version.V1:
-            msg = "__narwhals_dataframe__ is not implemented for DuckDBLazyFrame"
+            msg = "__narwhals_dataframe__ is not implemented for IbisLazyFrame"
             raise AttributeError(msg)
         return self
 
@@ -72,9 +91,11 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
     def __getitem__(self: Self, item: str) -> IbisInterchangeSeries:
         from narwhals._ibis.series import IbisInterchangeSeries
 
-        return IbisInterchangeSeries(
-            self._native_frame.select(item), version=self._version
-        )
+        return IbisInterchangeSeries(self.native.select(item), version=self._version)
+
+    def _iter_columns(self) -> Iterator[ir.Expr]:
+        for name in self.columns:
+            yield self.native[name]
 
     def collect(
         self: Self,
@@ -87,10 +108,10 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
-                native_dataframe=self._native_frame.to_pyarrow(),
+                native_dataframe=self.native.to_pyarrow(),
                 backend_version=parse_version(pa),
                 version=self._version,
-                validate_column_names=False,
+                validate_column_names=True,
             )
 
         if backend is Implementation.PANDAS:
@@ -99,11 +120,11 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
             return PandasLikeDataFrame(
-                native_dataframe=self._native_frame.to_pandas(),
+                native_dataframe=self.native.to_pandas(),
                 implementation=Implementation.PANDAS,
                 backend_version=parse_version(pd),
                 version=self._version,
-                validate_column_names=False,
+                validate_column_names=True,
             )
 
         if backend is Implementation.POLARS:
@@ -112,7 +133,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
             from narwhals._polars.dataframe import PolarsDataFrame
 
             return PolarsDataFrame(
-                df=self._native_frame.to_polars(),
+                df=self.native.to_polars(),
                 backend_version=parse_version(pl),
                 version=self._version,
             )
@@ -121,21 +142,14 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         raise ValueError(msg)  # pragma: no cover
 
     def head(self: Self, n: int) -> Self:
-        return self._from_native_frame(
-            self._native_frame.head(n), validate_column_names=False
-        )
+        return self._with_native(self.native.head(n))
 
     def simple_select(self, *column_names: str) -> Self:
-        return self._with_native(self._native_frame.select(s.cols(*column_names)))
+        return self._with_native(self.native.select(s.cols(*column_names)))
 
     def aggregate(self: Self, *exprs: IbisExpr) -> Self:
-        new_columns_map = parse_exprs(self, *exprs)
-        return self._from_native_frame(
-            self._native_frame.aggregate(
-                [val.name(col) for col, val in new_columns_map.items()]  # type: ignore[arg-type]
-            ),
-            validate_column_names=False,
-        )
+        selection = [val.name(name) for name, val in evaluate_exprs(self, *exprs)]
+        return self._with_native(self.native.aggregate(selection))  # type: ignore[arg-type]
 
     def select(
         self: Self,
@@ -143,28 +157,24 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
     ) -> Self:
         from ibis.expr.operations.window import WindowFunction
 
-        new_columns_map = parse_exprs(self, *exprs)
-        if not new_columns_map:
+        selection = [val.name(name) for name, val in evaluate_exprs(self, *exprs)]
+        if not selection:
             msg = "At least one expression must be provided to `select` with the Ibis backend."
             raise ValueError(msg)
 
-        t = self._native_frame.select(**new_columns_map)
+        t = self.native.select(*selection)
 
         # Ibis broadcasts aggregate functions in selects as window functions, keeping the original number of rows.
         # Need to reduce it to a single row if they are all window functions, by calling .distinct()
         if all(isinstance(c, WindowFunction) for c in t.op().values.values()):  # noqa: PD011
             t = t.distinct()
 
-        return self._from_native_frame(t, validate_column_names=False)
+        return self._with_native(t)
 
-    def drop(self: Self, columns: list[str], strict: bool) -> Self:  # noqa: FBT001
-        columns_to_drop = parse_columns_to_drop(
-            compliant_frame=self, columns=columns, strict=strict
-        )
+    def drop(self: Self, columns: Sequence[str], *, strict: bool) -> Self:
+        columns_to_drop = parse_columns_to_drop(self, columns=columns, strict=strict)
         selection = (col for col in self.columns if col not in columns_to_drop)
-        return self._from_native_frame(
-            self._native_frame.select(*selection), validate_column_names=False
-        )
+        return self._with_native(self.native.select(*selection))
 
     def lazy(self: Self, *, backend: Implementation | None = None) -> Self:
         # The `backend`` argument has no effect but we keep it here for
@@ -177,50 +187,48 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         return self
 
     def with_columns(self: Self, *exprs: IbisExpr) -> Self:
-        new_columns_map = parse_exprs(self, *exprs)
-
-        return self._from_native_frame(
-            self._native_frame.mutate(**new_columns_map), validate_column_names=False
-        )
+        new_columns_map = dict(evaluate_exprs(self, *exprs))
+        return self._with_native(self.native.mutate(**new_columns_map))
 
     def filter(self: Self, predicate: IbisExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
-        mask = predicate._call(self)[0]
-        return self._from_native_frame(
-            self._native_frame.filter(mask), validate_column_names=False
-        )
+        mask = predicate(self)[0]
+        return self._with_native(self.native.filter(mask))
 
     @property
     def schema(self: Self) -> dict[str, DType]:
-        return {
-            name: native_to_narwhals_dtype(dtype=dtype, version=self._version)
-            for name, dtype in self._native_frame.schema().fields.items()
-        }
+        if self._cached_schema is None:
+            # Note: prefer `self._cached_schema` over `functools.cached_property`
+            # due to Python3.13 failures.
+            self._cached_schema = {
+                name: native_to_narwhals_dtype(ibis_dtype=dtype, version=self._version)
+                for name, dtype in self.native.schema().fields.items()
+            }
+        return self._cached_schema
 
     @property
     def columns(self: Self) -> list[str]:
-        return list(self._native_frame.columns)  # type: ignore[no-any-return]
+        return list(self.native.columns)
 
     def to_pandas(self: Self) -> pd.DataFrame:
         # only if version is v1, keep around for backcompat
         import pandas as pd  # ignore-banned-import()
 
         if parse_version(pd) >= (1, 0, 0):
-            return self._native_frame.to_pandas()
+            return self.native.to_pandas()
         else:  # pragma: no cover
             msg = f"Conversion to pandas requires pandas>=1.0.0, found {pd.__version__}"
             raise NotImplementedError(msg)
 
     def to_arrow(self: Self) -> pa.Table:
         # only if version is v1, keep around for backcompat
-        return self._native_frame.to_pyarrow()
+        return self.native.to_pyarrow()
 
     def _with_version(self: Self, version: Version) -> Self:
         return self.__class__(
-            self._native_frame,
+            self.native,
             version=version,
             backend_version=self._backend_version,
-            validate_column_names=False,
         )
 
     def _with_native(self: Self, df: ir.Table) -> Self:
@@ -233,44 +241,42 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
     def group_by(self: Self, *keys: str, drop_null_keys: bool) -> IbisGroupBy:
         from narwhals._ibis.group_by import IbisGroupBy
 
-        return IbisGroupBy(
-            compliant_frame=self, keys=list(keys), drop_null_keys=drop_null_keys
-        )
+        return IbisGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
-    def rename(self: Self, mapping: dict[str, str]) -> Self:
+    def rename(self: Self, mapping: Mapping[str, str]) -> Self:
         def _rename(col: str) -> str:
             return mapping.get(col, col)
 
-        return self._from_native_frame(self._native_frame.rename(_rename))
+        return self._with_native(self.native.rename(_rename))
 
     def join(
         self: Self,
         other: Self,
         *,
-        how: Literal["left", "inner", "cross", "anti", "semi"],
-        left_on: list[str] | None,
-        right_on: list[str] | None,
+        how: JoinStrategy,
+        left_on: Sequence[str] | None,
+        right_on: Sequence[str] | None,
         suffix: str,
     ) -> Self:
+        native_how = "outer" if how == "full" else how
+
         if other == self:
             # Ibis does not support self-references unless created as a view
-            other = self._from_native_frame(other._native_frame.view())
+            other = self._with_version(other.native.view())
 
-        if how != "cross":
+        if native_how != "cross":
             if left_on is None or right_on is None:
-                msg = (
-                    f"For '{how}' joins, both 'left_on' and 'right_on' must be provided."
-                )
+                msg = f"For '{native_how}' joins, both 'left_on' and 'right_on' must be provided."
                 raise ValueError(msg)  # pragma: no cover (caught upstream)
             predicates = self._convert_predicates(other, left_on, right_on)
         else:
             # For cross joins, no predicates are needed
             predicates = []
 
-        joined = self._native_frame.join(
-            other._native_frame, predicates=predicates, how=how, rname="{name}" + suffix
+        joined = self.native.join(
+            other.native, predicates=predicates, how=native_how, rname="{name}" + suffix
         )
-        if how == "left":
+        if native_how == "left":
             # Drop duplicate columns from the right table. Ibis keeps them.
             if right_on is not None:
                 for right in right_on if isinstance(right_on, list) else [right_on]:
@@ -287,7 +293,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
                 if left != right and right not in self.columns:
                     joined = joined.drop(right)
 
-        return self._from_native_frame(joined)
+        return self._with_native(joined)
 
     def join_asof(
         self: Self,
@@ -295,15 +301,15 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         *,
         left_on: str | None,
         right_on: str | None,
-        by_left: list[str] | None,
-        by_right: list[str] | None,
-        strategy: Literal["backward", "forward", "nearest"],
+        by_left: Sequence[str] | None,
+        by_right: Sequence[str] | None,
+        strategy: AsofJoinStrategy,
         suffix: str,
     ) -> Self:
         if strategy == "backward":
-            on_condition = self._native_frame[left_on] >= other._native_frame[right_on]
+            on_condition = self.native[left_on] >= other.native[right_on]
         elif strategy == "forward":
-            on_condition = self._native_frame[left_on] <= other._native_frame[right_on]
+            on_condition = self.native[left_on] <= other.native[right_on]
         else:
             msg = "Only 'backward' and 'forward' strategies are currently supported for Ibis"
             raise NotImplementedError(msg)
@@ -313,8 +319,8 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         else:
             predicates = []
 
-        joined = self._native_frame.asof_join(
-            other._native_frame,
+        joined = self.native.asof_join(
+            other.native,
             on=on_condition,
             predicates=predicates,
             rname="{name}" + suffix,
@@ -336,7 +342,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         return self._from_native_frame(joined)
 
     def _convert_predicates(
-        self, other: Self, left_on: str | list[str], right_on: str | list[str]
+        self, other: Self, left_on: str | Sequence[str], right_on: str | Sequence[str]
     ) -> list[ir.BooleanValue]:
         if isinstance(left_on, str):
             left_on = [left_on]
@@ -348,16 +354,21 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
             raise ValueError(msg)
 
         return [
-            self._native_frame[left] == other._native_frame[right]
+            self.native[left] == other.native[right]
             for left, right in zip(left_on, right_on)
         ]
 
     def collect_schema(self: Self) -> dict[str, DType]:
-        return self.schema
+        return {
+            name: native_to_narwhals_dtype(ibis_dtype=dtype, version=self._version)
+            for name, dtype in self.native.schema().fields.items()
+        }
 
-    def unique(self: Self, subset: Sequence[str] | None, keep: str) -> Self:
+    def unique(
+        self: Self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
+    ) -> Self:
         if subset is not None:
-            rel = self._native_frame
+            rel = self.native
             # Sanitise input
             if any(x not in rel.columns for x in subset):
                 msg = f"Columns {set(subset).difference(rel.columns)} not found in {rel.columns}."
@@ -368,14 +379,8 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
                 "none": None,
             }
             to_keep = mapped_keep[keep]
-            return self._from_native_frame(
-                self._native_frame.distinct(on=subset, keep=to_keep),
-                validate_column_names=False,
-            )
-        return self._from_native_frame(
-            self._native_frame.distinct(on=self.columns),
-            validate_column_names=False,
-        )
+            return self._with_native(self.native.distinct(on=subset, keep=to_keep))
+        return self._with_native(self.native.distinct(on=self.columns))
 
     def sort(
         self: Self,
@@ -403,18 +408,13 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
                 for i in range(len(by))
             ]
 
-        return self._from_native_frame(
-            self._native_frame.order_by(*sort_cols), validate_column_names=False
-        )
+        return self._with_native(self.native.order_by(*sort_cols))
 
-    def drop_nulls(self: Self, subset: list[str] | None) -> Self:
-        rel = self._native_frame
-        subset_ = subset if subset is not None else rel.columns
-        return self._from_native_frame(
-            self._native_frame.drop_null(subset_), validate_column_names=False
-        )
+    def drop_nulls(self: Self, subset: Sequence[str] | None) -> Self:
+        subset_ = subset if subset is not None else self.columns
+        return self._with_native(self.native.drop_null(subset_))
 
-    def explode(self: Self, columns: list[str]) -> Self:
+    def explode(self: Self, columns: Sequence[str]) -> Self:
         dtypes = import_dtypes_module(self._version)
         schema = self.collect_schema()
         for col in columns:
@@ -434,15 +434,12 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
             )
             raise NotImplementedError(msg)
 
-        return self._from_native_frame(
-            self._native_frame.unnest(columns[0], keep_empty=True),
-            validate_column_names=False,
-        )
+        return self._with_native(self.native.unnest(columns[0], keep_empty=True))
 
     def unpivot(
         self: Self,
-        on: list[str] | None,
-        index: list[str] | None,
+        on: Sequence[str] | None,
+        index: Sequence[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:
@@ -456,9 +453,17 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         # Discard columns not in the index
         final_columns = list(dict.fromkeys([*index, variable_name, value_name]))
 
-        unpivoted = self._native_frame.pivot_longer(
+        unpivoted = self.native.pivot_longer(
             s.cols(*on_),
             names_to=variable_name,
             values_to=value_name,
         )
-        return self._from_native_frame(unpivoted.select(*final_columns))
+        return self._with_native(unpivoted.select(*final_columns))
+
+    gather_every = not_implemented.deprecated(
+        "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
+    )
+    tail = not_implemented.deprecated(
+        "`LazyFrame.tail` is deprecated and will be removed in a future version."
+    )
+    with_row_index = not_implemented()

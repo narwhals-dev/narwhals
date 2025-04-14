@@ -45,8 +45,8 @@ def maybe_evaluate(df: IbisLazyFrame, obj: Any) -> Any:
     return obj
 
 
-def parse_exprs(df: IbisLazyFrame, /, *exprs: IbisExpr) -> dict[str, ir.Expr]:
-    native_results: dict[str, ir.Expr] = {}
+def evaluate_exprs(df: IbisLazyFrame, /, *exprs: IbisExpr) -> list[tuple[str, ir.Expr]]:
+    native_results: list[tuple[str, ir.Expr]] = []
     for expr in exprs:
         native_series_list = expr._call(df)
         output_names = expr._evaluate_output_names(df)
@@ -55,7 +55,7 @@ def parse_exprs(df: IbisLazyFrame, /, *exprs: IbisExpr) -> dict[str, ir.Expr]:
         if len(output_names) != len(native_series_list):  # pragma: no cover
             msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
             raise AssertionError(msg)
-        native_results.update(zip(output_names, native_series_list))
+        native_results.extend(zip(output_names, native_series_list))
     return native_results
 
 
