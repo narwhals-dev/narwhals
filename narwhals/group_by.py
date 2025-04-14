@@ -27,13 +27,14 @@ class GroupBy(Generic[DataFrameT]):
     def __init__(
         self: Self,
         df: DataFrameT,
-        *keys: CompliantExprAny,
+        *keys: str | CompliantExprAny,
         drop_null_keys: bool,
     ) -> None:
         self._df: DataFrameT = df
         self._keys = keys
         self._grouped = self._df._compliant_frame.group_by(
-            *self._keys, drop_null_keys=drop_null_keys
+            *self._keys,
+            drop_null_keys=drop_null_keys,
         )
 
     def agg(self: Self, *aggs: Expr | Iterable[Expr], **named_aggs: Expr) -> DataFrameT:
@@ -109,7 +110,7 @@ class LazyGroupBy(Generic[LazyFrameT]):
     def __init__(
         self: Self,
         df: LazyFrameT,
-        *keys: CompliantExprAny,
+        *keys: str | CompliantExprAny,
         drop_null_keys: bool,
     ) -> None:
         self._df: LazyFrameT = df

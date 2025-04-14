@@ -1552,13 +1552,19 @@ class DataFrame(BaseFrame[DataFrameT]):
             2  b  3  2
             3  c  3  1
         """
+        from narwhals.group_by import GroupBy
+
+        flat_keys = flatten(keys)
+
+        if all(isinstance(key, str) for key in flat_keys):
+            return GroupBy(self, *flat_keys, drop_null_keys=drop_null_keys)
+
         from narwhals import col
         from narwhals.expr import Expr
-        from narwhals.group_by import GroupBy
         from narwhals.series import Series
 
-        _keys = [k if isinstance(k, (Expr, Series)) else col(k) for k in flatten(keys)]
-        flat_keys, kinds = self._flatten_and_extract(*_keys)
+        _keys = [k if isinstance(k, (Expr, Series)) else col(k) for k in flat_keys]
+        expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
 
         if not all(kind is ExprKind.TRANSFORM for kind in kinds):
             from narwhals.exceptions import ComputeError
@@ -1566,7 +1572,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             msg = "Group by is not (yet) supported with keys that are not transformation expressions"
             raise ComputeError(msg)
 
-        return GroupBy(self, *flat_keys, drop_null_keys=drop_null_keys)
+        return GroupBy(self, *expr_flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
         self: Self,
@@ -2832,12 +2838,18 @@ class LazyFrame(BaseFrame[FrameT]):
             └─────────┴────────┘
             <BLANKLINE>
         """
-        from narwhals import col
-        from narwhals.expr import Expr
         from narwhals.group_by import LazyGroupBy
 
-        _keys = [k if isinstance(k, Expr) else col(k) for k in flatten(keys)]
-        flat_keys, kinds = self._flatten_and_extract(*_keys)
+        flat_keys = flatten(keys)
+
+        if all(isinstance(key, str) for key in flat_keys):
+            return LazyGroupBy(self, *flat_keys, drop_null_keys=drop_null_keys)
+
+        from narwhals import col
+        from narwhals.expr import Expr
+
+        _keys = [k if isinstance(k, Expr) else col(k) for k in flat_keys]
+        expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
 
         if not all(kind is ExprKind.TRANSFORM for kind in kinds):
             from narwhals.exceptions import ComputeError
@@ -2845,7 +2857,7 @@ class LazyFrame(BaseFrame[FrameT]):
             msg = "Group by is not (yet) supported with keys that are not transformation expressions"
             raise ComputeError(msg)
 
-        return LazyGroupBy(self, *flat_keys, drop_null_keys=drop_null_keys)
+        return LazyGroupBy(self, *expr_flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
         self: Self,

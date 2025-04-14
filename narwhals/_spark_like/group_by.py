@@ -21,11 +21,11 @@ class SparkLikeLazyGroupBy(LazyGroupBy["SparkLikeLazyFrame", "SparkLikeExpr", "C
         *,
         drop_null_keys: bool,
     ) -> None:
-        frame, self._keys, self._output_key_names = self._init_parsing(
-            compliant_frame=df, keys=keys
-        )
+        super().__init__(df, keys, drop_null_keys=drop_null_keys)
         self._compliant_frame = (
-            frame.drop_nulls(subset=self._keys) if drop_null_keys else frame
+            self.compliant.drop_nulls(subset=self._keys)
+            if drop_null_keys
+            else self.compliant
         )
 
     def agg(self, *exprs: SparkLikeExpr) -> SparkLikeLazyFrame:

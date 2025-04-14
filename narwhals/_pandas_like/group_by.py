@@ -47,11 +47,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
     ) -> None:
         self._df = df
         self._drop_null_keys = drop_null_keys
-        (
-            self._compliant_frame,
-            self._keys,
-            self._output_key_names,
-        ) = self._init_parsing(compliant_frame=df, keys=keys)
+        super().__init__(df, keys, drop_null_keys=drop_null_keys)
         # Drop index to avoid potential collisions:
         # https://github.com/narwhals-dev/narwhals/issues/1907.
 

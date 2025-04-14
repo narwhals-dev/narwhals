@@ -15,7 +15,6 @@ from typing import TypeVar
 
 from narwhals._compliant.typing import CompliantExprT_contra
 from narwhals._compliant.typing import CompliantFrameT_co
-from narwhals._compliant.typing import CompliantLazyFrameAny
 from narwhals._compliant.typing import CompliantLazyFrameT_co
 from narwhals._compliant.typing import DepthTrackingExprAny
 from narwhals._compliant.typing import DepthTrackingExprT_contra
@@ -71,18 +70,11 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     def __init__(
         self,
         compliant_frame: CompliantFrameT_co,
-        keys: Sequence[CompliantExprT_contra],
+        keys: Sequence[CompliantExprT_contra] | Sequence[str],
         /,
         *,
         drop_null_keys: bool,
-    ) -> None: ...
-
-    def agg(self, *exprs: CompliantExprT_contra) -> CompliantFrameT_co: ...
-
-    @staticmethod
-    def _init_parsing(
-        compliant_frame: CompliantLazyFrameAny, keys: Sequence[CompliantExprT_contra]
-    ) -> tuple[CompliantLazyFrameAny, list[str], list[str]]:
+    ) -> None:
         """Parses key expressions to set up `.agg` operation with correct information.
 
         Since keys are expressions, it's possible to incour in aliases that match
@@ -97,22 +89,30 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
             no overlap with any existing column name.
         - Add these temporary columns to the compliant dataframe.
         """
-        suffix_token = "_" * max(len(str(c)) for c in compliant_frame.columns)
-        output_names = compliant_frame._evaluate_aliases(*keys)
+        if all(isinstance(k, str) for k in keys):
+            self._keys = list(keys)
+            self._output_key_names = list(keys)
+            self._compliant_frame = compliant_frame
+        else:
+            suffix_token = "_" * max(len(str(c)) for c in compliant_frame.columns)
+            output_names = compliant_frame._evaluate_aliases(*keys)
 
-        safe_keys = [
-            # multi_named expression cannot have duplicate names, hence it's safe to suffix
-            key.name.suffix(suffix_token)
-            if key._metadata is not None
-            and key._metadata.expansion_kind is ExpansionKind.MULTI_NAMED
-            # otherwise it's single named and we can use Expr.alias
-            else key.alias(f"{new_name}{suffix_token}")
-            for key, new_name in zip(keys, output_names)
-        ]
+            safe_keys = [
+                # multi_named expression cannot have duplicate names, hence it's safe to suffix
+                key.name.suffix(suffix_token)
+                if key._metadata is not None
+                and key._metadata.expansion_kind is ExpansionKind.MULTI_NAMED
+                # otherwise it's single named and we can use Expr.alias
+                else key.alias(f"{new_name}{suffix_token}")
+                for key, new_name in zip(keys, output_names)
+            ]
 
-        key_names = compliant_frame._evaluate_aliases(*safe_keys)
+            self._keys = compliant_frame._evaluate_aliases(*safe_keys)
 
-        return compliant_frame.with_columns(*safe_keys), key_names, output_names
+            self._output_key_names = output_names
+            self._compliant_frame = compliant_frame.with_columns(*safe_keys)
+
+    def agg(self, *exprs: CompliantExprT_contra) -> CompliantFrameT_co: ...
 
 
 class DepthTrackingGroupBy(
