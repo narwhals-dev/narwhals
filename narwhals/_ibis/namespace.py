@@ -4,31 +4,33 @@ import operator
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Callable
+from typing import Iterable
 from typing import Literal
 from typing import Sequence
-from typing import cast
 
+from narwhals._compliant import CompliantThen
+from narwhals._compliant import LazyNamespace
+from narwhals._compliant import LazyWhen
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
+from narwhals._ibis.dataframe import IbisLazyFrame
 from narwhals._ibis.expr import IbisExpr
 from narwhals._ibis.selectors import IbisSelectorNamespace
-from narwhals._ibis.utils import ExprKind
-from narwhals._ibis.utils import n_ary_operation_expr_kind
 from narwhals._ibis.utils import narwhals_to_native_dtype
 from narwhals.dependencies import get_ibis
-from narwhals.typing import CompliantNamespace
+from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     import ibis.expr.types as ir
     from typing_extensions import Self
 
-    from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
 
-class IbisNamespace(CompliantNamespace["ir.Expr"]):  # type: ignore[type-var]
+class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
+    _implementation: Implementation = Implementation.IBIS
+
     def __init__(
         self: Self, *, backend_version: tuple[int, ...], version: Version
     ) -> None:
@@ -37,29 +39,19 @@ class IbisNamespace(CompliantNamespace["ir.Expr"]):  # type: ignore[type-var]
 
     @property
     def selectors(self: Self) -> IbisSelectorNamespace:
-        return IbisSelectorNamespace(
-            backend_version=self._backend_version, version=self._version
-        )
+        return IbisSelectorNamespace.from_namespace(self)
 
-    def all(self: Self) -> IbisExpr:
-        def _all(df: IbisLazyFrame) -> list[ir.Expr]:
-            ibis = get_ibis()
+    @property
+    def _expr(self) -> type[IbisExpr]:
+        return IbisExpr
 
-            return [getattr(ibis._, col_name).name(col_name) for col_name in df.columns]
-
-        return IbisExpr(
-            call=_all,
-            function_name="all",
-            evaluate_output_names=lambda df: df.columns,
-            alias_output_names=None,
-            expr_kind=ExprKind.TRANSFORM,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+    @property
+    def _lazyframe(self) -> type[IbisLazyFrame]:
+        return IbisLazyFrame
 
     def concat(
         self: Self,
-        items: Sequence[IbisLazyFrame],
+        items: Iterable[IbisLazyFrame],
         *,
         how: Literal["horizontal", "vertical", "diagonal"],
     ) -> IbisLazyFrame:
@@ -71,14 +63,18 @@ class IbisNamespace(CompliantNamespace["ir.Expr"]):  # type: ignore[type-var]
         if how == "diagonal":
             msg = "diagonal concat not supported for Ibis. Please join instead"
             raise NotImplementedError(msg)
+
+        native_items = [item.native for item in items]
+        items = list(items)
         first = items[0]
         schema = first.schema
+
         if how == "vertical" and not all(x.schema == schema for x in items[1:]):
             msg = "inputs should all have the same schema"
             raise TypeError(msg)
-        native_dfs = [item._native_frame for item in items]
-        res = ibis.union(native_dfs[0], *native_dfs[1:])
-        return first._from_native_frame(res)
+
+        res = ibis.union(native_items[0], *native_items[1:])
+        return first._with_native(res)
 
     def concat_str(  # TODO(rwhitten577): IMPLEMENT
         self: Self,
@@ -141,12 +137,10 @@ class IbisNamespace(CompliantNamespace["ir.Expr"]):  # type: ignore[type-var]
             cols = (c for _expr in exprs for c in _expr(df))
             return [reduce(operator.and_, cols)]
 
-        return IbisExpr(
+        return self._expr(
             call=func,
-            function_name="all_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -156,12 +150,10 @@ class IbisNamespace(CompliantNamespace["ir.Expr"]):  # type: ignore[type-var]
             cols = (c for _expr in exprs for c in _expr(df))
             return [reduce(operator.or_, cols)]
 
-        return IbisExpr(
+        return self._expr(
             call=func,
-            function_name="or_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -172,12 +164,10 @@ class IbisNamespace(CompliantNamespace["ir.Expr"]):  # type: ignore[type-var]
             cols = [c for _expr in exprs for c in _expr(df)]
             return [ibis.greatest(*cols).name(cols[0].get_name())]
 
-        return IbisExpr(
+        return self._expr(
             call=func,
-            function_name="max_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -188,12 +178,10 @@ class IbisNamespace(CompliantNamespace["ir.Expr"]):  # type: ignore[type-var]
             cols = [c for _expr in exprs for c in _expr(df)]
             return [ibis.least(*cols).name(cols[0].get_name())]
 
-        return IbisExpr(
+        return self._expr(
             call=func,
-            function_name="min_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -205,12 +193,10 @@ class IbisNamespace(CompliantNamespace["ir.Expr"]):  # type: ignore[type-var]
             ]
             return [reduce(operator.add, cols)]
 
-        return IbisExpr(
+        return self._expr(
             call=func,
-            function_name="sum_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -231,40 +217,21 @@ class IbisNamespace(CompliantNamespace["ir.Expr"]):  # type: ignore[type-var]
                 ).name(first_expr_name)
             ]
 
-        return IbisExpr(
+        return self._expr(
             call=func,
-            function_name="mean_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
         )
 
     def when(
         self: Self,
-        *predicates: IbisExpr,
+        predicate: IbisExpr,
     ) -> IbisWhen:
-        plx = self.__class__(backend_version=self._backend_version, version=self._version)
-        condition = plx.all_horizontal(*predicates)
-        return IbisWhen(
-            condition,
-            self._backend_version,
-            expr_kind=ExprKind.TRANSFORM,
-            version=self._version,
-        )
+        return IbisWhen.from_expr(predicate, context=self)
 
-    def col(self: Self, *column_names: str) -> IbisExpr:
-        return IbisExpr.from_column_names(
-            *column_names, backend_version=self._backend_version, version=self._version
-        )
-
-    def nth(self: Self, *column_indices: int) -> IbisExpr:
-        return IbisExpr.from_column_indices(
-            *column_indices, backend_version=self._backend_version, version=self._version
-        )
-
-    def lit(self: Self, value: Any, dtype: DType | None) -> IbisExpr:
+    def lit(self: Self, value: Any, dtype: DType | type[DType] | None) -> IbisExpr:
         def func(_df: IbisLazyFrame) -> list[ir.Expr]:
             ibis = get_ibis()
             if dtype is not None:
@@ -272,111 +239,38 @@ class IbisNamespace(CompliantNamespace["ir.Expr"]):  # type: ignore[type-var]
                 return [ibis.literal(value, ibis_dtype)]
             return [ibis.literal(value)]
 
-        return IbisExpr(
+        return self._expr(
             func,
-            function_name="lit",
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
-            expr_kind=ExprKind.LITERAL,
             backend_version=self._backend_version,
             version=self._version,
         )
 
     def len(self: Self) -> IbisExpr:
         def func(_df: IbisLazyFrame) -> list[ir.Expr]:
-            return [_df._native_frame.count()]
+            return [_df.native.count()]
 
-        return IbisExpr(
+        return self._expr(
             call=func,
-            function_name="len",
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
-            expr_kind=ExprKind.AGGREGATION,
             backend_version=self._backend_version,
             version=self._version,
         )
 
 
-class IbisWhen:
-    def __init__(
-        self: Self,
-        condition: IbisExpr,
-        backend_version: tuple[int, ...],
-        then_value: Any = None,
-        otherwise_value: Any = None,
-        *,
-        expr_kind: ExprKind,
-        version: Version,
-    ) -> None:
-        self._backend_version = backend_version
-        self._condition = condition
-        self._then_value = then_value
-        self._otherwise_value = otherwise_value
-        self._expr_kind = expr_kind
-        self._version = version
+class IbisWhen(LazyWhen["IbisLazyFrame", "ir.Expr", IbisExpr]):
+    @property
+    def _then(self) -> type[IbisThen]:
+        return IbisThen
 
     def __call__(self: Self, df: IbisLazyFrame) -> Sequence[ir.Expr]:
         ibis = get_ibis()
 
-        condition = self._condition(df)[0]
-        condition = cast("ir.Expr", condition)
-
-        if isinstance(self._then_value, IbisExpr):
-            value = self._then_value(df)[0]
-        else:
-            # `self._otherwise_value` is a scalar
-            value = ibis.literal(self._then_value)
-        value = cast("ir.Expr", value)
-
-        if self._otherwise_value is None:
-            return [ibis.ifelse(condition, value, None)]
-        if not isinstance(self._otherwise_value, IbisExpr):
-            # `self._otherwise_value` is a scalar
-            otherwise = ibis.literal(self._otherwise_value)
-        else:
-            otherwise = self._otherwise_value(df)[0]
-        return [ibis.ifelse(condition, value, otherwise)]
-
-    def then(self: Self, value: IbisExpr | Any) -> IbisThen:
-        self._then_value = value
-
-        return IbisThen(
-            self,
-            function_name="whenthen",
-            evaluate_output_names=getattr(
-                value, "_evaluate_output_names", lambda _df: ["literal"]
-            ),
-            alias_output_names=getattr(value, "_alias_output_names", None),
-            expr_kind=self._expr_kind,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        self.when = ibis.ifelse
+        self.lit = ibis.literal
+        return super().__call__(df)
 
 
-class IbisThen(IbisExpr):
-    def __init__(
-        self: Self,
-        call: IbisWhen,
-        *,
-        function_name: str,
-        evaluate_output_names: Callable[[IbisLazyFrame], Sequence[str]],
-        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
-        expr_kind: ExprKind,
-        backend_version: tuple[int, ...],
-        version: Version,
-    ) -> None:
-        self._backend_version = backend_version
-        self._version = version
-        self._call = call
-        self._function_name = function_name
-        self._evaluate_output_names = evaluate_output_names
-        self._alias_output_names = alias_output_names
-        self._expr_kind = expr_kind
-
-    def otherwise(self: Self, value: IbisExpr | Any) -> IbisExpr:
-        # type ignore because we are setting the `_call` attribute to a
-        # callable object of type `DuckDBWhen`, base class has the attribute as
-        # only a `Callable`
-        self._call._otherwise_value = value  # type: ignore[attr-defined]
-        self._function_name = "whenotherwise"
-        return self
+class IbisThen(CompliantThen["IbisLazyFrame", "ir.Expr", IbisExpr], IbisExpr): ...

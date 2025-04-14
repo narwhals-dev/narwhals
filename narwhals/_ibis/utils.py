@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from enum import Enum
-from enum import auto
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
@@ -31,33 +29,6 @@ class WindowInputs:
         self.expr = expr
         self.partition_by = partition_by
         self.order_by = order_by
-
-
-class ExprKind(Enum):
-    """Describe which kind of expression we are dealing with.
-
-    Composition rule is:
-    - LITERAL vs LITERAL -> LITERAL
-    - TRANSFORM vs anything -> TRANSFORM
-    - anything vs TRANSFORM -> TRANSFORM
-    - all remaining cases -> AGGREGATION
-    """
-
-    LITERAL = auto()  # e.g. nw.lit(1)
-    AGGREGATION = auto()  # e.g. nw.col('a').mean()
-    TRANSFORM = auto()  # e.g. nw.col('a').round()
-
-
-def maybe_evaluate(df: IbisLazyFrame, obj: Any) -> Any:
-    from narwhals._ibis.expr import IbisExpr
-
-    if isinstance(obj, IbisExpr):
-        column_results = obj._call(df)
-        if len(column_results) != 1:  # pragma: no cover
-            msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
-            raise NotImplementedError(msg)
-        return column_results[0]
-    return obj
 
 
 def evaluate_exprs(df: IbisLazyFrame, /, *exprs: IbisExpr) -> list[tuple[str, ir.Expr]]:
@@ -186,15 +157,3 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
         return f"array<{inner}>"
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
-
-
-def n_ary_operation_expr_kind(*args: IbisExpr | Any) -> ExprKind:
-    if all(
-        getattr(arg, "_expr_kind", ExprKind.LITERAL) is ExprKind.LITERAL for arg in args
-    ):
-        return ExprKind.LITERAL
-    if any(
-        getattr(arg, "_expr_kind", ExprKind.LITERAL) is ExprKind.TRANSFORM for arg in args
-    ):
-        return ExprKind.TRANSFORM
-    return ExprKind.AGGREGATION

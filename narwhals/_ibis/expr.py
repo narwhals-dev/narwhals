@@ -183,7 +183,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
 
         return cls(
             func,
-            function_name="nth",
             evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
             alias_output_names=None,
             backend_version=context._backend_version,
