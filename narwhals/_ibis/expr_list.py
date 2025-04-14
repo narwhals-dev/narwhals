@@ -13,8 +13,6 @@ class IbisExprListNamespace:
         self._compliant_expr = expr
 
     def len(self: Self) -> IbisExpr:
-        return self._compliant_expr._from_call(
+        return self._compliant_expr._with_callable(
             lambda _input: _input.length(),
-            "len",
-            expr_kind=self._compliant_expr._expr_kind,
         )
