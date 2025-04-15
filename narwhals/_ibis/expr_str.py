@@ -37,6 +37,9 @@ class IbisExprStringNamespace:
             lambda _input: _input.substr(start=offset, length=length),
         )
 
+    def split(self: Self, by: str) -> IbisExpr:
+        return self._compliant_expr._with_callable(lambda _input: _input.split(by))
+
     def len_chars(self: Self) -> IbisExpr:
         return self._compliant_expr._with_callable(
             lambda _input: _input.length(),
@@ -81,6 +84,15 @@ class IbisExprStringNamespace:
             msg = "Cannot infer format with Ibis backend"
             raise NotImplementedError(msg)
 
-        return self._compliant_expr._with_callable(
-            lambda _input: _input.as_timestamp(format).cast(Timestamp(timezone=None)),
-        )
+        if _is_naive_format(format):
+            return self._compliant_expr._with_callable(
+                lambda _input: _input.as_timestamp(format).cast(Timestamp(timezone=None)),
+            )
+        else:
+            return self._compliant_expr._with_callable(
+                lambda _input: _input.as_timestamp(format),
+            )
+
+
+def _is_naive_format(format_: str) -> bool:
+    return not any(x in format_ for x in ("%s", "%z", "Z"))

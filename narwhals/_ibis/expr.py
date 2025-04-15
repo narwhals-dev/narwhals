@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from narwhals._ibis.namespace import IbisNamespace
     from narwhals._ibis.typing import WindowFunction
     from narwhals.dtypes import DType
+    from narwhals.typing import RankMethod
     from narwhals.typing import RollingInterpolationMethod
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -68,74 +69,104 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
 
         return IbisNamespace(backend_version=self._backend_version, version=self._version)
 
-    # TODO(rwhitten577): Implement these
-    # def _cum_window_func(
-    #     self,
-    #     *,
-    #     reverse: bool,
-    #     func_name: Literal["sum", "max", "min", "count", "product"],
-    # ) -> WindowFunction:
-    #     def func(window_inputs: WindowInputs) -> duckdb.Expression:
-    #         order_by_sql = generate_order_by_sql(
-    #             *window_inputs.order_by, ascending=not reverse
-    #         )
-    #         partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
-    #         sql = (
-    #             f"{func_name} ({window_inputs.expr}) over ({partition_by_sql} {order_by_sql} "
-    #             "rows between unbounded preceding and current row)"
-    #         )
-    #         return SQLExpression(sql)  # type: ignore[no-any-return, unused-ignore]
-    #
-    #     return func
-    #
-    # def _rolling_window_func(
-    #     self,
-    #     *,
-    #     func_name: Literal["sum", "mean", "std", "var"],
-    #     center: bool,
-    #     window_size: int,
-    #     min_samples: int,
-    #     ddof: int | None = None,
-    # ) -> WindowFunction:
-    #     ensure_type(window_size, int, type(None))
-    #     ensure_type(min_samples, int)
-    #     supported_funcs = ["sum", "mean", "std", "var"]
-    #     if center:
-    #         half = (window_size - 1) // 2
-    #         remainder = (window_size - 1) % 2
-    #         start = f"{half + remainder} preceding"
-    #         end = f"{half} following"
-    #     else:
-    #         start = f"{window_size - 1} preceding"
-    #         end = "current row"
-    #
-    #     def func(window_inputs: WindowInputs) -> duckdb.Expression:
-    #         order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=True)
-    #         partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
-    #         window = f"({partition_by_sql} {order_by_sql} rows between {start} and {end})"
-    #         if func_name in {"sum", "mean"}:
-    #             func_: str = func_name
-    #         elif func_name == "var" and ddof == 0:
-    #             func_ = "var_pop"
-    #         elif func_name in "var" and ddof == 1:
-    #             func_ = "var_samp"
-    #         elif func_name == "std" and ddof == 0:
-    #             func_ = "stddev_pop"
-    #         elif func_name == "std" and ddof == 1:
-    #             func_ = "stddev_samp"
-    #         elif func_name in {"var", "std"}:  # pragma: no cover
-    #             msg = f"Only ddof=0 and ddof=1 are currently supported for rolling_{func_name}."
-    #             raise ValueError(msg)
-    #         else:  # pragma: no cover
-    #             msg = f"Only the following functions are supported: {supported_funcs}.\nGot: {func_name}."
-    #             raise ValueError(msg)
-    #         condition_sql = f"count({window_inputs.expr}) over {window} >= {min_samples}"
-    #         condition = SQLExpression(condition_sql)
-    #         value = SQLExpression(f"{func_}({window_inputs.expr}) over {window}")
-    #         return when(condition, value)
-    #
-    #     return func
-    #
+    def _cum_window_func(
+        self,
+        *,
+        reverse: bool,
+        func_name: Literal["sum", "max", "min", "count"],
+    ) -> WindowFunction:
+        def func(window_inputs: WindowInputs) -> ir.Expr:
+            ibis = get_ibis()
+            from ibis import _ as col
+
+            if reverse:
+                order_by_cols = [
+                    ibis.desc(getattr(col, x), nulls_first=False)
+                    for x in window_inputs.order_by
+                ]
+            else:
+                order_by_cols = [
+                    ibis.asc(getattr(col, x), nulls_first=True)
+                    for x in window_inputs.order_by
+                ]
+
+            window = ibis.window(
+                group_by=list(window_inputs.partition_by),
+                order_by=order_by_cols,
+                preceding=None,  # unbounded
+                following=0,
+            )
+
+            return getattr(window_inputs.expr, func_name)().over(window)
+
+        return func
+
+    def _rolling_window_func(
+        self,
+        *,
+        func_name: Literal["sum", "mean", "std", "var"],
+        center: bool,
+        window_size: int,
+        min_samples: int,
+        ddof: int | None = None,
+    ) -> WindowFunction:
+        supported_funcs = ["sum", "mean", "std", "var"]
+
+        if center:
+            preceding = window_size // 2
+            following = window_size - preceding - 1
+        else:
+            preceding = window_size - 1
+            following = 0
+
+        def func(window_inputs: WindowInputs) -> ir.Expr:
+            ibis = get_ibis()
+            from ibis import _ as col
+
+            order_by_cols = [
+                ibis.asc(getattr(col, x), nulls_first=True)
+                for x in window_inputs.order_by
+            ]
+            window = ibis.window(
+                group_by=list(window_inputs.partition_by),
+                order_by=order_by_cols,
+                preceding=preceding,
+                following=following,
+            )
+
+            expr = window_inputs.expr
+
+            func_: ir.Expr
+
+            if func_name in {"sum", "mean"}:
+                func_ = getattr(expr, func_name)()
+            elif func_name == "var" and ddof == 0:
+                func_ = expr.var(how="pop")
+            elif func_name in "var" and ddof == 1:
+                func_ = expr.var(how="sample")
+            elif func_name == "std" and ddof == 0:
+                func_ = expr.std(how="pop")
+            elif func_name == "std" and ddof == 1:
+                func_ = expr.std(how="sample")
+            elif func_name in {"var", "std"}:  # pragma: no cover
+                msg = f"Only ddof=0 and ddof=1 are currently supported for rolling_{func_name}."
+                raise ValueError(msg)
+            else:  # pragma: no cover
+                msg = f"Only the following functions are supported: {supported_funcs}.\nGot: {func_name}."
+                raise ValueError(msg)
+
+            rolling_calc = func_.over(window)
+
+            if min_samples is not None:
+                valid_count = window_inputs.expr.count().over(window)
+                rolling_calc = ibis.cases(
+                    (valid_count >= min_samples, rolling_calc), else_=ibis.null()
+                )
+
+            return rolling_calc
+
+        return func
+
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         if kind is ExprKind.LITERAL:
             return self
@@ -492,129 +523,124 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
     def round(self: Self, decimals: int) -> Self:
         return self._with_callable(lambda _input: _input.round(decimals))
 
-    # TODO(rwhitten577): implement
-    # def shift(self, n: int) -> Self:
-    #     ensure_type(n, int)
-    #
-    #     def func(window_inputs: WindowInputs) -> duckdb.Expression:
-    #         order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=True)
-    #         partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
-    #         sql = (
-    #             f"lag({window_inputs.expr}, {n}) over ({partition_by_sql} {order_by_sql})"
-    #         )
-    #         return SQLExpression(sql)  # type: ignore[no-any-return, unused-ignore]
-    #
-    #     return self._with_window_function(func)
-    #
-    # def is_first_distinct(self) -> Self:
-    #     def func(window_inputs: WindowInputs) -> duckdb.Expression:
-    #         order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=True)
-    #         if window_inputs.partition_by:
-    #             partition_by_sql = (
-    #                 generate_partition_by_sql(*window_inputs.partition_by)
-    #                 + f", {window_inputs.expr}"
-    #             )
-    #         else:
-    #             partition_by_sql = f"partition by {window_inputs.expr}"
-    #         sql = f"{FunctionExpression('row_number')} over({partition_by_sql} {order_by_sql})"
-    #         return SQLExpression(sql) == lit(1)  # type: ignore[no-any-return, unused-ignore]
-    #
-    #     return self._with_window_function(func)
-    #
-    # def is_last_distinct(self) -> Self:
-    #     def func(window_inputs: WindowInputs) -> duckdb.Expression:
-    #         order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=False)
-    #         if window_inputs.partition_by:
-    #             partition_by_sql = (
-    #                 generate_partition_by_sql(*window_inputs.partition_by)
-    #                 + f", {window_inputs.expr}"
-    #             )
-    #         else:
-    #             partition_by_sql = f"partition by {window_inputs.expr}"
-    #         sql = f"{FunctionExpression('row_number')} over({partition_by_sql} {order_by_sql})"
-    #         return SQLExpression(sql) == lit(1)  # type: ignore[no-any-return, unused-ignore]
-    #
-    #     return self._with_window_function(func)
-    #
-    # def diff(self) -> Self:
-    #     def func(window_inputs: WindowInputs) -> duckdb.Expression:
-    #         order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=True)
-    #         partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
-    #         sql = f"lag({window_inputs.expr}) over ({partition_by_sql} {order_by_sql})"
-    #         return window_inputs.expr - SQLExpression(sql)  # type: ignore[no-any-return, unused-ignore]
-    #
-    #     return self._with_window_function(func)
-    #
-    # def cum_sum(self, *, reverse: bool) -> Self:
-    #     return self._with_window_function(
-    #         self._cum_window_func(reverse=reverse, func_name="sum")
-    #     )
-    #
-    # def cum_max(self, *, reverse: bool) -> Self:
-    #     return self._with_window_function(
-    #         self._cum_window_func(reverse=reverse, func_name="max")
-    #     )
-    #
-    # def cum_min(self, *, reverse: bool) -> Self:
-    #     return self._with_window_function(
-    #         self._cum_window_func(reverse=reverse, func_name="min")
-    #     )
-    #
-    # def cum_count(self, *, reverse: bool) -> Self:
-    #     return self._with_window_function(
-    #         self._cum_window_func(reverse=reverse, func_name="count")
-    #     )
-    #
-    # def cum_prod(self, *, reverse: bool) -> Self:
-    #     return self._with_window_function(
-    #         self._cum_window_func(reverse=reverse, func_name="product")
-    #     )
-    #
-    # def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
-    #     return self._with_window_function(
-    #         self._rolling_window_func(
-    #             func_name="sum",
-    #             center=center,
-    #             window_size=window_size,
-    #             min_samples=min_samples,
-    #         )
-    #     )
-    #
-    # def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
-    #     return self._with_window_function(
-    #         self._rolling_window_func(
-    #             func_name="mean",
-    #             center=center,
-    #             window_size=window_size,
-    #             min_samples=min_samples,
-    #         )
-    #     )
-    #
-    # def rolling_var(
-    #     self, window_size: int, *, min_samples: int, center: bool, ddof: int
-    # ) -> Self:
-    #     return self._with_window_function(
-    #         self._rolling_window_func(
-    #             func_name="var",
-    #             center=center,
-    #             window_size=window_size,
-    #             min_samples=min_samples,
-    #             ddof=ddof,
-    #         )
-    #     )
-    #
-    # def rolling_std(
-    #     self, window_size: int, *, min_samples: int, center: bool, ddof: int
-    # ) -> Self:
-    #     return self._with_window_function(
-    #         self._rolling_window_func(
-    #             func_name="std",
-    #             center=center,
-    #             window_size=window_size,
-    #             min_samples=min_samples,
-    #             ddof=ddof,
-    #         )
-    #     )
+    def shift(self, n: int) -> Self:
+        def func(window_inputs: WindowInputs) -> ir.Expr:
+            return window_inputs.expr.lag(n)
+
+        return self._with_window_function(func)
+
+    def is_first_distinct(self) -> Self:
+        def func(window_inputs: WindowInputs) -> ir.Expr:
+            ibis = get_ibis()
+            from ibis import _ as col
+
+            order_by_cols = [
+                ibis.asc(getattr(col, x), nulls_first=True)
+                for x in window_inputs.order_by
+            ]
+            window = ibis.window(
+                group_by=[*window_inputs.partition_by, window_inputs.expr],
+                order_by=order_by_cols,
+            )
+            # ibis row_number starts at 0, so need to compare with 0 instead of the usual `1`
+            return ibis.row_number().over(window) == 0
+
+        return self._with_window_function(func)
+
+    def is_last_distinct(self) -> Self:
+        def func(window_inputs: WindowInputs) -> ir.Expr:
+            ibis = get_ibis()
+            from ibis import _ as col
+
+            order_by_cols = [ibis.desc(getattr(col, x)) for x in window_inputs.order_by]
+            window = ibis.window(
+                group_by=[*window_inputs.partition_by, window_inputs.expr],
+                order_by=order_by_cols,
+            )
+            # ibis row_number starts at 0, so need to compare with 0 instead of the usual `1`
+            return ibis.row_number().over(window) == 0
+
+        return self._with_window_function(func)
+
+    def diff(self) -> Self:
+        def func(window_inputs: WindowInputs) -> ir.Expr:
+            ibis = get_ibis()
+            return window_inputs.expr - window_inputs.expr.lag().over(
+                ibis.window(following=0)
+            )
+
+        return self._with_window_function(func)
+
+    def cum_sum(self, *, reverse: bool) -> Self:
+        return self._with_window_function(
+            self._cum_window_func(reverse=reverse, func_name="sum")
+        )
+
+    def cum_max(self, *, reverse: bool) -> Self:
+        return self._with_window_function(
+            self._cum_window_func(reverse=reverse, func_name="max")
+        )
+
+    def cum_min(self, *, reverse: bool) -> Self:
+        return self._with_window_function(
+            self._cum_window_func(reverse=reverse, func_name="min")
+        )
+
+    def cum_count(self, *, reverse: bool) -> Self:
+        return self._with_window_function(
+            self._cum_window_func(reverse=reverse, func_name="count")
+        )
+
+    def cum_prod(self, *, reverse: bool) -> Self:
+        # https://github.com/ibis-project/ibis/issues/10542
+        msg = "`cum_prod` is not supported for the Ibis backend"
+        raise NotImplementedError(msg)
+
+    def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
+        return self._with_window_function(
+            self._rolling_window_func(
+                func_name="sum",
+                center=center,
+                window_size=window_size,
+                min_samples=min_samples,
+            )
+        )
+
+    def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
+        return self._with_window_function(
+            self._rolling_window_func(
+                func_name="mean",
+                center=center,
+                window_size=window_size,
+                min_samples=min_samples,
+            )
+        )
+
+    def rolling_var(
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
+    ) -> Self:
+        return self._with_window_function(
+            self._rolling_window_func(
+                func_name="var",
+                center=center,
+                window_size=window_size,
+                min_samples=min_samples,
+                ddof=ddof,
+            )
+        )
+
+    def rolling_std(
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
+    ) -> Self:
+        return self._with_window_function(
+            self._rolling_window_func(
+                func_name="std",
+                center=center,
+                window_size=window_size,
+                min_samples=min_samples,
+                ddof=ddof,
+            )
+        )
 
     def fill_null(
         self: Self, value: Self | Any, strategy: Any, limit: int | None
@@ -626,7 +652,10 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
             msg = "`limit` is not supported for the Ibis backend"
             raise NotImplementedError(msg)
 
-        return self._with_callable(lambda _input: _input.fill_null(value))
+        def _fill_null(_input: ir.Expr, value: ir.Expr) -> ir.Expr:
+            return _input.fill_null(value)
+
+        return self._with_callable(_fill_null, value=value)
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
         def func(_input: ir.Expr) -> ir.Expr:
@@ -641,42 +670,37 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
             lambda _input: _input.count().over(ibis.window(group_by=_input)) == 1
         )
 
-    # TODO(rwhitten577): implement
-    # def rank(self, method: RankMethod, *, descending: bool) -> Self:
-    #     if self._backend_version < (1, 3):
-    #         msg = "At least version 1.3 of DuckDB is required for `rank`."
-    #         raise NotImplementedError(msg)
-    #     if method in {"min", "max", "average"}:
-    #         func = FunctionExpression("rank")
-    #     elif method == "dense":
-    #         func = FunctionExpression("dense_rank")
-    #     else:  # method == "ordinal"
-    #         func = FunctionExpression("row_number")
-    #
-    #     def _rank(_input: duckdb.Expression) -> duckdb.Expression:
-    #         if descending:
-    #             by_sql = f"{_input} desc nulls last"
-    #         else:
-    #             by_sql = f"{_input} asc nulls last"
-    #         order_by_sql = f"order by {by_sql}"
-    #         count_expr = FunctionExpression("count", StarExpression())
-    #
-    #         if method == "max":
-    #             expr = (
-    #                 SQLExpression(f"{func} OVER ({order_by_sql})")
-    #                 + SQLExpression(f"{count_expr} OVER (PARTITION BY {_input})")
-    #                 - lit(1)
-    #             )
-    #         elif method == "average":
-    #             expr = SQLExpression(f"{func} OVER ({order_by_sql})") + (
-    #                 SQLExpression(f"{count_expr} OVER (PARTITION BY {_input})") - lit(1)
-    #             ) / lit(2.0)
-    #         else:
-    #             expr = SQLExpression(f"{func} OVER ({order_by_sql})")
-    #
-    #         return when(_input.isnotnull(), expr)
-    #
-    #     return self._with_callable(_rank)
+    def rank(self, method: RankMethod, *, descending: bool) -> Self:
+        def _rank(_input: ir.Expr) -> ir.Expr:
+            ibis = get_ibis()
+
+            order_by = _input.desc() if descending else _input.asc()
+            window = ibis.window(order_by=order_by)
+
+            if method == "dense":
+                rank_ = _input.dense_rank()
+            elif method == "ordinal":
+                rank_ = ibis.row_number().over(window)
+            else:
+                rank_ = _input.rank()
+
+            # Ibis uses 0-based ranking. Add 1 to match polars 1-based rank.
+            rank_ = rank_ + 1
+
+            # For "max" and "average", adjust using the count of rows in the partition.
+            if method == "max":
+                # Define a window partitioned by _input (i.e. each distinct value)
+                partition = ibis.window(group_by=[_input])
+                cnt = _input.count().over(partition)
+                rank_ = rank_ + cnt - 1
+            elif method == "average":
+                partition = ibis.window(group_by=[_input])
+                cnt = _input.count().over(partition)
+                rank_ = rank_ + (cnt - 1) / 2.0
+
+            return ibis.cases((_input.notnull(), rank_))
+
+        return self._with_callable(_rank)
 
     @property
     def str(self: Self) -> IbisExprStringNamespace:

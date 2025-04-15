@@ -226,7 +226,7 @@ def test_to_datetime_tz_aware(
         request.applymarker(pytest.mark.xfail)
     context = (
         pytest.raises(NotImplementedError)
-        if any(x in str(constructor) for x in ("duckdb",)) and format is None
+        if any(x in str(constructor) for x in ("duckdb", "ibis")) and format is None
         else does_not_raise()
     )
     df = nw.from_native(constructor({"a": ["2020-01-01T01:02:03+0100"]}))

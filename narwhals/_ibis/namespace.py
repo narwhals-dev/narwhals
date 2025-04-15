@@ -76,58 +76,52 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
         res = ibis.union(native_items[0], *native_items[1:])
         return first._with_native(res)
 
-    def concat_str(  # TODO(rwhitten577): IMPLEMENT
+    def concat_str(
         self: Self,
         *exprs: IbisExpr,
         separator: str,
         ignore_nulls: bool,
     ) -> IbisExpr:
         def func(df: IbisLazyFrame) -> list[ir.Expr]:
+            ibis = get_ibis()
+
             cols = [s for _expr in exprs for s in _expr(df)]
-            null_mask = [s.isnull() for _expr in exprs for s in _expr(df)]
+            cols_casted = [s.cast("string") for s in cols]
+            null_mask = [s.isnull() for s in cols]
 
             if not ignore_nulls:
                 null_mask_result = reduce(operator.or_, null_mask)
-                cols_separated = [
-                    y
-                    for x in [
-                        (col.cast(VARCHAR),)
-                        if i == len(cols) - 1
-                        else (col.cast(VARCHAR), lit(separator))
-                        for i, col in enumerate(cols)
-                    ]
-                    for y in x
-                ]
-                result = CaseExpression(
-                    condition=~null_mask_result,
-                    value=FunctionExpression("concat", *cols_separated),
+                result = ibis.cases(
+                    (
+                        ~null_mask_result,
+                        reduce(
+                            lambda x, y: x + separator + y,
+                            cols_casted,
+                        ),
+                    ),
+                    else_=None,
                 )
             else:
                 init_value, *values = [
-                    CaseExpression(~nm, col.cast(VARCHAR)).otherwise(lit(""))
-                    for col, nm in zip(cols, null_mask)
+                    ibis.cases((~nm, col), else_="")
+                    for col, nm in zip(cols_casted, null_mask)
                 ]
+
                 separators = (
-                    CaseExpression(nm, lit("")).otherwise(lit(separator))
-                    for nm in null_mask[:-1]
+                    ibis.cases((nm, ""), else_=separator) for nm in null_mask[:-1]
                 )
                 result = reduce(
-                    lambda x, y: FunctionExpression("concat", x, y),
-                    (
-                        FunctionExpression("concat", s, v)
-                        for s, v in zip(separators, values)
-                    ),
+                    lambda x, y: x + y,
+                    (s + v for s, v in zip(separators, values)),
                     init_value,
                 )
 
             return [result]
 
-        return IbisExpr(
+        return self._expr(
             call=func,
-            function_name="concat_str",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            expr_kind=n_ary_operation_expr_kind(*exprs),
             backend_version=self._backend_version,
             version=self._version,
         )
@@ -268,9 +262,19 @@ class IbisWhen(LazyWhen["IbisLazyFrame", "ir.Expr", IbisExpr]):
     def __call__(self: Self, df: IbisLazyFrame) -> Sequence[ir.Expr]:
         ibis = get_ibis()
 
-        self.when = ibis.ifelse
-        self.lit = ibis.literal
-        return super().__call__(df)
+        is_expr = self._condition._is_expr
+        condition = df._evaluate_expr(self._condition)
+        then_ = self._then_value
+        then = df._evaluate_expr(then_) if is_expr(then_) else ibis.literal(then_)
+        other_ = self._otherwise_value
+        if other_ is None:
+            result = ibis.cases((condition, then))
+        else:
+            otherwise = (
+                df._evaluate_expr(other_) if is_expr(other_) else ibis.literal(other_)
+            )
+            result = ibis.cases((condition, then), else_=otherwise)
+        return [result]
 
 
 class IbisThen(CompliantThen["IbisLazyFrame", "ir.Expr", IbisExpr], IbisExpr): ...
