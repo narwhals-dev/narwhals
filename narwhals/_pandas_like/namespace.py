@@ -5,7 +5,6 @@ import warnings
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
@@ -27,7 +26,6 @@ if TYPE_CHECKING:
 
     from narwhals._pandas_like.typing import NDFrameT
     from narwhals.dtypes import DType
-    from narwhals.typing import ConcatMethod
     from narwhals.typing import NonNestedLiteral
     from narwhals.utils import Implementation
     from narwhals.utils import Version
@@ -276,20 +274,6 @@ class PandasLikeNamespace(
         if self._implementation.is_pandas() and self._backend_version < (3,):
             return self._concat(dfs, axis=VERTICAL, copy=False)
         return self._concat(dfs, axis=VERTICAL)
-
-    def concat(
-        self, items: Iterable[PandasLikeDataFrame], *, how: ConcatMethod
-    ) -> PandasLikeDataFrame:
-        dfs: list[pd.DataFrame] = [item.native for item in items]
-        if how == "horizontal":
-            native = self._concat_horizontal(dfs)
-        elif how == "vertical":
-            native = self._concat_vertical(dfs)
-        elif how == "diagonal":
-            native = self._concat_diagonal(dfs)
-        else:
-            raise NotImplementedError
-        return self._dataframe.from_native(native, context=self)
 
     def when(self: Self, predicate: PandasLikeExpr) -> PandasWhen:
         return PandasWhen.from_expr(predicate, context=self)

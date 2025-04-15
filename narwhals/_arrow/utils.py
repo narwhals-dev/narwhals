@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -280,52 +279,6 @@ def align_series_full_broadcast(*series: ArrowSeries) -> Sequence[ArrowSeries]:
             reshaped.append(s)
 
     return reshaped
-
-
-def horizontal_concat(dfs: list[pa.Table]) -> pa.Table:
-    """Concatenate (native) DataFrames horizontally.
-
-    Should be in namespace.
-    """
-    names = [name for df in dfs for name in df.column_names]
-
-    if len(set(names)) < len(names):  # pragma: no cover
-        msg = "Expected unique column names"
-        raise ValueError(msg)
-    arrays = list(chain.from_iterable(df.itercolumns() for df in dfs))
-    return pa.Table.from_arrays(arrays, names=names)
-
-
-def vertical_concat(dfs: list[pa.Table]) -> pa.Table:
-    """Concatenate (native) DataFrames vertically.
-
-    Should be in namespace.
-    """
-    cols_0 = dfs[0].column_names
-    for i, df in enumerate(dfs[1:], start=1):
-        cols_current = df.column_names
-        if cols_current != cols_0:
-            msg = (
-                "unable to vstack, column names don't match:\n"
-                f"   - dataframe 0: {cols_0}\n"
-                f"   - dataframe {i}: {cols_current}\n"
-            )
-            raise TypeError(msg)
-
-    return pa.concat_tables(dfs)
-
-
-def diagonal_concat(dfs: list[pa.Table], backend_version: tuple[int, ...]) -> pa.Table:
-    """Concatenate (native) DataFrames diagonally.
-
-    Should be in namespace.
-    """
-    kwargs: dict[str, Any] = (
-        {"promote": True}
-        if backend_version < (14, 0, 0)
-        else {"promote_options": "default"}
-    )
-    return pa.concat_tables(dfs, **kwargs)
 
 
 def floordiv_compat(left: ArrayOrScalarAny, right: ArrayOrScalarAny) -> Any:
