@@ -76,7 +76,7 @@ class PolarsGroupBy:
 
 class PolarsLazyGroupBy:
     _compliant_frame: PolarsLazyFrame
-    _keys: list[PolarsExpr]
+    _keys: list[PolarsExpr] | list[str]
     _grouped: NativeLazyGroupBy
     _drop_null_keys: bool
     _output_names: list[str]

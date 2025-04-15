@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import JoinStrategy
+    from narwhals.typing import PivotAgg
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -77,7 +78,6 @@ class PolarsDataFrame:
     select: Method[Self]
     sort: Method[Self]
     to_arrow: Method[pa.Table]
-    to_numpy: Method[_2DArray]
     to_pandas: Method[pd.DataFrame]
     unique: Method[Self]
     with_columns: Method[Self]
@@ -230,6 +230,9 @@ class PolarsDataFrame:
         if self._backend_version < (0, 20, 28):
             return self.native.__array__(dtype)
         return self.native.__array__(dtype)
+
+    def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
+        return self.native.to_numpy()
 
     def collect_schema(self: Self) -> dict[str, DType]:
         if self._backend_version < (1,):
@@ -416,15 +419,12 @@ class PolarsDataFrame:
         )
 
     def pivot(
-        self: Self,
-        on: list[str],
+        self,
+        on: Sequence[str],
         *,
-        index: list[str] | None,
-        values: list[str] | None,
-        aggregate_function: Literal[
-            "min", "max", "first", "last", "sum", "mean", "median", "len"
-        ]
-        | None,
+        index: Sequence[str] | None,
+        values: Sequence[str] | None,
+        aggregate_function: PivotAgg | None,
         sort_columns: bool,
         separator: str,
     ) -> Self:

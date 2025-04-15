@@ -280,6 +280,7 @@ class PolarsExpr:
     arg_max: Method[Self]
     arg_min: Method[Self]
     arg_true: Method[Self]
+    clip: Method[Self]
     count: Method[Self]
     cum_max: Method[Self]
     cum_min: Method[Self]

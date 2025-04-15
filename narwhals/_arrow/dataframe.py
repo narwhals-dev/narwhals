@@ -845,3 +845,5 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         )
         # TODO(Unassigned): Even with promote_options="permissive", pyarrow does not
         # upcast numeric to non-numeric (e.g. string) datatypes
+
+    pivot = not_implemented()
