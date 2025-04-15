@@ -952,7 +952,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
 
                 arr: Any = np.hstack(
                     [
-                        self[col].to_numpy(copy=copy, dtype=None)[:, None]
+                        self.get_column(col).to_numpy(copy=copy, dtype=None)[:, None]
                         for col in self.columns
                     ]
                 )

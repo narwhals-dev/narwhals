@@ -854,7 +854,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         return counts.filter(
             plx.col(col_token)
             == plx.col(col_token).max().broadcast(kind=ExprKind.AGGREGATION)
-        )[self.name]
+        ).get_column(self.name)
 
     def is_finite(self: Self) -> Self:
         return self._with_native(pc.is_finite(self.native))
