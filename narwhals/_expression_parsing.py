@@ -25,9 +25,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
     from narwhals._compliant import CompliantExpr
-    from narwhals._compliant import CompliantExprT
     from narwhals._compliant import CompliantFrameT
-    from narwhals._compliant import CompliantNamespace
     from narwhals._compliant.typing import AliasNames
     from narwhals._compliant.typing import CompliantExprAny
     from narwhals._compliant.typing import CompliantFrameAny
@@ -36,6 +34,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import EvalNames
     from narwhals.expr import Expr
     from narwhals.typing import IntoExpr
+    from narwhals.typing import NonNestedLiteral
     from narwhals.typing import _1DArray
 
     T = TypeVar("T")
@@ -76,8 +75,11 @@ def combine_alias_output_names(*exprs: CompliantExprAny) -> AliasNames | None:
 
 
 def extract_compliant(
-    plx: CompliantNamespace[Any, CompliantExprT], other: Any, *, str_as_lit: bool
-) -> CompliantExprT | object:
+    plx: CompliantNamespaceAny,
+    other: IntoExpr | NonNestedLiteral | _1DArray,
+    *,
+    str_as_lit: bool,
+) -> CompliantExprAny | NonNestedLiteral:
     if is_expr(other):
         return other._to_compliant_expr(plx)
     if isinstance(other, str) and not str_as_lit:
@@ -469,7 +471,9 @@ def all_exprs_are_scalar_like(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
     return all(is_expr(x) and x._metadata.kind.is_scalar_like() for x in exprs)
 
 
-def infer_kind(obj: IntoExpr | _1DArray | object, *, str_as_lit: bool) -> ExprKind:
+def infer_kind(
+    obj: IntoExpr | NonNestedLiteral | _1DArray, *, str_as_lit: bool
+) -> ExprKind:
     if is_expr(obj):
         return obj._metadata.kind
     if (
@@ -482,7 +486,10 @@ def infer_kind(obj: IntoExpr | _1DArray | object, *, str_as_lit: bool) -> ExprKi
 
 
 def apply_n_ary_operation(
-    plx: CompliantNamespaceAny, function: Any, *comparands: IntoExpr, str_as_lit: bool
+    plx: CompliantNamespaceAny,
+    function: Any,
+    *comparands: IntoExpr | NonNestedLiteral | _1DArray,
+    str_as_lit: bool,
 ) -> CompliantExprAny:
     compliant_exprs = (
         extract_compliant(plx, comparand, str_as_lit=str_as_lit)
