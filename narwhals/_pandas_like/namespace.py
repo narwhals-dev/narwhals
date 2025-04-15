@@ -5,7 +5,6 @@ import warnings
 from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
@@ -27,7 +26,7 @@ if TYPE_CHECKING:
 
     from narwhals._pandas_like.typing import NDFrameT
     from narwhals.dtypes import DType
-    from narwhals.typing import ConcatMethod
+    from narwhals.typing import NonNestedLiteral
     from narwhals.utils import Implementation
     from narwhals.utils import Version
 
@@ -71,7 +70,9 @@ class PandasLikeNamespace(
         self._backend_version = backend_version
         self._version = version
 
-    def lit(self: Self, value: Any, dtype: DType | type[DType] | None) -> PandasLikeExpr:
+    def lit(
+        self, value: NonNestedLiteral, dtype: DType | type[DType] | None
+    ) -> PandasLikeExpr:
         def _lit_pandas_series(df: PandasLikeDataFrame) -> PandasLikeSeries:
             pandas_series = self._series.from_iterable(
                 data=[value],
@@ -274,20 +275,6 @@ class PandasLikeNamespace(
             return self._concat(dfs, axis=VERTICAL, copy=False)
         return self._concat(dfs, axis=VERTICAL)
 
-    def concat(
-        self, items: Iterable[PandasLikeDataFrame], *, how: ConcatMethod
-    ) -> PandasLikeDataFrame:
-        dfs: list[pd.DataFrame] = [item.native for item in items]
-        if how == "horizontal":
-            native = self._concat_horizontal(dfs)
-        elif how == "vertical":
-            native = self._concat_vertical(dfs)
-        elif how == "diagonal":
-            native = self._concat_diagonal(dfs)
-        else:
-            raise NotImplementedError
-        return self._dataframe.from_native(native, context=self)
-
     def when(self: Self, predicate: PandasLikeExpr) -> PandasWhen:
         return PandasWhen.from_expr(predicate, context=self)
 
@@ -349,7 +336,11 @@ class PandasWhen(
         return PandasThen
 
     def _if_then_else(
-        self, when: pd.Series[Any], then: pd.Series[Any], otherwise: Any, /
+        self,
+        when: pd.Series[Any],
+        then: pd.Series[Any],
+        otherwise: pd.Series[Any] | NonNestedLiteral,
+        /,
     ) -> pd.Series[Any]:
         return then.where(when) if otherwise is None else then.where(when, otherwise)
 

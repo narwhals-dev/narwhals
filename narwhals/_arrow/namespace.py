@@ -4,9 +4,8 @@ import operator
 from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING
-from typing import Any
-from typing import Iterable
 from typing import Literal
+from typing import Sequence
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -17,9 +16,6 @@ from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import align_series_full_broadcast
 from narwhals._arrow.utils import cast_to_comparable_string_types
-from narwhals._arrow.utils import diagonal_concat
-from narwhals._arrow.utils import horizontal_concat
-from narwhals._arrow.utils import vertical_concat
 from narwhals._compliant import CompliantThen
 from narwhals._compliant import EagerNamespace
 from narwhals._compliant import EagerWhen
@@ -31,10 +27,11 @@ from narwhals.utils import import_dtypes_module
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals._arrow.typing import ArrayOrScalarAny
     from narwhals._arrow.typing import ArrowChunkedArray
     from narwhals._arrow.typing import Incomplete
     from narwhals.dtypes import DType
-    from narwhals.typing import ConcatMethod
+    from narwhals.typing import NonNestedLiteral
     from narwhals.utils import Version
 
 
@@ -77,7 +74,9 @@ class ArrowNamespace(
             version=self._version,
         )
 
-    def lit(self: Self, value: Any, dtype: DType | type[DType] | None) -> ArrowExpr:
+    def lit(
+        self, value: NonNestedLiteral, dtype: DType | type[DType] | None
+    ) -> ArrowExpr:
         def _lit_arrow_series(_: ArrowDataFrame) -> ArrowSeries:
             arrow_series = ArrowSeries.from_iterable(
                 data=[value], name="literal", context=self
@@ -211,30 +210,29 @@ class ArrowNamespace(
             context=self,
         )
 
-    def concat(
-        self, items: Iterable[ArrowDataFrame], *, how: ConcatMethod
-    ) -> ArrowDataFrame:
-        dfs = [item.native for item in items]
+    # NOTE: Stub issue fixed in https://github.com/zen-xu/pyarrow-stubs/pull/203
+    def _concat_diagonal(self, dfs: Sequence[pa.Table], /) -> pa.Table:
+        if self._backend_version >= (14,):
+            return pa.concat_tables(dfs, promote_options="default")  # type: ignore[arg-type]
+        return pa.concat_tables(dfs, promote=True)  # type: ignore[arg-type] # pragma: no cover
 
-        if not dfs:
-            msg = "No dataframes to concatenate"  # pragma: no cover
-            raise AssertionError(msg)
+    def _concat_horizontal(self, dfs: Sequence[pa.Table], /) -> pa.Table:
+        names = list(chain.from_iterable(df.column_names for df in dfs))
+        arrays = list(chain.from_iterable(df.itercolumns() for df in dfs))
+        return pa.Table.from_arrays(arrays, names=names)
 
-        if how == "horizontal":
-            result_table = horizontal_concat(dfs)
-        elif how == "vertical":
-            result_table = vertical_concat(dfs)
-        elif how == "diagonal":
-            result_table = diagonal_concat(dfs, self._backend_version)
-        else:
-            raise NotImplementedError
-
-        return ArrowDataFrame(
-            result_table,
-            backend_version=self._backend_version,
-            version=self._version,
-            validate_column_names=True,
-        )
+    def _concat_vertical(self, dfs: Sequence[pa.Table], /) -> pa.Table:
+        cols_0 = dfs[0].column_names
+        for i, df in enumerate(dfs[1:], start=1):
+            cols_current = df.column_names
+            if cols_current != cols_0:
+                msg = (
+                    "unable to vstack, column names don't match:\n"
+                    f"   - dataframe 0: {cols_0}\n"
+                    f"   - dataframe {i}: {cols_current}\n"
+                )
+                raise TypeError(msg)
+        return pa.concat_tables(dfs)  # type: ignore[arg-type]
 
     @property
     def selectors(self: Self) -> ArrowSelectorNamespace:
@@ -287,7 +285,11 @@ class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ArrowChunkedA
         return ArrowThen
 
     def _if_then_else(
-        self, when: ArrowChunkedArray, then: ArrowChunkedArray, otherwise: Any, /
+        self,
+        when: ArrowChunkedArray,
+        then: ArrowChunkedArray,
+        otherwise: ArrayOrScalarAny | NonNestedLiteral,
+        /,
     ) -> ArrowChunkedArray:
         otherwise = pa.nulls(len(when), then.type) if otherwise is None else otherwise
         return pc.if_else(when, then, otherwise)

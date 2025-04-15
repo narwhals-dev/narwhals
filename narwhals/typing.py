@@ -12,6 +12,8 @@ from narwhals._compliant import CompliantLazyFrame
 from narwhals._compliant import CompliantSeries
 
 if TYPE_CHECKING:
+    import datetime as dt
+    from decimal import Decimal
     from types import ModuleType
     from typing import Iterable
     from typing import Sized
@@ -57,7 +59,7 @@ as it can either accept a `nw.Expr` (e.g. `df.select(nw.col('a'))`) or a string
 which will be interpreted as a `nw.Expr`, e.g. `df.select('a')`.
 """
 
-IntoDataFrame: TypeAlias = Union["NativeFrame", "DataFrame[Any]", "DataFrameLike"]
+IntoDataFrame: TypeAlias = Union["NativeFrame", "DataFrameLike"]
 """Anything which can be converted to a Narwhals DataFrame.
 
 Use this if your function accepts a narwhalifiable object but doesn't care about its backend.
@@ -70,11 +72,9 @@ Examples:
     ...     return df.shape
 """
 
-IntoLazyFrame: TypeAlias = "NativeLazyFrame | LazyFrame[Any]"
+IntoLazyFrame: TypeAlias = "NativeLazyFrame"
 
-IntoFrame: TypeAlias = Union[
-    "NativeFrame", "DataFrame[Any]", "LazyFrame[Any]", "DataFrameLike"
-]
+IntoFrame: TypeAlias = Union["IntoDataFrame", "IntoLazyFrame"]
 """Anything which can be converted to a Narwhals DataFrame or LazyFrame.
 
 Use this if your function can accept an object which can be converted to either
@@ -300,6 +300,14 @@ _AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
 _NumpyScalar: TypeAlias = "np.generic[Any]"
 Into1DArray: TypeAlias = "_1DArray | _NumpyScalar"
 """A 1-dimensional `numpy.ndarray` or scalar that can be converted into one."""
+
+
+NumericLiteral: TypeAlias = "int | float | Decimal"
+TemporalLiteral: TypeAlias = "dt.date | dt.datetime | dt.time | dt.timedelta"
+NonNestedLiteral: TypeAlias = (
+    "NumericLiteral | TemporalLiteral | str | bool | bytes | None"
+)
+PythonLiteral: TypeAlias = "NonNestedLiteral | list[Any] | tuple[Any, ...]"
 
 
 # ruff: noqa: N802
