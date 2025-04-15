@@ -37,12 +37,14 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._compliant.group_by import CompliantGroupBy
+    from narwhals._compliant.group_by import DataFrameGroupBy
     from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import AsofJoinStrategy
     from narwhals.typing import JoinStrategy
     from narwhals.typing import LazyUniqueKeepStrategy
+    from narwhals.typing import PivotAgg
     from narwhals.typing import SizeUnit
     from narwhals.typing import UniqueKeepStrategy
     from narwhals.typing import _2DArray
@@ -136,7 +138,7 @@ class CompliantDataFrame(
     def get_column(self, name: str) -> CompliantSeriesT: ...
     def group_by(
         self, *keys: str, drop_null_keys: bool
-    ) -> CompliantGroupBy[Self, Any]: ...
+    ) -> DataFrameGroupBy[Self, Any]: ...
     def head(self, n: int) -> Self: ...
     def item(self, row: int | None, column: int | str | None) -> Any: ...
     def iter_columns(self) -> Iterator[CompliantSeriesT]: ...
@@ -165,6 +167,16 @@ class CompliantDataFrame(
         suffix: str,
     ) -> Self: ...
     def lazy(self, *, backend: Implementation | None) -> CompliantLazyFrame[Any, Any]: ...
+    def pivot(
+        self,
+        on: Sequence[str],
+        *,
+        index: Sequence[str] | None,
+        values: Sequence[str] | None,
+        aggregate_function: PivotAgg | None,
+        sort_columns: bool,
+        separator: str,
+    ) -> Self: ...
     def rename(self, mapping: Mapping[str, str]) -> Self: ...
     def row(self, index: int) -> tuple[Any, ...]: ...
     def rows(

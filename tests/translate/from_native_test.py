@@ -1,5 +1,25 @@
+"""`from_native` runtime and static typing tests.
+
+# Static Typing
+The style of the tests is *intentionally* repetitive, aiming to provide an individual scope
+for each attempted `@overload` match.
+
+## `mypy` ignores
+[inline config] is used to prevent [mypy specific errors] from hiding `pyright` diagnostics.
+
+[`--disallow-any-generics`] and [`var-annotated`] are ignored to verify we don't regress to
+**prior false positive** behaviors identified in [#2239].
+
+[inline config]: https://mypy.readthedocs.io/en/stable/inline_config.html
+[mypy specific errors]: https://discuss.python.org/t/ignore-mypy-specific-type-errors/58535
+[`--disallow-any-generics`]: https://mypy.readthedocs.io/en/stable/error_code_list2.html#check-that-type-arguments-exist-type-arg
+[`var-annotated`]: https://mypy.readthedocs.io/en/stable/error_code_list.html#require-annotation-if-variable-type-is-unclear-var-annotated
+[#2239]: https://github.com/narwhals-dev/narwhals/issues/2239
+"""
+
 from __future__ import annotations
 
+# mypy: disallow-any-generics=false, disable-error-code="var-annotated"
 import sys
 from contextlib import nullcontext as does_not_raise
 from importlib.util import find_spec
@@ -371,6 +391,95 @@ def test_from_native_lazyframe() -> None:
     assert isinstance(unstable_lazy, nw.LazyFrame)
 
 
+def test_dataframe_recursive() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    pl_frame = pl.DataFrame({"a": [1, 2, 3]})
+    nw_frame = nw.from_native(pl_frame)
+    with pytest.raises(AssertionError):
+        nw.DataFrame(nw_frame, level="full")
+
+    nw_frame_early_return = nw.from_native(nw_frame)
+
+    if TYPE_CHECKING:
+        assert_type(pl_frame, pl.DataFrame)
+        assert_type(nw_frame, nw.DataFrame[pl.DataFrame])
+
+        nw_frame_depth_2 = nw.DataFrame(nw_frame, level="full")
+        # NOTE: Checking that the type is `DataFrame[Unknown]`
+        assert_type(nw_frame_depth_2, nw.DataFrame)
+        assert_type(nw_frame_early_return, nw.DataFrame[pl.DataFrame])
+
+
+def test_lazyframe_recursive() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    pl_frame = pl.DataFrame({"a": [1, 2, 3]}).lazy()
+    nw_frame = nw.from_native(pl_frame)
+    with pytest.raises(AssertionError):
+        nw.LazyFrame(nw_frame, level="lazy")
+
+    nw_frame_early_return = nw.from_native(nw_frame)
+
+    if TYPE_CHECKING:
+        assert_type(pl_frame, pl.LazyFrame)
+        assert_type(nw_frame, nw.LazyFrame[pl.LazyFrame])
+
+        nw_frame_depth_2 = nw.LazyFrame(nw_frame, level="lazy")
+        # NOTE: Checking that the type is `LazyFrame[Unknown]`
+        assert_type(nw_frame_depth_2, nw.LazyFrame)
+        assert_type(nw_frame_early_return, nw.LazyFrame[pl.LazyFrame])
+
+
+def test_dataframe_recursive_v1() -> None:
+    """`v1` always returns a `Union` for `DataFrame`."""
+    pytest.importorskip("polars")
+    import polars as pl
+
+    pl_frame = pl.DataFrame({"a": [1, 2, 3]})
+    nw_frame = nw_v1.from_native(pl_frame)
+    with pytest.raises(AssertionError):
+        nw_v1.DataFrame(nw_frame, level="full")
+
+    nw_frame_early_return = nw_v1.from_native(nw_frame)
+
+    if TYPE_CHECKING:
+        assert_type(pl_frame, pl.DataFrame)
+        assert_type(
+            nw_frame, "nw_v1.DataFrame[pl.DataFrame] | nw_v1.LazyFrame[pl.DataFrame]"
+        )
+        nw_frame_depth_2 = nw_v1.DataFrame(nw_frame, level="full")
+        assert_type(nw_frame_depth_2, nw_v1.DataFrame)
+        # NOTE: Checking that the type is `DataFrame[Unknown]`
+        assert_type(
+            nw_frame_early_return,
+            "nw_v1.DataFrame[pl.DataFrame] | nw_v1.LazyFrame[pl.DataFrame]",
+        )
+
+
+def test_lazyframe_recursive_v1() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    pl_frame = pl.DataFrame({"a": [1, 2, 3]}).lazy()
+    nw_frame = nw_v1.from_native(pl_frame)
+    with pytest.raises(AssertionError):
+        nw_v1.LazyFrame(nw_frame, level="lazy")
+
+    nw_frame_early_return = nw_v1.from_native(nw_frame)
+
+    if TYPE_CHECKING:
+        assert_type(pl_frame, pl.LazyFrame)
+        assert_type(nw_frame, nw_v1.LazyFrame[pl.LazyFrame])
+
+        nw_frame_depth_2 = nw_v1.LazyFrame(nw_frame, level="lazy")
+        # NOTE: Checking that the type is `LazyFrame[Unknown]`
+        assert_type(nw_frame_depth_2, nw_v1.LazyFrame)
+        assert_type(nw_frame_early_return, nw_v1.LazyFrame[pl.LazyFrame])
+
+
 def test_series_recursive() -> None:
     """https://github.com/narwhals-dev/narwhals/issues/2239."""
     pytest.importorskip("polars")
@@ -387,9 +496,9 @@ def test_series_recursive() -> None:
         assert_type(pl_series, pl.Series)
         assert_type(nw_series, nw.Series[pl.Series])
 
-        nw_series_depth_2 = nw.Series(nw_series, level="full")  # type: ignore[var-annotated]
+        nw_series_depth_2 = nw.Series(nw_series, level="full")
         # NOTE: Checking that the type is `Series[Unknown]`
-        assert_type(nw_series_depth_2, nw.Series)  # type: ignore[type-arg]
+        assert_type(nw_series_depth_2, nw.Series)
         assert_type(nw_series_early_return, nw.Series[pl.Series])
 
 

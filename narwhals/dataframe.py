@@ -33,11 +33,13 @@ from narwhals.utils import Implementation
 from narwhals.utils import find_stacklevel
 from narwhals.utils import flatten
 from narwhals.utils import generate_repr
+from narwhals.utils import is_compliant_dataframe
 from narwhals.utils import is_compliant_lazyframe
 from narwhals.utils import is_list_of
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import issue_deprecation_warning
 from narwhals.utils import parse_version
+from narwhals.utils import supports_arrow_c_stream
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -51,6 +53,8 @@ if TYPE_CHECKING:
     from typing_extensions import ParamSpec
     from typing_extensions import Self
 
+    from narwhals._compliant import CompliantDataFrame
+    from narwhals._compliant import CompliantLazyFrame
     from narwhals._compliant import IntoCompliantExpr
     from narwhals._compliant.typing import EagerNamespaceAny
     from narwhals.group_by import GroupBy
@@ -443,14 +447,13 @@ class DataFrame(BaseFrame[DataFrameT]):
         return LazyFrame
 
     def __init__(
-        self: Self,
-        df: Any,
-        *,
-        level: Literal["full", "lazy", "interchange"],
+        self: Self, df: Any, *, level: Literal["full", "lazy", "interchange"]
     ) -> None:
         self._level: Literal["full", "lazy", "interchange"] = level
-        if hasattr(df, "__narwhals_dataframe__"):
-            self._compliant_frame: Any = df.__narwhals_dataframe__()
+        # NOTE: Interchange support (`DataFrameLike`) is the source of the error
+        self._compliant_frame: CompliantDataFrame[Any, Any, DataFrameT]  # type: ignore[type-var]
+        if is_compliant_dataframe(df):
+            self._compliant_frame = df.__narwhals_dataframe__()
         else:  # pragma: no cover
             msg = f"Expected an object which implements `__narwhals_dataframe__`, got: {type(df)}"
             raise AssertionError(msg)
@@ -479,13 +482,13 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> df.implementation.is_polars()
             False
         """
-        return self._compliant_frame._implementation  # type: ignore[no-any-return]
+        return self._compliant_frame._implementation
 
     def __len__(self: Self) -> int:
-        return self._compliant_frame.__len__()  # type: ignore[no-any-return]
+        return self._compliant_frame.__len__()
 
     def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> _2DArray:  # noqa: FBT001
-        return self._compliant_frame.__array__(dtype, copy=copy)  # type: ignore[no-any-return]
+        return self._compliant_frame.__array__(dtype, copy=copy)
 
     def __repr__(self: Self) -> str:  # pragma: no cover
         return generate_repr("Narwhals DataFrame", self.to_native().__repr__())
@@ -500,7 +503,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         for more.
         """
         native_frame = self._compliant_frame._native_frame
-        if hasattr(native_frame, "__arrow_c_stream__"):
+        if supports_arrow_c_stream(native_frame):
             return native_frame.__arrow_c_stream__(requested_schema=requested_schema)
         try:
             import pyarrow as pa  # ignore-banned-import
@@ -589,8 +592,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             )
             raise ValueError(msg)
         return self._lazyframe(
-            self._compliant_frame.lazy(backend=lazy_backend),
-            level="lazy",
+            self._compliant_frame.lazy(backend=lazy_backend), level="lazy"
         )
 
     def to_native(self: Self) -> DataFrameT:
@@ -614,7 +616,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             1    2  7.0   b
             2    3  8.0   c
         """
-        return self._compliant_frame._native_frame  # type: ignore[no-any-return]
+        return self._compliant_frame._native_frame
 
     def to_pandas(self: Self) -> pd.DataFrame:
         """Convert this DataFrame to a pandas DataFrame.
@@ -635,7 +637,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             1    2  7.0   b
             2    3  8.0   c
         """
-        return self._compliant_frame.to_pandas()  # type: ignore[no-any-return]
+        return self._compliant_frame.to_pandas()
 
     def to_polars(self: Self) -> pl.DataFrame:
         """Convert this DataFrame to a polars DataFrame.
@@ -659,7 +661,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             │ 2   ┆ 7.0 │
             └─────┴─────┘
         """
-        return self._compliant_frame.to_polars()  # type: ignore[no-any-return]
+        return self._compliant_frame.to_polars()
 
     @overload
     def write_csv(self: Self, file: None = None) -> str: ...
@@ -690,7 +692,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             If we had passed a file name to `write_csv`, it would have been
             written to that file.
         """
-        return self._compliant_frame.write_csv(file)  # type: ignore[no-any-return]
+        return self._compliant_frame.write_csv(file)
 
     def write_parquet(self: Self, file: str | Path | BytesIO) -> None:
         """Write dataframe to parquet file.
@@ -726,7 +728,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             array([[1. , 6.5],
                    [2. , 7. ]])
         """
-        return self._compliant_frame.to_numpy()  # type: ignore[no-any-return]
+        return self._compliant_frame.to_numpy(None, copy=None)
 
     @property
     def shape(self: Self) -> tuple[int, int]:
@@ -743,7 +745,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> df.shape
             (2, 1)
         """
-        return self._compliant_frame.shape  # type: ignore[no-any-return]
+        return self._compliant_frame.shape
 
     def get_column(self: Self, name: str) -> Series[Any]:
         """Get a single column by name.
@@ -771,10 +773,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             1    2
             Name: a, dtype: int64
         """
-        return self._series(
-            self._compliant_frame.get_column(name),
-            level=self._level,
-        )
+        return self._series(self._compliant_frame.get_column(name), level=self._level)
 
     def estimated_size(self: Self, unit: SizeUnit = "b") -> int | float:
         """Return an estimation of the total (heap) allocated size of the `DataFrame`.
@@ -796,7 +795,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> df.estimated_size()
             32
         """
-        return self._compliant_frame.estimated_size(unit=unit)  # type: ignore[no-any-return]
+        return self._compliant_frame.estimated_size(unit=unit)
 
     @overload
     def __getitem__(  # type: ignore[overload-overlap]
@@ -952,15 +951,12 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         if as_series:
             return {
-                key: self._series(
-                    value,
-                    level=self._level,
-                )
+                key: self._series(value, level=self._level)
                 for key, value in self._compliant_frame.to_dict(
                     as_series=as_series
                 ).items()
             }
-        return self._compliant_frame.to_dict(as_series=as_series)  # type: ignore[no-any-return]
+        return self._compliant_frame.to_dict(as_series=as_series)
 
     def row(self: Self, index: int) -> tuple[Any, ...]:
         """Get values at given row.
@@ -986,7 +982,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> nw.from_native(df_native).row(1)
             (<pyarrow.Int64Scalar: 2>, <pyarrow.Int64Scalar: 5>)
         """
-        return self._compliant_frame.row(index)  # type: ignore[no-any-return]
+        return self._compliant_frame.row(index)
 
     # inherited
     def pipe(
@@ -1152,7 +1148,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> nw.from_native(df_native).rows()
             [(1, 6.0), (2, 7.0)]
         """
-        return self._compliant_frame.rows(named=named)  # type: ignore[no-any-return]
+        return self._compliant_frame.rows(named=named)  # type: ignore[return-value]
 
     def iter_columns(self: Self) -> Iterator[Series[Any]]:
         """Returns an iterator over the columns of this DataFrame.
@@ -1229,7 +1225,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> next(iter_rows)
             (2, 7.0)
         """
-        return self._compliant_frame.iter_rows(named=named, buffer_size=buffer_size)  # type: ignore[no-any-return]
+        return self._compliant_frame.iter_rows(named=named, buffer_size=buffer_size)  # type: ignore[return-value]
 
     def with_columns(
         self: Self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
@@ -1436,9 +1432,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         if isinstance(subset, str):
             subset = [subset]
         return self._with_compliant(
-            self._compliant_frame.unique(
-                subset=subset, keep=keep, maintain_order=maintain_order
-            )
+            self._compliant_frame.unique(subset, keep=keep, maintain_order=maintain_order)
         )
 
     def filter(
@@ -1794,10 +1788,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             |  dtype: bool  |
             └───────────────┘
         """
-        return self._series(
-            self._compliant_frame.is_unique(),
-            level=self._level,
-        )
+        return self._series(self._compliant_frame.is_unique(), level=self._level)
 
     def null_count(self: Self) -> Self:
         r"""Create a new DataFrame that shows the null counts per column.
@@ -1987,7 +1978,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             foo: [[1,null]]
             bar: [[2,3]]
         """
-        return self._compliant_frame.to_arrow()  # type: ignore[no-any-return]
+        return self._compliant_frame.to_arrow()
 
     def sample(
         self: Self,
@@ -2185,15 +2176,11 @@ class LazyFrame(BaseFrame[FrameT]):
         return DataFrame
 
     def __init__(
-        self: Self,
-        df: Any,
-        *,
-        level: Literal["full", "lazy", "interchange"],
+        self: Self, df: Any, *, level: Literal["full", "lazy", "interchange"]
     ) -> None:
         self._level = level
+        self._compliant_frame: CompliantLazyFrame[Any, FrameT]  # type: ignore[type-var]
         if is_compliant_lazyframe(df):
-            # NOTE: Blocked by (#2239)
-            # self._compliant_frame: CompliantLazyFrame[Any, FrameT] = df.__narwhals_lazyframe__()  # noqa: ERA001
             self._compliant_frame = df.__narwhals_lazyframe__()
         else:  # pragma: no cover
             msg = f"Expected Polars LazyFrame or an object that implements `__narwhals_lazyframe__`, got: {type(df)}"
@@ -2219,7 +2206,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> nw.from_native(lf_native).implementation
             <Implementation.DASK: 7>
         """
-        return self._compliant_frame._implementation  # type: ignore[no-any-return]
+        return self._compliant_frame._implementation
 
     def __getitem__(self: Self, item: str | slice) -> NoReturn:
         msg = "Slicing is not supported on LazyFrame"
