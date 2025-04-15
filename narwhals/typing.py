@@ -12,6 +12,8 @@ from narwhals._compliant import CompliantLazyFrame
 from narwhals._compliant import CompliantSeries
 
 if TYPE_CHECKING:
+    import datetime as dt
+    from decimal import Decimal
     from types import ModuleType
     from typing import Iterable
     from typing import Sized
@@ -298,6 +300,14 @@ _AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
 _NumpyScalar: TypeAlias = "np.generic[Any]"
 Into1DArray: TypeAlias = "_1DArray | _NumpyScalar"
 """A 1-dimensional `numpy.ndarray` or scalar that can be converted into one."""
+
+
+NumericLiteral: TypeAlias = "int | float | Decimal"
+TemporalLiteral: TypeAlias = "dt.date | dt.datetime | dt.time | dt.timedelta"
+NonNestedLiteral: TypeAlias = (
+    "NumericLiteral | TemporalLiteral | str | bool | bytes | None"
+)
+PythonLiteral: TypeAlias = "NonNestedLiteral | list[Any] | tuple[Any, ...]"
 
 
 # ruff: noqa: N802

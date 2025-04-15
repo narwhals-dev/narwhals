@@ -97,6 +97,7 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoFrame
     from narwhals.typing import IntoLazyFrameT
     from narwhals.typing import IntoSeries
+    from narwhals.typing import NonNestedLiteral
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
 
@@ -1389,7 +1390,7 @@ def len() -> Expr:
     return _stableify(nw.len())
 
 
-def lit(value: Any, dtype: DType | type[DType] | None = None) -> Expr:
+def lit(value: NonNestedLiteral, dtype: DType | type[DType] | None = None) -> Expr:
     """Return an expression representing a literal value.
 
     Arguments:
@@ -1619,21 +1620,19 @@ def concat_str(
 
 class When(NwWhen):
     @classmethod
-    def from_when(cls: type, when: NwWhen) -> When:
-        return cls(when._predicate)  # type: ignore[no-any-return]
+    def from_when(cls, when: NwWhen) -> When:
+        return cls(when._predicate)
 
-    def then(self: Self, value: Any) -> Then:
+    def then(self: Self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
         return Then.from_then(super().then(value))
 
 
 class Then(NwThen, Expr):
     @classmethod
-    def from_then(cls: type, then: NwThen) -> Then:
-        return cls(  # type: ignore[no-any-return]
-            then._to_compliant_expr, then._metadata
-        )
+    def from_then(cls, then: NwThen) -> Then:
+        return cls(then._to_compliant_expr, then._metadata)
 
-    def otherwise(self: Self, value: Any) -> Expr:
+    def otherwise(self: Self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
         return _stableify(super().otherwise(value))
 
 
