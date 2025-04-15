@@ -403,23 +403,29 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
 
     def std(self: Self, ddof: int) -> Self:
         def _std(_input: ir.Expr, ddof: int) -> ir.Expr:
-            if ddof not in {0, 1}:
-                msg = "Ibis only supports ddof of 0 or 1"
-                raise NotImplementedError(msg)
-
-            return _input.std(how="sample" if ddof == 1 else "pop")
+            if ddof == 0:
+                return _input.std(how="pop")
+            elif ddof == 1:
+                return _input.std(how="sample")
+            else:
+                n_samples = _input.count()
+                std_pop = _input.std(how="pop")
+                return std_pop * n_samples.sqrt() / (n_samples - ddof).sqrt()
 
         return self._with_callable(lambda _input: _std(_input, ddof))
 
     def var(self: Self, ddof: int) -> Self:
         def _var(_input: ir.Expr, ddof: int) -> ir.Expr:
-            if ddof not in {0, 1}:
-                msg = "Ibis only supports ddof of 0 or 1"
-                raise NotImplementedError(msg)
+            if ddof == 0:
+                return _input.var(how="pop")
+            elif ddof == 1:
+                return _input.var(how="sample")
+            else:
+                n_samples = _input.count()
+                var_pop = _input.var(how="pop")
+                return var_pop * n_samples / (n_samples - ddof)
 
-            return _input.var(how="sample" if ddof == 1 else "pop")
-
-        return self._with_callable(_var)
+        return self._with_callable(lambda _input: _var(_input, ddof))
 
     def max(self: Self) -> Self:
         return self._with_callable(lambda _input: _input.max())

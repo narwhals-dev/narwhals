@@ -77,7 +77,13 @@ def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
     if ibis_dtype.is_timestamp():
         return dtypes.Datetime()
     if ibis_dtype.is_array():
-        return dtypes.List(native_to_narwhals_dtype(ibis_dtype.value_type, version))
+        if ibis_dtype.length:
+            return dtypes.Array(
+                native_to_narwhals_dtype(ibis_dtype.value_type, version),
+                ibis_dtype.length,
+            )
+        else:
+            return dtypes.List(native_to_narwhals_dtype(ibis_dtype.value_type, version))
     if ibis_dtype.is_struct():
         return dtypes.Struct(
             [
@@ -154,6 +160,6 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
         return f"struct<{inner}>"
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
         inner = narwhals_to_native_dtype(dtype.inner, version)  # type: ignore[union-attr]
-        return f"array<{inner}>"
+        return f"array<{inner}, {dtype.size}>"
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)

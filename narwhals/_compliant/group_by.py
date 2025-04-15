@@ -152,10 +152,15 @@ class LazyGroupBy(
         if expr._is_multi_output_unnamed():
             for native_expr, name, alias in zip(native_exprs, output_names, aliases):
                 if name not in self._keys:
-                    yield native_expr.alias(alias)
+                    yield self._alias_native_expr(native_expr, alias)
         else:
             for native_expr, alias in zip(native_exprs, aliases):
-                yield native_expr.alias(alias)
+                yield self._alias_native_expr(native_expr, alias)
+
+    def _alias_native_expr(
+        self, native_expr: NativeExprT_co, alias: str
+    ) -> NativeExprT_co:
+        return native_expr.alias(alias)
 
     def _evaluate_exprs(
         self, exprs: Iterable[LazyExprT_contra], /

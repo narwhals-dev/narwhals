@@ -340,6 +340,11 @@ class Implementation(Enum):
 
             return sqlframe
 
+        if self is Implementation.IBIS:
+            import ibis  # ignore-banned-import
+
+            return ibis
+
         msg = "Not supported Implementation"  # pragma: no cover
         raise AssertionError(msg)
 
