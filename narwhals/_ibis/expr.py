@@ -399,7 +399,9 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
         return self._with_callable(lambda _input: _input.count())
 
     def len(self: Self) -> Self:
-        return self._with_callable(lambda _input: _input.count())
+        return self._with_callable(
+            lambda _input: _input.cast("string").fill_null("__NULL__").count()
+        )
 
     def std(self: Self, ddof: int) -> Self:
         def _std(_input: ir.Expr, ddof: int) -> ir.Expr:

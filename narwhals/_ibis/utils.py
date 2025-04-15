@@ -76,6 +76,9 @@ def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
         return dtypes.Date()
     if ibis_dtype.is_timestamp():
         return dtypes.Datetime()
+    if ibis_dtype.is_interval():
+        _time_unit = getattr(ibis_dtype, "time_unit", "us")
+        return dtypes.Duration(_time_unit)
     if ibis_dtype.is_array():
         if ibis_dtype.length:
             return dtypes.Array(
@@ -94,8 +97,7 @@ def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
                 for ibis_dtype_name, ibis_dtype_field in ibis_dtype.items()
             ]
         )
-    if ibis_dtype.is_decimal():  # pragma: no cover
-        # TODO(unassigned): cover this
+    if ibis_dtype.is_decimal():
         return dtypes.Decimal()
     if ibis_dtype.is_time():
         return dtypes.Time()
@@ -145,8 +147,7 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
         return "timestamp"
     if isinstance_or_issubclass(dtype, dtypes.Duration):  # pragma: no cover
         _time_unit = getattr(dtype, "time_unit", "us")
-        msg = "Categorical not supported by Ibis"
-        raise NotImplementedError(msg)
+        return f"inverval<{_time_unit}>"
     if isinstance_or_issubclass(dtype, dtypes.Date):  # pragma: no cover
         return "date"
     if isinstance_or_issubclass(dtype, dtypes.List):
