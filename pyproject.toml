@@ -280,6 +280,8 @@ module = [
   "dask.*",
   "dask_expr.*",
   "duckdb.*",
+  # https://github.com/ibis-project/ibis/issues/6844
+  "ibis.*",
   "modin.*",
   "numpy.*",
   "sklearn.*",
