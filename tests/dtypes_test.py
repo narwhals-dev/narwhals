@@ -405,13 +405,35 @@ def test_cast_decimal_to_native() -> None:
             )
 
 
+class FakeEnum(enum.Enum):
+    A = "A"
+    B = "B"
+
+
 @pytest.mark.parametrize(
-    "categories", [["a", "b"], ["a", None], [1, 2], enum.Enum("test", "a b")]
+    "categories", [["a", "b"], [np.str_("a"), np.str_("b")], FakeEnum]
 )
 def test_enum_valid(categories: Iterable[Any] | type[enum.Enum]) -> None:
     dtype = nw.Enum(categories)
     assert dtype == nw.Enum
     assert len(dtype.categories) == len([*categories])
+
+
+@pytest.mark.parametrize(
+    ("categories", "exception", "match"),
+    [
+        (["a", None], TypeError, "categories must be strings"),
+        (["a", float("nan")], TypeError, "categories must be strings"),
+        ([object()], TypeError, "categories must be strings"),
+        (enum.Enum("FakeEnum", "a b"), TypeError, "categories must be strings"),
+        (["a", "a"], ValueError, "categories must be unique"),
+    ],
+)
+def test_enum_errors(
+    categories: Iterable[Any], exception: type[Exception], match: str
+) -> None:
+    with pytest.raises(exception, match=match):
+        nw.Enum(categories)
 
 
 def test_enum_from_series() -> None:

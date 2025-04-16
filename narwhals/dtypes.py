@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import enum
 from collections import OrderedDict
+from collections import defaultdict
 from datetime import timezone
 from itertools import starmap
 from typing import TYPE_CHECKING
@@ -449,15 +450,27 @@ class Enum(DType):
     """
 
     def __init__(self, categories: Iterable[str] | type[enum.Enum]) -> None:
-        # TODO(Unassigned): pandas errors on NaN, NA, NaT OR duplicated value category
-        #       Polars errors on Null, NaN OR duplicated OR any non-string category
-        #       should the intersection of the above be caught at the narwhals layer?
         if isinstance(categories, type) and issubclass(categories, enum.Enum):
-            self.categories = tuple(
-                getattr(v, "value", v) for v in categories.__members__.values()
-            )
-        else:
-            self.categories = tuple(categories)
+            categories = (v.value for v in categories)
+
+        _categories, errors = [], defaultdict(set)
+        for cat in categories:
+            if cat in _categories:
+                errors["duplicates"].add(cat)
+
+            if not isinstance(cat, str):
+                errors["invalid"].add(cat)
+            _categories.append(cat)
+
+        if res := errors["invalid"]:
+            msg = f"{type(self).__name__} categories must be strings; found invalid: {res!r}"
+            raise TypeError(msg)
+
+        if res := errors["duplicates"]:
+            msg = f"{type(self).__name__} categories must be unique; found duplicate {res!r}"
+            raise ValueError(msg)
+
+        self.categories = tuple(_categories)
 
     def __eq__(self: Self, other: object) -> bool:
         # allow comparing object instances to class
