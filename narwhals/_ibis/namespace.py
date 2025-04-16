@@ -63,12 +63,10 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
         first = items[0]
         schema = first.schema
 
-        if how == "vertical" and not all(x.schema == schema for x in items[1:]):
+        if not all(x.schema == schema for x in items[1:]):
             msg = "inputs should all have the same schema"
             raise TypeError(msg)
-
-        res = ibis.union(native_items[0], *native_items[1:])
-        return first._with_native(res)
+        return first._with_native(ibis.union(*native_items))
 
     def concat_str(
         self: Self,
