@@ -17,6 +17,7 @@ from narwhals._ibis.expr_list import IbisExprListNamespace
 from narwhals._ibis.expr_str import IbisExprStringNamespace
 from narwhals._ibis.expr_struct import IbisExprStructNamespace
 from narwhals._ibis.utils import WindowInputs
+from narwhals._ibis.utils import lit
 from narwhals._ibis.utils import narwhals_to_native_dtype
 from narwhals.utils import Implementation
 from narwhals.utils import not_implemented
@@ -39,12 +40,12 @@ if TYPE_CHECKING:
     from narwhals.utils import _FullContext
 
 
-class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
+class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
     _implementation = Implementation.IBIS
 
     def __init__(
         self: Self,
-        call: EvalSeries[IbisLazyFrame, ir.Expr],
+        call: EvalSeries[IbisLazyFrame, ir.Value],
         *,
         evaluate_output_names: EvalNames[IbisLazyFrame],
         alias_output_names: AliasNames | None,
@@ -59,7 +60,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
         self._window_function: WindowFunction | None = None
         self._metadata: ExprMetadata | None = None
 
-    def __call__(self: Self, df: IbisLazyFrame) -> Sequence[ir.Expr]:
+    def __call__(self: Self, df: IbisLazyFrame) -> Sequence[ir.Value]:
         return self._call(df)
 
     def __narwhals_expr__(self) -> None: ...
@@ -76,7 +77,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
         reverse: bool,
         func_name: Literal["sum", "max", "min", "count"],
     ) -> WindowFunction:
-        def func(window_inputs: WindowInputs) -> ir.Expr:
+        def func(window_inputs: WindowInputs) -> ir.Value:
             from ibis import _ as col  # ignore-banned-import
 
             if reverse:
@@ -119,7 +120,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
             preceding = window_size - 1
             following = 0
 
-        def func(window_inputs: WindowInputs) -> ir.Expr:
+        def func(window_inputs: WindowInputs) -> ir.Value:
             from ibis import _ as col  # ignore-banned-import
 
             order_by_cols = [
@@ -133,9 +134,9 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
                 following=following,
             )
 
-            expr = window_inputs.expr
+            expr: ir.NumericColumn = cast("ir.NumericColumn", window_inputs.expr)
 
-            func_: ir.Expr
+            func_: ir.NumericScalar
 
             if func_name in {"sum", "mean"}:
                 func_ = getattr(expr, func_name)()
@@ -157,9 +158,10 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
             rolling_calc = func_.over(window)
 
             if min_samples is not None:
-                valid_count = window_inputs.expr.count().over(window)
+                valid_count = expr.count().over(window)
                 rolling_calc = ibis.cases(
-                    (valid_count >= min_samples, rolling_calc), else_=ibis.null()
+                    (valid_count >= ibis.literal(min_samples), rolling_calc),
+                    else_=ibis.null(),
                 )
 
             return rolling_calc
@@ -170,7 +172,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
         if kind is ExprKind.LITERAL:
             return self
 
-        def func(df: IbisLazyFrame) -> Sequence[ir.Expr]:
+        def func(df: IbisLazyFrame) -> Sequence[ir.Value]:
             return [expr.over() for expr in self(df)]
 
         return self.__class__(
@@ -189,7 +191,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
         *,
         context: _FullContext,
     ) -> Self:
-        def func(df: IbisLazyFrame) -> list[ir.Expr]:
+        def func(df: IbisLazyFrame) -> list[ir.Value]:
             return [df.native[name] for name in evaluate_column_names(df)]
 
         return cls(
@@ -204,7 +206,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
     def from_column_indices(
         cls: type[Self], *column_indices: int, context: _FullContext
     ) -> Self:
-        def func(df: IbisLazyFrame) -> list[ir.Expr]:
+        def func(df: IbisLazyFrame) -> list[ir.Value]:
             columns = df.columns
             return [df.native[columns[i]] for i in column_indices]
 
@@ -218,7 +220,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
 
     def _with_callable(
         self: Self,
-        call: Callable[..., ir.Expr],
+        call: Callable[..., ir.Value],
         /,
         **expressifiable_args: Self | Any,
     ) -> Self:
@@ -231,7 +233,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
                 as expressions (e.g. in `nw.col('a').is_between('b', 'c')`)
         """
 
-        def func(df: IbisLazyFrame) -> list[ir.Expr]:
+        def func(df: IbisLazyFrame) -> list[ir.Value]:
             native_series_list = self(df)
             other_native_series = {
                 key: df._evaluate_expr(value) if self._is_expr(value) else value
@@ -345,7 +347,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
         return self._with_callable(lambda _input, other: _input != other, other=other)
 
     def __invert__(self: Self) -> Self:
-        invert = cast("Callable[..., ir.Expr]", operator.invert)
+        invert = cast("Callable[..., ir.Value]", operator.invert)
         return self._with_callable(invert)
 
     def alias(self: Self, name: str) -> Self:
@@ -389,16 +391,18 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
         quantile: float,
         interpolation: RollingInterpolationMethod,
     ) -> Self:
-        def func(_input: ir.Expr) -> ir.Expr:
+        def func(_input: ir.Column) -> ir.Column:
             if interpolation == "linear":
-                return _input.quantile(quantile).name(_input.get_name())
+                return cast(
+                    "ir.Column", _input.quantile(quantile).name(_input.get_name())
+                )
             msg = "Only linear interpolation methods are supported for Ibis quantile."
             raise NotImplementedError(msg)
 
         return self._with_callable(func)
 
     def clip(self: Self, lower_bound: Any, upper_bound: Any) -> Self:
-        def _clip(_input: ir.Expr, lower: Any, upper: Any) -> ir.Expr:
+        def _clip(_input: ir.NumericValue, lower: Any, upper: Any) -> ir.NumericValue:
             return _input.clip(lower=lower, upper=upper)
 
         return self._with_callable(_clip, lower=lower_bound, upper=upper_bound)
@@ -423,7 +427,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
         )
 
     def std(self: Self, ddof: int) -> Self:
-        def _std(_input: ir.Expr, ddof: int) -> ir.Expr:
+        def _std(_input: ir.NumericColumn, ddof: int) -> ir.Value:
             if ddof == 0:
                 return _input.std(how="pop")
             elif ddof == 1:
@@ -431,12 +435,16 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
             else:
                 n_samples = _input.count()
                 std_pop = _input.std(how="pop")
-                return std_pop * n_samples.sqrt() / (n_samples - ddof).sqrt()
+                return (
+                    std_pop
+                    * n_samples.sqrt()
+                    / (n_samples - cast("ir.IntegerScalar", ibis.literal(ddof))).sqrt()
+                )
 
         return self._with_callable(lambda _input: _std(_input, ddof))
 
     def var(self: Self, ddof: int) -> Self:
-        def _var(_input: ir.Expr, ddof: int) -> ir.Expr:
+        def _var(_input: ir.NumericColumn, ddof: int) -> ir.Value:
             if ddof == 0:
                 return _input.var(how="pop")
             elif ddof == 1:
@@ -444,7 +452,11 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
             else:
                 n_samples = _input.count()
                 var_pop = _input.var(how="pop")
-                return var_pop * n_samples / (n_samples - ddof)
+                return (
+                    var_pop
+                    * n_samples
+                    / (n_samples - cast("ir.IntegerScalar", ibis.literal(ddof)))
+                )
 
         return self._with_callable(lambda _input: _var(_input, ddof))
 
@@ -467,14 +479,17 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
         if (window_function := self._window_function) is not None:
             assert order_by is not None  # noqa: S101
 
-            def func(df: IbisLazyFrame) -> list[ir.Expr]:
+            def func(df: IbisLazyFrame) -> list[ir.Value]:
                 return [
-                    window_function(WindowInputs(expr, partition_by, order_by))
+                    cast(
+                        "ir.Value",
+                        window_function(WindowInputs(expr, partition_by, order_by)),
+                    )
                     for expr in self._call(df)
                 ]
         else:
 
-            def func(df: IbisLazyFrame) -> list[ir.Expr]:
+            def func(df: IbisLazyFrame) -> list[ir.Value]:
                 return [expr.over(group_by=partition_by) for expr in self._call(df)]
 
         return self.__class__(
@@ -489,11 +504,11 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
         return self._with_callable(lambda _input: _input.isnull())
 
     def is_nan(self: Self) -> Self:
-        def func(_input: ir.Expr) -> ir.Expr:
+        def func(_input: ir.Value) -> ir.Value:
             dtype = _input.type()
 
             if dtype.is_float64() or dtype.is_float32():
-                otherwise = _input.isnan()
+                otherwise = cast("ir.FloatingValue", _input).isnan()
             else:
                 otherwise = False
 
@@ -511,13 +526,14 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
         return self._with_callable(lambda _input: _input.round(decimals))
 
     def shift(self, n: int) -> Self:
-        def func(window_inputs: WindowInputs) -> ir.Expr:
-            return window_inputs.expr.lag(n)
+        def _func(window_inputs: WindowInputs) -> ir.Column:
+            expr = cast("ir.Column", window_inputs.expr)
+            return expr.lag(n)
 
-        return self._with_window_function(func)
+        return self._with_window_function(_func)
 
     def is_first_distinct(self) -> Self:
-        def func(window_inputs: WindowInputs) -> ir.Expr:
+        def func(window_inputs: WindowInputs) -> ir.BooleanValue:
             from ibis import _ as col  # ignore-banned-import
 
             order_by_cols = [
@@ -529,12 +545,12 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
                 order_by=order_by_cols,
             )
             # ibis row_number starts at 0, so need to compare with 0 instead of the usual `1`
-            return ibis.row_number().over(window) == 0
+            return ibis.row_number().over(window) == lit(0)
 
         return self._with_window_function(func)
 
     def is_last_distinct(self) -> Self:
-        def func(window_inputs: WindowInputs) -> ir.Expr:
+        def func(window_inputs: WindowInputs) -> ir.Value:
             from ibis import _ as col  # ignore-banned-import
 
             order_by_cols = [ibis.desc(getattr(col, x)) for x in window_inputs.order_by]
@@ -543,17 +559,18 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
                 order_by=order_by_cols,
             )
             # ibis row_number starts at 0, so need to compare with 0 instead of the usual `1`
-            return ibis.row_number().over(window) == 0
+            return ibis.row_number().over(window) == lit(0)
 
         return self._with_window_function(func)
 
     def diff(self) -> Self:
-        def func(window_inputs: WindowInputs) -> ir.Expr:
-            return window_inputs.expr - window_inputs.expr.lag().over(
-                ibis.window(following=0)
+        def _func(window_inputs: WindowInputs) -> ir.NumericValue:
+            expr = cast("ir.NumericColumn", window_inputs.expr)
+            return expr - cast(
+                "ir.NumericColumn", expr.lag().over(ibis.window(following=0))
             )
 
-        return self._with_window_function(func)
+        return self._with_window_function(_func)
 
     def cum_sum(self, *, reverse: bool) -> Self:
         return self._with_window_function(
@@ -636,17 +653,18 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
             msg = "`limit` is not supported for the Ibis backend"
             raise NotImplementedError(msg)
 
-        def _fill_null(_input: ir.Expr, value: ir.Expr) -> ir.Expr:
+        def _fill_null(_input: ir.Value, value: ir.Scalar) -> ir.Value:
             return _input.fill_null(value)
 
         return self._with_callable(_fill_null, value=value)
 
     def cast(self: Self, dtype: DType | type[DType]) -> Self:
-        def func(_input: ir.Expr) -> ir.Expr:
+        def _func(_input: ir.Column) -> ir.Value:
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
-            return _input.cast(native_dtype)
+            # ibis `cast` overloads do not include DataType, only literals
+            return _input.cast(native_dtype)  # type: ignore[unused-ignore]
 
-        return self._with_callable(func)
+        return self._with_callable(_func)
 
     def is_unique(self: Self) -> Self:
         return self._with_callable(
@@ -658,32 +676,39 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
         )
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
-        def _rank(_input: ir.Expr) -> ir.Expr:
-            order_by = _input.desc() if descending else _input.asc()
+        def _rank(_input: ir.Column) -> ir.Column:
+            order_by: ir.Column = (
+                cast("ir.Column", _input.desc())
+                if descending
+                else cast("ir.Column", _input.asc())
+            )
             window = ibis.window(order_by=order_by)
 
             if method == "dense":
                 rank_ = order_by.dense_rank()
             elif method == "ordinal":
-                rank_ = ibis.row_number().over(window)
+                rank_ = cast("ir.IntegerColumn", ibis.row_number().over(window))
             else:
                 rank_ = order_by.rank()
 
             # Ibis uses 0-based ranking. Add 1 to match polars 1-based rank.
-            rank_ = rank_ + 1
+            rank_ = rank_ + cast("ir.IntegerValue", lit(1))
 
             # For "max" and "average", adjust using the count of rows in the partition.
             if method == "max":
                 # Define a window partitioned by _input (i.e. each distinct value)
                 partition = ibis.window(group_by=[_input])
-                cnt = _input.count().over(partition)
-                rank_ = rank_ + cnt - 1
+                cnt = cast("ir.IntegerValue", _input.count().over(partition))
+                rank_ = rank_ + cnt - cast("ir.IntegerValue", lit(1))
             elif method == "average":
                 partition = ibis.window(group_by=[_input])
-                cnt = _input.count().over(partition)
-                rank_ = rank_ + (cnt - 1) / 2.0
+                cnt = cast("ir.IntegerValue", _input.count().over(partition))
+                avg = cast(
+                    "ir.NumericValue", (cnt - cast("ir.IntegerScalar", lit(1))) / lit(2.0)
+                )
+                rank_ = rank_ + avg
 
-            return ibis.cases((_input.notnull(), rank_))
+            return cast("ir.Column", ibis.cases((_input.notnull(), rank_)))
 
         return self._with_callable(_rank)
 
