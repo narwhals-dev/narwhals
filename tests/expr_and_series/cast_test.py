@@ -55,6 +55,7 @@ SCHEMA = {
 
 SPARK_LIKE_INCOMPATIBLE_COLUMNS = {"e", "f", "g", "h", "o", "p"}
 DUCKDB_INCOMPATIBLE_COLUMNS = {"l", "o", "p"}
+IBIS_INCOMPATIBLE_COLUMNS = {"o"}
 
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
@@ -74,6 +75,8 @@ def test_cast(
         incompatible_columns = SPARK_LIKE_INCOMPATIBLE_COLUMNS  # pragma: no cover
     elif "duckdb" in str(constructor):
         incompatible_columns = DUCKDB_INCOMPATIBLE_COLUMNS  # pragma: no cover
+    elif "ibis" in str(constructor):
+        incompatible_columns = IBIS_INCOMPATIBLE_COLUMNS  # pragma: no cover
     else:
         incompatible_columns = set()
 
@@ -185,6 +188,8 @@ def test_cast_raises_for_unknown_dtype(
 
     if "pyspark" in str(constructor):
         incompatible_columns = SPARK_LIKE_INCOMPATIBLE_COLUMNS  # pragma: no cover
+    elif "ibis" in str(constructor):
+        incompatible_columns = IBIS_INCOMPATIBLE_COLUMNS  # pragma: no cover
     else:
         incompatible_columns = set()
 
@@ -211,6 +216,7 @@ def test_cast_datetime_tz_aware(
         or "cudf" in str(constructor)  # https://github.com/rapidsai/cudf/issues/16973
         or ("pyarrow_table" in str(constructor) and is_windows())
         or "pyspark" in str(constructor)
+        or "ibis" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
 

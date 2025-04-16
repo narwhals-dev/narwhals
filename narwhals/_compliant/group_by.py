@@ -157,9 +157,7 @@ class LazyGroupBy(
             for native_expr, alias in zip(native_exprs, aliases):
                 yield self._alias_native_expr(native_expr, alias)
 
-    def _alias_native_expr(
-        self, native_expr: NativeExprT_co, alias: str
-    ) -> NativeExprT_co:
+    def _alias_native_expr(self, native_expr: Any, alias: str) -> Any:
         return native_expr.alias(alias)
 
     def _evaluate_exprs(

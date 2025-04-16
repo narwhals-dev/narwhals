@@ -9,6 +9,4 @@ if TYPE_CHECKING:
     from narwhals._ibis.utils import WindowInputs
 
     class WindowFunction(Protocol):
-        def __call__(
-            self, window_inputs: WindowInputs
-        ) -> ir.Expr: ...  # TODO(rwhitten577): should this return ibis.WindowBuilder?
+        def __call__(self, window_inputs: WindowInputs) -> ir.Expr: ...

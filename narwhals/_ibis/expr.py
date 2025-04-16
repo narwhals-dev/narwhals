@@ -77,7 +77,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
     ) -> WindowFunction:
         def func(window_inputs: WindowInputs) -> ir.Expr:
             ibis = get_ibis()
-            from ibis import _ as col
+            from ibis import _ as col  # ignore-banned-import
 
             if reverse:
                 order_by_cols = [
@@ -121,7 +121,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
 
         def func(window_inputs: WindowInputs) -> ir.Expr:
             ibis = get_ibis()
-            from ibis import _ as col
+            from ibis import _ as col  # ignore-banned-import
 
             order_by_cols = [
                 ibis.asc(getattr(col, x), nulls_first=True)
@@ -285,7 +285,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
 
     def __rtruediv__(self: Self, other: IbisExpr) -> Self:
         return self._with_callable(
-            lambda _input, other: other.__truediv__(_input), other=other
+            lambda _input, other: _input.__rtruediv__(other), other=other
         ).alias("literal")
 
     def __floordiv__(self: Self, other: IbisExpr) -> Self:
@@ -295,7 +295,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
 
     def __rfloordiv__(self: Self, other: IbisExpr) -> Self:
         return self._with_callable(
-            lambda _input, other: other.__floordiv__(_input), other=other
+            lambda _input, other: _input.__rfloordiv__(other), other=other
         ).alias("literal")
 
     def __mod__(self: Self, other: IbisExpr) -> Self:
@@ -305,7 +305,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
 
     def __rmod__(self: Self, other: IbisExpr) -> Self:
         return self._with_callable(
-            lambda _input, other: other.__mod__(_input), other=other
+            lambda _input, other: _input.__rmod__(other), other=other
         ).alias("literal")
 
     def __sub__(self: Self, other: IbisExpr) -> Self:
@@ -313,7 +313,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
 
     def __rsub__(self: Self, other: IbisExpr) -> Self:
         return self._with_callable(
-            lambda _input, other: other.__sub__(_input), other=other
+            lambda _input, other: _input.__rsub__(other), other=other
         ).alias("literal")
 
     def __mul__(self: Self, other: IbisExpr) -> Self:
@@ -324,7 +324,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
 
     def __rpow__(self: Self, other: IbisExpr) -> Self:
         return self._with_callable(
-            lambda _input, other: other.__pow__(_input), other=other
+            lambda _input, other: _input.__rpow__(other), other=other
         ).alias("literal")
 
     def __lt__(self: Self, other: IbisExpr) -> Self:
@@ -372,21 +372,9 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
             lambda _input: _input.mean(),
         )
 
-    def skew(self: Self) -> Self:  # TODO(rwhitten577): IMPLEMENT
-        # def func(_input: ir.Expr) -> ir.Expr:
-        #     count = FunctionExpression("count", _input)
-        #     return CaseExpression(condition=(count == lit(0)), value=lit(None)).otherwise(
-        #         CaseExpression(
-        #             condition=(count == lit(1)), value=lit(float("nan"))
-        #         ).otherwise(
-        #             CaseExpression(condition=(count == lit(2)), value=lit(0.0)).otherwise(
-        #                 FunctionExpression("skewness", _input)
-        #             )
-        #         )
-        #     )
-        #
-        # return self._from_call(func, "skew", expr_kind=ExprKind.AGGREGATION)
-        raise NotImplementedError("skew is not implemented for Ibis backend")
+    def skew(self: Self) -> Self:
+        msg = "`skew` is not supported for the Ibis backend"
+        raise NotImplementedError(msg)
 
     def median(self: Self) -> Self:
         return self._with_callable(lambda _input: _input.median())
@@ -411,9 +399,10 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
         return self._with_callable(func)
 
     def clip(self: Self, lower_bound: Any, upper_bound: Any) -> Self:
-        return self._with_callable(
-            lambda _input: _input.clip(lower=lower_bound, upper=upper_bound)
-        )
+        def _clip(_input: ir.Expr, lower: Any, upper: Any) -> ir.Expr:
+            return _input.clip(lower=lower, upper=upper)
+
+        return self._with_callable(_clip, lower=lower_bound, upper=upper_bound)
 
     def sum(self: Self) -> Self:
         return self._with_callable(lambda _input: _input.sum())
@@ -515,7 +504,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
         return self._with_callable(func)
 
     def is_finite(self: Self) -> Self:
-        return self._with_callable(lambda _input: ~_input.isinf())
+        return self._with_callable(lambda _input: ~(_input.isinf() | _input.isnan()))
 
     def is_in(self: Self, other: Sequence[Any]) -> Self:
         return self._with_callable(lambda _input: _input.isin(other))
@@ -532,7 +521,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
     def is_first_distinct(self) -> Self:
         def func(window_inputs: WindowInputs) -> ir.Expr:
             ibis = get_ibis()
-            from ibis import _ as col
+            from ibis import _ as col  # ignore-banned-import
 
             order_by_cols = [
                 ibis.asc(getattr(col, x), nulls_first=True)
@@ -550,7 +539,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
     def is_last_distinct(self) -> Self:
         def func(window_inputs: WindowInputs) -> ir.Expr:
             ibis = get_ibis()
-            from ibis import _ as col
+            from ibis import _ as col  # ignore-banned-import
 
             order_by_cols = [ibis.desc(getattr(col, x)) for x in window_inputs.order_by]
             window = ibis.window(
@@ -667,7 +656,11 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
     def is_unique(self: Self) -> Self:
         ibis = get_ibis()
         return self._with_callable(
-            lambda _input: _input.count().over(ibis.window(group_by=_input)) == 1
+            lambda _input: _input.cast("string")
+            .fill_null("__NULL__")
+            .count()
+            .over(ibis.window(group_by=_input))
+            == 1
         )
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
@@ -678,11 +671,11 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
             window = ibis.window(order_by=order_by)
 
             if method == "dense":
-                rank_ = _input.dense_rank()
+                rank_ = order_by.dense_rank()
             elif method == "ordinal":
                 rank_ = ibis.row_number().over(window)
             else:
-                rank_ = _input.rank()
+                rank_ = order_by.rank()
 
             # Ibis uses 0-based ranking. Add 1 to match polars 1-based rank.
             rank_ = rank_ + 1

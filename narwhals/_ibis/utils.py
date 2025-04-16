@@ -5,11 +5,13 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
 
+from narwhals.dependencies import get_ibis
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     import ibis.expr.types as ir
+    from ibis.expr.datatypes import DataType as IbisDataType
 
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.expr import IbisExpr
@@ -77,7 +79,10 @@ def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
     if ibis_dtype.is_timestamp():
         return dtypes.Datetime()
     if ibis_dtype.is_interval():
-        _time_unit = getattr(ibis_dtype, "time_unit", "us")
+        _time_unit = ibis_dtype.unit
+        if _time_unit not in {"ns", "us", "ms", "s"}:
+            msg = f"Unsupported interval unit: {_time_unit}"
+            raise NotImplementedError(msg)
         return dtypes.Duration(_time_unit)
     if ibis_dtype.is_array():
         if ibis_dtype.length:
@@ -106,61 +111,70 @@ def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
     return dtypes.Unknown()  # pragma: no cover
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> str:
+def narwhals_to_native_dtype(
+    dtype: DType | type[DType], version: Version
+) -> IbisDataType:
     dtypes = import_dtypes_module(version)
+    ibis = get_ibis()
+    ibis_dtypes = ibis.expr.datatypes
+
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
-        return "decimal"
+        return ibis_dtypes.Decimal()
     if isinstance_or_issubclass(dtype, dtypes.Float64):
-        return "float64"
+        return ibis_dtypes.Float64()
     if isinstance_or_issubclass(dtype, dtypes.Float32):
-        return "float32"
+        return ibis_dtypes.Float32()
     if isinstance_or_issubclass(dtype, dtypes.Int128):
         msg = "Int128 not supported by Ibis"
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Int64):
-        return "int64"
+        return ibis_dtypes.Int64()
     if isinstance_or_issubclass(dtype, dtypes.Int32):
-        return "int32"
+        return ibis_dtypes.Int32()
     if isinstance_or_issubclass(dtype, dtypes.Int16):
-        return "int16"
+        return ibis_dtypes.Int16()
     if isinstance_or_issubclass(dtype, dtypes.Int8):
-        return "int8"
+        return ibis_dtypes.Int8()
     if isinstance_or_issubclass(dtype, dtypes.UInt128):
         msg = "UInt128 not supported by Ibis"
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.UInt64):
-        return "uint64"
+        return ibis_dtypes.UInt64()
     if isinstance_or_issubclass(dtype, dtypes.UInt32):
-        return "uint32"
+        return ibis_dtypes.UInt32()
     if isinstance_or_issubclass(dtype, dtypes.UInt16):  # pragma: no cover
-        return "uint16"
+        return ibis_dtypes.UInt16()
     if isinstance_or_issubclass(dtype, dtypes.UInt8):  # pragma: no cover
-        return "uint8"
+        return ibis_dtypes.UInt8()
     if isinstance_or_issubclass(dtype, dtypes.String):
-        return "string"
+        return ibis_dtypes.String()
     if isinstance_or_issubclass(dtype, dtypes.Boolean):  # pragma: no cover
-        return "bool"
+        return ibis_dtypes.Boolean()
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
         msg = "Categorical not supported by Ibis"
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        return "timestamp"
+        return ibis_dtypes.Timestamp()
     if isinstance_or_issubclass(dtype, dtypes.Duration):  # pragma: no cover
         _time_unit = getattr(dtype, "time_unit", "us")
-        return f"inverval<{_time_unit}>"
+        return ibis_dtypes.Interval(_time_unit)
     if isinstance_or_issubclass(dtype, dtypes.Date):  # pragma: no cover
-        return "date"
+        return ibis_dtypes.Date()
+    if isinstance_or_issubclass(dtype, dtypes.Time):
+        return ibis_dtypes.Time()
     if isinstance_or_issubclass(dtype, dtypes.List):
-        inner = narwhals_to_native_dtype(dtype.inner, version)  # type: ignore[union-attr]
-        return f"array<{inner}>"
+        inner = narwhals_to_native_dtype(dtype.inner, version)
+        return ibis_dtypes.Array(value_type=inner)
     if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
-        inner = ", ".join(
-            f"{field.name}: {narwhals_to_native_dtype(field.dtype, version)}"
-            for field in dtype.fields  # type: ignore[union-attr]
-        )
-        return f"struct<{inner}>"
+        fields = [
+            (field.name, narwhals_to_native_dtype(field.dtype, version))
+            for field in dtype.fields
+        ]
+        return ibis_dtypes.Struct.from_tuples(fields)
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
-        inner = narwhals_to_native_dtype(dtype.inner, version)  # type: ignore[union-attr]
-        return f"array<{inner}, {dtype.size}>"
+        inner = narwhals_to_native_dtype(dtype.inner, version)
+        return ibis_dtypes.Array(value_type=inner, length=dtype.size)
+    if isinstance_or_issubclass(dtype, dtypes.Binary):
+        return ibis_dtypes.Binary()
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)

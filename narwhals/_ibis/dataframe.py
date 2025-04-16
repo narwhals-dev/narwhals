@@ -8,7 +8,6 @@ from typing import Mapping
 from typing import Sequence
 
 import ibis.expr.types as ir
-import ibis.selectors as s
 
 from narwhals._ibis.utils import evaluate_exprs
 from narwhals._ibis.utils import native_to_narwhals_dtype
@@ -101,7 +100,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         self: Self,
         backend: ModuleType | Implementation | str | None,
         **kwargs: Any,
-    ) -> CompliantDataFrame:
+    ) -> CompliantDataFrame[Any, Any, Any]:
         if backend is None or backend is Implementation.PYARROW:
             import pyarrow as pa  # ignore-banned-import
 
@@ -145,11 +144,11 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         return self._with_native(self.native.head(n))
 
     def simple_select(self, *column_names: str) -> Self:
-        return self._with_native(self.native.select(s.cols(*column_names)))
+        return self._with_native(self.native.select(*column_names))
 
     def aggregate(self: Self, *exprs: IbisExpr) -> Self:
         selection = [val.name(name) for name, val in evaluate_exprs(self, *exprs)]
-        return self._with_native(self.native.aggregate(selection))  # type: ignore[arg-type]
+        return self._with_native(self.native.aggregate(selection))
 
     def select(
         self: Self,
@@ -327,7 +326,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
             on=on_condition,
             predicates=predicates,
             rname="{name}" + suffix,
-        )  # type: ignore[operator]
+        )
 
         # Drop duplicate columns from the right table. Ibis keeps them.
         if right_on is not None:
@@ -346,7 +345,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
 
     def _convert_predicates(
         self, other: Self, left_on: str | Sequence[str], right_on: str | Sequence[str]
-    ) -> list[ir.BooleanValue] | list[str]:
+    ) -> list[ir.BooleanValue] | Sequence[str]:
         if isinstance(left_on, str):
             left_on = [left_on]
         if isinstance(right_on, str):
@@ -450,8 +449,8 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
     ) -> Self:
         import ibis.selectors as s
 
-        index_: list[str] = [] if index is None else index
-        on_: list[str] = (
+        index_: Sequence[str] = [] if index is None else index
+        on_: Sequence[str] = (
             [c for c in self.columns if c not in index_] if on is None else on
         )
 
