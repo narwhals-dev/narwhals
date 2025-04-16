@@ -214,7 +214,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     *order_by, descending=False, nulls_last=False
                 )
                 results = self(df.drop([token], strict=True))
-                sorting_indices = df[token]
+                sorting_indices = df.get_column(token)
                 for s in results:
                     s._scatter_in_place(sorting_indices, s)
                 return results
@@ -257,14 +257,14 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     columns = list(set(partition_by).union(output_names).union(order_by))
                     token = generate_temporary_column_name(8, columns)
                     df = (
-                        df[columns]
+                        df.simple_select(*columns)
                         .with_row_index(token)
                         .sort(*order_by, descending=reverse, nulls_last=reverse)
                     )
-                    sorting_indices = df[token]
+                    sorting_indices = df.get_column(token)
                 elif reverse:
                     columns = list(set(partition_by).union(output_names))
-                    df = df[columns][::-1]
+                    df = df.simple_select(*columns)[::-1]
                 grouped = df._native_frame.groupby(partition_by)
                 if function_name.startswith("rolling"):
                     rolling = grouped[list(output_names)].rolling(**pandas_kwargs)
@@ -287,7 +287,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 result_frame = df._with_native(res_native).rename(
                     dict(zip(output_names, aliases))
                 )
-                results = [result_frame[name] for name in aliases]
+                results = [result_frame.get_column(name) for name in aliases]
                 if order_by:
                     for s in results:
                         s._scatter_in_place(sorting_indices, s)
