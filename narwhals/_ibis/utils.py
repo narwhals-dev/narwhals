@@ -19,6 +19,9 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.utils import Version
 
+lit = ibis.literal
+"""Alias for `ibis.literal`."""
+
 
 class WindowInputs:
     __slots__ = ("expr", "order_by", "partition_by")
