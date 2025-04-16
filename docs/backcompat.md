@@ -117,7 +117,7 @@ The following are differences between the main Narwhals namespace and `narwhals.
 - Since Narwhals 1.35:
 
   - pandas' ordered categoricals get mapped to `nw.Enum` instead of `nw.Categorical`.
-  - `nw.Enum` must accept categories at instantiation.
+  - `nw.Enum` must be provided `categories` at instantiation.
 
 - Since Narwhals 1.29.0, `LazyFrame.gather_every` has been deprecated from the main namespace.
 
