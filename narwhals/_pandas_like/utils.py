@@ -5,6 +5,7 @@ import re
 from contextlib import suppress
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Sequence
 from typing import Sized
 from typing import TypeVar
 from typing import cast
@@ -671,9 +672,9 @@ def select_columns_by_name(
 
 def pivot_table(
     df: PandasLikeDataFrame,
-    values: list[str],
-    index: list[str],
-    columns: list[str],
+    values: Sequence[str],
+    index: Sequence[str],
+    columns: Sequence[str],
     aggregate_function: str | None,
 ) -> Any:
     dtypes = import_dtypes_module(df._version)

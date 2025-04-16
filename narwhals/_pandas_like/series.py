@@ -51,8 +51,11 @@ if TYPE_CHECKING:
     from narwhals.typing import ClosedInterval
     from narwhals.typing import FillNullStrategy
     from narwhals.typing import Into1DArray
+    from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import NumericLiteral
     from narwhals.typing import RankMethod
     from narwhals.typing import RollingInterpolationMethod
+    from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
     from narwhals.typing import _AnyDArray
     from narwhals.utils import Version
@@ -551,12 +554,17 @@ class PandasLikeSeries(EagerSeries[Any]):
         raise InvalidOperationError(msg)
 
     def fill_null(
-        self, value: Any | None, strategy: FillNullStrategy | None, limit: int | None
+        self,
+        value: Self | NonNestedLiteral,
+        strategy: FillNullStrategy | None,
+        limit: int | None,
     ) -> Self:
         ser = self.native
         if value is not None:
-            _, value = align_and_extract_native(self, value)
-            res_ser = self._with_native(ser.fillna(value=value), preserve_broadcast=True)
+            _, native_value = align_and_extract_native(self, value)
+            res_ser = self._with_native(
+                ser.fillna(value=native_value), preserve_broadcast=True
+            )
         else:
             res_ser = self._with_native(
                 ser.ffill(limit=limit)
@@ -816,16 +824,18 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(self.native.iloc[offset::n])
 
     def clip(
-        self: Self, lower_bound: Self | Any | None, upper_bound: Self | Any | None
+        self,
+        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
+        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
     ) -> Self:
-        _, lower_bound = (
+        _, lower = (
             align_and_extract_native(self, lower_bound) if lower_bound else (None, None)
         )
-        _, upper_bound = (
+        _, upper = (
             align_and_extract_native(self, upper_bound) if upper_bound else (None, None)
         )
         kwargs = {"axis": 0} if self._implementation is Implementation.MODIN else {}
-        return self._with_native(self.native.clip(lower_bound, upper_bound, **kwargs))
+        return self._with_native(self.native.clip(lower, upper, **kwargs))
 
     def to_arrow(self: Self) -> ArrowArray:
         if self._implementation is Implementation.CUDF:
