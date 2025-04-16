@@ -71,6 +71,7 @@ typing = [
   "sqlframe",
   "polars==1.25.2",
   "uv",
+  "ibis",
 ]
 docs = [
   "black",  # required by mkdocstrings_handlers
