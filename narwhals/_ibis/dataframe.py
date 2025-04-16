@@ -278,7 +278,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         if native_how == "left":
             # Drop duplicate columns from the right table. Ibis keeps them.
             if right_on is not None:
-                for right in right_on if isinstance(right_on, list) else [right_on]:
+                for right in right_on if not isinstance(right_on, str) else [right_on]:
                     to_drop = right + suffix
                     if to_drop in joined.columns:
                         joined = joined.drop(right + suffix)
@@ -336,7 +336,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
                     joined = joined.drop(right + suffix)
 
         if by_right is not None:
-            for right in by_right if isinstance(by_right, list) else [by_right]:
+            for right in by_right if not isinstance(by_right, str) else [by_right]:
                 to_drop = right + suffix
                 if to_drop in joined.columns:
                     joined = joined.drop(right + suffix)
