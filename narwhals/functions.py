@@ -65,6 +65,8 @@ if TYPE_CHECKING:
     from narwhals.typing import NativeFrame
     from narwhals.typing import NativeLazyFrame
     from narwhals.typing import NativeSeries
+    from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
 
     _IntoSchema: TypeAlias = "Mapping[str, DType] | Schema | Sequence[str] | None"
@@ -1496,7 +1498,7 @@ class When:
         self._predicate = all_horizontal(*flatten(predicates))
         check_expressions_preserve_length(self._predicate, function_name="when")
 
-    def then(self: Self, value: IntoExpr | Any) -> Then:
+    def then(self: Self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
         return Then(
             lambda plx: apply_n_ary_operation(
                 plx,
@@ -1516,7 +1518,7 @@ class When:
 
 
 class Then(Expr):
-    def otherwise(self: Self, value: IntoExpr | Any) -> Expr:
+    def otherwise(self: Self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
         kind = infer_kind(value, str_as_lit=False)
 
         def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
@@ -1627,7 +1629,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     )
 
 
-def lit(value: Any, dtype: DType | type[DType] | None = None) -> Expr:
+def lit(value: NonNestedLiteral, dtype: DType | type[DType] | None = None) -> Expr:
     """Return an expression representing a literal value.
 
     Arguments:

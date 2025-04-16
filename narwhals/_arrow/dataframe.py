@@ -355,11 +355,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             return self._with_native(self.native.slice(start, stop - start))
 
         elif isinstance(item, Sequence) or is_numpy_array_1d(item):
-            if (
-                isinstance(item, Sequence)
-                and all(isinstance(x, str) for x in item)
-                and len(item) > 0
-            ):
+            if isinstance(item, Sequence) and len(item) > 0 and isinstance(item[0], str):
                 return self._with_native(self.native.select(cast("Indices", item)))
             if isinstance(item, Sequence) and len(item) == 0:
                 return self._with_native(self.native.slice(0, 0))
@@ -849,3 +845,5 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         )
         # TODO(Unassigned): Even with promote_options="permissive", pyarrow does not
         # upcast numeric to non-numeric (e.g. string) datatypes
+
+    pivot = not_implemented()
