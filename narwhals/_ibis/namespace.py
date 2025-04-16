@@ -7,8 +7,10 @@ from typing import Any
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
+from typing import cast
 
 import ibis
+import ibis.expr.types as ir
 
 from narwhals._compliant import CompliantThen
 from narwhals._compliant import LazyNamespace
@@ -22,7 +24,6 @@ from narwhals._ibis.utils import narwhals_to_native_dtype
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
-    import ibis.expr.types as ir
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
@@ -81,7 +82,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
         separator: str,
         ignore_nulls: bool,
     ) -> IbisExpr:
-        def func(df: IbisLazyFrame) -> list[ir.Expr]:
+        def func(df: IbisLazyFrame) -> list[ir.Value]:
             cols = [s for _expr in exprs for s in _expr(df)]
             cols_casted = [s.cast("string") for s in cols]
             null_mask = [s.isnull() for s in cols]
@@ -100,12 +101,13 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
                 )
             else:
                 init_value, *values = [
-                    ibis.cases((~nm, col), else_="")
+                    cast("ir.StringValue", ibis.cases((~nm, col), else_=""))
                     for col, nm in zip(cols_casted, null_mask)
                 ]
 
                 separators = (
-                    ibis.cases((nm, ""), else_=separator) for nm in null_mask[:-1]
+                    cast("ir.StringValue", ibis.cases((nm, ""), else_=separator))
+                    for nm in null_mask[:-1]
                 )
                 result = reduce(
                     lambda x, y: x + y,
@@ -124,7 +126,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
         )
 
     def all_horizontal(self: Self, *exprs: IbisExpr) -> IbisExpr:
-        def func(df: IbisLazyFrame) -> list[ir.Expr]:
+        def func(df: IbisLazyFrame) -> list[ir.Value]:
             cols = (c for _expr in exprs for c in _expr(df))
             return [reduce(operator.and_, cols)]
 
@@ -137,7 +139,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
         )
 
     def any_horizontal(self: Self, *exprs: IbisExpr) -> IbisExpr:
-        def func(df: IbisLazyFrame) -> list[ir.Expr]:
+        def func(df: IbisLazyFrame) -> list[ir.Value]:
             cols = (c for _expr in exprs for c in _expr(df))
             return [reduce(operator.or_, cols)]
 
@@ -150,7 +152,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
         )
 
     def max_horizontal(self: Self, *exprs: IbisExpr) -> IbisExpr:
-        def func(df: IbisLazyFrame) -> list[ir.Expr]:
+        def func(df: IbisLazyFrame) -> list[ir.Value]:
             cols = [c for _expr in exprs for c in _expr(df)]
             return [ibis.greatest(*cols).name(cols[0].get_name())]
 
@@ -163,7 +165,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
         )
 
     def min_horizontal(self: Self, *exprs: IbisExpr) -> IbisExpr:
-        def func(df: IbisLazyFrame) -> list[ir.Expr]:
+        def func(df: IbisLazyFrame) -> list[ir.Value]:
             cols = [c for _expr in exprs for c in _expr(df)]
             return [ibis.least(*cols).name(cols[0].get_name())]
 
@@ -176,9 +178,11 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
         )
 
     def sum_horizontal(self: Self, *exprs: IbisExpr) -> IbisExpr:
-        def func(df: IbisLazyFrame) -> list[ir.Expr]:
+        def func(df: IbisLazyFrame) -> list[ir.Value]:
             cols = [
-                e.fill_null(0).name(e.get_name()) for _expr in exprs for e in _expr(df)
+                e.fill_null(ibis.literal(0)).name(e.get_name())
+                for _expr in exprs
+                for e in _expr(df)
             ]
             return [reduce(operator.add, cols)]
 
@@ -191,13 +195,26 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
         )
 
     def mean_horizontal(self: Self, *exprs: IbisExpr) -> IbisExpr:
-        def func(df: IbisLazyFrame) -> list[ir.Expr]:
-            expr = (e.fill_null(0) for _expr in exprs for e in _expr(df))
-            non_null = (e.isnull().ifelse(0, 1) for _expr in exprs for e in _expr(df))
+        def func(df: IbisLazyFrame) -> list[ir.Value]:
+            expr = (
+                cast("ir.NumericColumn", e.fill_null(ibis.literal(0)))
+                for _expr in exprs
+                for e in _expr(df)
+            )
+            non_null = (
+                cast(
+                    "ir.NumericColumn",
+                    e.isnull().ifelse(ibis.literal(0), ibis.literal(1)),
+                )
+                for _expr in exprs
+                for e in _expr(df)
+            )
             first_expr_name = exprs[0](df)[0].get_name()
 
-            def _name_preserving_sum(e1: ir.Expr, e2: ir.Expr) -> ir.Expr:
-                return (e1 + e2).name(e1.get_name())
+            def _name_preserving_sum(
+                e1: ir.NumericColumn, e2: ir.NumericColumn
+            ) -> ir.NumericColumn:
+                return cast("ir.NumericColumn", (e1 + e2).name(e1.get_name()))
 
             return [
                 (
@@ -221,7 +238,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
         return IbisWhen.from_expr(predicate, context=self)
 
     def lit(self: Self, value: Any, dtype: DType | type[DType] | None) -> IbisExpr:
-        def func(_df: IbisLazyFrame) -> list[ir.Expr]:
+        def func(_df: IbisLazyFrame) -> list[ir.Value]:
             if dtype is not None:
                 ibis_dtype = narwhals_to_native_dtype(dtype, version=self._version)
                 return [ibis.literal(value, ibis_dtype)]
@@ -236,7 +253,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
         )
 
     def len(self: Self) -> IbisExpr:
-        def func(_df: IbisLazyFrame) -> list[ir.Expr]:
+        def func(_df: IbisLazyFrame) -> list[ir.Value]:
             return [_df.native.count()]
 
         return self._expr(
@@ -248,12 +265,12 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
         )
 
 
-class IbisWhen(LazyWhen["IbisLazyFrame", "ir.Expr", IbisExpr]):
+class IbisWhen(LazyWhen["IbisLazyFrame", "ir.Value", IbisExpr]):
     @property
     def _then(self) -> type[IbisThen]:
         return IbisThen
 
-    def __call__(self: Self, df: IbisLazyFrame) -> Sequence[ir.Expr]:
+    def __call__(self: Self, df: IbisLazyFrame) -> Sequence[ir.Value]:
         is_expr = self._condition._is_expr
         condition = df._evaluate_expr(self._condition)
         then_ = self._then_value
@@ -269,4 +286,4 @@ class IbisWhen(LazyWhen["IbisLazyFrame", "ir.Expr", IbisExpr]):
         return [result]
 
 
-class IbisThen(CompliantThen["IbisLazyFrame", "ir.Expr", IbisExpr], IbisExpr): ...
+class IbisThen(CompliantThen["IbisLazyFrame", "ir.Value", IbisExpr], IbisExpr): ...
