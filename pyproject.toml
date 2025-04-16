@@ -280,7 +280,6 @@ module = [
   "dask.*",
   "dask_expr.*",
   "duckdb.*",
-  "ibis.*",
   "modin.*",
   "numpy.*",
   "sklearn.*",
