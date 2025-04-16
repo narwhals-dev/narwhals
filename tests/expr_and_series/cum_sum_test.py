@@ -31,7 +31,7 @@ def test_cum_sum_expr(constructor_eager: ConstructorEager, *, reverse: bool) -> 
     ("reverse", "expected_a"),
     [
         (False, [3, 2, 6]),
-        # (True, [4, 6, 3]),
+        (True, [4, 6, 3]),
     ],
 )
 def test_lazy_cum_sum_grouped(
