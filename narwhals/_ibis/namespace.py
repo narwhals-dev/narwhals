@@ -5,7 +5,6 @@ from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
-from typing import Literal
 from typing import Sequence
 from typing import cast
 
@@ -27,6 +26,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.dtypes import DType
+    from narwhals.typing import ConcatMethod
     from narwhals.utils import Version
 
 
@@ -52,10 +52,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
         return IbisLazyFrame
 
     def concat(
-        self: Self,
-        items: Iterable[IbisLazyFrame],
-        *,
-        how: Literal["horizontal", "vertical", "diagonal"],
+        self, items: Iterable[IbisLazyFrame], *, how: ConcatMethod
     ) -> IbisLazyFrame:
         if how == "horizontal":
             msg = "horizontal concat not supported for Ibis. Please join instead"
