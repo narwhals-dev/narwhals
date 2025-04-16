@@ -58,8 +58,8 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             msg = f"{how!r} concat not supported for Ibis. Please join instead."
             raise NotImplementedError(msg)
 
-        native_items = [item.native for item in items]
         items = list(items)
+        native_items = [item.native for item in items]
         first = items[0]
         schema = first.schema
 
