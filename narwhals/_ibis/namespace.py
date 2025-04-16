@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -75,7 +76,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
         ignore_nulls: bool,
     ) -> IbisExpr:
         def func(df: IbisLazyFrame) -> list[ir.Value]:
-            cols = [s for _expr in exprs for s in _expr(df)]
+            cols = list(chain.from_iterable(expr(df) for expr in exprs))
             cols_casted = [s.cast("string") for s in cols]
             null_mask = [s.isnull() for s in cols]
 
@@ -119,7 +120,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
 
     def all_horizontal(self: Self, *exprs: IbisExpr) -> IbisExpr:
         def func(df: IbisLazyFrame) -> list[ir.Value]:
-            cols = (c for _expr in exprs for c in _expr(df))
+            cols = chain.from_iterable(expr(df) for expr in exprs)
             return [reduce(operator.and_, cols)]
 
         return self._expr(
@@ -132,7 +133,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
 
     def any_horizontal(self: Self, *exprs: IbisExpr) -> IbisExpr:
         def func(df: IbisLazyFrame) -> list[ir.Value]:
-            cols = (c for _expr in exprs for c in _expr(df))
+            cols = chain.from_iterable(expr(df) for expr in exprs)
             return [reduce(operator.or_, cols)]
 
         return self._expr(
@@ -145,7 +146,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
 
     def max_horizontal(self: Self, *exprs: IbisExpr) -> IbisExpr:
         def func(df: IbisLazyFrame) -> list[ir.Value]:
-            cols = [c for _expr in exprs for c in _expr(df)]
+            cols = list(chain.from_iterable(expr(df) for expr in exprs))
             return [ibis.greatest(*cols).name(cols[0].get_name())]
 
         return self._expr(
@@ -158,7 +159,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
 
     def min_horizontal(self: Self, *exprs: IbisExpr) -> IbisExpr:
         def func(df: IbisLazyFrame) -> list[ir.Value]:
-            cols = [c for _expr in exprs for c in _expr(df)]
+            cols = list(chain.from_iterable(expr(df) for expr in exprs))
             return [ibis.least(*cols).name(cols[0].get_name())]
 
         return self._expr(
