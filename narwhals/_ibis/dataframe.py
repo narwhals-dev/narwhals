@@ -6,6 +6,7 @@ from typing import Iterator
 from typing import Literal
 from typing import Mapping
 from typing import Sequence
+from typing import cast
 
 import ibis
 import ibis.expr.types as ir
@@ -29,6 +30,8 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import pyarrow as pa
+    from ibis.expr.operations import Binary
+    from ibis.expr.operations import Relation
     from typing_extensions import Self
     from typing_extensions import TypeIs
 
@@ -147,7 +150,10 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         return self._with_native(self.native.select(*column_names))
 
     def aggregate(self: Self, *exprs: IbisExpr) -> Self:
-        selection = [val.name(name) for name, val in evaluate_exprs(self, *exprs)]
+        selection = [
+            cast("ir.Scalar", val.name(name))
+            for name, val in evaluate_exprs(self, *exprs)
+        ]
         return self._with_native(self.native.aggregate(selection))
 
     def select(
@@ -165,7 +171,8 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
 
         # Ibis broadcasts aggregate functions in selects as window functions, keeping the original number of rows.
         # Need to reduce it to a single row if they are all window functions, by calling .distinct()
-        if all(isinstance(c, WindowFunction) for c in t.op().values.values()):  # noqa: PD011
+        t_op = cast("Relation", t.op())
+        if all(isinstance(c, WindowFunction) for c in t_op.values.values()):  # noqa: PD011
             t = t.distinct()
 
         return self._with_native(t)
@@ -191,7 +198,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
 
     def filter(self: Self, predicate: IbisExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
-        mask = predicate(self)[0]
+        mask = cast("ir.BooleanValue", predicate(self)[0])
         return self._with_native(self.native.filter(mask))
 
     @property
@@ -261,7 +268,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
 
         if other == self:
             # Ibis does not support self-references unless created as a view
-            other = self._with_version(other.native.view())
+            other = self._with_native(other.native.view())
 
         if native_how != "cross":
             if left_on is None or right_on is None:
@@ -287,8 +294,10 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
                 if isinstance(pred, str):
                     continue
 
-                left = pred.op().left.name
-                right = pred.op().right.name
+                pred_op = cast("Binary", pred.op())
+
+                left = pred_op.left.name
+                right = pred_op.right.name
 
                 # If right column is not in the left table, drop it as it will be present in the left column
                 # Mirrors how polars works.
@@ -308,6 +317,10 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         strategy: AsofJoinStrategy,
         suffix: str,
     ) -> Self:
+        if left_on is None or right_on is None:
+            msg = "Both 'left_on' and 'right_on' must be provided for asof joins."
+            raise ValueError(msg)
+
         if strategy == "backward":
             on_condition = self.native[left_on] >= other.native[right_on]
         elif strategy == "forward":
@@ -323,7 +336,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
 
         joined = self.native.asof_join(
             other.native,
-            on=on_condition,
+            on=cast("ir.BooleanColumn", on_condition),
             predicates=predicates,
             rname="{name}" + suffix,
         )
@@ -345,7 +358,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
 
     def _convert_predicates(
         self, other: Self, left_on: str | Sequence[str], right_on: str | Sequence[str]
-    ) -> list[ir.BooleanValue] | Sequence[str]:
+    ) -> list[ir.BooleanColumn] | Sequence[str]:
         if isinstance(left_on, str):
             left_on = [left_on]
         if isinstance(right_on, str):
@@ -359,7 +372,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
             return left_on
 
         return [
-            self.native[left] == other.native[right]
+            cast("ir.BooleanColumn", (self.native[left] == other.native[right]))
             for left, right in zip(left_on, right_on)
         ]
 
@@ -397,16 +410,16 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
 
         if nulls_last:
             sort_cols = [
-                ibis.desc(by[i], nulls_first=False)
+                cast("ir.Column", ibis.desc(by[i], nulls_first=False))
                 if descending[i]
-                else ibis.asc(by[i], nulls_first=False)
+                else cast("ir.Column", ibis.asc(by[i], nulls_first=False))
                 for i in range(len(by))
             ]
         else:
             sort_cols = [
-                ibis.desc(by[i], nulls_first=True)
+                cast("ir.Column", ibis.desc(by[i], nulls_first=True))
                 if descending[i]
-                else ibis.asc(by[i], nulls_first=True)
+                else cast("ir.Column", ibis.asc(by[i], nulls_first=True))
                 for i in range(len(by))
             ]
 
