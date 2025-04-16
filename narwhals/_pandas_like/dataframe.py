@@ -65,6 +65,7 @@ if TYPE_CHECKING:
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import DTypeBackend
     from narwhals.typing import JoinStrategy
+    from narwhals.typing import PivotAgg
     from narwhals.typing import SizeUnit
     from narwhals.typing import UniqueKeepStrategy
     from narwhals.typing import _1DArray
@@ -952,7 +953,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
 
                 arr: Any = np.hstack(
                     [
-                        self[col].to_numpy(copy=copy, dtype=None)[:, None]
+                        self.get_column(col).to_numpy(copy=copy, dtype=None)[:, None]
                         for col in self.columns
                     ]
                 )
@@ -1017,12 +1018,12 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         return self._with_native(self.native.iloc[offset::n], validate_column_names=False)
 
     def pivot(
-        self: Self,
-        on: list[str],
+        self,
+        on: Sequence[str],
         *,
-        index: list[str] | None,
-        values: list[str] | None,
-        aggregate_function: Any | None,
+        index: Sequence[str] | None,
+        values: Sequence[str] | None,
+        aggregate_function: PivotAgg | None,
         sort_columns: bool,
         separator: str,
     ) -> Self:
