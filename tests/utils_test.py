@@ -526,7 +526,7 @@ def test_requires() -> None:
         def concat(self, *strings: str, separator: str = "") -> str:
             return separator.join((self.native, *strings))
 
-        @requires(min_version=(3, 0, 0))
+        @requires.backend_version((3, 0, 0))
         def repeat(self, n: int) -> str:
             return self.native * n
 

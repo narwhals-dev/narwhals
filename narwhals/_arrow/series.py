@@ -864,7 +864,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         dtypes = import_dtypes_module(self._version)
         return (~self.is_null()).cast(dtypes.UInt32()).cum_sum(reverse=reverse)
 
-    @requires(min_version=(13,))
+    @requires.backend_version((13,))
     def cum_min(self, *, reverse: bool) -> Self:
         result = (
             pc.cumulative_min(self.native, skip_nulls=True)

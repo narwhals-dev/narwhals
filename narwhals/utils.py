@@ -1826,11 +1826,18 @@ class requires:  # noqa: N801
         self._wrapped_name: str
 
     @classmethod
-    def backend_version(
-        cls, min_version: tuple[int, ...], /, hint: str = ""
-    ) -> Self:  # pragma: no cover
+    def backend_version(cls, minimum: tuple[int, ...], /, hint: str = "") -> Self:
+        """Method decorator for raising below a minimum `_backend_version`.
+
+        Arguments:
+            minimum: Minimum backend version.
+            hint: Optional suggested alternative.
+
+        Returns:
+            An exception-raising decorator.
+        """
         obj = cls.__new__(cls)
-        obj._min_version = min_version
+        obj._min_version = minimum
         obj._hint = hint
         return obj
 
