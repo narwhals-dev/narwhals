@@ -176,5 +176,9 @@ def narwhals_to_native_dtype(
         return ibis_dtypes.Array(value_type=inner, length=dtype.size)
     if isinstance_or_issubclass(dtype, dtypes.Binary):
         return ibis_dtypes.Binary()
+    if isinstance_or_issubclass(dtype, dtypes.Enum):
+        # Ibis does not support: https://github.com/ibis-project/ibis/issues/10991
+        msg = "Enum not supported by Ibis"
+        raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
