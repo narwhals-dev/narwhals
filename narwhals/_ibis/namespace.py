@@ -8,6 +8,8 @@ from typing import Iterable
 from typing import Literal
 from typing import Sequence
 
+import ibis
+
 from narwhals._compliant import CompliantThen
 from narwhals._compliant import LazyNamespace
 from narwhals._compliant import LazyWhen
@@ -17,7 +19,6 @@ from narwhals._ibis.dataframe import IbisLazyFrame
 from narwhals._ibis.expr import IbisExpr
 from narwhals._ibis.selectors import IbisSelectorNamespace
 from narwhals._ibis.utils import narwhals_to_native_dtype
-from narwhals.dependencies import get_ibis
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -55,8 +56,6 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
         *,
         how: Literal["horizontal", "vertical", "diagonal"],
     ) -> IbisLazyFrame:
-        ibis = get_ibis()
-
         if how == "horizontal":
             msg = "horizontal concat not supported for Ibis. Please join instead"
             raise TypeError(msg)
@@ -83,8 +82,6 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
         ignore_nulls: bool,
     ) -> IbisExpr:
         def func(df: IbisLazyFrame) -> list[ir.Expr]:
-            ibis = get_ibis()
-
             cols = [s for _expr in exprs for s in _expr(df)]
             cols_casted = [s.cast("string") for s in cols]
             null_mask = [s.isnull() for s in cols]
@@ -154,7 +151,6 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
 
     def max_horizontal(self: Self, *exprs: IbisExpr) -> IbisExpr:
         def func(df: IbisLazyFrame) -> list[ir.Expr]:
-            ibis = get_ibis()
             cols = [c for _expr in exprs for c in _expr(df)]
             return [ibis.greatest(*cols).name(cols[0].get_name())]
 
@@ -168,7 +164,6 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
 
     def min_horizontal(self: Self, *exprs: IbisExpr) -> IbisExpr:
         def func(df: IbisLazyFrame) -> list[ir.Expr]:
-            ibis = get_ibis()
             cols = [c for _expr in exprs for c in _expr(df)]
             return [ibis.least(*cols).name(cols[0].get_name())]
 
@@ -227,7 +222,6 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
 
     def lit(self: Self, value: Any, dtype: DType | type[DType] | None) -> IbisExpr:
         def func(_df: IbisLazyFrame) -> list[ir.Expr]:
-            ibis = get_ibis()
             if dtype is not None:
                 ibis_dtype = narwhals_to_native_dtype(dtype, version=self._version)
                 return [ibis.literal(value, ibis_dtype)]
@@ -260,8 +254,6 @@ class IbisWhen(LazyWhen["IbisLazyFrame", "ir.Expr", IbisExpr]):
         return IbisThen
 
     def __call__(self: Self, df: IbisLazyFrame) -> Sequence[ir.Expr]:
-        ibis = get_ibis()
-
         is_expr = self._condition._is_expr
         condition = df._evaluate_expr(self._condition)
         then_ = self._then_value

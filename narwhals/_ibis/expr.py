@@ -8,6 +8,8 @@ from typing import Literal
 from typing import Sequence
 from typing import cast
 
+import ibis
+
 from narwhals._compliant import LazyExpr
 from narwhals._expression_parsing import ExprKind
 from narwhals._ibis.expr_dt import IbisExprDateTimeNamespace
@@ -16,7 +18,6 @@ from narwhals._ibis.expr_str import IbisExprStringNamespace
 from narwhals._ibis.expr_struct import IbisExprStructNamespace
 from narwhals._ibis.utils import WindowInputs
 from narwhals._ibis.utils import narwhals_to_native_dtype
-from narwhals.dependencies import get_ibis
 from narwhals.utils import Implementation
 from narwhals.utils import not_implemented
 
@@ -76,7 +77,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
         func_name: Literal["sum", "max", "min", "count"],
     ) -> WindowFunction:
         def func(window_inputs: WindowInputs) -> ir.Expr:
-            ibis = get_ibis()
             from ibis import _ as col  # ignore-banned-import
 
             if reverse:
@@ -120,7 +120,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
             following = 0
 
         def func(window_inputs: WindowInputs) -> ir.Expr:
-            ibis = get_ibis()
             from ibis import _ as col  # ignore-banned-import
 
             order_by_cols = [
@@ -491,7 +490,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
 
     def is_nan(self: Self) -> Self:
         def func(_input: ir.Expr) -> ir.Expr:
-            ibis = get_ibis()
             dtype = _input.type()
 
             if dtype.is_float64() or dtype.is_float32():
@@ -520,7 +518,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
 
     def is_first_distinct(self) -> Self:
         def func(window_inputs: WindowInputs) -> ir.Expr:
-            ibis = get_ibis()
             from ibis import _ as col  # ignore-banned-import
 
             order_by_cols = [
@@ -538,7 +535,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
 
     def is_last_distinct(self) -> Self:
         def func(window_inputs: WindowInputs) -> ir.Expr:
-            ibis = get_ibis()
             from ibis import _ as col  # ignore-banned-import
 
             order_by_cols = [ibis.desc(getattr(col, x)) for x in window_inputs.order_by]
@@ -553,7 +549,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
 
     def diff(self) -> Self:
         def func(window_inputs: WindowInputs) -> ir.Expr:
-            ibis = get_ibis()
             return window_inputs.expr - window_inputs.expr.lag().over(
                 ibis.window(following=0)
             )
@@ -654,7 +649,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
         return self._with_callable(func)
 
     def is_unique(self: Self) -> Self:
-        ibis = get_ibis()
         return self._with_callable(
             lambda _input: _input.cast("string")
             .fill_null("__NULL__")
@@ -665,8 +659,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Expr"]):
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
         def _rank(_input: ir.Expr) -> ir.Expr:
-            ibis = get_ibis()
-
             order_by = _input.desc() if descending else _input.asc()
             window = ibis.window(order_by=order_by)
 

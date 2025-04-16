@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
 
-from narwhals.dependencies import get_ibis
+import ibis
+
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
@@ -115,7 +116,6 @@ def narwhals_to_native_dtype(
     dtype: DType | type[DType], version: Version
 ) -> IbisDataType:
     dtypes = import_dtypes_module(version)
-    ibis = get_ibis()
     ibis_dtypes = ibis.expr.datatypes
 
     if isinstance_or_issubclass(dtype, dtypes.Decimal):

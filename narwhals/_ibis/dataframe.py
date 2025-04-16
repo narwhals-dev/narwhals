@@ -7,11 +7,11 @@ from typing import Literal
 from typing import Mapping
 from typing import Sequence
 
+import ibis
 import ibis.expr.types as ir
 
 from narwhals._ibis.utils import evaluate_exprs
 from narwhals._ibis.utils import native_to_narwhals_dtype
-from narwhals.dependencies import get_ibis
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantDataFrame
@@ -80,7 +80,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         return self
 
     def __native_namespace__(self: Self) -> ModuleType:
-        return get_ibis()
+        return ibis
 
     def __narwhals_namespace__(self: Self) -> IbisNamespace:
         from narwhals._ibis.namespace import IbisNamespace
@@ -392,8 +392,6 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         descending: bool | Sequence[bool],
         nulls_last: bool,
     ) -> Self:
-        ibis = get_ibis()
-
         if isinstance(descending, bool):
             descending = [descending for _ in range(len(by))]
 
