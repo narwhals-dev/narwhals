@@ -25,7 +25,7 @@ class IbisExprStringNamespace:
         )
 
     def contains(self: Self, pattern: str, *, literal: bool) -> IbisExpr:
-        def func(_input: ir.Expr) -> ir.Expr:
+        def func(_input: ir.StringColumn) -> ir.BooleanValue:
             if literal:
                 return _input.contains(pattern)
             return _input.re_search(pattern)

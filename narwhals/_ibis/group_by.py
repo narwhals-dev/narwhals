@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from narwhals._ibis.expr import IbisExpr
 
 
-class IbisGroupBy(LazyGroupBy["IbisLazyFrame", "IbisExpr", "ir.Expr"]):
+class IbisGroupBy(LazyGroupBy["IbisLazyFrame", "IbisExpr", "ir.Value"]):
     def __init__(
         self: Self,
         df: IbisLazyFrame,
@@ -25,7 +25,7 @@ class IbisGroupBy(LazyGroupBy["IbisLazyFrame", "IbisExpr", "ir.Expr"]):
         self._compliant_frame = df.drop_nulls(subset=None) if drop_null_keys else df
         self._keys: list[str] = list(keys)
 
-    def _alias_native_expr(self, native_expr: ir.Expr, alias: str) -> ir.Expr:
+    def _alias_native_expr(self, native_expr: ir.Value, alias: str) -> ir.Value:
         return native_expr.name(alias)
 
     def agg(self: Self, *exprs: IbisExpr) -> IbisLazyFrame:

@@ -25,7 +25,7 @@ class WindowInputs:
 
     def __init__(
         self,
-        expr: ir.Expr,
+        expr: ir.Expr | ir.Value | ir.Column,
         partition_by: Sequence[str],
         order_by: Sequence[str],
     ) -> None:
@@ -34,8 +34,8 @@ class WindowInputs:
         self.order_by = order_by
 
 
-def evaluate_exprs(df: IbisLazyFrame, /, *exprs: IbisExpr) -> list[tuple[str, ir.Expr]]:
-    native_results: list[tuple[str, ir.Expr]] = []
+def evaluate_exprs(df: IbisLazyFrame, /, *exprs: IbisExpr) -> list[tuple[str, ir.Value]]:
+    native_results: list[tuple[str, ir.Value]] = []
     for expr in exprs:
         native_series_list = expr._call(df)
         output_names = expr._evaluate_output_names(df)
