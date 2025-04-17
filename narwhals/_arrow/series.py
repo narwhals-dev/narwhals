@@ -873,7 +873,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         )
         return self._with_native(result)
 
-    @requires(min_version=(13,))
+    @requires.backend_version((13,))
     def cum_max(self, *, reverse: bool) -> Self:
         result = (
             pc.cumulative_max(self.native, skip_nulls=True)
@@ -882,7 +882,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         )
         return self._with_native(result)
 
-    @requires(min_version=(13,))
+    @requires.backend_version((13,))
     def cum_prod(self, *, reverse: bool) -> Self:
         result = (
             pc.cumulative_prod(self.native, skip_nulls=True)
@@ -1021,7 +1021,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         result = pc.if_else(null_mask, lit(None, native_series.type), rank)
         return self._with_native(result)
 
-    @requires(min_version=(13,))
+    @requires.backend_version((13,))
     def hist(  # noqa: PLR0915
         self,
         bins: list[float | int] | None,

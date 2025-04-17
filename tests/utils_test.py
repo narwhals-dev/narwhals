@@ -518,11 +518,11 @@ def test_requires() -> None:
         def native(self) -> str:
             return self._native_obj
 
-        @requires(min_version=(1, 0, 0))
+        @requires.backend_version((1, 0, 0))
         def to_int(self) -> int:
             return int(self.native)
 
-        @requires(min_version=(2,), hint="Something helpful I suppose")
+        @requires.backend_version((2,), hint="Something helpful I suppose")
         def concat(self, *strings: str, separator: str = "") -> str:
             return separator.join((self.native, *strings))
 

@@ -110,7 +110,7 @@ class PolarsExpr:
             native = self.native.over(partition_by or pl.lit(1), order_by=order_by)
         return self._with_native(native)
 
-    @requires(min_version=(1,))
+    @requires.backend_version((1,))
     def rolling_var(
         self: Self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
@@ -120,7 +120,7 @@ class PolarsExpr:
         )
         return self._with_native(native)
 
-    @requires(min_version=(1,))
+    @requires.backend_version((1,))
     def rolling_std(
         self: Self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
@@ -155,7 +155,7 @@ class PolarsExpr:
         native = self.native.map_batches(function, return_dtype_pl)
         return self._with_native(native)
 
-    @requires(min_version=(1,))
+    @requires.backend_version((1,))
     def replace_strict(
         self,
         old: Sequence[Any] | Mapping[Any, Any],

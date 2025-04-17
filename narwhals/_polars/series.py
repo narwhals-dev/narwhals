@@ -190,7 +190,7 @@ class PolarsSeries:
         dtype_pl = narwhals_to_native_dtype(dtype, self._version, self._backend_version)
         return self._with_native(self.native.cast(dtype_pl))
 
-    @requires(min_version=(1,))
+    @requires.backend_version((1,))
     def replace_strict(
         self: Self,
         old: Sequence[Any] | Mapping[Any, Any],
@@ -339,7 +339,7 @@ class PolarsSeries:
 
         return self._with_native(native_result)
 
-    @requires(min_version=(1,))
+    @requires.backend_version((1,))
     def rolling_var(
         self: Self,
         window_size: int,
@@ -359,7 +359,7 @@ class PolarsSeries:
             )
         )
 
-    @requires(min_version=(1,))
+    @requires.backend_version((1,))
     def rolling_std(
         self: Self,
         window_size: int,

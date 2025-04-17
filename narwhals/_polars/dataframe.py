@@ -415,7 +415,7 @@ class PolarsDataFrame:
             )
         )
 
-    @requires(min_version=(1,))
+    @requires.backend_version((1,))
     def pivot(
         self,
         on: Sequence[str],
