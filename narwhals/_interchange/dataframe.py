@@ -13,7 +13,6 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
 
-    from narwhals._interchange.series import InterchangeSeries
     from narwhals.dtypes import DType
     from narwhals.typing import DataFrameLike
     from narwhals.utils import Version

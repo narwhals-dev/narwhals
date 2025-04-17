@@ -19,7 +19,6 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
 
-    from narwhals._ibis.series import IbisInterchangeSeries
     from narwhals.dtypes import DType
 
 

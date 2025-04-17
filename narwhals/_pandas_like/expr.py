@@ -264,9 +264,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     sorting_indices = df.get_column(token)
                 elif reverse:
                     columns = list(set(partition_by).union(output_names))
-                    df = df.simple_select(*columns)._gather_slice(
-                        slice(None, None, -1)
-                    )
+                    df = df.simple_select(*columns)._gather_slice(slice(None, None, -1))
                 grouped = df._native_frame.groupby(partition_by)
                 if function_name.startswith("rolling"):
                     rolling = grouped[list(output_names)].rolling(**pandas_kwargs)
