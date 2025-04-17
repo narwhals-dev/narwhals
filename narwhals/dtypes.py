@@ -449,6 +449,8 @@ class Enum(DType):
        Enum(categories=['beluga', 'narwhal', 'orca'])
     """
 
+    categories: Sequence[str]
+
     def __init__(self, categories: Iterable[str] | type[enum.Enum]) -> None:
         if isinstance(categories, type) and issubclass(categories, enum.Enum):
             categories = (v.value for v in categories)

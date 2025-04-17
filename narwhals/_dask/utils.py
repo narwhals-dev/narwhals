@@ -129,11 +129,15 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> An
         if version is Version.V1:
             msg = "Converting to Enum is not supported in narwhals.stable.v1"
             raise NotImplementedError(msg)
+        if isinstance(dtype, dtypes.Enum):
+            import pandas as pd
 
-        if dtype is dtypes.Enum:
-            msg = "Can not cast / initialize Enum without categories present"
-            raise ValueError(msg)
-        return get_pandas().CategoricalDtype(categories=dtype.categories, ordered=True)  # pyright: ignore[reportAttributeAccessIssue]
+            # NOTE: `pandas-stubs.core.dtypes.dtypes.CategoricalDtype.categories` is too narrow
+            # Should be one of the `ListLike*` types
+            # https://github.com/pandas-dev/pandas-stubs/blob/8434bde95460b996323cc8c0fea7b0a8bb00ea26/pandas-stubs/_typing.pyi#L497-L505
+            return pd.CategoricalDtype(dtype.categories, ordered=True)  # pyright: ignore[reportArgumentType]
+        msg = "Can not cast / initialize Enum without categories present"
+        raise ValueError(msg)
 
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
         return "category"

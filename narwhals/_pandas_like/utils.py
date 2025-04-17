@@ -257,7 +257,7 @@ def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> 
         if version is Version.V1:
             return dtypes.Categorical()
         if native_dtype.ordered:
-            return dtypes.Enum(categories=native_dtype.categories)
+            return dtypes.Enum(native_dtype.categories)
         return dtypes.Categorical()
     if (match_ := PATTERN_PD_DATETIME.match(dtype)) or (
         match_ := PATTERN_PA_DATETIME.match(dtype)
@@ -482,15 +482,11 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
         if version is Version.V1:
             msg = "Converting to Enum is not supported in narwhals.stable.v1"
             raise NotImplementedError(msg)
-
-        if dtype is dtypes.Enum:
-            msg = "Can not cast / initialize Enum without categories present"
-            raise ValueError(msg)
-
-        return implementation.to_native_namespace().CategoricalDtype(
-            categories=dtype.categories,  # pyright: ignore[reportAttributeAccessIssue]
-            ordered=True,
-        )
+        if isinstance(dtype, dtypes.Enum):
+            ns = implementation.to_native_namespace()
+            return ns.CategoricalDtype(dtype.categories, ordered=True)
+        msg = "Can not cast / initialize Enum without categories present"
+        raise ValueError(msg)
 
     if isinstance_or_issubclass(
         dtype, (dtypes.Struct, dtypes.Array, dtypes.List, dtypes.Time, dtypes.Binary)
