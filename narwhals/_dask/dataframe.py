@@ -112,15 +112,18 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
         if backend is None or backend is Implementation.PANDAS:
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
+            implementation = Implementation.PANDAS
+            backend_version = parse_version(pd)
+
             return PandasLikeDataFrame(
                 rename_axis(
                     result,
-                    implementation=Implementation.PANDAS,
-                    backend_version=parse_version(pd),
+                    implementation=implementation,
+                    backend_version=backend_version,
                     columns=self.native.columns.name,
                 ),
-                implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd),
+                implementation=implementation,
+                backend_version=backend_version,
                 version=self._version,
                 validate_column_names=True,
             )
