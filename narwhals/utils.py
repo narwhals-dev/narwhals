@@ -28,6 +28,7 @@ from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_duckdb
 from narwhals.dependencies import get_ibis
 from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
@@ -35,6 +36,7 @@ from narwhals.dependencies import get_pyspark_sql
 from narwhals.dependencies import get_sqlframe
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_modin_series
+from narwhals.dependencies import is_numpy_array_1d
 from narwhals.dependencies import is_pandas_dataframe
 from narwhals.dependencies import is_pandas_like_dataframe
 from narwhals.dependencies import is_pandas_like_series
@@ -1269,6 +1271,42 @@ def parse_columns_to_drop(
 
 def is_sequence_but_not_str(sequence: Any | Sequence[_T]) -> TypeIs[Sequence[_T]]:
     return isinstance(sequence, Sequence) and not isinstance(sequence, str)
+
+
+def is_sequence_like_ints(sequence: Any | Sequence[_T]) -> bool:
+    np = get_numpy()
+    return (
+        isinstance(sequence, Sequence)
+        and ((len(sequence) > 0 and isinstance(sequence[0], int)) or (len(sequence) == 0))
+    ) or (is_numpy_array_1d(sequence) and np.issubdtype(sequence.dtype, np.integer))
+
+
+def is_sequence_like(sequence: Any | Sequence[_T]) -> bool:
+    return (isinstance(sequence, Sequence) and not isinstance(sequence, str)) or (
+        is_numpy_array_1d(sequence)
+    )
+
+
+def is_slice_strs(obj: object) -> bool:
+    return isinstance(obj, slice) and (
+        isinstance(obj.start, str) or isinstance(obj.stop, str)
+    )
+
+
+def is_slice_ints(obj: object) -> bool:
+    return isinstance(obj, slice) and (
+        isinstance(obj.start, int)  # e.g. [1:]
+        or isinstance(obj.stop, int)  # e.g. [:3]
+        or (obj.start is None and obj.stop is None)  # e.g. [::2]
+    )
+
+
+def is_int_like_indexer(cols: object) -> bool:
+    return isinstance(cols, int) or is_sequence_like_ints(cols) or is_slice_ints(cols)
+
+
+def is_null_slice(obj: object) -> bool:
+    return isinstance(obj, slice) and obj == slice(None)
 
 
 def is_list_of(obj: Any, tp: type[_T]) -> TypeIs[list[type[_T]]]:

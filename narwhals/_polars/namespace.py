@@ -254,7 +254,7 @@ class PolarsNamespace:
     @property
     def selectors(self) -> CompliantSelectorNamespace[PolarsDataFrame, PolarsSeries]:
         return cast(
-            "CompliantSelectorNamespace[PolarsDataFrame, PolarsSeries]",
+            "CompliantSelectorNamespace[PolarsDataFrame, PolarsSeries]",  # pyright: ignore[reportInvalidTypeArguments]
             PolarsSelectorNamespace(self),
         )
 

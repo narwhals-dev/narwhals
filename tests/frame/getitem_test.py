@@ -171,11 +171,10 @@ def test_slice_slice_columns(
     assert_equal_data(result, expected)
 
 
-def test_slice_invalid(constructor_eager: ConstructorEager) -> None:
+def test_slice_item(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 2], "b": [4, 5]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    with pytest.raises(TypeError, match="Hint:"):
-        df[0, 0]
+    assert df[0, 0] == 1
 
 
 def test_slice_edge_cases(constructor_eager: ConstructorEager) -> None:
@@ -242,3 +241,12 @@ def test_get_item_works_with_tuple_and_list_indexing_and_str(
 ) -> None:
     nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     nw_df[row_idx, col]
+
+
+def test_getitem_ndarray_columns(constructor_eager: ConstructorEager) -> None:
+    data = {"col1": ["a", "b", "c", "d"], "col2": np.arange(4), "col3": [4, 3, 2, 1]}
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
+    arr: np.ndarray[tuple[int], np.dtype[np.int64]] = np.array([0, 1])  # pyright: ignore[reportAssignmentType]
+    result = nw_df[:, arr]
+    expected = {"col1": ["a", "b", "c", "d"], "col2": [0, 1, 2, 3]}
+    assert_equal_data(result, expected)

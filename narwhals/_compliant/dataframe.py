@@ -25,6 +25,10 @@ from narwhals._translate import NumpyConvertible
 from narwhals.utils import Version
 from narwhals.utils import _StoresNative
 from narwhals.utils import deprecated
+from narwhals.utils import is_int_like_indexer
+from narwhals.utils import is_null_slice
+from narwhals.utils import is_sequence_like
+from narwhals.utils import is_sequence_like_ints
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -99,7 +103,6 @@ class CompliantDataFrame(
         schema: Mapping[str, DType] | Schema | Sequence[str] | None,
     ) -> Self: ...
     def __array__(self, dtype: Any, *, copy: bool | None) -> _2DArray: ...
-    def __getitem__(self, item: Any) -> CompliantSeriesT | Self: ...
     def simple_select(self, *column_names: str) -> Self:
         """`select` where all args are column names."""
         ...
@@ -227,6 +230,7 @@ class CompliantDataFrame(
     def write_csv(self, file: str | Path | BytesIO) -> None: ...
     def write_csv(self, file: str | Path | BytesIO | None) -> str | None: ...
     def write_parquet(self, file: str | Path | BytesIO) -> None: ...
+    def __getitem__(self, item: tuple[Any, Any]) -> Self: ...
 
 
 class CompliantLazyFrame(
@@ -369,3 +373,41 @@ class EagerDataFrame(
         data: _2DArray, columns: Sequence[str] | None, /
     ) -> list[str]:
         return list(columns or (f"column_{x}" for x in range(data.shape[1])))
+
+    def gather(self, indices: Any) -> Self: ...
+    def _gather_slice(self, indices: Any) -> Self: ...
+    def _select_indices(self, indices: Any) -> Self: ...
+    def _select_labels(self, indices: Any) -> Self: ...
+    def _select_slice_of_indices(self, indices: Any) -> Self: ...
+    def _select_slice_of_labels(self, indices: Any) -> Self: ...
+
+    def __getitem__(self, item: tuple[Any, Any]) -> Self:
+        rows, columns = item
+
+        is_int_col_indexer = is_int_like_indexer(columns)
+        compliant = self
+        if not is_null_slice(columns):
+            if is_int_col_indexer and not isinstance(columns, slice):
+                compliant = compliant._select_indices(columns)
+            elif is_int_col_indexer:
+                compliant = compliant._select_slice_of_indices(columns)
+            elif isinstance(columns, slice):
+                compliant = compliant._select_slice_of_labels(columns)
+            elif is_sequence_like(columns):
+                compliant = self._select_labels(columns)
+            else:
+                msg = "Unreachable code"
+                raise AssertionError(msg)
+
+        if not is_null_slice(rows):
+            if isinstance(rows, int):
+                compliant = compliant.gather([rows])
+            elif isinstance(rows, (slice, range)):
+                compliant = compliant._gather_slice(rows)
+            elif is_sequence_like_ints(rows):
+                compliant = compliant.gather(rows)
+            else:
+                msg = "Unreachable code"
+                raise AssertionError(msg)
+
+        return compliant

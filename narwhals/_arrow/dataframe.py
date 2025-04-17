@@ -18,17 +18,14 @@ from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import align_series_full_broadcast
 from narwhals._arrow.utils import convert_str_slice_to_int_slice
 from narwhals._arrow.utils import native_to_narwhals_dtype
-from narwhals._arrow.utils import select_rows
 from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
-from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import check_column_exists
 from narwhals.utils import check_column_names_are_unique
 from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -51,7 +48,6 @@ if TYPE_CHECKING:
     from narwhals._arrow.group_by import ArrowGroupBy
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.typing import ArrowChunkedArray
-    from narwhals._arrow.typing import Indices  # type: ignore[attr-defined]
     from narwhals._arrow.typing import Mask  # type: ignore[attr-defined]
     from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
     from narwhals._translate import IntoArrowTable
@@ -62,7 +58,6 @@ if TYPE_CHECKING:
     from narwhals.typing import JoinStrategy
     from narwhals.typing import SizeUnit
     from narwhals.typing import UniqueKeepStrategy
-    from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -252,118 +247,37 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
     def __array__(self: Self, dtype: Any, *, copy: bool | None) -> _2DArray:
         return self.native.__array__(dtype, copy=copy)
 
-    @overload
-    def __getitem__(  # type: ignore[overload-overlap, unused-ignore]
-        self: Self, item: str | tuple[slice | Sequence[int] | _1DArray, int | str]
-    ) -> ArrowSeries: ...
-    @overload
-    def __getitem__(
-        self: Self,
-        item: (
-            int
-            | slice
-            | Sequence[int]
-            | Sequence[str]
-            | _1DArray
-            | tuple[
-                slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
-            ]
-        ),
-    ) -> Self: ...
-    def __getitem__(
-        self: Self,
-        item: (
-            str
-            | int
-            | slice
-            | Sequence[int]
-            | Sequence[str]
-            | _1DArray
-            | tuple[slice | Sequence[int] | _1DArray, int | str]
-            | tuple[
-                slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
-            ]
-        ),
-    ) -> ArrowSeries | Self:
-        if isinstance(item, tuple):
-            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)  # pyright: ignore[reportAssignmentType]
+    def gather(self, item: Any) -> Self:
+        if len(item) == 0:
+            return self._with_native(self.native.slice(0, 0))
+        return self._with_native(self.native.take(item))
 
-        if isinstance(item, str):
-            return ArrowSeries.from_native(self.native[item], context=self, name=item)
-        elif (
-            isinstance(item, tuple)
-            and len(item) == 2
-            and is_sequence_but_not_str(item[1])
-            and not isinstance(item[0], str)
-        ):
-            if len(item[1]) == 0:
-                # Return empty dataframe
-                return self._with_native(self.native.slice(0, 0).select([]))
-            selected_rows = select_rows(self.native, item[0])
-            return self._with_native(selected_rows.select(cast("Indices", item[1])))
+    def _gather_slice(self, item: Any) -> Self:
+        start = item.start or 0
+        stop = item.stop if item.stop is not None else len(self.native)
+        if item.step is not None and item.step != 1:
+            msg = "Slicing with step is not supported on PyArrow tables"
+            raise NotImplementedError(msg)
+        return self._with_native(self.native.slice(start, stop - start))
 
-        elif isinstance(item, tuple) and len(item) == 2:
-            if isinstance(item[1], slice):
-                columns = self.columns
-                indices = cast("Indices", item[0])
-                if item[1] == slice(None):
-                    if isinstance(item[0], Sequence) and len(item[0]) == 0:
-                        return self._with_native(self.native.slice(0, 0))
-                    return self._with_native(self.native.take(indices))
-                if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
-                    start, stop, step = convert_str_slice_to_int_slice(item[1], columns)
-                    return self._with_native(
-                        self.native.take(indices).select(columns[start:stop:step])
-                    )
-                if isinstance(item[1].start, int) or isinstance(item[1].stop, int):
-                    return self._with_native(
-                        self.native.take(indices).select(
-                            columns[item[1].start : item[1].stop : item[1].step]
-                        )
-                    )
-                msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
-                raise TypeError(msg)  # pragma: no cover
+    def _select_slice_of_labels(self, item: Any) -> Self:
+        start, stop, step = convert_str_slice_to_int_slice(item, self.columns)
+        return self._with_native(self.native.select(self.columns[start:stop:step]))
 
-            # PyArrow columns are always strings
-            col_name = (
-                item[1]
-                if isinstance(item[1], str)
-                else self.columns[cast("int", item[1])]
+    def _select_slice_of_indices(self, item: Any) -> Self:
+        return self._with_native(
+            self.native.select(self.columns[item.start : item.stop : item.step])
+        )
+
+    def _select_indices(self, item: Any) -> Self:
+        if len(item) == 0:
+            return self._with_native(
+                self.native.__class__.from_arrays([]), validate_column_names=False
             )
-            if isinstance(item[0], str):  # pragma: no cover
-                msg = "Can not slice with tuple with the first element as a str"
-                raise TypeError(msg)
-            if (isinstance(item[0], slice)) and (item[0] == slice(None)):
-                return ArrowSeries.from_native(
-                    self.native[col_name], context=self, name=col_name
-                )
-            selected_rows = select_rows(self.native, item[0])
-            return ArrowSeries.from_native(
-                selected_rows[col_name], context=self, name=col_name
-            )
+        return self._with_native(self.native.select([self.columns[x] for x in item]))
 
-        elif isinstance(item, slice):
-            if item.step is not None and item.step != 1:
-                msg = "Slicing with step is not supported on PyArrow tables"
-                raise NotImplementedError(msg)
-            columns = self.columns
-            if isinstance(item.start, str) or isinstance(item.stop, str):
-                start, stop, step = convert_str_slice_to_int_slice(item, columns)
-                return self._with_native(self.native.select(columns[start:stop:step]))
-            start = item.start or 0
-            stop = item.stop if item.stop is not None else len(self.native)
-            return self._with_native(self.native.slice(start, stop - start))
-
-        elif isinstance(item, Sequence) or is_numpy_array_1d(item):
-            if isinstance(item, Sequence) and len(item) > 0 and isinstance(item[0], str):
-                return self._with_native(self.native.select(cast("Indices", item)))
-            if isinstance(item, Sequence) and len(item) == 0:
-                return self._with_native(self.native.slice(0, 0))
-            return self._with_native(self.native.take(cast("Indices", item)))
-
-        else:  # pragma: no cover
-            msg = f"Expected str or slice, got: {type(item)}"
-            raise TypeError(msg)
+    def _select_labels(self, item: Any) -> Self:
+        return self._with_native(self.native.select(item))
 
     @property
     def schema(self: Self) -> dict[str, DType]:

@@ -23,6 +23,8 @@ from narwhals._translate import FromNative
 from narwhals._translate import NumpyConvertible
 from narwhals.utils import _StoresCompliant
 from narwhals.utils import _StoresNative
+from narwhals.utils import is_null_slice
+from narwhals.utils import is_sequence_like_ints
 from narwhals.utils import unstable
 
 if TYPE_CHECKING:
@@ -78,7 +80,6 @@ class CompliantSeries(
     def __native_namespace__(self) -> ModuleType: ...
     def __array__(self, dtype: Any, *, copy: bool | None) -> _1DArray: ...
     def __contains__(self, other: Any) -> bool: ...
-    def __getitem__(self, item: Any) -> Any: ...
     def __iter__(self) -> Iterator[Any]: ...
     def __len__(self) -> int:
         return len(self.native)
@@ -284,6 +285,22 @@ class CompliantSeries(
     def list(self) -> Any: ...
     @property
     def struct(self) -> Any: ...
+
+    def gather(self, indices: Any) -> Self: ...
+    def _gather_slice(self, indices: Any) -> Self: ...
+
+    def __getitem__(self, rows: Any) -> Self:
+        if is_null_slice(rows):
+            return self
+        if isinstance(rows, int):
+            return self.gather([rows])
+        elif isinstance(rows, (slice, range)):
+            return self._gather_slice(rows)
+        elif is_sequence_like_ints(rows):
+            return self.gather(rows)
+        else:
+            msg = "Unreachable code"
+            raise AssertionError(msg)
 
 
 class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):

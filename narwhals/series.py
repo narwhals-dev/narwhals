@@ -8,6 +8,7 @@ from typing import Iterator
 from typing import Literal
 from typing import Mapping
 from typing import Sequence
+from typing import cast
 from typing import overload
 
 from narwhals.dependencies import is_numpy_scalar
@@ -132,9 +133,11 @@ class Series(Generic[IntoSeriesT]):
     def __getitem__(self: Self, idx: int) -> Any: ...
 
     @overload
-    def __getitem__(self: Self, idx: slice | Sequence[int] | Self) -> Self: ...
+    def __getitem__(self: Self, idx: slice | Sequence[int] | _1DArray | Self) -> Self: ...
 
-    def __getitem__(self: Self, idx: int | slice | Sequence[int] | Self) -> Any | Self:
+    def __getitem__(
+        self: Self, idx: int | slice | Sequence[int] | _1DArray | Self
+    ) -> Any | Self:
         """Retrieve elements from the object using integer indexing or slicing.
 
         Arguments:
@@ -169,10 +172,9 @@ class Series(Generic[IntoSeriesT]):
         if isinstance(idx, int) or (
             is_numpy_scalar(idx) and idx.dtype.kind in {"i", "u"}
         ):
-            return self._compliant_series[idx]
-        return self._with_compliant(
-            self._compliant_series[to_native(idx, pass_through=True)]
-        )
+            return self._compliant_series.item(cast("int", idx))
+        idx = to_native(idx, pass_through=True)
+        return self._with_compliant(self._compliant_series[idx])
 
     def __native_namespace__(self: Self) -> ModuleType:
         return self._compliant_series.__native_namespace__()

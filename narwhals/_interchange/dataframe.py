@@ -105,13 +105,6 @@ class InterchangeFrame:
         )
         raise NotImplementedError(msg)
 
-    def __getitem__(self: Self, item: str) -> InterchangeSeries:
-        from narwhals._interchange.series import InterchangeSeries
-
-        return InterchangeSeries(
-            self._interchange_frame.get_column_by_name(item), version=self._version
-        )
-
     def to_pandas(self: Self) -> pd.DataFrame:
         import pandas as pd  # ignore-banned-import()
 

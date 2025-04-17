@@ -405,22 +405,18 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def name(self: Self) -> str:
         return self._name
 
-    @overload
-    def __getitem__(self: Self, idx: int) -> Any: ...
+    def gather(self, item: Any) -> Self:
+        if len(item) == 0:
+            return self._with_native(self.native.slice(0, 0))
+        return self._with_native(self.native.take(item))
 
-    @overload
-    def __getitem__(
-        self: Self, idx: slice | Sequence[int] | ArrowChunkedArray
-    ) -> Self: ...
-
-    def __getitem__(
-        self: Self, idx: int | slice | Sequence[int] | ArrowChunkedArray
-    ) -> Any | Self:
-        if isinstance(idx, int):
-            return maybe_extract_py_scalar(self.native[idx], return_py_scalar=True)
-        if isinstance(idx, (Sequence, pa.ChunkedArray)):
-            return self._with_native(self.native.take(idx))
-        return self._with_native(self.native[idx])
+    def _gather_slice(self, item: Any) -> Self:
+        start = item.start or 0
+        stop = item.stop if item.stop is not None else len(self.native)
+        if item.step is not None and item.step != 1:
+            msg = "Slicing with step is not supported on PyArrow tables"
+            raise NotImplementedError(msg)
+        return self._with_native(self.native.slice(start, stop - start))
 
     def scatter(self: Self, indices: int | Sequence[int], values: Any) -> Self:
         import numpy as np  # ignore-banned-import
@@ -924,7 +920,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         result = self._with_native(
             pc.if_else((count_in_window >= min_samples).native, rolling_sum.native, None)
         )
-        return result[offset:]
+        return result._gather_slice(slice(offset, None))
 
     def rolling_mean(
         self: Self,
@@ -959,7 +955,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             )
             / count_in_window
         )
-        return result[offset:]
+        return result._gather_slice(slice(offset, None))
 
     def rolling_var(
         self: Self,
@@ -1007,7 +1003,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             )
         ) / self._with_native(pc.max_element_wise((count_in_window - ddof).native, 0))
 
-        return result[offset:]
+        return result._gather_slice(slice(offset, None, None))
 
     def rolling_std(
         self: Self,

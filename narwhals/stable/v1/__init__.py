@@ -151,25 +151,29 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         return LazyFrame
 
     @overload
+    def __getitem__(self: Self, item: tuple[int, int | str]) -> Any: ...
+
+    @overload
     def __getitem__(  # type: ignore[overload-overlap]
         self: Self,
         item: str | tuple[slice | Sequence[int] | _1DArray, int | str],
     ) -> Series[Any]: ...
+
     @overload
     def __getitem__(
         self: Self,
         item: (
             int
             | slice
-            | _1DArray
             | Sequence[int]
             | Sequence[str]
+            | _1DArray
             | tuple[
-                slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
+                slice | Sequence[int] | _1DArray,
+                slice | Sequence[int] | Sequence[str] | _1DArray,
             ]
         ),
     ) -> Self: ...
-
     def __getitem__(self: Self, item: Any) -> Any:
         return super().__getitem__(item)
 

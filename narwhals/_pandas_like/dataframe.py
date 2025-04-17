@@ -27,7 +27,6 @@ from narwhals._pandas_like.utils import pivot_table
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_index
-from narwhals.dependencies import is_numpy_array_1d
 from narwhals.dependencies import is_pandas_like_dataframe
 from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import ShapeError
@@ -37,7 +36,6 @@ from narwhals.utils import _remap_full_join_keys
 from narwhals.utils import check_column_exists
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
-from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import scale_bytes
@@ -68,7 +66,6 @@ if TYPE_CHECKING:
     from narwhals.typing import PivotAgg
     from narwhals.typing import SizeUnit
     from narwhals.typing import UniqueKeepStrategy
-    from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -281,135 +278,40 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
     def __array__(self: Self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
         return self.to_numpy(dtype=dtype, copy=copy)
 
-    @overload
-    def __getitem__(  # type: ignore[overload-overlap]
-        self: Self,
-        item: str | tuple[slice | Sequence[int] | _1DArray, int | str],
-    ) -> PandasLikeSeries: ...
+    def gather(self, items: Any) -> Self:
+        items = list(items) if isinstance(items, tuple) else items
+        return self._with_native(self.native.iloc[items, :])
 
-    @overload
-    def __getitem__(
-        self: Self,
-        item: (
-            int
-            | slice
-            | Sequence[int]
-            | Sequence[str]
-            | _1DArray
-            | tuple[
-                slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
-            ]
-        ),
-    ) -> Self: ...
-    def __getitem__(
-        self: Self,
-        item: (
-            str
-            | int
-            | slice
-            | Sequence[int]
-            | Sequence[str]
-            | _1DArray
-            | tuple[slice | Sequence[int] | _1DArray, int | str]
-            | tuple[
-                slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
-            ]
-        ),
-    ) -> PandasLikeSeries | Self:
-        if isinstance(item, tuple):
-            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)  # pyright: ignore[reportAssignmentType]
+    def _gather_slice(self, item: Any) -> Self:
+        return self._with_native(
+            self.native.iloc[slice(item.start, item.stop, item.step), :],
+            validate_column_names=False,
+        )
 
-        if isinstance(item, str):
-            return PandasLikeSeries.from_native(self.native[item], context=self)
+    def _select_slice_of_labels(self, item: Any) -> Self:
+        start, stop, step = convert_str_slice_to_int_slice(item, self.native.columns)
+        return self._with_native(
+            self.native.iloc[:, slice(start, stop, step)],
+            validate_column_names=False,
+        )
 
-        elif (
-            isinstance(item, tuple)
-            and len(item) == 2
-            and is_sequence_but_not_str(item[1])
-        ):
-            if len(item[1]) == 0:
-                # Return empty dataframe
-                return self._with_native(
-                    self.native.__class__(), validate_column_names=False
-                )
-            if isinstance(item[1][0], int):
-                return self._with_native(
-                    self.native.iloc[item], validate_column_names=False
-                )
-            if isinstance(item[1][0], str):
-                indexer = (
-                    item[0],
-                    self.native.columns.get_indexer(item[1]),
-                )
-                return self._with_native(
-                    self.native.iloc[indexer], validate_column_names=False
-                )
-            msg = (
-                f"Expected sequence str or int, got: {type(item[1])}"  # pragma: no cover
-            )
-            raise TypeError(msg)  # pragma: no cover
+    def _select_slice_of_indices(self, item: Any) -> Self:
+        return self._with_native(
+            self.native.iloc[:, slice(item.start, item.stop, item.step)],
+            validate_column_names=False,
+        )
 
-        elif isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], slice):
-            columns = self.native.columns
-            if item[1] == slice(None):
-                return self._with_native(
-                    self.native.iloc[item[0], :], validate_column_names=False
-                )
-            if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
-                start, stop, step = convert_str_slice_to_int_slice(item[1], columns)
-                return self._with_native(
-                    self.native.iloc[item[0], slice(start, stop, step)],
-                    validate_column_names=False,
-                )
-            if isinstance(item[1].start, int) or isinstance(item[1].stop, int):
-                return self._with_native(
-                    self.native.iloc[
-                        item[0], slice(item[1].start, item[1].stop, item[1].step)
-                    ],
-                    validate_column_names=False,
-                )
-            msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
-            raise TypeError(msg)  # pragma: no cover
+    def _select_indices(self, item: Any) -> Self:
+        item = list(item) if isinstance(item, tuple) else item
+        if len(item) == 0:
+            return self._with_native(self.native.__class__(), validate_column_names=False)
+        return self._with_native(
+            self.native.iloc[:, item],
+            validate_column_names=False,
+        )
 
-        elif isinstance(item, tuple) and len(item) == 2:
-            if isinstance(item[1], str):
-                index = (item[0], self.native.columns.get_loc(item[1]))
-                native_series = self.native.iloc[index]
-            elif isinstance(item[1], int):
-                native_series = self.native.iloc[item]
-            else:  # pragma: no cover
-                msg = f"Expected str or int, got: {type(item[1])}"
-                raise TypeError(msg)
-
-            return PandasLikeSeries.from_native(native_series, context=self)
-
-        elif is_sequence_but_not_str(item) or is_numpy_array_1d(item):
-            if len(item) > 0 and isinstance(item[0], str):
-                return self._with_native(
-                    select_columns_by_name(
-                        self.native,
-                        cast("list[str] | _1DArray", item),
-                        self._backend_version,
-                        self._implementation,
-                    ),
-                    validate_column_names=False,
-                )
-            return self._with_native(self.native.iloc[item], validate_column_names=False)
-
-        elif isinstance(item, slice):
-            if isinstance(item.start, str) or isinstance(item.stop, str):
-                start, stop, step = convert_str_slice_to_int_slice(
-                    item, self.native.columns
-                )
-                return self._with_native(
-                    self.native.iloc[:, slice(start, stop, step)],
-                    validate_column_names=False,
-                )
-            return self._with_native(self.native.iloc[item], validate_column_names=False)
-
-        else:  # pragma: no cover
-            msg = f"Expected str or slice, got: {type(item)}"
-            raise TypeError(msg)
+    def _select_labels(self, indices: Any) -> PandasLikeDataFrame:
+        return self._with_native(self.native.loc[:, indices])
 
     # --- properties ---
     @property
