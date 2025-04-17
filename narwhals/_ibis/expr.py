@@ -113,6 +113,10 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
     ) -> WindowFunction:
         supported_funcs = ["sum", "mean", "std", "var"]
 
+        if min_samples is not None and self._backend_version < (10, 0):
+            msg = "At least version 10.0 of Ibis is required to use `min_samples` with rolling calculations."
+            raise NotImplementedError(msg)
+
         if center:
             preceding = window_size // 2
             following = window_size - preceding - 1

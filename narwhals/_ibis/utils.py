@@ -83,7 +83,7 @@ def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
     if ibis_dtype.is_timestamp():
         return dtypes.Datetime()
     if ibis_dtype.is_interval():
-        _time_unit = ibis_dtype.unit
+        _time_unit = ibis_dtype.unit.value
         if _time_unit not in {"ns", "us", "ms", "s"}:
             msg = f"Unsupported interval unit: {_time_unit}"
             raise NotImplementedError(msg)

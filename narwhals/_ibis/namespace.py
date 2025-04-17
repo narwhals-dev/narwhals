@@ -76,6 +76,10 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
         separator: str,
         ignore_nulls: bool,
     ) -> IbisExpr:
+        if self._backend_version < (10, 0):
+            msg = "At least version 10.0 of Ibis is required to use `concat_str`."
+            raise NotImplementedError(msg)
+
         def func(df: IbisLazyFrame) -> list[ir.Value]:
             cols = list(chain.from_iterable(expr(df) for expr in exprs))
             cols_casted = [s.cast("string") for s in cols]
@@ -261,6 +265,10 @@ class IbisWhen(LazyWhen["IbisLazyFrame", "ir.Value", IbisExpr]):
         return IbisThen
 
     def __call__(self: Self, df: IbisLazyFrame) -> Sequence[ir.Value]:
+        if self._backend_version < (10, 0):
+            msg = "At least version 10.0 of Ibis is required to use `when`."
+            raise NotImplementedError(msg)
+
         is_expr = self._condition._is_expr
         condition = df._evaluate_expr(self._condition)
         then_ = self._then_value
