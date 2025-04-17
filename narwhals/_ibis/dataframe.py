@@ -50,11 +50,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
     _implementation = Implementation.IBIS
 
     def __init__(
-        self: Self,
-        df: ir.Table,
-        *,
-        backend_version: tuple[int, ...],
-        version: Version,
+        self, df: ir.Table, *, backend_version: tuple[int, ...], version: Version
     ) -> None:
         self._native_frame: ir.Table = df
         self._version = version
@@ -72,25 +68,25 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
             data, backend_version=context._backend_version, version=context._version
         )
 
-    def __narwhals_dataframe__(self: Self) -> Self:  # pragma: no cover
+    def __narwhals_dataframe__(self) -> Self:  # pragma: no cover
         # Keep around for backcompat.
         if self._version is not Version.V1:
             msg = "__narwhals_dataframe__ is not implemented for IbisLazyFrame"
             raise AttributeError(msg)
         return self
 
-    def __narwhals_lazyframe__(self: Self) -> Self:
+    def __narwhals_lazyframe__(self) -> Self:
         return self
 
-    def __native_namespace__(self: Self) -> ModuleType:
+    def __native_namespace__(self) -> ModuleType:
         return ibis
 
-    def __narwhals_namespace__(self: Self) -> IbisNamespace:
+    def __narwhals_namespace__(self) -> IbisNamespace:
         from narwhals._ibis.namespace import IbisNamespace
 
         return IbisNamespace(backend_version=self._backend_version, version=self._version)
 
-    def __getitem__(self: Self, item: str) -> IbisInterchangeSeries:
+    def __getitem__(self, item: str) -> IbisInterchangeSeries:
         from narwhals._ibis.series import IbisInterchangeSeries
 
         return IbisInterchangeSeries(self.native.select(item), version=self._version)
@@ -100,9 +96,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
             yield self.native[name]
 
     def collect(
-        self: Self,
-        backend: ModuleType | Implementation | str | None,
-        **kwargs: Any,
+        self, backend: ModuleType | Implementation | str | None, **kwargs: Any
     ) -> CompliantDataFrame[Any, Any, Any]:
         if backend is None or backend is Implementation.PYARROW:
             import pyarrow as pa  # ignore-banned-import
@@ -143,23 +137,20 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
         raise ValueError(msg)  # pragma: no cover
 
-    def head(self: Self, n: int) -> Self:
+    def head(self, n: int) -> Self:
         return self._with_native(self.native.head(n))
 
     def simple_select(self, *column_names: str) -> Self:
         return self._with_native(self.native.select(*column_names))
 
-    def aggregate(self: Self, *exprs: IbisExpr) -> Self:
+    def aggregate(self, *exprs: IbisExpr) -> Self:
         selection = [
             cast("ir.Scalar", val.name(name))
             for name, val in evaluate_exprs(self, *exprs)
         ]
         return self._with_native(self.native.aggregate(selection))
 
-    def select(
-        self: Self,
-        *exprs: IbisExpr,
-    ) -> Self:
+    def select(self, *exprs: IbisExpr) -> Self:
         from ibis.expr.operations.window import WindowFunction
 
         selection = [val.name(name) for name, val in evaluate_exprs(self, *exprs)]
@@ -177,12 +168,12 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
 
         return self._with_native(t)
 
-    def drop(self: Self, columns: Sequence[str], *, strict: bool) -> Self:
+    def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         columns_to_drop = parse_columns_to_drop(self, columns=columns, strict=strict)
         selection = (col for col in self.columns if col not in columns_to_drop)
         return self._with_native(self.native.select(*selection))
 
-    def lazy(self: Self, *, backend: Implementation | None = None) -> Self:
+    def lazy(self, *, backend: Implementation | None = None) -> Self:
         # The `backend`` argument has no effect but we keep it here for
         # backwards compatibility because in `narwhals.stable.v1`
         # function `.from_native()` will return a DataFrame for Ibis.
@@ -192,17 +183,17 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
             raise ValueError(msg)
         return self
 
-    def with_columns(self: Self, *exprs: IbisExpr) -> Self:
+    def with_columns(self, *exprs: IbisExpr) -> Self:
         new_columns_map = dict(evaluate_exprs(self, *exprs))
         return self._with_native(self.native.mutate(**new_columns_map))
 
-    def filter(self: Self, predicate: IbisExpr) -> Self:
+    def filter(self, predicate: IbisExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
         mask = cast("ir.BooleanValue", predicate(self)[0])
         return self._with_native(self.native.filter(mask))
 
     @property
-    def schema(self: Self) -> dict[str, DType]:
+    def schema(self) -> dict[str, DType]:
         if self._cached_schema is None:
             # Note: prefer `self._cached_schema` over `functools.cached_property`
             # due to Python3.13 failures.
@@ -213,10 +204,10 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         return self._cached_schema
 
     @property
-    def columns(self: Self) -> list[str]:
+    def columns(self) -> list[str]:
         return list(self.native.columns)
 
-    def to_pandas(self: Self) -> pd.DataFrame:
+    def to_pandas(self) -> pd.DataFrame:
         # only if version is v1, keep around for backcompat
         import pandas as pd  # ignore-banned-import()
 
@@ -226,37 +217,37 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
             msg = f"Conversion to pandas requires pandas>=1.0.0, found {pd.__version__}"
             raise NotImplementedError(msg)
 
-    def to_arrow(self: Self) -> pa.Table:
+    def to_arrow(self) -> pa.Table:
         # only if version is v1, keep around for backcompat
         return self.native.to_pyarrow()
 
-    def _with_version(self: Self, version: Version) -> Self:
+    def _with_version(self, version: Version) -> Self:
         return self.__class__(
             self.native,
             version=version,
             backend_version=self._backend_version,
         )
 
-    def _with_native(self: Self, df: ir.Table) -> Self:
+    def _with_native(self, df: ir.Table) -> Self:
         return self.__class__(
             df,
             backend_version=self._backend_version,
             version=self._version,
         )
 
-    def group_by(self: Self, *keys: str, drop_null_keys: bool) -> IbisGroupBy:
+    def group_by(self, *keys: str, drop_null_keys: bool) -> IbisGroupBy:
         from narwhals._ibis.group_by import IbisGroupBy
 
         return IbisGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
-    def rename(self: Self, mapping: Mapping[str, str]) -> Self:
+    def rename(self, mapping: Mapping[str, str]) -> Self:
         def _rename(col: str) -> str:
             return mapping.get(col, col)
 
         return self._with_native(self.native.rename(_rename))
 
     def join(
-        self: Self,
+        self,
         other: Self,
         *,
         how: JoinStrategy,
@@ -307,7 +298,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         return self._with_native(joined)
 
     def join_asof(
-        self: Self,
+        self,
         other: Self,
         *,
         left_on: str | None,
@@ -376,14 +367,14 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
             for left, right in zip(left_on, right_on)
         ]
 
-    def collect_schema(self: Self) -> dict[str, DType]:
+    def collect_schema(self) -> dict[str, DType]:
         return {
             name: native_to_narwhals_dtype(ibis_dtype=dtype, version=self._version)
             for name, dtype in self.native.schema().fields.items()
         }
 
     def unique(
-        self: Self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
+        self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self:
         if subset_ := subset if keep == "any" else (subset or self.columns):
             # Sanitise input
@@ -399,12 +390,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
             return self._with_native(self.native.distinct(on=subset_, keep=to_keep))
         return self._with_native(self.native.distinct(on=subset))
 
-    def sort(
-        self: Self,
-        *by: str,
-        descending: bool | Sequence[bool],
-        nulls_last: bool,
-    ) -> Self:
+    def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
         if isinstance(descending, bool):
             descending = [descending for _ in range(len(by))]
 
@@ -425,11 +411,11 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
 
         return self._with_native(self.native.order_by(*sort_cols))
 
-    def drop_nulls(self: Self, subset: Sequence[str] | None) -> Self:
+    def drop_nulls(self, subset: Sequence[str] | None) -> Self:
         subset_ = subset if subset is not None else self.columns
         return self._with_native(self.native.drop_null(subset_))
 
-    def explode(self: Self, columns: Sequence[str]) -> Self:
+    def explode(self, columns: Sequence[str]) -> Self:
         dtypes = import_dtypes_module(self._version)
         schema = self.collect_schema()
         for col in columns:
@@ -452,7 +438,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         return self._with_native(self.native.unnest(columns[0], keep_empty=True))
 
     def unpivot(
-        self: Self,
+        self,
         on: Sequence[str] | None,
         index: Sequence[str] | None,
         variable_name: str,

@@ -4,16 +4,15 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import ibis.expr.types as ir
-    from typing_extensions import Self
 
     from narwhals._ibis.expr import IbisExpr
 
 
 class IbisExprStructNamespace:
-    def __init__(self: Self, expr: IbisExpr) -> None:
+    def __init__(self, expr: IbisExpr) -> None:
         self._compliant_expr = expr
 
-    def field(self: Self, name: str) -> IbisExpr:
+    def field(self, name: str) -> IbisExpr:
         def func(_input: ir.StructColumn) -> ir.Column:
             return _input[name]
 
