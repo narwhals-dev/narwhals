@@ -53,7 +53,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         # we are not testing pyspark on Windows here because it is very slow
-        run: uv pip install -e ".[dask, modin]" --group core-tests --group extra --system
+        run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -83,14 +83,9 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e ".[modin, dask]" --group core-tests --group extra --system
+        run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra --system
       - name: install duckdb nightly
         run: uv pip install -U --pre duckdb --system
-      - name: install ibis
-        run: uv pip install -e ".[ibis]" --system
-        # Ibis puts upper bounds on dependencies, and requires Python3.10+,
-        # which messes with other dependencies on lower Python versions
-        if: matrix.python-version == '3.11'
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
