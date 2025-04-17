@@ -1808,22 +1808,28 @@ def _not_implemented_error(what: str, who: str, /) -> NotImplementedError:
 class requires:  # noqa: N801
     """Method decorator for raising under certain constraints.
 
-    Arguments:
-        min_version: Minimum backend version.
-        hint: Optional suggested alternative.
+    Attributes:
+        _min_version: Minimum backend version.
+        _hint: Optional suggested alternative.
 
-    Returns:
-        An exception-raising decorator.
+    Examples:
+        >>> from narwhals.utils import requires, Implementation
+        >>> class SomeBackend:
+        ...     _implementation = Implementation.PYARROW
+        ...     _backend_version = 20, 0, 0
+        ...
+        ...     @requires.backend_version((9000, 0, 0))
+        ...     def really_complex_feature(self) -> str:
+        ...         return "hello"
+        >>> backend = SomeBackend()
+        >>> backend.really_complex_feature()
+        Traceback (most recent call last):
+            ...
+        NotImplementedError: `really_complex_feature` is only available in PyArrow>='9000.0.0', found version '20.0.0'.
     """
 
-    # NOTE: Decide how constraints should work
-    # - [x] min_version
-    # - [ ] specific parameters
-    # - [x] optional message
-    def __init__(self, *, min_version: tuple[int, ...], hint: str = "") -> None:
-        self._min_version: tuple[int, ...] = min_version
-        self._hint: str = hint
-        self._wrapped_name: str
+    _min_version: tuple[int, ...]
+    _hint: str
 
     @classmethod
     def backend_version(cls, minimum: tuple[int, ...], /, hint: str = "") -> Self:
