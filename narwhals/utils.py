@@ -613,6 +613,10 @@ def _into_compliant_namespace(
         from narwhals._dask.namespace import DaskNamespace
 
         return DaskNamespace(backend_version=backend_version, version=version)
+    elif impl.is_ibis():  # pragma: no cover
+        from narwhals._ibis.namespace import IbisNamespace
+
+        return IbisNamespace(backend_version=backend_version, version=version)
     else:
         msg = "Not supported Implementation"  # pragma: no cover
         raise AssertionError(msg)

@@ -212,7 +212,7 @@ def sqlframe_pyspark_lazy_constructor(obj: Data) -> SQLFrameDataFrame:  # pragma
 
 
 @lru_cache(maxsize=1)
-def _ibis_backend() -> ibis.backends.BaseBackend:
+def _ibis_backend() -> ibis.backends.BaseBackend:  # pragma: no cover
     """Cached (singleton) in-memory backend to ensure all tables exist within the same in-memory database."""
     import ibis
 
