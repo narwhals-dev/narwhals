@@ -233,7 +233,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
                     msg = f"Expected unique output names, got:{msg}"
                     raise ValueError(msg)
                 namespace = self.compliant.__narwhals_namespace__()
-                result = namespace._horizontal_concat(result_aggs)
+                result = namespace._concat_horizontal(result_aggs)
             else:
                 # No aggregation provided
                 result = self.compliant.__native_namespace__().DataFrame(

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -27,11 +26,14 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import ArrayAny
+    from narwhals._arrow.typing import ArrayOrScalarAny
     from narwhals._arrow.typing import ArrayOrScalarT1
     from narwhals._arrow.typing import ArrayOrScalarT2
     from narwhals._arrow.typing import ArrowArray
     from narwhals._arrow.typing import ArrowChunkedArray
+    from narwhals._arrow.typing import ScalarAny
     from narwhals.dtypes import DType
+    from narwhals.typing import PythonLiteral
     from narwhals.typing import _AnyDArray
     from narwhals.utils import Version
 
@@ -77,7 +79,7 @@ def extract_py_scalar(value: Any, /) -> Any:
 
 
 def chunked_array(
-    arr: ArrayAny | list[Iterable[Any]], dtype: pa.DataType | None = None, /
+    arr: ArrayAny | list[Iterable[Any]] | ScalarAny, dtype: pa.DataType | None = None, /
 ) -> ArrowChunkedArray:
     if isinstance(arr, pa.ChunkedArray):
         return arr
@@ -221,10 +223,8 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
 
 
 def extract_native(
-    lhs: ArrowSeries, rhs: ArrowSeries | object
-) -> tuple[
-    ArrowChunkedArray | pa.Scalar[Any], ArrowChunkedArray | pa.Scalar[Any] | object
-]:
+    lhs: ArrowSeries, rhs: ArrowSeries | PythonLiteral | ScalarAny
+) -> tuple[ArrowChunkedArray | ScalarAny, ArrowChunkedArray | ScalarAny]:
     """Extract native objects in binary  operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -252,7 +252,8 @@ def extract_native(
     if isinstance(rhs, list):
         msg = "Expected Series or scalar, got list."
         raise TypeError(msg)
-    return lhs.native, rhs
+
+    return lhs.native, rhs if isinstance(rhs, pa.Scalar) else lit(rhs)
 
 
 def align_series_full_broadcast(*series: ArrowSeries) -> Sequence[ArrowSeries]:
@@ -280,60 +281,9 @@ def align_series_full_broadcast(*series: ArrowSeries) -> Sequence[ArrowSeries]:
     return reshaped
 
 
-def horizontal_concat(dfs: list[pa.Table]) -> pa.Table:
-    """Concatenate (native) DataFrames horizontally.
-
-    Should be in namespace.
-    """
-    names = [name for df in dfs for name in df.column_names]
-
-    if len(set(names)) < len(names):  # pragma: no cover
-        msg = "Expected unique column names"
-        raise ValueError(msg)
-    arrays = list(chain.from_iterable(df.itercolumns() for df in dfs))
-    return pa.Table.from_arrays(arrays, names=names)
-
-
-def vertical_concat(dfs: list[pa.Table]) -> pa.Table:
-    """Concatenate (native) DataFrames vertically.
-
-    Should be in namespace.
-    """
-    cols_0 = dfs[0].column_names
-    for i, df in enumerate(dfs[1:], start=1):
-        cols_current = df.column_names
-        if cols_current != cols_0:
-            msg = (
-                "unable to vstack, column names don't match:\n"
-                f"   - dataframe 0: {cols_0}\n"
-                f"   - dataframe {i}: {cols_current}\n"
-            )
-            raise TypeError(msg)
-
-    return pa.concat_tables(dfs)
-
-
-def diagonal_concat(dfs: list[pa.Table], backend_version: tuple[int, ...]) -> pa.Table:
-    """Concatenate (native) DataFrames diagonally.
-
-    Should be in namespace.
-    """
-    kwargs: dict[str, Any] = (
-        {"promote": True}
-        if backend_version < (14, 0, 0)
-        else {"promote_options": "default"}
-    )
-    return pa.concat_tables(dfs, **kwargs)
-
-
-def floordiv_compat(left: Any, right: Any) -> Any:
+def floordiv_compat(left: ArrayOrScalarAny, right: ArrayOrScalarAny) -> Any:
     # The following lines are adapted from pandas' pyarrow implementation.
     # Ref: https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L124-L154
-    if isinstance(left, (int, float)):
-        left = lit(left)
-
-    if isinstance(right, (int, float)):
-        right = lit(right)
 
     if pa.types.is_integer(left.type) and pa.types.is_integer(right.type):
         divided = pc.divide_checked(left, right)

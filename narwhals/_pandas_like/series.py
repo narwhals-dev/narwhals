@@ -31,6 +31,7 @@ from narwhals.dependencies import is_pandas_like_series
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
+from narwhals.utils import is_list_of
 from narwhals.utils import parse_version
 from narwhals.utils import validate_backend_version
 
@@ -50,8 +51,11 @@ if TYPE_CHECKING:
     from narwhals.typing import ClosedInterval
     from narwhals.typing import FillNullStrategy
     from narwhals.typing import Into1DArray
+    from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import NumericLiteral
     from narwhals.typing import RankMethod
     from narwhals.typing import RollingInterpolationMethod
+    from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
     from narwhals.typing import _AnyDArray
     from narwhals.utils import Version
@@ -376,9 +380,7 @@ class PandasLikeSeries(EagerSeries[Any]):
     # Binary comparisons
 
     def filter(self: Self, predicate: Any) -> PandasLikeSeries:
-        if not (
-            isinstance(predicate, list) and all(isinstance(x, bool) for x in predicate)
-        ):
+        if not is_list_of(predicate, bool):
             _, other_native = align_and_extract_native(self, predicate)
         else:
             other_native = predicate
@@ -552,12 +554,17 @@ class PandasLikeSeries(EagerSeries[Any]):
         raise InvalidOperationError(msg)
 
     def fill_null(
-        self, value: Any | None, strategy: FillNullStrategy | None, limit: int | None
+        self,
+        value: Self | NonNestedLiteral,
+        strategy: FillNullStrategy | None,
+        limit: int | None,
     ) -> Self:
         ser = self.native
         if value is not None:
-            _, value = align_and_extract_native(self, value)
-            res_ser = self._with_native(ser.fillna(value=value), preserve_broadcast=True)
+            _, native_value = align_and_extract_native(self, value)
+            res_ser = self._with_native(
+                ser.fillna(value=native_value), preserve_broadcast=True
+            )
         else:
             res_ser = self._with_native(
                 ser.ffill(limit=limit)
@@ -817,16 +824,18 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(self.native.iloc[offset::n])
 
     def clip(
-        self: Self, lower_bound: Self | Any | None, upper_bound: Self | Any | None
+        self,
+        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
+        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
     ) -> Self:
-        _, lower_bound = (
+        _, lower = (
             align_and_extract_native(self, lower_bound) if lower_bound else (None, None)
         )
-        _, upper_bound = (
+        _, upper = (
             align_and_extract_native(self, upper_bound) if upper_bound else (None, None)
         )
         kwargs = {"axis": 0} if self._implementation is Implementation.MODIN else {}
-        return self._with_native(self.native.clip(lower_bound, upper_bound, **kwargs))
+        return self._with_native(self.native.clip(lower, upper, **kwargs))
 
     def to_arrow(self: Self) -> ArrowArray:
         if self._implementation is Implementation.CUDF:
@@ -966,34 +975,50 @@ class PandasLikeSeries(EagerSeries[Any]):
                 data["breakpoint"] = []
             data["count"] = []
             return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
-        elif self.native.count() < 1:
+
+        if self.native.count() < 1:
             if bins is not None:
                 data = {"breakpoint": bins[1:], "count": zeros(shape=len(bins) - 1)}
             else:
                 count = cast("int", bin_count)
-                data = {"breakpoint": linspace(0, 1, count), "count": zeros(shape=count)}
+                if bin_count == 1:
+                    data = {"breakpoint": [1.0], "count": [0]}
+                else:
+                    data = {
+                        "breakpoint": linspace(0, 1, count + 1)[1:],
+                        "count": zeros(shape=count),
+                    }
             if not include_breakpoint:
                 del data["breakpoint"]
             return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
 
-        elif bin_count is not None:  # use Polars binning behavior
+        if bin_count is not None:
+            # use Polars binning behavior
             lower, upper = self.native.min(), self.native.max()
-            pad_lowest_bin = False
             if lower == upper:
                 lower -= 0.5
                 upper += 0.5
-            else:
-                pad_lowest_bin = True
+
+            if bin_count == 1:
+                data = {
+                    "breakpoint": [upper],
+                    "count": [self.native.count()],
+                }
+                if not include_breakpoint:
+                    del data["breakpoint"]
+                return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
 
             bins = linspace(lower, upper, bin_count + 1)
-            if pad_lowest_bin and bins is not None:
-                bins[0] -= 0.001 * abs(bins[0]) if bins[0] != 0 else 0.001
             bin_count = None
 
         # pandas (2.2.*) .value_counts(bins=int) adjusts the lowest bin twice, result in improper counts.
         # pandas (2.2.*) .value_counts(bins=[...]) adjusts the lowest bin which should not happen since
         #   the bins were explicitly passed in.
-        categories = ns.cut(self.native, bins=bins if bin_count is None else bin_count)
+        categories = ns.cut(
+            self.native,
+            bins=bins if bin_count is None else bin_count,
+            include_lowest=True,  # Polars 1.27.0 always includes the lowest bin
+        )
         # modin (0.32.0) .value_counts(...) silently drops bins with empty observations, .reindex
         #   is necessary to restore these bins.
         result = categories.value_counts(dropna=True, sort=False).reindex(

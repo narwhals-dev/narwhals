@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
@@ -66,12 +66,8 @@ kwargs_and_expected = (
 )
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Expr.rolling_std` is being called from the stable API although considered an unstable feature."
-)
 @pytest.mark.parametrize("kwargs_and_expected", kwargs_and_expected)
 def test_rolling_std_expr(
-    request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
     kwargs_and_expected: dict[str, Any],
 ) -> None:
@@ -80,7 +76,7 @@ def test_rolling_std_expr(
     expected = kwargs_and_expected["expected"]
 
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     df = nw.from_native(constructor_eager(data))
     result = df.select(nw.col("a").rolling_std(**kwargs).alias(name))
@@ -93,12 +89,11 @@ def test_rolling_std_expr(
 )
 @pytest.mark.parametrize("kwargs_and_expected", kwargs_and_expected)
 def test_rolling_std_series(
-    request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
     kwargs_and_expected: dict[str, Any],
 ) -> None:
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     name = kwargs_and_expected["name"]
     kwargs = kwargs_and_expected["kwargs"]
@@ -110,9 +105,6 @@ def test_rolling_std_series(
     assert_equal_data(result, {name: expected})
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Expr.rolling_std` is being called from the stable API although considered an unstable feature."
-)
 @pytest.mark.parametrize(
     ("expected_a", "window_size", "min_samples", "center", "ddof"),
     [
@@ -233,9 +225,6 @@ def test_rolling_std_expr_lazy_ungrouped(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Expr.rolling_std` is being called from the stable API although considered an unstable feature."
-)
 @pytest.mark.parametrize(
     ("expected_a", "window_size", "min_samples", "center", "ddof"),
     [

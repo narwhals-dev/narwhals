@@ -20,6 +20,7 @@ from narwhals.series_str import SeriesStringNamespace
 from narwhals.series_struct import SeriesStructNamespace
 from narwhals.translate import to_native
 from narwhals.typing import IntoSeriesT
+from narwhals.typing import NonNestedLiteral
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import generate_repr
 from narwhals.utils import is_compliant_series
@@ -39,8 +40,10 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import ClosedInterval
     from narwhals.typing import FillNullStrategy
+    from narwhals.typing import NumericLiteral
     from narwhals.typing import RankMethod
     from narwhals.typing import RollingInterpolationMethod
+    from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
     from narwhals.utils import Implementation
 
@@ -393,10 +396,6 @@ class Series(Generic[IntoSeriesT]):
         ignore_nulls: bool = False,
     ) -> Self:
         r"""Compute exponentially-weighted moving average.
-
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
 
         Arguments:
             com: Specify decay in terms of center of mass, $\gamma$, with <br> $\alpha = \frac{1}{1+\gamma}\forall\gamma\geq0$
@@ -753,8 +752,8 @@ class Series(Generic[IntoSeriesT]):
 
     def clip(
         self: Self,
-        lower_bound: Self | Any | None = None,
-        upper_bound: Self | Any | None = None,
+        lower_bound: Self | NumericLiteral | TemporalLiteral | None = None,
+        upper_bound: Self | NumericLiteral | TemporalLiteral | None = None,
     ) -> Self:
         r"""Clip values in the Series.
 
@@ -1282,7 +1281,7 @@ class Series(Generic[IntoSeriesT]):
 
     def fill_null(
         self: Self,
-        value: Any | None = None,
+        value: Self | NonNestedLiteral = None,
         strategy: FillNullStrategy | None = None,
         limit: int | None = None,
     ) -> Self:
@@ -2246,10 +2245,6 @@ class Series(Generic[IntoSeriesT]):
     ) -> Self:
         """Apply a rolling sum (moving sum) over the values.
 
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
-
         A window of length `window_size` will traverse the values. The resulting values
         will be aggregated to their sum.
 
@@ -2303,10 +2298,6 @@ class Series(Generic[IntoSeriesT]):
         center: bool = False,
     ) -> Self:
         """Apply a rolling mean (moving mean) over the values.
-
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
 
         A window of length `window_size` will traverse the values. The resulting values
         will be aggregated to their mean.
@@ -2367,10 +2358,6 @@ class Series(Generic[IntoSeriesT]):
     ) -> Self:
         """Apply a rolling variance (moving variance) over the values.
 
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
-
         A window of length `window_size` will traverse the values. The resulting values
         will be aggregated to their variance.
 
@@ -2429,10 +2416,6 @@ class Series(Generic[IntoSeriesT]):
         ddof: int = 1,
     ) -> Self:
         """Apply a rolling standard deviation (moving standard deviation) over the values.
-
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
 
         A window of length `window_size` will traverse the values. The resulting values
         will be aggregated to their standard deviation.

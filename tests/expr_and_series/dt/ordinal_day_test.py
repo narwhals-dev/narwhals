@@ -6,7 +6,7 @@ import hypothesis.strategies as st
 import pytest
 from hypothesis import given
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import PANDAS_VERSION
 
 pytest.importorskip("pandas")

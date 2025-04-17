@@ -66,6 +66,7 @@ if TYPE_CHECKING:
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import DTypeBackend
     from narwhals.typing import JoinStrategy
+    from narwhals.typing import PivotAgg
     from narwhals.typing import SizeUnit
     from narwhals.typing import UniqueKeepStrategy
     from narwhals.typing import _1DArray
@@ -338,11 +339,11 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
                 return self._with_native(
                     self.native.__class__(), validate_column_names=False
                 )
-            if all(isinstance(x, int) for x in item[1]):  # type: ignore[var-annotated]
+            if isinstance(item[1][0], int):
                 return self._with_native(
                     self.native.iloc[item], validate_column_names=False
                 )
-            if all(isinstance(x, str) for x in item[1]):  # type: ignore[var-annotated]
+            if isinstance(item[1][0], str):
                 indexer = (
                     item[0],
                     self.native.columns.get_indexer(item[1]),
@@ -390,7 +391,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             return PandasLikeSeries.from_native(native_series, context=self)
 
         elif is_sequence_but_not_str(item) or is_numpy_array_1d(item):
-            if all(isinstance(x, str) for x in item) and len(item) > 0:
+            if len(item) > 0 and isinstance(item[0], str):
                 return self._with_native(
                     select_columns_by_name(
                         self.native,
@@ -511,7 +512,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             return self._with_native(self.native.__class__(), validate_column_names=False)
         new_series = align_series_full_broadcast(*new_series)
         namespace = self.__narwhals_namespace__()
-        df = namespace._horizontal_concat([s.native for s in new_series])
+        df = namespace._concat_horizontal([s.native for s in new_series])
         return self._with_native(df, validate_column_names=True)
 
     def drop_nulls(
@@ -534,7 +535,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         row_index = namespace._series.from_iterable(
             range(len(frame)), context=self, index=frame.index
         ).alias(name)
-        return self._with_native(namespace._horizontal_concat([row_index.native, frame]))
+        return self._with_native(namespace._concat_horizontal([row_index.native, frame]))
 
     def row(self: Self, index: int) -> tuple[Any, ...]:
         return tuple(x for x in self.native.iloc[index])
@@ -569,7 +570,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             to_concat.append(series)
         to_concat.extend(self._extract_comparand(s) for s in name_columns.values())
         namespace = self.__narwhals_namespace__()
-        df = namespace._horizontal_concat(to_concat)
+        df = namespace._concat_horizontal(to_concat)
         return self._with_native(df, validate_column_names=False)
 
     def rename(self: Self, mapping: Mapping[str, str]) -> Self:
@@ -964,7 +965,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
 
                 arr: Any = np.hstack(
                     [
-                        self[col].to_numpy(copy=copy, dtype=None)[:, None]
+                        self.get_column(col).to_numpy(copy=copy, dtype=None)[:, None]
                         for col in self.columns
                     ]
                 )
@@ -974,7 +975,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
     def to_pandas(self: Self) -> pd.DataFrame:
         if self._implementation is Implementation.PANDAS:
             return self.native
-        elif self._implementation is Implementation.CUDF:  # pragma: no cover
+        elif self._implementation is Implementation.CUDF:
             return self.native.to_pandas()
         elif self._implementation is Implementation.MODIN:
             return self.native._to_pandas()
@@ -1029,12 +1030,12 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         return self._with_native(self.native.iloc[offset::n], validate_column_names=False)
 
     def pivot(
-        self: Self,
-        on: list[str],
+        self,
+        on: Sequence[str],
         *,
-        index: list[str] | None,
-        values: list[str] | None,
-        aggregate_function: Any | None,
+        index: Sequence[str] | None,
+        values: Sequence[str] | None,
+        aggregate_function: PivotAgg | None,
         sort_columns: bool,
         separator: str,
     ) -> Self:

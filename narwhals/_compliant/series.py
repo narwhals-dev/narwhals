@@ -42,8 +42,11 @@ if TYPE_CHECKING:
     from narwhals.typing import ClosedInterval
     from narwhals.typing import FillNullStrategy
     from narwhals.typing import Into1DArray
+    from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import NumericLiteral
     from narwhals.typing import RankMethod
     from narwhals.typing import RollingInterpolationMethod
+    from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
     from narwhals.utils import Implementation
     from narwhals.utils import Version
@@ -133,7 +136,11 @@ class CompliantSeries(
     def arg_min(self) -> int: ...
     def arg_true(self) -> Self: ...
     def cast(self, dtype: DType | type[DType]) -> Self: ...
-    def clip(self, lower_bound: Any, upper_bound: Any) -> Self: ...
+    def clip(
+        self,
+        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
+        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
+    ) -> Self: ...
     def count(self) -> int: ...
     def cum_count(self, *, reverse: bool) -> Self: ...
     def cum_max(self, *, reverse: bool) -> Self: ...
@@ -142,7 +149,6 @@ class CompliantSeries(
     def cum_sum(self, *, reverse: bool) -> Self: ...
     def diff(self) -> Self: ...
     def drop_nulls(self) -> Self: ...
-    @unstable
     def ewm_mean(
         self,
         *,
@@ -155,7 +161,10 @@ class CompliantSeries(
         ignore_nulls: bool,
     ) -> Self: ...
     def fill_null(
-        self, value: Any | None, strategy: FillNullStrategy | None, limit: int | None
+        self,
+        value: Self | NonNestedLiteral,
+        strategy: FillNullStrategy | None,
+        limit: int | None,
     ) -> Self: ...
     def filter(self, predicate: Any) -> Self: ...
     def gather_every(self, n: int, offset: int) -> Self: ...
@@ -199,7 +208,6 @@ class CompliantSeries(
         *,
         return_dtype: DType | type[DType] | None,
     ) -> Self: ...
-    @unstable
     def rolling_mean(
         self,
         window_size: int,
@@ -207,7 +215,6 @@ class CompliantSeries(
         min_samples: int,
         center: bool,
     ) -> Self: ...
-    @unstable
     def rolling_std(
         self,
         window_size: int,
@@ -216,7 +223,6 @@ class CompliantSeries(
         center: bool,
         ddof: int,
     ) -> Self: ...
-    @unstable
     def rolling_sum(
         self,
         window_size: int,
@@ -224,7 +230,6 @@ class CompliantSeries(
         min_samples: int,
         center: bool,
     ) -> Self: ...
-    @unstable
     def rolling_var(
         self,
         window_size: int,

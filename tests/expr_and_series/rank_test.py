@@ -5,7 +5,7 @@ from typing import Literal
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
@@ -166,10 +166,10 @@ def test_lazy_rank_expr(
     ):
         request.applymarker(pytest.mark.xfail)
 
-    if (
-        any(x in str(constructor) for x in ("pyspark", "duckdb"))
-        and method in {"average", "max", "ordinal"}
-    ) or ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)):
+    if "pyspark" in str(constructor) and method in {"average", "max", "ordinal"}:
+        request.applymarker(pytest.mark.xfail)
+
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         request.applymarker(pytest.mark.xfail)
 
     if "dask" in str(constructor):
@@ -208,10 +208,10 @@ def test_lazy_rank_expr_desc(
     ):
         request.applymarker(pytest.mark.xfail)
 
-    if (
-        any(x in str(constructor) for x in ("pyspark", "duckdb"))
-        and method in {"average", "max", "ordinal"}
-    ) or ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)):
+    if "pyspark" in str(constructor) and method in {"average", "max", "ordinal"}:
+        request.applymarker(pytest.mark.xfail)
+
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         request.applymarker(pytest.mark.xfail)
 
     if "dask" in str(constructor):

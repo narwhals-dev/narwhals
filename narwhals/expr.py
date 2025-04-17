@@ -42,8 +42,11 @@ if TYPE_CHECKING:
     from narwhals.typing import ClosedInterval
     from narwhals.typing import FillNullStrategy
     from narwhals.typing import IntoExpr
+    from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import NumericLiteral
     from narwhals.typing import RankMethod
     from narwhals.typing import RollingInterpolationMethod
+    from narwhals.typing import TemporalLiteral
 
     PS = ParamSpec("PS")
     R = TypeVar("R")
@@ -452,10 +455,6 @@ class Expr:
         ignore_nulls: bool = False,
     ) -> Self:
         r"""Compute exponentially-weighted moving average.
-
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
 
         Arguments:
             com: Specify decay in terms of center of mass, $\gamma$, with <br> $\alpha = \frac{1}{1+\gamma}\forall\gamma\geq0$
@@ -1360,7 +1359,7 @@ class Expr:
 
     def fill_null(
         self: Self,
-        value: Expr | Any | None = None,
+        value: Expr | NonNestedLiteral = None,
         strategy: FillNullStrategy | None = None,
         limit: int | None = None,
     ) -> Self:
@@ -1939,12 +1938,10 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset)
         )
 
-    # need to allow numeric typing
-    # TODO @aivanoved: make type alias for numeric type
     def clip(
         self: Self,
-        lower_bound: IntoExpr | Any | None = None,
-        upper_bound: IntoExpr | Any | None = None,
+        lower_bound: IntoExpr | NumericLiteral | TemporalLiteral | None = None,
+        upper_bound: IntoExpr | NumericLiteral | TemporalLiteral | None = None,
     ) -> Self:
         r"""Clip values in the Series.
 
@@ -1978,8 +1975,8 @@ class Expr:
                     exprs[2] if upper_bound is not None else None,
                 ),
                 self,
-                lower_bound,  # type: ignore[arg-type]
-                upper_bound,  # type: ignore[arg-type]
+                lower_bound,
+                upper_bound,
                 str_as_lit=False,
             ),
             combine_metadata(
@@ -2210,10 +2207,6 @@ class Expr:
     ) -> Self:
         """Apply a rolling sum (moving sum) over the values.
 
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
-
         A window of length `window_size` will traverse the values. The resulting values
         will be aggregated to their sum.
 
@@ -2275,10 +2268,6 @@ class Expr:
         center: bool = False,
     ) -> Self:
         """Apply a rolling mean (moving mean) over the values.
-
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
 
         A window of length `window_size` will traverse the values. The resulting values
         will be aggregated to their mean.
@@ -2343,10 +2332,6 @@ class Expr:
     ) -> Self:
         """Apply a rolling variance (moving variance) over the values.
 
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
-
         A window of length `window_size` will traverse the values. The resulting values
         will be aggregated to their variance.
 
@@ -2408,10 +2393,6 @@ class Expr:
         ddof: int = 1,
     ) -> Self:
         """Apply a rolling standard deviation (moving standard deviation) over the values.
-
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
 
         A window of length `window_size` will traverse the values. The resulting values
         will be aggregated to their standard deviation.

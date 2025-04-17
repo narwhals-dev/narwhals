@@ -8,7 +8,7 @@ import hypothesis.strategies as st
 import pytest
 from hypothesis import given
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
@@ -58,9 +58,6 @@ kwargs_and_expected = (
 )
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Expr.rolling_var` is being called from the stable API although considered an unstable feature."
-)
 @pytest.mark.parametrize("kwargs_and_expected", kwargs_and_expected)
 def test_rolling_var_expr(
     request: pytest.FixtureRequest,
@@ -88,12 +85,11 @@ def test_rolling_var_expr(
 )
 @pytest.mark.parametrize("kwargs_and_expected", kwargs_and_expected)
 def test_rolling_var_series(
-    request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
     kwargs_and_expected: dict[str, Any],
 ) -> None:
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     name = kwargs_and_expected["name"]
     kwargs = kwargs_and_expected["kwargs"]
@@ -175,9 +171,6 @@ def test_rolling_var_hypothesis_polars(center: bool, values: list[float]) -> Non
     assert_equal_data(result, expected_dict)
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Expr.rolling_var` is being called from the stable API although considered an unstable feature."
-)
 @pytest.mark.parametrize(
     ("expected_a", "window_size", "min_samples", "center", "ddof"),
     [
@@ -242,9 +235,6 @@ def test_rolling_var_expr_lazy_ungrouped(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Expr.rolling_var` is being called from the stable API although considered an unstable feature."
-)
 @pytest.mark.parametrize(
     ("expected_a", "window_size", "min_samples", "center", "ddof"),
     [

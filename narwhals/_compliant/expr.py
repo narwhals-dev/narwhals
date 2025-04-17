@@ -37,7 +37,6 @@ from narwhals.dtypes import DType
 from narwhals.utils import _StoresCompliant
 from narwhals.utils import deprecated
 from narwhals.utils import not_implemented
-from narwhals.utils import unstable
 
 if not TYPE_CHECKING:  # pragma: no cover
     if sys.version_info >= (3, 9):
@@ -65,8 +64,11 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
     from narwhals.typing import FillNullStrategy
+    from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import NumericLiteral
     from narwhals.typing import RankMethod
     from narwhals.typing import RollingInterpolationMethod
+    from narwhals.typing import TemporalLiteral
     from narwhals.typing import TimeUnit
     from narwhals.utils import Implementation
     from narwhals.utils import Version
@@ -134,7 +136,10 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def null_count(self) -> Self: ...
     def drop_nulls(self) -> Self: ...
     def fill_null(
-        self, value: Any | None, strategy: FillNullStrategy | None, limit: int | None
+        self,
+        value: Self | NonNestedLiteral,
+        strategy: FillNullStrategy | None,
+        limit: int | None,
     ) -> Self: ...
     def diff(self) -> Self: ...
     def unique(self) -> Self: ...
@@ -184,6 +189,12 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         return_dtype: DType | type[DType] | None,
     ) -> Self: ...
 
+    def clip(
+        self,
+        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
+        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
+    ) -> Self: ...
+
     @property
     def str(self) -> Any: ...
     @property
@@ -197,7 +208,6 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     @property
     def struct(self) -> Any: ...
 
-    @unstable
     def ewm_mean(
         self,
         *,
@@ -210,7 +220,6 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         ignore_nulls: bool,
     ) -> Self: ...
 
-    @unstable
     def rolling_sum(
         self,
         window_size: int,
@@ -219,7 +228,6 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         center: bool,
     ) -> Self: ...
 
-    @unstable
     def rolling_mean(
         self,
         window_size: int,
@@ -228,7 +236,6 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         center: bool,
     ) -> Self: ...
 
-    @unstable
     def rolling_var(
         self,
         window_size: int,
@@ -238,7 +245,6 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         ddof: int,
     ) -> Self: ...
 
-    @unstable
     def rolling_std(
         self,
         window_size: int,
@@ -638,7 +644,11 @@ class EagerExpr(
 
     # Other
 
-    def clip(self, lower_bound: Any, upper_bound: Any) -> Self:
+    def clip(
+        self,
+        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
+        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
+    ) -> Self:
         return self._reuse_series(
             "clip", lower_bound=lower_bound, upper_bound=upper_bound
         )
@@ -650,7 +660,10 @@ class EagerExpr(
         return self._reuse_series("is_nan")
 
     def fill_null(
-        self, value: Any | None, strategy: FillNullStrategy | None, limit: int | None
+        self,
+        value: Self | NonNestedLiteral,
+        strategy: FillNullStrategy | None,
+        limit: int | None,
     ) -> Self:
         return self._reuse_series(
             "fill_null", value=value, strategy=strategy, limit=limit

@@ -4,17 +4,22 @@ from datetime import datetime
 from datetime import time
 from datetime import timedelta
 from datetime import timezone
+from typing import TYPE_CHECKING
+from typing import cast
 
 import pandas as pd
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 from tests.utils import is_windows
+
+if TYPE_CHECKING:
+    from narwhals.typing import NativeLazyFrame
 
 DATA = {
     "a": [1],
@@ -272,7 +277,7 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     data = {
         "a": [
@@ -283,27 +288,30 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
 
     native_df = constructor(data)
 
+    # NOTE: This branch needs to be rewritten to **not depend** on private `SparkLikeLazyFrame` properties
     if "spark" in str(constructor):  # pragma: no cover
         # Special handling for pyspark as it natively maps the input to
         # a column of type MAP<STRING, STRING>
-        _tmp_nw_compliant_frame = nw.from_native(native_df)._compliant_frame
-        F = _tmp_nw_compliant_frame._F  # noqa: N806
-        T = _tmp_nw_compliant_frame._native_dtypes  # noqa: N806
+        native_ldf = cast("NativeLazyFrame", native_df)
+        _tmp_nw_compliant_frame = nw.from_native(native_ldf)._compliant_frame
+        F = _tmp_nw_compliant_frame._F  # type: ignore[attr-defined] # noqa: N806
+        T = _tmp_nw_compliant_frame._native_dtypes  # type: ignore[attr-defined] # noqa: N806
 
-        native_df = native_df.withColumn(  # type: ignore[union-attr]
+        native_ldf = native_ldf.withColumn(  # type: ignore[attr-defined]
             "a",
             F.struct(
                 F.col("a.movie ").cast(T.StringType()).alias("movie "),
                 F.col("a.rating").cast(T.DoubleType()).alias("rating"),
             ),
         )
-        assert nw.from_native(native_df).schema == nw.Schema(
+        assert nw.from_native(native_ldf).schema == nw.Schema(
             {
                 "a": nw.Struct(
                     [nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float64())]
                 )
             }
         )
+        native_df = native_ldf
 
     dtype = nw.Struct([nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float32())])
     result = nw.from_native(native_df).select(nw.col("a").cast(dtype)).lazy().collect()
@@ -322,7 +330,7 @@ def test_raise_if_polars_dtype(constructor: Constructor) -> None:
 
 def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     if any(
         backend in str(constructor) for backend in ("dask", "pyspark", "modin", "cudf")
@@ -337,7 +345,7 @@ def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> 
 
 def test_cast_binary(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     if any(backend in str(constructor) for backend in ("cudf", "dask", "modin")):
         request.applymarker(pytest.mark.xfail)

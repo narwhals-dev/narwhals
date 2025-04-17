@@ -198,7 +198,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
     def shift(self: Self, n: int) -> Self:
         return self._reuse_series("shift", call_kwargs={"n": n})
 
-    def over(
+    def over(  # noqa: PLR0915
         self: Self,
         partition_by: Sequence[str],
         order_by: Sequence[str] | None,
@@ -214,7 +214,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     *order_by, descending=False, nulls_last=False
                 )
                 results = self(df.drop([token], strict=True))
-                sorting_indices = df[token]
+                sorting_indices = df.get_column(token)
                 for s in results:
                     s._scatter_in_place(sorting_indices, s)
                 return results
@@ -257,18 +257,17 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     columns = list(set(partition_by).union(output_names).union(order_by))
                     token = generate_temporary_column_name(8, columns)
                     df = (
-                        df[columns]
+                        df.simple_select(*columns)
                         .with_row_index(token)
                         .sort(*order_by, descending=reverse, nulls_last=reverse)
                     )
-                    sorting_indices = df[token]
+                    sorting_indices = df.get_column(token)
                 elif reverse:
                     columns = list(set(partition_by).union(output_names))
-                    df = df[columns][::-1]
+                    df = df.simple_select(*columns)[::-1]
+                grouped = df._native_frame.groupby(partition_by)
                 if function_name.startswith("rolling"):
-                    rolling = df._native_frame.groupby(partition_by)[
-                        list(output_names)
-                    ].rolling(**pandas_kwargs)
+                    rolling = grouped[list(output_names)].rolling(**pandas_kwargs)
                     assert pandas_function_name is not None  # help mypy  # noqa: S101
                     if pandas_function_name in {"std", "var"}:
                         res_native = getattr(rolling, pandas_function_name)(
@@ -276,14 +275,19 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         )
                     else:
                         res_native = getattr(rolling, pandas_function_name)()
+                elif function_name == "len":
+                    if len(output_names) != 1:  # pragma: no cover
+                        msg = "Safety check failed, please report a bug."
+                        raise AssertionError(msg)
+                    res_native = grouped.transform("size").to_frame(aliases[0])
                 else:
-                    res_native = df._native_frame.groupby(partition_by)[
-                        list(output_names)
-                    ].transform(pandas_function_name, **pandas_kwargs)
+                    res_native = grouped[list(output_names)].transform(
+                        pandas_function_name, **pandas_kwargs
+                    )
                 result_frame = df._with_native(res_native).rename(
                     dict(zip(output_names, aliases))
                 )
-                results = [result_frame[name] for name in aliases]
+                results = [result_frame.get_column(name) for name in aliases]
                 if order_by:
                     for s in results:
                         s._scatter_in_place(sorting_indices, s)

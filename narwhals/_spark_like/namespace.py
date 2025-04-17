@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from narwhals._spark_like.dataframe import SQLFrameDataFrame  # noqa: F401
     from narwhals.dtypes import DType
     from narwhals.typing import ConcatMethod
+    from narwhals.typing import NonNestedLiteral
     from narwhals.utils import Implementation
     from narwhals.utils import Version
 
@@ -54,7 +55,7 @@ class SparkLikeNamespace(
         return SparkLikeLazyFrame
 
     def lit(
-        self: Self, value: object, dtype: DType | type[DType] | None
+        self, value: NonNestedLiteral, dtype: DType | type[DType] | None
     ) -> SparkLikeExpr:
         def _lit(df: SparkLikeLazyFrame) -> list[Column]:
             column = df._F.lit(value)
@@ -192,13 +193,6 @@ class SparkLikeNamespace(
         self, items: Iterable[SparkLikeLazyFrame], *, how: ConcatMethod
     ) -> SparkLikeLazyFrame:
         dfs = [item._native_frame for item in items]
-        if how == "horizontal":
-            msg = (
-                "Horizontal concatenation is not supported for LazyFrame backed by "
-                "a PySpark DataFrame."
-            )
-            raise NotImplementedError(msg)
-
         if how == "vertical":
             cols_0 = dfs[0].columns
             for i, df in enumerate(dfs[1:], start=1):

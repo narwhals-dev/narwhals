@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import ShapeError
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
@@ -62,7 +62,7 @@ def test_with_columns_dtypes_single_row(
     request: pytest.FixtureRequest,
 ) -> None:
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (15,):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"a": ["foo"]}
