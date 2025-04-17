@@ -107,17 +107,11 @@ If you want to run PySpark-related tests, you'll need to have Java installed. Re
 
    4. Activate it. On Linux, this is `. .venv/bin/activate`, on Windows `.\.venv\Scripts\activate`.
 
-2. Install Narwhals: `uv pip install -e . --group local-dev"`. This will include fast-ish core libraries and dev dependencies.
+2. Install Narwhals: `uv pip install -e . --group local-dev`. This will include fast-ish core libraries and dev dependencies.
    If you also want to test other libraries like Dask , PySpark, and Modin, you can install them too with
    `uv pip install -e ".[dask, pyspark, modin]" --group local-dev`.
 
-You should also install pre-commit:
-
-```terminal
-pre-commit install
-```
-
-This will automatically format and lint your code before each commit, and it will block the commit if any issues are found.
+The pre-commit tool is installed as part of the local-dev dependency group. This will automatically format and lint your code before each commit, and it will block the commit if any issues are found.
 
 #### Option 2: use python3-venv
 
@@ -208,13 +202,9 @@ We can't currently test in CI against cuDF, but you can test it manually in Kagg
 
 ### Static typing
 
-We run both `mypy` and `pyright` in CI. To run them locally, make sure to install
+We run both `mypy` and `pyright` in CI. Both of these tools are included when installing Narwhals with the local-dev dependency group.
 
-```terminal
-uv pip install -U -e ".[typing]"
-```
-
-You can then run
+Run them with:
 - `mypy narwhals tests`
 - `pyright narwhals tests`
 
