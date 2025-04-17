@@ -23,6 +23,7 @@ from narwhals.utils import _into_arrow_table
 from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
+from narwhals.utils import requires
 from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
@@ -414,6 +415,7 @@ class PolarsDataFrame:
             )
         )
 
+    @requires.backend_version((1,))
     def pivot(
         self,
         on: Sequence[str],
@@ -424,9 +426,6 @@ class PolarsDataFrame:
         sort_columns: bool,
         separator: str,
     ) -> Self:
-        if self._backend_version < (1, 0, 0):  # pragma: no cover
-            msg = "`pivot` is only supported for Polars>=1.0.0"
-            raise NotImplementedError(msg)
         try:
             result = self.native.pivot(
                 on,
