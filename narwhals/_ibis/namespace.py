@@ -23,6 +23,7 @@ from narwhals._ibis.selectors import IbisSelectorNamespace
 from narwhals._ibis.utils import lit
 from narwhals._ibis.utils import narwhals_to_native_dtype
 from narwhals.utils import Implementation
+from narwhals.utils import requires
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -70,16 +71,10 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             raise TypeError(msg)
         return first._with_native(ibis.union(*native_items))
 
+    @requires.backend_version((10, 0))
     def concat_str(
-        self: Self,
-        *exprs: IbisExpr,
-        separator: str,
-        ignore_nulls: bool,
+        self, *exprs: IbisExpr, separator: str, ignore_nulls: bool
     ) -> IbisExpr:
-        if self._backend_version < (10, 0):
-            msg = "At least version 10.0 of Ibis is required to use `concat_str`."
-            raise NotImplementedError(msg)
-
         def func(df: IbisLazyFrame) -> list[ir.Value]:
             cols = list(chain.from_iterable(expr(df) for expr in exprs))
             cols_casted = [s.cast("string") for s in cols]
@@ -223,10 +218,8 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             version=self._version,
         )
 
-    def when(
-        self: Self,
-        predicate: IbisExpr,
-    ) -> IbisWhen:
+    @requires.backend_version((10, 0))
+    def when(self, predicate: IbisExpr) -> IbisWhen:
         return IbisWhen.from_expr(predicate, context=self)
 
     def lit(self: Self, value: Any, dtype: DType | type[DType] | None) -> IbisExpr:
@@ -265,10 +258,6 @@ class IbisWhen(LazyWhen["IbisLazyFrame", "ir.Value", IbisExpr]):
         return IbisThen
 
     def __call__(self: Self, df: IbisLazyFrame) -> Sequence[ir.Value]:
-        if self._backend_version < (10, 0):
-            msg = "At least version 10.0 of Ibis is required to use `when`."
-            raise NotImplementedError(msg)
-
         is_expr = self._condition._is_expr
         condition = df._evaluate_expr(self._condition)
         then_ = self._then_value
