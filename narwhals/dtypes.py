@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import enum
 from collections import OrderedDict
-from collections import defaultdict
 from datetime import timezone
 from itertools import starmap
 from typing import TYPE_CHECKING
@@ -454,25 +453,17 @@ class Enum(DType):
     def __init__(self, categories: Iterable[str] | type[enum.Enum]) -> None:
         if isinstance(categories, type) and issubclass(categories, enum.Enum):
             categories = (v.value for v in categories)
-
-        _categories, errors = [], defaultdict(set)
-        for cat in categories:
-            if cat in _categories:
-                errors["duplicates"].add(cat)
-
+        sequence: tuple[str, ...] = tuple(categories)
+        seen: set[str] = set()
+        for cat in sequence:
+            if cat in seen:
+                msg = f"{type(self).__name__} categories must be unique; found duplicate {cat!r}"
+                raise ValueError(msg)
             if not isinstance(cat, str):
-                errors["invalid"].add(cat)
-            _categories.append(cat)
-
-        if res := errors["invalid"]:
-            msg = f"{type(self).__name__} categories must be strings; found invalid: {res!r}"
-            raise TypeError(msg)
-
-        if res := errors["duplicates"]:
-            msg = f"{type(self).__name__} categories must be unique; found duplicate {res!r}"
-            raise ValueError(msg)
-
-        self.categories = tuple(_categories)
+                msg = f"{type(self).__name__} categories must be strings; found data of type {type(cat).__name__!r}"
+                raise TypeError(msg)
+            seen.add(cat)
+        self.categories = sequence
 
     def __eq__(self: Self, other: object) -> bool:
         # allow comparing object instances to class
