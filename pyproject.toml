@@ -246,6 +246,7 @@ omit = [
   'narwhals/_arrow/typing.py',
   'narwhals/_duckdb/typing.py',
   'narwhals/_spark_like/typing.py',
+  'narwhals/_ibis/typing.py',
   # Remove after finishing eager sub-protocols
   'narwhals/_compliant/*',
 ]
