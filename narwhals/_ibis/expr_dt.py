@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals.utils import not_implemented
+
 if TYPE_CHECKING:
     from narwhals._ibis.expr import IbisExpr
 
@@ -76,22 +78,8 @@ class IbisExprDateTimeNamespace:
             lambda _input: _input.date(),
         )
 
-    def total_minutes(self) -> IbisExpr:
-        msg = "`total_minutes` is not implemented for Ibis"
-        raise NotImplementedError(msg)
-
-    def total_seconds(self) -> IbisExpr:
-        msg = "`total_seconds` is not implemented for Ibis"
-        raise NotImplementedError(msg)
-
-    def total_milliseconds(self) -> IbisExpr:
-        msg = "`total_milliseconds` is not implemented for Ibis"
-        raise NotImplementedError(msg)
-
-    def total_microseconds(self) -> IbisExpr:
-        msg = "`total_microseconds` is not implemented for Ibis"
-        raise NotImplementedError(msg)
-
-    def total_nanoseconds(self) -> IbisExpr:
-        msg = "`total_nanoseconds` is not implemented for Ibis"
-        raise NotImplementedError(msg)
+    total_minutes = not_implemented()
+    total_seconds = not_implemented()
+    total_milliseconds = not_implemented()
+    total_microseconds = not_implemented()
+    total_nanoseconds = not_implemented()
