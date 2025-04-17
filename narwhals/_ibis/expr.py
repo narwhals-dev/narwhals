@@ -584,11 +584,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
             self._cum_window_func(reverse=reverse, func_name="count")
         )
 
-    def cum_prod(self, *, reverse: bool) -> Self:
-        # https://github.com/ibis-project/ibis/issues/10542
-        msg = "`cum_prod` is not supported for the Ibis backend"
-        raise NotImplementedError(msg)
-
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._with_window_function(
             self._rolling_window_func(
@@ -718,5 +713,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
     def struct(self) -> IbisExprStructNamespace:
         return IbisExprStructNamespace(self)
 
+    # NOTE: https://github.com/ibis-project/ibis/issues/10542
+    cum_prod = not_implemented()
     drop_nulls = not_implemented()
     unique = not_implemented()
