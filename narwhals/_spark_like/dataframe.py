@@ -187,7 +187,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
 
     @property
     def columns(self: Self) -> list[str]:
-        return list(self.native.columns)
+        return list(self.schema) if self._cached_schema else list(self.native.columns)
 
     def collect(
         self: Self,

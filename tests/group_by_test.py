@@ -554,7 +554,7 @@ def test_group_by_expr(
         # For id=4: similarly, `ColumnNotFoundError` ("y")
         request.applymarker(pytest.mark.xfail)
 
-    data = {"a": [1, 1, 2, 2, -1], "x": [0, 1, 2, 3, 4], "y": [0.5, -0.5, 1, -1, 1.5]}
+    data = {"a": [1, 1, 2, 2, -1], "x": [0, 1, 2, 3, 4], "y": [0.5, -0.5, 1.0, -1.0, 1.5]}
     df = nw.from_native(constructor(data))
     result = df.group_by(*keys, drop_null_keys=drop_null_keys).agg(*aggs).sort(*sort_by)
     assert_equal_data(result, expected)
@@ -600,7 +600,7 @@ def test_group_by_raise_if_not_transform(
     else:
         context = pytest.raises(
             ComputeError,
-            match=r"Group by is not \(yet\) supported with keys that are not transformation expressions",
+            match="Group by is not supported with keys that are not transformation expressions",
         )
     with context:
         df.group_by(keys).agg(nw.col("x").max())

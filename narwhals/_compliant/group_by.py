@@ -108,7 +108,7 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
             no overlap with any existing column name.
         - Add these temporary columns to the compliant dataframe.
         """
-        suffix_token = "_" * max(len(str(c)) for c in compliant_frame.columns)
+        suffix_token = "_" * (max(len(str(c)) for c in compliant_frame.columns) + 1)
         output_names = compliant_frame._evaluate_aliases(*keys)
 
         safe_keys = [

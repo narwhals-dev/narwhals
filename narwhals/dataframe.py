@@ -1560,7 +1560,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         if not all(kind is ExprKind.TRANSFORM for kind in kinds):
             from narwhals.exceptions import ComputeError
 
-            msg = "Group by is not (yet) supported with keys that are not transformation expressions"
+            msg = "Group by is not supported with keys that are not transformation expressions"
             raise ComputeError(msg)
 
         return GroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)
@@ -2835,7 +2835,7 @@ class LazyFrame(BaseFrame[FrameT]):
         if not all(kind is ExprKind.TRANSFORM for kind in kinds):
             from narwhals.exceptions import ComputeError
 
-            msg = "Group by is not (yet) supported with keys that are not transformation expressions"
+            msg = "Group by is not supported with keys that are not transformation expressions"
             raise ComputeError(msg)
 
         return LazyGroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)
