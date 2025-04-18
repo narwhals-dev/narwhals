@@ -21,7 +21,9 @@ from narwhals.series_str import SeriesStringNamespace
 from narwhals.series_struct import SeriesStructNamespace
 from narwhals.translate import to_native
 from narwhals.typing import IntoSeriesT
+from narwhals.typing import MultiIndexSelector
 from narwhals.typing import NonNestedLiteral
+from narwhals.typing import SingleIndexSelector
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import generate_repr
 from narwhals.utils import is_compliant_series
@@ -130,14 +132,12 @@ class Series(Generic[IntoSeriesT]):
         return self._compliant_series.__array__(dtype=dtype, copy=copy)
 
     @overload
-    def __getitem__(self: Self, idx: int) -> Any: ...
+    def __getitem__(self, idx: SingleIndexSelector) -> Any: ...
 
     @overload
-    def __getitem__(self: Self, idx: slice | Sequence[int] | _1DArray | Self) -> Self: ...
+    def __getitem__(self, idx: MultiIndexSelector) -> Self: ...
 
-    def __getitem__(
-        self: Self, idx: int | slice | Sequence[int] | _1DArray | Self
-    ) -> Any | Self:
+    def __getitem__(self, idx: SingleIndexSelector | MultiIndexSelector) -> Any | Self:
         """Retrieve elements from the object using integer indexing or slicing.
 
         Arguments:
