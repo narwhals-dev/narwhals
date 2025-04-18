@@ -271,9 +271,11 @@ class PolarsDataFrame:
             rows = list(rows) if isinstance(rows, tuple) else rows
             columns = list(columns) if isinstance(columns, tuple) else columns
             if is_numpy_array_1d(columns):
-                columns = columns.tolist()
+                columns = pl.Series(columns)
 
-            is_int_col_indexer = is_int_like_indexer(columns)
+            is_int_col_indexer = is_int_like_indexer(columns) or (
+                isinstance(columns, pl.Series) and columns.dtype.is_integer()
+            )
             native = self.native
             if not is_null_slice(columns):
                 if hasattr(columns, "__len__") and len(columns) == 0:
