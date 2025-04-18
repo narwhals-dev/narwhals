@@ -377,7 +377,7 @@ class EagerDataFrame(
     ) -> list[str]:
         return list(columns or (f"column_{x}" for x in range(data.shape[1])))
 
-    def gather(self, indices: Any) -> Self: ...
+    def _gather(self, indices: Any) -> Self: ...
     def _gather_slice(self, indices: Any) -> Self: ...
     def _select_indices(self, indices: Any) -> Self: ...
     def _select_labels(self, indices: Any) -> Self: ...
@@ -404,11 +404,11 @@ class EagerDataFrame(
 
         if not is_null_slice(rows):
             if isinstance(rows, int):
-                compliant = compliant.gather([rows])
+                compliant = compliant._gather([rows])
             elif isinstance(rows, (slice, range)):
                 compliant = compliant._gather_slice(rows)
             elif is_sequence_like_ints(rows) or isinstance(rows, self.native_series):
-                compliant = compliant.gather(rows)
+                compliant = compliant._gather(rows)
             else:
                 msg = "Unreachable code"
                 raise AssertionError(msg)

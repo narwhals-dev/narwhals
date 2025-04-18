@@ -250,7 +250,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
     def __array__(self: Self, dtype: Any, *, copy: bool | None) -> _2DArray:
         return self.native.__array__(dtype, copy=copy)
 
-    def gather(self, item: Any) -> Self:
+    def _gather(self, item: Any) -> Self:
         if len(item) == 0:
             return self._with_native(self.native.slice(0, 0))
         return self._with_native(self.native.take(item))

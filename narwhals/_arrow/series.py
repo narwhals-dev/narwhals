@@ -405,7 +405,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def name(self: Self) -> str:
         return self._name
 
-    def gather(self, item: Any) -> Self:
+    def _gather(self, item: Any) -> Self:
         if len(item) == 0:
             return self._with_native(self.native.slice(0, 0))
         return self._with_native(self.native.take(item))

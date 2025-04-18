@@ -281,7 +281,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
     def __array__(self: Self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
         return self.to_numpy(dtype=dtype, copy=copy)
 
-    def gather(self, items: Any) -> Self:
+    def _gather(self, items: Any) -> Self:
         items = list(items) if isinstance(items, tuple) else items
         return self._with_native(self.native.iloc[items, :])
 

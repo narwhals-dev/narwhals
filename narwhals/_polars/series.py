@@ -617,7 +617,7 @@ class PolarsSeries:
     fill_null: Method[Self]
     filter: Method[Self]
     _gather_slice: Method[Self]
-    gather: Method[Self]
+    _gather: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]
     is_between: Method[Self]
