@@ -178,7 +178,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
 
                 ns = self.__narwhals_namespace__()
                 tmp = df.group_by(
-                    *[ns.col(key) for key in partition_by], drop_null_keys=False
+                    [ns.col(key) for key in partition_by], drop_null_keys=False
                 ).agg(self)
                 tmp = df.simple_select(*partition_by).join(
                     tmp,

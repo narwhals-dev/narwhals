@@ -377,7 +377,7 @@ class PolarsDataFrame:
             return self.native.to_dict(as_series=False)
 
     def group_by(
-        self: Self, *keys: PolarsExpr, drop_null_keys: bool
+        self: Self, keys: Sequence[str] | Sequence[PolarsExpr], *, drop_null_keys: bool
     ) -> CompliantGroupBy[PolarsDataFrame, Any]:
         from narwhals._polars.group_by import PolarsGroupBy
 
@@ -628,7 +628,7 @@ class PolarsLazyFrame:
         raise ValueError(msg)  # pragma: no cover
 
     def group_by(
-        self: Self, *keys: PolarsExpr, drop_null_keys: bool
+        self: Self, keys: Sequence[str] | Sequence[PolarsExpr], *, drop_null_keys: bool
     ) -> CompliantGroupBy[PolarsLazyFrame, Any]:
         from narwhals._polars.group_by import PolarsLazyGroupBy
 

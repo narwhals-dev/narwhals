@@ -656,7 +656,10 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
 
     # --- actions ---
     def group_by(
-        self: Self, *keys: PandasLikeExpr, drop_null_keys: bool
+        self: Self,
+        keys: Sequence[str] | Sequence[PandasLikeExpr],
+        *,
+        drop_null_keys: bool,
     ) -> PandasLikeGroupBy:
         from narwhals._pandas_like.group_by import PandasLikeGroupBy
 

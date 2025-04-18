@@ -1548,7 +1548,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         flat_keys = flatten(keys)
 
         if all(isinstance(key, str) for key in flat_keys):
-            return GroupBy(self, *flat_keys, drop_null_keys=drop_null_keys)
+            return GroupBy(self, flat_keys, drop_null_keys=drop_null_keys)
 
         from narwhals import col
         from narwhals.expr import Expr
@@ -1563,7 +1563,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             msg = "Group by is not (yet) supported with keys that are not transformation expressions"
             raise ComputeError(msg)
 
-        return GroupBy(self, *expr_flat_keys, drop_null_keys=drop_null_keys)
+        return GroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
         self: Self,
@@ -2824,7 +2824,7 @@ class LazyFrame(BaseFrame[FrameT]):
         flat_keys = flatten(keys)
 
         if all(isinstance(key, str) for key in flat_keys):
-            return LazyGroupBy(self, *flat_keys, drop_null_keys=drop_null_keys)
+            return LazyGroupBy(self, flat_keys, drop_null_keys=drop_null_keys)
 
         from narwhals import col
         from narwhals.expr import Expr
@@ -2838,7 +2838,7 @@ class LazyFrame(BaseFrame[FrameT]):
             msg = "Group by is not (yet) supported with keys that are not transformation expressions"
             raise ComputeError(msg)
 
-        return LazyGroupBy(self, *expr_flat_keys, drop_null_keys=drop_null_keys)
+        return LazyGroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
         self: Self,

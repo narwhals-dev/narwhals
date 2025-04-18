@@ -5,6 +5,7 @@ from typing import Any
 from typing import Generic
 from typing import Iterable
 from typing import Iterator
+from typing import Sequence
 from typing import TypeVar
 
 from narwhals._expression_parsing import all_exprs_are_scalar_like
@@ -27,13 +28,14 @@ class GroupBy(Generic[DataFrameT]):
     def __init__(
         self: Self,
         df: DataFrameT,
-        *keys: str | CompliantExprAny,
+        keys: Sequence[str] | Sequence[CompliantExprAny],
+        *,
         drop_null_keys: bool,
     ) -> None:
         self._df: DataFrameT = df
         self._keys = keys
         self._grouped = self._df._compliant_frame.group_by(
-            *self._keys,
+            self._keys,
             drop_null_keys=drop_null_keys,
         )
 
@@ -110,13 +112,14 @@ class LazyGroupBy(Generic[LazyFrameT]):
     def __init__(
         self: Self,
         df: LazyFrameT,
-        *keys: str | CompliantExprAny,
+        keys: Sequence[str] | Sequence[CompliantExprAny],
+        *,
         drop_null_keys: bool,
     ) -> None:
         self._df: LazyFrameT = df
         self._keys = keys
         self._grouped = self._df._compliant_frame.group_by(
-            *self._keys, drop_null_keys=drop_null_keys
+            self._keys, drop_null_keys=drop_null_keys
         )
 
     def agg(self: Self, *aggs: Expr | Iterable[Expr], **named_aggs: Expr) -> LazyFrameT:
