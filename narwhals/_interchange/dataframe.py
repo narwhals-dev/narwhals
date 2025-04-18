@@ -105,11 +105,11 @@ class InterchangeFrame:
         )
         raise NotImplementedError(msg)
 
-    def get_column(self, col: str) -> InterchangeSeries:
+    def get_column(self, name: str) -> InterchangeSeries:
         from narwhals._interchange.series import InterchangeSeries
 
         return InterchangeSeries(
-            self._interchange_frame.get_column_by_name(col), version=self._version
+            self._interchange_frame.get_column_by_name(name), version=self._version
         )
 
     def to_pandas(self: Self) -> pd.DataFrame:
