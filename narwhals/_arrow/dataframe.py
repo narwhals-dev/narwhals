@@ -94,10 +94,6 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
 
-    @property
-    def native_series(self) -> type[ArrowChunkedArray]:
-        return pa.ChunkedArray
-
     @classmethod
     def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self:
         backend_version = context._backend_version
