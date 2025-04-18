@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
 from typing import Protocol
+from typing import Sequence
 from typing import TypeVar
 from typing import Union
 
@@ -313,6 +314,17 @@ PythonLiteral: TypeAlias = "NonNestedLiteral | list[Any] | tuple[Any, ...]"
 _IntIndexer: TypeAlias = Any  # noqa: PYI047
 # Overloaded sequence of strings
 _StrIndexer: TypeAlias = Any  # noqa: PYI047
+
+
+# Annotations for `__getitem__` methods
+_Slice: TypeAlias = "slice[Any, Any, Any]"
+SingleIndexSelector: TypeAlias = int
+SingleNameSelector: TypeAlias = str
+MultiIndexSelector: TypeAlias = "_Slice | Sequence[int] | Series[Any] | _1DArray"
+MultiNameSelector: TypeAlias = "_Slice | Sequence[str] | Series[Any] | _1DArray"
+BooleanMask: TypeAlias = "Sequence[bool] | Series[Any] | _1DArray"
+SingleColSelector: TypeAlias = "SingleIndexSelector | SingleNameSelector"
+MultiColSelector: TypeAlias = "MultiIndexSelector | MultiNameSelector | BooleanMask"
 
 
 # ruff: noqa: N802
