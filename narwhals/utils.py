@@ -1302,6 +1302,7 @@ def is_sequence_like_ints(sequence: Any | Sequence[_T]) -> bool:
     return (
         (
             isinstance(sequence, Sequence)
+            and not isinstance(sequence, str)
             and (
                 (len(sequence) > 0 and isinstance(sequence[0], int))
                 or (len(sequence) == 0)

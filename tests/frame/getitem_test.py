@@ -251,7 +251,7 @@ def test_get_item_works_with_tuple_and_list_indexing_and_str(
 def test_getitem_ndarray_columns(constructor_eager: ConstructorEager) -> None:
     data = {"col1": ["a", "b", "c", "d"], "col2": np.arange(4), "col3": [4, 3, 2, 1]}
     nw_df = nw.from_native(constructor_eager(data), eager_only=True)
-    arr: np.ndarray[tuple[int], np.dtype[np.int64]] = np.array([0, 1])  # pyright: ignore[reportAssignmentType]
+    arr = np.arange(2)
     result = nw_df[:, arr]
     expected = {"col1": ["a", "b", "c", "d"], "col2": [0, 1, 2, 3]}
     assert_equal_data(result, expected)
