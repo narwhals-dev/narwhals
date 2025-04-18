@@ -17,6 +17,7 @@ from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import NarwhalsError
 from narwhals.exceptions import ShapeError
+from narwhals.utils import Version
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
@@ -26,7 +27,6 @@ if TYPE_CHECKING:
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.series import PolarsSeries
     from narwhals.dtypes import DType
-    from narwhals.utils import Version
 
     T = TypeVar("T")
 
@@ -110,8 +110,10 @@ def native_to_narwhals_dtype(
         return dtypes.Object()
     if dtype == pl.Categorical:
         return dtypes.Categorical()
-    if dtype == pl.Enum:
-        return dtypes.Enum()
+    if isinstance_or_issubclass(dtype, pl.Enum):
+        if version is Version.V1:
+            return dtypes.Enum()  # type: ignore[call-arg]
+        return dtypes.Enum(dtype.categories)
     if dtype == pl.Date:
         return dtypes.Date()
     if isinstance_or_issubclass(dtype, pl.Datetime):
@@ -185,9 +187,14 @@ def narwhals_to_native_dtype(
         return pl.Object()
     if dtype == dtypes.Categorical:
         return pl.Categorical()
-    if dtype == dtypes.Enum:
-        msg = "Converting to Enum is not (yet) supported"
-        raise NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Enum):
+        if version is Version.V1:
+            msg = "Converting to Enum is not supported in narwhals.stable.v1"
+            raise NotImplementedError(msg)
+        if isinstance(dtype, dtypes.Enum):
+            return pl.Enum(dtype.categories)
+        msg = "Can not cast / initialize Enum without categories present"
+        raise ValueError(msg)
     if dtype == dtypes.Date:
         return pl.Date()
     if dtype == dtypes.Time:

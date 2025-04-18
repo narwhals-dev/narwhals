@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import enum
 from collections import OrderedDict
 from datetime import timezone
 from itertools import starmap
@@ -9,6 +10,7 @@ from typing import Mapping
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
+    from typing import Iterable
     from typing import Iterator
     from typing import Sequence
 
@@ -464,13 +466,30 @@ class Enum(DType):
     Polars has an Enum data type, while pandas and PyArrow do not.
 
     Examples:
-       >>> import polars as pl
        >>> import narwhals as nw
-       >>> data = ["beluga", "narwhal", "orca"]
-       >>> s_native = pl.Series(data, dtype=pl.Enum(data))
-       >>> nw.from_native(s_native, series_only=True).dtype
-       Enum
+       >>> nw.Enum(["beluga", "narwhal", "orca"])
+       Enum(categories=['beluga', 'narwhal', 'orca'])
     """
+
+    categories: Sequence[str]
+
+    def __init__(self, categories: Iterable[str] | type[enum.Enum]) -> None:
+        if isinstance(categories, type) and issubclass(categories, enum.Enum):
+            self.categories = tuple(member.value for member in categories)
+        else:
+            self.categories = tuple(categories)
+
+    def __eq__(self: Self, other: object) -> bool:
+        # allow comparing object instances to class
+        if type(other) is type:
+            return other is Enum
+        return isinstance(other, type(self)) and self.categories == other.categories
+
+    def __hash__(self: Self) -> int:  # pragma: no cover
+        return hash((self.__class__, tuple(self.categories)))
+
+    def __repr__(self: Self) -> str:  # pragma: no cover
+        return f"{type(self).__name__}(categories={list(self.categories)!r})"
 
 
 class Field:
