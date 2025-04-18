@@ -76,8 +76,6 @@ if TYPE_CHECKING:
 
 
 class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
-    native_series = pa.ChunkedArray
-
     def __init__(
         self: Self,
         native_dataframe: pa.Table,
@@ -93,6 +91,10 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         self._backend_version = backend_version
         self._version = version
         validate_backend_version(self._implementation, self._backend_version)
+
+    @property
+    def native_series(self) -> type[ArrowChunkedArray]:
+        return pa.ChunkedArray
 
     @classmethod
     def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self:
