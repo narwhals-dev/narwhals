@@ -304,7 +304,7 @@ class PolarsDataFrame:
                 elif (
                     isinstance(rows, (slice, range))
                     or is_sequence_like_ints(rows)
-                    or isinstance(rows, self.native_series)
+                    or isinstance(rows, pl.Series)
                 ):
                     native = native[rows, :]
                 else:
