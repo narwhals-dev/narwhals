@@ -394,6 +394,8 @@ class EagerDataFrame(
         is_int_col_indexer = is_int_like_indexer(columns)
         compliant = self
         if not is_null_slice(columns):
+            if hasattr(columns, "__len__") and len(columns) == 0:
+                return compliant.select()
             if is_int_col_indexer and not isinstance(columns, slice):
                 compliant = compliant._select_indices(columns)
             elif is_int_col_indexer:
