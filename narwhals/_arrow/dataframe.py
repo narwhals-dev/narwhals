@@ -259,9 +259,11 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
 
     def _gather_slice(self, item: slice | range) -> Self:
         start = item.start or 0
+        stop = item.stop if item.stop is not None else len(self.native)
         if start < 0:
             start = len(self.native) + start
-        stop = item.stop if item.stop is not None else len(self.native)
+        if stop < 0:
+            stop = len(self.native) + stop
         if item.step is not None and item.step != 1:
             msg = "Slicing with step is not supported on PyArrow tables"
             raise NotImplementedError(msg)
