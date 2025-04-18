@@ -1341,7 +1341,7 @@ def is_int_like_indexer(cols: object) -> bool:
     )
 
 
-def is_null_slice(obj: object) -> bool:
+def is_null_slice(obj: object) -> TypeIs[slice[None, None, None]]:
     return isinstance(obj, slice) and obj == slice(None)
 
 
