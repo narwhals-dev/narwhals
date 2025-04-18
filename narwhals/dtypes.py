@@ -440,11 +440,8 @@ class Enum(DType):
     Polars has an Enum data type, while pandas and PyArrow do not.
 
     Examples:
-       >>> import polars as pl
        >>> import narwhals as nw
-       >>> data = ["beluga", "narwhal", "orca"]
-       >>> s_native = pl.Series(data, dtype=pl.Enum(data))
-       >>> nw.from_native(s_native, series_only=True).dtype
+       >>> nw.Enum(["beluga", "narwhal", "orca"])
        Enum(categories=['beluga', 'narwhal', 'orca'])
     """
 
@@ -452,18 +449,9 @@ class Enum(DType):
 
     def __init__(self, categories: Iterable[str] | type[enum.Enum]) -> None:
         if isinstance(categories, type) and issubclass(categories, enum.Enum):
-            categories = (v.value for v in categories)
-        sequence: tuple[str, ...] = tuple(categories)
-        seen: set[str] = set()
-        for cat in sequence:
-            if cat in seen:
-                msg = f"{type(self).__name__} categories must be unique; found duplicate {cat!r}"
-                raise ValueError(msg)
-            if not isinstance(cat, str):
-                msg = f"{type(self).__name__} categories must be strings; found data of type {type(cat).__name__!r}"
-                raise TypeError(msg)
-            seen.add(cat)
-        self.categories = sequence
+            self.categories = tuple(member.value for member in categories)
+        else:
+            self.categories = tuple(categories)
 
     def __eq__(self: Self, other: object) -> bool:
         # allow comparing object instances to class
