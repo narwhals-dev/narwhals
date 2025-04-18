@@ -1322,12 +1322,6 @@ def is_sequence_like(sequence: Any | Sequence[_T]) -> bool:
     )
 
 
-def is_slice_strs(obj: object) -> bool:
-    return isinstance(obj, slice) and (
-        isinstance(obj.start, str) or isinstance(obj.stop, str)
-    )
-
-
 def is_slice_ints(obj: object) -> bool:
     return isinstance(obj, slice) and (
         isinstance(obj.start, int)  # e.g. [1:]

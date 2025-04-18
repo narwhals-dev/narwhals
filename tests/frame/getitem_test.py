@@ -53,6 +53,11 @@ def test_slice_rows_with_step_pyarrow() -> None:
         match="Slicing with step is not supported on PyArrow tables",
     ):
         nw.from_native(pa.table(data))[1::2]
+    with pytest.raises(
+        NotImplementedError,
+        match="Slicing with step is not supported on PyArrow tables",
+    ):
+        nw.from_native(pa.chunked_array([data["a"]]), series_only=True)[1::2]
 
 
 def test_slice_lazy_fails() -> None:
@@ -272,3 +277,34 @@ def test_zeroth_row_no_columns(constructor_eager: ConstructorEager) -> None:
     columns: list[str] = []
     result = nw_df[0, columns]
     assert result.shape == (0, 0)
+
+
+def test_single_tuple(constructor_eager: ConstructorEager) -> None:
+    data = {"a": [1, 2, 3]}
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
+    # Technically works but we should probably discourage it
+    # OK if overloads don't match it.
+    result = nw_df[[0, 1],]  # type: ignore[index]
+    expected = {"a": [1, 2]}
+    assert_equal_data(result, expected)
+
+
+def test_triple_tuple(constructor_eager: ConstructorEager) -> None:
+    data = {"a": [1, 2, 3]}
+    with pytest.raises(TypeError, match="Tuples cannot"):
+        nw.from_native(constructor_eager(data), eager_only=True)[(1, 2, 3)]
+
+
+def test_slice_with_series(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if "pandas_pyarrow" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
+    data = {"a": [1, 2, 3], "c": [0, 2, 1]}
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = nw_df[nw_df["c"]]
+    expected = {"a": [1, 3, 2], "c": [0, 1, 2]}
+    assert_equal_data(result, expected)
+    result = nw_df[nw_df["c"], ["a"]]
+    expected = {"a": [1, 3, 2]}
+    assert_equal_data(result, expected)

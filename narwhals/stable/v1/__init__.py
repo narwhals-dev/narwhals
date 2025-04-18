@@ -156,7 +156,8 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     @overload
     def __getitem__(  # type: ignore[overload-overlap]
         self: Self,
-        item: str | tuple[int | slice | Sequence[int] | _1DArray, int | str],
+        item: str
+        | tuple[int | slice | Sequence[int] | _1DArray | NwSeries[Any], int | str],
     ) -> Series[Any]: ...
 
     @overload
@@ -168,9 +169,10 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
             | Sequence[int]
             | Sequence[str]
             | _1DArray
+            | NwSeries[Any]
             | tuple[
-                int | slice | Sequence[int] | _1DArray,
-                slice | Sequence[int] | Sequence[str] | _1DArray,
+                int | slice | Sequence[int] | _1DArray | NwSeries[Any],
+                slice | Sequence[int] | Sequence[str] | _1DArray | NwSeries[Any],
             ]
         ),
     ) -> Self: ...

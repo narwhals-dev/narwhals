@@ -308,8 +308,6 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
 
     def _select_indices(self, item: _IntIndexer) -> Self:
         item = list(item) if isinstance(item, tuple) else item
-        if len(item) == 0:
-            return self._with_native(self.native.__class__(), validate_column_names=False)
         return self._with_native(
             self.native.iloc[:, item],
             validate_column_names=False,

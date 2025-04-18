@@ -239,7 +239,7 @@ def test_getitem(
     df_polars = nw.from_native(pl.DataFrame(TEST_DATA))
     try:
         result_polars = df_polars[selector]
-    except TypeError:
+    except TypeError:  # pragma: no cover
         # If the selector fails on polars, then skip the test.
         # e.g. df[0, 'a'] fails, suggesting to use DataFrame.item to extract a single
         # element.
@@ -252,7 +252,7 @@ def test_getitem(
 
     if isinstance(result_polars, nw.Series):
         assert_equal_data({"a": result_other}, {"a": result_polars.to_list()})
-    elif isinstance(result_polars, (str, int)):
+    elif isinstance(result_polars, (str, int)):  # pragma: no cover
         assert result_polars == result_other
     else:
         assert_equal_data(

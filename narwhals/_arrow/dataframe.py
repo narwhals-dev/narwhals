@@ -281,10 +281,6 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         )
 
     def _select_indices(self, item: _IntIndexer) -> Self:
-        if len(item) == 0:
-            return self._with_native(
-                self.native.__class__.from_arrays([]), validate_column_names=False
-            )
         return self._with_native(self.native.select([self.columns[x] for x in item]))
 
     def _select_labels(self, item: _StrIndexer) -> Self:

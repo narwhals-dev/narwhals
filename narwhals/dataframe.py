@@ -804,7 +804,8 @@ class DataFrame(BaseFrame[DataFrameT]):
     @overload
     def __getitem__(  # type: ignore[overload-overlap]
         self: Self,
-        item: str | tuple[int | slice | Sequence[int] | _1DArray, int | str],
+        item: str
+        | tuple[int | slice | Sequence[int] | _1DArray | Series[Any], int | str],
     ) -> Series[Any]: ...
 
     @overload
@@ -816,9 +817,10 @@ class DataFrame(BaseFrame[DataFrameT]):
             | Sequence[int]
             | Sequence[str]
             | _1DArray
+            | Series[Any]
             | tuple[
-                int | slice | Sequence[int] | _1DArray,
-                slice | Sequence[int] | Sequence[str] | _1DArray,
+                int | slice | Sequence[int] | _1DArray | Series[Any],
+                slice | Sequence[int] | Sequence[str] | _1DArray | Series[Any],
             ]
         ),
     ) -> Self: ...
@@ -831,11 +833,12 @@ class DataFrame(BaseFrame[DataFrameT]):
             | Sequence[int]
             | Sequence[str]
             | _1DArray
+            | Series[Any]
             | tuple[int, int | str]
-            | tuple[int | slice | Sequence[int] | _1DArray, int | str]
+            | tuple[int | slice | Sequence[int] | _1DArray | Series[Any], int | str]
             | tuple[
-                int | slice | Sequence[int] | _1DArray,
-                slice | Sequence[int] | Sequence[str] | _1DArray,
+                int | slice | Sequence[int] | _1DArray | Series[Any],
+                slice | Sequence[int] | Sequence[str] | _1DArray | Series[Any],
             ]
         ),
     ) -> Series[Any] | Self | Any:
@@ -890,7 +893,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         if isinstance(item, tuple) and len(item) > 2:
             msg = (
-                "Tuples be passed to DataFrame.__getitem__ directly.\n\n"
+                "Tuples cannot be passed to DataFrame.__getitem__ directly.\n\n"
                 "Hint: instead of `df[indices]`, did you mean `df[indices, :]`?"
             )
             raise TypeError(msg)
