@@ -253,7 +253,7 @@ class PolarsNamespace:
     #    i. None of that is useful here
     # 2. We don't have a `PolarsSelector` abstraction, and just use `PolarsExpr`
     @property
-    def selectors(self) -> CompliantSelectorNamespace[PolarsDataFrame, PolarsSeries]:
+    def selectors(self) -> CompliantSelectorNamespace[PolarsDataFrame, PolarsSeries]:  # pyright: ignore[reportInvalidTypeArguments]
         return cast(
             "CompliantSelectorNamespace[PolarsDataFrame, PolarsSeries]",  # pyright: ignore[reportInvalidTypeArguments]
             PolarsSelectorNamespace(self),
