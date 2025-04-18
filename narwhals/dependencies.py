@@ -13,7 +13,6 @@ if TYPE_CHECKING:
     import duckdb
     import ibis
     import modin.pandas as mpd
-    import numpy as np
     import pandas as pd
     import polars as pl
     import pyarrow as pa
@@ -32,6 +31,7 @@ if TYPE_CHECKING:
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
     from narwhals.typing import _NDArray
+    from narwhals.typing import _NumpyScalar
     from narwhals.typing import _ShapeT
 
 # We silently allow these but - given that they claim
@@ -254,7 +254,7 @@ def is_numpy_array_2d(arr: Any) -> TypeIs[_2DArray]:
     return is_numpy_array(arr) and arr.ndim == 2
 
 
-def is_numpy_scalar(scalar: Any) -> TypeGuard[np.generic]:
+def is_numpy_scalar(scalar: Any) -> TypeGuard[_NumpyScalar]:
     """Check whether `scalar` is a NumPy Scalar without importing NumPy."""
     # NOTE: Needs to stay as `TypeGuard`
     # - Used in `Series.__getitem__`, but not annotated
