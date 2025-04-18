@@ -894,6 +894,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             # These are so heavily overloaded that we just ignore the types for now.
             rows = None if not item or is_null_slice(item[0]) else item[0]
             columns = None if len(item) < 2 or is_null_slice(item[1]) else item[1]
+            if rows is None and columns is None:
+                return self
         elif is_int_like_indexer(item):
             rows = item
             columns = None
@@ -909,8 +911,6 @@ class DataFrame(BaseFrame[DataFrameT]):
                 "- Use `DataFrame.filter(mask)` to filter rows based on a boolean mask."
             )
             raise TypeError(msg)
-        if rows is None and columns is None:
-            return self
 
         compliant = self._compliant_frame
         rows = to_native(rows, pass_through=True)
