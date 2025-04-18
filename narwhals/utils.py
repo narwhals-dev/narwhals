@@ -36,6 +36,7 @@ from narwhals.dependencies import get_pyspark_sql
 from narwhals.dependencies import get_sqlframe
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_modin_series
+from narwhals.dependencies import is_narwhals_series
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.dependencies import is_pandas_dataframe
 from narwhals.dependencies import is_pandas_like_dataframe
@@ -95,6 +96,7 @@ if TYPE_CHECKING:
     from narwhals.typing import SizeUnit
     from narwhals.typing import SupportsNativeNamespace
     from narwhals.typing import TimeUnit
+    from narwhals.typing import _1DArray
 
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
@@ -1313,13 +1315,13 @@ def is_sequence_like_ints(sequence: Any | Sequence[_T]) -> bool:
     )
 
 
-def is_sequence_like(sequence: Any | Sequence[_T]) -> bool:
-    from narwhals.series import Series
-
+def is_sequence_like(
+    sequence: Sequence[_T] | Any,
+) -> TypeIs[Sequence[_T]] | TypeIs[Series[Any]] | TypeIs[_1DArray]:
     return (
-        (isinstance(sequence, Sequence) and not isinstance(sequence, str))
-        or (is_numpy_array_1d(sequence))
-        or isinstance(sequence, Series)
+        is_sequence_but_not_str(sequence)
+        or is_numpy_array_1d(sequence)
+        or is_narwhals_series(sequence)
     )
 
 
