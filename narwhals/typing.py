@@ -322,9 +322,8 @@ SingleIndexSelector: TypeAlias = int
 SingleNameSelector: TypeAlias = str
 MultiIndexSelector: TypeAlias = "_Slice | Sequence[int] | Series[Any] | _1DArray"
 MultiNameSelector: TypeAlias = "_Slice | Sequence[str] | Series[Any] | _1DArray"
-BooleanMask: TypeAlias = "Sequence[bool] | Series[Any] | _1DArray"
 SingleColSelector: TypeAlias = "SingleIndexSelector | SingleNameSelector"
-MultiColSelector: TypeAlias = "MultiIndexSelector | MultiNameSelector | BooleanMask"
+MultiColSelector: TypeAlias = "MultiIndexSelector | MultiNameSelector"
 
 
 # ruff: noqa: N802
