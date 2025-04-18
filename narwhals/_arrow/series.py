@@ -410,6 +410,8 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def _gather(self, item: _IntIndexer) -> Self:
         if len(item) == 0:
             return self._with_native(self.native.slice(0, 0))
+        if self._backend_version < (18,) and isinstance(item, tuple):
+            item = list(item)
         return self._with_native(self.native.take(item))
 
     def _gather_slice(self, item: slice | range) -> Self:
