@@ -76,7 +76,8 @@ if TYPE_CHECKING:
 
 
 class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
-    # --- not in the spec ---
+    native_series = pa.ChunkedArray
+
     def __init__(
         self: Self,
         native_dataframe: pa.Table,

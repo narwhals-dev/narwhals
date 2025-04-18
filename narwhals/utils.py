@@ -1276,14 +1276,25 @@ def is_sequence_but_not_str(sequence: Any | Sequence[_T]) -> TypeIs[Sequence[_T]
 def is_sequence_like_ints(sequence: Any | Sequence[_T]) -> bool:
     np = get_numpy()
     return (
-        isinstance(sequence, Sequence)
-        and ((len(sequence) > 0 and isinstance(sequence[0], int)) or (len(sequence) == 0))
-    ) or (is_numpy_array_1d(sequence) and np.issubdtype(sequence.dtype, np.integer))
+        (
+            isinstance(sequence, Sequence)
+            and (
+                (len(sequence) > 0 and isinstance(sequence[0], int))
+                or (len(sequence) == 0)
+            )
+        )
+        or (is_numpy_array_1d(sequence) and np.issubdtype(sequence.dtype, np.integer))
+        or (is_compliant_series(sequence) and sequence.dtype.is_integer())
+    )
 
 
 def is_sequence_like(sequence: Any | Sequence[_T]) -> bool:
-    return (isinstance(sequence, Sequence) and not isinstance(sequence, str)) or (
-        is_numpy_array_1d(sequence)
+    from narwhals.series import Series
+
+    return (
+        (isinstance(sequence, Sequence) and not isinstance(sequence, str))
+        or (is_numpy_array_1d(sequence))
+        or isinstance(sequence, Series)
     )
 
 
@@ -1302,7 +1313,14 @@ def is_slice_ints(obj: object) -> bool:
 
 
 def is_int_like_indexer(cols: object) -> bool:
-    return isinstance(cols, int) or is_sequence_like_ints(cols) or is_slice_ints(cols)
+    from narwhals.series import Series
+
+    return (
+        isinstance(cols, int)
+        or is_sequence_like_ints(cols)
+        or is_slice_ints(cols)
+        or (isinstance(cols, Series) and cols.dtype.is_integer())
+    )
 
 
 def is_null_slice(obj: object) -> bool:

@@ -287,6 +287,7 @@ class CompliantSeries(
     def struct(self) -> Any: ...
 
     def gather(self, indices: Any) -> Self: ...
+
     def _gather_slice(self, indices: Any) -> Self: ...
 
     def __getitem__(self, rows: Any) -> Self:
@@ -296,7 +297,7 @@ class CompliantSeries(
             return self.gather([rows])
         elif isinstance(rows, (slice, range)):
             return self._gather_slice(rows)
-        elif is_sequence_like_ints(rows):
+        elif is_sequence_like_ints(rows) or isinstance(rows, self.native.__class__):
             return self.gather(rows)
         else:
             msg = "Unreachable code"

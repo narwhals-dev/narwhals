@@ -100,7 +100,6 @@ CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
 
 
 class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "Any"]):
-    # --- not in the spec ---
     def __init__(
         self: Self,
         native_dataframe: Any,
@@ -117,6 +116,10 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         validate_backend_version(self._implementation, self._backend_version)
         if validate_column_names:
             check_column_names_are_unique(native_dataframe.columns)
+
+    @property
+    def native_series(self) -> type[pd.Series[Any]]:
+        return self.__native_namespace__().Series
 
     @classmethod
     def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self:

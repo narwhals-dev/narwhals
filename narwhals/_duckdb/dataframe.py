@@ -102,10 +102,10 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             backend_version=self._backend_version, version=self._version
         )
 
-    def __getitem__(self: Self, item: str) -> DuckDBInterchangeSeries:
+    def get_column(self: Self, col: str) -> DuckDBInterchangeSeries:
         from narwhals._duckdb.series import DuckDBInterchangeSeries
 
-        return DuckDBInterchangeSeries(self.native.select(item), version=self._version)
+        return DuckDBInterchangeSeries(self.native.select(col), version=self._version)
 
     def _iter_columns(self) -> Iterator[duckdb.Expression]:
         for name in self.columns:

@@ -922,6 +922,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             raise TypeError(msg)
 
         compliant = self._compliant_frame
+        rows = to_native(rows, pass_through=True)
+        columns = to_native(columns, pass_through=True)
 
         if isinstance(rows, int) and isinstance(columns, (int, str)):
             return self.item(rows, columns)

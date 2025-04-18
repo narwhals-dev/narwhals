@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
 
+    from narwhals._ibis.series import IbisInterchangeSeries
     from narwhals.dtypes import DType
 
 
@@ -98,6 +99,11 @@ class IbisLazyFrame:
 
     def __native_namespace__(self: Self) -> ModuleType:
         return get_ibis()
+
+    def get_column(self, col: str) -> IbisInterchangeSeries:
+        from narwhals._ibis.series import IbisInterchangeSeries
+
+        return IbisInterchangeSeries(self._native_frame[col], version=self._version)
 
     def to_pandas(self: Self) -> pd.DataFrame:
         return self._native_frame.to_pandas()

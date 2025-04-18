@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
 
+    from narwhals._interchange.series import InterchangeSeries
     from narwhals.dtypes import DType
     from narwhals.typing import DataFrameLike
     from narwhals.utils import Version
@@ -103,6 +104,13 @@ class InterchangeFrame:
             "open a feature request at https://github.com/narwhals-dev/narwhals/issues."
         )
         raise NotImplementedError(msg)
+
+    def get_column(self, col: str) -> InterchangeSeries:
+        from narwhals._interchange.series import InterchangeSeries
+
+        return InterchangeSeries(
+            self._interchange_frame.get_column_by_name(col), version=self._version
+        )
 
     def to_pandas(self: Self) -> pd.DataFrame:
         import pandas as pd  # ignore-banned-import()
