@@ -250,3 +250,11 @@ def test_getitem_ndarray_columns(constructor_eager: ConstructorEager) -> None:
     result = nw_df[:, arr]
     expected = {"col1": ["a", "b", "c", "d"], "col2": [0, 1, 2, 3]}
     assert_equal_data(result, expected)
+
+
+def test_getitem_negative_slice(constructor_eager: ConstructorEager) -> None:
+    data = {"col1": ["a", "b", "c", "d"], "col2": np.arange(4), "col3": [4, 3, 2, 1]}
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = nw_df[-3:2, ["col3", "col1"]]
+    expected = {"col3": [3], "col1": ["b"]}
+    assert_equal_data(result, expected)
