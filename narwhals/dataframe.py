@@ -893,8 +893,8 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         if isinstance(item, tuple) and len(item) == 2:
             # These are so heavily overloaded that we just ignore the types for now.
-            rows: Any = item[0] if not is_null_slice(item[0]) else None
-            columns: Any = item[1] if not is_null_slice(item[1]) else None
+            rows = item[0] if not is_null_slice(item[0]) else None
+            columns = item[1] if not is_null_slice(item[1]) else None
         elif isinstance(item, tuple) and item:
             rows = item[0]
             columns = None
