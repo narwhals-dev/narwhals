@@ -884,27 +884,23 @@ class DataFrame(BaseFrame[DataFrameT]):
             1    2
             Name: a, dtype: int64
         """
-        if isinstance(item, tuple) and len(item) > 2:
-            msg = (
-                "Tuples cannot be passed to DataFrame.__getitem__ directly.\n\n"
-                "Hint: instead of `df[indices]`, did you mean `df[indices, :]`?"
-            )
-            raise TypeError(msg)
-
-        if isinstance(item, tuple) and len(item) == 2:
+        if isinstance(item, tuple):
+            if len(item) > 2:
+                msg = (
+                    "Tuples cannot be passed to DataFrame.__getitem__ directly.\n\n"
+                    "Hint: instead of `df[indices]`, did you mean `df[indices, :]`?"
+                )
+                raise TypeError(msg)
             # These are so heavily overloaded that we just ignore the types for now.
-            rows = item[0] if not is_null_slice(item[0]) else None
-            columns = item[1] if not is_null_slice(item[1]) else None
-        elif isinstance(item, tuple) and item:
-            rows = item[0]
-            columns = None
+            rows = None if not item or is_null_slice(item[0]) else item[0]
+            columns = None if len(item) < 2 or is_null_slice(item[1]) else item[1]
         elif isinstance(item, str):
             rows = None
             columns = item
         elif is_int_like_indexer(item):
             rows = item
             columns = None
-        elif is_sequence_like(item) or isinstance(item, (slice, range)):
+        elif is_sequence_like(item) or isinstance(item, slice):
             rows = None
             columns = item
         else:
@@ -916,6 +912,8 @@ class DataFrame(BaseFrame[DataFrameT]):
                 "- Use `DataFrame.filter(mask)` to filter rows based on a boolean mask."
             )
             raise TypeError(msg)
+        if rows is None and columns is None:
+            return self
 
         compliant = self._compliant_frame
         rows = to_native(rows, pass_through=True)
@@ -923,12 +921,10 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         if isinstance(rows, int) and isinstance(columns, (int, str)):
             return self.item(rows, columns)
-        if isinstance(columns, (str, int)):
+        if isinstance(columns, (int, str)):
             col_name = columns if isinstance(columns, str) else self.columns[columns]
             series = self.get_column(col_name)
             return series[rows] if rows is not None else series
-        if rows is None and columns is None:
-            return self
         if rows is None:
             return self._with_compliant(compliant[:, columns])
         if columns is None:
