@@ -18,6 +18,7 @@ from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals._polars.utils import native_to_narwhals_dtype
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.utils import Implementation
+from narwhals.utils import requires
 from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
@@ -189,6 +190,7 @@ class PolarsSeries:
         dtype_pl = narwhals_to_native_dtype(dtype, self._version, self._backend_version)
         return self._with_native(self.native.cast(dtype_pl))
 
+    @requires.backend_version((1,))
     def replace_strict(
         self: Self,
         old: Sequence[Any] | Mapping[Any, Any],
@@ -202,9 +204,6 @@ class PolarsSeries:
             if return_dtype
             else None
         )
-        if self._backend_version < (1,):
-            msg = f"`replace_strict` is only available in Polars>=1.0, found version {self._backend_version}"
-            raise NotImplementedError(msg)
         return self._with_native(ser.replace_strict(old, new, return_dtype=dtype))
 
     def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
@@ -340,6 +339,7 @@ class PolarsSeries:
 
         return self._with_native(native_result)
 
+    @requires.backend_version((1,))
     def rolling_var(
         self: Self,
         window_size: int,
@@ -348,22 +348,18 @@ class PolarsSeries:
         center: bool,
         ddof: int,
     ) -> Self:
-        if self._backend_version < (1,):  # pragma: no cover
-            msg = "`rolling_var` not implemented for polars older than 1.0"
-            raise NotImplementedError(msg)
-
         extra_kwargs: dict[str, Any] = (
             {"min_periods": min_samples}
             if self._backend_version < (1, 21, 0)
             else {"min_samples": min_samples}
         )
-
         return self._with_native(
             self.native.rolling_var(
                 window_size=window_size, center=center, ddof=ddof, **extra_kwargs
             )
         )
 
+    @requires.backend_version((1,))
     def rolling_std(
         self: Self,
         window_size: int,
@@ -372,16 +368,11 @@ class PolarsSeries:
         center: bool,
         ddof: int,
     ) -> Self:
-        if self._backend_version < (1,):  # pragma: no cover
-            msg = "`rolling_std` not implemented for polars older than 1.0"
-            raise NotImplementedError(msg)
-
         extra_kwargs: dict[str, Any] = (
             {"min_periods": min_samples}
             if self._backend_version < (1, 21, 0)
             else {"min_samples": min_samples}
         )
-
         return self._with_native(
             self.native.rolling_std(
                 window_size=window_size, center=center, ddof=ddof, **extra_kwargs
@@ -400,7 +391,6 @@ class PolarsSeries:
             if self._backend_version < (1, 21, 0)
             else {"min_samples": min_samples}
         )
-
         return self._with_native(
             self.native.rolling_sum(
                 window_size=window_size, center=center, **extra_kwargs
@@ -419,7 +409,6 @@ class PolarsSeries:
             if self._backend_version < (1, 21, 0)
             else {"min_samples": min_samples}
         )
-
         return self._with_native(
             self.native.rolling_mean(
                 window_size=window_size, center=center, **extra_kwargs

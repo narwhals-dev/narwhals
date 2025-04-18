@@ -19,6 +19,7 @@ from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dtypes import DType
 from narwhals.utils import Implementation
+from narwhals.utils import requires
 
 if TYPE_CHECKING:
     from datetime import timezone
@@ -136,10 +137,10 @@ class PolarsNamespace:
             return self._dataframe.from_numpy(data, schema=schema, context=self)
         return self._series.from_numpy(data, context=self)  # pragma: no cover
 
-    def nth(self: Self, *indices: int) -> PolarsExpr:
-        if self._backend_version < (1, 0, 0):
-            msg = "`nth` is only supported for Polars>=1.0.0. Please use `col` for columns selection instead."
-            raise AttributeError(msg)
+    @requires.backend_version(
+        (1, 0, 0), "Please use `col` for columns selection instead."
+    )
+    def nth(self, *indices: int) -> PolarsExpr:
         return self._expr(
             pl.nth(*indices), version=self._version, backend_version=self._backend_version
         )
