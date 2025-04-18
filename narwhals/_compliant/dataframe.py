@@ -14,7 +14,7 @@ from typing import overload
 
 from narwhals._compliant.typing import CompliantExprT_contra
 from narwhals._compliant.typing import CompliantSeriesT
-from narwhals._compliant.typing import EagerExprT_contra
+from narwhals._compliant.typing import EagerExprT
 from narwhals._compliant.typing import EagerSeriesT
 from narwhals._compliant.typing import NativeFrameT
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
@@ -42,6 +42,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.group_by import CompliantGroupBy
     from narwhals._compliant.group_by import DataFrameGroupBy
+    from narwhals._compliant.namespace import EagerNamespace
     from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
@@ -335,24 +336,25 @@ class CompliantLazyFrame(
 
 
 class EagerDataFrame(
-    CompliantDataFrame[EagerSeriesT, EagerExprT_contra, NativeFrameT],
-    CompliantLazyFrame[EagerExprT_contra, NativeFrameT],
-    Protocol[EagerSeriesT, EagerExprT_contra, NativeFrameT],
+    CompliantDataFrame[EagerSeriesT, EagerExprT, NativeFrameT],
+    CompliantLazyFrame[EagerExprT, NativeFrameT],
+    Protocol[EagerSeriesT, EagerExprT, NativeFrameT],
 ):
-    @property
-    def native_series(self) -> Any: ...
+    def __narwhals_namespace__(
+        self,
+    ) -> EagerNamespace[Self, EagerSeriesT, EagerExprT, NativeFrameT, Any]: ...
 
-    def _evaluate_expr(self, expr: EagerExprT_contra, /) -> EagerSeriesT:
+    def _evaluate_expr(self, expr: EagerExprT, /) -> EagerSeriesT:
         """Evaluate `expr` and ensure it has a **single** output."""
         result: Sequence[EagerSeriesT] = expr(self)
         assert len(result) == 1  # debug assertion  # noqa: S101
         return result[0]
 
-    def _evaluate_into_exprs(self, *exprs: EagerExprT_contra) -> Sequence[EagerSeriesT]:
+    def _evaluate_into_exprs(self, *exprs: EagerExprT) -> Sequence[EagerSeriesT]:
         # NOTE: Ignore is to avoid an intermittent false positive
         return list(chain.from_iterable(self._evaluate_into_expr(expr) for expr in exprs))  # pyright: ignore[reportArgumentType]
 
-    def _evaluate_into_expr(self, expr: EagerExprT_contra, /) -> Sequence[EagerSeriesT]:
+    def _evaluate_into_expr(self, expr: EagerExprT, /) -> Sequence[EagerSeriesT]:
         """Return list of raw columns.
 
         For eager backends we alias operations at each step.
@@ -407,11 +409,13 @@ class EagerDataFrame(
                 raise AssertionError(msg)
 
         if not is_null_slice(rows):
+            is_native_series = self.__narwhals_namespace__()._series._is_native
             if isinstance(rows, int):
                 compliant = compliant._gather([rows])
             elif isinstance(rows, (slice, range)):
                 compliant = compliant._gather_slice(rows)
-            elif is_sequence_like_ints(rows) or isinstance(rows, self.native_series):
+
+            elif is_sequence_like_ints(rows) or is_native_series(rows):
                 compliant = compliant._gather(rows)
             else:
                 msg = "Unreachable code"
