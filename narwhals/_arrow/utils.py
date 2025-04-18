@@ -351,23 +351,6 @@ def select_rows(
     return selected_rows
 
 
-def convert_str_slice_to_int_slice(
-    str_slice: slice | range, columns: list[str]
-) -> tuple[int | None, int | None, int | None]:
-    start = (
-        columns.index(cast("str", str_slice.start))
-        if str_slice.start is not None
-        else None
-    )
-    stop = (
-        columns.index(cast("str", str_slice.stop)) + 1
-        if str_slice.stop is not None
-        else None
-    )
-    step = str_slice.step
-    return (start, stop, step)
-
-
 # Regex for date, time, separator and timezone components
 DATE_RE = r"(?P<date>\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}|\d{8})"
 SEP_RE = r"(?P<sep>\s|T)"

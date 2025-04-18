@@ -16,7 +16,6 @@ import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import align_series_full_broadcast
-from narwhals._arrow.utils import convert_str_slice_to_int_slice
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
@@ -25,6 +24,7 @@ from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import check_column_exists
 from narwhals.utils import check_column_names_are_unique
+from narwhals.utils import convert_str_slice_to_int_slice
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
