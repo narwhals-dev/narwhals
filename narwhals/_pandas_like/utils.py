@@ -211,7 +211,9 @@ def rename(
 
 
 @functools.lru_cache(maxsize=16)
-def non_object_native_to_narwhals_dtype(dtype: str, version: Version) -> DType:
+def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> DType:
+    dtype = str(native_dtype)
+
     dtypes = import_dtypes_module(version)
     if dtype in {"int64", "Int64", "Int64[pyarrow]", "int64[pyarrow]"}:
         return dtypes.Int64()
@@ -249,7 +251,13 @@ def non_object_native_to_narwhals_dtype(dtype: str, version: Version) -> DType:
         return dtypes.String()
     if dtype in {"bool", "boolean", "boolean[pyarrow]", "bool[pyarrow]"}:
         return dtypes.Boolean()
-    if dtype == "category" or dtype.startswith("dictionary<"):
+    if dtype.startswith("dictionary<"):
+        return dtypes.Categorical()
+    if dtype == "category":
+        if version is Version.V1:
+            return dtypes.Categorical()
+        if native_dtype.ordered:
+            return dtypes.Enum(native_dtype.categories)
         return dtypes.Categorical()
     if (match_ := PATTERN_PD_DATETIME.match(dtype)) or (
         match_ := PATTERN_PA_DATETIME.match(dtype)
@@ -310,7 +318,7 @@ def native_to_narwhals_dtype(
             return arrow_native_to_narwhals_dtype(native_dtype.to_arrow(), version)
         return arrow_native_to_narwhals_dtype(native_dtype.pyarrow_dtype, version)
     if str_dtype != "object":
-        return non_object_native_to_narwhals_dtype(str_dtype, version)
+        return non_object_native_to_narwhals_dtype(native_dtype, version)
     elif implementation is Implementation.DASK:
         # Per conversations with their maintainers, they don't support arbitrary
         # objects, so we can just return String.
@@ -471,8 +479,15 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
             msg = "PyArrow>=11.0.0 is required for `Date` dtype."
         return "date32[pyarrow]"
     if isinstance_or_issubclass(dtype, dtypes.Enum):
-        msg = "Converting to Enum is not (yet) supported"
-        raise NotImplementedError(msg)
+        if version is Version.V1:
+            msg = "Converting to Enum is not supported in narwhals.stable.v1"
+            raise NotImplementedError(msg)
+        if isinstance(dtype, dtypes.Enum):
+            ns = implementation.to_native_namespace()
+            return ns.CategoricalDtype(dtype.categories, ordered=True)
+        msg = "Can not cast / initialize Enum without categories present"
+        raise ValueError(msg)
+
     if isinstance_or_issubclass(
         dtype, (dtypes.Struct, dtypes.Array, dtypes.List, dtypes.Time, dtypes.Binary)
     ):
