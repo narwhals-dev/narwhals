@@ -81,6 +81,7 @@ class CompliantSeries(
     def __native_namespace__(self) -> ModuleType: ...
     def __array__(self, dtype: Any, *, copy: bool | None) -> _1DArray: ...
     def __contains__(self, other: Any) -> bool: ...
+    def __getitem__(self, item: Any) -> Any: ...
     def __iter__(self) -> Iterator[Any]: ...
     def __len__(self) -> int:
         return len(self.native)
@@ -287,23 +288,6 @@ class CompliantSeries(
     @property
     def struct(self) -> Any: ...
 
-    def _gather(self, indices: _IntIndexer) -> Self: ...
-
-    def _gather_slice(self, indices: slice | range) -> Self: ...
-
-    def __getitem__(self, rows: Any) -> Self:
-        if is_null_slice(rows):
-            return self
-        if isinstance(rows, int):
-            return self._gather([rows])
-        elif isinstance(rows, (slice, range)):
-            return self._gather_slice(rows)
-        elif is_sequence_like_ints(rows) or isinstance(rows, self.native.__class__):
-            return self._gather(rows)
-        else:
-            msg = "Unreachable code"
-            raise AssertionError(msg)
-
 
 class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
     _native_series: Any
@@ -334,6 +318,22 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
 
     def _to_expr(self) -> EagerExpr[Any, Any]:
         return self.__narwhals_namespace__()._expr._from_series(self)  # type: ignore[no-any-return]
+
+    def _gather(self, indices: _IntIndexer) -> Self: ...
+    def _gather_slice(self, indices: slice | range) -> Self: ...
+
+    def __getitem__(self, item: Any) -> Self:
+        if is_null_slice(item):
+            return self
+        if isinstance(item, int):
+            return self._gather([item])
+        elif isinstance(item, (slice, range)):
+            return self._gather_slice(item)
+        elif is_sequence_like_ints(item) or isinstance(item, self.native.__class__):
+            return self._gather(item)
+        else:
+            msg = "Unreachable code"
+            raise AssertionError(msg)
 
     @property
     def str(self) -> EagerSeriesStringNamespace[Self, NativeSeriesT]: ...
