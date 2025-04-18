@@ -13,6 +13,7 @@ from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
 from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals.utils import Implementation
+from narwhals.utils import requires
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -109,24 +110,20 @@ class PolarsExpr:
             native = self.native.over(partition_by or pl.lit(1), order_by=order_by)
         return self._with_native(native)
 
+    @requires.backend_version((1,))
     def rolling_var(
         self: Self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
-        if self._backend_version < (1,):  # pragma: no cover
-            msg = "`rolling_var` not implemented for polars older than 1.0"
-            raise NotImplementedError(msg)
         kwds = self._renamed_min_periods(min_samples)
         native = self.native.rolling_var(
             window_size=window_size, center=center, ddof=ddof, **kwds
         )
         return self._with_native(native)
 
+    @requires.backend_version((1,))
     def rolling_std(
         self: Self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
-        if self._backend_version < (1,):  # pragma: no cover
-            msg = "`rolling_std` not implemented for polars older than 1.0"
-            raise NotImplementedError(msg)
         kwds = self._renamed_min_periods(min_samples)
         native = self.native.rolling_std(
             window_size=window_size, center=center, ddof=ddof, **kwds
@@ -158,6 +155,7 @@ class PolarsExpr:
         native = self.native.map_batches(function, return_dtype_pl)
         return self._with_native(native)
 
+    @requires.backend_version((1,))
     def replace_strict(
         self,
         old: Sequence[Any] | Mapping[Any, Any],
@@ -165,9 +163,6 @@ class PolarsExpr:
         *,
         return_dtype: DType | type[DType] | None,
     ) -> Self:
-        if self._backend_version < (1,):
-            msg = f"`replace_strict` is only available in Polars>=1.0, found version {self._backend_version}"
-            raise NotImplementedError(msg)
         return_dtype_pl = (
             narwhals_to_native_dtype(return_dtype, self._version, self._backend_version)
             if return_dtype
