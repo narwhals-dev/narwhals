@@ -67,6 +67,8 @@ if TYPE_CHECKING:
     from narwhals.typing import SizeUnit
     from narwhals.typing import UniqueKeepStrategy
     from narwhals.typing import _2DArray
+    from narwhals.typing import _IntIndexer
+    from narwhals.typing import _StrIndexer
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -281,30 +283,30 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
     def __array__(self: Self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
         return self.to_numpy(dtype=dtype, copy=copy)
 
-    def _gather(self, items: Any) -> Self:
+    def _gather(self, items: _IntIndexer) -> Self:
         items = list(items) if isinstance(items, tuple) else items
         return self._with_native(self.native.iloc[items, :])
 
-    def _gather_slice(self, item: Any) -> Self:
+    def _gather_slice(self, item: slice | range) -> Self:
         return self._with_native(
             self.native.iloc[slice(item.start, item.stop, item.step), :],
             validate_column_names=False,
         )
 
-    def _select_slice_of_labels(self, item: Any) -> Self:
+    def _select_slice_of_labels(self, item: slice | range) -> Self:
         start, stop, step = convert_str_slice_to_int_slice(item, self.native.columns)
         return self._with_native(
             self.native.iloc[:, slice(start, stop, step)],
             validate_column_names=False,
         )
 
-    def _select_slice_of_indices(self, item: Any) -> Self:
+    def _select_slice_of_indices(self, item: slice | range) -> Self:
         return self._with_native(
             self.native.iloc[:, slice(item.start, item.stop, item.step)],
             validate_column_names=False,
         )
 
-    def _select_indices(self, item: Any) -> Self:
+    def _select_indices(self, item: _IntIndexer) -> Self:
         item = list(item) if isinstance(item, tuple) else item
         if len(item) == 0:
             return self._with_native(self.native.__class__(), validate_column_names=False)
@@ -313,7 +315,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             validate_column_names=False,
         )
 
-    def _select_labels(self, indices: Any) -> PandasLikeDataFrame:
+    def _select_labels(self, indices: _StrIndexer) -> PandasLikeDataFrame:
         return self._with_native(self.native.loc[:, indices])
 
     # --- properties ---

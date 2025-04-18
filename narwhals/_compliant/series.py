@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from narwhals.typing import RollingInterpolationMethod
     from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
+    from narwhals.typing import _IntIndexer
     from narwhals.utils import Implementation
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -286,9 +287,9 @@ class CompliantSeries(
     @property
     def struct(self) -> Any: ...
 
-    def _gather(self, indices: Any) -> Self: ...
+    def _gather(self, indices: _IntIndexer) -> Self: ...
 
-    def _gather_slice(self, indices: Any) -> Self: ...
+    def _gather_slice(self, indices: slice | range) -> Self: ...
 
     def __getitem__(self, rows: Any) -> Self:
         if is_null_slice(rows):

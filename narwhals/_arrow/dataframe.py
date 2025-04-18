@@ -59,6 +59,8 @@ if TYPE_CHECKING:
     from narwhals.typing import SizeUnit
     from narwhals.typing import UniqueKeepStrategy
     from narwhals.typing import _2DArray
+    from narwhals.typing import _IntIndexer
+    from narwhals.typing import _StrIndexer
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -250,12 +252,12 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
     def __array__(self: Self, dtype: Any, *, copy: bool | None) -> _2DArray:
         return self.native.__array__(dtype, copy=copy)
 
-    def _gather(self, item: Any) -> Self:
+    def _gather(self, item: _IntIndexer) -> Self:
         if len(item) == 0:
             return self._with_native(self.native.slice(0, 0))
         return self._with_native(self.native.take(item))
 
-    def _gather_slice(self, item: Any) -> Self:
+    def _gather_slice(self, item: slice | range) -> Self:
         start = item.start or 0
         stop = item.stop if item.stop is not None else len(self.native)
         if item.step is not None and item.step != 1:
@@ -263,23 +265,23 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             raise NotImplementedError(msg)
         return self._with_native(self.native.slice(start, stop - start))
 
-    def _select_slice_of_labels(self, item: Any) -> Self:
+    def _select_slice_of_labels(self, item: slice | range) -> Self:
         start, stop, step = convert_str_slice_to_int_slice(item, self.columns)
         return self._with_native(self.native.select(self.columns[start:stop:step]))
 
-    def _select_slice_of_indices(self, item: Any) -> Self:
+    def _select_slice_of_indices(self, item: slice | range) -> Self:
         return self._with_native(
             self.native.select(self.columns[item.start : item.stop : item.step])
         )
 
-    def _select_indices(self, item: Any) -> Self:
+    def _select_indices(self, item: _IntIndexer) -> Self:
         if len(item) == 0:
             return self._with_native(
                 self.native.__class__.from_arrays([]), validate_column_names=False
             )
         return self._with_native(self.native.select([self.columns[x] for x in item]))
 
-    def _select_labels(self, item: Any) -> Self:
+    def _select_labels(self, item: _StrIndexer) -> Self:
         return self._with_native(self.native.select(item))
 
     @property

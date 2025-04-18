@@ -309,6 +309,11 @@ NonNestedLiteral: TypeAlias = (
 )
 PythonLiteral: TypeAlias = "NonNestedLiteral | list[Any] | tuple[Any, ...]"
 
+# Overloaded sequence of integers
+_IntIndexer: TypeAlias = Any  # noqa: PYI047
+# Overloaded sequence of strings
+_StrIndexer: TypeAlias = Any  # noqa: PYI047
+
 
 # ruff: noqa: N802
 class DTypes(Protocol):

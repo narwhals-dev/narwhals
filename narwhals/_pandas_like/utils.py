@@ -551,7 +551,7 @@ def int_dtype_mapper(dtype: Any) -> str:
 
 
 def convert_str_slice_to_int_slice(
-    str_slice: slice, columns: pd.Index[str]
+    str_slice: slice | range, columns: pd.Index[str]
 ) -> tuple[int | None, int | None, int | None]:
     # We can safely cast to int because we know that `columns` doesn't contain duplicates.
     start = (

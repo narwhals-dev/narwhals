@@ -69,6 +69,7 @@ if TYPE_CHECKING:
     from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
+    from narwhals.typing import _IntIndexer
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -405,12 +406,12 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def name(self: Self) -> str:
         return self._name
 
-    def _gather(self, item: Any) -> Self:
+    def _gather(self, item: _IntIndexer) -> Self:
         if len(item) == 0:
             return self._with_native(self.native.slice(0, 0))
         return self._with_native(self.native.take(item))
 
-    def _gather_slice(self, item: Any) -> Self:
+    def _gather_slice(self, item: slice | range) -> Self:
         start = item.start or 0
         stop = item.stop if item.stop is not None else len(self.native)
         if item.step is not None and item.step != 1:
