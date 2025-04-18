@@ -264,3 +264,11 @@ def test_getitem_negative_slice(constructor_eager: ConstructorEager) -> None:
     result_s = nw_df["col1"][-3:-2]
     expected = {"col1": ["b"]}
     assert_equal_data({"col1": result_s}, expected)
+
+
+def test_zeroth_row_no_columns(constructor_eager: ConstructorEager) -> None:
+    data = {"col1": ["a", "b", "c", "d"], "col2": np.arange(4), "col3": [4, 3, 2, 1]}
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
+    columns: list[str] = []
+    result = nw_df[0, columns]
+    assert result.shape == (0, 0)

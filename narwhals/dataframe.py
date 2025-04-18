@@ -804,7 +804,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     @overload
     def __getitem__(  # type: ignore[overload-overlap]
         self: Self,
-        item: str | tuple[slice | Sequence[int] | _1DArray, int | str],
+        item: str | tuple[int | slice | Sequence[int] | _1DArray, int | str],
     ) -> Series[Any]: ...
 
     @overload
@@ -817,7 +817,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             | Sequence[str]
             | _1DArray
             | tuple[
-                slice | Sequence[int] | _1DArray,
+                int | slice | Sequence[int] | _1DArray,
                 slice | Sequence[int] | Sequence[str] | _1DArray,
             ]
         ),
@@ -832,9 +832,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             | Sequence[str]
             | _1DArray
             | tuple[int, int | str]
-            | tuple[slice | Sequence[int] | _1DArray, int | str]
+            | tuple[int | slice | Sequence[int] | _1DArray, int | str]
             | tuple[
-                slice | Sequence[int] | _1DArray,
+                int | slice | Sequence[int] | _1DArray,
                 slice | Sequence[int] | Sequence[str] | _1DArray,
             ]
         ),
