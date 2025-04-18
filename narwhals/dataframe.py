@@ -894,13 +894,10 @@ class DataFrame(BaseFrame[DataFrameT]):
             # These are so heavily overloaded that we just ignore the types for now.
             rows = None if not item or is_null_slice(item[0]) else item[0]
             columns = None if len(item) < 2 or is_null_slice(item[1]) else item[1]
-        elif isinstance(item, str):
-            rows = None
-            columns = item
         elif is_int_like_indexer(item):
             rows = item
             columns = None
-        elif is_sequence_like(item) or isinstance(item, slice):
+        elif is_sequence_like(item) or isinstance(item, (slice, str)):
             rows = None
             columns = item
         else:
