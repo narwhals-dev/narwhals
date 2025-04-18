@@ -259,7 +259,7 @@ def is_numpy_scalar(scalar: Any) -> TypeGuard[np.generic]:
     # NOTE: Needs to stay as `TypeGuard`
     # - Used in `Series.__getitem__`, but not annotated
     # - `TypeGuard` is *hiding* that the check introduces an intersection
-    return (np := get_numpy()) is not None and np.isscalar(scalar)
+    return (np := get_numpy()) is not None and isinstance(scalar, np.generic)
 
 
 def is_pandas_like_dataframe(df: Any) -> bool:
