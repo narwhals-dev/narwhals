@@ -112,7 +112,23 @@ class Decimal(NumericType):
 
 
 class Int128(SignedIntegerType):
-    """128-bit signed integer type."""
+    """128-bit signed integer type.
+
+    Examples:
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> import duckdb
+        >>> s_native = pl.Series([2, 1, 3, 7])
+        >>> s = nw.from_native(s_native, series_only=True)
+        >>> df_native = pa.table({"a": [2, 1, 3, 7]})
+        >>> rel = duckdb.sql(" SELECT CAST (a AS INT128) AS a FROM df_native ")
+
+        >>> s.cast(nw.Int128).dtype
+        Int128
+        >>> nw.from_native(rel).schema["a"]
+        Int128
+    """
 
 
 class Int64(SignedIntegerType):
@@ -168,7 +184,17 @@ class Int8(SignedIntegerType):
 
 
 class UInt128(UnsignedIntegerType):
-    """128-bit unsigned integer type."""
+    """128-bit unsigned integer type.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import narwhals as nw
+        >>> import duckdb
+        >>> df_native = pd.DataFrame({"a": [2, 1, 3, 7]})
+        >>> rel = duckdb.sql(" SELECT CAST (a AS UINT128) AS a FROM df_native ")
+        >>> nw.from_native(rel).schema["a"]
+        UInt128
+    """
 
 
 class UInt64(UnsignedIntegerType):
