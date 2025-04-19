@@ -9,6 +9,7 @@ from typing import Iterator
 from typing import Mapping
 from typing import Sequence
 
+from narwhals._namespace import is_native_spark_like
 from narwhals._spark_like.utils import evaluate_exprs
 from narwhals._spark_like.utils import import_functions
 from narwhals._spark_like.utils import import_native_dtypes
@@ -22,7 +23,6 @@ from narwhals.utils import check_column_exists
 from narwhals.utils import find_stacklevel
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import import_dtypes_module
-from narwhals.utils import is_spark_like_dataframe
 from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -99,7 +99,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
 
     @staticmethod
     def _is_native(obj: SQLFrameDataFrame | Any) -> TypeIs[SQLFrameDataFrame]:
-        return is_spark_like_dataframe(obj)
+        return is_native_spark_like(obj)
 
     @classmethod
     def from_native(cls, data: SQLFrameDataFrame, /, *, context: _FullContext) -> Self:
