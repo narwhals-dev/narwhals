@@ -676,13 +676,17 @@ def _from_native_impl(  # noqa: PLR0915
         if version is Version.V1:
             return DataFrame(
                 IbisLazyFrame(
-                    native_object, backend_version=backend_version, version=version
+                    native_object,
+                    backend_version=backend_version,
+                    version=version,
                 ),
                 level="interchange",
             )
         return LazyFrame(
             IbisLazyFrame(
-                native_object, backend_version=backend_version, version=version
+                native_object,
+                backend_version=backend_version,
+                version=version,
             ),
             level="lazy",
         )

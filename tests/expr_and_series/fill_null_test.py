@@ -67,7 +67,11 @@ def test_fill_null_exceptions(constructor: Constructor) -> None:
 def test_fill_null_strategies_with_limit_as_none(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if (
+        ("pyspark" in str(constructor))
+        or "duckdb" in str(constructor)
+        or "ibis" in str(constructor)
+    ):
         request.applymarker(pytest.mark.xfail)
     data_limits = {
         "a": [1, None, None, None, 5, 6, None, None, None, 10],
@@ -137,7 +141,11 @@ def test_fill_null_strategies_with_limit_as_none(
 def test_fill_null_limits(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if (
+        ("pyspark" in str(constructor))
+        or "duckdb" in str(constructor)
+        or "ibis" in str(constructor)
+    ):
         request.applymarker(pytest.mark.xfail)
     context: Any = (
         pytest.raises(NotImplementedError, match="The limit keyword is not supported")

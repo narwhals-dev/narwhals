@@ -94,7 +94,11 @@ def test_nan_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_nan_non_float(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if (
+        ("pyspark" in str(constructor))
+        or "duckdb" in str(constructor)
+        or "ibis" in str(constructor)
+    ):
         request.applymarker(pytest.mark.xfail)
     from pyarrow.lib import ArrowNotImplementedError
 

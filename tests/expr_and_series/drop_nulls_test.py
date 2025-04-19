@@ -34,7 +34,7 @@ def test_drop_nulls(constructor_eager: ConstructorEager) -> None:
 
 
 def test_drop_nulls_agg(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
+    if any(x in str(constructor) for x in ("duckdb", "pyspark", "ibis")):
         request.applymarker(pytest.mark.xfail)
     data = {
         "A": [1, 2, None, 4],

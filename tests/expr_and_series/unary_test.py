@@ -10,7 +10,10 @@ from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 
-def test_unary(constructor: Constructor) -> None:
+def test_unary(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "ibis" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     data = {
         "a": [1, 3, 2],
         "b": [4, 4, 6],
@@ -80,7 +83,7 @@ def test_unary_series(constructor_eager: ConstructorEager) -> None:
 def test_unary_two_elements(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "sqlframe" in str(constructor):
+    if "sqlframe" in str(constructor) or "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2], "b": [2, 10], "c": [2.0, None]}
     result = nw.from_native(constructor(data)).select(
@@ -129,6 +132,8 @@ def test_unary_one_element(
 ) -> None:
     if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
         request.applymarker(pytest.mark.xfail)
+    if "ibis" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1], "b": [2], "c": [None]}
     # Dask runs into a divide by zero RuntimeWarning for 1 element skew.
     context = (
@@ -136,6 +141,7 @@ def test_unary_one_element(
         if "dask" in str(constructor)
         else does_not_raise()
     )
+
     result = (
         nw.from_native(constructor(data))
         .with_columns(nw.col("c").cast(nw.Float64))

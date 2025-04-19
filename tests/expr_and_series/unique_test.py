@@ -32,7 +32,7 @@ def test_unique_expr(constructor: Constructor) -> None:
 def test_unique_expr_agg(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
+    if any(x in str(constructor) for x in ("duckdb", "pyspark", "ibis")):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").unique().sum())

@@ -71,6 +71,7 @@ typing = [
   "sqlframe",
   "polars==1.25.2",
   "uv",
+  "narwhals[ibis]",
 ]
 docs = [
   "black",  # required by mkdocstrings_handlers
@@ -245,10 +246,7 @@ omit = [
   'narwhals/_arrow/typing.py',
   'narwhals/_duckdb/typing.py',
   'narwhals/_spark_like/typing.py',
-  # we can't run this in every environment that we measure coverage on due to upper-bound constraits
-  'narwhals/_ibis/*',
-  # we don't run these in every environment
-  'tests/ibis_test.py',
+  'narwhals/_ibis/typing.py',
   # Remove after finishing eager sub-protocols
   'narwhals/_compliant/*',
 ]
@@ -279,6 +277,7 @@ module = [
   "dask.*",
   "dask_expr.*",
   "duckdb.*",
+  # https://github.com/ibis-project/ibis/issues/6844
   "ibis.*",
   "modin.*",
   "numpy.*",

@@ -66,7 +66,7 @@ def test_concat_vertical(constructor: Constructor) -> None:
 def test_concat_diagonal(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor):
+    if "duckdb" in str(constructor) or "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data_1 = {"a": [1, 3], "b": [4, 6]}
     data_2 = {"a": [100, 200], "z": ["x", "y"]}
