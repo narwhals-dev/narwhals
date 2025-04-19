@@ -104,6 +104,15 @@ if TYPE_CHECKING:
     BackendName: TypeAlias = "_EagerAllowed | _LazyAllowed"
     IntoBackend: TypeAlias = "BackendName | Implementation | ModuleType"
 
+    EagerAllowedNamespace: TypeAlias = "Namespace[PandasLikeNamespace] | Namespace[ArrowNamespace] | Namespace[PolarsNamespace]"
+    EagerAllowedImplementation: TypeAlias = Literal[
+        Implementation.PANDAS,
+        Implementation.CUDF,
+        Implementation.MODIN,
+        Implementation.PYARROW,
+        Implementation.POLARS,
+    ]
+
     class _NativeDask(Protocol):
         _partition_type: type[pd.DataFrame]
 
@@ -189,6 +198,10 @@ class Namespace(Generic[CompliantNamespaceT_co]):
     @overload
     @classmethod
     def from_backend(cls, backend: Dask, /) -> Namespace[DaskNamespace]: ...
+
+    @overload
+    @classmethod
+    def from_backend(cls, backend: EagerAllowed, /) -> EagerAllowedNamespace: ...
 
     @overload
     @classmethod
