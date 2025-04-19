@@ -6,18 +6,16 @@ from typing import Generic
 from typing import TypeVar
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals.expr import Expr
 
 ExprT = TypeVar("ExprT", bound="Expr")
 
 
 class ExprNameNamespace(Generic[ExprT]):
-    def __init__(self: Self, expr: ExprT) -> None:
+    def __init__(self, expr: ExprT) -> None:
         self._expr = expr
 
-    def keep(self: Self) -> ExprT:
+    def keep(self) -> ExprT:
         r"""Keep the original root name of the expression.
 
         Returns:
@@ -41,7 +39,7 @@ class ExprNameNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def map(self: Self, function: Callable[[str], str]) -> ExprT:
+    def map(self, function: Callable[[str], str]) -> ExprT:
         r"""Rename the output of an expression by mapping a function over the root name.
 
         Arguments:
@@ -69,7 +67,7 @@ class ExprNameNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def prefix(self: Self, prefix: str) -> ExprT:
+    def prefix(self, prefix: str) -> ExprT:
         r"""Add a prefix to the root column name of the expression.
 
         Arguments:
@@ -96,7 +94,7 @@ class ExprNameNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def suffix(self: Self, suffix: str) -> ExprT:
+    def suffix(self, suffix: str) -> ExprT:
         r"""Add a suffix to the root column name of the expression.
 
         Arguments:
@@ -123,7 +121,7 @@ class ExprNameNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def to_lowercase(self: Self) -> ExprT:
+    def to_lowercase(self) -> ExprT:
         r"""Make the root column name lowercase.
 
         Returns:
@@ -147,7 +145,7 @@ class ExprNameNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def to_uppercase(self: Self) -> ExprT:
+    def to_uppercase(self) -> ExprT:
         r"""Make the root column name uppercase.
 
         Returns:

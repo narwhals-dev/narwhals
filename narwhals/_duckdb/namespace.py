@@ -28,8 +28,6 @@ from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals.dtypes import DType
     from narwhals.typing import ConcatMethod
     from narwhals.typing import NonNestedLiteral
@@ -41,14 +39,12 @@ class DuckDBNamespace(
 ):
     _implementation: Implementation = Implementation.DUCKDB
 
-    def __init__(
-        self: Self, *, backend_version: tuple[int, ...], version: Version
-    ) -> None:
+    def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
         self._backend_version = backend_version
         self._version = version
 
     @property
-    def selectors(self: Self) -> DuckDBSelectorNamespace:
+    def selectors(self) -> DuckDBSelectorNamespace:
         return DuckDBSelectorNamespace.from_namespace(self)
 
     @property
@@ -60,7 +56,7 @@ class DuckDBNamespace(
         return DuckDBLazyFrame
 
     def concat(
-        self: Self, items: Iterable[DuckDBLazyFrame], *, how: ConcatMethod
+        self, items: Iterable[DuckDBLazyFrame], *, how: ConcatMethod
     ) -> DuckDBLazyFrame:
         native_items = [item._native_frame for item in items]
         items = list(items)
@@ -73,7 +69,7 @@ class DuckDBNamespace(
         return first._with_native(res)
 
     def concat_str(
-        self: Self,
+        self,
         *exprs: DuckDBExpr,
         separator: str,
         ignore_nulls: bool,
@@ -104,7 +100,7 @@ class DuckDBNamespace(
             version=self._version,
         )
 
-    def all_horizontal(self: Self, *exprs: DuckDBExpr) -> DuckDBExpr:
+    def all_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             cols = (c for _expr in exprs for c in _expr(df))
             return [reduce(operator.and_, cols)]
@@ -117,7 +113,7 @@ class DuckDBNamespace(
             version=self._version,
         )
 
-    def any_horizontal(self: Self, *exprs: DuckDBExpr) -> DuckDBExpr:
+    def any_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             cols = (c for _expr in exprs for c in _expr(df))
             return [reduce(operator.or_, cols)]
@@ -130,7 +126,7 @@ class DuckDBNamespace(
             version=self._version,
         )
 
-    def max_horizontal(self: Self, *exprs: DuckDBExpr) -> DuckDBExpr:
+    def max_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             cols = (c for _expr in exprs for c in _expr(df))
             return [FunctionExpression("greatest", *cols)]
@@ -143,7 +139,7 @@ class DuckDBNamespace(
             version=self._version,
         )
 
-    def min_horizontal(self: Self, *exprs: DuckDBExpr) -> DuckDBExpr:
+    def min_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             cols = (c for _expr in exprs for c in _expr(df))
             return [FunctionExpression("least", *cols)]
@@ -156,7 +152,7 @@ class DuckDBNamespace(
             version=self._version,
         )
 
-    def sum_horizontal(self: Self, *exprs: DuckDBExpr) -> DuckDBExpr:
+    def sum_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             cols = (CoalesceOperator(col, lit(0)) for _expr in exprs for col in _expr(df))
             return [reduce(operator.add, cols)]
@@ -169,7 +165,7 @@ class DuckDBNamespace(
             version=self._version,
         )
 
-    def mean_horizontal(self: Self, *exprs: DuckDBExpr) -> DuckDBExpr:
+    def mean_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             cols = [c for _expr in exprs for c in _expr(df)]
             return [
@@ -187,7 +183,7 @@ class DuckDBNamespace(
             version=self._version,
         )
 
-    def when(self: Self, predicate: DuckDBExpr) -> DuckDBWhen:
+    def when(self, predicate: DuckDBExpr) -> DuckDBWhen:
         return DuckDBWhen.from_expr(predicate, context=self)
 
     def lit(
@@ -210,7 +206,7 @@ class DuckDBNamespace(
             version=self._version,
         )
 
-    def len(self: Self) -> DuckDBExpr:
+    def len(self) -> DuckDBExpr:
         def func(_df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             return [FunctionExpression("count")]
 
@@ -228,7 +224,7 @@ class DuckDBWhen(LazyWhen["DuckDBLazyFrame", duckdb.Expression, DuckDBExpr]):
     def _then(self) -> type[DuckDBThen]:
         return DuckDBThen
 
-    def __call__(self: Self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
+    def __call__(self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
         self.when = when
         self.lit = lit
         return super().__call__(df)

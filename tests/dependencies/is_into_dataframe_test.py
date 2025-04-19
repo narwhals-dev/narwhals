@@ -17,7 +17,7 @@ DATA: dict[str, Any] = {"a": [1, 2, 3], "b": [4, 5, 6]}
 
 
 class DictDataFrame:
-    def __init__(self: Self, data: Mapping[str, Any]) -> None:
+    def __init__(self, data: Mapping[str, Any]) -> None:
         self._data = data
 
     def __len__(self) -> int:  # pragma: no cover

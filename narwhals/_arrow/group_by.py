@@ -18,8 +18,6 @@ from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals.utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.typing import Incomplete
@@ -55,7 +53,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
         self._keys: list[str] = list(keys)
         self._grouped = pa.TableGroupBy(self.compliant.native, self._keys)
 
-    def agg(self: Self, *exprs: ArrowExpr) -> ArrowDataFrame:
+    def agg(self, *exprs: ArrowExpr) -> ArrowDataFrame:
         self._ensure_all_simple(exprs)
         aggs: list[tuple[str, str, Any]] = []
         expected_pyarrow_column_names: list[str] = self._keys.copy()
@@ -124,7 +122,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
             )
         return self.compliant._with_native(result_simple)
 
-    def __iter__(self: Self) -> Iterator[tuple[Any, ArrowDataFrame]]:
+    def __iter__(self) -> Iterator[tuple[Any, ArrowDataFrame]]:
         col_token = generate_temporary_column_name(
             n_bytes=8, columns=self.compliant.columns
         )

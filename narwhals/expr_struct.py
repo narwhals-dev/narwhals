@@ -5,18 +5,16 @@ from typing import Generic
 from typing import TypeVar
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals.expr import Expr
 
 ExprT = TypeVar("ExprT", bound="Expr")
 
 
 class ExprStructNamespace(Generic[ExprT]):
-    def __init__(self: Self, expr: ExprT) -> None:
+    def __init__(self, expr: ExprT) -> None:
         self._expr = expr
 
-    def field(self: Self, name: str) -> ExprT:
+    def field(self, name: str) -> ExprT:
         r"""Retrieve a Struct field as a new expression.
 
         Arguments:
