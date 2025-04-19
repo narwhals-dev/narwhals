@@ -8,6 +8,7 @@ from typing import Sequence
 
 import duckdb
 
+from narwhals.utils import Version
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals.dtypes import DType
-    from narwhals.utils import Version
+
 
 col = duckdb.ColumnExpression
 """Alias for `duckdb.ColumnExpression`."""
@@ -120,6 +121,19 @@ def native_to_narwhals_dtype(duckdb_dtype: str, version: Version) -> DType:
         return dtypes.Boolean()
     if duckdb_dtype == "INTERVAL":
         return dtypes.Duration()
+    if duckdb_dtype.startswith("ENUM"):
+        if version is Version.V1:
+            msg = "Converting to Enum is not supported in narwhals.stable.v1"
+            raise NotImplementedError(msg)
+
+        enum_content = re.search(r"ENUM\((.*?)\)", duckdb_dtype)
+        if not enum_content:  # pragma: no cover
+            msg = "Can not cast / initialize Enum without categories present"
+            raise ValueError(msg)
+        values_pattern = r"'(.*?)'"
+        values = re.findall(values_pattern, enum_content.group(1))
+        return dtypes.Enum(values)
+
     if duckdb_dtype.startswith("STRUCT"):
         matchstruc_ = re.findall(r"(\w+)\s+(\w+)", duckdb_dtype)
         return dtypes.Struct(
@@ -150,7 +164,7 @@ def native_to_narwhals_dtype(duckdb_dtype: str, version: Version) -> DType:
     return dtypes.Unknown()  # pragma: no cover
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> str:
+def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> str:  # noqa: PLR0915
     dtypes = import_dtypes_module(version)
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         msg = "Casting to Decimal is not supported yet."
@@ -190,6 +204,16 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
         msg = "Categorical not supported by DuckDB"
         raise NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Enum):
+        if version is Version.V1:
+            msg = "Converting to Enum is not supported in narwhals.stable.v1"
+            raise NotImplementedError(msg)
+        if isinstance(dtype, dtypes.Enum):
+            categories = "'" + "', '".join(dtype.categories) + "'"
+            return f"ENUM ({categories})"
+        msg = "Can not cast / initialize Enum without categories present"
+        raise ValueError(msg)
+
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         _time_unit = dtype.time_unit
         _time_zone = dtype.time_zone
