@@ -1350,7 +1350,7 @@ def is_index_selector(cols: SingleIndexSelector | MultiIndexSelector | Any) -> b
     )
 
 
-def is_list_of(obj: Any, tp: type[_T]) -> TypeIs[list[type[_T]]]:
+def is_list_of(obj: Any, tp: type[_T]) -> TypeIs[list[_T]]:
     # Check if an object is a list of `tp`, only sniffing the first element.
     return bool(isinstance(obj, list) and obj and isinstance(obj[0], tp))
 
