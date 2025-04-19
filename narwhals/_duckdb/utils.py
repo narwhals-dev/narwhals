@@ -130,9 +130,8 @@ def native_to_narwhals_dtype(duckdb_dtype: str, version: Version) -> DType:
         if not enum_content:  # pragma: no cover
             msg = "Can not cast / initialize Enum without categories present"
             raise ValueError(msg)
-        values_pattern = r"'(.*?)'"
-        values = re.findall(values_pattern, enum_content.group(1))
-        return dtypes.Enum(values)
+        categories = re.findall(r"'(.*?)'", enum_content.group(1))
+        return dtypes.Enum(categories)
 
     if duckdb_dtype.startswith("STRUCT"):
         matchstruc_ = re.findall(r"(\w+)\s+(\w+)", duckdb_dtype)
