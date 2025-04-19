@@ -105,7 +105,7 @@ class InterchangeFrame:
         )
         raise NotImplementedError(msg)
 
-    def __getitem__(self, name: str) -> InterchangeSeries:
+    def get_column(self, name: str) -> InterchangeSeries:
         from narwhals._interchange.series import InterchangeSeries
 
         return InterchangeSeries(
