@@ -1440,12 +1440,16 @@ class Expr:
         if strategy is not None and strategy not in {"forward", "backward"}:
             msg = f"strategy not supported: {strategy}"
             raise ValueError(msg)
-        return self._with_callable(
+
+        return self.__class__(
             lambda plx: self._to_compliant_expr(plx).fill_null(
                 value=extract_compliant(plx, value, str_as_lit=True),
                 strategy=strategy,
                 limit=limit,
-            )
+            ),
+            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW)
+            if strategy is not None
+            else self._metadata,
         )
 
     # --- partial reduction ---

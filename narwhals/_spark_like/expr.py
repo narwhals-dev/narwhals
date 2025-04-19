@@ -706,13 +706,34 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         limit: int | None,
     ) -> Self:
         if strategy is not None:
-            msg = "Support for strategies is not yet implemented."
-            raise NotImplementedError(msg)
 
-        def _fill_null(_input: Column, value: Column) -> Column:
-            return self._F.ifnull(_input, value)
+            def _fill_null_with_strategy(window_inputs: WindowInputs) -> Column:
+                fill_func = self._F.last if strategy == "forward" else self._F.first
 
-        return self._with_callable(_fill_null, value=value)
+                rows_between = (
+                    (self._Window().unboundedPreceding, self._Window().currentRow)
+                    if strategy == "forward"
+                    else (self._Window().currentRow, self._Window().unboundedFollowing)
+                )
+
+                window = (
+                    self._Window()
+                    .partitionBy(list(window_inputs.partition_by))
+                    .orderBy(
+                        [self._F.col(x).asc_nulls_first() for x in window_inputs.order_by]
+                    )
+                    .rowsBetween(*rows_between)
+                )
+
+                return fill_func(window_inputs.expr, ignorenulls=True).over(window)
+
+            return self._with_window_function(_fill_null_with_strategy)
+
+        else:
+            def _fill_null(_input: Column, value: Column) -> Column:
+                return self._F.ifnull(_input, value)
+
+            return self._with_callable(_fill_null, value=value)
 
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._with_window_function(
