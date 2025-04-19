@@ -7,7 +7,6 @@ from narwhals._compliant import LazyGroupBy
 
 if TYPE_CHECKING:
     from sqlframe.base.column import Column  # noqa: F401
-    from typing_extensions import Self
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.expr import SparkLikeExpr
@@ -15,7 +14,7 @@ if TYPE_CHECKING:
 
 class SparkLikeLazyGroupBy(LazyGroupBy["SparkLikeLazyFrame", "SparkLikeExpr", "Column"]):
     def __init__(
-        self: Self,
+        self,
         df: SparkLikeLazyFrame,
         keys: Sequence[str],
         /,
@@ -25,7 +24,7 @@ class SparkLikeLazyGroupBy(LazyGroupBy["SparkLikeLazyFrame", "SparkLikeExpr", "C
         self._compliant_frame = df.drop_nulls(subset=None) if drop_null_keys else df
         self._keys = list(keys)
 
-    def agg(self: Self, *exprs: SparkLikeExpr) -> SparkLikeLazyFrame:
+    def agg(self, *exprs: SparkLikeExpr) -> SparkLikeLazyFrame:
         if agg_columns := list(self._evaluate_exprs(exprs)):
             return self.compliant._with_native(
                 self.compliant.native.groupBy(*self._keys).agg(*agg_columns)

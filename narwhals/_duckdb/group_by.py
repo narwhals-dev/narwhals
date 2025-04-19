@@ -8,7 +8,6 @@ from narwhals._compliant import LazyGroupBy
 
 if TYPE_CHECKING:
     from duckdb import Expression  # noqa: F401
-    from typing_extensions import Self
 
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
@@ -16,7 +15,7 @@ if TYPE_CHECKING:
 
 class DuckDBGroupBy(LazyGroupBy["DuckDBLazyFrame", "DuckDBExpr", "Expression"]):
     def __init__(
-        self: Self,
+        self,
         df: DuckDBLazyFrame,
         keys: Sequence[str],
         /,
@@ -26,7 +25,7 @@ class DuckDBGroupBy(LazyGroupBy["DuckDBLazyFrame", "DuckDBExpr", "Expression"]):
         self._compliant_frame = df.drop_nulls(subset=None) if drop_null_keys else df
         self._keys = list(keys)
 
-    def agg(self: Self, *exprs: DuckDBExpr) -> DuckDBLazyFrame:
+    def agg(self, *exprs: DuckDBExpr) -> DuckDBLazyFrame:
         agg_columns = list(chain(self._keys, self._evaluate_exprs(exprs)))
         return self.compliant._with_native(
             self.compliant.native.aggregate(agg_columns)  # type: ignore[arg-type]

@@ -14,78 +14,76 @@ if TYPE_CHECKING:
     except ModuleNotFoundError:
         import dask_expr as dx
 
-    from typing_extensions import Self
-
     from narwhals._dask.expr import DaskExpr
     from narwhals.typing import TimeUnit
 
 
 class DaskExprDateTimeNamespace:
-    def __init__(self: Self, expr: DaskExpr) -> None:
+    def __init__(self, expr: DaskExpr) -> None:
         self._compliant_expr = expr
 
-    def date(self: Self) -> DaskExpr:
+    def date(self) -> DaskExpr:
         return self._compliant_expr._with_callable(lambda _input: _input.dt.date, "date")
 
-    def year(self: Self) -> DaskExpr:
+    def year(self) -> DaskExpr:
         return self._compliant_expr._with_callable(lambda _input: _input.dt.year, "year")
 
-    def month(self: Self) -> DaskExpr:
+    def month(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input: _input.dt.month, "month"
         )
 
-    def day(self: Self) -> DaskExpr:
+    def day(self) -> DaskExpr:
         return self._compliant_expr._with_callable(lambda _input: _input.dt.day, "day")
 
-    def hour(self: Self) -> DaskExpr:
+    def hour(self) -> DaskExpr:
         return self._compliant_expr._with_callable(lambda _input: _input.dt.hour, "hour")
 
-    def minute(self: Self) -> DaskExpr:
+    def minute(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input: _input.dt.minute, "minute"
         )
 
-    def second(self: Self) -> DaskExpr:
+    def second(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input: _input.dt.second, "second"
         )
 
-    def millisecond(self: Self) -> DaskExpr:
+    def millisecond(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input: _input.dt.microsecond // 1000, "millisecond"
         )
 
-    def microsecond(self: Self) -> DaskExpr:
+    def microsecond(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input: _input.dt.microsecond, "microsecond"
         )
 
-    def nanosecond(self: Self) -> DaskExpr:
+    def nanosecond(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input: _input.dt.microsecond * 1000 + _input.dt.nanosecond,
             "nanosecond",
         )
 
-    def ordinal_day(self: Self) -> DaskExpr:
+    def ordinal_day(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input: _input.dt.dayofyear, "ordinal_day"
         )
 
-    def weekday(self: Self) -> DaskExpr:
+    def weekday(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input: _input.dt.weekday + 1,  # Dask is 0-6
             "weekday",
         )
 
-    def to_string(self: Self, format: str) -> DaskExpr:
+    def to_string(self, format: str) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input, format: _input.dt.strftime(format.replace("%.f", ".%f")),
             "strftime",
             format=format,
         )
 
-    def replace_time_zone(self: Self, time_zone: str | None) -> DaskExpr:
+    def replace_time_zone(self, time_zone: str | None) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input, time_zone: _input.dt.tz_localize(None).dt.tz_localize(
                 time_zone
@@ -96,7 +94,7 @@ class DaskExprDateTimeNamespace:
             time_zone=time_zone,
         )
 
-    def convert_time_zone(self: Self, time_zone: str) -> DaskExpr:
+    def convert_time_zone(self, time_zone: str) -> DaskExpr:
         def func(s: dx.Series, time_zone: str) -> dx.Series:
             dtype = native_to_narwhals_dtype(
                 s.dtype, self._compliant_expr._version, Implementation.DASK
@@ -110,7 +108,7 @@ class DaskExprDateTimeNamespace:
             func, "tz_convert", time_zone=time_zone
         )
 
-    def timestamp(self: Self, time_unit: TimeUnit) -> DaskExpr:
+    def timestamp(self, time_unit: TimeUnit) -> DaskExpr:
         def func(s: dx.Series, time_unit: TimeUnit) -> dx.Series:
             dtype = native_to_narwhals_dtype(
                 s.dtype, self._compliant_expr._version, Implementation.DASK
@@ -137,28 +135,28 @@ class DaskExprDateTimeNamespace:
 
         return self._compliant_expr._with_callable(func, "datetime", time_unit=time_unit)
 
-    def total_minutes(self: Self) -> DaskExpr:
+    def total_minutes(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input: _input.dt.total_seconds() // 60, "total_minutes"
         )
 
-    def total_seconds(self: Self) -> DaskExpr:
+    def total_seconds(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input: _input.dt.total_seconds() // 1, "total_seconds"
         )
 
-    def total_milliseconds(self: Self) -> DaskExpr:
+    def total_milliseconds(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input: _input.dt.total_seconds() * 1000 // 1, "total_milliseconds"
         )
 
-    def total_microseconds(self: Self) -> DaskExpr:
+    def total_microseconds(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input: _input.dt.total_seconds() * 1_000_000 // 1,
             "total_microseconds",
         )
 
-    def total_nanoseconds(self: Self) -> DaskExpr:
+    def total_nanoseconds(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input: _input.dt.total_seconds() * 1_000_000_000 // 1,
             "total_nanoseconds",

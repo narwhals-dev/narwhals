@@ -5,8 +5,6 @@ from typing import Generic
 from typing import TypeVar
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals.expr import Expr
     from narwhals.typing import TimeUnit
 
@@ -14,10 +12,10 @@ ExprT = TypeVar("ExprT", bound="Expr")
 
 
 class ExprDateTimeNamespace(Generic[ExprT]):
-    def __init__(self: Self, expr: ExprT) -> None:
+    def __init__(self, expr: ExprT) -> None:
         self._expr = expr
 
-    def date(self: Self) -> ExprT:
+    def date(self) -> ExprT:
         """Extract the date from underlying DateTime representation.
 
         Returns:
@@ -49,7 +47,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             lambda plx: self._expr._to_compliant_expr(plx).dt.date(), self._expr._metadata
         )
 
-    def year(self: Self) -> ExprT:
+    def year(self) -> ExprT:
         """Extract year from underlying DateTime representation.
 
         Returns the year number in the calendar date.
@@ -78,7 +76,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             lambda plx: self._expr._to_compliant_expr(plx).dt.year(), self._expr._metadata
         )
 
-    def month(self: Self) -> ExprT:
+    def month(self) -> ExprT:
         """Extract month from underlying DateTime representation.
 
         Returns the month number starting from 1. The return value ranges from 1 to 12.
@@ -105,7 +103,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def day(self: Self) -> ExprT:
+    def day(self) -> ExprT:
         """Extract day from underlying DateTime representation.
 
         Returns the day of month starting from 1. The return value ranges from 1 to 31. (The last day of month differs by months.)
@@ -131,7 +129,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             lambda plx: self._expr._to_compliant_expr(plx).dt.day(), self._expr._metadata
         )
 
-    def hour(self: Self) -> ExprT:
+    def hour(self) -> ExprT:
         """Extract hour from underlying DateTime representation.
 
         Returns the hour number from 0 to 23.
@@ -166,7 +164,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             lambda plx: self._expr._to_compliant_expr(plx).dt.hour(), self._expr._metadata
         )
 
-    def minute(self: Self) -> ExprT:
+    def minute(self) -> ExprT:
         """Extract minutes from underlying DateTime representation.
 
         Returns the minute number from 0 to 59.
@@ -192,7 +190,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def second(self: Self) -> ExprT:
+    def second(self) -> ExprT:
         """Extract seconds from underlying DateTime representation.
 
         Returns:
@@ -224,7 +222,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def millisecond(self: Self) -> ExprT:
+    def millisecond(self) -> ExprT:
         """Extract milliseconds from underlying DateTime representation.
 
         Returns:
@@ -258,7 +256,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def microsecond(self: Self) -> ExprT:
+    def microsecond(self) -> ExprT:
         """Extract microseconds from underlying DateTime representation.
 
         Returns:
@@ -292,7 +290,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def nanosecond(self: Self) -> ExprT:
+    def nanosecond(self) -> ExprT:
         """Extract Nanoseconds from underlying DateTime representation.
 
         Returns:
@@ -326,7 +324,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def ordinal_day(self: Self) -> ExprT:
+    def ordinal_day(self) -> ExprT:
         """Get ordinal day.
 
         Returns:
@@ -354,7 +352,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def weekday(self: Self) -> ExprT:
+    def weekday(self) -> ExprT:
         """Extract the week day from the underlying Date representation.
 
         Returns:
@@ -382,7 +380,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def total_minutes(self: Self) -> ExprT:
+    def total_minutes(self) -> ExprT:
         """Get total minutes.
 
         Returns:
@@ -419,7 +417,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def total_seconds(self: Self) -> ExprT:
+    def total_seconds(self) -> ExprT:
         """Get total seconds.
 
         Returns:
@@ -456,7 +454,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def total_milliseconds(self: Self) -> ExprT:
+    def total_milliseconds(self) -> ExprT:
         """Get total milliseconds.
 
         Returns:
@@ -498,7 +496,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def total_microseconds(self: Self) -> ExprT:
+    def total_microseconds(self) -> ExprT:
         """Get total microseconds.
 
         Returns:
@@ -537,7 +535,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def total_nanoseconds(self: Self) -> ExprT:
+    def total_nanoseconds(self) -> ExprT:
         """Get total nanoseconds.
 
         Returns:
@@ -575,7 +573,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def to_string(self: Self, format: str) -> ExprT:
+    def to_string(self, format: str) -> ExprT:
         """Convert a Date/Time/Datetime column into a String column with the given format.
 
         Arguments:
@@ -648,7 +646,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def replace_time_zone(self: Self, time_zone: str | None) -> ExprT:
+    def replace_time_zone(self, time_zone: str | None) -> ExprT:
         """Replace time zone.
 
         Arguments:
@@ -682,7 +680,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def convert_time_zone(self: Self, time_zone: str) -> ExprT:
+    def convert_time_zone(self, time_zone: str) -> ExprT:
         """Convert to a new time zone.
 
         If converting from a time-zone-naive column, then conversion happens
@@ -722,7 +720,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             self._expr._metadata,
         )
 
-    def timestamp(self: Self, time_unit: TimeUnit = "us") -> ExprT:
+    def timestamp(self, time_unit: TimeUnit = "us") -> ExprT:
         """Return a timestamp in the given time unit.
 
         Arguments:

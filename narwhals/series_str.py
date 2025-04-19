@@ -6,18 +6,16 @@ from typing import Generic
 from typing import TypeVar
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals.series import Series
 
 SeriesT = TypeVar("SeriesT", bound="Series[Any]")
 
 
 class SeriesStringNamespace(Generic[SeriesT]):
-    def __init__(self: Self, series: SeriesT) -> None:
+    def __init__(self, series: SeriesT) -> None:
         self._narwhals_series = series
 
-    def len_chars(self: Self) -> SeriesT:
+    def len_chars(self) -> SeriesT:
         r"""Return the length of each string as the number of characters.
 
         Returns:
@@ -42,7 +40,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         )
 
     def replace(
-        self: Self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
     ) -> SeriesT:
         r"""Replace first matching regex/literal substring with a new string value.
 
@@ -71,9 +69,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             )
         )
 
-    def replace_all(
-        self: Self, pattern: str, value: str, *, literal: bool = False
-    ) -> SeriesT:
+    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> SeriesT:
         r"""Replace all matching regex/literal substring with a new string value.
 
         Arguments:
@@ -100,7 +96,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             )
         )
 
-    def strip_chars(self: Self, characters: str | None = None) -> SeriesT:
+    def strip_chars(self, characters: str | None = None) -> SeriesT:
         r"""Remove leading and trailing characters.
 
         Arguments:
@@ -126,7 +122,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.str.strip_chars(characters)
         )
 
-    def starts_with(self: Self, prefix: str) -> SeriesT:
+    def starts_with(self, prefix: str) -> SeriesT:
         r"""Check if string values start with a substring.
 
         Arguments:
@@ -150,7 +146,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.str.starts_with(prefix)
         )
 
-    def ends_with(self: Self, suffix: str) -> SeriesT:
+    def ends_with(self, suffix: str) -> SeriesT:
         r"""Check if string values end with a substring.
 
         Arguments:
@@ -174,7 +170,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.str.ends_with(suffix)
         )
 
-    def contains(self: Self, pattern: str, *, literal: bool = False) -> SeriesT:
+    def contains(self, pattern: str, *, literal: bool = False) -> SeriesT:
         r"""Check if string contains a substring that matches a pattern.
 
         Arguments:
@@ -204,7 +200,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.str.contains(pattern, literal=literal)
         )
 
-    def slice(self: Self, offset: int, length: int | None = None) -> SeriesT:
+    def slice(self, offset: int, length: int | None = None) -> SeriesT:
         r"""Create subslices of the string values of a Series.
 
         Arguments:
@@ -232,7 +228,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             )
         )
 
-    def split(self: Self, by: str) -> SeriesT:
+    def split(self, by: str) -> SeriesT:
         r"""Split the string values of a Series by a substring.
 
         Arguments:
@@ -258,7 +254,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.str.split(by=by)
         )
 
-    def head(self: Self, n: int = 5) -> SeriesT:
+    def head(self, n: int = 5) -> SeriesT:
         r"""Take the first n elements of each string.
 
         Arguments:
@@ -291,7 +287,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.str.slice(offset=0, length=n)
         )
 
-    def tail(self: Self, n: int = 5) -> SeriesT:
+    def tail(self, n: int = 5) -> SeriesT:
         r"""Take the last n elements of each string.
 
         Arguments:
@@ -324,7 +320,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.str.slice(offset=-n, length=None)
         )
 
-    def to_uppercase(self: Self) -> SeriesT:
+    def to_uppercase(self) -> SeriesT:
         r"""Transform string to uppercase variant.
 
         Returns:
@@ -349,7 +345,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.str.to_uppercase()
         )
 
-    def to_lowercase(self: Self) -> SeriesT:
+    def to_lowercase(self) -> SeriesT:
         r"""Transform string to lowercase variant.
 
         Returns:
@@ -369,7 +365,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.str.to_lowercase()
         )
 
-    def to_datetime(self: Self, format: str | None = None) -> SeriesT:
+    def to_datetime(self, format: str | None = None) -> SeriesT:
         """Parse Series with strings to a Series with Datetime dtype.
 
         Notes:

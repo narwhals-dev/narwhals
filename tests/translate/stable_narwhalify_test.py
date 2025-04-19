@@ -8,8 +8,6 @@ import pytest
 import narwhals.stable.v1 as nw_v1
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals.typing import IntoDataFrameT
 
 data = {"a": [2, 3, 4]}
@@ -37,7 +35,7 @@ def test_narwhalify_method() -> None:
     class Foo:
         @nw_v1.narwhalify
         def func(
-            self: Self, df: nw_v1.DataFrame[IntoDataFrameT], a: int = 1
+            self, df: nw_v1.DataFrame[IntoDataFrameT], a: int = 1
         ) -> nw_v1.DataFrame[IntoDataFrameT]:
             return df.with_columns(nw_v1.all() + a)
 
@@ -55,7 +53,7 @@ def test_narwhalify_method_called() -> None:
     class Foo:
         @nw_v1.narwhalify
         def func(
-            self: Self, df: nw_v1.DataFrame[IntoDataFrameT], a: int = 1
+            self, df: nw_v1.DataFrame[IntoDataFrameT], a: int = 1
         ) -> nw_v1.DataFrame[IntoDataFrameT]:
             return df.with_columns(nw_v1.all() + a)
 

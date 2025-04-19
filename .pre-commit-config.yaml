@@ -54,6 +54,11 @@ repos:
       language: python
       files: ^narwhals/
       exclude: ^narwhals/dependencies\.py
+    - id: self-self
+      name: don't annotate `self` argument using `Self`
+      entry: "self: Self"
+      language: pygrep
+      files: ^narwhals/
     - id: dtypes-import
       name: don't import from narwhals.dtypes (use `import_dtypes_module` instead)
       entry: |
