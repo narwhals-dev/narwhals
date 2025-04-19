@@ -11,6 +11,8 @@ from typing import Literal
 from typing import TypeVar
 from typing import overload
 
+from narwhals._namespace import is_native_polars
+from narwhals._namespace import is_native_spark_like
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_cupy
 from narwhals.dependencies import get_dask
@@ -36,8 +38,6 @@ from narwhals.dependencies import is_pyarrow_chunked_array
 from narwhals.dependencies import is_pyarrow_table
 from narwhals.utils import Version
 from narwhals.utils import import_namespace
-from narwhals.utils import is_native_polars
-from narwhals.utils import is_spark_like_dataframe
 
 if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
@@ -687,7 +687,7 @@ def _from_native_impl(  # noqa: PLR0915
         )
 
     # PySpark
-    elif is_spark_like_dataframe(native_object):  # pragma: no cover
+    elif is_native_spark_like(native_object):  # pragma: no cover
         ns_spark = import_namespace(version).from_native_object(native_object)
         if series_only:
             msg = f"Cannot only use `series_only` with {ns_spark.implementation._alias} DataFrame"

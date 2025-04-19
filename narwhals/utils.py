@@ -43,8 +43,6 @@ from narwhals.dependencies import is_pandas_like_series
 from narwhals.dependencies import is_pandas_series
 from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
-from narwhals.dependencies import is_pyspark_dataframe
-from narwhals.dependencies import is_sqlframe_dataframe
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import InvalidOperationError
@@ -54,9 +52,7 @@ if TYPE_CHECKING:
     from typing import AbstractSet as Set
 
     import pandas as pd
-    import polars as pl
     import pyarrow as pa
-    import pyspark.sql as pyspark_sql
     from typing_extensions import Concatenate
     from typing_extensions import LiteralString
     from typing_extensions import ParamSpec
@@ -74,7 +70,6 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import EvalNames
     from narwhals._namespace import EagerAllowedImplementation
     from narwhals._namespace import Namespace
-    from narwhals._spark_like.dataframe import SQLFrameDataFrame
     from narwhals._translate import ArrowStreamExportable
     from narwhals._translate import IntoArrowTable
     from narwhals.dataframe import DataFrame
@@ -94,8 +89,6 @@ if TYPE_CHECKING:
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
     )
-    _SparkLikeDataFrame: TypeAlias = "SQLFrameDataFrame | pyspark_sql.DataFrame"
-    _NativePolars: TypeAlias = "pl.DataFrame | pl.LazyFrame | pl.Series"
     _T = TypeVar("_T")
     _T1 = TypeVar("_T1")
     _T2 = TypeVar("_T2")
@@ -1528,16 +1521,6 @@ def passthrough_column_names(names: Sequence[str], /) -> EvalNames[Any]:
 def _hasattr_static(obj: Any, attr: str) -> bool:
     sentinel = object()
     return getattr_static(obj, attr, sentinel) is not sentinel
-
-
-def is_spark_like_dataframe(obj: Any) -> TypeIs[_SparkLikeDataFrame]:
-    return is_sqlframe_dataframe(obj) or is_pyspark_dataframe(obj)
-
-
-def is_native_polars(obj: Any) -> TypeIs[_NativePolars]:
-    return (pl := get_polars()) is not None and isinstance(
-        obj, (pl.DataFrame, pl.Series, pl.LazyFrame)
-    )
 
 
 def is_compliant_dataframe(
