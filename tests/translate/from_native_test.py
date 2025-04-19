@@ -38,33 +38,32 @@ import narwhals.stable.v1 as nw_v1
 from tests.utils import maybe_get_modin_df
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
     from typing_extensions import assert_type
 
     from narwhals.utils import Version
 
 
 class MockDataFrame:
-    def _with_version(self: Self, _version: Version) -> MockDataFrame:
+    def _with_version(self, _version: Version) -> MockDataFrame:
         return self
 
-    def __narwhals_dataframe__(self: Self) -> Any:
+    def __narwhals_dataframe__(self) -> Any:
         return self
 
 
 class MockLazyFrame:
-    def _with_version(self: Self, _version: Version) -> MockLazyFrame:
+    def _with_version(self, _version: Version) -> MockLazyFrame:
         return self
 
-    def __narwhals_lazyframe__(self: Self) -> Any:
+    def __narwhals_lazyframe__(self) -> Any:
         return self
 
 
 class MockSeries:
-    def _with_version(self: Self, _version: Version) -> MockSeries:
+    def _with_version(self, _version: Version) -> MockSeries:
         return self
 
-    def __narwhals_series__(self: Self) -> Any:
+    def __narwhals_series__(self) -> Any:
         return self
 
 

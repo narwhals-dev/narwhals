@@ -24,8 +24,6 @@ from narwhals.utils import requires
 if TYPE_CHECKING:
     from datetime import timezone
 
-    from typing_extensions import Self
-
     from narwhals._compliant import CompliantSelectorNamespace
     from narwhals._compliant import CompliantWhen
     from narwhals._polars.dataframe import Method
@@ -54,14 +52,12 @@ class PolarsNamespace:
     #   error: Type argument "PolarsExpr" of "CompliantWhen" must be a subtype of "CompliantExpr[Any, Any]"
     when: Method[CompliantWhen[PolarsDataFrame, PolarsSeries, PolarsExpr]]  # type: ignore[type-var]
 
-    def __init__(
-        self: Self, *, backend_version: tuple[int, ...], version: Version
-    ) -> None:
+    def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
         self._backend_version = backend_version
         self._implementation = Implementation.POLARS
         self._version = version
 
-    def __getattr__(self: Self, attr: str) -> Any:
+    def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
             pos, kwds = extract_args_kwargs(args, kwargs)
             return self._expr(
@@ -145,7 +141,7 @@ class PolarsNamespace:
             pl.nth(*indices), version=self._version, backend_version=self._backend_version
         )
 
-    def len(self: Self) -> PolarsExpr:
+    def len(self) -> PolarsExpr:
         if self._backend_version < (0, 20, 5):
             return self._expr(
                 pl.count().alias("len"),
@@ -157,7 +153,7 @@ class PolarsNamespace:
         )
 
     def concat(
-        self: Self,
+        self,
         items: Iterable[FrameT],
         *,
         how: Literal["vertical", "horizontal", "diagonal"],
@@ -169,7 +165,7 @@ class PolarsNamespace:
             )
         return self._lazyframe.from_native(result, context=self)
 
-    def lit(self: Self, value: Any, dtype: DType | type[DType] | None) -> PolarsExpr:
+    def lit(self, value: Any, dtype: DType | type[DType] | None) -> PolarsExpr:
         if dtype is not None:
             return self._expr(
                 pl.lit(
@@ -185,7 +181,7 @@ class PolarsNamespace:
             pl.lit(value), version=self._version, backend_version=self._backend_version
         )
 
-    def mean_horizontal(self: Self, *exprs: PolarsExpr) -> PolarsExpr:
+    def mean_horizontal(self, *exprs: PolarsExpr) -> PolarsExpr:
         if self._backend_version < (0, 20, 8):
             return self._expr(
                 pl.sum_horizontal(e._native_expr for e in exprs)
@@ -201,7 +197,7 @@ class PolarsNamespace:
         )
 
     def concat_str(
-        self: Self,
+        self,
         *exprs: PolarsExpr,
         separator: str,
         ignore_nulls: bool,
@@ -261,12 +257,12 @@ class PolarsNamespace:
 
 
 class PolarsSelectorNamespace:
-    def __init__(self: Self, context: _FullContext, /) -> None:
+    def __init__(self, context: _FullContext, /) -> None:
         self._implementation = context._implementation
         self._backend_version = context._backend_version
         self._version = context._version
 
-    def by_dtype(self: Self, dtypes: Iterable[DType]) -> PolarsExpr:
+    def by_dtype(self, dtypes: Iterable[DType]) -> PolarsExpr:
         native_dtypes = [
             narwhals_to_native_dtype(
                 dtype, self._version, self._backend_version
@@ -281,42 +277,42 @@ class PolarsSelectorNamespace:
             backend_version=self._backend_version,
         )
 
-    def matches(self: Self, pattern: str) -> PolarsExpr:
+    def matches(self, pattern: str) -> PolarsExpr:
         return PolarsExpr(
             pl.selectors.matches(pattern=pattern),
             version=self._version,
             backend_version=self._backend_version,
         )
 
-    def numeric(self: Self) -> PolarsExpr:
+    def numeric(self) -> PolarsExpr:
         return PolarsExpr(
             pl.selectors.numeric(),
             version=self._version,
             backend_version=self._backend_version,
         )
 
-    def boolean(self: Self) -> PolarsExpr:
+    def boolean(self) -> PolarsExpr:
         return PolarsExpr(
             pl.selectors.boolean(),
             version=self._version,
             backend_version=self._backend_version,
         )
 
-    def string(self: Self) -> PolarsExpr:
+    def string(self) -> PolarsExpr:
         return PolarsExpr(
             pl.selectors.string(),
             version=self._version,
             backend_version=self._backend_version,
         )
 
-    def categorical(self: Self) -> PolarsExpr:
+    def categorical(self) -> PolarsExpr:
         return PolarsExpr(
             pl.selectors.categorical(),
             version=self._version,
             backend_version=self._backend_version,
         )
 
-    def all(self: Self) -> PolarsExpr:
+    def all(self) -> PolarsExpr:
         return PolarsExpr(
             pl.selectors.all(),
             version=self._version,
@@ -324,7 +320,7 @@ class PolarsSelectorNamespace:
         )
 
     def datetime(
-        self: Self,
+        self,
         time_unit: TimeUnit | Iterable[TimeUnit] | None,
         time_zone: str | timezone | Iterable[str | timezone | None] | None,
     ) -> PolarsExpr:

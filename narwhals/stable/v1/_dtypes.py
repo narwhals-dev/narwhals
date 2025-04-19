@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from narwhals.dtypes import Array
 from narwhals.dtypes import Binary
 from narwhals.dtypes import Boolean
@@ -38,9 +36,6 @@ from narwhals.dtypes import UInt128
 from narwhals.dtypes import Unknown
 from narwhals.dtypes import UnsignedIntegerType
 
-if TYPE_CHECKING:
-    from typing_extensions import Self
-
 
 class Datetime(NwDatetime):
     """Data type representing a calendar date and time of day.
@@ -54,7 +49,7 @@ class Datetime(NwDatetime):
         Adapted from [Polars implementation](https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L398-L457)
     """
 
-    def __hash__(self: Self) -> int:
+    def __hash__(self) -> int:
         return hash(self.__class__)
 
 
@@ -68,7 +63,7 @@ class Duration(NwDuration):
         Adapted from [Polars implementation](https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L460-L502)
     """
 
-    def __hash__(self: Self) -> int:
+    def __hash__(self) -> int:
         return hash(self.__class__)
 
 
@@ -86,7 +81,7 @@ class Enum(NwEnum):
        Enum
     """
 
-    def __init__(self: Self) -> None:
+    def __init__(self) -> None:
         super(NwEnum, self).__init__()
 
     def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
@@ -94,10 +89,10 @@ class Enum(NwEnum):
             return other in {type(self), NwEnum}
         return isinstance(other, type(self))
 
-    def __hash__(self: Self) -> int:  # pragma: no cover
+    def __hash__(self) -> int:  # pragma: no cover
         return super(NwEnum, self).__hash__()
 
-    def __repr__(self: Self) -> str:  # pragma: no cover
+    def __repr__(self) -> str:  # pragma: no cover
         return super(NwEnum, self).__repr__()
 
 

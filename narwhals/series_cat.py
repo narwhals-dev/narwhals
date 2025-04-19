@@ -6,18 +6,16 @@ from typing import Generic
 from typing import TypeVar
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals.series import Series
 
 SeriesT = TypeVar("SeriesT", bound="Series[Any]")
 
 
 class SeriesCatNamespace(Generic[SeriesT]):
-    def __init__(self: Self, series: SeriesT) -> None:
+    def __init__(self, series: SeriesT) -> None:
         self._narwhals_series = series
 
-    def get_categories(self: Self) -> SeriesT:
+    def get_categories(self) -> SeriesT:
         """Get unique categories from column.
 
         Returns:

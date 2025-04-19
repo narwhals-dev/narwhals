@@ -20,7 +20,6 @@ from narwhals.utils import isinstance_or_issubclass
 if TYPE_CHECKING:
     from typing import TypeVar
 
-    from typing_extensions import Self
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
@@ -496,5 +495,5 @@ def cast_to_comparable_string_types(
 
 
 class ArrowSeriesNamespace(_SeriesNamespace["ArrowSeries", "ArrowChunkedArray"]):
-    def __init__(self: Self, series: ArrowSeries, /) -> None:
+    def __init__(self, series: ArrowSeries, /) -> None:
         self._compliant_series = series

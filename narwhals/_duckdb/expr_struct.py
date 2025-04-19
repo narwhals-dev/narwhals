@@ -7,16 +7,14 @@ from duckdb import FunctionExpression
 from narwhals._duckdb.utils import lit
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals._duckdb.expr import DuckDBExpr
 
 
 class DuckDBExprStructNamespace:
-    def __init__(self: Self, expr: DuckDBExpr) -> None:
+    def __init__(self, expr: DuckDBExpr) -> None:
         self._compliant_expr = expr
 
-    def field(self: Self, name: str) -> DuckDBExpr:
+    def field(self, name: str) -> DuckDBExpr:
         return self._compliant_expr._with_callable(
             lambda _input: FunctionExpression("struct_extract", _input, lit(name))
         ).alias(name)

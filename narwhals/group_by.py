@@ -15,8 +15,6 @@ from narwhals.utils import flatten
 from narwhals.utils import tupleify
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals._compliant.typing import CompliantExprAny
     from narwhals.dataframe import LazyFrame
     from narwhals.expr import Expr
@@ -26,7 +24,7 @@ LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[Any]")
 
 class GroupBy(Generic[DataFrameT]):
     def __init__(
-        self: Self,
+        self,
         df: DataFrameT,
         keys: Sequence[str] | Sequence[CompliantExprAny],
         *,
@@ -39,7 +37,7 @@ class GroupBy(Generic[DataFrameT]):
             drop_null_keys=drop_null_keys,
         )
 
-    def agg(self: Self, *aggs: Expr | Iterable[Expr], **named_aggs: Expr) -> DataFrameT:
+    def agg(self, *aggs: Expr | Iterable[Expr], **named_aggs: Expr) -> DataFrameT:
         """Compute aggregations for each group of a group by operation.
 
         Arguments:
@@ -101,7 +99,7 @@ class GroupBy(Generic[DataFrameT]):
         )
         return self._df._with_compliant(self._grouped.agg(*compliant_aggs))
 
-    def __iter__(self: Self) -> Iterator[tuple[Any, DataFrameT]]:
+    def __iter__(self) -> Iterator[tuple[Any, DataFrameT]]:
         yield from (
             (tupleify(key), self._df._with_compliant(df))
             for (key, df) in self._grouped.__iter__()
@@ -110,7 +108,7 @@ class GroupBy(Generic[DataFrameT]):
 
 class LazyGroupBy(Generic[LazyFrameT]):
     def __init__(
-        self: Self,
+        self,
         df: LazyFrameT,
         keys: Sequence[str] | Sequence[CompliantExprAny],
         *,
@@ -122,7 +120,7 @@ class LazyGroupBy(Generic[LazyFrameT]):
             self._keys, drop_null_keys=drop_null_keys
         )
 
-    def agg(self: Self, *aggs: Expr | Iterable[Expr], **named_aggs: Expr) -> LazyFrameT:
+    def agg(self, *aggs: Expr | Iterable[Expr], **named_aggs: Expr) -> LazyFrameT:
         """Compute aggregations for each group of a group by operation.
 
         Arguments:
