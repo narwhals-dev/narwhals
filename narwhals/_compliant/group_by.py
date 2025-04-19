@@ -96,7 +96,8 @@ class ParseKeysGroupBy(
         keys: Sequence[CompliantExprT_contra] | Sequence[str],
     ) -> tuple[CompliantFrameT, list[str], list[str]]:
         if is_sequence_of(keys, str):
-            return self._parse_string_keys(compliant_frame, keys=keys)
+            keys_str = list(keys)
+            return compliant_frame, keys_str, keys_str.copy()
         else:
             return self._parse_expr_keys(compliant_frame, keys=keys)
 
@@ -135,13 +136,6 @@ class ParseKeysGroupBy(
             compliant_frame._evaluate_aliases(*safe_keys),
             output_names,
         )
-
-    @staticmethod
-    def _parse_string_keys(
-        compliant_frame: CompliantFrameT,
-        keys: Sequence[str],
-    ) -> tuple[CompliantFrameT, list[str], list[str]]:
-        return compliant_frame, list(keys), list(keys)
 
 
 class DepthTrackingGroupBy(
