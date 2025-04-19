@@ -13,11 +13,13 @@ from typing import Mapping
 from typing import Sequence
 from typing import TypeVar
 
+from narwhals._compliant.typing import CompliantDataFrameAny
 from narwhals._compliant.typing import CompliantDataFrameT
 from narwhals._compliant.typing import CompliantDataFrameT_co
 from narwhals._compliant.typing import CompliantExprT_contra
 from narwhals._compliant.typing import CompliantFrameT
 from narwhals._compliant.typing import CompliantFrameT_co
+from narwhals._compliant.typing import CompliantLazyFrameAny
 from narwhals._compliant.typing import CompliantLazyFrameT
 from narwhals._compliant.typing import DepthTrackingExprAny
 from narwhals._compliant.typing import DepthTrackingExprT_contra
@@ -29,6 +31,8 @@ from narwhals.utils import is_sequence_of
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
+
+    _SameFrameT = TypeVar("_SameFrameT", CompliantDataFrameAny, CompliantLazyFrameAny)
 
 
 if not TYPE_CHECKING:  # pragma: no cover
@@ -103,8 +107,8 @@ class ParseKeysGroupBy(
 
     @staticmethod
     def _parse_expr_keys(
-        compliant_frame: CompliantFrameT, keys: Sequence[CompliantExprT_contra]
-    ) -> tuple[CompliantFrameT, list[str], list[str]]:
+        compliant_frame: _SameFrameT, keys: Sequence[CompliantExprT_contra]
+    ) -> tuple[_SameFrameT, list[str], list[str]]:
         """Parses key expressions to set up `.agg` operation with correct information.
 
         Since keys are expressions, it's possible to incour in aliases that match
