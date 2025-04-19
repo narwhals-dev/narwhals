@@ -122,7 +122,7 @@ def native_to_narwhals_dtype(duckdb_dtype: str, version: Version) -> DType:
     if duckdb_dtype == "INTERVAL":
         return dtypes.Duration()
     if duckdb_dtype.startswith("ENUM"):
-        if version is Version.V1:
+        if version is Version.V1:  # pragma: no cover
             msg = "Converting to Enum is not supported in narwhals.stable.v1"
             raise NotImplementedError(msg)
 
