@@ -29,7 +29,7 @@ def _validate_dtype(dtype: DType | type[DType]) -> None:
 
 
 class DType:
-    def __repr__(self: Self) -> str:  # pragma: no cover
+    def __repr__(self) -> str:  # pragma: no cover
         return self.__class__.__qualname__
 
     @classmethod
@@ -64,12 +64,12 @@ class DType:
     def is_nested(cls: type[Self]) -> bool:
         return issubclass(cls, NestedType)
 
-    def __eq__(self: Self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
         from narwhals.utils import isinstance_or_issubclass
 
         return isinstance_or_issubclass(other, type(self))
 
-    def __hash__(self: Self) -> int:
+    def __hash__(self) -> int:
         return hash(self.__class__)
 
 
@@ -361,7 +361,7 @@ class Datetime(TemporalType, metaclass=_DatetimeMeta):
     """
 
     def __init__(
-        self: Self,
+        self,
         time_unit: TimeUnit = "us",
         time_zone: str | timezone | None = None,
     ) -> None:
@@ -378,7 +378,7 @@ class Datetime(TemporalType, metaclass=_DatetimeMeta):
         self.time_unit: TimeUnit = time_unit
         self.time_zone: str | None = time_zone
 
-    def __eq__(self: Self, other: object) -> bool:
+    def __eq__(self, other: object) -> bool:
         # allow comparing object instances to class
         if type(other) is _DatetimeMeta:
             return True
@@ -387,10 +387,10 @@ class Datetime(TemporalType, metaclass=_DatetimeMeta):
         else:  # pragma: no cover
             return False
 
-    def __hash__(self: Self) -> int:  # pragma: no cover
+    def __hash__(self) -> int:  # pragma: no cover
         return hash((self.__class__, self.time_unit, self.time_zone))
 
-    def __repr__(self: Self) -> str:  # pragma: no cover
+    def __repr__(self) -> str:  # pragma: no cover
         class_name = self.__class__.__name__
         return f"{class_name}(time_unit={self.time_unit!r}, time_zone={self.time_zone!r})"
 
@@ -421,7 +421,7 @@ class Duration(TemporalType, metaclass=_DurationMeta):
         Duration(time_unit='ms')
     """
 
-    def __init__(self: Self, time_unit: TimeUnit = "us") -> None:
+    def __init__(self, time_unit: TimeUnit = "us") -> None:
         if time_unit not in {"s", "ms", "us", "ns"}:
             msg = (
                 "invalid `time_unit`"
@@ -431,7 +431,7 @@ class Duration(TemporalType, metaclass=_DurationMeta):
 
         self.time_unit: TimeUnit = time_unit
 
-    def __eq__(self: Self, other: object) -> bool:
+    def __eq__(self, other: object) -> bool:
         # allow comparing object instances to class
         if type(other) is _DurationMeta:
             return True
@@ -440,10 +440,10 @@ class Duration(TemporalType, metaclass=_DurationMeta):
         else:  # pragma: no cover
             return False
 
-    def __hash__(self: Self) -> int:  # pragma: no cover
+    def __hash__(self) -> int:  # pragma: no cover
         return hash((self.__class__, self.time_unit))
 
-    def __repr__(self: Self) -> str:  # pragma: no cover
+    def __repr__(self) -> str:  # pragma: no cover
         class_name = self.__class__.__name__
         return f"{class_name}(time_unit={self.time_unit!r})"
 
@@ -479,16 +479,16 @@ class Enum(DType):
         else:
             self.categories = tuple(categories)
 
-    def __eq__(self: Self, other: object) -> bool:
+    def __eq__(self, other: object) -> bool:
         # allow comparing object instances to class
         if type(other) is type:
             return other is Enum
         return isinstance(other, type(self)) and self.categories == other.categories
 
-    def __hash__(self: Self) -> int:  # pragma: no cover
+    def __hash__(self) -> int:  # pragma: no cover
         return hash((self.__class__, tuple(self.categories)))
 
-    def __repr__(self: Self) -> str:  # pragma: no cover
+    def __repr__(self) -> str:  # pragma: no cover
         return f"{type(self).__name__}(categories={list(self.categories)!r})"
 
 
@@ -511,17 +511,17 @@ class Field:
     name: str
     dtype: type[DType] | DType
 
-    def __init__(self: Self, name: str, dtype: type[DType] | DType) -> None:
+    def __init__(self, name: str, dtype: type[DType] | DType) -> None:
         self.name = name
         self.dtype = dtype
 
-    def __eq__(self: Self, other: Field) -> bool:  # type: ignore[override]
+    def __eq__(self, other: Field) -> bool:  # type: ignore[override]
         return (self.name == other.name) & (self.dtype == other.dtype)
 
-    def __hash__(self: Self) -> int:
+    def __hash__(self) -> int:
         return hash((self.name, self.dtype))
 
-    def __repr__(self: Self) -> str:
+    def __repr__(self) -> str:
         class_name = self.__class__.__name__
         return f"{class_name}({self.name!r}, {self.dtype})"
 
@@ -546,14 +546,14 @@ class Struct(NestedType):
     fields: list[Field]
 
     def __init__(
-        self: Self, fields: Sequence[Field] | Mapping[str, DType | type[DType]]
+        self, fields: Sequence[Field] | Mapping[str, DType | type[DType]]
     ) -> None:
         if isinstance(fields, Mapping):
             self.fields = list(starmap(Field, fields.items()))
         else:
             self.fields = list(fields)
 
-    def __eq__(self: Self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
         # The comparison allows comparing objects to classes, and specific
         # inner types to those without (eg: inner=None). if one of the
         # arguments is not specific about its inner type we infer it
@@ -565,22 +565,22 @@ class Struct(NestedType):
         else:
             return False
 
-    def __hash__(self: Self) -> int:
+    def __hash__(self) -> int:
         return hash((self.__class__, tuple(self.fields)))
 
-    def __iter__(self: Self) -> Iterator[tuple[str, DType | type[DType]]]:
+    def __iter__(self) -> Iterator[tuple[str, DType | type[DType]]]:
         for fld in self.fields:
             yield fld.name, fld.dtype
 
-    def __reversed__(self: Self) -> Iterator[tuple[str, DType | type[DType]]]:
+    def __reversed__(self) -> Iterator[tuple[str, DType | type[DType]]]:
         for fld in reversed(self.fields):
             yield fld.name, fld.dtype
 
-    def __repr__(self: Self) -> str:
+    def __repr__(self) -> str:
         class_name = self.__class__.__name__
         return f"{class_name}({dict(self)})"
 
-    def to_schema(self: Self) -> OrderedDict[str, DType | type[DType]]:
+    def to_schema(self) -> OrderedDict[str, DType | type[DType]]:
         """Return Struct dtype as a schema dict.
 
         Returns:
@@ -606,10 +606,10 @@ class List(NestedType):
 
     inner: DType | type[DType]
 
-    def __init__(self: Self, inner: DType | type[DType]) -> None:
+    def __init__(self, inner: DType | type[DType]) -> None:
         self.inner = inner
 
-    def __eq__(self: Self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
         # This equality check allows comparison of type classes and type instances.
         # If a parent type is not specific about its inner type, we infer it as equal:
         # > list[i64] == list[i64] -> True
@@ -624,10 +624,10 @@ class List(NestedType):
         else:
             return False
 
-    def __hash__(self: Self) -> int:
+    def __hash__(self) -> int:
         return hash((self.__class__, self.inner))
 
-    def __repr__(self: Self) -> str:
+    def __repr__(self) -> str:
         class_name = self.__class__.__name__
         return f"{class_name}({self.inner!r})"
 
@@ -651,9 +651,7 @@ class Array(NestedType):
     size: int
     shape: tuple[int, ...]
 
-    def __init__(
-        self: Self, inner: DType | type[DType], shape: int | tuple[int, ...]
-    ) -> None:
+    def __init__(self, inner: DType | type[DType], shape: int | tuple[int, ...]) -> None:
         inner_shape: tuple[int, ...] = inner.shape if isinstance(inner, Array) else ()
         if isinstance(shape, int):
             self.inner = inner
@@ -672,7 +670,7 @@ class Array(NestedType):
             msg = f"invalid input for shape: {shape!r}"
             raise TypeError(msg)
 
-    def __eq__(self: Self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
         # This equality check allows comparison of type classes and type instances.
         # If a parent type is not specific about its inner type, we infer it as equal:
         # > array[i64] == array[i64] -> True
@@ -690,7 +688,7 @@ class Array(NestedType):
         else:
             return False
 
-    def __hash__(self: Self) -> int:
+    def __hash__(self) -> int:
         return hash((self.__class__, self.inner, self.shape))
 
     def __repr__(self) -> str:
