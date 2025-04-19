@@ -100,10 +100,10 @@ class IbisLazyFrame:
     def __native_namespace__(self) -> ModuleType:
         return get_ibis()
 
-    def __getitem__(self, item: str) -> IbisInterchangeSeries:
+    def get_column(self, name: str) -> IbisInterchangeSeries:
         from narwhals._ibis.series import IbisInterchangeSeries
 
-        return IbisInterchangeSeries(self._native_frame[item], version=self._version)
+        return IbisInterchangeSeries(self._native_frame[name], version=self._version)
 
     def to_pandas(self) -> pd.DataFrame:
         return self._native_frame.to_pandas()

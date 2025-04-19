@@ -12,6 +12,7 @@ from typing import Literal
 from typing import NoReturn
 from typing import Sequence
 from typing import TypeVar
+from typing import cast
 from typing import overload
 from warnings import warn
 
@@ -22,7 +23,6 @@ from narwhals._expression_parsing import infer_kind
 from narwhals._expression_parsing import is_scalar_like
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
-from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.exceptions import LengthChangingExprError
@@ -35,8 +35,10 @@ from narwhals.utils import flatten
 from narwhals.utils import generate_repr
 from narwhals.utils import is_compliant_dataframe
 from narwhals.utils import is_compliant_lazyframe
+from narwhals.utils import is_index_selector
 from narwhals.utils import is_list_of
-from narwhals.utils import is_sequence_but_not_str
+from narwhals.utils import is_sequence_like
+from narwhals.utils import is_slice_none
 from narwhals.utils import issue_deprecation_warning
 from narwhals.utils import parse_version
 from narwhals.utils import supports_arrow_c_stream
@@ -66,10 +68,13 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoFrame
     from narwhals.typing import JoinStrategy
     from narwhals.typing import LazyUniqueKeepStrategy
+    from narwhals.typing import MultiColSelector
+    from narwhals.typing import MultiIndexSelector
     from narwhals.typing import PivotAgg
+    from narwhals.typing import SingleColSelector
+    from narwhals.typing import SingleIndexSelector
     from narwhals.typing import SizeUnit
     from narwhals.typing import UniqueKeepStrategy
-    from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
 
     PS = ParamSpec("PS")
@@ -795,41 +800,40 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return self._compliant_frame.estimated_size(unit=unit)
 
+    # `str` overlaps with `Sequence[str]`
+    # We can ignore this but we must keep this overload ordering
+    @overload
+    def __getitem__(self, item: tuple[SingleIndexSelector, SingleColSelector]) -> Any: ...
+
     @overload
     def __getitem__(  # type: ignore[overload-overlap]
-        self,
-        item: str | tuple[slice | Sequence[int] | _1DArray, int | str],
+        self, item: str | tuple[MultiIndexSelector, SingleColSelector]
     ) -> Series[Any]: ...
 
     @overload
     def __getitem__(
         self,
         item: (
-            int
-            | slice
-            | Sequence[int]
-            | Sequence[str]
-            | _1DArray
-            | tuple[
-                slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
-            ]
+            SingleIndexSelector
+            | MultiIndexSelector
+            | MultiColSelector
+            | tuple[SingleIndexSelector, MultiColSelector]
+            | tuple[MultiIndexSelector, MultiColSelector]
         ),
     ) -> Self: ...
     def __getitem__(
         self,
         item: (
-            str
-            | int
-            | slice
-            | Sequence[int]
-            | Sequence[str]
-            | _1DArray
-            | tuple[slice | Sequence[int] | _1DArray, int | str]
-            | tuple[
-                slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
-            ]
+            SingleIndexSelector
+            | SingleColSelector
+            | MultiColSelector
+            | MultiIndexSelector
+            | tuple[SingleIndexSelector, SingleColSelector]
+            | tuple[SingleIndexSelector, MultiColSelector]
+            | tuple[MultiIndexSelector, SingleColSelector]
+            | tuple[MultiIndexSelector, MultiColSelector]
         ),
-    ) -> Series[Any] | Self:
+    ) -> Series[Any] | Self | Any:
         """Extract column or slice of DataFrame.
 
         Arguments:
@@ -879,40 +883,58 @@ class DataFrame(BaseFrame[DataFrameT]):
             1    2
             Name: a, dtype: int64
         """
-        if isinstance(item, int):
-            item = [item]
-        if (
-            isinstance(item, tuple)
-            and len(item) == 2
-            and (isinstance(item[0], (str, int)))
-        ):
+        from narwhals.series import Series
+
+        if isinstance(item, tuple):
+            if len(item) > 2:
+                msg = (
+                    "Tuples cannot be passed to DataFrame.__getitem__ directly.\n\n"
+                    "Hint: instead of `df[indices]`, did you mean `df[indices, :]`?"
+                )
+                raise TypeError(msg)
+            # These are so heavily overloaded that we just ignore the types for now.
+            rows = None if not item or is_slice_none(item[0]) else item[0]
+            columns = None if len(item) < 2 or is_slice_none(item[1]) else item[1]
+            if rows is None and columns is None:
+                return self
+        elif is_index_selector(item):
+            rows = item
+            columns = None
+        elif is_sequence_like(item) or isinstance(item, (slice, str)):
+            rows = None
+            columns = item
+        else:
             msg = (
                 f"Expected str or slice, got: {type(item)}.\n\n"
-                "Hint: if you were trying to get a single element out of a "
-                "dataframe, use `DataFrame.item`."
+                "Hints:\n"
+                "- use `DataFrame.item` to select a single item.\n"
+                "- Use `DataFrame[indices, :]` to select rows positionally.\n"
+                "- Use `DataFrame.filter(mask)` to filter rows based on a boolean mask."
             )
             raise TypeError(msg)
-        if (
-            isinstance(item, tuple)
-            and len(item) == 2
-            and (is_sequence_but_not_str(item[1]) or isinstance(item[1], slice))
-        ):
-            if item[1] == slice(None) and item[0] == slice(None):
-                return self
-            return self._with_compliant(self._compliant_frame[item])
-        if isinstance(item, str) or (isinstance(item, tuple) and len(item) == 2):
-            return self._series(self._compliant_frame[item], level=self._level)
 
-        elif (
-            is_sequence_but_not_str(item)
-            or isinstance(item, slice)
-            or (is_numpy_array_1d(item))
-        ):
-            return self._with_compliant(self._compliant_frame[item])
+        compliant = self._compliant_frame
 
-        else:
-            msg = f"Expected str or slice, got: {type(item)}"
-            raise TypeError(msg)
+        if isinstance(rows, int) and isinstance(columns, (int, str)):
+            return self.item(rows, columns)
+        if isinstance(columns, (int, str)):
+            col_name = columns if isinstance(columns, str) else self.columns[columns]
+            series = self.get_column(col_name)
+            return (
+                series[cast("SingleIndexSelector | MultiIndexSelector", rows)]
+                if rows is not None
+                else series
+            )
+
+        if isinstance(rows, Series):
+            rows = rows._compliant_series
+        if isinstance(columns, Series):
+            columns = columns._compliant_series
+        if rows is None:
+            return self._with_compliant(compliant[:, columns])
+        if columns is None:
+            return self._with_compliant(compliant[rows, :])
+        return self._with_compliant(compliant[rows, columns])
 
     def __contains__(self, key: str) -> bool:
         return key in self.columns

@@ -23,6 +23,9 @@ from narwhals._translate import FromNative
 from narwhals._translate import NumpyConvertible
 from narwhals.utils import _StoresCompliant
 from narwhals.utils import _StoresNative
+from narwhals.utils import is_compliant_series
+from narwhals.utils import is_sequence_like_ints
+from narwhals.utils import is_slice_none
 from narwhals.utils import unstable
 
 if TYPE_CHECKING:
@@ -48,6 +51,7 @@ if TYPE_CHECKING:
     from narwhals.typing import RollingInterpolationMethod
     from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
+    from narwhals.typing import _IntIndexer
     from narwhals.utils import Implementation
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -315,6 +319,24 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
 
     def _to_expr(self) -> EagerExpr[Any, Any]:
         return self.__narwhals_namespace__()._expr._from_series(self)  # type: ignore[no-any-return]
+
+    def _gather(self, indices: _IntIndexer) -> Self: ...
+    def _gather_slice(self, indices: slice | range) -> Self: ...
+
+    def __getitem__(self, item: Any) -> Self:
+        if is_slice_none(item):
+            return self
+        if isinstance(item, int):
+            return self._gather([item])
+        elif isinstance(item, (slice, range)):
+            return self._gather_slice(item)
+        elif is_compliant_series(item):
+            return self._gather(item.native)
+        elif is_sequence_like_ints(item):
+            return self._gather(item)
+        else:
+            msg = "Unreachable code"
+            raise AssertionError(msg)
 
     @property
     def str(self) -> EagerSeriesStringNamespace[Self, NativeSeriesT]: ...

@@ -18,6 +18,7 @@ from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals._polars.utils import native_to_narwhals_dtype
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.utils import Implementation
+from narwhals.utils import is_compliant_series
 from narwhals.utils import requires
 from narwhals.utils import validate_backend_version
 
@@ -182,6 +183,8 @@ class PolarsSeries:
     def __getitem__(self, item: slice | Sequence[int] | pl.Series) -> Self: ...
 
     def __getitem__(self, item: int | slice | Sequence[int] | pl.Series) -> Any | Self:
+        if is_compliant_series(item):
+            item = item.native
         return self._from_native_object(self.native.__getitem__(item))
 
     def cast(self, dtype: DType | type[DType]) -> Self:

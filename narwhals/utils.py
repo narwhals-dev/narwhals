@@ -28,6 +28,7 @@ from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_duckdb
 from narwhals.dependencies import get_ibis
 from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
@@ -35,6 +36,8 @@ from narwhals.dependencies import get_pyspark_sql
 from narwhals.dependencies import get_sqlframe
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_modin_series
+from narwhals.dependencies import is_narwhals_series
+from narwhals.dependencies import is_numpy_array_1d
 from narwhals.dependencies import is_pandas_dataframe
 from narwhals.dependencies import is_pandas_like_dataframe
 from narwhals.dependencies import is_pandas_like_series
@@ -90,9 +93,14 @@ if TYPE_CHECKING:
     from narwhals.typing import DataFrameLike
     from narwhals.typing import DTypes
     from narwhals.typing import IntoSeriesT
+    from narwhals.typing import MultiIndexSelector
+    from narwhals.typing import SingleIndexSelector
     from narwhals.typing import SizeUnit
     from narwhals.typing import SupportsNativeNamespace
     from narwhals.typing import TimeUnit
+    from narwhals.typing import _1DArray
+    from narwhals.typing import _SliceIndex
+    from narwhals.typing import _SliceNone
 
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
@@ -1295,6 +1303,51 @@ def is_sequence_but_not_str(sequence: Any | Sequence[_T]) -> TypeIs[Sequence[_T]
     return isinstance(sequence, Sequence) and not isinstance(sequence, str)
 
 
+def is_sequence_like_ints(sequence: Any | Sequence[_T]) -> bool:
+    np = get_numpy()
+    return (
+        (
+            is_sequence_but_not_str(sequence)
+            and (
+                (len(sequence) > 0 and isinstance(sequence[0], int))
+                or (len(sequence) == 0)
+            )
+        )
+        or (is_numpy_array_1d(sequence) and np.issubdtype(sequence.dtype, np.integer))
+        or (
+            (is_narwhals_series(sequence) or is_compliant_series(sequence))
+            and sequence.dtype.is_integer()
+        )
+    )
+
+
+def is_sequence_like(
+    sequence: Sequence[_T] | Any,
+) -> TypeIs[Sequence[_T]] | TypeIs[Series[Any]] | TypeIs[_1DArray]:
+    return (
+        is_sequence_but_not_str(sequence)
+        or is_numpy_array_1d(sequence)
+        or is_narwhals_series(sequence)
+        or is_compliant_series(sequence)
+    )
+
+
+def is_slice_index(obj: _SliceIndex | Any) -> TypeIs[_SliceIndex]:
+    return isinstance(obj, slice) and (
+        isinstance(obj.start, int)
+        or isinstance(obj.stop, int)
+        or (isinstance(obj.step, int) and obj.start is None and obj.stop is None)
+    )
+
+
+def is_slice_none(obj: object) -> TypeIs[_SliceNone]:
+    return isinstance(obj, slice) and obj == slice(None)
+
+
+def is_index_selector(cols: SingleIndexSelector | MultiIndexSelector | Any) -> bool:
+    return isinstance(cols, int) or is_sequence_like_ints(cols) or is_slice_index(cols)
+
+
 def is_list_of(obj: Any, tp: type[_T]) -> TypeIs[list[_T]]:
     # Check if an object is a list of `tp`, only sniffing the first element.
     return bool(isinstance(obj, list) and obj and isinstance(obj[0], tp))
@@ -1873,3 +1926,20 @@ class requires:  # noqa: N801
 
         # NOTE: Only getting a complaint from `mypy`
         return wrapper  # type: ignore[return-value]
+
+
+def convert_str_slice_to_int_slice(
+    str_slice: slice | range, columns: list[str]
+) -> tuple[int | None, int | None, int | None]:
+    start = (
+        columns.index(cast("str", str_slice.start))
+        if str_slice.start is not None
+        else None
+    )
+    stop = (
+        columns.index(cast("str", str_slice.stop)) + 1
+        if str_slice.stop is not None
+        else None
+    )
+    step = str_slice.step
+    return (start, stop, step)

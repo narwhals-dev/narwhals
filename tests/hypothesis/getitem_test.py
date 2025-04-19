@@ -155,6 +155,18 @@ def test_getitem(
         )
     )
 
+    # NotImplementedError: Slicing with step is not supported on PyArrow tables
+    assume(
+        not (
+            pandas_or_pyarrow_constructor is pyarrow_table_constructor
+            and isinstance(selector, tuple)
+            and (
+                (isinstance(selector[0], slice) and selector[0].step is not None)
+                or (isinstance(selector[1], slice) and selector[1].step is not None)
+            )
+        )
+    )
+
     # IndexError: Offset must be non-negative (pyarrow does not support negative indexing)
     assume(
         not (
@@ -227,7 +239,7 @@ def test_getitem(
     df_polars = nw.from_native(pl.DataFrame(TEST_DATA))
     try:
         result_polars = df_polars[selector]
-    except TypeError:
+    except TypeError:  # pragma: no cover
         # If the selector fails on polars, then skip the test.
         # e.g. df[0, 'a'] fails, suggesting to use DataFrame.item to extract a single
         # element.
@@ -240,6 +252,8 @@ def test_getitem(
 
     if isinstance(result_polars, nw.Series):
         assert_equal_data({"a": result_other}, {"a": result_polars.to_list()})
+    elif isinstance(result_polars, (str, int)):  # pragma: no cover
+        assert result_polars == result_other
     else:
         assert_equal_data(
             result_other,

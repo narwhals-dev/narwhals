@@ -14,13 +14,18 @@ import polars as pl
 from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import catch_polars_exception
-from narwhals._polars.utils import convert_str_slice_to_int_slice
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import native_to_narwhals_dtype
+from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import _into_arrow_table
-from narwhals.utils import is_sequence_but_not_str
+from narwhals.utils import convert_str_slice_to_int_slice
+from narwhals.utils import is_compliant_series
+from narwhals.utils import is_index_selector
+from narwhals.utils import is_sequence_like
+from narwhals.utils import is_sequence_like_ints
+from narwhals.utils import is_slice_none
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import requires
@@ -258,53 +263,60 @@ class PolarsDataFrame:
         return self.native.shape
 
     def __getitem__(self, item: Any) -> Any:
+        rows, columns = item
+        if is_compliant_series(rows):
+            rows = rows.native
+        if is_compliant_series(columns):
+            columns = columns.native
         if self._backend_version > (0, 20, 30):
-            return self._from_native_object(self.native.__getitem__(item))
+            return self._from_native_object(self.native.__getitem__((rows, columns)))
         else:  # pragma: no cover
             # TODO(marco): we can delete this branch after Polars==0.20.30 becomes the minimum
             # Polars version we support
-            if isinstance(item, tuple):
-                item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)
+            rows = list(rows) if isinstance(rows, tuple) else rows
+            columns = list(columns) if isinstance(columns, tuple) else columns
+            if is_numpy_array_1d(columns):
+                columns = columns.tolist()
 
-            columns = self.columns
-            if isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], slice):
-                if item[1] == slice(None):
-                    if isinstance(item[0], Sequence) and not len(item[0]):
-                        return self._with_native(self.native[0:0])
-                    return self._with_native(self.native.__getitem__(item[0]))
-                if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
-                    start, stop, step = convert_str_slice_to_int_slice(item[1], columns)
-                    return self._with_native(
-                        self.native.select(columns[start:stop:step]).__getitem__(item[0])
+            is_int_col_indexer = is_index_selector(columns)
+            native = self.native
+            if not is_slice_none(columns):
+                if hasattr(columns, "__len__") and len(columns) == 0:
+                    native = native.select()
+                if is_int_col_indexer and not isinstance(columns, (slice, range)):
+                    native = native[:, columns]
+                elif is_int_col_indexer and isinstance(columns, (slice, range)):
+                    native = native.select(
+                        self.columns[slice(columns.start, columns.stop, columns.step)]
                     )
-                if isinstance(item[1].start, int) or isinstance(item[1].stop, int):
-                    return self._with_native(
-                        self.native.select(
-                            columns[item[1].start : item[1].stop : item[1].step]
-                        ).__getitem__(item[0])
+                elif isinstance(columns, (slice, range)):
+                    native = native.select(
+                        self.columns[
+                            slice(*convert_str_slice_to_int_slice(columns, self.columns))
+                        ]
                     )
-                msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
-                raise TypeError(msg)  # pragma: no cover
+                elif is_int_col_indexer:
+                    native = native[:, columns]
+                elif is_sequence_like(columns):
+                    native = native.select(columns)
+                else:
+                    msg = "Unreachable code"
+                    raise AssertionError(msg)
 
-            if (
-                isinstance(item, tuple)
-                and (len(item) == 2)
-                and is_sequence_but_not_str(item[1])
-                and (len(item[1]) == 0)
-            ):
-                result = self.native.select(item[1])
-            elif isinstance(item, slice) and (
-                isinstance(item.start, str) or isinstance(item.stop, str)
-            ):
-                start, stop, step = convert_str_slice_to_int_slice(item, columns)
-                return self._with_native(self.native.select(columns[start:stop:step]))
-            elif is_sequence_but_not_str(item) and (len(item) == 0):
-                result = self.native.slice(0, 0)
-            else:
-                result = self.native.__getitem__(item)
-            if isinstance(result, pl.Series):
-                return PolarsSeries.from_native(result, context=self)
-            return self._from_native_object(result)
+            if not is_slice_none(rows):
+                if isinstance(rows, int):
+                    native = native[[rows], :]
+                elif (
+                    isinstance(rows, (slice, range))
+                    or is_sequence_like_ints(rows)
+                    or isinstance(rows, pl.Series)
+                ):
+                    native = native[rows, :]
+                else:
+                    msg = "Unreachable code"
+                    raise AssertionError(msg)
+
+            return self._with_native(native)
 
     def simple_select(self, *column_names: str) -> Self:
         return self._with_native(self.native.select(*column_names))

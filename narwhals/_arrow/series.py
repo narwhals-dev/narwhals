@@ -70,6 +70,7 @@ if TYPE_CHECKING:
     from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
+    from narwhals.typing import _IntIndexer
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -406,20 +407,24 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def name(self) -> str:
         return self._name
 
-    @overload
-    def __getitem__(self, idx: int) -> Any: ...
+    def _gather(self, item: _IntIndexer) -> Self:
+        if len(item) == 0:
+            return self._with_native(self.native.slice(0, 0))
+        if self._backend_version < (18,) and isinstance(item, tuple):
+            item = list(item)
+        return self._with_native(self.native.take(item))
 
-    @overload
-    def __getitem__(self, idx: slice | Sequence[int] | ArrowChunkedArray) -> Self: ...
-
-    def __getitem__(
-        self, idx: int | slice | Sequence[int] | ArrowChunkedArray
-    ) -> Any | Self:
-        if isinstance(idx, int):
-            return maybe_extract_py_scalar(self.native[idx], return_py_scalar=True)
-        if isinstance(idx, (Sequence, pa.ChunkedArray)):
-            return self._with_native(self.native.take(idx))
-        return self._with_native(self.native[idx])
+    def _gather_slice(self, item: slice | range) -> Self:
+        start = item.start or 0
+        stop = item.stop if item.stop is not None else len(self.native)
+        if start < 0:
+            start = len(self.native) + start
+        if stop < 0:
+            stop = len(self.native) + stop
+        if item.step is not None and item.step != 1:
+            msg = "Slicing with step is not supported on PyArrow tables"
+            raise NotImplementedError(msg)
+        return self._with_native(self.native.slice(start, stop - start))
 
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
         import numpy as np  # ignore-banned-import
@@ -911,7 +916,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         result = self._with_native(
             pc.if_else((count_in_window >= min_samples).native, rolling_sum.native, None)
         )
-        return result[offset:]
+        return result._gather_slice(slice(offset, None))
 
     def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         min_samples = min_samples if min_samples is not None else window_size
@@ -940,7 +945,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             )
             / count_in_window
         )
-        return result[offset:]
+        return result._gather_slice(slice(offset, None))
 
     def rolling_var(
         self, window_size: int, *, min_samples: int, center: bool, ddof: int
@@ -983,7 +988,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             )
         ) / self._with_native(pc.max_element_wise((count_in_window - ddof).native, 0))
 
-        return result[offset:]
+        return result._gather_slice(slice(offset, None, None))
 
     def rolling_std(
         self, window_size: int, *, min_samples: int, center: bool, ddof: int
