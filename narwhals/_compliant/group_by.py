@@ -13,12 +13,11 @@ from typing import Mapping
 from typing import Sequence
 from typing import TypeVar
 
-from narwhals._compliant.typing import CompliantDataFrameT_co
+from narwhals._compliant.typing import CompliantDataFrameT
 from narwhals._compliant.typing import CompliantExprAny
 from narwhals._compliant.typing import CompliantExprT_contra
 from narwhals._compliant.typing import CompliantFrameT
-from narwhals._compliant.typing import CompliantFrameT_co
-from narwhals._compliant.typing import CompliantLazyFrameT_co
+from narwhals._compliant.typing import CompliantLazyFrameT
 from narwhals._compliant.typing import DepthTrackingExprAny
 from narwhals._compliant.typing import DepthTrackingExprT_contra
 from narwhals._compliant.typing import EagerExprT_contra
@@ -60,18 +59,18 @@ NarwhalsAggregation: TypeAlias = Literal[
 _RE_LEAF_NAME: re.Pattern[str] = re.compile(r"(\w+->)")
 
 
-class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
+class CompliantGroupBy(Protocol38[CompliantFrameT, CompliantExprT_contra]):
     _compliant_frame: Any
     _keys: list[str] | list[CompliantExprAny]
     _output_key_names: list[str]
 
     @property
-    def compliant(self) -> CompliantFrameT_co:
+    def compliant(self) -> CompliantFrameT:
         return self._compliant_frame  # type: ignore[no-any-return]
 
     def __init__(
         self,
-        compliant_frame: CompliantFrameT_co,
+        compliant_frame: CompliantFrameT,
         keys: Sequence[CompliantExprT_contra] | Sequence[str],
         /,
         *,
@@ -118,7 +117,6 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
             else key.alias(f"{new_name}{suffix_token}")
             for key, new_name in zip(keys, output_names)
         ]
-
         return (
             compliant_frame.with_columns(*safe_keys),
             compliant_frame._evaluate_aliases(*safe_keys),
@@ -132,19 +130,19 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     ) -> tuple[CompliantFrameT, list[str], list[str]]:
         return compliant_frame, list(keys), list(keys)
 
-    def agg(self, *exprs: CompliantExprT_contra) -> CompliantFrameT_co: ...
+    def agg(self, *exprs: CompliantExprT_contra) -> CompliantFrameT: ...
 
 
 class DataFrameGroupBy(
-    CompliantGroupBy[CompliantDataFrameT_co, CompliantExprT_contra],
-    Protocol38[CompliantDataFrameT_co, CompliantExprT_contra],
+    CompliantGroupBy[CompliantDataFrameT, CompliantExprT_contra],
+    Protocol38[CompliantDataFrameT, CompliantExprT_contra],
 ):
-    def __iter__(self) -> Iterator[tuple[Any, CompliantDataFrameT_co]]: ...
+    def __iter__(self) -> Iterator[tuple[Any, CompliantDataFrameT]]: ...
 
 
 class DepthTrackingGroupBy(
-    CompliantGroupBy[CompliantFrameT_co, DepthTrackingExprT_contra],
-    Protocol38[CompliantFrameT_co, DepthTrackingExprT_contra, NativeAggregationT_co],
+    CompliantGroupBy[CompliantFrameT, DepthTrackingExprT_contra],
+    Protocol38[CompliantFrameT, DepthTrackingExprT_contra, NativeAggregationT_co],
 ):
     """`CompliantGroupBy` variant, deals with `Eager` and other backends that utilize `CompliantExpr._depth`."""
 
@@ -197,15 +195,15 @@ class DepthTrackingGroupBy(
 
 
 class EagerGroupBy(
-    DepthTrackingGroupBy[CompliantDataFrameT_co, EagerExprT_contra, str],
-    DataFrameGroupBy[CompliantDataFrameT_co, EagerExprT_contra],
-    Protocol38[CompliantDataFrameT_co, EagerExprT_contra],
+    DepthTrackingGroupBy[CompliantDataFrameT, EagerExprT_contra, str],
+    DataFrameGroupBy[CompliantDataFrameT, EagerExprT_contra],
+    Protocol38[CompliantDataFrameT, EagerExprT_contra],
 ): ...
 
 
 class LazyGroupBy(
-    CompliantGroupBy[CompliantLazyFrameT_co, LazyExprT_contra],
-    Protocol38[CompliantLazyFrameT_co, LazyExprT_contra, NativeExprT_co],
+    CompliantGroupBy[CompliantLazyFrameT, LazyExprT_contra],
+    Protocol38[CompliantLazyFrameT, LazyExprT_contra, NativeExprT_co],
 ):
     def _evaluate_expr(self, expr: LazyExprT_contra, /) -> Iterator[NativeExprT_co]:
         output_names = expr._evaluate_output_names(self.compliant)
