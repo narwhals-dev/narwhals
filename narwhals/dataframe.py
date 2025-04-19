@@ -34,10 +34,10 @@ from narwhals.utils import flatten
 from narwhals.utils import generate_repr
 from narwhals.utils import is_compliant_dataframe
 from narwhals.utils import is_compliant_lazyframe
-from narwhals.utils import is_int_like_indexer
+from narwhals.utils import is_index_selector
 from narwhals.utils import is_list_of
-from narwhals.utils import is_null_slice
 from narwhals.utils import is_sequence_like
+from narwhals.utils import is_slice_none
 from narwhals.utils import issue_deprecation_warning
 from narwhals.utils import parse_version
 from narwhals.utils import supports_arrow_c_stream
@@ -892,11 +892,11 @@ class DataFrame(BaseFrame[DataFrameT]):
                 )
                 raise TypeError(msg)
             # These are so heavily overloaded that we just ignore the types for now.
-            rows = None if not item or is_null_slice(item[0]) else item[0]
-            columns = None if len(item) < 2 or is_null_slice(item[1]) else item[1]
+            rows = None if not item or is_slice_none(item[0]) else item[0]
+            columns = None if len(item) < 2 or is_slice_none(item[1]) else item[1]
             if rows is None and columns is None:
                 return self
-        elif is_int_like_indexer(item):
+        elif is_index_selector(item):
             rows = item
             columns = None
         elif is_sequence_like(item) or isinstance(item, (slice, str)):

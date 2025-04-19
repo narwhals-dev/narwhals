@@ -23,8 +23,8 @@ from narwhals._translate import FromNative
 from narwhals._translate import NumpyConvertible
 from narwhals.utils import _StoresCompliant
 from narwhals.utils import _StoresNative
-from narwhals.utils import is_null_slice
 from narwhals.utils import is_sequence_like_ints
+from narwhals.utils import is_slice_none
 from narwhals.utils import unstable
 
 if TYPE_CHECKING:
@@ -323,7 +323,7 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
     def _gather_slice(self, indices: slice | range) -> Self: ...
 
     def __getitem__(self, item: Any) -> Self:
-        if is_null_slice(item):
+        if is_slice_none(item):
             return self
         if isinstance(item, int):
             return self._gather([item])

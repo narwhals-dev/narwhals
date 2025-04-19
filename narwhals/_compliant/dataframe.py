@@ -25,10 +25,10 @@ from narwhals._translate import NumpyConvertible
 from narwhals.utils import Version
 from narwhals.utils import _StoresNative
 from narwhals.utils import deprecated
-from narwhals.utils import is_int_like_indexer
-from narwhals.utils import is_null_slice
+from narwhals.utils import is_index_selector
 from narwhals.utils import is_sequence_like
 from narwhals.utils import is_sequence_like_ints
+from narwhals.utils import is_slice_none
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -391,9 +391,9 @@ class EagerDataFrame(
     def __getitem__(self, item: tuple[Any, Any]) -> Self:
         rows, columns = item
 
-        is_int_col_indexer = is_int_like_indexer(columns)
+        is_int_col_indexer = is_index_selector(columns)
         compliant = self
-        if not is_null_slice(columns):
+        if not is_slice_none(columns):
             if hasattr(columns, "__len__") and len(columns) == 0:
                 return compliant.select()
             if is_int_col_indexer and not isinstance(columns, slice):
@@ -408,7 +408,7 @@ class EagerDataFrame(
                 msg = "Unreachable code"
                 raise AssertionError(msg)
 
-        if not is_null_slice(rows):
+        if not is_slice_none(rows):
             is_native_series = self.__narwhals_namespace__()._series._is_native
             if isinstance(rows, int):
                 compliant = compliant._gather([rows])

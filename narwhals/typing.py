@@ -318,9 +318,15 @@ _StrIndexer: TypeAlias = Any  # noqa: PYI047
 
 # Annotations for `__getitem__` methods
 _Slice: TypeAlias = "slice[Any, Any, Any]"
+_SliceNone: TypeAlias = "slice[None, None, None]"
+_SliceIndex: TypeAlias = (
+    "slice[int, Any, Any] | slice[Any, int, Any] | slice[None, None, int] | _SliceNone"
+)
+"""E.g. `[1:]` or `[:3]` or `[::2]`."""
+
 SingleIndexSelector: TypeAlias = int
 SingleNameSelector: TypeAlias = str
-MultiIndexSelector: TypeAlias = "_Slice | Sequence[int] | Series[Any] | _1DArray"
+MultiIndexSelector: TypeAlias = "_SliceIndex | Sequence[int] | Series[Any] | _1DArray"
 MultiNameSelector: TypeAlias = "_Slice | Sequence[str] | Series[Any] | _1DArray"
 SingleColSelector: TypeAlias = "SingleIndexSelector | SingleNameSelector"
 MultiColSelector: TypeAlias = "MultiIndexSelector | MultiNameSelector"

@@ -93,10 +93,14 @@ if TYPE_CHECKING:
     from narwhals.typing import DataFrameLike
     from narwhals.typing import DTypes
     from narwhals.typing import IntoSeriesT
+    from narwhals.typing import MultiIndexSelector
+    from narwhals.typing import SingleIndexSelector
     from narwhals.typing import SizeUnit
     from narwhals.typing import SupportsNativeNamespace
     from narwhals.typing import TimeUnit
     from narwhals.typing import _1DArray
+    from narwhals.typing import _SliceIndex
+    from narwhals.typing import _SliceNone
 
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
@@ -1325,27 +1329,25 @@ def is_sequence_like(
     )
 
 
-def is_slice_ints(obj: object) -> bool:
+def is_slice_index(obj: _SliceIndex | Any) -> TypeIs[_SliceIndex]:
     return isinstance(obj, slice) and (
-        isinstance(obj.start, int)  # e.g. [1:]
-        or isinstance(obj.stop, int)  # e.g. [:3]
-        or (obj.start is None and obj.stop is None)  # e.g. [::2]
+        isinstance(obj.start, int)
+        or isinstance(obj.stop, int)
+        or (isinstance(obj.step, int) and obj.start is None and obj.stop is None)
     )
 
 
-def is_int_like_indexer(cols: object) -> bool:
-    from narwhals.series import Series
+def is_slice_none(obj: object) -> TypeIs[_SliceNone]:
+    return isinstance(obj, slice) and obj == slice(None)
 
+
+def is_index_selector(cols: SingleIndexSelector | MultiIndexSelector | Any) -> bool:
     return (
         isinstance(cols, int)
         or is_sequence_like_ints(cols)
-        or is_slice_ints(cols)
-        or (isinstance(cols, Series) and cols.dtype.is_integer())
+        or is_slice_index(cols)
+        or (is_narwhals_series(cols) and cols.dtype.is_integer())
     )
-
-
-def is_null_slice(obj: object) -> TypeIs[slice[None, None, None]]:
-    return isinstance(obj, slice) and obj == slice(None)
 
 
 def is_list_of(obj: Any, tp: type[_T]) -> TypeIs[list[type[_T]]]:

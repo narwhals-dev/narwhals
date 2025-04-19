@@ -21,10 +21,10 @@ from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import _into_arrow_table
 from narwhals.utils import convert_str_slice_to_int_slice
-from narwhals.utils import is_int_like_indexer
-from narwhals.utils import is_null_slice
+from narwhals.utils import is_index_selector
 from narwhals.utils import is_sequence_like
 from narwhals.utils import is_sequence_like_ints
+from narwhals.utils import is_slice_none
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import requires
@@ -273,9 +273,9 @@ class PolarsDataFrame:
             if is_numpy_array_1d(columns):
                 columns = columns.tolist()
 
-            is_int_col_indexer = is_int_like_indexer(columns)
+            is_int_col_indexer = is_index_selector(columns)
             native = self.native
-            if not is_null_slice(columns):
+            if not is_slice_none(columns):
                 if hasattr(columns, "__len__") and len(columns) == 0:
                     native = native.select()
                 if is_int_col_indexer and not isinstance(columns, (slice, range)):
@@ -298,7 +298,7 @@ class PolarsDataFrame:
                     msg = "Unreachable code"
                     raise AssertionError(msg)
 
-            if not is_null_slice(rows):
+            if not is_slice_none(rows):
                 if isinstance(rows, int):
                     native = native[[rows], :]
                 elif (
