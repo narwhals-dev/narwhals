@@ -27,10 +27,9 @@ def test_convert_time_zone(
         or ("pyarrow_table" in str(constructor) and is_windows())
         or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
         or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
-        or ("cudf" in str(constructor))
-        or ("duckdb" in str(constructor))
-        or ("pyspark" in str(constructor))
     ):
+        pytest.skip()
+    if any(x in str(constructor) for x in ("cudf", "duckdb", "pyspark")):
         request.applymarker(pytest.mark.xfail)
     data = {
         "a": [
@@ -58,8 +57,9 @@ def test_convert_time_zone_series(
         or ("pyarrow_table" in str(constructor_eager) and is_windows())
         or ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1))
         or ("modin_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1))
-        or ("cudf" in str(constructor_eager))
     ):
+        pytest.skip()
+    if any(x in str(constructor_eager) for x in ("cudf",)):
         request.applymarker(pytest.mark.xfail)
     data = {
         "a": [
@@ -87,14 +87,13 @@ def test_convert_time_zone_from_none(
         or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
         or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
         or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
-        or ("cudf" in str(constructor))
-        or ("duckdb" in str(constructor))
-        or ("pyspark" in str(constructor))
     ):
+        pytest.skip()
+    if any(x in str(constructor) for x in ("cudf", "duckdb", "pyspark")):
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
         # polars used to disallow this
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     data = {
         "a": [
             datetime(2020, 1, 1, tzinfo=timezone.utc),
