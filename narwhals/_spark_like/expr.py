@@ -289,104 +289,80 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         )
 
     def __eq__(self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
-        return self._with_callable(
-            lambda _input, other: _input.__eq__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__eq__(other), other=other)
 
     def __ne__(self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
-        return self._with_callable(
-            lambda _input, other: _input.__ne__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__ne__(other), other=other)
 
     def __add__(self, other: SparkLikeExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: _input.__add__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__add__(other), other=other)
 
     def __sub__(self, other: SparkLikeExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: _input.__sub__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__sub__(other), other=other)
 
     def __rsub__(self, other: SparkLikeExpr) -> Self:
         return self._with_callable(
-            lambda _input, other: other.__sub__(_input), other=other
+            lambda expr, other: other.__sub__(expr), other=other
         ).alias("literal")
 
     def __mul__(self, other: SparkLikeExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: _input.__mul__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__mul__(other), other=other)
 
     def __truediv__(self, other: SparkLikeExpr) -> Self:
         return self._with_callable(
-            lambda _input, other: _input.__truediv__(other), other=other
+            lambda expr, other: expr.__truediv__(other), other=other
         )
 
     def __rtruediv__(self, other: SparkLikeExpr) -> Self:
         return self._with_callable(
-            lambda _input, other: other.__truediv__(_input), other=other
+            lambda expr, other: other.__truediv__(expr), other=other
         ).alias("literal")
 
     def __floordiv__(self, other: SparkLikeExpr) -> Self:
-        def _floordiv(_input: Column, other: Column) -> Column:
-            return self._F.floor(_input / other)
+        def _floordiv(expr: Column, other: Column) -> Column:
+            return self._F.floor(expr / other)
 
         return self._with_callable(_floordiv, other=other)
 
     def __rfloordiv__(self, other: SparkLikeExpr) -> Self:
-        def _rfloordiv(_input: Column, other: Column) -> Column:
-            return self._F.floor(other / _input)
+        def _rfloordiv(expr: Column, other: Column) -> Column:
+            return self._F.floor(other / expr)
 
         return self._with_callable(_rfloordiv, other=other).alias("literal")
 
     def __pow__(self, other: SparkLikeExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: _input.__pow__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__pow__(other), other=other)
 
     def __rpow__(self, other: SparkLikeExpr) -> Self:
         return self._with_callable(
-            lambda _input, other: other.__pow__(_input), other=other
+            lambda expr, other: other.__pow__(expr), other=other
         ).alias("literal")
 
     def __mod__(self, other: SparkLikeExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: _input.__mod__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__mod__(other), other=other)
 
     def __rmod__(self, other: SparkLikeExpr) -> Self:
         return self._with_callable(
-            lambda _input, other: other.__mod__(_input), other=other
+            lambda expr, other: other.__mod__(expr), other=other
         ).alias("literal")
 
     def __ge__(self, other: SparkLikeExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: _input.__ge__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__ge__(other), other=other)
 
     def __gt__(self, other: SparkLikeExpr) -> Self:
-        return self._with_callable(lambda _input, other: _input > other, other=other)
+        return self._with_callable(lambda expr, other: expr > other, other=other)
 
     def __le__(self, other: SparkLikeExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: _input.__le__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__le__(other), other=other)
 
     def __lt__(self, other: SparkLikeExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: _input.__lt__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__lt__(other), other=other)
 
     def __and__(self, other: SparkLikeExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: _input.__and__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__and__(other), other=other)
 
     def __or__(self, other: SparkLikeExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: _input.__or__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__or__(other), other=other)
 
     def __invert__(self) -> Self:
         invert = cast("Callable[..., Column]", operator.invert)
