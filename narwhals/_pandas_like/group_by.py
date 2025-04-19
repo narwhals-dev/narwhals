@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import collections
 import warnings
-from math import isnan
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import ClassVar
@@ -52,7 +51,6 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
         )
         # Drop index to avoid potential collisions:
         # https://github.com/narwhals-dev/narwhals/issues/1907.
-
         if set(self.compliant.native.index.names).intersection(self.compliant.columns):
             native_frame = self.compliant.native.reset_index(drop=True)
         else:
@@ -306,25 +304,10 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
                 message=".*a length 1 tuple will be returned",
                 category=FutureWarning,
             )
-            implementation = self.compliant._implementation
-            backend_version = self.compliant._backend_version
 
-            if implementation.is_pandas() and backend_version <= (1, 1, 5):
-                for key, _indices in self._grouped.groups.items():
-                    tuplefied_key = tupleify(key)
-                    if self._drop_null_keys and any(
-                        (k is None) or (isinstance(k, float) and isnan(k))
-                        for k in tuplefied_key
-                    ):
-                        continue
-                    yield (
-                        key,
-                        self.compliant._with_native(self._df.native.iloc[_indices]),
-                    )
-
-            else:
-                for key, _indices in self._grouped.indices.items():
-                    yield (
-                        key,
-                        self.compliant._with_native(self._df.native.iloc[_indices]),
-                    )
+            ns = self._df.__native_namespace__()
+            for key, _indices in self._grouped.groups.items():
+                tuplefied_key = tupleify(key)
+                if self._drop_null_keys and any(ns.isna(k) for k in tuplefied_key):
+                    continue
+                yield key, self.compliant._with_native(self._df.native.iloc[_indices])

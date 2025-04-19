@@ -1494,7 +1494,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Arguments:
             *keys: Column(s) to group by. Accepts expression input. Strings are parsed as column names.
-                Multiple columns should can be passed as a list.
+                Multiple columns can be passed as a list.
             drop_null_keys: if True, then groups where any key is null won't be included
                 in the result.
 
@@ -2786,8 +2786,8 @@ class LazyFrame(BaseFrame[FrameT]):
 
         Arguments:
             *keys:
-                Column(s) to group by. Accepts expression input. Strings are parsed as column names.
-                Multiple columns should can be passed as a list.
+                Column(s) to group by. Accepts expression input. Strings are
+                parsed as column names. Multiple columns can be passed as a list.
             drop_null_keys: if True, then groups where any key is null won't be
                 included in the result.
 
