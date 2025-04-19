@@ -14,9 +14,10 @@ from typing import Sequence
 from typing import TypeVar
 
 from narwhals._compliant.typing import CompliantDataFrameT
-from narwhals._compliant.typing import CompliantExprAny
+from narwhals._compliant.typing import CompliantDataFrameT_co
 from narwhals._compliant.typing import CompliantExprT_contra
 from narwhals._compliant.typing import CompliantFrameT
+from narwhals._compliant.typing import CompliantFrameT_co
 from narwhals._compliant.typing import CompliantLazyFrameT
 from narwhals._compliant.typing import DepthTrackingExprAny
 from narwhals._compliant.typing import DepthTrackingExprT_contra
@@ -59,24 +60,36 @@ NarwhalsAggregation: TypeAlias = Literal[
 _RE_LEAF_NAME: re.Pattern[str] = re.compile(r"(\w+->)")
 
 
-class CompliantGroupBy(Protocol38[CompliantFrameT, CompliantExprT_contra]):
+class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     _compliant_frame: Any
-    _keys: list[str] | list[CompliantExprAny]
-    _output_key_names: list[str]
 
     @property
-    def compliant(self) -> CompliantFrameT:
+    def compliant(self) -> CompliantFrameT_co:
         return self._compliant_frame  # type: ignore[no-any-return]
 
     def __init__(
         self,
-        compliant_frame: CompliantFrameT,
+        compliant_frame: CompliantFrameT_co,
         keys: Sequence[CompliantExprT_contra] | Sequence[str],
         /,
         *,
         drop_null_keys: bool,
     ) -> None: ...
 
+    def agg(self, *exprs: CompliantExprT_contra) -> CompliantFrameT_co: ...
+
+
+class DataFrameGroupBy(
+    CompliantGroupBy[CompliantDataFrameT_co, CompliantExprT_contra],
+    Protocol38[CompliantDataFrameT_co, CompliantExprT_contra],
+):
+    def __iter__(self) -> Iterator[tuple[Any, CompliantDataFrameT_co]]: ...
+
+
+class ParseKeysGroupBy(
+    CompliantGroupBy[CompliantFrameT, CompliantExprT_contra],
+    Protocol38[CompliantFrameT, CompliantExprT_contra],
+):
     def _parse_keys(
         self,
         compliant_frame: CompliantFrameT,
@@ -130,18 +143,9 @@ class CompliantGroupBy(Protocol38[CompliantFrameT, CompliantExprT_contra]):
     ) -> tuple[CompliantFrameT, list[str], list[str]]:
         return compliant_frame, list(keys), list(keys)
 
-    def agg(self, *exprs: CompliantExprT_contra) -> CompliantFrameT: ...
-
-
-class DataFrameGroupBy(
-    CompliantGroupBy[CompliantDataFrameT, CompliantExprT_contra],
-    Protocol38[CompliantDataFrameT, CompliantExprT_contra],
-):
-    def __iter__(self) -> Iterator[tuple[Any, CompliantDataFrameT]]: ...
-
 
 class DepthTrackingGroupBy(
-    CompliantGroupBy[CompliantFrameT, DepthTrackingExprT_contra],
+    ParseKeysGroupBy[CompliantFrameT, DepthTrackingExprT_contra],
     Protocol38[CompliantFrameT, DepthTrackingExprT_contra, NativeAggregationT_co],
 ):
     """`CompliantGroupBy` variant, deals with `Eager` and other backends that utilize `CompliantExpr._depth`."""
@@ -202,9 +206,13 @@ class EagerGroupBy(
 
 
 class LazyGroupBy(
+    ParseKeysGroupBy[CompliantLazyFrameT, LazyExprT_contra],
     CompliantGroupBy[CompliantLazyFrameT, LazyExprT_contra],
     Protocol38[CompliantLazyFrameT, LazyExprT_contra, NativeExprT_co],
 ):
+    _keys: list[str]
+    _output_key_names: list[str]
+
     def _evaluate_expr(self, expr: LazyExprT_contra, /) -> Iterator[NativeExprT_co]:
         output_names = expr._evaluate_output_names(self.compliant)
         aliases = (

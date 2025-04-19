@@ -6,6 +6,7 @@ from typing import Sequence
 from typing import cast
 
 from narwhals.utils import flatten
+from narwhals.utils import is_sequence_of
 from narwhals.utils import tupleify
 
 if TYPE_CHECKING:
@@ -19,7 +20,6 @@ if TYPE_CHECKING:
 
 class PolarsGroupBy:
     _compliant_frame: PolarsDataFrame
-    _keys: list[PolarsExpr] | list[str]
     _grouped: NativeGroupBy
     _drop_null_keys: bool
 
@@ -38,25 +38,21 @@ class PolarsGroupBy:
         self._compliant_frame = df
         self._drop_null_keys = drop_null_keys
 
-        if all(isinstance(k, str) for k in keys):
-            self._keys = cast("list[str]", list(keys))
-            self._output_names = self._keys.copy()
-            self._grouped = self.compliant.native.group_by(self._keys)
+        if is_sequence_of(keys, str):
+            self._output_names = list(keys)
+            self._grouped = self.compliant.native.group_by(list(keys))
 
         else:
-            self._keys = cast("list[PolarsExpr]", list(keys))
             self._output_names = flatten(
                 [
                     arg.native.meta.root_names()
                     if arg.native.meta.has_multiple_outputs()
                     else arg.native.meta.output_name()
-                    for arg in self._keys
+                    for arg in keys
                 ]
             )
 
-            self._grouped = self.compliant.native.group_by(
-                *[arg.native for arg in self._keys]
-            )
+            self._grouped = self.compliant.native.group_by(*[arg.native for arg in keys])
 
     def agg(self, *aggs: PolarsExpr) -> PolarsDataFrame:
         agg_result = self._grouped.agg(arg.native for arg in aggs)
@@ -76,7 +72,6 @@ class PolarsGroupBy:
 
 class PolarsLazyGroupBy:
     _compliant_frame: PolarsLazyFrame
-    _keys: list[PolarsExpr] | list[str]
     _grouped: NativeLazyGroupBy
     _drop_null_keys: bool
     _output_names: list[str]
@@ -95,26 +90,21 @@ class PolarsLazyGroupBy:
     ) -> None:
         self._compliant_frame = df
         self._drop_null_keys = drop_null_keys
-
-        if all(isinstance(k, str) for k in keys):
-            self._keys = cast("list[str]", list(keys))
-            self._output_names = self._keys.copy()
-            self._grouped = self.compliant.native.group_by(self._keys)
+        if is_sequence_of(keys, str):
+            self._output_names = list(keys)
+            self._grouped = self.compliant.native.group_by(keys)
 
         else:
-            self._keys = cast("list[PolarsExpr]", list(keys))
             self._output_names = flatten(
                 [
                     arg.native.meta.root_names()
                     if arg.native.meta.has_multiple_outputs()
                     else arg.native.meta.output_name()
-                    for arg in self._keys
+                    for arg in keys
                 ]
             )
 
-            self._grouped = self.compliant.native.group_by(
-                *[arg.native for arg in self._keys]
-            )
+            self._grouped = self.compliant.native.group_by(*[arg.native for arg in keys])
 
     def agg(self, *aggs: PolarsExpr) -> PolarsLazyFrame:
         agg_result = self._grouped.agg(arg.native for arg in aggs)
