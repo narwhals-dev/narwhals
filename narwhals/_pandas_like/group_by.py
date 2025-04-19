@@ -14,7 +14,6 @@ from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_columns
 from narwhals.utils import find_stacklevel
-from narwhals.utils import tupleify
 
 if TYPE_CHECKING:
     from narwhals._compliant.group_by import NarwhalsAggregation
@@ -305,23 +304,8 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
                 category=FutureWarning,
             )
 
-            implementation = self.compliant._implementation
-            backend_version = self.compliant._backend_version
-            ns = self._df.__native_namespace__()
-
-            if implementation.is_pandas() and backend_version <= (1, 1, 5):
-                for key, _indices in self._grouped.groups.items():
-                    tuplefied_key = tupleify(key)
-                    if self._drop_null_keys and any(ns.isna(k) for k in tuplefied_key):
-                        continue
-                    yield (
-                        key,
-                        self.compliant._with_native(self._df.native.iloc[_indices]),
-                    )
-
-            else:
-                for key, _indices in self._grouped.indices.items():
-                    yield (
-                        key,
-                        self.compliant._with_native(self._df.native.iloc[_indices]),
-                    )
+            for key, group in self._grouped:
+                yield (
+                    key,
+                    self.compliant._with_native(group).simple_select(*self._df.columns),
+                )
