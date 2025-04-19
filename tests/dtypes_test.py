@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import enum
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
 from typing import TYPE_CHECKING
+from typing import Any
+from typing import Iterable
 from typing import Literal
 
 import numpy as np
@@ -400,3 +403,35 @@ def test_cast_decimal_to_native() -> None:
                 .with_columns(a=nw.col("a").cast(nw.Decimal()))
                 .to_native()
             )
+
+
+@pytest.mark.parametrize(
+    "categories",
+    [
+        ["a", "b"],
+        [np.str_("a"), np.str_("b")],
+        enum.Enum("Test", "a b"),
+        [1, 2, 3],
+    ],
+)
+def test_enum_valid(categories: Iterable[Any] | type[enum.Enum]) -> None:
+    dtype = nw.Enum(categories)
+    assert dtype == nw.Enum
+    assert len(dtype.categories) == len([*categories])
+
+
+def test_enum_from_series() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    elements = "a", "d", "e", "b", "c"
+    categories = pl.Series(elements)
+    categories_nw = nw.from_native(categories, series_only=True)
+    assert nw.Enum(categories_nw).categories == elements
+    assert nw.Enum(categories).categories == elements
+
+
+def test_enum_categories_immutable() -> None:
+    dtype = nw.Enum(["a", "b"])
+    with pytest.raises(TypeError, match="does not support item assignment"):
+        dtype.categories[0] = "c"  # type: ignore[index]

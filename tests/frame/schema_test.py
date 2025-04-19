@@ -176,6 +176,19 @@ def test_dtypes() -> None:
     assert df_from_pd.schema == df_from_pd.collect_schema() == expected
     assert {name: df_from_pd[name].dtype for name in df_from_pd.columns} == expected
 
+    df_from_pd = nw.from_native(df_pl.to_pandas(), eager_only=True)
+
+    pure_pd_expected = {
+        **expected,
+        "n": nw.Datetime,
+        "s": nw.Object,
+        "u": nw.Object,
+    }
+    assert df_from_pd.schema == df_from_pd.collect_schema() == pure_pd_expected
+    assert {
+        name: df_from_pd[name].dtype for name in df_from_pd.columns
+    } == pure_pd_expected
+
     df_from_pa = nw.from_native(df_pl.to_arrow(), eager_only=True)
 
     assert df_from_pa.schema == df_from_pa.collect_schema() == expected

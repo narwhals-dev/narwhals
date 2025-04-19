@@ -9,6 +9,7 @@ from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow
 from narwhals.utils import Implementation
+from narwhals.utils import Version
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 from narwhals.utils import parse_version
@@ -24,7 +25,6 @@ if TYPE_CHECKING:
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.expr import DaskExpr
     from narwhals.dtypes import DType
-    from narwhals.utils import Version
 
 
 def maybe_evaluate_expr(df: DaskLazyFrame, obj: DaskExpr | object) -> dx.Series | object:
@@ -125,6 +125,20 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> An
         return "object"  # pragma: no cover
     if isinstance_or_issubclass(dtype, dtypes.Boolean):
         return "bool"
+    if isinstance_or_issubclass(dtype, dtypes.Enum):
+        if version is Version.V1:
+            msg = "Converting to Enum is not supported in narwhals.stable.v1"
+            raise NotImplementedError(msg)
+        if isinstance(dtype, dtypes.Enum):
+            import pandas as pd
+
+            # NOTE: `pandas-stubs.core.dtypes.dtypes.CategoricalDtype.categories` is too narrow
+            # Should be one of the `ListLike*` types
+            # https://github.com/pandas-dev/pandas-stubs/blob/8434bde95460b996323cc8c0fea7b0a8bb00ea26/pandas-stubs/_typing.pyi#L497-L505
+            return pd.CategoricalDtype(dtype.categories, ordered=True)  # pyright: ignore[reportArgumentType]
+        msg = "Can not cast / initialize Enum without categories present"
+        raise ValueError(msg)
+
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
         return "category"
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
