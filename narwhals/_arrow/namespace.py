@@ -25,8 +25,6 @@ from narwhals.utils import Implementation
 from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals._arrow.typing import ArrayOrScalarAny
     from narwhals._arrow.typing import ArrowChunkedArray
     from narwhals._arrow.typing import Incomplete
@@ -53,14 +51,12 @@ class ArrowNamespace(
         return ArrowSeries
 
     # --- not in spec ---
-    def __init__(
-        self: Self, *, backend_version: tuple[int, ...], version: Version
-    ) -> None:
+    def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
         self._backend_version = backend_version
         self._implementation = Implementation.PYARROW
         self._version = version
 
-    def len(self: Self) -> ArrowExpr:
+    def len(self) -> ArrowExpr:
         # coverage bug? this is definitely hit
         return self._expr(  # pragma: no cover
             lambda df: [
@@ -95,7 +91,7 @@ class ArrowNamespace(
             version=self._version,
         )
 
-    def all_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
+    def all_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = chain.from_iterable(expr(df) for expr in exprs)
             return [reduce(operator.and_, align_series_full_broadcast(*series))]
@@ -109,7 +105,7 @@ class ArrowNamespace(
             context=self,
         )
 
-    def any_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
+    def any_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = chain.from_iterable(expr(df) for expr in exprs)
             return [reduce(operator.or_, align_series_full_broadcast(*series))]
@@ -123,7 +119,7 @@ class ArrowNamespace(
             context=self,
         )
 
-    def sum_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
+    def sum_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             it = chain.from_iterable(expr(df) for expr in exprs)
             series = (s.fill_null(0, strategy=None, limit=None) for s in it)
@@ -138,7 +134,7 @@ class ArrowNamespace(
             context=self,
         )
 
-    def mean_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
+    def mean_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         dtypes = import_dtypes_module(self._version)
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
@@ -160,7 +156,7 @@ class ArrowNamespace(
             context=self,
         )
 
-    def min_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
+    def min_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             init_series, *series = list(chain.from_iterable(expr(df) for expr in exprs))
             init_series, *series = align_series_full_broadcast(init_series, *series)
@@ -185,7 +181,7 @@ class ArrowNamespace(
             context=self,
         )
 
-    def max_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
+    def max_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             init_series, *series = list(chain.from_iterable(expr(df) for expr in exprs))
             init_series, *series = align_series_full_broadcast(init_series, *series)
@@ -235,14 +231,14 @@ class ArrowNamespace(
         return pa.concat_tables(dfs)  # type: ignore[arg-type]
 
     @property
-    def selectors(self: Self) -> ArrowSelectorNamespace:
+    def selectors(self) -> ArrowSelectorNamespace:
         return ArrowSelectorNamespace.from_namespace(self)
 
-    def when(self: Self, predicate: ArrowExpr) -> ArrowWhen:
+    def when(self, predicate: ArrowExpr) -> ArrowWhen:
         return ArrowWhen.from_expr(predicate, context=self)
 
     def concat_str(
-        self: Self,
+        self,
         *exprs: ArrowExpr,
         separator: str,
         ignore_nulls: bool,

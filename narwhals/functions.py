@@ -47,7 +47,6 @@ from narwhals.utils import validate_laziness
 if TYPE_CHECKING:
     from types import ModuleType
 
-    from typing_extensions import Self
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
@@ -1494,11 +1493,11 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 
 class When:
-    def __init__(self: Self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
+    def __init__(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
         self._predicate = all_horizontal(*flatten(predicates))
         check_expressions_preserve_length(self._predicate, function_name="when")
 
-    def then(self: Self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
+    def then(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
         return Then(
             lambda plx: apply_n_ary_operation(
                 plx,
@@ -1518,7 +1517,7 @@ class When:
 
 
 class Then(Expr):
-    def otherwise(self: Self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
+    def otherwise(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
         kind = infer_kind(value, str_as_lit=False)
 
         def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:

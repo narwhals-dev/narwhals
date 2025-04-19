@@ -21,7 +21,6 @@ except ModuleNotFoundError:  # pragma: no cover
 if TYPE_CHECKING:
     import pandas as pd
     from pandas.core.groupby import SeriesGroupBy as _PandasSeriesGroupBy
-    from typing_extensions import Self
     from typing_extensions import TypeAlias
 
     from narwhals._compliant.group_by import NarwhalsAggregation
@@ -72,7 +71,7 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
     }
 
     def __init__(
-        self: Self, df: DaskLazyFrame, keys: Sequence[str], /, *, drop_null_keys: bool
+        self, df: DaskLazyFrame, keys: Sequence[str], /, *, drop_null_keys: bool
     ) -> None:
         self._compliant_frame = df
         self._keys: list[str] = list(keys)
@@ -80,7 +79,7 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
             list(self._keys), dropna=drop_null_keys, observed=True
         )
 
-    def agg(self: Self, *exprs: DaskExpr) -> DaskLazyFrame:
+    def agg(self, *exprs: DaskExpr) -> DaskLazyFrame:
         from narwhals._dask.dataframe import DaskLazyFrame
 
         if not exprs:

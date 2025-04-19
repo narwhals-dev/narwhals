@@ -72,7 +72,7 @@ def window_kwargs_to_pandas_equivalent(
 
 class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
     def __init__(
-        self: Self,
+        self,
         call: EvalSeries[PandasLikeDataFrame, PandasLikeSeries],
         *,
         depth: int,
@@ -95,7 +95,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         self._call_kwargs = call_kwargs or {}
         self._metadata: ExprMetadata | None = None
 
-    def __narwhals_namespace__(self: Self) -> PandasLikeNamespace:
+    def __narwhals_namespace__(self) -> PandasLikeNamespace:
         from narwhals._pandas_like.namespace import PandasLikeNamespace
 
         return PandasLikeNamespace(
@@ -171,7 +171,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         )
 
     def ewm_mean(
-        self: Self,
+        self,
         *,
         com: float | None,
         span: float | None,
@@ -192,14 +192,14 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             ignore_nulls=ignore_nulls,
         )
 
-    def cum_sum(self: Self, *, reverse: bool) -> Self:
+    def cum_sum(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_sum", call_kwargs={"reverse": reverse})
 
-    def shift(self: Self, n: int) -> Self:
+    def shift(self, n: int) -> Self:
         return self._reuse_series("shift", call_kwargs={"n": n})
 
     def over(  # noqa: PLR0915
-        self: Self,
+        self,
         partition_by: Sequence[str],
         order_by: Sequence[str] | None,
     ) -> Self:
@@ -307,21 +307,19 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             version=self._version,
         )
 
-    def cum_count(self: Self, *, reverse: bool) -> Self:
+    def cum_count(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_count", call_kwargs={"reverse": reverse})
 
-    def cum_min(self: Self, *, reverse: bool) -> Self:
+    def cum_min(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_min", call_kwargs={"reverse": reverse})
 
-    def cum_max(self: Self, *, reverse: bool) -> Self:
+    def cum_max(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_max", call_kwargs={"reverse": reverse})
 
-    def cum_prod(self: Self, *, reverse: bool) -> Self:
+    def cum_prod(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_prod", call_kwargs={"reverse": reverse})
 
-    def rolling_sum(
-        self: Self, window_size: int, *, min_samples: int, center: bool
-    ) -> Self:
+    def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._reuse_series(
             "rolling_sum",
             call_kwargs={
@@ -331,9 +329,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             },
         )
 
-    def rolling_mean(
-        self: Self, window_size: int, *, min_samples: int, center: bool
-    ) -> Self:
+    def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._reuse_series(
             "rolling_mean",
             call_kwargs={
@@ -344,7 +340,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         )
 
     def rolling_std(
-        self: Self, window_size: int, *, min_samples: int, center: bool, ddof: int
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
         return self._reuse_series(
             "rolling_std",
@@ -357,7 +353,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         )
 
     def rolling_var(
-        self: Self, window_size: int, *, min_samples: int, center: bool, ddof: int
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
         return self._reuse_series(
             "rolling_var",

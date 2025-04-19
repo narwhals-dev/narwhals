@@ -1,10 +1,5 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from typing_extensions import Self
-
 
 class NarwhalsError(ValueError):
     """Base class for all Narwhals exceptions."""
@@ -19,17 +14,17 @@ class FormattedKeyError(KeyError):
     Needed by https://github.com/tensorflow/tensorflow/issues/36857.
     """
 
-    def __init__(self: Self, message: str) -> None:
+    def __init__(self, message: str) -> None:
         self.message = message
 
-    def __str__(self: Self) -> str:
+    def __str__(self) -> str:
         return self.message
 
 
 class ColumnNotFoundError(FormattedKeyError, NarwhalsError):
     """Exception raised when column name isn't present."""
 
-    def __init__(self: Self, message: str) -> None:
+    def __init__(self, message: str) -> None:
         self.message = message
         super().__init__(self.message)
 
@@ -67,7 +62,7 @@ class InvalidOperationError(NarwhalsError):
 class InvalidIntoExprError(TypeError, NarwhalsError):
     """Exception raised when object can't be converted to expression."""
 
-    def __init__(self: Self, message: str) -> None:
+    def __init__(self, message: str) -> None:
         self.message = message
         super().__init__(self.message)
 
@@ -90,7 +85,7 @@ class InvalidIntoExprError(TypeError, NarwhalsError):
 class AnonymousExprError(NarwhalsError):  # pragma: no cover
     """Exception raised when trying to perform operations on anonymous expressions."""
 
-    def __init__(self: Self, message: str) -> None:
+    def __init__(self, message: str) -> None:
         self.message = message
         super().__init__(self.message)
 
@@ -107,7 +102,7 @@ class AnonymousExprError(NarwhalsError):  # pragma: no cover
 class OrderDependentExprError(NarwhalsError):
     """Exception raised when trying to use an order-dependent expressions with LazyFrames."""
 
-    def __init__(self: Self, message: str) -> None:
+    def __init__(self, message: str) -> None:
         self.message = message
         super().__init__(self.message)
 
@@ -115,7 +110,7 @@ class OrderDependentExprError(NarwhalsError):
 class LengthChangingExprError(NarwhalsError):
     """Exception raised when trying to use an expression which changes length with LazyFrames."""
 
-    def __init__(self: Self, message: str) -> None:
+    def __init__(self, message: str) -> None:
         self.message = message
         super().__init__(self.message)
 

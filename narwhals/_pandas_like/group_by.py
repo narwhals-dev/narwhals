@@ -16,8 +16,6 @@ from narwhals._pandas_like.utils import set_columns
 from narwhals.utils import find_stacklevel
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals._compliant.group_by import NarwhalsAggregation
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
@@ -38,7 +36,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
     }
 
     def __init__(
-        self: Self,
+        self,
         df: PandasLikeDataFrame,
         keys: Sequence[str],
         /,
@@ -78,7 +76,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
                 observed=True,
             )
 
-    def agg(self: Self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:  # noqa: PLR0915
+    def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:  # noqa: PLR0915
         implementation = self.compliant._implementation
         backend_version = self.compliant._backend_version
         new_names: list[str] = self._keys.copy()
@@ -296,7 +294,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
             )
         )
 
-    def __iter__(self: Self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
+    def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore",
