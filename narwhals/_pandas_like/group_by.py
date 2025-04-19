@@ -305,9 +305,23 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
                 category=FutureWarning,
             )
 
+            implementation = self.compliant._implementation
+            backend_version = self.compliant._backend_version
             ns = self._df.__native_namespace__()
-            for key, _indices in self._grouped.groups.items():
-                tuplefied_key = tupleify(key)
-                if self._drop_null_keys and any(ns.isna(k) for k in tuplefied_key):
-                    continue
-                yield key, self.compliant._with_native(self._df.native.iloc[_indices])
+
+            if implementation.is_pandas() and backend_version <= (1, 1, 5):
+                for key, _indices in self._grouped.groups.items():
+                    tuplefied_key = tupleify(key)
+                    if self._drop_null_keys and any(ns.isna(k) for k in tuplefied_key):
+                        continue
+                    yield (
+                        key,
+                        self.compliant._with_native(self._df.native.iloc[_indices]),
+                    )
+
+            else:
+                for key, _indices in self._grouped.indices.items():
+                    yield (
+                        key,
+                        self.compliant._with_native(self._df.native.iloc[_indices]),
+                    )

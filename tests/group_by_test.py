@@ -327,6 +327,25 @@ def test_key_with_nulls_iter(
     assert len(result) == 4
 
 
+def test_key_with_nulls_iter_pandas_with_non_default_index() -> None:
+    if PANDAS_VERSION < (1, 0):
+        pytest.skip("Grouping by null values is not supported in pandas < 1.0.0")
+    data = {
+        "b": [None, "4", "5", "5", "7"],
+        "a": [None, 1, 2, 3, 4],
+        "c": [None, "4", "3", "3", None],
+    }
+    result = dict(
+        nw.from_native(pd.DataFrame(data, index=[0, 1, 2, 2, 2]), eager_only=True)
+        .group_by("b", nw.col("c").str.len_chars(), drop_null_keys=True)
+        .__iter__()
+    )
+
+    assert len(result) == 2
+    assert_equal_data(result[("4", 1)], {"b": ["4"], "a": [1], "c": ["4"]})
+    assert_equal_data(result[("5", 1)], {"b": ["5", "5"], "a": [2, 3], "c": ["3", "3"]})
+
+
 def test_no_agg(constructor: Constructor) -> None:
     result = nw.from_native(constructor(data)).group_by(["a", "b"]).agg().sort("a", "b")
 
