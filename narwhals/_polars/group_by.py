@@ -42,7 +42,6 @@ class PolarsGroupBy:
             self._output_names = keys
             self._grouped = self.compliant.native.group_by(keys)
         else:
-            self._output_names = []
             if drop_null_keys:
                 self._output_names = flatten(
                     [
