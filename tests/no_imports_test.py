@@ -15,6 +15,7 @@ def test_polars(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delitem(sys.modules, "pandas")
     monkeypatch.delitem(sys.modules, "numpy")
     monkeypatch.delitem(sys.modules, "pyarrow", raising=False)
+    monkeypatch.delitem(sys.modules, "typing_extensions", raising=False)
     monkeypatch.delitem(sys.modules, "duckdb", raising=False)
     monkeypatch.delitem(sys.modules, "dask", raising=False)
     monkeypatch.delitem(sys.modules, "ibis", raising=False)
@@ -31,6 +32,7 @@ def test_polars(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "ibis" not in sys.modules
     assert "pyspark" not in sys.modules
     assert "duckdb" not in sys.modules
+    assert "typing_extensions" not in sys.modules
 
 
 def test_pandas(monkeypatch: pytest.MonkeyPatch) -> None:
