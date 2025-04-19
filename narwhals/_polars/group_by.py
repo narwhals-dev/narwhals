@@ -7,7 +7,6 @@ from typing import cast
 
 from narwhals.utils import flatten
 from narwhals.utils import is_sequence_of
-from narwhals.utils import tupleify
 
 if TYPE_CHECKING:
     from polars.dataframe.group_by import GroupBy as NativeGroupBy
@@ -64,10 +63,9 @@ class PolarsGroupBy:
 
     def __iter__(self) -> Iterator[tuple[tuple[str, ...], PolarsDataFrame]]:
         for key, df in self._grouped:
-            tuplefied_key = tupleify(key)
-            if self._drop_null_keys and any(k is None for k in tuplefied_key):
+            if self._drop_null_keys and any(k is None for k in key):
                 continue
-            yield tuple(cast("str", tuplefied_key)), self.compliant._with_native(df)
+            yield tuple(cast("str", key)), self.compliant._with_native(df)
 
 
 class PolarsLazyGroupBy:
