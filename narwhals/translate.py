@@ -623,26 +623,19 @@ def _from_native_impl(  # noqa: PLR0915
 
     # DuckDB
     elif is_duckdb_relation(native_object):
-        from narwhals._duckdb.namespace import DuckDBNamespace
-
         if eager_only or series_only:  # pragma: no cover
             if not pass_through:
-                msg = (
-                    "Cannot only use `series_only=True` or `eager_only=False` "
-                    "with DuckDBPyRelation"
-                )
-            else:
-                return native_object
-            raise TypeError(msg)
-        import duckdb  # ignore-banned-import
-
-        duckdb_ns = DuckDBNamespace(
-            backend_version=parse_version(duckdb), version=version
+                msg = "Cannot only use `series_only=True` or `eager_only=False` with DuckDBPyRelation"
+                raise TypeError(msg)
+            return native_object
+        duckdb_compliant = (
+            import_namespace(version)
+            .from_native_object(native_object)
+            .compliant.from_native(native_object)
         )
-        duckdb_ldf = duckdb_ns.from_native(native_object)
         if version is Version.V1:
-            return DataFrame(duckdb_ldf, level="interchange")
-        return LazyFrame(duckdb_ldf, level="lazy")
+            return DataFrame(duckdb_compliant, level="interchange")
+        return LazyFrame(duckdb_compliant, level="lazy")
 
     # Ibis
     elif is_ibis_table(native_object):  # pragma: no cover
