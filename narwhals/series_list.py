@@ -6,8 +6,6 @@ from typing import Generic
 from typing import TypeVar
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals.series import Series
 
 
@@ -15,10 +13,10 @@ SeriesT = TypeVar("SeriesT", bound="Series[Any]")
 
 
 class SeriesListNamespace(Generic[SeriesT]):
-    def __init__(self: Self, series: SeriesT) -> None:
+    def __init__(self, series: SeriesT) -> None:
         self._narwhals_series = series
 
-    def len(self: Self) -> SeriesT:
+    def len(self) -> SeriesT:
         """Return the number of elements in each list.
 
         Null values count towards the total.

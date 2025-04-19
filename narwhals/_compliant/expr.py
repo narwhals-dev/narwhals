@@ -334,7 +334,7 @@ class EagerExpr(
     _call_kwargs: dict[str, Any]
 
     def __init__(
-        self: Self,
+        self,
         call: EvalSeries[EagerDataFrameT, EagerSeriesT],
         *,
         depth: int,
@@ -393,7 +393,7 @@ class EagerExpr(
         )
 
     def _reuse_series(
-        self: Self,
+        self,
         method_name: str,
         *,
         returns_scalar: bool = False,
@@ -478,7 +478,7 @@ class EagerExpr(
         return out
 
     def _reuse_series_namespace(
-        self: Self,
+        self,
         series_namespace: Literal["cat", "dt", "list", "name", "str", "struct"],
         method_name: str,
         **kwargs: Any,
@@ -718,7 +718,7 @@ class EagerExpr(
             "sample", n=n, fraction=fraction, with_replacement=with_replacement, seed=seed
         )
 
-    def alias(self: Self, name: str) -> Self:
+    def alias(self, name: str) -> Self:
         def alias_output_names(names: Sequence[str]) -> Sequence[str]:
             if len(names) != 1:
                 msg = f"Expected function with single output, found output names: {names}"
@@ -815,7 +815,7 @@ class EagerExpr(
         )
 
     def map_batches(
-        self: Self,
+        self,
         function: Callable[[Any], Any],
         return_dtype: DType | type[DType] | None,
     ) -> Self:

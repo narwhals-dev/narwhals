@@ -84,13 +84,13 @@ class BaseFrame(Generic[_FrameT]):
     _compliant_frame: Any
     _level: Literal["full", "lazy", "interchange"]
 
-    def __native_namespace__(self: Self) -> ModuleType:
+    def __native_namespace__(self) -> ModuleType:
         return self._compliant_frame.__native_namespace__()  # type: ignore[no-any-return]
 
-    def __narwhals_namespace__(self: Self) -> Any:
+    def __narwhals_namespace__(self) -> Any:
         return self._compliant_frame.__narwhals_namespace__()
 
-    def _with_compliant(self: Self, df: Any) -> Self:
+    def _with_compliant(self, df: Any) -> Self:
         # construct, preserving properties
         return self.__class__(df, level=self._level)  # type: ignore[call-arg]
 
@@ -111,39 +111,39 @@ class BaseFrame(Generic[_FrameT]):
         return out_exprs, out_kinds
 
     @abstractmethod
-    def _extract_compliant(self: Self, arg: Any) -> Any:
+    def _extract_compliant(self, arg: Any) -> Any:
         raise NotImplementedError
 
     @property
-    def schema(self: Self) -> Schema:
+    def schema(self) -> Schema:
         return Schema(self._compliant_frame.schema.items())
 
-    def collect_schema(self: Self) -> Schema:
+    def collect_schema(self) -> Schema:
         native_schema = dict(self._compliant_frame.collect_schema())
 
         return Schema(native_schema)
 
     def pipe(
-        self: Self,
+        self,
         function: Callable[Concatenate[Self, PS], R],
         *args: PS.args,
         **kwargs: PS.kwargs,
     ) -> R:
         return function(self, *args, **kwargs)
 
-    def with_row_index(self: Self, name: str = "index") -> Self:
+    def with_row_index(self, name: str = "index") -> Self:
         return self._with_compliant(self._compliant_frame.with_row_index(name))
 
-    def drop_nulls(self: Self, subset: str | list[str] | None) -> Self:
+    def drop_nulls(self, subset: str | list[str] | None) -> Self:
         subset = [subset] if isinstance(subset, str) else subset
         return self._with_compliant(self._compliant_frame.drop_nulls(subset=subset))
 
     @property
-    def columns(self: Self) -> list[str]:
+    def columns(self) -> list[str]:
         return self._compliant_frame.columns  # type: ignore[no-any-return]
 
     def with_columns(
-        self: Self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
+        self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
         compliant_exprs, kinds = self._flatten_and_extract(*exprs, **named_exprs)
         compliant_exprs = [
@@ -153,7 +153,7 @@ class BaseFrame(Generic[_FrameT]):
         return self._with_compliant(self._compliant_frame.with_columns(*compliant_exprs))
 
     def select(
-        self: Self,
+        self,
         *exprs: IntoExpr | Iterable[IntoExpr],
         **named_exprs: IntoExpr,
     ) -> Self:
@@ -180,20 +180,20 @@ class BaseFrame(Generic[_FrameT]):
         ]
         return self._with_compliant(self._compliant_frame.select(*compliant_exprs))
 
-    def rename(self: Self, mapping: dict[str, str]) -> Self:
+    def rename(self, mapping: dict[str, str]) -> Self:
         return self._with_compliant(self._compliant_frame.rename(mapping))
 
-    def head(self: Self, n: int) -> Self:
+    def head(self, n: int) -> Self:
         return self._with_compliant(self._compliant_frame.head(n))
 
-    def tail(self: Self, n: int) -> Self:
+    def tail(self, n: int) -> Self:
         return self._with_compliant(self._compliant_frame.tail(n))
 
-    def drop(self: Self, *columns: Iterable[str], strict: bool) -> Self:
+    def drop(self, *columns: Iterable[str], strict: bool) -> Self:
         return self._with_compliant(self._compliant_frame.drop(columns, strict=strict))
 
     def filter(
-        self: Self,
+        self,
         *predicates: IntoExpr | Iterable[IntoExpr] | list[bool],
         **constraints: Any,
     ) -> Self:
@@ -216,7 +216,7 @@ class BaseFrame(Generic[_FrameT]):
         return self._with_compliant(self._compliant_frame.filter(predicate))
 
     def sort(
-        self: Self,
+        self,
         by: str | Iterable[str],
         *more_by: str,
         descending: bool | Sequence[bool] = False,
@@ -228,7 +228,7 @@ class BaseFrame(Generic[_FrameT]):
         )
 
     def join(
-        self: Self,
+        self,
         other: Self,
         on: str | list[str] | None = None,
         how: JoinStrategy = "inner",
@@ -276,13 +276,13 @@ class BaseFrame(Generic[_FrameT]):
             )
         )
 
-    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+    def gather_every(self, n: int, offset: int = 0) -> Self:
         return self._with_compliant(
             self._compliant_frame.gather_every(n=n, offset=offset)
         )
 
     def join_asof(
-        self: Self,
+        self,
         other: Self,
         *,
         left_on: str | None = None,
@@ -338,7 +338,7 @@ class BaseFrame(Generic[_FrameT]):
         )
 
     def unpivot(
-        self: Self,
+        self,
         on: str | list[str] | None,
         *,
         index: str | list[str] | None,
@@ -354,7 +354,7 @@ class BaseFrame(Generic[_FrameT]):
             )
         )
 
-    def __neq__(self: Self, other: object) -> NoReturn:
+    def __neq__(self, other: object) -> NoReturn:
         msg = (
             "DataFrame.__neq__ and LazyFrame.__neq__ are not implemented, please "
             "use expressions instead.\n\n"
@@ -365,7 +365,7 @@ class BaseFrame(Generic[_FrameT]):
         )
         raise NotImplementedError(msg)
 
-    def __eq__(self: Self, other: object) -> NoReturn:
+    def __eq__(self, other: object) -> NoReturn:
         msg = (
             "DataFrame.__eq__ and LazyFrame.__eq__ are not implemented, please "
             "use expressions instead.\n\n"
@@ -376,7 +376,7 @@ class BaseFrame(Generic[_FrameT]):
         )
         raise NotImplementedError(msg)
 
-    def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
+    def explode(self, columns: str | Sequence[str], *more_columns: str) -> Self:
         to_explode = (
             [columns, *more_columns]
             if isinstance(columns, str)
@@ -411,7 +411,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             ```
     """
 
-    def _extract_compliant(self: Self, arg: Any) -> Any:
+    def _extract_compliant(self, arg: Any) -> Any:
         from narwhals.expr import Expr
         from narwhals.series import Series
 
@@ -437,18 +437,16 @@ class DataFrame(BaseFrame[DataFrameT]):
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     @property
-    def _series(self: Self) -> type[Series[Any]]:
+    def _series(self) -> type[Series[Any]]:
         from narwhals.series import Series
 
         return Series
 
     @property
-    def _lazyframe(self: Self) -> type[LazyFrame[Any]]:
+    def _lazyframe(self) -> type[LazyFrame[Any]]:
         return LazyFrame
 
-    def __init__(
-        self: Self, df: Any, *, level: Literal["full", "lazy", "interchange"]
-    ) -> None:
+    def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         self._level: Literal["full", "lazy", "interchange"] = level
         # NOTE: Interchange support (`DataFrameLike`) is the source of the error
         self._compliant_frame: CompliantDataFrame[Any, Any, DataFrameT]  # type: ignore[type-var]
@@ -459,7 +457,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             raise AssertionError(msg)
 
     @property
-    def implementation(self: Self) -> Implementation:
+    def implementation(self) -> Implementation:
         """Return implementation of native frame.
 
         This can be useful when you need to use special-casing for features outside of
@@ -484,16 +482,16 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return self._compliant_frame._implementation
 
-    def __len__(self: Self) -> int:
+    def __len__(self) -> int:
         return self._compliant_frame.__len__()
 
-    def __array__(self: Self, dtype: Any = None, copy: bool | None = None) -> _2DArray:  # noqa: FBT001
+    def __array__(self, dtype: Any = None, copy: bool | None = None) -> _2DArray:  # noqa: FBT001
         return self._compliant_frame.__array__(dtype, copy=copy)
 
-    def __repr__(self: Self) -> str:  # pragma: no cover
+    def __repr__(self) -> str:  # pragma: no cover
         return generate_repr("Narwhals DataFrame", self.to_native().__repr__())
 
-    def __arrow_c_stream__(self: Self, requested_schema: object | None = None) -> object:
+    def __arrow_c_stream__(self, requested_schema: object | None = None) -> object:
         """Export a DataFrame via the Arrow PyCapsule Interface.
 
         - if the underlying dataframe implements the interface, it'll return that
@@ -517,7 +515,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return pa_table.__arrow_c_stream__(requested_schema=requested_schema)  # type: ignore[no-untyped-call]
 
     def lazy(
-        self: Self,
+        self,
         backend: ModuleType | Implementation | str | None = None,
     ) -> LazyFrame[Any]:
         """Restrict available API methods to lazy-only ones.
@@ -595,7 +593,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             self._compliant_frame.lazy(backend=lazy_backend), level="lazy"
         )
 
-    def to_native(self: Self) -> DataFrameT:
+    def to_native(self) -> DataFrameT:
         """Convert Narwhals DataFrame to native one.
 
         Returns:
@@ -618,7 +616,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return self._compliant_frame._native_frame
 
-    def to_pandas(self: Self) -> pd.DataFrame:
+    def to_pandas(self) -> pd.DataFrame:
         """Convert this DataFrame to a pandas DataFrame.
 
         Returns:
@@ -639,7 +637,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return self._compliant_frame.to_pandas()
 
-    def to_polars(self: Self) -> pl.DataFrame:
+    def to_polars(self) -> pl.DataFrame:
         """Convert this DataFrame to a polars DataFrame.
 
         Returns:
@@ -664,12 +662,12 @@ class DataFrame(BaseFrame[DataFrameT]):
         return self._compliant_frame.to_polars()
 
     @overload
-    def write_csv(self: Self, file: None = None) -> str: ...
+    def write_csv(self, file: None = None) -> str: ...
 
     @overload
-    def write_csv(self: Self, file: str | Path | BytesIO) -> None: ...
+    def write_csv(self, file: str | Path | BytesIO) -> None: ...
 
-    def write_csv(self: Self, file: str | Path | BytesIO | None = None) -> str | None:
+    def write_csv(self, file: str | Path | BytesIO | None = None) -> str | None:
         r"""Write dataframe to comma-separated values (CSV) file.
 
         Arguments:
@@ -694,7 +692,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return self._compliant_frame.write_csv(file)
 
-    def write_parquet(self: Self, file: str | Path | BytesIO) -> None:
+    def write_parquet(self, file: str | Path | BytesIO) -> None:
         """Write dataframe to parquet file.
 
         Arguments:
@@ -713,7 +711,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         self._compliant_frame.write_parquet(file)
 
-    def to_numpy(self: Self) -> _2DArray:
+    def to_numpy(self) -> _2DArray:
         """Convert this DataFrame to a NumPy ndarray.
 
         Returns:
@@ -731,7 +729,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return self._compliant_frame.to_numpy(None, copy=None)
 
     @property
-    def shape(self: Self) -> tuple[int, int]:
+    def shape(self) -> tuple[int, int]:
         """Get the shape of the DataFrame.
 
         Returns:
@@ -747,7 +745,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return self._compliant_frame.shape
 
-    def get_column(self: Self, name: str) -> Series[Any]:
+    def get_column(self, name: str) -> Series[Any]:
         """Get a single column by name.
 
         Arguments:
@@ -775,7 +773,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return self._series(self._compliant_frame.get_column(name), level=self._level)
 
-    def estimated_size(self: Self, unit: SizeUnit = "b") -> int | float:
+    def estimated_size(self, unit: SizeUnit = "b") -> int | float:
         """Return an estimation of the total (heap) allocated size of the `DataFrame`.
 
         Estimated size is given in the specified unit (bytes by default).
@@ -799,13 +797,13 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     @overload
     def __getitem__(  # type: ignore[overload-overlap]
-        self: Self,
+        self,
         item: str | tuple[slice | Sequence[int] | _1DArray, int | str],
     ) -> Series[Any]: ...
 
     @overload
     def __getitem__(
-        self: Self,
+        self,
         item: (
             int
             | slice
@@ -818,7 +816,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         ),
     ) -> Self: ...
     def __getitem__(
-        self: Self,
+        self,
         item: (
             str
             | int
@@ -916,21 +914,19 @@ class DataFrame(BaseFrame[DataFrameT]):
             msg = f"Expected str or slice, got: {type(item)}"
             raise TypeError(msg)
 
-    def __contains__(self: Self, key: str) -> bool:
+    def __contains__(self, key: str) -> bool:
         return key in self.columns
 
     @overload
-    def to_dict(
-        self: Self, *, as_series: Literal[True] = ...
-    ) -> dict[str, Series[Any]]: ...
+    def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series[Any]]: ...
     @overload
-    def to_dict(self: Self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
+    def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
     def to_dict(
-        self: Self, *, as_series: bool
+        self, *, as_series: bool
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]: ...
     def to_dict(
-        self: Self, *, as_series: bool = True
+        self, *, as_series: bool = True
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]:
         """Convert DataFrame to a dictionary mapping column name to values.
 
@@ -958,7 +954,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             }
         return self._compliant_frame.to_dict(as_series=as_series)
 
-    def row(self: Self, index: int) -> tuple[Any, ...]:
+    def row(self, index: int) -> tuple[Any, ...]:
         """Get values at given row.
 
         !!! warning
@@ -986,7 +982,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     # inherited
     def pipe(
-        self: Self,
+        self,
         function: Callable[Concatenate[Self, PS], R],
         *args: PS.args,
         **kwargs: PS.kwargs,
@@ -1016,7 +1012,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return super().pipe(function, *args, **kwargs)
 
-    def drop_nulls(self: Self, subset: str | list[str] | None = None) -> Self:
+    def drop_nulls(self, subset: str | list[str] | None = None) -> Self:
         """Drop rows that contain null values.
 
         Arguments:
@@ -1045,7 +1041,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return super().drop_nulls(subset=subset)
 
-    def with_row_index(self: Self, name: str = "index") -> Self:
+    def with_row_index(self, name: str = "index") -> Self:
         """Insert column which enumerates rows.
 
         Arguments:
@@ -1071,7 +1067,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return super().with_row_index(name)
 
     @property
-    def schema(self: Self) -> Schema:
+    def schema(self) -> Schema:
         r"""Get an ordered mapping of column names to their data type.
 
         Returns:
@@ -1086,7 +1082,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return super().schema
 
-    def collect_schema(self: Self) -> Schema:
+    def collect_schema(self) -> Schema:
         r"""Get an ordered mapping of column names to their data type.
 
         Returns:
@@ -1102,7 +1098,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return super().collect_schema()
 
     @property
-    def columns(self: Self) -> list[str]:
+    def columns(self) -> list[str]:
         """Get column names.
 
         Returns:
@@ -1118,18 +1114,16 @@ class DataFrame(BaseFrame[DataFrameT]):
         return super().columns
 
     @overload
-    def rows(self: Self, *, named: Literal[False] = False) -> list[tuple[Any, ...]]: ...
+    def rows(self, *, named: Literal[False] = False) -> list[tuple[Any, ...]]: ...
 
     @overload
-    def rows(self: Self, *, named: Literal[True]) -> list[dict[str, Any]]: ...
+    def rows(self, *, named: Literal[True]) -> list[dict[str, Any]]: ...
 
     @overload
-    def rows(
-        self: Self, *, named: bool
-    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
+    def rows(self, *, named: bool) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
 
     def rows(
-        self: Self, *, named: bool = False
+        self, *, named: bool = False
     ) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         """Returns all data in the DataFrame as a list of rows of python-native values.
 
@@ -1150,7 +1144,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return self._compliant_frame.rows(named=named)  # type: ignore[return-value]
 
-    def iter_columns(self: Self) -> Iterator[Series[Any]]:
+    def iter_columns(self) -> Iterator[Series[Any]]:
         """Returns an iterator over the columns of this DataFrame.
 
         Yields:
@@ -1183,21 +1177,21 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     @overload
     def iter_rows(
-        self: Self, *, named: Literal[False], buffer_size: int = ...
+        self, *, named: Literal[False], buffer_size: int = ...
     ) -> Iterator[tuple[Any, ...]]: ...
 
     @overload
     def iter_rows(
-        self: Self, *, named: Literal[True], buffer_size: int = ...
+        self, *, named: Literal[True], buffer_size: int = ...
     ) -> Iterator[dict[str, Any]]: ...
 
     @overload
     def iter_rows(
-        self: Self, *, named: bool, buffer_size: int = ...
+        self, *, named: bool, buffer_size: int = ...
     ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]: ...
 
     def iter_rows(
-        self: Self, *, named: bool = False, buffer_size: int = 512
+        self, *, named: bool = False, buffer_size: int = 512
     ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
         """Returns an iterator over the DataFrame of rows of python-native values.
 
@@ -1228,7 +1222,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return self._compliant_frame.iter_rows(named=named, buffer_size=buffer_size)  # type: ignore[return-value]
 
     def with_columns(
-        self: Self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
+        self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
         r"""Add columns to this DataFrame.
 
@@ -1265,7 +1259,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return super().with_columns(*exprs, **named_exprs)
 
     def select(
-        self: Self,
+        self,
         *exprs: IntoExpr | Iterable[IntoExpr],
         **named_exprs: IntoExpr,
     ) -> Self:
@@ -1300,7 +1294,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return super().select(*exprs, **named_exprs)
 
-    def rename(self: Self, mapping: dict[str, str]) -> Self:
+    def rename(self, mapping: dict[str, str]) -> Self:
         """Rename column names.
 
         Arguments:
@@ -1323,7 +1317,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return super().rename(mapping)
 
-    def head(self: Self, n: int = 5) -> Self:
+    def head(self, n: int = 5) -> Self:
         """Get the first `n` rows.
 
         Arguments:
@@ -1343,7 +1337,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return super().head(n)
 
-    def tail(self: Self, n: int = 5) -> Self:
+    def tail(self, n: int = 5) -> Self:
         """Get the last `n` rows.
 
         Arguments:
@@ -1367,7 +1361,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return super().tail(n)
 
-    def drop(self: Self, *columns: str | Iterable[str], strict: bool = True) -> Self:
+    def drop(self, *columns: str | Iterable[str], strict: bool = True) -> Self:
         """Remove columns from the dataframe.
 
         Returns:
@@ -1392,7 +1386,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return super().drop(*flatten(columns), strict=strict)
 
     def unique(
-        self: Self,
+        self,
         subset: str | list[str] | None = None,
         *,
         keep: UniqueKeepStrategy = "any",
@@ -1436,7 +1430,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         )
 
     def filter(
-        self: Self,
+        self,
         *predicates: IntoExpr | Iterable[IntoExpr] | list[bool],
         **constraints: Any,
     ) -> Self:
@@ -1494,7 +1488,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return super().filter(*predicates, **constraints)
 
     def group_by(
-        self: Self, *keys: str | Iterable[str], drop_null_keys: bool = False
+        self, *keys: str | Iterable[str], drop_null_keys: bool = False
     ) -> GroupBy[Self]:
         r"""Start a group by operation.
 
@@ -1556,7 +1550,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return GroupBy(self, *flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
-        self: Self,
+        self,
         by: str | Iterable[str],
         *more_by: str,
         descending: bool | Sequence[bool] = False,
@@ -1597,7 +1591,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return super().sort(by, *more_by, descending=descending, nulls_last=nulls_last)
 
     def join(
-        self: Self,
+        self,
         other: Self,
         on: str | list[str] | None = None,
         how: JoinStrategy = "inner",
@@ -1646,7 +1640,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         )
 
     def join_asof(
-        self: Self,
+        self,
         other: Self,
         *,
         left_on: str | None = None,
@@ -1731,7 +1725,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         )
 
     # --- descriptive ---
-    def is_duplicated(self: Self) -> Series[Any]:
+    def is_duplicated(self) -> Series[Any]:
         r"""Get a mask of all duplicated rows in this DataFrame.
 
         Returns:
@@ -1753,7 +1747,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return ~self.is_unique()
 
-    def is_empty(self: Self) -> bool:
+    def is_empty(self) -> bool:
         r"""Check if the dataframe is empty.
 
         Returns:
@@ -1768,7 +1762,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return len(self) == 0
 
-    def is_unique(self: Self) -> Series[Any]:
+    def is_unique(self) -> Series[Any]:
         r"""Get a mask of all unique rows in this DataFrame.
 
         Returns:
@@ -1790,7 +1784,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return self._series(self._compliant_frame.is_unique(), level=self._level)
 
-    def null_count(self: Self) -> Self:
+    def null_count(self) -> Self:
         r"""Create a new DataFrame that shows the null counts per column.
 
         Returns:
@@ -1821,7 +1815,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         result = self._compliant_frame.select(plx.all().null_count())
         return self._with_compliant(result)
 
-    def item(self: Self, row: int | None = None, column: int | str | None = None) -> Any:
+    def item(self, row: int | None = None, column: int | str | None = None) -> Any:
         r"""Return the DataFrame as a scalar, or return the element at the given row/column.
 
         Arguments:
@@ -1844,7 +1838,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return self._compliant_frame.item(row=row, column=column)
 
-    def clone(self: Self) -> Self:
+    def clone(self) -> Self:
         r"""Create a copy of this DataFrame.
 
         Returns:
@@ -1852,7 +1846,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return self._with_compliant(self._compliant_frame.clone())
 
-    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+    def gather_every(self, n: int, offset: int = 0) -> Self:
         r"""Take every nth row in the DataFrame and return as a new DataFrame.
 
         Arguments:
@@ -1879,7 +1873,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return super().gather_every(n=n, offset=offset)
 
     def pivot(
-        self: Self,
+        self,
         on: str | list[str],
         *,
         index: str | list[str] | None = None,
@@ -1960,7 +1954,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             )
         )
 
-    def to_arrow(self: Self) -> pa.Table:
+    def to_arrow(self) -> pa.Table:
         r"""Convert to arrow table.
 
         Returns:
@@ -1981,7 +1975,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return self._compliant_frame.to_arrow()
 
     def sample(
-        self: Self,
+        self,
         n: int | None = None,
         *,
         fraction: float | None = None,
@@ -2023,7 +2017,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         )
 
     def unpivot(
-        self: Self,
+        self,
         on: str | list[str] | None = None,
         *,
         index: str | list[str] | None = None,
@@ -2080,7 +2074,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             on=on, index=index, variable_name=variable_name, value_name=value_name
         )
 
-    def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
+    def explode(self, columns: str | Sequence[str], *more_columns: str) -> Self:
         """Explode the dataframe to long format by exploding the given columns.
 
         Notes:
@@ -2127,7 +2121,7 @@ class LazyFrame(BaseFrame[FrameT]):
         ```
     """
 
-    def _extract_compliant(self: Self, arg: Any) -> Any:
+    def _extract_compliant(self, arg: Any) -> Any:
         from narwhals.expr import Expr
         from narwhals.series import Series
 
@@ -2172,12 +2166,10 @@ class LazyFrame(BaseFrame[FrameT]):
         raise InvalidIntoExprError.from_invalid_type(type(arg))  # pragma: no cover
 
     @property
-    def _dataframe(self: Self) -> type[DataFrame[Any]]:
+    def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame
 
-    def __init__(
-        self: Self, df: Any, *, level: Literal["full", "lazy", "interchange"]
-    ) -> None:
+    def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         self._level = level
         self._compliant_frame: CompliantLazyFrame[Any, FrameT]  # type: ignore[type-var]
         if is_compliant_lazyframe(df):
@@ -2186,11 +2178,11 @@ class LazyFrame(BaseFrame[FrameT]):
             msg = f"Expected Polars LazyFrame or an object that implements `__narwhals_lazyframe__`, got: {type(df)}"
             raise AssertionError(msg)
 
-    def __repr__(self: Self) -> str:  # pragma: no cover
+    def __repr__(self) -> str:  # pragma: no cover
         return generate_repr("Narwhals LazyFrame", self.to_native().__repr__())
 
     @property
-    def implementation(self: Self) -> Implementation:
+    def implementation(self) -> Implementation:
         """Return implementation of native frame.
 
         This can be useful when you need to use special-casing for features outside of
@@ -2208,12 +2200,12 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return self._compliant_frame._implementation
 
-    def __getitem__(self: Self, item: str | slice) -> NoReturn:
+    def __getitem__(self, item: str | slice) -> NoReturn:
         msg = "Slicing is not supported on LazyFrame"
         raise TypeError(msg)
 
     def collect(
-        self: Self,
+        self,
         backend: ModuleType | Implementation | str | None = None,
         **kwargs: Any,
     ) -> DataFrame[Any]:
@@ -2291,7 +2283,7 @@ class LazyFrame(BaseFrame[FrameT]):
             level="full",
         )
 
-    def to_native(self: Self) -> FrameT:
+    def to_native(self) -> FrameT:
         """Convert Narwhals LazyFrame to native one.
 
         Returns:
@@ -2315,7 +2307,7 @@ class LazyFrame(BaseFrame[FrameT]):
 
     # inherited
     def pipe(
-        self: Self,
+        self,
         function: Callable[Concatenate[Self, PS], R],
         *args: PS.args,
         **kwargs: PS.kwargs,
@@ -2346,7 +2338,7 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().pipe(function, *args, **kwargs)
 
-    def drop_nulls(self: Self, subset: str | list[str] | None = None) -> Self:
+    def drop_nulls(self, subset: str | list[str] | None = None) -> Self:
         """Drop rows that contain null values.
 
         Arguments:
@@ -2379,7 +2371,7 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().drop_nulls(subset=subset)
 
-    def with_row_index(self: Self, name: str = "index") -> Self:
+    def with_row_index(self, name: str = "index") -> Self:
         """Insert column which enumerates rows.
 
         Arguments:
@@ -2404,7 +2396,7 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().with_row_index(name)
 
     @property
-    def schema(self: Self) -> Schema:
+    def schema(self) -> Schema:
         r"""Get an ordered mapping of column names to their data type.
 
         Returns:
@@ -2419,7 +2411,7 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().schema
 
-    def collect_schema(self: Self) -> Schema:
+    def collect_schema(self) -> Schema:
         r"""Get an ordered mapping of column names to their data type.
 
         Returns:
@@ -2435,7 +2427,7 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().collect_schema()
 
     @property
-    def columns(self: Self) -> list[str]:
+    def columns(self) -> list[str]:
         r"""Get column names.
 
         Returns:
@@ -2451,7 +2443,7 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().columns
 
     def with_columns(
-        self: Self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
+        self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
         r"""Add columns to this LazyFrame.
 
@@ -2495,7 +2487,7 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().with_columns(*exprs, **named_exprs)
 
     def select(
-        self: Self,
+        self,
         *exprs: IntoExpr | Iterable[IntoExpr],
         **named_exprs: IntoExpr,
     ) -> Self:
@@ -2538,7 +2530,7 @@ class LazyFrame(BaseFrame[FrameT]):
             raise ValueError(msg)
         return super().select(*exprs, **named_exprs)
 
-    def rename(self: Self, mapping: dict[str, str]) -> Self:
+    def rename(self, mapping: dict[str, str]) -> Self:
         r"""Rename column names.
 
         Arguments:
@@ -2568,7 +2560,7 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().rename(mapping)
 
-    def head(self: Self, n: int = 5) -> Self:
+    def head(self, n: int = 5) -> Self:
         r"""Get `n` rows.
 
         Arguments:
@@ -2608,7 +2600,7 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().tail(n)
 
-    def drop(self: Self, *columns: str | Iterable[str], strict: bool = True) -> Self:
+    def drop(self, *columns: str | Iterable[str], strict: bool = True) -> Self:
         r"""Remove columns from the LazyFrame.
 
         Arguments:
@@ -2641,7 +2633,7 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().drop(*flatten(columns), strict=strict)
 
     def unique(
-        self: Self,
+        self,
         subset: str | list[str] | None = None,
         *,
         keep: LazyUniqueKeepStrategy = "any",
@@ -2690,7 +2682,7 @@ class LazyFrame(BaseFrame[FrameT]):
         )
 
     def filter(
-        self: Self,
+        self,
         *predicates: IntoExpr | Iterable[IntoExpr] | list[bool],
         **constraints: Any,
     ) -> Self:
@@ -2778,7 +2770,7 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().filter(*predicates, **constraints)
 
     def group_by(
-        self: Self, *keys: str | Iterable[str], drop_null_keys: bool = False
+        self, *keys: str | Iterable[str], drop_null_keys: bool = False
     ) -> LazyGroupBy[Self]:
         r"""Start a group by operation.
 
@@ -2823,7 +2815,7 @@ class LazyFrame(BaseFrame[FrameT]):
         return LazyGroupBy(self, *flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
-        self: Self,
+        self,
         by: str | Iterable[str],
         *more_by: str,
         descending: bool | Sequence[bool] = False,
@@ -2871,7 +2863,7 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().sort(by, *more_by, descending=descending, nulls_last=nulls_last)
 
     def join(
-        self: Self,
+        self,
         other: Self,
         on: str | list[str] | None = None,
         how: JoinStrategy = "inner",
@@ -2929,7 +2921,7 @@ class LazyFrame(BaseFrame[FrameT]):
         )
 
     def join_asof(
-        self: Self,
+        self,
         other: Self,
         *,
         left_on: str | None = None,
@@ -3016,7 +3008,7 @@ class LazyFrame(BaseFrame[FrameT]):
             suffix=suffix,
         )
 
-    def lazy(self: Self) -> Self:
+    def lazy(self) -> Self:
         """Restrict available API methods to lazy-only ones.
 
         This is a no-op, and exists only for compatibility with `DataFrame.lazy`.
@@ -3026,7 +3018,7 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return self
 
-    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+    def gather_every(self, n: int, offset: int = 0) -> Self:
         r"""Take every nth row in the DataFrame and return as a new DataFrame.
 
         !!! warning
@@ -3051,7 +3043,7 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().gather_every(n=n, offset=offset)
 
     def unpivot(
-        self: Self,
+        self,
         on: str | list[str] | None = None,
         *,
         index: str | list[str] | None = None,
@@ -3107,7 +3099,7 @@ class LazyFrame(BaseFrame[FrameT]):
             on=on, index=index, variable_name=variable_name, value_name=value_name
         )
 
-    def explode(self: Self, columns: str | Sequence[str], *more_columns: str) -> Self:
+    def explode(self, columns: str | Sequence[str], *more_columns: str) -> Self:
         """Explode the dataframe to long format by exploding the given columns.
 
         Notes:

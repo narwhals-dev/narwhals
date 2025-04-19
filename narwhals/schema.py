@@ -23,7 +23,6 @@ if TYPE_CHECKING:
 
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self
 
     from narwhals.dtypes import DType
     from narwhals.typing import DTypeBackend
@@ -70,13 +69,13 @@ class Schema(BaseSchema):
     _version: ClassVar[Version] = Version.MAIN
 
     def __init__(
-        self: Self,
+        self,
         schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None = None,
     ) -> None:
         schema = schema or {}
         super().__init__(schema)
 
-    def names(self: Self) -> list[str]:
+    def names(self) -> list[str]:
         """Get the column names of the schema.
 
         Returns:
@@ -84,7 +83,7 @@ class Schema(BaseSchema):
         """
         return list(self.keys())
 
-    def dtypes(self: Self) -> list[DType]:
+    def dtypes(self) -> list[DType]:
         """Get the data types of the schema.
 
         Returns:
@@ -92,7 +91,7 @@ class Schema(BaseSchema):
         """
         return list(self.values())
 
-    def len(self: Self) -> int:
+    def len(self) -> int:
         """Get the number of columns in the schema.
 
         Returns:
@@ -100,7 +99,7 @@ class Schema(BaseSchema):
         """
         return len(self)
 
-    def to_arrow(self: Self) -> pa.Schema:
+    def to_arrow(self) -> pa.Schema:
         """Convert Schema to a pyarrow Schema.
 
         Returns:
@@ -123,7 +122,7 @@ class Schema(BaseSchema):
         )
 
     def to_pandas(
-        self: Self, dtype_backend: DTypeBackend | Iterable[DTypeBackend] = None
+        self, dtype_backend: DTypeBackend | Iterable[DTypeBackend] = None
     ) -> dict[str, Any]:
         """Convert Schema to an ordered mapping of column names to their pandas data type.
 
@@ -186,7 +185,7 @@ class Schema(BaseSchema):
                 for name, dtype, backend in zip(self.keys(), self.values(), backends)
             }
 
-    def to_polars(self: Self) -> pl.Schema:
+    def to_polars(self) -> pl.Schema:
         """Convert Schema to a polars Schema.
 
         Returns:

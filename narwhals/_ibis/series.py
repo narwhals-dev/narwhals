@@ -17,21 +17,21 @@ if TYPE_CHECKING:
 
 
 class IbisInterchangeSeries:
-    def __init__(self: Self, df: Any, version: Version) -> None:
+    def __init__(self, df: Any, version: Version) -> None:
         self._native_series = df
         self._version = version
 
-    def __narwhals_series__(self: Self) -> Self:
+    def __narwhals_series__(self) -> Self:
         return self
 
-    def __native_namespace__(self: Self) -> ModuleType:
+    def __native_namespace__(self) -> ModuleType:
         return get_ibis()
 
     @property
-    def dtype(self: Self) -> DType:
+    def dtype(self) -> DType:
         return native_to_narwhals_dtype(self._native_series.type(), self._version)
 
-    def __getattr__(self: Self, attr: str) -> NoReturn:
+    def __getattr__(self, attr: str) -> NoReturn:
         msg = (
             f"Attribute {attr} is not supported for metadata-only dataframes.\n\n"
             "If you would like to see this kind of object better supported in "

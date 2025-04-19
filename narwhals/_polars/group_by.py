@@ -10,7 +10,6 @@ from narwhals._polars.utils import extract_native
 if TYPE_CHECKING:
     from polars.dataframe.group_by import GroupBy as NativeGroupBy
     from polars.lazyframe.group_by import LazyGroupBy as NativeLazyGroupBy
-    from typing_extensions import Self
 
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.dataframe import PolarsLazyFrame
@@ -33,11 +32,11 @@ class PolarsGroupBy:
         df = df.drop_nulls(keys) if drop_null_keys else df
         self._grouped: NativeGroupBy = df._native_frame.group_by(keys)
 
-    def agg(self: Self, *aggs: PolarsExpr) -> PolarsDataFrame:
+    def agg(self, *aggs: PolarsExpr) -> PolarsDataFrame:
         from_native = self.compliant._with_native
         return from_native(self._grouped.agg(extract_native(arg) for arg in aggs))
 
-    def __iter__(self: Self) -> Iterator[tuple[tuple[str, ...], PolarsDataFrame]]:
+    def __iter__(self) -> Iterator[tuple[tuple[str, ...], PolarsDataFrame]]:
         for key, df in self._grouped:
             yield tuple(cast("str", key)), self.compliant._with_native(df)
 
@@ -58,6 +57,6 @@ class PolarsLazyGroupBy:
         df = df.drop_nulls(keys) if drop_null_keys else df
         self._grouped: NativeLazyGroupBy = df._native_frame.group_by(keys)
 
-    def agg(self: Self, *aggs: PolarsExpr) -> PolarsLazyFrame:
+    def agg(self, *aggs: PolarsExpr) -> PolarsLazyFrame:
         from_native = self.compliant._with_native
         return from_native(self._grouped.agg(extract_native(arg) for arg in aggs))

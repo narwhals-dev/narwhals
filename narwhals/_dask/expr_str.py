@@ -5,21 +5,17 @@ from typing import TYPE_CHECKING
 import dask.dataframe as dd
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals._dask.expr import DaskExpr
 
 
 class DaskExprStringNamespace:
-    def __init__(self: Self, expr: DaskExpr) -> None:
+    def __init__(self, expr: DaskExpr) -> None:
         self._compliant_expr = expr
 
-    def len_chars(self: Self) -> DaskExpr:
+    def len_chars(self) -> DaskExpr:
         return self._compliant_expr._with_callable(lambda _input: _input.str.len(), "len")
 
-    def replace(
-        self: Self, pattern: str, value: str, *, literal: bool, n: int
-    ) -> DaskExpr:
+    def replace(self, pattern: str, value: str, *, literal: bool, n: int) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input, pattern, value, literal, n: _input.str.replace(
                 pattern, value, regex=not literal, n=n
@@ -31,7 +27,7 @@ class DaskExprStringNamespace:
             n=n,
         )
 
-    def replace_all(self: Self, pattern: str, value: str, *, literal: bool) -> DaskExpr:
+    def replace_all(self, pattern: str, value: str, *, literal: bool) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input, pattern, value, literal: _input.str.replace(
                 pattern, value, n=-1, regex=not literal
@@ -42,26 +38,26 @@ class DaskExprStringNamespace:
             literal=literal,
         )
 
-    def strip_chars(self: Self, characters: str | None) -> DaskExpr:
+    def strip_chars(self, characters: str | None) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input, characters: _input.str.strip(characters),
             "strip",
             characters=characters,
         )
 
-    def starts_with(self: Self, prefix: str) -> DaskExpr:
+    def starts_with(self, prefix: str) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input, prefix: _input.str.startswith(prefix),
             "starts_with",
             prefix=prefix,
         )
 
-    def ends_with(self: Self, suffix: str) -> DaskExpr:
+    def ends_with(self, suffix: str) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input, suffix: _input.str.endswith(suffix), "ends_with", suffix=suffix
         )
 
-    def contains(self: Self, pattern: str, *, literal: bool) -> DaskExpr:
+    def contains(self, pattern: str, *, literal: bool) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input, pattern, literal: _input.str.contains(
                 pat=pattern, regex=not literal
@@ -71,7 +67,7 @@ class DaskExprStringNamespace:
             literal=literal,
         )
 
-    def slice(self: Self, offset: int, length: int | None) -> DaskExpr:
+    def slice(self, offset: int, length: int | None) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input, offset, length: _input.str.slice(
                 start=offset, stop=offset + length if length else None
@@ -81,26 +77,26 @@ class DaskExprStringNamespace:
             length=length,
         )
 
-    def split(self: Self, by: str) -> DaskExpr:
+    def split(self, by: str) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input, by: _input.str.split(pat=by),
             "split",
             by=by,
         )
 
-    def to_datetime(self: Self, format: str | None) -> DaskExpr:
+    def to_datetime(self, format: str | None) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input, format: dd.to_datetime(_input, format=format),
             "to_datetime",
             format=format,
         )
 
-    def to_uppercase(self: Self) -> DaskExpr:
+    def to_uppercase(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input: _input.str.upper(), "to_uppercase"
         )
 
-    def to_lowercase(self: Self) -> DaskExpr:
+    def to_lowercase(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda _input: _input.str.lower(), "to_lowercase"
         )

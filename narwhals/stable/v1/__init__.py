@@ -143,21 +143,21 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     # annotations are correct.
 
     @property
-    def _series(self: Self) -> type[Series[Any]]:
+    def _series(self) -> type[Series[Any]]:
         return Series
 
     @property
-    def _lazyframe(self: Self) -> type[LazyFrame[Any]]:
+    def _lazyframe(self) -> type[LazyFrame[Any]]:
         return LazyFrame
 
     @overload
     def __getitem__(  # type: ignore[overload-overlap]
-        self: Self,
+        self,
         item: str | tuple[slice | Sequence[int] | _1DArray, int | str],
     ) -> Series[Any]: ...
     @overload
     def __getitem__(
-        self: Self,
+        self,
         item: (
             int
             | slice
@@ -170,11 +170,11 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         ),
     ) -> Self: ...
 
-    def __getitem__(self: Self, item: Any) -> Any:
+    def __getitem__(self, item: Any) -> Any:
         return super().__getitem__(item)
 
     def lazy(
-        self: Self,
+        self,
         backend: ModuleType | Implementation | str | None = None,
     ) -> LazyFrame[Any]:
         """Restrict available API methods to lazy-only ones.
@@ -208,17 +208,15 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     # Not sure what mypy is complaining about, probably some fancy
     # thing that I need to understand category theory for
     @overload  # type: ignore[override]
-    def to_dict(
-        self: Self, *, as_series: Literal[True] = ...
-    ) -> dict[str, Series[Any]]: ...
+    def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series[Any]]: ...
     @overload
-    def to_dict(self: Self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
+    def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
     def to_dict(
-        self: Self, *, as_series: bool
+        self, *, as_series: bool
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]: ...
     def to_dict(
-        self: Self, *, as_series: bool = True
+        self, *, as_series: bool = True
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]:
         """Convert DataFrame to a dictionary mapping column name to values.
 
@@ -231,7 +229,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         """
         return super().to_dict(as_series=as_series)  # type: ignore[return-value]
 
-    def is_duplicated(self: Self) -> Series[Any]:
+    def is_duplicated(self) -> Series[Any]:
         r"""Get a mask of all duplicated rows in this DataFrame.
 
         Returns:
@@ -239,7 +237,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         """
         return super().is_duplicated()  # type: ignore[return-value]
 
-    def is_unique(self: Self) -> Series[Any]:
+    def is_unique(self) -> Series[Any]:
         r"""Get a mask of all unique rows in this DataFrame.
 
         Returns:
@@ -247,7 +245,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         """
         return super().is_unique()  # type: ignore[return-value]
 
-    def _l1_norm(self: Self) -> Self:
+    def _l1_norm(self) -> Self:
         """Private, just used to test the stable API.
 
         Returns:
@@ -270,10 +268,10 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
     """
 
     @property
-    def _dataframe(self: Self) -> type[DataFrame[Any]]:
+    def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame
 
-    def _extract_compliant(self: Self, arg: Any) -> Any:
+    def _extract_compliant(self, arg: Any) -> Any:
         # After v1, we raise when passing order-dependent or length-changing
         # expressions to LazyFrame
         from narwhals.dataframe import BaseFrame
@@ -302,7 +300,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     def collect(
-        self: Self,
+        self,
         backend: ModuleType | Implementation | str | None = None,
         **kwargs: Any,
     ) -> DataFrame[Any]:
@@ -339,7 +337,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         """
         return super().collect(backend=backend, **kwargs)  # type: ignore[return-value]
 
-    def _l1_norm(self: Self) -> Self:
+    def _l1_norm(self) -> Self:
         """Private, just used to test the stable API.
 
         Returns:
@@ -358,7 +356,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         """
         return super().tail(n)
 
-    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+    def gather_every(self, n: int, offset: int = 0) -> Self:
         r"""Take every nth row in the DataFrame and return as a new DataFrame.
 
         Arguments:
@@ -402,10 +400,10 @@ class Series(NwSeries[IntoSeriesT]):
     # annotations are correct.
 
     @property
-    def _dataframe(self: Self) -> type[DataFrame[Any]]:
+    def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame
 
-    def to_frame(self: Self) -> DataFrame[Any]:
+    def to_frame(self) -> DataFrame[Any]:
         """Convert to dataframe.
 
         Returns:
@@ -414,7 +412,7 @@ class Series(NwSeries[IntoSeriesT]):
         return super().to_frame()  # type: ignore[return-value]
 
     def value_counts(
-        self: Self,
+        self,
         *,
         sort: bool = False,
         parallel: bool = False,
@@ -441,7 +439,7 @@ class Series(NwSeries[IntoSeriesT]):
         )
 
     def hist(
-        self: Self,
+        self,
         bins: list[float | int] | None = None,
         *,
         bin_count: int | None = None,
@@ -477,10 +475,10 @@ class Series(NwSeries[IntoSeriesT]):
 
 
 class Expr(NwExpr):
-    def _l1_norm(self: Self) -> Self:
+    def _l1_norm(self) -> Self:
         return super()._taxicab_norm()
 
-    def head(self: Self, n: int = 10) -> Self:
+    def head(self, n: int = 10) -> Self:
         r"""Get the first `n` rows.
 
         Arguments:
@@ -494,7 +492,7 @@ class Expr(NwExpr):
             self._metadata.with_kind_and_closeable_window(ExprKind.FILTRATION),
         )
 
-    def tail(self: Self, n: int = 10) -> Self:
+    def tail(self, n: int = 10) -> Self:
         r"""Get the last `n` rows.
 
         Arguments:
@@ -508,7 +506,7 @@ class Expr(NwExpr):
             self._metadata.with_kind_and_closeable_window(ExprKind.FILTRATION),
         )
 
-    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+    def gather_every(self, n: int, offset: int = 0) -> Self:
         r"""Take every nth value in the Series and return as new Series.
 
         Arguments:
@@ -523,7 +521,7 @@ class Expr(NwExpr):
             self._metadata.with_kind_and_closeable_window(ExprKind.FILTRATION),
         )
 
-    def unique(self: Self, *, maintain_order: bool | None = None) -> Self:
+    def unique(self, *, maintain_order: bool | None = None) -> Self:
         """Return unique values of this expression.
 
         Arguments:
@@ -545,7 +543,7 @@ class Expr(NwExpr):
             self._metadata.with_kind(ExprKind.FILTRATION),
         )
 
-    def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """Sort this column. Place null values first.
 
         Arguments:
@@ -562,7 +560,7 @@ class Expr(NwExpr):
             self._metadata.with_uncloseable_window(),
         )
 
-    def arg_true(self: Self) -> Self:
+    def arg_true(self) -> Self:
         """Find elements where boolean expression is True.
 
         Returns:
@@ -574,7 +572,7 @@ class Expr(NwExpr):
         )
 
     def sample(
-        self: Self,
+        self,
         n: int | None = None,
         *,
         fraction: float | None = None,
@@ -1623,7 +1621,7 @@ class When(NwWhen):
     def from_when(cls, when: NwWhen) -> When:
         return cls(when._predicate)
 
-    def then(self: Self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
+    def then(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
         return Then.from_then(super().then(value))
 
 
@@ -1632,7 +1630,7 @@ class Then(NwThen, Expr):
     def from_then(cls, then: NwThen) -> Then:
         return cls(then._to_compliant_expr, then._metadata)
 
-    def otherwise(self: Self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
+    def otherwise(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
         return _stableify(super().otherwise(value))
 
 
