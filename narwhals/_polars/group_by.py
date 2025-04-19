@@ -21,6 +21,7 @@ class PolarsGroupBy:
     _compliant_frame: PolarsDataFrame
     _grouped: NativeGroupBy
     _drop_null_keys: bool
+    _output_names: Sequence[str]
 
     @property
     def compliant(self) -> PolarsDataFrame:
@@ -36,7 +37,7 @@ class PolarsGroupBy:
     ) -> None:
         self._compliant_frame = df
         self._drop_null_keys = drop_null_keys
-        self._output_names: Sequence[str] = []
+        self._output_names = []
 
         if is_sequence_of(keys, str):
             self._output_names = keys
@@ -70,7 +71,7 @@ class PolarsLazyGroupBy:
     _compliant_frame: PolarsLazyFrame
     _grouped: NativeLazyGroupBy
     _drop_null_keys: bool
-    _output_names: list[str]
+    _output_names: Sequence[str]
 
     @property
     def compliant(self) -> PolarsLazyFrame:
@@ -86,26 +87,25 @@ class PolarsLazyGroupBy:
     ) -> None:
         self._compliant_frame = df
         self._drop_null_keys = drop_null_keys
+        self._output_names = []
+
         if is_sequence_of(keys, str):
-            self._output_names = list(keys)
+            self._output_names = keys
             self._grouped = self.compliant.native.group_by(keys)
-
         else:
-            self._output_names = flatten(
-                [
-                    arg.native.meta.root_names()
-                    if arg.native.meta.has_multiple_outputs()
-                    else arg.native.meta.output_name()
-                    for arg in keys
-                ]
-            )
-
-            self._grouped = self.compliant.native.group_by(*[arg.native for arg in keys])
+            if drop_null_keys:
+                self._output_names = flatten(
+                    [
+                        arg.native.meta.root_names()
+                        if arg.native.meta.has_multiple_outputs()
+                        else arg.native.meta.output_name()
+                        for arg in keys
+                    ]
+                )
+            self._grouped = self.compliant.native.group_by(arg.native for arg in keys)
 
     def agg(self, *aggs: PolarsExpr) -> PolarsLazyFrame:
         agg_result = self._grouped.agg(arg.native for arg in aggs)
-
         if self._drop_null_keys:
             agg_result = agg_result.drop_nulls(subset=self._output_names)
-
         return self.compliant._with_native(agg_result)
