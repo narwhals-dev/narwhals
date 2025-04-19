@@ -456,9 +456,7 @@ def test_pandas_group_by_index_and_column_overlap() -> None:
 
     key, result = next(iter(nw.from_native(df, eager_only=True).group_by("a")))
     assert key == (1,)
-    expected_native = pd.DataFrame(
-        {"a": [1, 1], "b": [4, 5]}, index=pd.Index([0, 1], name="a")
-    )
+    expected_native = pd.DataFrame({"a": [1, 1], "b": [4, 5]}, index=pd.Index([0, 1]))
     pd.testing.assert_frame_equal(result.to_native(), expected_native)
 
 
