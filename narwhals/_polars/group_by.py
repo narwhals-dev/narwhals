@@ -5,7 +5,8 @@ from typing import Iterator
 from typing import Sequence
 from typing import cast
 
-from narwhals._polars.utils import extract_native
+from narwhals.utils import flatten
+from narwhals.utils import is_sequence_of
 
 if TYPE_CHECKING:
     from polars.dataframe.group_by import GroupBy as NativeGroupBy
@@ -18,45 +19,93 @@ if TYPE_CHECKING:
 
 class PolarsGroupBy:
     _compliant_frame: PolarsDataFrame
-    _keys: Sequence[str]
+    _grouped: NativeGroupBy
+    _drop_null_keys: bool
 
     @property
     def compliant(self) -> PolarsDataFrame:
         return self._compliant_frame
 
     def __init__(
-        self, df: PolarsDataFrame, keys: Sequence[str], /, *, drop_null_keys: bool
+        self,
+        df: PolarsDataFrame,
+        keys: Sequence[PolarsExpr] | Sequence[str],
+        /,
+        *,
+        drop_null_keys: bool,
     ) -> None:
         self._compliant_frame = df
-        self._keys = list(keys)
-        df = df.drop_nulls(keys) if drop_null_keys else df
-        self._grouped: NativeGroupBy = df._native_frame.group_by(keys)
+        self._drop_null_keys = drop_null_keys
+        self._output_names: Sequence[str] = []
+
+        if is_sequence_of(keys, str):
+            self._output_names = keys
+            self._grouped = self.compliant.native.group_by(keys)
+        else:
+            if drop_null_keys:
+                self._output_names = flatten(
+                    [
+                        arg.native.meta.root_names()
+                        if arg.native.meta.has_multiple_outputs()
+                        else arg.native.meta.output_name()
+                        for arg in keys
+                    ]
+                )
+            self._grouped = self.compliant.native.group_by(arg.native for arg in keys)
 
     def agg(self, *aggs: PolarsExpr) -> PolarsDataFrame:
-        from_native = self.compliant._with_native
-        return from_native(self._grouped.agg(extract_native(arg) for arg in aggs))
+        agg_result = self._grouped.agg(arg.native for arg in aggs)
+        if self._drop_null_keys:
+            agg_result = agg_result.drop_nulls(self._output_names)
+        return self.compliant._with_native(agg_result)
 
     def __iter__(self) -> Iterator[tuple[tuple[str, ...], PolarsDataFrame]]:
         for key, df in self._grouped:
+            if self._drop_null_keys and any(k is None for k in key):
+                continue
             yield tuple(cast("str", key)), self.compliant._with_native(df)
 
 
 class PolarsLazyGroupBy:
     _compliant_frame: PolarsLazyFrame
-    _keys: Sequence[str]
+    _grouped: NativeLazyGroupBy
+    _drop_null_keys: bool
+    _output_names: list[str]
 
     @property
     def compliant(self) -> PolarsLazyFrame:
         return self._compliant_frame
 
     def __init__(
-        self, df: PolarsLazyFrame, keys: Sequence[str], /, *, drop_null_keys: bool
+        self,
+        df: PolarsLazyFrame,
+        keys: Sequence[PolarsExpr] | Sequence[str],
+        /,
+        *,
+        drop_null_keys: bool,
     ) -> None:
         self._compliant_frame = df
-        self._keys = list(keys)
-        df = df.drop_nulls(keys) if drop_null_keys else df
-        self._grouped: NativeLazyGroupBy = df._native_frame.group_by(keys)
+        self._drop_null_keys = drop_null_keys
+        if is_sequence_of(keys, str):
+            self._output_names = list(keys)
+            self._grouped = self.compliant.native.group_by(keys)
+
+        else:
+            self._output_names = flatten(
+                [
+                    arg.native.meta.root_names()
+                    if arg.native.meta.has_multiple_outputs()
+                    else arg.native.meta.output_name()
+                    for arg in keys
+                ]
+            )
+
+            self._grouped = self.compliant.native.group_by(*[arg.native for arg in keys])
 
     def agg(self, *aggs: PolarsExpr) -> PolarsLazyFrame:
-        from_native = self.compliant._with_native
-        return from_native(self._grouped.agg(extract_native(arg) for arg in aggs))
+        agg_result = self._grouped.agg(arg.native for arg in aggs)
+
+        if self._drop_null_keys:
+            agg_result = agg_result.drop_nulls(subset=self._output_names)
+
+        return self.compliant._with_native(agg_result)

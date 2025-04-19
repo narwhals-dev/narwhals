@@ -96,8 +96,6 @@ def evaluate_output_names_and_aliases(
     expr: CompliantExprAny, df: CompliantFrameAny, exclude: Sequence[str]
 ) -> tuple[Sequence[str], Sequence[str]]:
     output_names = expr._evaluate_output_names(df)
-    if not output_names:
-        return [], []
     aliases = (
         output_names
         if expr._alias_output_names is None
@@ -183,8 +181,17 @@ class ExpansionKind(Enum):
     MULTI_UNNAMED = auto()
     """e.g. `nw.all()`, nw.nth(0, 1)"""
 
+    def is_single(self) -> bool:  # pragma: no cover
+        return self is ExpansionKind.SINGLE
+
+    def is_multi_named(self) -> bool:  # pragma: no cover
+        return self is ExpansionKind.MULTI_NAMED
+
     def is_multi_unnamed(self) -> bool:
         return self is ExpansionKind.MULTI_UNNAMED
+
+    def is_multi_output(self) -> bool:
+        return self in {ExpansionKind.MULTI_NAMED, ExpansionKind.MULTI_UNNAMED}
 
 
 def is_multi_output(

@@ -40,18 +40,17 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
 
     def __init__(
         self,
-        compliant_frame: ArrowDataFrame,
-        keys: Sequence[str],
+        df: ArrowDataFrame,
+        keys: Sequence[ArrowExpr] | Sequence[str],
         /,
         *,
         drop_null_keys: bool,
     ) -> None:
-        if drop_null_keys:
-            self._compliant_frame = compliant_frame.drop_nulls(keys)
-        else:
-            self._compliant_frame = compliant_frame
-        self._keys: list[str] = list(keys)
+        self._df = df
+        frame, self._keys, self._output_key_names = self._parse_keys(df, keys=keys)
+        self._compliant_frame = frame.drop_nulls(self._keys) if drop_null_keys else frame
         self._grouped = pa.TableGroupBy(self.compliant.native, self._keys)
+        self._drop_null_keys = drop_null_keys
 
     def agg(self, *exprs: ArrowExpr) -> ArrowDataFrame:
         self._ensure_all_simple(exprs)
@@ -61,7 +60,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
 
         for expr in exprs:
             output_names, aliases = evaluate_output_names_and_aliases(
-                expr, self.compliant, self._keys
+                expr, self.compliant, [*self._keys, *self._output_key_names]
             )
 
             if expr._depth == 0:
@@ -120,7 +119,10 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
             result_simple = result_simple.select(
                 [*self._keys, *[col for col in columns if col not in self._keys]]
             )
-        return self.compliant._with_native(result_simple)
+
+        return self.compliant._with_native(result_simple).rename(
+            dict(zip(self._keys, self._output_key_names))
+        )
 
     def __iter__(self) -> Iterator[tuple[Any, ArrowDataFrame]]:
         col_token = generate_temporary_column_name(
@@ -141,10 +143,19 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
             null_handling="replace",
             null_replacement=null_token,
         )
+        mapping = dict(zip(self._keys, self._output_key_names))
+
         table = table.add_column(i=0, field_=col_token, column=key_values)
+
+        original_table = self._df
+        if self._drop_null_keys:
+            original_table = original_table.drop_nulls(subset=list(mapping.values()))
+
         for v in pc.unique(key_values):
-            t = self.compliant._with_native(
-                table.filter(pc.equal(table[col_token], v)).drop([col_token])
-            )
+            # TODO(FBruzzesi): Can we avoid to double filter?
+            _mask = pc.equal(table[col_token], v)
+            group = self.compliant._with_native(original_table.native.filter(_mask))
+            t = self.compliant._with_native(table.filter(_mask))
+
             row = t.simple_select(*self._keys).row(0)
-            yield tuple(extract_py_scalar(el) for el in row), t
+            yield tuple(extract_py_scalar(el) for el in row), group

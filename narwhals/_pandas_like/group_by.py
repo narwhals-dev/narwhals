@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import collections
 import warnings
+from math import isnan
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import ClassVar
@@ -14,6 +15,7 @@ from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_columns
 from narwhals.utils import find_stacklevel
+from narwhals.utils import tupleify
 
 if TYPE_CHECKING:
     from narwhals._compliant.group_by import NarwhalsAggregation
@@ -38,19 +40,23 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
     def __init__(
         self,
         df: PandasLikeDataFrame,
-        keys: Sequence[str],
+        keys: Sequence[PandasLikeExpr] | Sequence[str],
         /,
         *,
         drop_null_keys: bool,
     ) -> None:
-        self._compliant_frame = df
-        self._keys: list[str] = list(keys)
+        self._df = df
+        self._drop_null_keys = drop_null_keys
+        self._compliant_frame, self._keys, self._output_key_names = self._parse_keys(
+            df, keys=keys
+        )
         # Drop index to avoid potential collisions:
         # https://github.com/narwhals-dev/narwhals/issues/1907.
-        if set(df.native.index.names).intersection(df.columns):
-            native_frame = df.native.reset_index(drop=True)
+
+        if set(self.compliant.native.index.names).intersection(self.compliant.columns):
+            native_frame = self.compliant.native.reset_index(drop=True)
         else:
-            native_frame = df.native
+            native_frame = self.compliant.native
         if (
             self.compliant._implementation.is_pandas()
             and self.compliant._backend_version < (1, 1)
@@ -84,7 +90,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
         all_aggs_are_simple = True
         for expr in exprs:
             _, aliases = evaluate_output_names_and_aliases(
-                expr, self.compliant, self._keys
+                expr, self.compliant, [*self._keys, *self._output_key_names]
             )
             new_names.extend(aliases)
             if not self._is_simple(expr):
@@ -111,7 +117,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
         if all_aggs_are_simple:
             for expr in exprs:
                 output_names, aliases = evaluate_output_names_and_aliases(
-                    expr, self.compliant, self._keys
+                    expr, self.compliant, [*self._keys, *self._output_key_names]
                 )
                 if expr._depth == 0:
                     # e.g. `agg(nw.len())`
@@ -242,7 +248,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
             result.reset_index(inplace=True)  # noqa: PD002
             return self.compliant._with_native(
                 select_columns_by_name(result, new_names, backend_version, implementation)
-            )
+            ).rename(dict(zip(self._keys, self._output_key_names)))
 
         if self.compliant.native.empty:
             # Don't even attempt this, it's way too inconsistent across pandas versions.
@@ -287,12 +293,11 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
         # Keep inplace=True to avoid making a redundant copy.
         # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
         result_complex.reset_index(inplace=True)  # noqa: PD002
-
         return self.compliant._with_native(
             select_columns_by_name(
                 result_complex, new_names, backend_version, implementation
             )
-        )
+        ).rename(dict(zip(self._keys, self._output_key_names)))
 
     def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
         with warnings.catch_warnings():
@@ -301,5 +306,25 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
                 message=".*a length 1 tuple will be returned",
                 category=FutureWarning,
             )
-            for key, group in self._grouped:
-                yield (key, self.compliant._with_native(group))
+            implementation = self.compliant._implementation
+            backend_version = self.compliant._backend_version
+
+            if implementation.is_pandas() and backend_version <= (1, 1, 5):
+                for key, _indices in self._grouped.groups.items():
+                    tuplefied_key = tupleify(key)
+                    if self._drop_null_keys and any(
+                        (k is None) or (isinstance(k, float) and isnan(k))
+                        for k in tuplefied_key
+                    ):
+                        continue
+                    yield (
+                        key,
+                        self.compliant._with_native(self._df.native.iloc[_indices]),
+                    )
+
+            else:
+                for key, _indices in self._grouped.indices.items():
+                    yield (
+                        key,
+                        self.compliant._with_native(self._df.native.iloc[_indices]),
+                    )

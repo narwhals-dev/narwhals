@@ -256,6 +256,7 @@ class PolarsExpr:
 
     # CompliantExpr
     _alias_output_names: Any
+    _evaluate_aliases: Any
     _evaluate_output_names: Any
     _is_multi_output_unnamed: Any
     __call__: Any

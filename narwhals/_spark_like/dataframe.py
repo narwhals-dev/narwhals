@@ -187,7 +187,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
 
     @property
     def columns(self) -> list[str]:
-        return list(self.schema)
+        return list(self.schema) if self._cached_schema else list(self.native.columns)
 
     def collect(
         self,
@@ -289,7 +289,9 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
     def head(self, n: int) -> Self:
         return self._with_native(self.native.limit(num=n))
 
-    def group_by(self, *keys: str, drop_null_keys: bool) -> SparkLikeLazyGroupBy:
+    def group_by(
+        self, keys: Sequence[str] | Sequence[SparkLikeExpr], *, drop_null_keys: bool
+    ) -> SparkLikeLazyGroupBy:
         from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
 
         return SparkLikeLazyGroupBy(self, keys, drop_null_keys=drop_null_keys)

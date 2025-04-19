@@ -55,7 +55,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant import CompliantDataFrame
     from narwhals._compliant import CompliantLazyFrame
-    from narwhals._compliant import IntoCompliantExpr
+    from narwhals._compliant.typing import CompliantExprAny
     from narwhals._compliant.typing import EagerNamespaceAny
     from narwhals.group_by import GroupBy
     from narwhals.group_by import LazyGroupBy
@@ -96,7 +96,7 @@ class BaseFrame(Generic[_FrameT]):
 
     def _flatten_and_extract(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> tuple[list[IntoCompliantExpr[Any, Any]], list[ExprKind]]:
+    ) -> tuple[list[CompliantExprAny], list[ExprKind]]:
         """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
         out_exprs = []
         out_kinds = []
@@ -1488,12 +1488,13 @@ class DataFrame(BaseFrame[DataFrameT]):
         return super().filter(*predicates, **constraints)
 
     def group_by(
-        self, *keys: str | Iterable[str], drop_null_keys: bool = False
+        self, *keys: IntoExpr | Iterable[IntoExpr], drop_null_keys: bool = False
     ) -> GroupBy[Self]:
         r"""Start a group by operation.
 
         Arguments:
-            *keys: Column(s) to group by. Accepts multiple columns names as a list.
+            *keys: Column(s) to group by. Accepts expression input. Strings are parsed as column names.
+                Multiple columns should can be passed as a list.
             drop_null_keys: if True, then groups where any key is null won't be included
                 in the result.
 
@@ -1536,18 +1537,27 @@ class DataFrame(BaseFrame[DataFrameT]):
             2  b  3  2
             3  c  3  1
         """
-        from narwhals.expr import Expr
         from narwhals.group_by import GroupBy
-        from narwhals.series import Series
 
         flat_keys = flatten(keys)
-        if any(isinstance(x, (Expr, Series)) for x in flat_keys):
-            msg = (
-                "`group_by` with expression or Series keys is not (yet?) supported.\n\n"
-                "Hint: instead of `df.group_by(nw.col('a'))`, use `df.group_by('a')`."
-            )
-            raise NotImplementedError(msg)
-        return GroupBy(self, *flat_keys, drop_null_keys=drop_null_keys)
+
+        if all(isinstance(key, str) for key in flat_keys):
+            return GroupBy(self, flat_keys, drop_null_keys=drop_null_keys)
+
+        from narwhals import col
+        from narwhals.expr import Expr
+        from narwhals.series import Series
+
+        _keys = [k if isinstance(k, (Expr, Series)) else col(k) for k in flat_keys]
+        expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
+
+        if not all(kind is ExprKind.TRANSFORM for kind in kinds):
+            from narwhals.exceptions import ComputeError
+
+            msg = "Group by is not supported with keys that are not transformation expressions"
+            raise ComputeError(msg)
+
+        return GroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
         self,
@@ -2770,14 +2780,14 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().filter(*predicates, **constraints)
 
     def group_by(
-        self, *keys: str | Iterable[str], drop_null_keys: bool = False
+        self, *keys: IntoExpr | Iterable[IntoExpr], drop_null_keys: bool = False
     ) -> LazyGroupBy[Self]:
         r"""Start a group by operation.
 
         Arguments:
             *keys:
-                Column(s) to group by. Accepts expression input. Strings are
-                parsed as column names.
+                Column(s) to group by. Accepts expression input. Strings are parsed as column names.
+                Multiple columns should can be passed as a list.
             drop_null_keys: if True, then groups where any key is null won't be
                 included in the result.
 
@@ -2801,18 +2811,26 @@ class LazyFrame(BaseFrame[FrameT]):
             └─────────┴────────┘
             <BLANKLINE>
         """
-        from narwhals.expr import Expr
         from narwhals.group_by import LazyGroupBy
-        from narwhals.series import Series
 
         flat_keys = flatten(keys)
-        if any(isinstance(x, (Expr, Series)) for x in flat_keys):
-            msg = (
-                "`group_by` with expression or Series keys is not (yet?) supported.\n\n"
-                "Hint: instead of `df.group_by(nw.col('a'))`, use `df.group_by('a')`."
-            )
-            raise NotImplementedError(msg)
-        return LazyGroupBy(self, *flat_keys, drop_null_keys=drop_null_keys)
+
+        if all(isinstance(key, str) for key in flat_keys):
+            return LazyGroupBy(self, flat_keys, drop_null_keys=drop_null_keys)
+
+        from narwhals import col
+        from narwhals.expr import Expr
+
+        _keys = [k if isinstance(k, Expr) else col(k) for k in flat_keys]
+        expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
+
+        if not all(kind is ExprKind.TRANSFORM for kind in kinds):
+            from narwhals.exceptions import ComputeError
+
+            msg = "Group by is not supported with keys that are not transformation expressions"
+            raise ComputeError(msg)
+
+        return LazyGroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
         self,

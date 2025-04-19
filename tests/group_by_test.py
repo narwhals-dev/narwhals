@@ -1,5 +1,7 @@
+# ruff: noqa: ERA001
 from __future__ import annotations
 
+import os
 from contextlib import nullcontext
 from typing import Any
 from typing import Mapping
@@ -9,8 +11,12 @@ import pyarrow as pa
 import pytest
 
 import narwhals as nw
+from narwhals.exceptions import ComputeError
 from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import LengthChangingExprError
+from narwhals.exceptions import OrderDependentExprError
 from tests.utils import PANDAS_VERSION
+from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -19,6 +25,8 @@ from tests.utils import assert_equal_data
 data: Mapping[str, Any] = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
 
 df_pandas = pd.DataFrame(data)
+
+POLARS_COLLECT_STREAMING_ENGINE = os.environ.get("NARWHALS_POLARS_NEW_STREAMING", None)
 
 
 def test_group_by_complex() -> None:
@@ -294,7 +302,11 @@ def test_key_with_nulls_iter(
 ) -> None:
     if PANDAS_VERSION < (1, 0) and "pandas_constructor" in str(constructor_eager):
         pytest.skip("Grouping by null values is not supported in pandas < 1.0.0")
-    data = {"b": ["4", "5", None, "7"], "a": [1, 2, 3, 4], "c": ["4", "3", None, None]}
+    data = {
+        "b": [None, "4", "5", None, "7"],
+        "a": [None, 1, 2, 3, 4],
+        "c": [None, "4", "3", None, None],
+    }
     result = dict(
         nw.from_native(constructor_eager(data), eager_only=True)
         .group_by("b", "c", drop_null_keys=True)
@@ -415,12 +427,6 @@ def test_all_kind_of_aggs(
     assert_equal_data(result, expected)
 
 
-def test_group_by_expr(constructor: Constructor) -> None:
-    df = nw.from_native(constructor({"a": [1, 1, 3], "b": [4, 5, 6]}))
-    with pytest.raises(NotImplementedError, match=r"not \(yet\?\) supported"):
-        df.group_by(nw.col("a")).agg(nw.col("b").mean())  # type: ignore[arg-type]
-
-
 def test_pandas_group_by_index_and_column_overlap() -> None:
     df = pd.DataFrame(
         {"a": [1, 1, 2], "b": [4, 5, 6]}, index=pd.Index([0, 1, 2], name="a")
@@ -431,7 +437,9 @@ def test_pandas_group_by_index_and_column_overlap() -> None:
 
     key, result = next(iter(nw.from_native(df, eager_only=True).group_by("a")))
     assert key == (1,)
-    expected_native = pd.DataFrame({"a": [1, 1], "b": [4, 5]})
+    expected_native = pd.DataFrame(
+        {"a": [1, 1], "b": [4, 5]}, index=pd.Index([0, 1], name="a")
+    )
     pd.testing.assert_frame_equal(result.to_native(), expected_native)
 
 
@@ -455,3 +463,144 @@ def test_fancy_functions(constructor: Constructor) -> None:
         .sort("a")
     )
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("keys", "aggs", "expected", "sort_by"),
+    [
+        (
+            [nw.col("a").abs(), nw.col("a").abs().alias("a_with_alias")],
+            [nw.col("x").sum()],
+            {"a": [1, 2], "a_with_alias": [1, 2], "x": [5, 5]},
+            ["a"],
+        ),
+        (
+            [nw.col("a").alias("x")],
+            [nw.col("x").mean().alias("y")],
+            {"x": [-1, 1, 2], "y": [4.0, 0.5, 2.5]},
+            ["x"],
+        ),
+        (
+            [nw.col("a")],
+            [nw.col("a").count().alias("foo-bar"), nw.all().sum()],
+            {"a": [-1, 1, 2], "foo-bar": [1, 2, 2], "x": [4, 1, 5], "y": [1.5, 0, 0]},
+            ["a"],
+        ),
+        (
+            [nw.col("a", "y").abs()],
+            [nw.col("x").sum()],
+            {"a": [1, 1, 2], "y": [0.5, 1.5, 1], "x": [1, 4, 5]},
+            ["a", "y"],
+        ),
+        (
+            [nw.col("a").abs().alias("y")],
+            [nw.all().sum().name.suffix("c")],
+            {"y": [1, 2], "ac": [1, 4], "xc": [5, 5]},
+            ["y"],
+        ),
+    ],
+    ids=range(5),
+)
+@pytest.mark.parametrize("drop_null_keys", [True, False])
+def test_group_by_expr(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    keys: list[nw.Expr],
+    aggs: list[nw.Expr],
+    expected: dict[str, list[Any]],
+    sort_by: list[str],
+    *,
+    drop_null_keys: bool,
+) -> None:
+    request_id = request.node.callspec.id
+    if (
+        POLARS_COLLECT_STREAMING_ENGINE
+        and request_id.startswith("polars[lazy]")
+        and request_id.endswith("0")
+    ):
+        # Blocked by upstream issue as of polars==1.27.1
+        # See: https://github.com/pola-rs/polars/issues/22238
+        request.applymarker(pytest.mark.xfail)
+
+    if (
+        "polars" in str(constructor)
+        and drop_null_keys
+        and any(key._metadata.expansion_kind.is_multi_output() for key in keys)
+    ):
+        request.applymarker(pytest.mark.xfail)
+
+    if (
+        "polars_lazy" in str(constructor)
+        and drop_null_keys
+        and POLARS_VERSION <= (0, 20, 16)
+        and request_id.endswith(("0", "4"))
+    ):
+        # For id=0: the following repro works for polars>=0.20.17, but fails with
+        # `ColumnNotFoundError` for previous versions:
+        # ```
+        # import polars as pl
+        # data = {"a": [1, 1, 2, 2, -1], "x": [0, 1, 2, 3, 4]}
+        # df = pl.LazyFrame(data)
+        # result = (
+        #     df.group_by(
+        #         pl.col("a").abs(),
+        #         pl.col("a").abs().alias("a_with_alias"),
+        #     )
+        #     .agg(pl.col("x").sum())
+        #     .drop_nulls(["a", "a_with_alias"])
+        #     .collect()
+        # )
+        # ```
+        # For id=4: similarly, `ColumnNotFoundError` ("y")
+        request.applymarker(pytest.mark.xfail)
+
+    data = {"a": [1, 1, 2, 2, -1], "x": [0, 1, 2, 3, 4], "y": [0.5, -0.5, 1.0, -1.0, 1.5]}
+    df = nw.from_native(constructor(data))
+    result = df.group_by(*keys, drop_null_keys=drop_null_keys).agg(*aggs).sort(*sort_by)
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    "keys",
+    [
+        [nw.col("a").drop_nulls()],  # Filtration
+        [
+            nw.col("a").alias("foo"),
+            nw.col("a").drop_nulls(),
+        ],  # Transform and Filtration
+        [nw.col("a").alias("foo"), nw.col("a").max()],  # Transform and Aggregation
+        [
+            nw.col("a").alias("foo"),
+            nw.col("a").cum_max(),
+        ],  # Transform and Window
+        [nw.lit(42)],  # Literal
+    ],
+)
+def test_group_by_raise_if_not_transform(
+    constructor: Constructor, keys: list[nw.Expr]
+) -> None:
+    data = {"a": [1, 2, 2, None], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
+    df = nw.from_native(constructor(data))
+
+    context: Any
+    if isinstance(df, nw.LazyFrame) and any(
+        expr._metadata.kind.is_filtration() for expr in keys
+    ):
+        context = pytest.raises(
+            LengthChangingExprError,
+            match="Length-changing expressions are not supported for use in LazyFrame",
+        )
+    elif isinstance(df, nw.LazyFrame) and any(
+        expr._metadata.kind.is_window() for expr in keys
+    ):
+        context = pytest.raises(
+            OrderDependentExprError,
+            match="Order-dependent expressions are not supported for use in LazyFrame",
+        )
+    else:
+        context = pytest.raises(
+            ComputeError,
+            match="Group by is not supported with keys that are not transformation expressions",
+        )
+    with context:
+        df.group_by(keys).agg(nw.col("x").max())
