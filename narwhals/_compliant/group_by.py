@@ -12,12 +12,12 @@ from typing import Literal
 from typing import Mapping
 from typing import Sequence
 from typing import TypeVar
-from typing import cast
 
 from narwhals._compliant.typing import CompliantDataFrameT_co
+from narwhals._compliant.typing import CompliantExprAny
 from narwhals._compliant.typing import CompliantExprT_contra
+from narwhals._compliant.typing import CompliantFrameT
 from narwhals._compliant.typing import CompliantFrameT_co
-from narwhals._compliant.typing import CompliantLazyFrameAny
 from narwhals._compliant.typing import CompliantLazyFrameT_co
 from narwhals._compliant.typing import DepthTrackingExprAny
 from narwhals._compliant.typing import DepthTrackingExprT_contra
@@ -25,6 +25,7 @@ from narwhals._compliant.typing import EagerExprT_contra
 from narwhals._compliant.typing import LazyExprT_contra
 from narwhals._compliant.typing import NativeExprT_co
 from narwhals._expression_parsing import ExpansionKind
+from narwhals.utils import is_sequence_of
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -61,7 +62,7 @@ _RE_LEAF_NAME: re.Pattern[str] = re.compile(r"(\w+->)")
 
 class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     _compliant_frame: Any
-    _keys: list[str]
+    _keys: list[str] | list[CompliantExprAny]
     _output_key_names: list[str]
 
     @property
@@ -79,21 +80,18 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
 
     def _parse_keys(
         self,
-        compliant_frame: CompliantLazyFrameAny,
+        compliant_frame: CompliantFrameT,
         keys: Sequence[CompliantExprT_contra] | Sequence[str],
-    ) -> tuple[CompliantLazyFrameAny, list[str], list[str]]:
-        if all(isinstance(k, str) for k in keys):
-            keys = cast("list[str]", list(keys))
-
+    ) -> tuple[CompliantFrameT, list[str], list[str]]:
+        if is_sequence_of(keys, str):
             return self._parse_string_keys(compliant_frame, keys=keys)
         else:
-            keys = cast("list[CompliantExprT_contra]", list(keys))
             return self._parse_expr_keys(compliant_frame, keys=keys)
 
     @staticmethod
     def _parse_expr_keys(
-        compliant_frame: CompliantLazyFrameAny, keys: Sequence[CompliantExprT_contra]
-    ) -> tuple[CompliantLazyFrameAny, list[str], list[str]]:
+        compliant_frame: CompliantFrameT, keys: Sequence[CompliantExprT_contra]
+    ) -> tuple[CompliantFrameT, list[str], list[str]]:
         """Parses key expressions to set up `.agg` operation with correct information.
 
         Since keys are expressions, it's possible to incour in aliases that match
@@ -129,9 +127,9 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
 
     @staticmethod
     def _parse_string_keys(
-        compliant_frame: CompliantLazyFrameAny,
+        compliant_frame: CompliantFrameT,
         keys: Sequence[str],
-    ) -> tuple[CompliantLazyFrameAny, list[str], list[str]]:
+    ) -> tuple[CompliantFrameT, list[str], list[str]]:
         return compliant_frame, list(keys), list(keys)
 
     def agg(self, *exprs: CompliantExprT_contra) -> CompliantFrameT_co: ...

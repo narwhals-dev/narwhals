@@ -230,6 +230,10 @@ class CompliantDataFrame(
     def write_csv(self, file: str | Path | BytesIO | None) -> str | None: ...
     def write_parquet(self, file: str | Path | BytesIO) -> None: ...
 
+    def _evaluate_aliases(self, *exprs: CompliantExprT_contra) -> list[str]:
+        it = (expr._evaluate_aliases(self) for expr in exprs)
+        return list(chain.from_iterable(it))
+
 
 class CompliantLazyFrame(
     _StoresNative[NativeFrameT],
