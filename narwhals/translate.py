@@ -20,7 +20,6 @@ from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
-from narwhals.dependencies import get_pyspark
 from narwhals.dependencies import is_cudf_dataframe
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_dask_dataframe
@@ -35,8 +34,8 @@ from narwhals.dependencies import is_polars_lazyframe
 from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
 from narwhals.dependencies import is_pyarrow_table
-from narwhals.dependencies import is_pyspark_dataframe
 from narwhals.utils import Version
+from narwhals.utils import import_namespace
 from narwhals.utils import is_native_polars
 from narwhals.utils import is_spark_like_dataframe
 
@@ -689,30 +688,14 @@ def _from_native_impl(  # noqa: PLR0915
 
     # PySpark
     elif is_spark_like_dataframe(native_object):  # pragma: no cover
-        from narwhals._spark_like.namespace import SparkLikeNamespace
-
-        if is_pyspark_dataframe(native_object):
-            name = "pyspark"
-            backend_version = parse_version(get_pyspark())
-            implementation = Implementation.PYSPARK
-        else:
-            name = "SQLFrame"
-            import sqlframe._version
-
-            backend_version = parse_version(sqlframe._version)
-            implementation = Implementation.SQLFRAME
+        ns_spark = import_namespace(version).from_native_object(native_object)
         if series_only:
-            msg = f"Cannot only use `series_only` with {name} DataFrame"
+            msg = f"Cannot only use `series_only` with {ns_spark.implementation._alias} DataFrame"
             raise TypeError(msg)
         if eager_only or eager_or_interchange_only:
-            msg = f"Cannot only use `eager_only` or `eager_or_interchange_only` with {name} DataFrame"
+            msg = f"Cannot only use `eager_only` or `eager_or_interchange_only` with {ns_spark.implementation._alias} DataFrame"
             raise TypeError(msg)
-        spark_ns = SparkLikeNamespace(
-            backend_version=backend_version,
-            version=version,
-            implementation=implementation,
-        )
-        return LazyFrame(spark_ns.from_native(native_object), level="lazy")
+        return LazyFrame(ns_spark.compliant.from_native(native_object), level="lazy")
 
     # Interchange protocol
     elif _supports_dataframe_interchange(native_object):
