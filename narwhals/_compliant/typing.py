@@ -93,6 +93,11 @@ CompliantLazyFrameT = TypeVar("CompliantLazyFrameT", bound=CompliantLazyFrameAny
 CompliantLazyFrameT_co = TypeVar(
     "CompliantLazyFrameT_co", bound=CompliantLazyFrameAny, covariant=True
 )
+CompliantNamespaceT = TypeVar("CompliantNamespaceT", bound=CompliantNamespaceAny)
+CompliantNamespaceT_co = TypeVar(
+    "CompliantNamespaceT_co", bound=CompliantNamespaceAny, covariant=True
+)
+
 IntoCompliantExpr: TypeAlias = "CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | CompliantSeriesOrNativeExprT_co"
 
 DepthTrackingExprT = TypeVar("DepthTrackingExprT", bound=DepthTrackingExprAny)
