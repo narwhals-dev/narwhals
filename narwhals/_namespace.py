@@ -104,7 +104,7 @@ if TYPE_CHECKING:
         _pandas_class: type[pd.Series[Any]]
 
     _NativePolars: TypeAlias = "pl.DataFrame | pl.LazyFrame | pl.Series"
-    _NativeArrow: TypeAlias = "pa.Table | pa.ChunkedArray[Any] | pa.Array[Any]"
+    _NativeArrow: TypeAlias = "pa.Table | pa.ChunkedArray[Any]"
     _NativeDuckDB: TypeAlias = "duckdb.DuckDBPyRelation"
     _NativePandas: TypeAlias = "pd.DataFrame | pd.Series[Any]"
     _NativeModin: TypeAlias = "_ModinDataFrame | _ModinSeries"
@@ -315,7 +315,7 @@ def is_native_polars(obj: Any) -> TypeIs[_NativePolars]:
 
 def is_native_arrow(obj: Any) -> TypeIs[_NativeArrow]:
     return (pa := get_pyarrow()) is not None and isinstance(
-        obj, (pa.Table, pa.ChunkedArray, pa.Array)
+        obj, (pa.Table, pa.ChunkedArray)
     )
 
 

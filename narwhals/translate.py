@@ -11,6 +11,7 @@ from typing import Literal
 from typing import TypeVar
 from typing import overload
 
+from narwhals._namespace import is_native_arrow
 from narwhals._namespace import is_native_polars
 from narwhals._namespace import is_native_spark_like
 from narwhals.dependencies import get_cudf
@@ -579,39 +580,25 @@ def _from_native_impl(  # noqa: PLR0915
         )
 
     # PyArrow
-    elif is_pyarrow_table(native_object):
-        from narwhals._arrow.dataframe import ArrowDataFrame
-
-        pa = get_pyarrow()
-        if series_only:
+    elif is_native_arrow(native_object):
+        if series_only and is_pyarrow_table(native_object):
             if not pass_through:
-                msg = "Cannot only use `series_only` with arrow table"
+                msg = f"Cannot only use `series_only` with {type(native_object).__qualname__}"
                 raise TypeError(msg)
             return native_object
-        return DataFrame(
-            ArrowDataFrame(
-                native_object,
-                backend_version=parse_version(pa),
-                version=version,
-                validate_column_names=True,
-            ),
-            level="full",
-        )
-    elif is_pyarrow_chunked_array(native_object):
-        from narwhals._arrow.series import ArrowSeries
-
-        pa = get_pyarrow()
-        if not allow_series:
+        if not allow_series and not is_pyarrow_table(native_object):
             if not pass_through:
                 msg = "Please set `allow_series=True` or `series_only=True`"
                 raise TypeError(msg)
             return native_object
-        return Series(
-            ArrowSeries(
-                native_object, backend_version=parse_version(pa), name="", version=version
-            ),
-            level="full",
+        pa_compliant = (
+            import_namespace(version)
+            .from_native_object(native_object)
+            .compliant.from_native(native_object)
         )
+        if is_compliant_dataframe(pa_compliant):
+            return DataFrame(pa_compliant, level="full")
+        return Series(pa_compliant, level="full")
 
     # Dask
     elif is_dask_dataframe(native_object):
