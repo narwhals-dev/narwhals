@@ -566,7 +566,6 @@ class Implementation(Enum):
         }
         return mapping[self]
 
-    @property
     def _backend_version(self) -> tuple[int, ...]:
         native = self.to_native_namespace()
         into_version: Any

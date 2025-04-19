@@ -212,7 +212,7 @@ class Namespace(Generic[CompliantNamespaceT_co]):
             Namespace[PolarsNamespace]
         """
         impl = Implementation.from_backend(backend)
-        backend_version = impl._backend_version
+        backend_version = impl._backend_version()
         version = cls._version
         ns: CompliantNamespaceAny
         if impl.is_pandas_like():
