@@ -173,7 +173,8 @@ class Series(Generic[IntoSeriesT]):
             is_numpy_scalar(idx) and idx.dtype.kind in {"i", "u"}
         ):
             return self._compliant_series.item(cast("int", idx))
-        idx = to_native(idx, pass_through=True)
+        if isinstance(idx, Series):
+            return self._with_compliant(self._compliant_series[idx._compliant_series])
         return self._with_compliant(self._compliant_series[idx])
 
     def __native_namespace__(self) -> ModuleType:

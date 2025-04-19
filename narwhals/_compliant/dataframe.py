@@ -25,6 +25,7 @@ from narwhals._translate import NumpyConvertible
 from narwhals.utils import Version
 from narwhals.utils import _StoresNative
 from narwhals.utils import deprecated
+from narwhals.utils import is_compliant_series
 from narwhals.utils import is_index_selector
 from narwhals.utils import is_sequence_like
 from narwhals.utils import is_sequence_like_ints
@@ -396,12 +397,16 @@ class EagerDataFrame(
         if not is_slice_none(columns):
             if hasattr(columns, "__len__") and len(columns) == 0:
                 return compliant.select()
-            if is_int_col_indexer and not isinstance(columns, slice):
-                compliant = compliant._select_indices(columns)
-            elif is_int_col_indexer:
+            if is_int_col_indexer and isinstance(columns, (slice, range)):
                 compliant = compliant._select_slice_of_indices(columns)
-            elif isinstance(columns, slice):
+            elif is_int_col_indexer and is_compliant_series(columns):
+                compliant = self._select_indices(columns.native)
+            elif is_int_col_indexer and is_sequence_like_ints(columns):
+                compliant = compliant._select_indices(columns)
+            elif isinstance(columns, (slice, range)):
                 compliant = compliant._select_slice_of_labels(columns)
+            elif is_compliant_series(columns):
+                compliant = self._select_labels(columns.native)
             elif is_sequence_like(columns):
                 compliant = self._select_labels(columns)
             else:
@@ -409,13 +414,13 @@ class EagerDataFrame(
                 raise AssertionError(msg)
 
         if not is_slice_none(rows):
-            is_native_series = self.__narwhals_namespace__()._series._is_native
             if isinstance(rows, int):
                 compliant = compliant._gather([rows])
             elif isinstance(rows, (slice, range)):
                 compliant = compliant._gather_slice(rows)
-
-            elif is_sequence_like_ints(rows) or is_native_series(rows):
+            elif is_compliant_series(rows):
+                compliant = compliant._gather(rows.native)
+            elif is_sequence_like_ints(rows):
                 compliant = compliant._gather(rows)
             else:
                 msg = "Unreachable code"

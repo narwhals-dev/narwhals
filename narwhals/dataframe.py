@@ -12,6 +12,7 @@ from typing import Literal
 from typing import NoReturn
 from typing import Sequence
 from typing import TypeVar
+from typing import cast
 from typing import overload
 from warnings import warn
 
@@ -882,6 +883,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             1    2
             Name: a, dtype: int64
         """
+        from narwhals.series import Series
+
         if isinstance(item, tuple):
             if len(item) > 2:
                 msg = (
@@ -911,15 +914,22 @@ class DataFrame(BaseFrame[DataFrameT]):
             raise TypeError(msg)
 
         compliant = self._compliant_frame
-        rows = to_native(rows, pass_through=True)
-        columns = to_native(columns, pass_through=True)
 
         if isinstance(rows, int) and isinstance(columns, (int, str)):
             return self.item(rows, columns)
         if isinstance(columns, (int, str)):
             col_name = columns if isinstance(columns, str) else self.columns[columns]
             series = self.get_column(col_name)
-            return series[rows] if rows is not None else series
+            return (
+                series[cast("SingleIndexSelector | MultiIndexSelector", rows)]
+                if rows is not None
+                else series
+            )
+
+        if isinstance(rows, Series):
+            rows = rows._compliant_series
+        if isinstance(columns, Series):
+            columns = columns._compliant_series
         if rows is None:
             return self._with_compliant(compliant[:, columns])
         if columns is None:

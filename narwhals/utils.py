@@ -1307,15 +1307,17 @@ def is_sequence_like_ints(sequence: Any | Sequence[_T]) -> bool:
     np = get_numpy()
     return (
         (
-            isinstance(sequence, Sequence)
-            and not isinstance(sequence, str)
+            is_sequence_but_not_str(sequence)
             and (
                 (len(sequence) > 0 and isinstance(sequence[0], int))
                 or (len(sequence) == 0)
             )
         )
         or (is_numpy_array_1d(sequence) and np.issubdtype(sequence.dtype, np.integer))
-        or (is_compliant_series(sequence) and sequence.dtype.is_integer())
+        or (
+            (is_narwhals_series(sequence) or is_compliant_series(sequence))
+            and sequence.dtype.is_integer()
+        )
     )
 
 
@@ -1326,6 +1328,7 @@ def is_sequence_like(
         is_sequence_but_not_str(sequence)
         or is_numpy_array_1d(sequence)
         or is_narwhals_series(sequence)
+        or is_compliant_series(sequence)
     )
 
 
@@ -1342,12 +1345,7 @@ def is_slice_none(obj: object) -> TypeIs[_SliceNone]:
 
 
 def is_index_selector(cols: SingleIndexSelector | MultiIndexSelector | Any) -> bool:
-    return (
-        isinstance(cols, int)
-        or is_sequence_like_ints(cols)
-        or is_slice_index(cols)
-        or (is_narwhals_series(cols) and cols.dtype.is_integer())
-    )
+    return isinstance(cols, int) or is_sequence_like_ints(cols) or is_slice_index(cols)
 
 
 def is_list_of(obj: Any, tp: type[_T]) -> TypeIs[list[_T]]:

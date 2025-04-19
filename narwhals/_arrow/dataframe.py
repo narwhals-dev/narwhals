@@ -273,9 +273,13 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         )
 
     def _select_indices(self, item: _IntIndexer) -> Self:
+        if isinstance(item, pa.ChunkedArray):
+            item = item.to_pylist()
         return self._with_native(self.native.select([self.columns[x] for x in item]))
 
     def _select_labels(self, item: _StrIndexer) -> Self:
+        if isinstance(item, pa.ChunkedArray):
+            item = item.to_pylist()
         return self._with_native(self.native.select(item))
 
     @property

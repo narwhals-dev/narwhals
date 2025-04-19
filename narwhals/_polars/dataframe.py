@@ -21,6 +21,7 @@ from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import _into_arrow_table
 from narwhals.utils import convert_str_slice_to_int_slice
+from narwhals.utils import is_compliant_series
 from narwhals.utils import is_index_selector
 from narwhals.utils import is_sequence_like
 from narwhals.utils import is_sequence_like_ints
@@ -262,12 +263,16 @@ class PolarsDataFrame:
         return self.native.shape
 
     def __getitem__(self, item: Any) -> Any:
+        rows, columns = item
+        if is_compliant_series(rows):
+            rows = rows.native
+        if is_compliant_series(columns):
+            columns = columns.native
         if self._backend_version > (0, 20, 30):
-            return self._from_native_object(self.native.__getitem__(item))
+            return self._from_native_object(self.native.__getitem__((rows, columns)))
         else:  # pragma: no cover
             # TODO(marco): we can delete this branch after Polars==0.20.30 becomes the minimum
             # Polars version we support
-            rows, columns = item
             rows = list(rows) if isinstance(rows, tuple) else rows
             columns = list(columns) if isinstance(columns, tuple) else columns
             if is_numpy_array_1d(columns):

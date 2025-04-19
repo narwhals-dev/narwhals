@@ -308,3 +308,23 @@ def test_slice_with_series(
     result = nw_df[nw_df["c"], ["a"]]
     expected = {"a": [1, 3, 2]}
     assert_equal_data(result, expected)
+
+
+def test_horizontal_slice_with_series(constructor_eager: ConstructorEager) -> None:
+    data = {"a": [1, 2], "c": [0, 2], "d": ["c", "a"]}
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = nw_df[nw_df["d"]]
+    expected = {"c": [0, 2], "a": [1, 2]}
+    assert_equal_data(result, expected)
+
+
+def test_horizontal_slice_with_series_2(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if "pandas_pyarrow" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
+    data = {"a": [1, 2], "c": [0, 2], "d": ["c", "a"]}
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = nw_df[:, nw_df["c"]]
+    expected = {"a": [1, 2], "d": ["c", "a"]}
+    assert_equal_data(result, expected)
