@@ -184,9 +184,6 @@ class ExpansionKind(Enum):
     def is_multi_unnamed(self) -> bool:
         return self is ExpansionKind.MULTI_UNNAMED
 
-    def is_multi_output(self) -> bool:
-        return self in {ExpansionKind.MULTI_NAMED, ExpansionKind.MULTI_UNNAMED}
-
 
 def is_multi_output(
     expansion_kind: ExpansionKind,
