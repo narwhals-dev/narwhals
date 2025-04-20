@@ -101,9 +101,8 @@ def native_to_narwhals_dtype(duckdb_dtype: DuckDBPyType, version: Version) -> DT
         )
 
     if duckdb_dtype_id == "array":
-        shape: list[int] = []
         child, size = duckdb_dtype.children
-        shape.insert(0, size[1])
+        shape: list[int] = [size[1]]
 
         while child[1].id == "array":
             child, size = child[1].children
