@@ -264,15 +264,12 @@ class PolarsDataFrame:
 
     def __getitem__(self, item: Any) -> Any:
         rows, columns = item
-        if is_compliant_series(rows):
-            rows = rows.native
-        if is_compliant_series(columns):
-            columns = columns.native
         if self._backend_version > (0, 20, 30):
             return self._from_native_object(self.native.__getitem__((rows, columns)))
         else:  # pragma: no cover
             # TODO(marco): we can delete this branch after Polars==0.20.30 becomes the minimum
             # Polars version we support
+            # This mostly mirrors the logic in `EagerDataFrame.__getitem__`.
             rows = list(rows) if isinstance(rows, tuple) else rows
             columns = list(columns) if isinstance(columns, tuple) else columns
             if is_numpy_array_1d(columns):
@@ -283,20 +280,22 @@ class PolarsDataFrame:
             if not is_slice_none(columns):
                 if hasattr(columns, "__len__") and len(columns) == 0:
                     native = native.select()
-                if is_int_col_indexer and not isinstance(columns, (slice, range)):
-                    native = native[:, columns]
-                elif is_int_col_indexer and isinstance(columns, (slice, range)):
+                if is_int_col_indexer and isinstance(columns, (slice, range)):
                     native = native.select(
                         self.columns[slice(columns.start, columns.stop, columns.step)]
                     )
+                elif is_int_col_indexer and is_compliant_series(columns):
+                    native = native[:, cast("pl.Series", columns.native).to_list()]
+                elif is_int_col_indexer and is_sequence_like_ints(columns):
+                    native = native[:, columns]
                 elif isinstance(columns, (slice, range)):
                     native = native.select(
                         self.columns[
                             slice(*convert_str_slice_to_int_slice(columns, self.columns))
                         ]
                     )
-                elif is_int_col_indexer:
-                    native = native[:, columns]
+                elif is_compliant_series(columns):
+                    native = native.select(cast("pl.Series", columns.native).to_list())
                 elif is_sequence_like(columns):
                     native = native.select(columns)
                 else:
@@ -306,11 +305,11 @@ class PolarsDataFrame:
             if not is_slice_none(rows):
                 if isinstance(rows, int):
                     native = native[[rows], :]
-                elif (
-                    isinstance(rows, (slice, range))
-                    or is_sequence_like_ints(rows)
-                    or isinstance(rows, pl.Series)
-                ):
+                elif isinstance(rows, (slice, range)):
+                    native = native[rows, :]
+                elif is_compliant_series(rows):
+                    native = native[rows.native, :]
+                elif is_sequence_like(rows):
                     native = native[rows, :]
                 else:
                     msg = "Unreachable code"
