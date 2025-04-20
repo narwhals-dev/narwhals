@@ -497,7 +497,6 @@ def test_fancy_functions(constructor: Constructor) -> None:
     ],
     ids=range(5),
 )
-@pytest.mark.parametrize("drop_null_keys", [True, False])
 def test_group_by_expr(
     request: pytest.FixtureRequest,
     constructor: Constructor,
@@ -505,8 +504,6 @@ def test_group_by_expr(
     aggs: list[nw.Expr],
     expected: dict[str, list[Any]],
     sort_by: list[str],
-    *,
-    drop_null_keys: bool,
 ) -> None:
     request_id = request.node.callspec.id
     if (
@@ -518,26 +515,14 @@ def test_group_by_expr(
         # See: https://github.com/pola-rs/polars/issues/22238
         request.applymarker(pytest.mark.xfail)
 
-    context = (
-        pytest.raises(
-            NotImplementedError,
-            match="drop_null_keys cannot be True when keys contains Expr",
-        )
-        if drop_null_keys
-        else nullcontext()
-    )
-
-    with context:
-        data = {
-            "a": [1, 1, 2, 2, -1],
-            "x": [0, 1, 2, 3, 4],
-            "y": [0.5, -0.5, 1.0, -1.0, 1.5],
-        }
-        df = nw.from_native(constructor(data))
-        result = (
-            df.group_by(*keys, drop_null_keys=drop_null_keys).agg(*aggs).sort(*sort_by)
-        )
-        assert_equal_data(result, expected)
+    data = {
+        "a": [1, 1, 2, 2, -1],
+        "x": [0, 1, 2, 3, 4],
+        "y": [0.5, -0.5, 1.0, -1.0, 1.5],
+    }
+    df = nw.from_native(constructor(data))
+    result = df.group_by(*keys).agg(*aggs).sort(*sort_by)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
@@ -573,3 +558,22 @@ def test_group_by_raise_if_not_transform(
     )
     with context:
         df.group_by(keys).agg(nw.col("x").max())
+
+
+@pytest.mark.parametrize(
+    "keys", [[nw.col("a").abs()], ["a", nw.col("a").abs().alias("a_test")]]
+)
+def test_group_by_raise_drop_null_keys_with_exprs(
+    constructor: Constructor, keys: list[nw.Expr | str]
+) -> None:
+    data = {
+        "a": [1, 1, 2, 2, -1],
+        "x": [0, 1, 2, 3, 4],
+        "y": [0.5, -0.5, 1.0, -1.0, 1.5],
+    }
+    df = nw.from_native(constructor(data))
+    with pytest.raises(
+        NotImplementedError,
+        match="drop_null_keys cannot be True when keys contains Expr",
+    ):
+        df.group_by(*keys, drop_null_keys=True)  # type: ignore[call-overload]
