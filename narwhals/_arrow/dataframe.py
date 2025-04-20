@@ -63,6 +63,7 @@ if TYPE_CHECKING:
     from narwhals.typing import SizeUnit
     from narwhals.typing import UniqueKeepStrategy
     from narwhals.typing import _2DArray
+    from narwhals.typing import _SliceIndex
     from narwhals.typing import _SliceName
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -254,7 +255,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             item = list(item)
         return self._with_native(self.native.take(item))
 
-    def _gather_slice(self, item: slice | range) -> Self:
+    def _gather_slice(self, item: _SliceIndex | range) -> Self:
         start = item.start or 0
         stop = item.stop if item.stop is not None else len(self.native)
         if start < 0:
@@ -270,7 +271,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         start, stop, step = convert_str_slice_to_int_slice(item, self.columns)
         return self._with_native(self.native.select(self.columns[start:stop:step]))
 
-    def _select_slice_of_indices(self, item: slice | range) -> Self:
+    def _select_slice_of_indices(self, item: _SliceIndex | range) -> Self:
         return self._with_native(
             self.native.select(self.columns[item.start : item.stop : item.step])
         )

@@ -69,6 +69,7 @@ if TYPE_CHECKING:
     from narwhals.typing import SizeUnit
     from narwhals.typing import UniqueKeepStrategy
     from narwhals.typing import _2DArray
+    from narwhals.typing import _SliceIndex
     from narwhals.typing import _SliceName
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -284,7 +285,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         items = list(items) if isinstance(items, tuple) else items
         return self._with_native(self.native.iloc[items, :])
 
-    def _gather_slice(self, item: slice | range) -> Self:
+    def _gather_slice(self, item: _SliceIndex | range) -> Self:
         return self._with_native(
             self.native.iloc[slice(item.start, item.stop, item.step), :],
             validate_column_names=False,
@@ -297,7 +298,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             validate_column_names=False,
         )
 
-    def _select_slice_of_indices(self, item: slice | range) -> Self:
+    def _select_slice_of_indices(self, item: _SliceIndex | range) -> Self:
         return self._with_native(
             self.native.iloc[:, slice(item.start, item.stop, item.step)],
             validate_column_names=False,
