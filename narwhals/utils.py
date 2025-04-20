@@ -1266,42 +1266,37 @@ def parse_columns_to_drop(
     return to_drop
 
 
-def is_sequence_but_not_str(sequence: Any | Sequence[_T]) -> TypeIs[Sequence[_T]]:
+def is_sequence_but_not_str(sequence: Sequence[_T] | Any) -> TypeIs[Sequence[_T]]:
     return isinstance(sequence, Sequence) and not isinstance(sequence, str)
 
 
-def is_slice_none(obj: object) -> TypeIs[_SliceNone]:
+def is_slice_none(obj: Any) -> TypeIs[_SliceNone]:
     return isinstance(obj, slice) and obj == slice(None)
 
 
-def is_sized_multi_index_selector(
-    sequence: Sequence[_T] | Any,
-) -> TypeIs[SizedMultiIndexSelector]:
+def is_sized_multi_index_selector(obj: Any) -> TypeIs[SizedMultiIndexSelector]:
     np = get_numpy()
     return (
         (
-            is_sequence_but_not_str(sequence)
-            and (
-                (len(sequence) > 0 and isinstance(sequence[0], int))
-                or (len(sequence) == 0)
-            )
+            is_sequence_but_not_str(obj)
+            and ((len(obj) > 0 and isinstance(obj[0], int)) or (len(obj) == 0))
         )
-        or (is_numpy_array_1d(sequence) and np.issubdtype(sequence.dtype, np.integer))
+        or (is_numpy_array_1d(obj) and np.issubdtype(obj.dtype, np.integer))
         or (
-            (is_narwhals_series(sequence) or is_compliant_series(sequence))
-            and sequence.dtype.is_integer()
+            (is_narwhals_series(obj) or is_compliant_series(obj))
+            and obj.dtype.is_integer()
         )
     )
 
 
 def is_sequence_like(
-    sequence: Sequence[_T] | Any,
-) -> TypeIs[Sequence[_T]] | TypeIs[Series[Any]] | TypeIs[_1DArray]:
+    obj: Sequence[_T] | Any,
+) -> TypeIs[Sequence[_T] | Series[Any] | _1DArray]:
     return (
-        is_sequence_but_not_str(sequence)
-        or is_numpy_array_1d(sequence)
-        or is_narwhals_series(sequence)
-        or is_compliant_series(sequence)
+        is_sequence_but_not_str(obj)
+        or is_numpy_array_1d(obj)
+        or is_narwhals_series(obj)
+        or is_compliant_series(obj)
     )
 
 
@@ -1314,12 +1309,10 @@ def is_slice_index(obj: Any) -> TypeIs[_SliceIndex]:
 
 
 def is_single_index_selector(obj: Any) -> TypeIs[SingleIndexSelector]:
-    return isinstance(obj, int) and not isinstance(obj, bool)
+    return bool(isinstance(obj, int) and not isinstance(obj, bool))
 
 
-def is_index_selector(
-    obj: Any,
-) -> TypeIs[SingleIndexSelector] | TypeIs[MultiIndexSelector]:
+def is_index_selector(obj: Any) -> TypeIs[SingleIndexSelector | MultiIndexSelector]:
     return (
         is_single_index_selector(obj)
         or is_sized_multi_index_selector(obj)

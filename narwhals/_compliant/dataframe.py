@@ -13,6 +13,7 @@ from typing import TypeVar
 from typing import overload
 
 from narwhals._compliant.typing import CompliantExprT_contra
+from narwhals._compliant.typing import CompliantSeriesAny
 from narwhals._compliant.typing import CompliantSeriesT
 from narwhals._compliant.typing import EagerExprT
 from narwhals._compliant.typing import EagerSeriesT
@@ -402,23 +403,22 @@ class EagerDataFrame(
     def __getitem__(
         self,
         item: tuple[
-            SingleIndexSelector | MultiIndexSelector | CompliantSeriesT,
-            MultiIndexSelector | MultiColSelector | CompliantSeriesT,
+            SingleIndexSelector | MultiIndexSelector | CompliantSeriesAny,
+            MultiIndexSelector | MultiColSelector | CompliantSeriesAny,
         ],
     ) -> Self:
         rows, columns = item
-
-        is_int_col_indexer = is_index_selector(columns)
         compliant = self
         if not is_slice_none(columns):
             if isinstance(columns, Sized) and len(columns) == 0:
                 return compliant.select()
-            if is_int_col_indexer and isinstance(columns, (slice, range)):
-                compliant = compliant._select_slice_of_indices(columns)
-            elif is_int_col_indexer and is_compliant_series(columns):
-                compliant = self._select_indices(columns.native)
-            elif is_int_col_indexer and is_sized_multi_index_selector(columns):
-                compliant = compliant._select_indices(columns)
+            if is_index_selector(columns):
+                if isinstance(columns, (slice, range)):
+                    compliant = compliant._select_slice_of_indices(columns)
+                elif is_compliant_series(columns):
+                    compliant = self._select_indices(columns.native)
+                else:
+                    compliant = compliant._select_indices(columns)
             elif isinstance(columns, slice):
                 compliant = compliant._select_slice_of_labels(columns)
             elif is_compliant_series(columns):
