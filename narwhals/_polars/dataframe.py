@@ -266,6 +266,10 @@ class PolarsDataFrame:
     def __getitem__(self, item: Any) -> Any:
         rows, columns = item
         if self._backend_version > (0, 20, 30):
+            if is_compliant_series(rows):
+                rows = rows.native
+            if is_compliant_series(columns):
+                columns = columns.native
             return self._from_native_object(self.native.__getitem__((rows, columns)))
         else:  # pragma: no cover
             # TODO(marco): we can delete this branch after Polars==0.20.30 becomes the minimum
