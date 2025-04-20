@@ -6,6 +6,11 @@ from typing import Any
 from typing import Sequence
 
 import duckdb
+import duckdb.typing as duckdb_types
+from duckdb import array_type
+from duckdb import enum_type
+from duckdb import list_type
+from duckdb import struct_type
 
 from narwhals.utils import Version
 from narwhals.utils import import_dtypes_module
@@ -149,43 +154,45 @@ def _non_nested_native_to_narwhals_dtype(duckdb_dtype_id: str, version: Version)
     }.get(duckdb_dtype_id, dtypes.Unknown())
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> str:  # noqa: PLR0915
+def narwhals_to_native_dtype(  # noqa: PLR0915
+    dtype: DType | type[DType], version: Version
+) -> DuckDBPyType:
     dtypes = import_dtypes_module(version)
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         msg = "Casting to Decimal is not supported yet."
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Float64):
-        return "DOUBLE"
+        return duckdb_types.DOUBLE
     if isinstance_or_issubclass(dtype, dtypes.Float32):
-        return "FLOAT"
+        return duckdb_types.FLOAT
     if isinstance_or_issubclass(dtype, dtypes.Int128):
-        return "INT128"
+        return duckdb_types.HUGEINT
     if isinstance_or_issubclass(dtype, dtypes.Int64):
-        return "BIGINT"
+        return duckdb_types.BIGINT
     if isinstance_or_issubclass(dtype, dtypes.Int32):
-        return "INTEGER"
+        return duckdb_types.INTEGER
     if isinstance_or_issubclass(dtype, dtypes.Int16):
-        return "SMALLINT"
+        return duckdb_types.SMALLINT
     if isinstance_or_issubclass(dtype, dtypes.Int8):
-        return "TINYINT"
+        return duckdb_types.TINYINT
     if isinstance_or_issubclass(dtype, dtypes.UInt128):
-        return "UINT128"
+        return duckdb_types.UHUGEINT
     if isinstance_or_issubclass(dtype, dtypes.UInt64):
-        return "UBIGINT"
+        return duckdb_types.UBIGINT
     if isinstance_or_issubclass(dtype, dtypes.UInt32):
-        return "UINTEGER"
+        return duckdb_types.UINTEGER
     if isinstance_or_issubclass(dtype, dtypes.UInt16):  # pragma: no cover
-        return "USMALLINT"
+        return duckdb_types.USMALLINT
     if isinstance_or_issubclass(dtype, dtypes.UInt8):  # pragma: no cover
-        return "UTINYINT"
+        return duckdb_types.UTINYINT
     if isinstance_or_issubclass(dtype, dtypes.String):
-        return "VARCHAR"
+        return duckdb_types.VARCHAR
     if isinstance_or_issubclass(dtype, dtypes.Boolean):  # pragma: no cover
-        return "BOOLEAN"
+        return duckdb_types.BOOLEAN
     if isinstance_or_issubclass(dtype, dtypes.Time):
-        return "TIME"
+        return duckdb_types.TIME
     if isinstance_or_issubclass(dtype, dtypes.Binary):
-        return "BLOB"
+        return duckdb_types.BLOB
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
         msg = "Categorical not supported by DuckDB"
         raise NotImplementedError(msg)
@@ -194,8 +201,9 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
             msg = "Converting to Enum is not supported in narwhals.stable.v1"
             raise NotImplementedError(msg)
         if isinstance(dtype, dtypes.Enum):
-            categories = "'" + "', '".join(dtype.categories) + "'"
-            return f"ENUM ({categories})"
+            return enum_type(
+                name="enum_type", type=duckdb_types.VARCHAR, values=list(dtype.categories)
+            )
         msg = "Can not cast / initialize Enum without categories present"
         raise ValueError(msg)
 
@@ -209,24 +217,27 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
         msg = "todo"
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Date):  # pragma: no cover
-        return "DATE"
+        return duckdb_types.DATE
     if isinstance_or_issubclass(dtype, dtypes.List):
         inner = narwhals_to_native_dtype(dtype.inner, version)
-        return f"{inner}[]"
+        return list_type(inner)
     if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
-        inner = ", ".join(
-            f'"{field.name}" {narwhals_to_native_dtype(field.dtype, version)}'
-            for field in dtype.fields
+        return struct_type(
+            {
+                field.name: narwhals_to_native_dtype(field.dtype, version)
+                for field in dtype.fields
+            }
         )
-        return f"STRUCT({inner})"
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
-        shape = dtype.shape
-        duckdb_shape_fmt = "".join(f"[{item}]" for item in shape)
-        inner_dtype: Any = dtype
-        for _ in shape:
-            inner_dtype = inner_dtype.inner
-        duckdb_inner = narwhals_to_native_dtype(inner_dtype, version)
-        return f"{duckdb_inner}{duckdb_shape_fmt}"
+        _dtype = dtype.inner
+        while isinstance_or_issubclass(_dtype, dtypes.Array):
+            _dtype = _dtype.inner
+
+        duckdb_return_type = narwhals_to_native_dtype(_dtype, version)
+        for size in dtype.shape:
+            duckdb_return_type = array_type(duckdb_return_type, size)
+        return duckdb_return_type
+
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
