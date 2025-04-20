@@ -59,6 +59,7 @@ if TYPE_CHECKING:
     from narwhals.typing import SizeUnit
     from narwhals.typing import UniqueKeepStrategy
     from narwhals.typing import _2DArray
+    from narwhals.typing import _SliceName
     from narwhals.utils import Implementation
     from narwhals.utils import _FullContext
 
@@ -396,7 +397,7 @@ class EagerDataFrame(
     def _select_indices(self, indices: SizedMultiIndexSelector) -> Self: ...
     def _select_labels(self, indices: SizedMultiNameSelector) -> Self: ...
     def _select_slice_of_indices(self, indices: slice | range) -> Self: ...
-    def _select_slice_of_labels(self, indices: slice | range) -> Self: ...
+    def _select_slice_of_labels(self, item: _SliceName) -> Self: ...
 
     def __getitem__(
         self,
@@ -418,7 +419,7 @@ class EagerDataFrame(
                 compliant = self._select_indices(columns.native)
             elif is_int_col_indexer and is_sized_multi_index_selector(columns):
                 compliant = compliant._select_indices(columns)
-            elif isinstance(columns, (slice, range)):
+            elif isinstance(columns, slice):
                 compliant = compliant._select_slice_of_labels(columns)
             elif is_compliant_series(columns):
                 compliant = self._select_labels(columns.native)

@@ -293,7 +293,7 @@ class PolarsDataFrame:
                     native = native[:, columns.native.to_list()]
                 elif is_int_col_indexer and is_sized_multi_index_selector(columns):
                     native = native[:, columns]
-                elif isinstance(columns, (slice, range)):
+                elif isinstance(columns, slice):
                     native = native.select(
                         self.columns[
                             slice(*convert_str_slice_to_int_slice(columns, self.columns))

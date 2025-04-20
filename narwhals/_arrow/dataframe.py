@@ -63,6 +63,7 @@ if TYPE_CHECKING:
     from narwhals.typing import SizeUnit
     from narwhals.typing import UniqueKeepStrategy
     from narwhals.typing import _2DArray
+    from narwhals.typing import _SliceName
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -265,7 +266,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             raise NotImplementedError(msg)
         return self._with_native(self.native.slice(start, stop - start))
 
-    def _select_slice_of_labels(self, item: slice | range) -> Self:
+    def _select_slice_of_labels(self, item: _SliceName) -> Self:
         start, stop, step = convert_str_slice_to_int_slice(item, self.columns)
         return self._with_native(self.native.select(self.columns[start:stop:step]))
 

@@ -93,6 +93,7 @@ if TYPE_CHECKING:
     from narwhals.typing import TimeUnit
     from narwhals.typing import _1DArray
     from narwhals.typing import _SliceIndex
+    from narwhals.typing import _SliceName
     from narwhals.typing import _SliceNone
 
     FrameOrSeriesT = TypeVar(
@@ -1887,8 +1888,8 @@ class requires:  # noqa: N801
 
 
 def convert_str_slice_to_int_slice(
-    str_slice: slice | range, columns: list[str]
-) -> tuple[int | None, int | None, int | None]:
+    str_slice: _SliceName, columns: Sequence[str]
+) -> tuple[int | None, int | None, Any]:
     start = columns.index(str_slice.start) if str_slice.start is not None else None
     stop = columns.index(str_slice.stop) + 1 if str_slice.stop is not None else None
     step = str_slice.step
