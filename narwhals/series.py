@@ -172,6 +172,7 @@ class Series(Generic[IntoSeriesT]):
         if isinstance(idx, int) or (
             is_numpy_scalar(idx) and idx.dtype.kind in {"i", "u"}
         ):
+            idx = int(idx) if not isinstance(idx, int) else idx
             return self._compliant_series.item(idx)
 
         if isinstance(idx, self.to_native().__class__):
