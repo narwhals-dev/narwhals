@@ -914,13 +914,12 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         compliant = self._compliant_frame
 
-        if isinstance(rows, int) and isinstance(columns, (int, str)):
-            return self.item(rows, columns)
-        if isinstance(columns, (int, str)):
+        if isinstance(columns, (int, str)) and not isinstance(rows, str):
+            if isinstance(rows, int):
+                return self.item(rows, columns)
             col_name = columns if isinstance(columns, str) else self.columns[columns]
             series = self.get_column(col_name)
             return series[rows] if rows is not None else series
-
         if isinstance(rows, Series):
             rows = rows._compliant_series
         if isinstance(columns, Series):
