@@ -6,6 +6,7 @@ from typing import Iterator
 from typing import Literal
 from typing import Mapping
 from typing import Sequence
+from typing import Sized
 from typing import cast
 from typing import overload
 
@@ -278,7 +279,7 @@ class PolarsDataFrame:
             is_int_col_indexer = is_index_selector(columns)
             native = self.native
             if not is_slice_none(columns):
-                if hasattr(columns, "__len__") and len(columns) == 0:
+                if isinstance(columns, Sized) and len(columns) == 0:
                     native = native.select()
                 if is_int_col_indexer and isinstance(columns, (slice, range)):
                     native = native.select(
@@ -287,7 +288,7 @@ class PolarsDataFrame:
                 elif is_int_col_indexer and is_compliant_series(columns):
                     native = native[:, cast("pl.Series", columns.native).to_list()]
                 elif is_int_col_indexer and is_sequence_like_ints(columns):
-                    native = native[:, columns]
+                    native = native[:, cast("Sequence[int]", columns)]
                 elif isinstance(columns, (slice, range)):
                     native = native.select(
                         self.columns[
@@ -297,7 +298,7 @@ class PolarsDataFrame:
                 elif is_compliant_series(columns):
                     native = native.select(cast("pl.Series", columns.native).to_list())
                 elif is_sequence_like(columns):
-                    native = native.select(columns)
+                    native = native.select(cast("Sequence[str]", columns))
                 else:
                     msg = "Unreachable code"
                     raise AssertionError(msg)

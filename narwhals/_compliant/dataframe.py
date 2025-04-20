@@ -50,7 +50,10 @@ if TYPE_CHECKING:
     from narwhals.typing import AsofJoinStrategy
     from narwhals.typing import JoinStrategy
     from narwhals.typing import LazyUniqueKeepStrategy
+    from narwhals.typing import MultiColSelector
+    from narwhals.typing import MultiIndexSelector
     from narwhals.typing import PivotAgg
+    from narwhals.typing import SingleIndexSelector
     from narwhals.typing import SizeUnit
     from narwhals.typing import UniqueKeepStrategy
     from narwhals.typing import _2DArray
@@ -107,7 +110,13 @@ class CompliantDataFrame(
         schema: Mapping[str, DType] | Schema | Sequence[str] | None,
     ) -> Self: ...
     def __array__(self, dtype: Any, *, copy: bool | None) -> _2DArray: ...
-    def __getitem__(self, item: tuple[Any, Any]) -> Self: ...
+    def __getitem__(
+        self,
+        item: tuple[
+            SingleIndexSelector | MultiIndexSelector | CompliantSeriesT,
+            MultiIndexSelector | MultiColSelector | CompliantSeriesT,
+        ],
+    ) -> Self: ...
     def simple_select(self, *column_names: str) -> Self:
         """`select` where all args are column names."""
         ...
@@ -389,13 +398,19 @@ class EagerDataFrame(
     def _select_slice_of_indices(self, indices: slice | range) -> Self: ...
     def _select_slice_of_labels(self, indices: slice | range) -> Self: ...
 
-    def __getitem__(self, item: tuple[Any, Any]) -> Self:
+    def __getitem__(
+        self,
+        item: tuple[
+            SingleIndexSelector | MultiIndexSelector | CompliantSeriesT,
+            MultiIndexSelector | MultiColSelector | CompliantSeriesT,
+        ],
+    ) -> Self:
         rows, columns = item
 
         is_int_col_indexer = is_index_selector(columns)
         compliant = self
         if not is_slice_none(columns):
-            if hasattr(columns, "__len__") and len(columns) == 0:
+            if isinstance(columns, Sized) and len(columns) == 0:
                 return compliant.select()
             if is_int_col_indexer and isinstance(columns, (slice, range)):
                 compliant = compliant._select_slice_of_indices(columns)

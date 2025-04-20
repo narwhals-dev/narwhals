@@ -926,6 +926,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                 else series
             )
 
+        rows = cast("SingleIndexSelector | MultiIndexSelector", rows)
         if isinstance(rows, Series):
             rows = rows._compliant_series
         if isinstance(columns, Series):
