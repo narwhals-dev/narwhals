@@ -10,7 +10,6 @@ from typing import Protocol
 from typing import Sequence
 from typing import Sized
 from typing import TypeVar
-from typing import cast
 from typing import overload
 
 from narwhals._compliant.typing import CompliantExprT_contra
@@ -424,7 +423,7 @@ class EagerDataFrame(
             elif is_compliant_series(columns):
                 compliant = self._select_labels(columns.native)
             elif is_sequence_like(columns):
-                compliant = self._select_labels(cast("SizedMultiNameSelector", columns))
+                compliant = self._select_labels(columns)
             else:
                 msg = f"Unreachable code, got unexpected type: {type(columns)}"
                 raise AssertionError(msg)
