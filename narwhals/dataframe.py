@@ -1548,7 +1548,16 @@ class DataFrame(BaseFrame[DataFrameT]):
         from narwhals.expr import Expr
         from narwhals.series import Series
 
-        _keys = [k if isinstance(k, (Expr, Series)) else col(k) for k in flat_keys]
+        key_is_expr_or_series = tuple(isinstance(k, (Expr, Series)) for k in flat_keys)
+
+        if drop_null_keys and any(key_is_expr_or_series):
+            msg = "drop_null_keys cannot be True when keys contains Expr or Series"
+            raise NotImplementedError(msg)
+
+        _keys = [
+            k if is_expr else col(k)
+            for k, is_expr in zip(flat_keys, key_is_expr_or_series)
+        ]
         expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
 
         if not all(kind is ExprKind.TRANSFORM for kind in kinds):
@@ -2821,7 +2830,13 @@ class LazyFrame(BaseFrame[FrameT]):
         from narwhals import col
         from narwhals.expr import Expr
 
-        _keys = [k if isinstance(k, Expr) else col(k) for k in flat_keys]
+        key_is_expr = tuple(isinstance(k, Expr) for k in flat_keys)
+
+        if drop_null_keys and any(key_is_expr):
+            msg = "drop_null_keys cannot be True when keys contains Expr"
+            raise NotImplementedError(msg)
+
+        _keys = [k if is_expr else col(k) for k, is_expr in zip(flat_keys, key_is_expr)]
         expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
 
         if not all(kind is ExprKind.TRANSFORM for kind in kinds):

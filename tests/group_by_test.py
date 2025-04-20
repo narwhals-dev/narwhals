@@ -1,4 +1,3 @@
-# ruff: noqa: ERA001
 from __future__ import annotations
 
 import os
@@ -16,7 +15,6 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.exceptions import OrderDependentExprError
 from tests.utils import PANDAS_VERSION
-from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -309,13 +307,13 @@ def test_key_with_nulls_iter(
     }
     result = dict(
         nw.from_native(constructor_eager(data), eager_only=True)
-        .group_by("b", nw.col("c").str.len_chars(), drop_null_keys=True)
+        .group_by("b", "c", drop_null_keys=True)
         .__iter__()
     )
 
     assert len(result) == 2
-    assert_equal_data(result[("4", 1)], {"b": ["4"], "a": [1], "c": ["4"]})
-    assert_equal_data(result[("5", 1)], {"b": ["5"], "a": [2], "c": ["3"]})
+    assert_equal_data(result[("4", "4")], {"b": ["4"], "a": [1], "c": ["4"]})
+    assert_equal_data(result[("5", "3")], {"b": ["5"], "a": [2], "c": ["3"]})
 
     result = dict(
         nw.from_native(constructor_eager(data), eager_only=True)
@@ -520,42 +518,26 @@ def test_group_by_expr(
         # See: https://github.com/pola-rs/polars/issues/22238
         request.applymarker(pytest.mark.xfail)
 
-    if (
-        "polars" in str(constructor)
-        and drop_null_keys
-        and any(key._metadata.expansion_kind.is_multi_output() for key in keys)
-    ):
-        request.applymarker(pytest.mark.xfail)
+    context = (
+        pytest.raises(
+            NotImplementedError,
+            match="drop_null_keys cannot be True when keys contains Expr",
+        )
+        if drop_null_keys
+        else nullcontext()
+    )
 
-    if (
-        "polars_lazy" in str(constructor)
-        and drop_null_keys
-        and POLARS_VERSION <= (0, 20, 16)
-        and request_id.endswith(("0", "4"))
-    ):
-        # For id=0: the following repro works for polars>=0.20.17, but fails with
-        # `ColumnNotFoundError` for previous versions:
-        # ```
-        # import polars as pl
-        # data = {"a": [1, 1, 2, 2, -1], "x": [0, 1, 2, 3, 4]}
-        # df = pl.LazyFrame(data)
-        # result = (
-        #     df.group_by(
-        #         pl.col("a").abs(),
-        #         pl.col("a").abs().alias("a_with_alias"),
-        #     )
-        #     .agg(pl.col("x").sum())
-        #     .drop_nulls(["a", "a_with_alias"])
-        #     .collect()
-        # )
-        # ```
-        # For id=4: similarly, `ColumnNotFoundError` ("y")
-        request.applymarker(pytest.mark.xfail)
-
-    data = {"a": [1, 1, 2, 2, -1], "x": [0, 1, 2, 3, 4], "y": [0.5, -0.5, 1.0, -1.0, 1.5]}
-    df = nw.from_native(constructor(data))
-    result = df.group_by(*keys, drop_null_keys=drop_null_keys).agg(*aggs).sort(*sort_by)
-    assert_equal_data(result, expected)
+    with context:
+        data = {
+            "a": [1, 1, 2, 2, -1],
+            "x": [0, 1, 2, 3, 4],
+            "y": [0.5, -0.5, 1.0, -1.0, 1.5],
+        }
+        df = nw.from_native(constructor(data))
+        result = (
+            df.group_by(*keys, drop_null_keys=drop_null_keys).agg(*aggs).sort(*sort_by)
+        )
+        assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
