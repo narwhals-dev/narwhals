@@ -25,7 +25,6 @@ from narwhals.utils import convert_str_slice_to_int_slice
 from narwhals.utils import is_compliant_series
 from narwhals.utils import is_index_selector
 from narwhals.utils import is_sequence_like
-from narwhals.utils import is_sized_multi_index_selector
 from narwhals.utils import is_slice_none
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -51,7 +50,10 @@ if TYPE_CHECKING:
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import JoinStrategy
+    from narwhals.typing import MultiColSelector
+    from narwhals.typing import MultiIndexSelector
     from narwhals.typing import PivotAgg
+    from narwhals.typing import SingleIndexSelector
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -263,14 +265,20 @@ class PolarsDataFrame:
     def shape(self) -> tuple[int, int]:
         return self.native.shape
 
-    def __getitem__(self, item: Any) -> Any:
+    def __getitem__(
+        self,
+        item: tuple[
+            SingleIndexSelector | MultiIndexSelector | PolarsSeries,
+            MultiIndexSelector | MultiColSelector | PolarsSeries,
+        ],
+    ) -> Any:
         rows, columns = item
         if self._backend_version > (0, 20, 30):
-            if is_compliant_series(rows):
-                rows = rows.native
-            if is_compliant_series(columns):
-                columns = columns.native
-            return self._from_native_object(self.native.__getitem__((rows, columns)))
+            rows_native = rows.native if is_compliant_series(rows) else rows
+            columns_native = columns.native if is_compliant_series(columns) else columns
+            selector = rows_native, columns_native
+            selected = self.native.__getitem__(selector)
+            return self._from_native_object(selected)
         else:  # pragma: no cover
             # TODO(marco): we can delete this branch after Polars==0.20.30 becomes the minimum
             # Polars version we support
@@ -280,19 +288,19 @@ class PolarsDataFrame:
             if is_numpy_array_1d(columns):
                 columns = columns.tolist()
 
-            is_int_col_indexer = is_index_selector(columns)
             native = self.native
             if not is_slice_none(columns):
                 if isinstance(columns, Sized) and len(columns) == 0:
                     native = native.select()
-                if is_int_col_indexer and isinstance(columns, (slice, range)):
-                    native = native.select(
-                        self.columns[slice(columns.start, columns.stop, columns.step)]
-                    )
-                elif is_int_col_indexer and is_compliant_series(columns):
-                    native = native[:, columns.native.to_list()]
-                elif is_int_col_indexer and is_sized_multi_index_selector(columns):
-                    native = native[:, columns]
+                if is_index_selector(columns):
+                    if isinstance(columns, (slice, range)):
+                        native = native.select(
+                            self.columns[slice(columns.start, columns.stop, columns.step)]
+                        )
+                    elif is_compliant_series(columns):
+                        native = native[:, columns.native.to_list()]
+                    else:
+                        native = native[:, columns]
                 elif isinstance(columns, slice):
                     native = native.select(
                         self.columns[
