@@ -1487,6 +1487,16 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return super().filter(*predicates, **constraints)
 
+    @overload
+    def group_by(
+        self, *keys: IntoExpr | Iterable[IntoExpr], drop_null_keys: Literal[False] = ...
+    ) -> GroupBy[Self]: ...
+
+    @overload
+    def group_by(
+        self, *keys: str | Iterable[str], drop_null_keys: Literal[True]
+    ) -> GroupBy[Self]: ...
+
     def group_by(
         self, *keys: IntoExpr | Iterable[IntoExpr], drop_null_keys: bool = False
     ) -> GroupBy[Self]:
@@ -2787,6 +2797,16 @@ class LazyFrame(BaseFrame[FrameT]):
             raise TypeError(msg)
 
         return super().filter(*predicates, **constraints)
+
+    @overload
+    def group_by(
+        self, *keys: IntoExpr | Iterable[IntoExpr], drop_null_keys: Literal[False] = ...
+    ) -> LazyGroupBy[Self]: ...
+
+    @overload
+    def group_by(
+        self, *keys: str | Iterable[str], drop_null_keys: Literal[True]
+    ) -> LazyGroupBy[Self]: ...
 
     def group_by(
         self, *keys: IntoExpr | Iterable[IntoExpr], drop_null_keys: bool = False
