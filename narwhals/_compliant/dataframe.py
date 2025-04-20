@@ -28,7 +28,7 @@ from narwhals.utils import deprecated
 from narwhals.utils import is_compliant_series
 from narwhals.utils import is_index_selector
 from narwhals.utils import is_sequence_like
-from narwhals.utils import is_sequence_like_ints
+from narwhals.utils import is_sized_multi_index_selector
 from narwhals.utils import is_slice_none
 
 if TYPE_CHECKING:
@@ -416,7 +416,7 @@ class EagerDataFrame(
                 compliant = compliant._select_slice_of_indices(columns)
             elif is_int_col_indexer and is_compliant_series(columns):
                 compliant = self._select_indices(columns.native)
-            elif is_int_col_indexer and is_sequence_like_ints(columns):
+            elif is_int_col_indexer and is_sized_multi_index_selector(columns):
                 compliant = compliant._select_indices(columns)
             elif isinstance(columns, (slice, range)):
                 compliant = compliant._select_slice_of_labels(columns)
@@ -435,7 +435,7 @@ class EagerDataFrame(
                 compliant = compliant._gather_slice(rows)
             elif is_compliant_series(rows):
                 compliant = compliant._gather(rows.native)
-            elif is_sequence_like_ints(rows):
+            elif is_sized_multi_index_selector(rows):
                 compliant = compliant._gather(rows)
             else:
                 msg = f"Unreachable code, got unexpected type: {type(rows)}"

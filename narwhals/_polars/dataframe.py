@@ -25,7 +25,7 @@ from narwhals.utils import convert_str_slice_to_int_slice
 from narwhals.utils import is_compliant_series
 from narwhals.utils import is_index_selector
 from narwhals.utils import is_sequence_like
-from narwhals.utils import is_sequence_like_ints
+from narwhals.utils import is_sized_multi_index_selector
 from narwhals.utils import is_slice_none
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -291,7 +291,7 @@ class PolarsDataFrame:
                     )
                 elif is_int_col_indexer and is_compliant_series(columns):
                     native = native[:, cast("pl.Series", columns.native).to_list()]
-                elif is_int_col_indexer and is_sequence_like_ints(columns):
+                elif is_int_col_indexer and is_sized_multi_index_selector(columns):
                     native = native[:, cast("Sequence[int]", columns)]
                 elif isinstance(columns, (slice, range)):
                     native = native.select(

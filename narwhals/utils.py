@@ -1269,8 +1269,12 @@ def is_sequence_but_not_str(sequence: Any | Sequence[_T]) -> TypeIs[Sequence[_T]
     return isinstance(sequence, Sequence) and not isinstance(sequence, str)
 
 
-def is_sequence_like_ints(
-    sequence: Any | Sequence[_T],
+def is_slice_none(obj: object) -> TypeIs[_SliceNone]:
+    return isinstance(obj, slice) and obj == slice(None)
+
+
+def is_sized_multi_index_selector(
+    sequence: Sequence[_T] | Any,
 ) -> TypeIs[SizedMultiIndexSelector]:
     np = get_numpy()
     return (
@@ -1300,7 +1304,7 @@ def is_sequence_like(
     )
 
 
-def is_slice_index(obj: _SliceIndex | Any) -> TypeIs[_SliceIndex]:
+def is_slice_index(obj: Any) -> TypeIs[_SliceIndex]:
     return isinstance(obj, slice) and (
         isinstance(obj.start, int)
         or isinstance(obj.stop, int)
@@ -1308,12 +1312,18 @@ def is_slice_index(obj: _SliceIndex | Any) -> TypeIs[_SliceIndex]:
     )
 
 
-def is_slice_none(obj: object) -> TypeIs[_SliceNone]:
-    return isinstance(obj, slice) and obj == slice(None)
+def is_single_index_selector(obj: Any) -> TypeIs[SingleIndexSelector]:
+    return isinstance(obj, int) and not isinstance(obj, bool)
 
 
-def is_index_selector(cols: SingleIndexSelector | MultiIndexSelector | Any) -> bool:
-    return isinstance(cols, int) or is_sequence_like_ints(cols) or is_slice_index(cols)
+def is_index_selector(
+    obj: Any,
+) -> TypeIs[SingleIndexSelector] | TypeIs[MultiIndexSelector]:
+    return (
+        is_single_index_selector(obj)
+        or is_sized_multi_index_selector(obj)
+        or is_slice_index(obj)
+    )
 
 
 def is_list_of(obj: Any, tp: type[_T]) -> TypeIs[list[_T]]:

@@ -24,7 +24,7 @@ from narwhals._translate import NumpyConvertible
 from narwhals.utils import _StoresCompliant
 from narwhals.utils import _StoresNative
 from narwhals.utils import is_compliant_series
-from narwhals.utils import is_sequence_like_ints
+from narwhals.utils import is_sized_multi_index_selector
 from narwhals.utils import is_slice_none
 from narwhals.utils import unstable
 
@@ -332,7 +332,7 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
             return self._gather_slice(item)
         elif is_compliant_series(item):
             return self._gather(item.native)
-        elif is_sequence_like_ints(item):
+        elif is_sized_multi_index_selector(item):
             return self._gather(item)
         else:
             msg = f"Unreachable code, got unexpected type: {type(item)}"
