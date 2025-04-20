@@ -27,6 +27,7 @@ class GroupBy(Generic[DataFrameT]):
         self,
         df: DataFrameT,
         keys: Sequence[str] | Sequence[CompliantExprAny],
+        /,
         *,
         drop_null_keys: bool,
     ) -> None:
@@ -111,6 +112,7 @@ class LazyGroupBy(Generic[LazyFrameT]):
         self,
         df: LazyFrameT,
         keys: Sequence[str] | Sequence[CompliantExprAny],
+        /,
         *,
         drop_null_keys: bool,
     ) -> None:

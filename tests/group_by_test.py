@@ -559,46 +559,35 @@ def test_group_by_expr(
 
 
 @pytest.mark.parametrize(
-    "keys",
+    ("keys", "lazy_context"),
     [
-        [nw.col("a").drop_nulls()],  # Filtration
-        [
-            nw.col("a").alias("foo"),
-            nw.col("a").drop_nulls(),
-        ],  # Transform and Filtration
-        [nw.col("a").alias("foo"), nw.col("a").max()],  # Transform and Aggregation
-        [
-            nw.col("a").alias("foo"),
-            nw.col("a").cum_max(),
-        ],  # Transform and Window
-        [nw.lit(42)],  # Literal
+        (
+            [nw.col("a").drop_nulls()],
+            pytest.raises(LengthChangingExprError),
+        ),  # Filtration
+        (
+            [nw.col("a").alias("foo"), nw.col("a").drop_nulls()],
+            pytest.raises(LengthChangingExprError),
+        ),  # Transform and Filtration
+        (
+            [nw.col("a").alias("foo"), nw.col("a").max()],
+            pytest.raises(ComputeError),
+        ),  # Transform and Aggregation
+        (
+            [nw.col("a").alias("foo"), nw.col("a").cum_max()],
+            pytest.raises(OrderDependentExprError),
+        ),  # Transform and Window
+        ([nw.lit(42)], pytest.raises(ComputeError)),  # Literal
     ],
 )
 def test_group_by_raise_if_not_transform(
-    constructor: Constructor, keys: list[nw.Expr]
+    constructor: Constructor, keys: list[nw.Expr], lazy_context: Any
 ) -> None:
     data = {"a": [1, 2, 2, None], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
 
-    context: Any
-    if isinstance(df, nw.LazyFrame) and any(
-        expr._metadata.kind.is_filtration() for expr in keys
-    ):
-        context = pytest.raises(
-            LengthChangingExprError,
-            match="Length-changing expressions are not supported for use in LazyFrame",
-        )
-    elif isinstance(df, nw.LazyFrame) and any(
-        expr._metadata.kind.is_window() for expr in keys
-    ):
-        context = pytest.raises(
-            OrderDependentExprError,
-            match="Order-dependent expressions are not supported for use in LazyFrame",
-        )
-    else:
-        context = pytest.raises(
-            ComputeError,
-            match="Group by is not supported with keys that are not transformation expressions",
-        )
+    context: Any = (
+        lazy_context if isinstance(df, nw.LazyFrame) else pytest.raises(ComputeError)
+    )
     with context:
         df.group_by(keys).agg(nw.col("x").max())
