@@ -181,7 +181,7 @@ class Series(Generic[IntoSeriesT]):
         # For Series.__getitem__, we only
         if not is_index_selector(idx):
             msg = (
-                f"Expected sequence-like or slice of ints, got: {type(idx)}.\n\n"
+                f"Unexpected type for `Series.__getitem__`: {type(idx)}.\n\n"
                 "Hints:\n"
                 "- use `s.item` to select a single item.\n"
                 "- Use `s[indices]` to select rows positionally.\n"
