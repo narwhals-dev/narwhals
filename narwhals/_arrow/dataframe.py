@@ -19,6 +19,7 @@ from narwhals._arrow.utils import align_series_full_broadcast
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
+from narwhals.dependencies import is_numpy_array
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
@@ -48,6 +49,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.group_by import ArrowGroupBy
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.typing import ArrowChunkedArray
+    from narwhals._arrow.typing import Indices  # type: ignore[attr-defined]
     from narwhals._arrow.typing import Mask  # type: ignore[attr-defined]
     from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
     from narwhals._translate import IntoArrowTable
@@ -249,7 +251,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             return self._with_native(self.native.slice(0, 0))
         if self._backend_version < (18,) and isinstance(item, tuple):
             item = list(item)
-        return self._with_native(self.native.take(item))
+        return self._with_native(self.native.take(cast("Indices", item)))
 
     def _gather_slice(self, item: slice | range) -> Self:
         start = item.start or 0
@@ -274,13 +276,16 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
 
     def _select_indices(self, item: SizedMultiIndexSelector) -> Self:
         if isinstance(item, pa.ChunkedArray):
-            item = item.to_pylist()
-        return self._with_native(self.native.select([self.columns[x] for x in item]))
+            item = cast("list[int]", item.to_pylist())
+        if is_numpy_array(item):
+            item = cast("list[int]", item.tolist())
+        return self._with_native(self.native.select(cast("Indices", item)))
 
     def _select_labels(self, item: SizedMultiNameSelector) -> Self:
         if isinstance(item, pa.ChunkedArray):
-            item = item.to_pylist()
-        return self._with_native(self.native.select(item))
+            item = cast("list[str]", item.to_pylist())
+        # pyarrow-stubs overly strict, accept list[str] | Indices
+        return self._with_native(self.native.select(item))  # pyright: ignore[reportArgumentType]
 
     @property
     def schema(self) -> dict[str, DType]:
