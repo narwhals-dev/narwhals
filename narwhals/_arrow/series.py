@@ -52,6 +52,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import ArrowArray
     from narwhals._arrow.typing import ArrowChunkedArray
     from narwhals._arrow.typing import Incomplete
+    from narwhals._arrow.typing import Indices  # type: ignore[attr-defined]
     from narwhals._arrow.typing import NullPlacement
     from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
     from narwhals._arrow.typing import ScalarAny
@@ -412,7 +413,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             return self._with_native(self.native.slice(0, 0))
         if self._backend_version < (18,) and isinstance(item, tuple):
             item = list(item)
-        return self._with_native(self.native.take(item))
+        return self._with_native(self.native.take(cast("Indices", item)))
 
     def _gather_slice(self, item: slice | range) -> Self:
         start = item.start or 0
