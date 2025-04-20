@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
@@ -12,6 +11,8 @@ from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
+    from duckdb.typing import DuckDBPyType
+
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals.dtypes import DType
@@ -79,75 +80,69 @@ def evaluate_exprs(
     return native_results
 
 
-@lru_cache(maxsize=16)
-def native_to_narwhals_dtype(duckdb_dtype: str, version: Version) -> DType:
+def native_to_narwhals_dtype(duckdb_dtype: DuckDBPyType, version: Version) -> DType:
+    duckdb_dtype_id = duckdb_dtype.id
     dtypes = import_dtypes_module(version)
-    if duckdb_dtype == "HUGEINT":
-        return dtypes.Int128()
-    if duckdb_dtype == "BIGINT":
-        return dtypes.Int64()
-    if duckdb_dtype == "INTEGER":
-        return dtypes.Int32()
-    if duckdb_dtype == "SMALLINT":
-        return dtypes.Int16()
-    if duckdb_dtype == "TINYINT":
-        return dtypes.Int8()
-    if duckdb_dtype == "UHUGEINT":
-        return dtypes.UInt128()
-    if duckdb_dtype == "UBIGINT":
-        return dtypes.UInt64()
-    if duckdb_dtype == "UINTEGER":
-        return dtypes.UInt32()
-    if duckdb_dtype == "USMALLINT":
-        return dtypes.UInt16()
-    if duckdb_dtype == "UTINYINT":
-        return dtypes.UInt8()
-    if duckdb_dtype == "DOUBLE":
-        return dtypes.Float64()
-    if duckdb_dtype == "FLOAT":
-        return dtypes.Float32()
-    if duckdb_dtype == "VARCHAR":
-        return dtypes.String()
-    if duckdb_dtype == "DATE":
-        return dtypes.Date()
-    if duckdb_dtype == "TIMESTAMP":
-        return dtypes.Datetime()
-    if duckdb_dtype == "TIMESTAMP WITH TIME ZONE":
-        # TODO(marco): is UTC correct, or should we be getting the connection timezone?
-        # https://github.com/narwhals-dev/narwhals/issues/2165
-        return dtypes.Datetime(time_zone="UTC")
-    if duckdb_dtype == "BOOLEAN":
-        return dtypes.Boolean()
-    if duckdb_dtype == "INTERVAL":
-        return dtypes.Duration()
-    if duckdb_dtype.startswith("STRUCT"):
-        matchstruc_ = re.findall(r"(\w+)\s+(\w+)", duckdb_dtype)
+
+    # Handle nested data types first
+    if duckdb_dtype_id == "list":
+        return dtypes.List(native_to_narwhals_dtype(duckdb_dtype.child, version=version))
+
+    if duckdb_dtype_id == "struct":
+        children = duckdb_dtype.children
         return dtypes.Struct(
             [
                 dtypes.Field(
-                    matchstruc_[i][0],
-                    native_to_narwhals_dtype(matchstruc_[i][1], version),
+                    name=child[0],
+                    dtype=native_to_narwhals_dtype(child[1], version=version),
                 )
-                for i in range(len(matchstruc_))
+                for child in children
             ]
         )
-    if match_ := re.match(r"(.*)\[\]$", duckdb_dtype):
-        return dtypes.List(native_to_narwhals_dtype(match_.group(1), version))
-    if match_ := re.match(r"(\w+)((?:\[\d+\])+)", duckdb_dtype):
-        duckdb_inner_type = match_.group(1)
-        duckdb_shape = match_.group(2)
-        shape = tuple(int(value) for value in re.findall(r"\[(\d+)\]", duckdb_shape))
-        return dtypes.Array(
-            inner=native_to_narwhals_dtype(duckdb_inner_type, version),
-            shape=shape,
-        )
-    if duckdb_dtype.startswith("DECIMAL("):
-        return dtypes.Decimal()
-    if duckdb_dtype == "TIME":
-        return dtypes.Time()
-    if duckdb_dtype == "BLOB":
-        return dtypes.Binary()
-    return dtypes.Unknown()  # pragma: no cover
+
+    if duckdb_dtype_id == "array":
+        shape: list[int] = []
+        child, size = duckdb_dtype.children
+        shape.insert(0, size[1])
+
+        while child[1].id == "array":
+            child, size = child[1].children
+            shape.insert(0, size[1])
+
+        inner = native_to_narwhals_dtype(child[1], version=version)
+        return dtypes.Array(inner=inner, shape=tuple(shape))
+
+    return _non_nested_native_to_narwhals_dtype(duckdb_dtype_id, version)
+
+
+@lru_cache(maxsize=16)
+def _non_nested_native_to_narwhals_dtype(duckdb_dtype_id: str, version: Version) -> DType:
+    dtypes = import_dtypes_module(version)
+    return {
+        "hugeint": dtypes.Int128(),
+        "bigint": dtypes.Int64(),
+        "integer": dtypes.Int32(),
+        "smallint": dtypes.Int16(),
+        "tinyint": dtypes.Int8(),
+        "uhugeint": dtypes.UInt128(),
+        "ubigint": dtypes.UInt64(),
+        "uinteger": dtypes.UInt32(),
+        "usmallint": dtypes.UInt16(),
+        "utinyint": dtypes.UInt8(),
+        "double": dtypes.Float64(),
+        "float": dtypes.Float32(),
+        "varchar": dtypes.String(),
+        "date": dtypes.Date(),
+        "timestamp": dtypes.Datetime(),
+        # TODO(marco): is UTC correct, or should we be getting the connection timezone?
+        # https://github.com/narwhals-dev/narwhals/issues/2165
+        "timestamp with time zone": dtypes.Datetime(time_zone="UTC"),
+        "boolean": dtypes.Boolean(),
+        "interval": dtypes.Duration(),
+        "decimal": dtypes.Decimal(),
+        "time": dtypes.Time(),
+        "blob": dtypes.Binary(),
+    }.get(duckdb_dtype_id, dtypes.Unknown())
 
 
 def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> str:
