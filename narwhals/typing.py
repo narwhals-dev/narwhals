@@ -314,16 +314,18 @@ PythonLiteral: TypeAlias = "NonNestedLiteral | list[Any] | tuple[Any, ...]"
 _T = TypeVar("_T")
 _Slice: TypeAlias = "slice[_T, Any, Any] | slice[Any, _T, Any] | slice[None, None, _T]"
 _SliceNone: TypeAlias = "slice[None, None, None]"
+# Index/column positions
+SingleIndexSelector: TypeAlias = int
 _SliceIndex: TypeAlias = "_Slice[int] | _SliceNone"
 """E.g. `[1:]` or `[:3]` or `[::2]`."""
-
-_SliceName: TypeAlias = "_Slice[str] | _SliceNone"
-SingleIndexSelector: TypeAlias = int
-SingleNameSelector: TypeAlias = str
 SizedMultiIndexSelector: TypeAlias = "Sequence[int] | Series[Any] | _1DArray"
 MultiIndexSelector: TypeAlias = "_SliceIndex | SizedMultiIndexSelector"
+# Labels/column names
+SingleNameSelector: TypeAlias = str
+_SliceName: TypeAlias = "_Slice[str] | _SliceNone"
 SizedMultiNameSelector: TypeAlias = "Sequence[str] | Series[Any] | _1DArray"
 MultiNameSelector: TypeAlias = "_SliceName | SizedMultiNameSelector"
+# Mixed selectors
 SingleColSelector: TypeAlias = "SingleIndexSelector | SingleNameSelector"
 MultiColSelector: TypeAlias = "MultiIndexSelector | MultiNameSelector"
 
