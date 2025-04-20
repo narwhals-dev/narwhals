@@ -68,6 +68,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
         self._implementation = implementation
         self._version = version
         self._cached_schema: dict[str, DType] | None = None
+        self._cached_columns: list[str] | None = None
         validate_backend_version(self._implementation, self._backend_version)
 
     @property
@@ -187,7 +188,13 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
 
     @property
     def columns(self) -> list[str]:
-        return list(self.schema)
+        if self._cached_columns is None:
+            self._cached_columns = (
+                list(self.schema)
+                if self._cached_schema is not None
+                else self.native.columns
+            )
+        return self._cached_columns.copy()
 
     def collect(
         self,
@@ -410,7 +417,6 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
             else left_on_
         )
         how_native = "full_outer" if how == "full" else how
-
         return self._with_native(
             self.native.join(other_native, on=on_, how=how_native).select(col_order)
         )

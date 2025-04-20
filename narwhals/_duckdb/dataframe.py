@@ -68,6 +68,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
         self._version = version
         self._backend_version = backend_version
         self._cached_schema: dict[str, DType] | None = None
+        self._cached_columns: list[str] | None = None
         validate_backend_version(self._implementation, self._backend_version)
 
     @staticmethod
@@ -216,7 +217,13 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
 
     @property
     def columns(self) -> list[str]:
-        return list(self.schema)
+        if self._cached_columns is None:
+            self._cached_columns = (
+                list(self.schema)
+                if self._cached_schema is not None
+                else self.native.columns
+            )
+        return self._cached_columns.copy()
 
     def to_pandas(self) -> pd.DataFrame:
         # only if version is v1, keep around for backcompat
