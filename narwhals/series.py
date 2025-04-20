@@ -27,6 +27,7 @@ from narwhals.typing import SingleIndexSelector
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import generate_repr
 from narwhals.utils import is_compliant_series
+from narwhals.utils import is_index_selector
 from narwhals.utils import parse_version
 from narwhals.utils import supports_arrow_c_stream
 
@@ -173,6 +174,20 @@ class Series(Generic[IntoSeriesT]):
             is_numpy_scalar(idx) and idx.dtype.kind in {"i", "u"}
         ):
             return self._compliant_series.item(cast("int", idx))
+
+        if isinstance(idx, self.to_native().__class__):
+            idx = self._with_compliant(self._compliant_series._with_native(idx))
+
+        # For Series.__getitem__, we only
+        if not is_index_selector(idx):
+            msg = (
+                f"Expected sequence-like or slice of ints, got: {type(idx)}.\n\n"
+                "Hints:\n"
+                "- use `s.item` to select a single item.\n"
+                "- Use `s[indices]` to select rows positionally.\n"
+                "- Use `s.filter(mask)` to filter rows based on a boolean mask."
+            )
+            raise TypeError(msg)
         if isinstance(idx, Series):
             return self._with_compliant(self._compliant_series[idx._compliant_series])
         return self._with_compliant(self._compliant_series[idx])

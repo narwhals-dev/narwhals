@@ -905,11 +905,11 @@ class DataFrame(BaseFrame[DataFrameT]):
             columns = item
         else:
             msg = (
-                f"Expected str or slice, got: {type(item)}.\n\n"
+                f"Unexpected type for `DataFrame.__getitem__`, got: {type(item)}.\n\n"
                 "Hints:\n"
-                "- use `DataFrame.item` to select a single item.\n"
-                "- Use `DataFrame[indices, :]` to select rows positionally.\n"
-                "- Use `DataFrame.filter(mask)` to filter rows based on a boolean mask."
+                "- use `df.item` to select a single item.\n"
+                "- Use `df[indices, :]` to select rows positionally.\n"
+                "- Use `df.filter(mask)` to filter rows based on a boolean mask."
             )
             raise TypeError(msg)
 

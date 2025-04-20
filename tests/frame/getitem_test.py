@@ -76,7 +76,7 @@ def test_slice_int(constructor_eager: ConstructorEager) -> None:
 def test_slice_fails(constructor_eager: ConstructorEager) -> None:
     class Foo: ...
 
-    with pytest.raises(TypeError, match="Expected str or slice, got:"):
+    with pytest.raises(TypeError, match="Unexpected type.*, got:"):
         nw.from_native(constructor_eager(data), eager_only=True)[Foo()]  # type: ignore[call-overload, unused-ignore]
 
 
@@ -327,4 +327,11 @@ def test_horizontal_slice_with_series_2(
     nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     result = nw_df[:, nw_df["c"]]
     expected = {"a": [1, 2], "d": ["c", "a"]}
+    assert_equal_data(result, expected)
+
+
+def test_native_slice_series(constructor_eager: ConstructorEager) -> None:
+    s = nw.from_native(constructor_eager({"a": [0, 2, 1]}), eager_only=True)["a"]
+    result = {"a": s[s.to_native()]}
+    expected = {"a": [0, 1, 2]}
     assert_equal_data(result, expected)
