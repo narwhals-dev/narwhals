@@ -8,7 +8,6 @@ from typing import Iterator
 from typing import Literal
 from typing import Mapping
 from typing import Sequence
-from typing import cast
 from typing import overload
 
 from narwhals.dependencies import is_numpy_scalar
@@ -173,7 +172,7 @@ class Series(Generic[IntoSeriesT]):
         if isinstance(idx, int) or (
             is_numpy_scalar(idx) and idx.dtype.kind in {"i", "u"}
         ):
-            return self._compliant_series.item(cast("int", idx))
+            return self._compliant_series.item(idx)
 
         if isinstance(idx, self.to_native().__class__):
             idx = self._with_compliant(self._compliant_series._with_native(idx))

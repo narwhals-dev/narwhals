@@ -12,7 +12,6 @@ from typing import Literal
 from typing import NoReturn
 from typing import Sequence
 from typing import TypeVar
-from typing import cast
 from typing import overload
 from warnings import warn
 
@@ -920,13 +919,8 @@ class DataFrame(BaseFrame[DataFrameT]):
         if isinstance(columns, (int, str)):
             col_name = columns if isinstance(columns, str) else self.columns[columns]
             series = self.get_column(col_name)
-            return (
-                series[cast("SingleIndexSelector | MultiIndexSelector", rows)]
-                if rows is not None
-                else series
-            )
+            return series[rows] if rows is not None else series
 
-        rows = cast("SingleIndexSelector | MultiIndexSelector", rows)
         if isinstance(rows, Series):
             rows = rows._compliant_series
         if isinstance(columns, Series):

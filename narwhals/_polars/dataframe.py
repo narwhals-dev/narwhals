@@ -290,9 +290,9 @@ class PolarsDataFrame:
                         self.columns[slice(columns.start, columns.stop, columns.step)]
                     )
                 elif is_int_col_indexer and is_compliant_series(columns):
-                    native = native[:, cast("pl.Series", columns.native).to_list()]
+                    native = native[:, columns.native.to_list()]
                 elif is_int_col_indexer and is_sized_multi_index_selector(columns):
-                    native = native[:, cast("Sequence[int]", columns)]
+                    native = native[:, columns]
                 elif isinstance(columns, (slice, range)):
                     native = native.select(
                         self.columns[
@@ -300,9 +300,9 @@ class PolarsDataFrame:
                         ]
                     )
                 elif is_compliant_series(columns):
-                    native = native.select(cast("pl.Series", columns.native).to_list())
+                    native = native.select(columns.native.to_list())
                 elif is_sequence_like(columns):
-                    native = native.select(cast("Sequence[str]", columns))
+                    native = native.select(columns)
                 else:
                     msg = f"Unreachable code, got unexpected type: {type(columns)}"
                     raise AssertionError(msg)
