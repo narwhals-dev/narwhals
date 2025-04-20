@@ -154,7 +154,7 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
                 if self._cached_schema is not None
                 else self.native.columns.tolist()
             )
-        return self._cached_columns.copy()
+        return self._cached_columns
 
     def filter(self, predicate: DaskExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column

@@ -192,7 +192,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             new_columns_map.pop(name).alias(name)
             if name in new_columns_map
             else col(name)
-            for name in self.native.columns
+            for name in self.columns
         ]
         result.extend(value.alias(name) for name, value in new_columns_map.items())
         return self._with_native(self.native.select(*result))
@@ -223,7 +223,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
                 if self._cached_schema is not None
                 else self.native.columns
             )
-        return self._cached_columns.copy()
+        return self._cached_columns
 
     def to_pandas(self) -> pd.DataFrame:
         # only if version is v1, keep around for backcompat
@@ -295,9 +295,9 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             )
 
         if native_how in {"inner", "left", "cross", "outer"}:
-            select = [col(f'lhs."{x}"') for x in self.native.columns]
-            for name in other.native.columns:
-                col_in_lhs: bool = name in self.native.columns
+            select = [col(f'lhs."{x}"') for x in self.columns]
+            for name in other.columns:
+                col_in_lhs: bool = name in self.columns
                 if native_how == "outer" and not col_in_lhs:
                     select.append(col(f'rhs."{name}"'))
                 elif (native_how == "outer") or (
@@ -360,10 +360,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
         return self._with_native(duckdb.sql(query))
 
     def collect_schema(self) -> dict[str, DType]:
-        return {
-            column_name: native_to_narwhals_dtype(str(duckdb_dtype), self._version)
-            for column_name, duckdb_dtype in zip(self.native.columns, self.native.types)
-        }
+        return self.schema
 
     def unique(
         self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
