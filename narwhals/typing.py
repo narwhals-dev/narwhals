@@ -311,19 +311,19 @@ NonNestedLiteral: TypeAlias = (
 PythonLiteral: TypeAlias = "NonNestedLiteral | list[Any] | tuple[Any, ...]"
 
 # Annotations for `__getitem__` methods
-_Slice: TypeAlias = "slice[Any, Any, Any]"
+_T = TypeVar("_T")
+_Slice: TypeAlias = "slice[_T, Any, Any] | slice[Any, _T, Any] | slice[None, None, _T]"
 _SliceNone: TypeAlias = "slice[None, None, None]"
-_SliceIndex: TypeAlias = (
-    "slice[int, Any, Any] | slice[Any, int, Any] | slice[None, None, int] | _SliceNone"
-)
+_SliceIndex: TypeAlias = "_Slice[int] | _SliceNone"
 """E.g. `[1:]` or `[:3]` or `[::2]`."""
 
+_SliceName: TypeAlias = "_Slice[str] | _SliceNone"
 SingleIndexSelector: TypeAlias = int
 SingleNameSelector: TypeAlias = str
 SizedMultiIndexSelector: TypeAlias = "Sequence[int] | Series[Any] | _1DArray"
 MultiIndexSelector: TypeAlias = "_SliceIndex | SizedMultiIndexSelector"
 SizedMultiNameSelector: TypeAlias = "Sequence[str] | Series[Any] | _1DArray"
-MultiNameSelector: TypeAlias = "_Slice | SizedMultiNameSelector"
+MultiNameSelector: TypeAlias = "_SliceName | SizedMultiNameSelector"
 SingleColSelector: TypeAlias = "SingleIndexSelector | SingleNameSelector"
 MultiColSelector: TypeAlias = "MultiIndexSelector | MultiNameSelector"
 
