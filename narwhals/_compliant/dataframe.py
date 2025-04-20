@@ -28,8 +28,10 @@ from narwhals.utils import _StoresNative
 from narwhals.utils import deprecated
 from narwhals.utils import is_compliant_series
 from narwhals.utils import is_index_selector
+from narwhals.utils import is_range
 from narwhals.utils import is_sequence_like
 from narwhals.utils import is_sized_multi_index_selector
+from narwhals.utils import is_slice_index
 from narwhals.utils import is_slice_none
 
 if TYPE_CHECKING:
@@ -414,7 +416,7 @@ class EagerDataFrame(
             if isinstance(columns, Sized) and len(columns) == 0:
                 return compliant.select()
             if is_index_selector(columns):
-                if isinstance(columns, (slice, range)):
+                if is_slice_index(columns) or is_range(columns):
                     compliant = compliant._select_slice_of_indices(columns)
                 elif is_compliant_series(columns):
                     compliant = self._select_indices(columns.native)

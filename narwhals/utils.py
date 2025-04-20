@@ -1308,6 +1308,10 @@ def is_slice_index(obj: Any) -> TypeIs[_SliceIndex]:
     )
 
 
+def is_range(obj: Any) -> TypeIs[range]:
+    return isinstance(obj, range)
+
+
 def is_single_index_selector(obj: Any) -> TypeIs[SingleIndexSelector]:
     return bool(isinstance(obj, int) and not isinstance(obj, bool))
 
