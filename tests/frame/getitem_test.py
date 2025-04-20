@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import cast
@@ -335,3 +336,16 @@ def test_native_slice_series(constructor_eager: ConstructorEager) -> None:
     result = {"a": s[s.to_native()]}
     expected = {"a": [0, 1, 2]}
     assert_equal_data(result, expected)
+
+
+def test_pandas_non_str_columns() -> None:
+    # The general rule with getitem is: ints are always treated as positions. The rest, we should
+    # be able to hand down to the native frame. Here we check what happens for pandas with
+    # datetime column names.
+    df = nw.from_native(
+        pd.DataFrame({datetime(2020, 1, 1): [1, 2, 3], datetime(2020, 1, 2): [4, 5, 6]}),
+        eager_only=True,
+    )
+    result = df[:, [datetime(2020, 1, 1)]]  # type: ignore[index]
+    expected = {datetime(2020, 1, 1): [1, 2, 3]}
+    assert result.to_dict(as_series=False) == expected

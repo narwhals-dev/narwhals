@@ -310,12 +310,6 @@ NonNestedLiteral: TypeAlias = (
 )
 PythonLiteral: TypeAlias = "NonNestedLiteral | list[Any] | tuple[Any, ...]"
 
-# Overloaded sequence of integers
-_IntIndexer: TypeAlias = Any  # noqa: PYI047
-# Overloaded sequence of strings
-_StrIndexer: TypeAlias = Any  # noqa: PYI047
-
-
 # Annotations for `__getitem__` methods
 _Slice: TypeAlias = "slice[Any, Any, Any]"
 _SliceNone: TypeAlias = "slice[None, None, None]"
@@ -326,8 +320,10 @@ _SliceIndex: TypeAlias = (
 
 SingleIndexSelector: TypeAlias = int
 SingleNameSelector: TypeAlias = str
-MultiIndexSelector: TypeAlias = "_SliceIndex | Sequence[int] | Series[Any] | _1DArray"
-MultiNameSelector: TypeAlias = "_Slice | Sequence[str] | Series[Any] | _1DArray"
+SizedMultiIndexSelector: TypeAlias = "Sequence[int] | Series[Any] | _1DArray"
+MultiIndexSelector: TypeAlias = "_SliceIndex | SizedMultiIndexSelector"
+SizedMultiNameSelector: TypeAlias = "Sequence[str] | Series[Any] | _1DArray"
+MultiNameSelector: TypeAlias = "_Slice | SizedMultiNameSelector"
 SingleColSelector: TypeAlias = "SingleIndexSelector | SingleNameSelector"
 MultiColSelector: TypeAlias = "MultiIndexSelector | MultiNameSelector"
 

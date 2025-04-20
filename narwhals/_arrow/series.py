@@ -67,10 +67,10 @@ if TYPE_CHECKING:
     from narwhals.typing import PythonLiteral
     from narwhals.typing import RankMethod
     from narwhals.typing import RollingInterpolationMethod
+    from narwhals.typing import SizedMultiIndexSelector
     from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
-    from narwhals.typing import _IntIndexer
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -407,7 +407,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def name(self) -> str:
         return self._name
 
-    def _gather(self, item: _IntIndexer) -> Self:
+    def _gather(self, item: SizedMultiIndexSelector) -> Self:
         if len(item) == 0:
             return self._with_native(self.native.slice(0, 0))
         if self._backend_version < (18,) and isinstance(item, tuple):

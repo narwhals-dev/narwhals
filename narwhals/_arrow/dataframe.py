@@ -56,11 +56,11 @@ if TYPE_CHECKING:
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import JoinStrategy
+    from narwhals.typing import SizedMultiIndexSelector
+    from narwhals.typing import SizedMultiNameSelector
     from narwhals.typing import SizeUnit
     from narwhals.typing import UniqueKeepStrategy
     from narwhals.typing import _2DArray
-    from narwhals.typing import _IntIndexer
-    from narwhals.typing import _StrIndexer
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -244,7 +244,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
     def __array__(self, dtype: Any, *, copy: bool | None) -> _2DArray:
         return self.native.__array__(dtype, copy=copy)
 
-    def _gather(self, item: _IntIndexer) -> Self:
+    def _gather(self, item: SizedMultiIndexSelector) -> Self:
         if len(item) == 0:
             return self._with_native(self.native.slice(0, 0))
         if self._backend_version < (18,) and isinstance(item, tuple):
@@ -272,12 +272,12 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             self.native.select(self.columns[item.start : item.stop : item.step])
         )
 
-    def _select_indices(self, item: _IntIndexer) -> Self:
+    def _select_indices(self, item: SizedMultiIndexSelector) -> Self:
         if isinstance(item, pa.ChunkedArray):
             item = item.to_pylist()
         return self._with_native(self.native.select([self.columns[x] for x in item]))
 
-    def _select_labels(self, item: _StrIndexer) -> Self:
+    def _select_labels(self, item: SizedMultiNameSelector) -> Self:
         if isinstance(item, pa.ChunkedArray):
             item = item.to_pylist()
         return self._with_native(self.native.select(item))

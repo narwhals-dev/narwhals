@@ -10,6 +10,7 @@ from typing import Protocol
 from typing import Sequence
 from typing import Sized
 from typing import TypeVar
+from typing import cast
 from typing import overload
 
 from narwhals._compliant.typing import CompliantExprT_contra
@@ -54,11 +55,11 @@ if TYPE_CHECKING:
     from narwhals.typing import MultiIndexSelector
     from narwhals.typing import PivotAgg
     from narwhals.typing import SingleIndexSelector
+    from narwhals.typing import SizedMultiIndexSelector
+    from narwhals.typing import SizedMultiNameSelector
     from narwhals.typing import SizeUnit
     from narwhals.typing import UniqueKeepStrategy
     from narwhals.typing import _2DArray
-    from narwhals.typing import _IntIndexer
-    from narwhals.typing import _StrIndexer
     from narwhals.utils import Implementation
     from narwhals.utils import _FullContext
 
@@ -391,10 +392,10 @@ class EagerDataFrame(
     ) -> list[str]:
         return list(columns or (f"column_{x}" for x in range(data.shape[1])))
 
-    def _gather(self, indices: _IntIndexer) -> Self: ...
+    def _gather(self, indices: SizedMultiIndexSelector) -> Self: ...
     def _gather_slice(self, indices: slice | range) -> Self: ...
-    def _select_indices(self, indices: _IntIndexer) -> Self: ...
-    def _select_labels(self, indices: _StrIndexer) -> Self: ...
+    def _select_indices(self, indices: SizedMultiIndexSelector) -> Self: ...
+    def _select_labels(self, indices: SizedMultiNameSelector) -> Self: ...
     def _select_slice_of_indices(self, indices: slice | range) -> Self: ...
     def _select_slice_of_labels(self, indices: slice | range) -> Self: ...
 
@@ -423,7 +424,7 @@ class EagerDataFrame(
             elif is_compliant_series(columns):
                 compliant = self._select_labels(columns.native)
             elif is_sequence_like(columns):
-                compliant = self._select_labels(columns)
+                compliant = self._select_labels(cast("SizedMultiNameSelector", columns))
             else:
                 msg = f"Unreachable code, got unexpected type: {type(columns)}"
                 raise AssertionError(msg)

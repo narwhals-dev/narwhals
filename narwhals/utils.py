@@ -87,6 +87,7 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoSeriesT
     from narwhals.typing import MultiIndexSelector
     from narwhals.typing import SingleIndexSelector
+    from narwhals.typing import SizedMultiIndexSelector
     from narwhals.typing import SizeUnit
     from narwhals.typing import SupportsNativeNamespace
     from narwhals.typing import TimeUnit
@@ -1268,7 +1269,9 @@ def is_sequence_but_not_str(sequence: Any | Sequence[_T]) -> TypeIs[Sequence[_T]
     return isinstance(sequence, Sequence) and not isinstance(sequence, str)
 
 
-def is_sequence_like_ints(sequence: Any | Sequence[_T]) -> bool:
+def is_sequence_like_ints(
+    sequence: Any | Sequence[_T],
+) -> TypeIs[SizedMultiIndexSelector]:
     np = get_numpy()
     return (
         (

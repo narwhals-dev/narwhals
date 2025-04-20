@@ -64,11 +64,11 @@ if TYPE_CHECKING:
     from narwhals.typing import DTypeBackend
     from narwhals.typing import JoinStrategy
     from narwhals.typing import PivotAgg
+    from narwhals.typing import SizedMultiIndexSelector
+    from narwhals.typing import SizedMultiNameSelector
     from narwhals.typing import SizeUnit
     from narwhals.typing import UniqueKeepStrategy
     from narwhals.typing import _2DArray
-    from narwhals.typing import _IntIndexer
-    from narwhals.typing import _StrIndexer
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -279,7 +279,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
     def __array__(self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
         return self.to_numpy(dtype=dtype, copy=copy)
 
-    def _gather(self, items: _IntIndexer) -> Self:
+    def _gather(self, items: SizedMultiIndexSelector) -> Self:
         items = list(items) if isinstance(items, tuple) else items
         return self._with_native(self.native.iloc[items, :])
 
@@ -302,14 +302,14 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             validate_column_names=False,
         )
 
-    def _select_indices(self, item: _IntIndexer) -> Self:
+    def _select_indices(self, item: SizedMultiIndexSelector) -> Self:
         item = list(item) if isinstance(item, tuple) else item
         return self._with_native(
             self.native.iloc[:, item],
             validate_column_names=False,
         )
 
-    def _select_labels(self, indices: _StrIndexer) -> PandasLikeDataFrame:
+    def _select_labels(self, indices: SizedMultiNameSelector) -> PandasLikeDataFrame:
         return self._with_native(self.native.loc[:, indices])
 
     # --- properties ---
