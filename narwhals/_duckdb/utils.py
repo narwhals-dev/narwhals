@@ -7,6 +7,7 @@ from typing import Sequence
 
 import duckdb
 
+from narwhals.utils import Version
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
@@ -16,7 +17,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals.dtypes import DType
-    from narwhals.utils import Version
+
 
 col = duckdb.ColumnExpression
 """Alias for `duckdb.ColumnExpression`."""
@@ -111,6 +112,10 @@ def native_to_narwhals_dtype(duckdb_dtype: DuckDBPyType, version: Version) -> DT
         inner = native_to_narwhals_dtype(child[1], version=version)
         return dtypes.Array(inner=inner, shape=tuple(shape))
 
+    if duckdb_dtype_id == "enum":
+        categories = duckdb_dtype.children[0][1]
+        return dtypes.Enum(categories=categories)
+
     return _non_nested_native_to_narwhals_dtype(duckdb_dtype_id, version)
 
 
@@ -144,7 +149,7 @@ def _non_nested_native_to_narwhals_dtype(duckdb_dtype_id: str, version: Version)
     }.get(duckdb_dtype_id, dtypes.Unknown())
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> str:
+def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> str:  # noqa: PLR0915
     dtypes = import_dtypes_module(version)
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         msg = "Casting to Decimal is not supported yet."
@@ -184,6 +189,16 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
         msg = "Categorical not supported by DuckDB"
         raise NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Enum):
+        if version is Version.V1:
+            msg = "Converting to Enum is not supported in narwhals.stable.v1"
+            raise NotImplementedError(msg)
+        if isinstance(dtype, dtypes.Enum):
+            categories = "'" + "', '".join(dtype.categories) + "'"
+            return f"ENUM ({categories})"
+        msg = "Can not cast / initialize Enum without categories present"
+        raise ValueError(msg)
+
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         _time_unit = dtype.time_unit
         _time_zone = dtype.time_zone
