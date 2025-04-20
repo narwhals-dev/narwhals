@@ -207,7 +207,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             # Note: prefer `self._cached_schema` over `functools.cached_property`
             # due to Python3.13 failures.
             self._cached_schema = {
-                column_name: native_to_narwhals_dtype(str(duckdb_dtype), self._version)
+                column_name: native_to_narwhals_dtype(duckdb_dtype, self._version)
                 for column_name, duckdb_dtype in zip(
                     self.native.columns, self.native.types
                 )
@@ -354,7 +354,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
 
     def collect_schema(self) -> dict[str, DType]:
         return {
-            column_name: native_to_narwhals_dtype(str(duckdb_dtype), self._version)
+            column_name: native_to_narwhals_dtype(duckdb_dtype, self._version)
             for column_name, duckdb_dtype in zip(self.native.columns, self.native.types)
         }
 
