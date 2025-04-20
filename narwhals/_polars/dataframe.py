@@ -304,7 +304,7 @@ class PolarsDataFrame:
                 elif is_sequence_like(columns):
                     native = native.select(cast("Sequence[str]", columns))
                 else:
-                    msg = "Unreachable code"
+                    msg = f"Unreachable code, got unexpected type: {type(columns)}"
                     raise AssertionError(msg)
 
             if not is_slice_none(rows):
@@ -317,7 +317,7 @@ class PolarsDataFrame:
                 elif is_sequence_like(rows):
                     native = native[rows, :]
                 else:
-                    msg = "Unreachable code"
+                    msg = f"Unreachable code, got unexpected type: {type(rows)}"
                     raise AssertionError(msg)
 
             return self._with_native(native)

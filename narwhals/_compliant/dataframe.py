@@ -425,7 +425,7 @@ class EagerDataFrame(
             elif is_sequence_like(columns):
                 compliant = self._select_labels(columns)
             else:
-                msg = "Unreachable code"
+                msg = f"Unreachable code, got unexpected type: {type(columns)}"
                 raise AssertionError(msg)
 
         if not is_slice_none(rows):
@@ -438,7 +438,7 @@ class EagerDataFrame(
             elif is_sequence_like_ints(rows):
                 compliant = compliant._gather(rows)
             else:
-                msg = "Unreachable code"
+                msg = f"Unreachable code, got unexpected type: {type(rows)}"
                 raise AssertionError(msg)
 
         return compliant
