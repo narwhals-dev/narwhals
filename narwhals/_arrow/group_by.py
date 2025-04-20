@@ -155,7 +155,6 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
             t = self.compliant._with_native(
                 table.filter(pc.equal(table[col_token], v)).drop([col_token])
             )
-            # Should we add a `.head(1)` before calling `simple_select` and `row`?
             row = t.simple_select(*self._keys).row(0)
             yield (
                 tuple(extract_py_scalar(el) for el in row),
