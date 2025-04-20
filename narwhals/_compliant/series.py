@@ -332,7 +332,7 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
             return self._gather_slice(item)
         elif is_compliant_series(item):
             return self._gather(item.native)
-        elif isinstance(item, self._native_series) or is_sequence_like_ints(item):
+        elif is_sequence_like_ints(item):
             return self._gather(item)
         else:
             msg = f"Unreachable code, got unexpected type: {type(item)}"
