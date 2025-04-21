@@ -118,8 +118,8 @@ class CompliantDataFrame(
     def __getitem__(
         self,
         item: tuple[
-            SingleIndexSelector | MultiIndexSelector | CompliantSeriesT,
-            MultiIndexSelector | MultiColSelector | CompliantSeriesT,
+            SingleIndexSelector | MultiIndexSelector[CompliantSeriesT],
+            MultiIndexSelector[CompliantSeriesT] | MultiColSelector[CompliantSeriesT],
         ],
     ) -> Self: ...
     def simple_select(self, *column_names: str) -> Self:
@@ -396,18 +396,22 @@ class EagerDataFrame(
     ) -> list[str]:
         return list(columns or (f"column_{x}" for x in range(data.shape[1])))
 
-    def _gather(self, indices: SizedMultiIndexSelector) -> Self: ...
+    def _gather(self, indices: SizedMultiIndexSelector[CompliantSeriesAny]) -> Self: ...
     def _gather_slice(self, indices: _SliceIndex | range) -> Self: ...
-    def _select_indices(self, indices: SizedMultiIndexSelector) -> Self: ...
-    def _select_labels(self, indices: SizedMultiNameSelector) -> Self: ...
+    def _select_indices(
+        self, indices: SizedMultiIndexSelector[CompliantSeriesAny]
+    ) -> Self: ...
+    def _select_labels(
+        self, indices: SizedMultiNameSelector[CompliantSeriesAny]
+    ) -> Self: ...
     def _select_slice_of_indices(self, indices: _SliceIndex | range) -> Self: ...
     def _select_slice_of_labels(self, item: _SliceName) -> Self: ...
 
     def __getitem__(
         self,
         item: tuple[
-            SingleIndexSelector | MultiIndexSelector | CompliantSeriesAny,
-            MultiIndexSelector | MultiColSelector | CompliantSeriesAny,
+            SingleIndexSelector | MultiIndexSelector[CompliantSeriesAny],
+            MultiIndexSelector[CompliantSeriesAny] | MultiColSelector[CompliantSeriesAny],
         ],
     ) -> Self:
         rows, columns = item
