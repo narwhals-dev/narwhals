@@ -14,6 +14,7 @@ from typing import cast
 import pandas as pd
 
 from narwhals._compliant.series import EagerSeriesNamespace
+from narwhals.dtypes import _DelayedCategories
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import ShapeError
@@ -311,7 +312,7 @@ def native_categorical_to_narwhals_dtype(
     if version is Version.V1:
         return dtypes.Categorical()
     if native_dtype.ordered:
-        return dtypes.Enum(get_categories)
+        return dtypes.Enum(_DelayedCategories(get_categories))
     return dtypes.Categorical()
 
 

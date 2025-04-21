@@ -472,8 +472,3 @@ def test_enum_repr() -> None:
 def test_enum_hash() -> None:
     assert nw.Enum(["a", "b"]) in {nw.Enum(["a", "b"])}
     assert nw.Enum(["a", "b"]) not in {nw.Enum(["a", "b", "c"])}
-
-
-def test_enum_invalid() -> None:
-    with pytest.raises(TypeError, match="Invalid"):
-        assert nw.Enum(3)  # type: ignore[arg-type]

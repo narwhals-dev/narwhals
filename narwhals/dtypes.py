@@ -461,6 +461,18 @@ class Categorical(DType):
     """
 
 
+class _DelayedCategories:
+    """Store callable which produces tupleified version of Enum's categories.
+
+    !!! warning
+        This class is not meant to be instantiated directly and exists
+        for internal usage only.
+    """
+
+    def __init__(self, get_categories: Callable[[], tuple[str, ...]]) -> None:
+        self.get_categories = get_categories
+
+
 class Enum(DType):
     """A fixed categorical encoding of a unique set of strings.
 
@@ -474,32 +486,24 @@ class Enum(DType):
     """
 
     def __init__(
-        self, categories: Iterable[str] | type[enum.Enum] | Callable[[], tuple[str, ...]]
+        self, categories: Iterable[str] | type[enum.Enum] | _DelayedCategories
     ) -> None:
-        self._get_categories: Callable[[], tuple[str, ...]]
-        self._categories: tuple[str, ...] | None
+        self._delayed_categories: _DelayedCategories | None = None
+        self._cached_categories: tuple[str, ...] | None = None
+
         if isinstance(categories, type) and issubclass(categories, enum.Enum):
-            self._get_categories = lambda: tuple(member.value for member in categories)
-            self._categories = self._get_categories()
-        elif isinstance(categories, Iterable):
-            self._get_categories = lambda: tuple(categories)
-            self._categories = self._get_categories()
-        elif callable(categories):
-            # Incompatible types in assignment (expression has type "Callable[[], tuple[str, ...]] | type[object]",
-            # variable has type "Callable[[], tuple[str, ...]]")
-            self._get_categories = categories  # type: ignore[assignment]
-            self._categories = None
+            self._cached_categories = tuple(member.value for member in categories)
+        elif isinstance(categories, _DelayedCategories):
+            self._delayed_categories = categories
         else:
-            msg = f"Invalid type, expected Iterable of strings or Enum, got: {type(categories)}"
-            raise TypeError(msg)
+            self._cached_categories = tuple(categories)
 
     @property
     def categories(self) -> tuple[str, ...]:
-        # Converting the native categories object to a tuple isn't free, so we make
-        # sure to only do so when necessary.
-        if self._categories is None:
-            self._categories = self._get_categories()
-        return self._categories
+        if self._cached_categories is None:
+            assert self._delayed_categories is not None  # noqa: S101
+            self._cached_categories = self._delayed_categories.get_categories()
+        return self._cached_categories
 
     def __eq__(self, other: object) -> bool:
         # allow comparing object instances to class
@@ -511,7 +515,7 @@ class Enum(DType):
         return hash((self.__class__, tuple(self.categories)))
 
     def __repr__(self) -> str:
-        if self._categories is None:
+        if self._cached_categories is None:
             return f"{type(self).__name__}(categories=[...])"
         return f"{type(self).__name__}(categories={list(self.categories)!r})"
 
