@@ -68,6 +68,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
         self._implementation = implementation
         self._version = version
         self._cached_schema: dict[str, DType] | None = None
+        self._cached_columns: list[str] | None = None
         validate_backend_version(self._implementation, self._backend_version)
 
     @property
@@ -187,7 +188,13 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
 
     @property
     def columns(self) -> list[str]:
-        return list(self.schema)
+        if self._cached_columns is None:
+            self._cached_columns = (
+                list(self.schema)
+                if self._cached_schema is not None
+                else self.native.columns
+            )
+        return self._cached_columns
 
     def collect(
         self,
@@ -384,7 +391,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
         # If how in {"semi", "anti"}, then resulting columns are same as left columns
         # Otherwise, we add the right columns with the new mapping, while keeping the
         # original order of right_columns.
-        col_order = left_columns
+        col_order = left_columns.copy()
 
         if how in {"inner", "left", "cross"}:
             col_order.extend(
@@ -410,7 +417,6 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
             else left_on_
         )
         how_native = "full_outer" if how == "full" else how
-
         return self._with_native(
             self.native.join(other_native, on=on_, how=how_native).select(col_order)
         )

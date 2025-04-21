@@ -254,11 +254,9 @@ def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> 
     if dtype.startswith("dictionary<"):
         return dtypes.Categorical()
     if dtype == "category":
-        if version is Version.V1:
-            return dtypes.Categorical()
-        if native_dtype.ordered:
-            return dtypes.Enum(native_dtype.categories)
-        return dtypes.Categorical()
+        return native_categorical_to_narwhals_dtype(
+            native_dtype, version, native_dtype.categories
+        )
     if (match_ := PATTERN_PD_DATETIME.match(dtype)) or (
         match_ := PATTERN_PA_DATETIME.match(dtype)
     ):
@@ -303,8 +301,21 @@ def object_native_to_narwhals_dtype(
     return dtypes.Object()
 
 
+def native_categorical_to_narwhals_dtype(
+    native_dtype: pd.CategoricalDtype, version: Version, categories: pd.Index[Any]
+) -> DType:
+    dtypes = import_dtypes_module(version)
+    if version is Version.V1:
+        return dtypes.Categorical()
+    if native_dtype.ordered:
+        return dtypes.Enum(categories)
+    return dtypes.Categorical()
+
+
 def native_to_narwhals_dtype(
-    native_dtype: Any, version: Version, implementation: Implementation
+    native_dtype: Any,
+    version: Version,
+    implementation: Implementation,
 ) -> DType:
     str_dtype = str(native_dtype)
 
@@ -317,6 +328,11 @@ def native_to_narwhals_dtype(
             # cudf, cudf.pandas
             return arrow_native_to_narwhals_dtype(native_dtype.to_arrow(), version)
         return arrow_native_to_narwhals_dtype(native_dtype.pyarrow_dtype, version)
+    if str_dtype == "category" and implementation.is_cudf():
+        # https://github.com/rapidsai/cudf/issues/18536
+        return native_categorical_to_narwhals_dtype(
+            native_dtype, version, native_dtype.categories.to_pandas()
+        )
     if str_dtype != "object":
         return non_object_native_to_narwhals_dtype(native_dtype, version)
     elif implementation is Implementation.DASK:

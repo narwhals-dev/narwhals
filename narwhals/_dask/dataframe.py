@@ -57,6 +57,7 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
         self._implementation = Implementation.DASK
         self._version = version
         self._cached_schema: dict[str, DType] | None = None
+        self._cached_columns: list[str] | None = None
         validate_backend_version(self._implementation, self._backend_version)
 
     @staticmethod
@@ -156,7 +157,13 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
 
     @property
     def columns(self) -> list[str]:
-        return list(self.schema)
+        if self._cached_columns is None:
+            self._cached_columns = (
+                list(self.schema)
+                if self._cached_schema is not None
+                else self.native.columns.tolist()
+            )
+        return self._cached_columns
 
     def filter(self, predicate: DaskExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
