@@ -318,16 +318,16 @@ _SliceNone: TypeAlias = "slice[None, None, None]"
 SingleIndexSelector: TypeAlias = int
 _SliceIndex: TypeAlias = "_Slice[int] | _SliceNone"
 """E.g. `[1:]` or `[:3]` or `[::2]`."""
-SizedMultiIndexSelector: TypeAlias = "Sequence[int] | Series[Any] | _1DArray"
-MultiIndexSelector: TypeAlias = "_SliceIndex | SizedMultiIndexSelector"
+SizedMultiIndexSelector: TypeAlias = "Sequence[int] | _T | _1DArray"
+MultiIndexSelector: TypeAlias = "_SliceIndex | SizedMultiIndexSelector[_T]"
 # Labels/column names
 SingleNameSelector: TypeAlias = str
 _SliceName: TypeAlias = "_Slice[str] | _SliceNone"
-SizedMultiNameSelector: TypeAlias = "Sequence[str] | Series[Any] | _1DArray"
-MultiNameSelector: TypeAlias = "_SliceName | SizedMultiNameSelector"
+SizedMultiNameSelector: TypeAlias = "Sequence[str] | _T | _1DArray"
+MultiNameSelector: TypeAlias = "_SliceName | SizedMultiNameSelector[_T]"
 # Mixed selectors
 SingleColSelector: TypeAlias = "SingleIndexSelector | SingleNameSelector"
-MultiColSelector: TypeAlias = "MultiIndexSelector | MultiNameSelector"
+MultiColSelector: TypeAlias = "MultiIndexSelector[_T] | MultiNameSelector[_T]"
 
 
 # ruff: noqa: N802

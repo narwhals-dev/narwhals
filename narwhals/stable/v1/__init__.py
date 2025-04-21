@@ -91,14 +91,14 @@ if TYPE_CHECKING:
     from typing_extensions import TypeVar
 
     from narwhals._translate import IntoArrowTable
+    from narwhals.dataframe import MultiColSelector
+    from narwhals.dataframe import MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import ConcatMethod
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
     from narwhals.typing import IntoLazyFrameT
     from narwhals.typing import IntoSeries
-    from narwhals.typing import MultiColSelector
-    from narwhals.typing import MultiIndexSelector
     from narwhals.typing import NonNestedLiteral
     from narwhals.typing import SingleColSelector
     from narwhals.typing import SingleIndexSelector
