@@ -270,8 +270,8 @@ class PolarsDataFrame:
     def __getitem__(
         self,
         item: tuple[
-            SingleIndexSelector | MultiIndexSelector | PolarsSeries,
-            MultiIndexSelector | MultiColSelector | PolarsSeries,
+            SingleIndexSelector | MultiIndexSelector[PolarsSeries],
+            MultiIndexSelector[PolarsSeries] | MultiColSelector[PolarsSeries],
         ],
     ) -> Any:
         rows, columns = item
