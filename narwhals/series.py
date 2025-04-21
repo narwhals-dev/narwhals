@@ -178,7 +178,6 @@ class Series(Generic[IntoSeriesT]):
         if isinstance(idx, self.to_native().__class__):
             idx = self._with_compliant(self._compliant_series._with_native(idx))
 
-        # For Series.__getitem__, we only
         if not is_index_selector(idx):
             msg = (
                 f"Unexpected type for `Series.__getitem__`: {type(idx)}.\n\n"
