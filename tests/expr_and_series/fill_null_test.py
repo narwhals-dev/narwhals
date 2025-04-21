@@ -64,20 +64,18 @@ def test_fill_null_exceptions(constructor: Constructor) -> None:
         df.with_columns(nw.col("a").fill_null(strategy="invalid"))  # type: ignore  # noqa: PGH003
 
 
-def test_fill_null_strategies_with_limit_as_none(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_fill_null_strategies_with_limit_as_none(constructor: Constructor) -> None:
     data_limits = {
         "a": [1, None, None, None, 5, 6, None, None, None, 10],
         "b": ["a", None, None, None, "b", "c", None, None, None, "d"],
+        "idx": list(range(10)),
     }
     df = nw.from_native(constructor(data_limits))
 
     expected_forward = {
         "a": [1, 1, 1, 1, 5, 6, 6, 6, 6, 10],
         "b": ["a", "a", "a", "a", "b", "c", "c", "c", "c", "d"],
+        "idx": list(range(10)),
     }
     if (
         "pandas_pyarrow_constructor" in str(constructor)
@@ -94,12 +92,16 @@ def test_fill_null_strategies_with_limit_as_none(
                 "ignore", message="Falling back on a non-pyarrow code path which"
             )
             result_forward = df.with_columns(
-                nw.col("a", "b").fill_null(strategy="forward", limit=None)
+                nw.col("a", "b")
+                .fill_null(strategy="forward", limit=None)
+                .over(order_by="idx")
             )
             assert_equal_data(result_forward, expected_forward)
     else:
         result_forward = df.with_columns(
-            nw.col("a", "b").fill_null(strategy="forward", limit=None)
+            nw.col("a", "b")
+            .fill_null(strategy="forward", limit=None)
+            .over(order_by="idx")
         )
 
         assert_equal_data(result_forward, expected_forward)
@@ -107,6 +109,7 @@ def test_fill_null_strategies_with_limit_as_none(
     expected_backward = {
         "a": [1, 5, 5, 5, 5, 6, 10, 10, 10, 10],
         "b": ["a", "b", "b", "b", "b", "c", "d", "d", "d", "d"],
+        "idx": list(range(10)),
     }
     if (
         "pandas_pyarrow_constructor" in str(constructor)
@@ -124,21 +127,21 @@ def test_fill_null_strategies_with_limit_as_none(
                 "ignore", message="Falling back on a non-pyarrow code path which"
             )
             result_backward = df.with_columns(
-                nw.col("a", "b").fill_null(strategy="backward", limit=None)
+                nw.col("a", "b")
+                .fill_null(strategy="backward", limit=None)
+                .over(order_by="idx")
             )
             assert_equal_data(result_backward, expected_backward)
     else:
         result_backward = df.with_columns(
-            nw.col("a", "b").fill_null(strategy="backward", limit=None)
+            nw.col("a", "b")
+            .fill_null(strategy="backward", limit=None)
+            .over(order_by="idx")
         )
         assert_equal_data(result_backward, expected_backward)
 
 
-def test_fill_null_limits(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    # if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
-    #     request.applymarker(pytest.mark.xfail)
+def test_fill_null_limits(constructor: Constructor) -> None:
     context: Any = (
         pytest.raises(NotImplementedError, match="The limit keyword is not supported")
         if "cudf" in str(constructor)
