@@ -283,7 +283,8 @@ class ArrowDataFrame(
         if isinstance(item, pa.ChunkedArray):
             # TODO @dangotbanned: Fix upstream with `pa.ChunkedArray.to_pylist(self) -> list[Any]:`
             selector = cast("Sequence[int]", item.to_pylist())
-        # NOTE: Probably don't need to convert to a list here?
+        # TODO @dangotbanned: Fix upstream, it is actually much narrower
+        # **Doesn't accept `ndarray`**
         elif is_numpy_array(item):
             selector = item.tolist()
         else:
