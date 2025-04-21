@@ -354,6 +354,3 @@ def test_fill_null_series_exceptions(constructor_eager: ConstructorEager) -> Non
         df_float.select(
             a_zero_digit=df_float["a"].fill_null(strategy="invalid"),  # type: ignore  # noqa: PGH003
         )
-
-
-# def lazy_fill_null_strategy(constructor: Constructor)
