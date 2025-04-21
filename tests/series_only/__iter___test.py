@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:

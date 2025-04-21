@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
 

@@ -17,13 +17,15 @@ from pandas.testing import assert_frame_equal
 from pandas.testing import assert_index_equal
 from pandas.testing import assert_series_equal
 
-import narwhals as unstable_nw
-import narwhals.stable.v1 as nw
+import narwhals as nw
+import narwhals.stable.v1 as nw_v1
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
+from narwhals.utils import Version
 from narwhals.utils import check_column_exists
 from narwhals.utils import deprecate_native_namespace
 from narwhals.utils import parse_version
+from narwhals.utils import requires
 from tests.utils import PANDAS_VERSION
 from tests.utils import get_module_version_as_tuple
 
@@ -43,48 +45,48 @@ class DummyModule:
 
 
 def test_maybe_align_index_pandas() -> None:
-    df = nw.from_native(pd.DataFrame({"a": [1, 2, 3]}, index=[1, 2, 0]))
-    s = nw.from_native(pd.Series([1, 2, 3], index=[2, 1, 0]), series_only=True)
-    result = nw.maybe_align_index(df, s)
+    df = nw_v1.from_native(pd.DataFrame({"a": [1, 2, 3]}, index=[1, 2, 0]))
+    s = nw_v1.from_native(pd.Series([1, 2, 3], index=[2, 1, 0]), series_only=True)
+    result = nw_v1.maybe_align_index(df, s)
     expected = pd.DataFrame({"a": [2, 1, 3]}, index=[2, 1, 0])
-    assert_frame_equal(nw.to_native(result), expected)
-    result = nw.maybe_align_index(df, df.sort("a", descending=True))
+    assert_frame_equal(nw_v1.to_native(result), expected)
+    result = nw_v1.maybe_align_index(df, df.sort("a", descending=True))
     expected = pd.DataFrame({"a": [3, 2, 1]}, index=[0, 2, 1])
-    assert_frame_equal(nw.to_native(result), expected)
-    result_s = nw.maybe_align_index(s, df)
+    assert_frame_equal(nw_v1.to_native(result), expected)
+    result_s = nw_v1.maybe_align_index(s, df)
     expected_s = pd.Series([2, 1, 3], index=[1, 2, 0])
-    assert_series_equal(nw.to_native(result_s), expected_s)
-    result_s = nw.maybe_align_index(s, s.sort(descending=True))
+    assert_series_equal(nw_v1.to_native(result_s), expected_s)
+    result_s = nw_v1.maybe_align_index(s, s.sort(descending=True))
     expected_s = pd.Series([3, 2, 1], index=[0, 1, 2])
-    assert_series_equal(nw.to_native(result_s), expected_s)
+    assert_series_equal(nw_v1.to_native(result_s), expected_s)
 
 
 def test_with_columns_sort() -> None:
     # Check that, unlike in pandas, we don't change the index
     # when sorting
-    df = nw.from_native(pd.DataFrame({"a": [2, 1, 3]}))
-    result = df.with_columns(a_sorted=nw.col("a").sort()).pipe(nw.to_native)
+    df = nw_v1.from_native(pd.DataFrame({"a": [2, 1, 3]}))
+    result = df.with_columns(a_sorted=nw_v1.col("a").sort()).pipe(nw_v1.to_native)
     expected = pd.DataFrame({"a": [2, 1, 3], "a_sorted": [1, 2, 3]})
     assert_frame_equal(result, expected)
 
 
 def test_non_unique_index() -> None:
-    df = nw.from_native(pd.DataFrame({"a": [1, 2, 3]}, index=[1, 2, 0]))
-    s = nw.from_native(pd.Series([1, 2, 3], index=[2, 2, 0]), series_only=True)
+    df = nw_v1.from_native(pd.DataFrame({"a": [1, 2, 3]}, index=[1, 2, 0]))
+    s = nw_v1.from_native(pd.Series([1, 2, 3], index=[2, 2, 0]), series_only=True)
     with pytest.raises(ValueError, match="unique"):
-        nw.maybe_align_index(df, s)
+        nw_v1.maybe_align_index(df, s)
 
 
 def test_maybe_align_index_polars() -> None:
     pytest.importorskip("polars")
     import polars as pl
 
-    df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
-    s = nw.from_native(pl.Series([1, 2, 3]), series_only=True)
-    result = nw.maybe_align_index(df, s)
+    df = nw_v1.from_native(pl.DataFrame({"a": [1, 2, 3]}))
+    s = nw_v1.from_native(pl.Series([1, 2, 3]), series_only=True)
+    result = nw_v1.maybe_align_index(df, s)
     assert result is df
     with pytest.raises(ValueError, match="length"):
-        nw.maybe_align_index(df, s[1:])
+        nw_v1.maybe_align_index(df, s[1:])
 
 
 @pytest.mark.parametrize(
@@ -94,10 +96,10 @@ def test_maybe_align_index_polars() -> None:
 def test_maybe_set_index_pandas_column_names(
     column_names: str | list[str] | None,
 ) -> None:
-    df = nw.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
-    result = nw.maybe_set_index(df, column_names)
+    df = nw_v1.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    result = nw_v1.maybe_set_index(df, column_names)
     expected = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}).set_index(column_names)
-    assert_frame_equal(nw.to_native(result), expected)
+    assert_frame_equal(nw_v1.to_native(result), expected)
 
 
 @pytest.mark.parametrize(
@@ -113,8 +115,8 @@ def test_maybe_set_index_polars_column_names(
     pytest.importorskip("polars")
     import polars as pl
 
-    df = nw.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
-    result = nw.maybe_set_index(df, column_names)
+    df = nw_v1.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    result = nw_v1.maybe_set_index(df, column_names)
     assert result is df
 
 
@@ -125,11 +127,11 @@ def test_maybe_set_index_polars_column_names(
 @pytest.mark.parametrize(
     ("narwhals_index", "pandas_index"),
     [
-        (nw.from_native(pd.Series([1, 2, 0]), series_only=True), pd.Series([1, 2, 0])),
+        (nw_v1.from_native(pd.Series([1, 2, 0]), series_only=True), pd.Series([1, 2, 0])),
         (
             [
-                nw.from_native(pd.Series([0, 1, 2]), series_only=True),
-                nw.from_native(pd.Series([1, 2, 0]), series_only=True),
+                nw_v1.from_native(pd.Series([0, 1, 2]), series_only=True),
+                nw_v1.from_native(pd.Series([1, 2, 0]), series_only=True),
             ],
             [
                 pd.Series([0, 1, 2]),
@@ -143,23 +145,23 @@ def test_maybe_set_index_pandas_direct_index(
     pandas_index: pd.Series[Any] | list[pd.Series[Any]],
     native_df_or_series: pd.DataFrame | pd.Series[Any],
 ) -> None:
-    df = nw.from_native(native_df_or_series, allow_series=True)
-    result = nw.maybe_set_index(df, index=narwhals_index)
+    df = nw_v1.from_native(native_df_or_series, allow_series=True)
+    result = nw_v1.maybe_set_index(df, index=narwhals_index)
     if isinstance(native_df_or_series, pd.Series):
         native_df_or_series.index = pandas_index  # type: ignore[assignment]
-        assert_series_equal(nw.to_native(result), native_df_or_series)
+        assert_series_equal(nw_v1.to_native(result), native_df_or_series)
     else:
         expected = native_df_or_series.set_index(pandas_index)  # type: ignore[arg-type]
-        assert_frame_equal(nw.to_native(result), expected)
+        assert_frame_equal(nw_v1.to_native(result), expected)
 
 
 @pytest.mark.parametrize(
     "index",
     [
-        nw.from_native(pd.Series([1, 2, 0]), series_only=True),
+        nw_v1.from_native(pd.Series([1, 2, 0]), series_only=True),
         [
-            nw.from_native(pd.Series([0, 1, 2]), series_only=True),
-            nw.from_native(pd.Series([1, 2, 0]), series_only=True),
+            nw_v1.from_native(pd.Series([0, 1, 2]), series_only=True),
+            nw_v1.from_native(pd.Series([1, 2, 0]), series_only=True),
         ],
     ],
 )
@@ -169,41 +171,41 @@ def test_maybe_set_index_polars_direct_index(
     pytest.importorskip("polars")
     import polars as pl
 
-    df = nw.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
-    result = nw.maybe_set_index(df, index=index)
+    df = nw_v1.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    result = nw_v1.maybe_set_index(df, index=index)
     assert result is df
 
 
 def test_maybe_set_index_pandas_series_column_names() -> None:
-    df = nw.from_native(pd.Series([0, 1, 2]), allow_series=True)
+    df = nw_v1.from_native(pd.Series([0, 1, 2]), allow_series=True)
     with pytest.raises(
         ValueError, match="Cannot set index using column names on a Series"
     ):
-        nw.maybe_set_index(df, column_names=["a"])
+        nw_v1.maybe_set_index(df, column_names=["a"])
 
 
 def test_maybe_set_index_pandas_either_index_or_column_names() -> None:
-    df = nw.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    df = nw_v1.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     column_names = ["a", "b"]
-    index = nw.from_native(pd.Series([0, 1, 2]), series_only=True)
+    index = nw_v1.from_native(pd.Series([0, 1, 2]), series_only=True)
     with pytest.raises(
         ValueError, match="Only one of `column_names` or `index` should be provided"
     ):
-        nw.maybe_set_index(df, column_names=column_names, index=index)
+        nw_v1.maybe_set_index(df, column_names=column_names, index=index)
     with pytest.raises(
         ValueError, match="Either `column_names` or `index` should be provided"
     ):
-        nw.maybe_set_index(df)
+        nw_v1.maybe_set_index(df)
 
 
 def test_maybe_get_index_pandas() -> None:
     pandas_df = pd.DataFrame({"a": [1, 2, 3]}, index=[1, 2, 0])
-    result = cast("pd.Index[Any]", nw.maybe_get_index(nw.from_native(pandas_df)))
+    result = cast("pd.Index[Any]", nw_v1.maybe_get_index(nw_v1.from_native(pandas_df)))
     assert_index_equal(result, pandas_df.index)
     pandas_series = pd.Series([1, 2, 3], index=[1, 2, 0])
     result_s = cast(
         "pd.Index[Any]",
-        nw.maybe_get_index(nw.from_native(pandas_series, series_only=True)),
+        nw_v1.maybe_get_index(nw_v1.from_native(pandas_series, series_only=True)),
     )
     assert_index_equal(result_s, pandas_series.index)
 
@@ -212,36 +214,36 @@ def test_maybe_get_index_polars() -> None:
     pytest.importorskip("polars")
     import polars as pl
 
-    df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
-    result = nw.maybe_get_index(df)
+    df = nw_v1.from_native(pl.DataFrame({"a": [1, 2, 3]}))
+    result = nw_v1.maybe_get_index(df)
     assert result is None
-    series = nw.from_native(pl.Series([1, 2, 3]), series_only=True)
-    result = nw.maybe_get_index(series)
+    series = nw_v1.from_native(pl.Series([1, 2, 3]), series_only=True)
+    result = nw_v1.maybe_get_index(series)
     assert result is None
 
 
 def test_maybe_reset_index_pandas() -> None:
-    pandas_df = nw.from_native(
+    pandas_df = nw_v1.from_native(
         pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}, index=[7, 8, 9])
     )
-    result = nw.maybe_reset_index(pandas_df)
+    result = nw_v1.maybe_reset_index(pandas_df)
     expected = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}, index=[0, 1, 2])
-    assert_frame_equal(nw.to_native(result), expected)
-    pandas_df = nw.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
-    result = nw.maybe_reset_index(pandas_df)
+    assert_frame_equal(nw_v1.to_native(result), expected)
+    pandas_df = nw_v1.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    result = nw_v1.maybe_reset_index(pandas_df)
     expected = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
-    assert_frame_equal(nw.to_native(result), expected)
+    assert_frame_equal(nw_v1.to_native(result), expected)
     assert result.to_native() is pandas_df.to_native()
-    pandas_series = nw.from_native(
+    pandas_series = nw_v1.from_native(
         pd.Series([1, 2, 3], index=[7, 8, 9]), series_only=True
     )
-    result_s = nw.maybe_reset_index(pandas_series)
+    result_s = nw_v1.maybe_reset_index(pandas_series)
     expected_s = pd.Series([1, 2, 3], index=[0, 1, 2])
-    assert_series_equal(nw.to_native(result_s), expected_s)
-    pandas_series = nw.from_native(pd.Series([1, 2, 3]), series_only=True)
-    result_s = nw.maybe_reset_index(pandas_series)
+    assert_series_equal(nw_v1.to_native(result_s), expected_s)
+    pandas_series = nw_v1.from_native(pd.Series([1, 2, 3]), series_only=True)
+    result_s = nw_v1.maybe_reset_index(pandas_series)
     expected_s = pd.Series([1, 2, 3])
-    assert_series_equal(nw.to_native(result_s), expected_s)
+    assert_series_equal(nw_v1.to_native(result_s), expected_s)
     assert result_s.to_native() is pandas_series.to_native()
 
 
@@ -249,11 +251,11 @@ def test_maybe_reset_index_polars() -> None:
     pytest.importorskip("polars")
     import polars as pl
 
-    df = nw.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
-    result = nw.maybe_reset_index(df)
+    df = nw_v1.from_native(pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    result = nw_v1.maybe_reset_index(df)
     assert result is df
-    series = nw.from_native(pl.Series([1, 2, 3]), series_only=True)
-    result_s = nw.maybe_reset_index(series)
+    series = nw_v1.from_native(pl.Series([1, 2, 3]), series_only=True)
+    result_s = nw_v1.maybe_reset_index(series)
     assert result_s is series
 
 
@@ -261,13 +263,13 @@ def test_maybe_reset_index_polars() -> None:
 def test_maybe_convert_dtypes_pandas() -> None:
     import numpy as np
 
-    df = nw.from_native(
+    df = nw_v1.from_native(
         pd.DataFrame({"a": [1, np.nan]}, dtype=np.dtype("float64")), eager_only=True
     )
-    result = nw.to_native(nw.maybe_convert_dtypes(df))
+    result = nw_v1.to_native(nw_v1.maybe_convert_dtypes(df))
     expected = pd.DataFrame({"a": [1, pd.NA]}, dtype="Int64")
     pd.testing.assert_frame_equal(result, expected)
-    result_s = nw.to_native(nw.maybe_convert_dtypes(df["a"]))
+    result_s = nw_v1.to_native(nw_v1.maybe_convert_dtypes(df["a"]))
     expected_s = pd.Series([1, pd.NA], name="a", dtype="Int64")
     pd.testing.assert_series_equal(result_s, expected_s)
 
@@ -278,8 +280,8 @@ def test_maybe_convert_dtypes_polars() -> None:
     pytest.importorskip("polars")
     import polars as pl
 
-    df = nw.from_native(pl.DataFrame({"a": [1.1, np.nan]}))
-    result = nw.maybe_convert_dtypes(df)
+    df = nw_v1.from_native(pl.DataFrame({"a": [1.1, np.nan]}))
+    result = nw_v1.maybe_convert_dtypes(df)
     assert result is df
 
 
@@ -293,7 +295,7 @@ def test_get_trivial_version_with_uninstalled_module() -> None:
 def test_generate_temporary_column_name(n_bytes: int) -> None:
     columns = ["abc", "XYZ"]
 
-    temp_col_name = nw.generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
+    temp_col_name = nw_v1.generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
     assert temp_col_name not in columns
 
 
@@ -312,7 +314,7 @@ def test_generate_temporary_column_name_raise() -> None:
         AssertionError,
         match="Internal Error: Narwhals was not able to generate a column name with ",
     ):
-        nw.generate_temporary_column_name(n_bytes=1, columns=columns)
+        nw_v1.generate_temporary_column_name(n_bytes=1, columns=columns)
 
 
 @pytest.mark.parametrize(
@@ -350,8 +352,8 @@ def test_not_implemented() -> None:
 
     data: dict[str, Any] = {"foo": [1, 2], "bar": [6.0, 7.0]}
     df = pa.table(data)
-    nw_df = unstable_nw.from_native(df)
-    ewm_mean = unstable_nw.col("foo").ewm_mean(com=1, ignore_nulls=False)
+    nw_df = nw.from_native(df)
+    ewm_mean = nw.col("foo").ewm_mean(com=1, ignore_nulls=False)
     pattern = re.compile(
         r".+ewm_mean.+ not implemented.+arrow", flags=re.DOTALL | re.IGNORECASE
     )
@@ -364,7 +366,7 @@ def test_not_implemented() -> None:
         from narwhals.utils import _SupportsGet
 
     class DummyCompliant(Protocol):
-        _implementation: nw.Implementation
+        _implementation: nw_v1.Implementation
 
         def alias(self, name: str) -> str: ...
         def unique(self) -> Self: ...
@@ -381,7 +383,7 @@ def test_not_implemented() -> None:
 
     class DummyExpr(DummyCompliant):
         def __init__(self) -> None:
-            self._implementation = nw.Implementation.POLARS
+            self._implementation = nw_v1.Implementation.POLARS
 
         def alias(self, name: str) -> str:
             return name
@@ -412,7 +414,7 @@ def test_not_implemented() -> None:
 
     expr = DummyExpr()
     # NOTE: Happy path
-    assert expr._implementation is nw.Implementation.POLARS
+    assert expr._implementation is nw_v1.Implementation.POLARS
     assert expr.alias("new name") == "new name"
     assert isinstance(expr.str, PolarsExprStringNamespace)
     assert isinstance(expr.cat, PolarsExprStringNamespace)
@@ -501,3 +503,57 @@ def test_deprecate_native_namespace() -> None:
         func3(param, backend=pl, native_namespace=pl)
 
     assert func3(param, backend=Implementation.POLARS) is Implementation.POLARS
+
+
+def test_requires() -> None:
+    class ProbablyCompliant:
+        _implementation: Implementation = Implementation.POLARS
+        _version: Version = Version.MAIN
+
+        def __init__(self, native_obj: str, backend_version: tuple[int, ...]) -> None:
+            self._native_obj: str = native_obj
+            self._backend_version: tuple[int, ...] = backend_version
+
+        @property
+        def native(self) -> str:
+            return self._native_obj
+
+        @requires.backend_version((1, 0, 0))
+        def to_int(self) -> int:
+            return int(self.native)
+
+        @requires.backend_version((2,), hint="Something helpful I suppose")
+        def concat(self, *strings: str, separator: str = "") -> str:
+            return separator.join((self.native, *strings))
+
+        @requires.backend_version((3, 0, 0))
+        def repeat(self, n: int) -> str:
+            return self.native * n
+
+    v_05 = ProbablyCompliant("123", (0, 5))
+    v_201 = ProbablyCompliant("123", (2, 0, 1))
+    v_300 = ProbablyCompliant("123", (3, 0, 0))
+
+    converted = v_201.to_int()
+    assert converted == 123
+    match = r"`to_int`.+Polars>=\'1.0.0\'.+found.+\'0.5\'"
+    with pytest.raises(NotImplementedError, match=match):
+        v_05.to_int()
+    repeated = v_300.repeat(3)
+    assert repeated == "123123123"
+    match = r"`repeat`.+Polars>=\'3.0.0\'.+found.+\'2.0.1\'"
+    with pytest.raises(NotImplementedError, match=match):
+        v_201.repeat(3)
+    match = r"`repeat`.+Polars>=\'3.0.0\'.+found.+\'0.5\'"
+    with pytest.raises(NotImplementedError, match=match):
+        v_05.repeat(3)
+    joined = v_201.concat("456", "789")
+    assert joined == "123456789"
+    joined_sep = v_201.concat("456", "789", separator=" ")
+    assert joined_sep == "123 456 789"
+    assert v_300.concat("forever") == "123forever"
+    pattern = re.compile(
+        r"`concat`.+Polars>=\'2\'.+found.+\'0.5\'.+Something helpful I suppose", re.DOTALL
+    )
+    with pytest.raises(NotImplementedError, match=pattern):
+        v_05.concat("never")

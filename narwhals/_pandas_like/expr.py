@@ -1,17 +1,12 @@
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Callable
-from typing import Literal
 from typing import Sequence
 
 from narwhals._compliant import EagerExpr
-from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._expression_parsing import is_elementary_expression
-from narwhals._pandas_like.group_by import AGGREGATIONS_TO_PANDAS_EQUIVALENT
+from narwhals._pandas_like.group_by import PandasLikeGroupBy
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import generate_temporary_column_name
@@ -19,8 +14,13 @@ from narwhals.utils import generate_temporary_column_name
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals._compliant.typing import AliasNames
+    from narwhals._compliant.typing import EvalNames
+    from narwhals._compliant.typing import EvalSeries
+    from narwhals._expression_parsing import ExprMetadata
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals.typing import RankMethod
     from narwhals.utils import Implementation
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -35,6 +35,9 @@ WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
     # So, instead of using "cumcount" we use "cumsum" on notna() to get the same result
     "cum_count": "cumsum",
     "rolling_sum": "sum",
+    "rolling_mean": "mean",
+    "rolling_std": "std",
+    "rolling_var": "var",
     "shift": "shift",
     "rank": "rank",
     "diff": "diff",
@@ -69,13 +72,13 @@ def window_kwargs_to_pandas_equivalent(
 
 class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
     def __init__(
-        self: Self,
-        call: Callable[[PandasLikeDataFrame], Sequence[PandasLikeSeries]],
+        self,
+        call: EvalSeries[PandasLikeDataFrame, PandasLikeSeries],
         *,
         depth: int,
         function_name: str,
-        evaluate_output_names: Callable[[PandasLikeDataFrame], Sequence[str]],
-        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
+        evaluate_output_names: EvalNames[PandasLikeDataFrame],
+        alias_output_names: AliasNames | None,
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
@@ -90,8 +93,9 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         self._backend_version = backend_version
         self._version = version
         self._call_kwargs = call_kwargs or {}
+        self._metadata: ExprMetadata | None = None
 
-    def __narwhals_namespace__(self: Self) -> PandasLikeNamespace:
+    def __narwhals_namespace__(self) -> PandasLikeNamespace:
         from narwhals._pandas_like.namespace import PandasLikeNamespace
 
         return PandasLikeNamespace(
@@ -103,11 +107,11 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
     @classmethod
     def from_column_names(
         cls: type[Self],
-        evaluate_column_names: Callable[[PandasLikeDataFrame], Sequence[str]],
+        evaluate_column_names: EvalNames[PandasLikeDataFrame],
         /,
         *,
-        function_name: str,
         context: _FullContext,
+        function_name: str = "",
     ) -> Self:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             try:
@@ -167,7 +171,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         )
 
     def ewm_mean(
-        self: Self,
+        self,
         *,
         com: float | None,
         span: float | None,
@@ -188,16 +192,15 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             ignore_nulls=ignore_nulls,
         )
 
-    def cum_sum(self: Self, *, reverse: bool) -> Self:
+    def cum_sum(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_sum", call_kwargs={"reverse": reverse})
 
-    def shift(self: Self, n: int) -> Self:
+    def shift(self, n: int) -> Self:
         return self._reuse_series("shift", call_kwargs={"n": n})
 
-    def over(
-        self: Self,
+    def over(  # noqa: PLR0915
+        self,
         partition_by: Sequence[str],
-        kind: ExprKind,
         order_by: Sequence[str] | None,
     ) -> Self:
         if not partition_by:
@@ -210,12 +213,12 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 df = df.with_row_index(token).sort(
                     *order_by, descending=False, nulls_last=False
                 )
-                results = self(df)
-                sorting_indices = df[token]
+                results = self(df.drop([token], strict=True))
+                sorting_indices = df.get_column(token)
                 for s in results:
                     s._scatter_in_place(sorting_indices, s)
                 return results
-        elif not is_elementary_expression(self):
+        elif not self._is_elementary():
             msg = (
                 "Only elementary expressions are supported for `.over` in pandas-like backends.\n\n"
                 "Please see: "
@@ -223,16 +226,15 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             )
             raise NotImplementedError(msg)
         else:
-            function_name: str = re.sub(r"(\w+->)", "", self._function_name)
+            function_name = PandasLikeGroupBy._leaf_name(self)
             pandas_function_name = WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT.get(
-                function_name,
-                AGGREGATIONS_TO_PANDAS_EQUIVALENT.get(function_name),
+                function_name, PandasLikeGroupBy._REMAP_AGGS.get(function_name)
             )
             if pandas_function_name is None:
                 msg = (
                     f"Unsupported function: {function_name} in `over` context.\n\n"
                     f"Supported functions are {', '.join(WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT)}\n"
-                    f"and {', '.join(AGGREGATIONS_TO_PANDAS_EQUIVALENT)}."
+                    f"and {', '.join(PandasLikeGroupBy._REMAP_AGGS)}."
                 )
                 raise NotImplementedError(msg)
             pandas_kwargs = window_kwargs_to_pandas_equivalent(
@@ -255,28 +257,37 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     columns = list(set(partition_by).union(output_names).union(order_by))
                     token = generate_temporary_column_name(8, columns)
                     df = (
-                        df[columns]
+                        df.simple_select(*columns)
                         .with_row_index(token)
                         .sort(*order_by, descending=reverse, nulls_last=reverse)
                     )
-                    sorting_indices = df[token]
+                    sorting_indices = df.get_column(token)
                 elif reverse:
                     columns = list(set(partition_by).union(output_names))
-                    df = df[columns][::-1]
+                    df = df.simple_select(*columns)[::-1]
+                grouped = df._native_frame.groupby(partition_by)
                 if function_name.startswith("rolling"):
-                    rolling = df._native_frame.groupby(partition_by)[
-                        list(output_names)
-                    ].rolling(**pandas_kwargs)
+                    rolling = grouped[list(output_names)].rolling(**pandas_kwargs)
                     assert pandas_function_name is not None  # help mypy  # noqa: S101
-                    res_native = getattr(rolling, pandas_function_name)()
+                    if pandas_function_name in {"std", "var"}:
+                        res_native = getattr(rolling, pandas_function_name)(
+                            ddof=self._call_kwargs["ddof"]
+                        )
+                    else:
+                        res_native = getattr(rolling, pandas_function_name)()
+                elif function_name == "len":
+                    if len(output_names) != 1:  # pragma: no cover
+                        msg = "Safety check failed, please report a bug."
+                        raise AssertionError(msg)
+                    res_native = grouped.transform("size").to_frame(aliases[0])
                 else:
-                    res_native = df._native_frame.groupby(partition_by)[
-                        list(output_names)
-                    ].transform(pandas_function_name, **pandas_kwargs)
-                result_frame = df._from_native_frame(res_native).rename(
+                    res_native = grouped[list(output_names)].transform(
+                        pandas_function_name, **pandas_kwargs
+                    )
+                result_frame = df._with_native(res_native).rename(
                     dict(zip(output_names, aliases))
                 )
-                results = [result_frame[name] for name in aliases]
+                results = [result_frame.get_column(name) for name in aliases]
                 if order_by:
                     for s in results:
                         s._scatter_in_place(sorting_indices, s)
@@ -296,21 +307,19 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             version=self._version,
         )
 
-    def cum_count(self: Self, *, reverse: bool) -> Self:
+    def cum_count(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_count", call_kwargs={"reverse": reverse})
 
-    def cum_min(self: Self, *, reverse: bool) -> Self:
+    def cum_min(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_min", call_kwargs={"reverse": reverse})
 
-    def cum_max(self: Self, *, reverse: bool) -> Self:
+    def cum_max(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_max", call_kwargs={"reverse": reverse})
 
-    def cum_prod(self: Self, *, reverse: bool) -> Self:
+    def cum_prod(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_prod", call_kwargs={"reverse": reverse})
 
-    def rolling_sum(
-        self: Self, window_size: int, *, min_samples: int, center: bool
-    ) -> Self:
+    def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._reuse_series(
             "rolling_sum",
             call_kwargs={
@@ -320,12 +329,43 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             },
         )
 
-    def rank(
-        self: Self,
-        method: Literal["average", "min", "max", "dense", "ordinal"],
-        *,
-        descending: bool,
+    def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
+        return self._reuse_series(
+            "rolling_mean",
+            call_kwargs={
+                "window_size": window_size,
+                "min_samples": min_samples,
+                "center": center,
+            },
+        )
+
+    def rolling_std(
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
+        return self._reuse_series(
+            "rolling_std",
+            call_kwargs={
+                "window_size": window_size,
+                "min_samples": min_samples,
+                "center": center,
+                "ddof": ddof,
+            },
+        )
+
+    def rolling_var(
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
+    ) -> Self:
+        return self._reuse_series(
+            "rolling_var",
+            call_kwargs={
+                "window_size": window_size,
+                "min_samples": min_samples,
+                "center": center,
+                "ddof": ddof,
+            },
+        )
+
+    def rank(self, method: RankMethod, *, descending: bool) -> Self:
         return self._reuse_series(
             "rank", call_kwargs={"method": method, "descending": descending}
         )

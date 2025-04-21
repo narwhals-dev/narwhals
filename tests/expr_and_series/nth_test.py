@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 from typing import Mapping
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
@@ -25,25 +26,20 @@ def test_nth(
     constructor: Constructor,
     idx: int | list[int],
     expected: dict[str, list[int]],
-    request: pytest.FixtureRequest,
 ) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 0, 0):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     df = nw.from_native(constructor(data))
     result = df.select(nw.nth(idx))
     assert_equal_data(result, expected)
 
 
-@pytest.mark.skipif(
-    POLARS_VERSION >= (1, 0, 0),
-    reason="1.0.0",
-)
+@pytest.mark.skipif(POLARS_VERSION >= (1, 0, 0), reason="1.0.0")
 def test_nth_not_supported() -> None:  # pragma: no cover
     pytest.importorskip("polars")
     import polars as pl
 
     df = nw.from_native(pl.DataFrame(data))
-    with pytest.raises(
-        AttributeError, match="`nth` is only supported for Polars>=1.0.0."
-    ):
+    pattern = re.compile(r"`nth` .+ Polars>=\'1.0.0\'.+`col`.+instead", re.DOTALL)
+    with pytest.raises(NotImplementedError, match=pattern):
         df.select(nw.nth(0))

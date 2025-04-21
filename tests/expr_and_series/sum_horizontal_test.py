@@ -4,7 +4,8 @@ from typing import Any
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
+from tests.utils import DUCKDB_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -57,12 +58,9 @@ def test_sumh_aggregations(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_sumh_transformations(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "duckdb" in str(constructor):
-        # We don't yet support broadcasting for DuckDB.
-        request.applymarker(pytest.mark.xfail)
+def test_sumh_transformations(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
     df = nw.from_native(constructor(data))
     result = df.select(d=nw.sum_horizontal("a", nw.col("b").sum(), "c"))

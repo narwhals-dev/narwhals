@@ -1,13 +1,19 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
+from narwhals.exceptions import MultiOutputExpressionError
 from narwhals.exceptions import ShapeError
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
+
+if TYPE_CHECKING:
+    from narwhals.typing import _1DArray
 
 data = {
     "a": [1, 2, 3],
@@ -62,9 +68,7 @@ def test_value_numpy_array(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
     import numpy as np
 
-    result = df.select(
-        nw.when(nw.col("a") == 1).then(np.asanyarray([3, 4, 5])).alias("a_when")
-    )
+    result = df.select(nw.when(nw.col("a") == 1).then(np.arange(3, 6)).alias("a_when"))
     expected = {
         "a_when": [3, None, None],
     }
@@ -95,9 +99,9 @@ def test_value_expression(constructor: Constructor) -> None:
 def test_otherwise_numpy_array(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
 
-    result = df.select(
-        nw.when(nw.col("a") == 1).then(-1).otherwise(np.array([0, 9, 10])).alias("a_when")
-    )
+    arr: _1DArray = np.zeros([3], np.dtype(np.int64))
+    arr[:3] = 0, 9, 10
+    result = df.select(nw.when(nw.col("a") == 1).then(-1).otherwise(arr).alias("a_when"))
     expected = {
         "a_when": [-1, 9, 10],
     }
@@ -155,3 +159,15 @@ def test_when_then_otherwise_both_lit(constructor: Constructor) -> None:
     )
     expected = {"x1": [-1, 42, 42], "x2": [-1, -1, 42]}
     assert_equal_data(result, expected)
+
+
+def test_when_then_otherwise_multi_output(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    with pytest.raises(MultiOutputExpressionError):
+        df.select(
+            x1=nw.when(nw.all() > 1).then(nw.col("a", "b")),
+        )
+    with pytest.raises(MultiOutputExpressionError):
+        df.select(
+            x1=nw.when(nw.all() > 1).then(nw.lit(1)).otherwise(nw.all()),
+        )

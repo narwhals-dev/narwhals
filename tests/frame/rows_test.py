@@ -6,7 +6,7 @@ from typing import Any
 import pandas as pd
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager

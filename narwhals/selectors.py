@@ -6,35 +6,62 @@ from typing import Iterable
 from typing import NoReturn
 
 from narwhals._expression_parsing import ExprMetadata
+from narwhals._expression_parsing import combine_metadata
 from narwhals.expr import Expr
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
     from datetime import timezone
 
-    from typing_extensions import Self
-
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
 
 
 class Selector(Expr):
-    def _to_expr(self: Self) -> Expr:
+    def _to_expr(self) -> Expr:
         return Expr(self._to_compliant_expr, self._metadata)
 
-    def __add__(self: Self, other: Any) -> Expr:  # type: ignore[override]
+    def __add__(self, other: Any) -> Expr:  # type: ignore[override]
         if isinstance(other, Selector):
             msg = "unsupported operand type(s) for op: ('Selector' + 'Selector')"
             raise TypeError(msg)
         return self._to_expr() + other  # type: ignore[no-any-return]
 
-    def __rsub__(self: Self, other: Any) -> NoReturn:
+    def __or__(self, other: Any) -> Expr:  # type: ignore[override]
+        if isinstance(other, Selector):
+            return self.__class__(
+                lambda plx: self._to_compliant_expr(plx) | other._to_compliant_expr(plx),
+                combine_metadata(
+                    self,
+                    other,
+                    str_as_lit=False,
+                    allow_multi_output=True,
+                    to_single_output=False,
+                ),
+            )
+        return self._to_expr() | other  # type: ignore[no-any-return]
+
+    def __and__(self, other: Any) -> Expr:  # type: ignore[override]
+        if isinstance(other, Selector):
+            return self.__class__(
+                lambda plx: self._to_compliant_expr(plx) & other._to_compliant_expr(plx),
+                combine_metadata(
+                    self,
+                    other,
+                    str_as_lit=False,
+                    allow_multi_output=True,
+                    to_single_output=False,
+                ),
+            )
+        return self._to_expr() & other  # type: ignore[no-any-return]
+
+    def __rsub__(self, other: Any) -> NoReturn:
         raise NotImplementedError
 
-    def __rand__(self: Self, other: Any) -> NoReturn:
+    def __rand__(self, other: Any) -> NoReturn:
         raise NotImplementedError
 
-    def __ror__(self: Self, other: Any) -> NoReturn:
+    def __ror__(self, other: Any) -> NoReturn:
         raise NotImplementedError
 
 
@@ -66,7 +93,8 @@ def by_dtype(*dtypes: DType | type[DType] | Iterable[DType | type[DType]]) -> Se
     """
     flattened = flatten(dtypes)
     return Selector(
-        lambda plx: plx.selectors.by_dtype(flattened), ExprMetadata.selector()
+        lambda plx: plx.selectors.by_dtype(flattened),
+        ExprMetadata.selector_multi_unnamed(),
     )
 
 
@@ -99,7 +127,10 @@ def matches(pattern: str) -> Selector:
         0  123  2.0
         1  456  5.5
     """
-    return Selector(lambda plx: plx.selectors.matches(pattern), ExprMetadata.selector())
+    return Selector(
+        lambda plx: plx.selectors.matches(pattern),
+        ExprMetadata.selector_multi_unnamed(),
+    )
 
 
 def numeric() -> Selector:
@@ -128,7 +159,9 @@ def numeric() -> Selector:
         │ 4   ┆ 4.6 │
         └─────┴─────┘
     """
-    return Selector(lambda plx: plx.selectors.numeric(), ExprMetadata.selector())
+    return Selector(
+        lambda plx: plx.selectors.numeric(), ExprMetadata.selector_multi_unnamed()
+    )
 
 
 def boolean() -> Selector:
@@ -161,7 +194,9 @@ def boolean() -> Selector:
         |  └───────┘       |
         └──────────────────┘
     """
-    return Selector(lambda plx: plx.selectors.boolean(), ExprMetadata.selector())
+    return Selector(
+        lambda plx: plx.selectors.boolean(), ExprMetadata.selector_multi_unnamed()
+    )
 
 
 def string() -> Selector:
@@ -190,7 +225,9 @@ def string() -> Selector:
         │ y   │
         └─────┘
     """
-    return Selector(lambda plx: plx.selectors.string(), ExprMetadata.selector())
+    return Selector(
+        lambda plx: plx.selectors.string(), ExprMetadata.selector_multi_unnamed()
+    )
 
 
 def categorical() -> Selector:
@@ -221,7 +258,10 @@ def categorical() -> Selector:
         │ y   │
         └─────┘
     """
-    return Selector(lambda plx: plx.selectors.categorical(), ExprMetadata.selector())
+    return Selector(
+        lambda plx: plx.selectors.categorical(),
+        ExprMetadata.selector_multi_unnamed(),
+    )
 
 
 def all() -> Selector:
@@ -244,7 +284,9 @@ def all() -> Selector:
         0  1  x  False
         1  2  y   True
     """
-    return Selector(lambda plx: plx.selectors.all(), ExprMetadata.selector())
+    return Selector(
+        lambda plx: plx.selectors.all(), ExprMetadata.selector_multi_unnamed()
+    )
 
 
 def datetime(
@@ -304,7 +346,7 @@ def datetime(
     """
     return Selector(
         lambda plx: plx.selectors.datetime(time_unit=time_unit, time_zone=time_zone),
-        ExprMetadata.selector(),
+        ExprMetadata.selector_multi_unnamed(),
     )
 
 

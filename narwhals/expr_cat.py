@@ -7,18 +7,16 @@ from typing import TypeVar
 from narwhals._expression_parsing import ExprKind
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals.expr import Expr
 
 ExprT = TypeVar("ExprT", bound="Expr")
 
 
 class ExprCatNamespace(Generic[ExprT]):
-    def __init__(self: Self, expr: ExprT) -> None:
+    def __init__(self, expr: ExprT) -> None:
         self._expr = expr
 
-    def get_categories(self: Self) -> ExprT:
+    def get_categories(self) -> ExprT:
         """Get unique categories from column.
 
         Returns:

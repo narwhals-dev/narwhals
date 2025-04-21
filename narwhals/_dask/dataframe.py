@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterator
-from typing import Literal
 from typing import Mapping
 from typing import Sequence
 
@@ -17,7 +16,9 @@ from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
+from narwhals.utils import _remap_full_join_keys
 from narwhals.utils import check_column_exists
+from narwhals.utils import check_column_names_are_unique
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
@@ -29,17 +30,22 @@ if TYPE_CHECKING:
 
     import dask.dataframe.dask_expr as dx
     from typing_extensions import Self
+    from typing_extensions import TypeIs
 
     from narwhals._dask.expr import DaskExpr
     from narwhals._dask.group_by import DaskLazyGroupBy
     from narwhals._dask.namespace import DaskNamespace
     from narwhals.dtypes import DType
+    from narwhals.typing import AsofJoinStrategy
+    from narwhals.typing import JoinStrategy
+    from narwhals.typing import LazyUniqueKeepStrategy
     from narwhals.utils import Version
+    from narwhals.utils import _FullContext
 
 
 class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
     def __init__(
-        self: Self,
+        self,
         native_dataframe: dd.DataFrame,
         *,
         backend_version: tuple[int, ...],
@@ -50,53 +56,58 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
         self._implementation = Implementation.DASK
         self._version = version
         self._cached_schema: dict[str, DType] | None = None
+        self._cached_columns: list[str] | None = None
         validate_backend_version(self._implementation, self._backend_version)
 
-    def __native_namespace__(self: Self) -> ModuleType:
+    @staticmethod
+    def _is_native(obj: dd.DataFrame | Any) -> TypeIs[dd.DataFrame]:
+        return isinstance(obj, dd.DataFrame)
+
+    @classmethod
+    def from_native(cls, data: dd.DataFrame, /, *, context: _FullContext) -> Self:
+        return cls(
+            data, backend_version=context._backend_version, version=context._version
+        )
+
+    def __native_namespace__(self) -> ModuleType:
         if self._implementation is Implementation.DASK:
             return self._implementation.to_native_namespace()
 
         msg = f"Expected dask, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
-    def __narwhals_namespace__(self: Self) -> DaskNamespace:
+    def __narwhals_namespace__(self) -> DaskNamespace:
         from narwhals._dask.namespace import DaskNamespace
 
         return DaskNamespace(backend_version=self._backend_version, version=self._version)
 
-    def __narwhals_lazyframe__(self: Self) -> Self:
+    def __narwhals_lazyframe__(self) -> Self:
         return self
 
-    def _change_version(self: Self, version: Version) -> Self:
+    def _with_version(self, version: Version) -> Self:
         return self.__class__(
-            self._native_frame,
-            backend_version=self._backend_version,
-            version=version,
+            self.native, backend_version=self._backend_version, version=version
         )
 
-    def _from_native_frame(self: Self, df: Any) -> Self:
+    def _with_native(self, df: Any) -> Self:
         return self.__class__(
-            df,
-            backend_version=self._backend_version,
-            version=self._version,
+            df, backend_version=self._backend_version, version=self._version
         )
 
     def _iter_columns(self) -> Iterator[dx.Series]:
-        for _col, ser in self._native_frame.items():  # noqa: PERF102
+        for _col, ser in self.native.items():  # noqa: PERF102
             yield ser
 
-    def with_columns(self: Self, *exprs: DaskExpr) -> Self:
-        df = self._native_frame
+    def with_columns(self, *exprs: DaskExpr) -> Self:
         new_series = evaluate_exprs(self, *exprs)
-        df = df.assign(**dict(new_series))
-        return self._from_native_frame(df)
+        return self._with_native(self.native.assign(**dict(new_series)))
 
     def collect(
-        self: Self,
+        self,
         backend: Implementation | None,
         **kwargs: Any,
     ) -> CompliantDataFrame[Any, Any, Any]:
-        result = self._native_frame.compute(**kwargs)
+        result = self.native.compute(**kwargs)
 
         if backend is None or backend is Implementation.PANDAS:
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -136,126 +147,118 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
         raise ValueError(msg)  # pragma: no cover
 
     @property
-    def columns(self: Self) -> list[str]:
-        return list(self.schema)
+    def columns(self) -> list[str]:
+        if self._cached_columns is None:
+            self._cached_columns = (
+                list(self.schema)
+                if self._cached_schema is not None
+                else self.native.columns.tolist()
+            )
+        return self._cached_columns
 
-    def filter(self: Self, predicate: DaskExpr) -> Self:
+    def filter(self, predicate: DaskExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
-        mask = predicate._call(self)[0]
+        mask = predicate(self)[0]
+        return self._with_native(self.native.loc[mask])
 
-        return self._from_native_frame(self._native_frame.loc[mask])
-
-    def simple_select(self: Self, *column_names: str) -> Self:
-        return self._from_native_frame(
-            select_columns_by_name(
-                self._native_frame,
-                list(column_names),
-                self._backend_version,
-                self._implementation,
-            ),
+    def simple_select(self, *column_names: str) -> Self:
+        native = select_columns_by_name(
+            self.native, list(column_names), self._backend_version, self._implementation
         )
+        return self._with_native(native)
 
-    def aggregate(self: Self, *exprs: DaskExpr) -> Self:
+    def aggregate(self, *exprs: DaskExpr) -> Self:
         new_series = evaluate_exprs(self, *exprs)
         df = dd.concat([val.rename(name) for name, val in new_series], axis=1)
-        return self._from_native_frame(df)
+        return self._with_native(df)
 
-    def select(self: Self, *exprs: DaskExpr) -> Self:
+    def select(self, *exprs: DaskExpr) -> Self:
         new_series = evaluate_exprs(self, *exprs)
         df = select_columns_by_name(
-            self._native_frame.assign(**dict(new_series)),
+            self.native.assign(**dict(new_series)),
             [s[0] for s in new_series],
             self._backend_version,
             self._implementation,
         )
-        return self._from_native_frame(df)
+        return self._with_native(df)
 
-    def drop_nulls(self: Self, subset: Sequence[str] | None) -> Self:
+    def drop_nulls(self, subset: Sequence[str] | None) -> Self:
         if subset is None:
-            return self._from_native_frame(self._native_frame.dropna())
+            return self._with_native(self.native.dropna())
         plx = self.__narwhals_namespace__()
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
     @property
-    def schema(self: Self) -> dict[str, DType]:
+    def schema(self) -> dict[str, DType]:
         if self._cached_schema is None:
-            native_dtypes = self._native_frame.dtypes
+            native_dtypes = self.native.dtypes
             self._cached_schema = {
                 col: native_to_narwhals_dtype(
                     native_dtypes[col], self._version, self._implementation
                 )
-                for col in self._native_frame.columns
+                for col in self.native.columns
             }
         return self._cached_schema
 
-    def collect_schema(self: Self) -> dict[str, DType]:
+    def collect_schema(self) -> dict[str, DType]:
         return self.schema
 
-    def drop(self: Self, columns: Sequence[str], *, strict: bool) -> Self:
+    def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         to_drop = parse_columns_to_drop(
             compliant_frame=self, columns=columns, strict=strict
         )
 
-        return self._from_native_frame(self._native_frame.drop(columns=to_drop))
+        return self._with_native(self.native.drop(columns=to_drop))
 
-    def with_row_index(self: Self, name: str) -> Self:
+    def with_row_index(self, name: str) -> Self:
         # Implementation is based on the following StackOverflow reply:
         # https://stackoverflow.com/questions/60831518/in-dask-how-does-one-add-a-range-of-integersauto-increment-to-a-new-column/60852409#60852409
-        return self._from_native_frame(
-            add_row_index(
-                self._native_frame, name, self._backend_version, self._implementation
-            )
+        return self._with_native(
+            add_row_index(self.native, name, self._backend_version, self._implementation)
         )
 
-    def rename(self: Self, mapping: Mapping[str, str]) -> Self:
-        return self._from_native_frame(self._native_frame.rename(columns=mapping))
+    def rename(self, mapping: Mapping[str, str]) -> Self:
+        return self._with_native(self.native.rename(columns=mapping))
 
-    def head(self: Self, n: int) -> Self:
-        return self._from_native_frame(
-            self._native_frame.head(n=n, compute=False, npartitions=-1)
-        )
+    def head(self, n: int) -> Self:
+        return self._with_native(self.native.head(n=n, compute=False, npartitions=-1))
 
     def unique(
-        self: Self,
-        subset: Sequence[str] | None,
-        *,
-        keep: Literal["any", "none"],
+        self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self:
         check_column_exists(self.columns, subset)
-        native_frame = self._native_frame
         if keep == "none":
             subset = subset or self.columns
             token = generate_temporary_column_name(n_bytes=8, columns=subset)
-            ser = native_frame.groupby(subset).size().rename(token)
+            ser = self.native.groupby(subset).size().rename(token)
             ser = ser[ser == 1]
             unique = ser.reset_index().drop(columns=token)
-            result = native_frame.merge(unique, on=subset, how="inner")
+            result = self.native.merge(unique, on=subset, how="inner")
         else:
             mapped_keep = {"any": "first"}.get(keep, keep)
-            result = native_frame.drop_duplicates(subset=subset, keep=mapped_keep)
-        return self._from_native_frame(result)
+            result = self.native.drop_duplicates(subset=subset, keep=mapped_keep)
+        return self._with_native(result)
 
     def sort(
-        self: Self,
+        self,
         *by: str,
         descending: bool | Sequence[bool],
         nulls_last: bool,
     ) -> Self:
-        df = self._native_frame
         if isinstance(descending, bool):
             ascending: bool | list[bool] = not descending
         else:
             ascending = [not d for d in descending]
-        na_position = "last" if nulls_last else "first"
-        return self._from_native_frame(
-            df.sort_values(list(by), ascending=ascending, na_position=na_position)
+        position = "last" if nulls_last else "first"
+        return self._with_native(
+            self.native.sort_values(list(by), ascending=ascending, na_position=position)
         )
 
     def join(
-        self: Self,
+        self,
         other: Self,
         *,
-        how: Literal["left", "inner", "cross", "anti", "semi"],
+        how: JoinStrategy,
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
         suffix: str,
@@ -265,16 +268,16 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
                 n_bytes=8, columns=[*self.columns, *other.columns]
             )
 
-            return self._from_native_frame(
-                self._native_frame.assign(**{key_token: 0})
+            return self._with_native(
+                self.native.assign(**{key_token: 0})
                 .merge(
-                    other._native_frame.assign(**{key_token: 0}),
+                    other.native.assign(**{key_token: 0}),
                     how="inner",
                     left_on=key_token,
                     right_on=key_token,
                     suffixes=("", suffix),
                 )
-                .drop(columns=key_token),
+                .drop(columns=key_token)
             )
 
         if how == "anti":
@@ -287,7 +290,7 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
                 raise TypeError(msg)
             other_native = (
                 select_columns_by_name(
-                    other._native_frame,
+                    other.native,
                     list(right_on),
                     self._backend_version,
                     self._implementation,
@@ -297,14 +300,14 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
                 )
                 .drop_duplicates()
             )
-            df = self._native_frame.merge(
+            df = self.native.merge(
                 other_native,
                 how="outer",
                 indicator=indicator_token,  # pyright: ignore[reportArgumentType]
                 left_on=left_on,
                 right_on=left_on,
             )
-            return self._from_native_frame(
+            return self._with_native(
                 df[df[indicator_token] == "left_only"].drop(columns=[indicator_token])
             )
 
@@ -314,7 +317,7 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
                 raise TypeError(msg)
             other_native = (
                 select_columns_by_name(
-                    other._native_frame,
+                    other.native,
                     list(right_on),
                     self._backend_version,
                     self._implementation,
@@ -324,19 +327,15 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
                 )
                 .drop_duplicates()  # avoids potential rows duplication from inner join
             )
-            return self._from_native_frame(
-                self._native_frame.merge(
-                    other_native,
-                    how="inner",
-                    left_on=left_on,
-                    right_on=left_on,
+            return self._with_native(
+                self.native.merge(
+                    other_native, how="inner", left_on=left_on, right_on=left_on
                 )
             )
 
         if how == "left":
-            other_native = other._native_frame
-            result_native = self._native_frame.merge(
-                other_native,
+            result_native = self.native.merge(
+                other.native,
                 how="left",
                 left_on=left_on,
                 right_on=right_on,
@@ -348,34 +347,56 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
                     extra.append(right_key)
                 elif right_key != left_key:
                     extra.append(f"{right_key}_right")
-            return self._from_native_frame(result_native.drop(columns=extra))
+            return self._with_native(result_native.drop(columns=extra))
 
-        return self._from_native_frame(
-            self._native_frame.merge(
-                other._native_frame,
+        if how == "full":
+            # dask does not retain keys post-join
+            # we must append the suffix to each key before-hand
+
+            # help mypy
+            assert left_on is not None  # noqa: S101
+            assert right_on is not None  # noqa: S101
+
+            right_on_mapper = _remap_full_join_keys(left_on, right_on, suffix)
+            other_native = other.native.rename(columns=right_on_mapper)
+            check_column_names_are_unique(other_native.columns)
+            right_on = list(right_on_mapper.values())  # we now have the suffixed keys
+            return self._with_native(
+                self.native.merge(
+                    other_native,
+                    left_on=left_on,
+                    right_on=right_on,
+                    how="outer",
+                    suffixes=("", suffix),
+                )
+            )
+
+        return self._with_native(
+            self.native.merge(
+                other.native,
                 left_on=left_on,
                 right_on=right_on,
                 how=how,
                 suffixes=("", suffix),
-            ),
+            )
         )
 
     def join_asof(
-        self: Self,
+        self,
         other: Self,
         *,
         left_on: str | None,
         right_on: str | None,
         by_left: Sequence[str] | None,
         by_right: Sequence[str] | None,
-        strategy: Literal["backward", "forward", "nearest"],
+        strategy: AsofJoinStrategy,
         suffix: str,
     ) -> Self:
         plx = self.__native_namespace__()
-        return self._from_native_frame(
+        return self._with_native(
             plx.merge_asof(
-                self._native_frame,
-                other._native_frame,
+                self.native,
+                other.native,
                 left_on=left_on,
                 right_on=right_on,
                 left_by=by_left,
@@ -385,22 +406,22 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
             ),
         )
 
-    def group_by(self: Self, *by: str, drop_null_keys: bool) -> DaskLazyGroupBy:
+    def group_by(self, *by: str, drop_null_keys: bool) -> DaskLazyGroupBy:
         from narwhals._dask.group_by import DaskLazyGroupBy
 
-        return DaskLazyGroupBy(self, list(by), drop_null_keys=drop_null_keys)
+        return DaskLazyGroupBy(self, by, drop_null_keys=drop_null_keys)
 
-    def tail(self: Self, n: int) -> Self:  # pragma: no cover
-        native_frame = self._native_frame
+    def tail(self, n: int) -> Self:  # pragma: no cover
+        native_frame = self.native
         n_partitions = native_frame.npartitions
 
         if n_partitions == 1:
-            return self._from_native_frame(self._native_frame.tail(n=n, compute=False))
+            return self._with_native(self.native.tail(n=n, compute=False))
         else:
             msg = "`LazyFrame.tail` is not supported for Dask backend with multiple partitions."
             raise NotImplementedError(msg)
 
-    def gather_every(self: Self, n: int, offset: int) -> Self:
+    def gather_every(self, n: int, offset: int) -> Self:
         row_index_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
         plx = self.__narwhals_namespace__()
         return (
@@ -413,14 +434,14 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
         )
 
     def unpivot(
-        self: Self,
+        self,
         on: Sequence[str] | None,
         index: Sequence[str] | None,
         variable_name: str,
         value_name: str,
     ) -> Self:
-        return self._from_native_frame(
-            self._native_frame.melt(
+        return self._with_native(
+            self.native.melt(
                 id_vars=index,
                 value_vars=on,
                 var_name=variable_name,

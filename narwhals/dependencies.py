@@ -13,7 +13,6 @@ if TYPE_CHECKING:
     import duckdb
     import ibis
     import modin.pandas as mpd
-    import numpy as np
     import pandas as pd
     import polars as pl
     import pyarrow as pa
@@ -26,13 +25,13 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
-    from narwhals.typing import DataFrameT
     from narwhals.typing import FrameT
     from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoSeriesT
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
     from narwhals.typing import _NDArray
+    from narwhals.typing import _NumpyScalar
     from narwhals.typing import _ShapeT
 
 # We silently allow these but - given that they claim
@@ -233,10 +232,11 @@ def is_pyspark_dataframe(df: Any) -> TypeIs[pyspark_sql.DataFrame]:
 
 def is_sqlframe_dataframe(df: Any) -> TypeIs[SQLFrameDataFrame]:
     """Check whether `df` is a SQLFrame DataFrame without importing SQLFrame."""
-    return bool(
-        (sqlframe := get_sqlframe()) is not None
-        and isinstance(df, sqlframe.base.dataframe.BaseDataFrame)
-    )
+    if get_sqlframe() is not None:
+        from sqlframe.base.dataframe import BaseDataFrame
+
+        return isinstance(df, BaseDataFrame)
+    return False  # pragma: no cover
 
 
 def is_numpy_array(arr: Any | _NDArray[_ShapeT]) -> TypeIs[_NDArray[_ShapeT]]:
@@ -254,12 +254,12 @@ def is_numpy_array_2d(arr: Any) -> TypeIs[_2DArray]:
     return is_numpy_array(arr) and arr.ndim == 2
 
 
-def is_numpy_scalar(scalar: Any) -> TypeGuard[np.generic]:
+def is_numpy_scalar(scalar: Any) -> TypeGuard[_NumpyScalar]:
     """Check whether `scalar` is a NumPy Scalar without importing NumPy."""
     # NOTE: Needs to stay as `TypeGuard`
     # - Used in `Series.__getitem__`, but not annotated
     # - `TypeGuard` is *hiding* that the check introduces an intersection
-    return (np := get_numpy()) is not None and np.isscalar(scalar)
+    return (np := get_numpy()) is not None and isinstance(scalar, np.generic)
 
 
 def is_pandas_like_dataframe(df: Any) -> bool:
@@ -363,8 +363,8 @@ def is_into_dataframe(native_dataframe: Any | IntoDataFrameT) -> TypeIs[IntoData
 
 
 def is_narwhals_dataframe(
-    df: Any | DataFrame[DataFrameT],
-) -> TypeIs[DataFrame[DataFrameT]]:
+    df: DataFrame[IntoDataFrameT] | Any,
+) -> TypeIs[DataFrame[IntoDataFrameT]]:
     """Check whether `df` is a Narwhals DataFrame.
 
     This is useful if you expect a user to pass in a Narwhals

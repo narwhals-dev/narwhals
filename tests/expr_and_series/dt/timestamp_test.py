@@ -10,7 +10,7 @@ import pyarrow as pa
 import pytest
 from hypothesis import given
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
@@ -130,7 +130,7 @@ def test_timestamp_datetimes_tz_aware(
             pytest.skip(reason)  # pragma: no cover
 
     if original_time_unit == "s" and "polars" in str(constructor):
-        request.applymarker(pytest.mark.xfail(reason="Second precision not supported"))
+        pytest.skip()
     datetimes = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
     df = nw.from_native(constructor(datetimes))
     result = df.select(

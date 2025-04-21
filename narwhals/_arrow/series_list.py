@@ -8,11 +8,9 @@ import pyarrow.compute as pc
 from narwhals._arrow.utils import ArrowSeriesNamespace
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals._arrow.series import ArrowSeries
 
 
 class ArrowSeriesListNamespace(ArrowSeriesNamespace):
-    def len(self: Self) -> ArrowSeries:
-        return self.from_native(pc.list_value_length(self.native).cast(pa.uint32()))
+    def len(self) -> ArrowSeries:
+        return self.with_native(pc.list_value_length(self.native).cast(pa.uint32()))

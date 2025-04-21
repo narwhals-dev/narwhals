@@ -6,7 +6,8 @@ from typing import TypeVar
 import pandas as pd
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
+from narwhals.exceptions import MultiOutputExpressionError
 from tests.utils import NUMPY_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
@@ -24,11 +25,7 @@ T = TypeVar("T")
 def test_all_vs_all(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6]}
     df: Frame = nw.from_native(constructor(data))
-    with pytest.raises(
-        (ValueError, AssertionError),
-        match=r"Multi-output|Expr: \*\' not allowed in this context|wildcard.*not supported",
-    ):
-        # Polars raises AssertionError.
+    with pytest.raises(MultiOutputExpressionError):
         df.lazy().select(nw.all() + nw.col("b", "a")).collect()
 
 
@@ -44,7 +41,7 @@ def test_invalid_pyarrow() -> None:
     import pyarrow as pa
 
     df: Frame = nw.from_native(pa.table({"a": [1, 2], "b": [3, 4]}))
-    with pytest.raises(ValueError, match="Multi-output"):
+    with pytest.raises(MultiOutputExpressionError):
         df.select(nw.all() + nw.all())
 
 
@@ -86,7 +83,7 @@ def test_validate_laziness() -> None:
         TypeError,
         match=("The items to concatenate should either all be eager, or all lazy"),
     ):
-        nw.concat([nw.from_native(df, eager_only=True), nw.from_native(df).lazy()])
+        nw.concat([nw.from_native(df, eager_only=True), nw.from_native(df).lazy()])  # type: ignore[type-var]
 
 
 @pytest.mark.slow

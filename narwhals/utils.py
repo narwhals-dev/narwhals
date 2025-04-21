@@ -6,6 +6,7 @@ from datetime import timezone
 from enum import Enum
 from enum import auto
 from functools import wraps
+from importlib.util import find_spec
 from inspect import getattr_static
 from secrets import token_hex
 from typing import TYPE_CHECKING
@@ -23,6 +24,7 @@ from typing import overload
 from warnings import warn
 
 from narwhals.dependencies import get_cudf
+from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_duckdb
 from narwhals.dependencies import get_ibis
@@ -30,6 +32,7 @@ from narwhals.dependencies import get_modin
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
+from narwhals.dependencies import get_pyspark
 from narwhals.dependencies import get_pyspark_sql
 from narwhals.dependencies import get_sqlframe
 from narwhals.dependencies import is_cudf_series
@@ -49,6 +52,8 @@ if TYPE_CHECKING:
     from typing import AbstractSet as Set
 
     import pandas as pd
+    import pyarrow as pa
+    from typing_extensions import Concatenate
     from typing_extensions import LiteralString
     from typing_extensions import ParamSpec
     from typing_extensions import Self
@@ -56,9 +61,17 @@ if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
     from narwhals._compliant import CompliantExpr
+    from narwhals._compliant import CompliantExprT
     from narwhals._compliant import CompliantFrameT
     from narwhals._compliant import CompliantSeriesOrNativeExprT_co
+    from narwhals._compliant import CompliantSeriesT
     from narwhals._compliant import NativeFrameT_co
+    from narwhals._compliant import NativeSeriesT_co
+    from narwhals._compliant.typing import EvalNames
+    from narwhals._namespace import EagerAllowedImplementation
+    from narwhals._namespace import Namespace
+    from narwhals._translate import ArrowStreamExportable
+    from narwhals._translate import IntoArrowTable
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -83,8 +96,6 @@ if TYPE_CHECKING:
     _Fn = TypeVar("_Fn", bound="Callable[..., Any]")
     P = ParamSpec("P")
     R = TypeVar("R")
-
-    _TracksDepth: TypeAlias = "Literal[Implementation.DASK,Implementation.CUDF,Implementation.MODIN,Implementation.PANDAS,Implementation.PYSPARK]"
 
     class _SupportsVersion(Protocol):
         __version__: str
@@ -111,7 +122,7 @@ if TYPE_CHECKING:
         - `_version`
         """
 
-    class _FullContext(_StoresImplementation, _LimitedContext, Protocol):  # noqa: PYI046
+    class _FullContext(_StoresImplementation, _LimitedContext, Protocol):
         """Provides 3 attributes.
 
         - `_implementation`
@@ -126,15 +137,11 @@ if TYPE_CHECKING:
 
 NativeT_co = TypeVar("NativeT_co", covariant=True)
 CompliantT_co = TypeVar("CompliantT_co", covariant=True)
-CompliantExprT_co = TypeVar(
-    "CompliantExprT_co", bound="CompliantExpr[Any, Any]", covariant=True
-)
-CompliantSeriesT_co = TypeVar(
-    "CompliantSeriesT_co", bound="CompliantSeries", covariant=True
-)
+_ContextT = TypeVar("_ContextT", bound="_FullContext")
+_Method: TypeAlias = "Callable[Concatenate[_ContextT, P], R]"
 
 
-class _StoresNative(Protocol[NativeT_co]):
+class _StoresNative(Protocol[NativeT_co]):  # noqa: PYI046
     """Provides access to a native object.
 
     Native objects have types like:
@@ -149,7 +156,7 @@ class _StoresNative(Protocol[NativeT_co]):
         ...
 
 
-class _StoresCompliant(Protocol[CompliantT_co]):
+class _StoresCompliant(Protocol[CompliantT_co]):  # noqa: PYI046
     """Provides access to a compliant object.
 
     Compliant objects have types like:
@@ -162,35 +169,6 @@ class _StoresCompliant(Protocol[CompliantT_co]):
     def compliant(self) -> CompliantT_co:
         """Return the compliant object."""
         ...
-
-
-class _SeriesNamespace(  # type: ignore[misc]  # noqa: PYI046
-    _StoresCompliant[CompliantSeriesT_co],
-    _StoresNative[NativeT_co],
-    Protocol[CompliantSeriesT_co, NativeT_co],
-):
-    _compliant_series: CompliantSeriesT_co
-
-    @property
-    def compliant(self) -> CompliantSeriesT_co:
-        return self._compliant_series
-
-    @property
-    def native(self) -> NativeT_co:
-        return self._compliant_series.native
-
-    def from_native(self, series: Any, /) -> CompliantSeriesT_co:
-        return self.compliant._from_native_series(series)
-
-
-class _ExprNamespace(  # type: ignore[misc] # noqa: PYI046
-    _StoresCompliant[CompliantExprT_co], Protocol[CompliantExprT_co]
-):
-    _compliant_expr: CompliantExprT_co
-
-    @property
-    def compliant(self) -> CompliantExprT_co:
-        return self._compliant_expr
 
 
 class Version(Enum):
@@ -297,7 +275,7 @@ class Implementation(Enum):
             else cls.from_native_namespace(backend)
         )
 
-    def to_native_namespace(self: Self) -> ModuleType:
+    def to_native_namespace(self) -> ModuleType:
         """Return the native namespace module corresponding to Implementation.
 
         Returns:
@@ -345,7 +323,7 @@ class Implementation(Enum):
         msg = "Not supported Implementation"  # pragma: no cover
         raise AssertionError(msg)
 
-    def is_pandas(self: Self) -> bool:
+    def is_pandas(self) -> bool:
         """Return whether implementation is pandas.
 
         Returns:
@@ -361,7 +339,7 @@ class Implementation(Enum):
         """
         return self is Implementation.PANDAS
 
-    def is_pandas_like(self: Self) -> bool:
+    def is_pandas_like(self) -> bool:
         """Return whether implementation is pandas, Modin, or cuDF.
 
         Returns:
@@ -381,7 +359,7 @@ class Implementation(Enum):
             Implementation.CUDF,
         }
 
-    def is_spark_like(self: Self) -> bool:
+    def is_spark_like(self) -> bool:
         """Return whether implementation is pyspark or sqlframe.
 
         Returns:
@@ -397,7 +375,7 @@ class Implementation(Enum):
         """
         return self in {Implementation.PYSPARK, Implementation.SQLFRAME}
 
-    def is_polars(self: Self) -> bool:
+    def is_polars(self) -> bool:
         """Return whether implementation is Polars.
 
         Returns:
@@ -413,7 +391,7 @@ class Implementation(Enum):
         """
         return self is Implementation.POLARS
 
-    def is_cudf(self: Self) -> bool:
+    def is_cudf(self) -> bool:
         """Return whether implementation is cuDF.
 
         Returns:
@@ -429,7 +407,7 @@ class Implementation(Enum):
         """
         return self is Implementation.CUDF  # pragma: no cover
 
-    def is_modin(self: Self) -> bool:
+    def is_modin(self) -> bool:
         """Return whether implementation is Modin.
 
         Returns:
@@ -445,7 +423,7 @@ class Implementation(Enum):
         """
         return self is Implementation.MODIN  # pragma: no cover
 
-    def is_pyspark(self: Self) -> bool:
+    def is_pyspark(self) -> bool:
         """Return whether implementation is PySpark.
 
         Returns:
@@ -461,7 +439,7 @@ class Implementation(Enum):
         """
         return self is Implementation.PYSPARK  # pragma: no cover
 
-    def is_pyarrow(self: Self) -> bool:
+    def is_pyarrow(self) -> bool:
         """Return whether implementation is PyArrow.
 
         Returns:
@@ -477,7 +455,7 @@ class Implementation(Enum):
         """
         return self is Implementation.PYARROW  # pragma: no cover
 
-    def is_dask(self: Self) -> bool:
+    def is_dask(self) -> bool:
         """Return whether implementation is Dask.
 
         Returns:
@@ -493,7 +471,7 @@ class Implementation(Enum):
         """
         return self is Implementation.DASK  # pragma: no cover
 
-    def is_duckdb(self: Self) -> bool:
+    def is_duckdb(self) -> bool:
         """Return whether implementation is DuckDB.
 
         Returns:
@@ -509,7 +487,7 @@ class Implementation(Enum):
         """
         return self is Implementation.DUCKDB  # pragma: no cover
 
-    def is_ibis(self: Self) -> bool:
+    def is_ibis(self) -> bool:
         """Return whether implementation is Ibis.
 
         Returns:
@@ -525,7 +503,7 @@ class Implementation(Enum):
         """
         return self is Implementation.IBIS  # pragma: no cover
 
-    def is_sqlframe(self: Self) -> bool:
+    def is_sqlframe(self) -> bool:
         """Return whether implementation is SQLFrame.
 
         Returns:
@@ -540,6 +518,46 @@ class Implementation(Enum):
             False
         """
         return self is Implementation.SQLFRAME  # pragma: no cover
+
+    @property
+    def _alias(self) -> LiteralString:
+        """Friendly name for errors.
+
+        Returns:
+            String.
+        """
+        mapping: dict[Implementation, LiteralString] = {
+            Implementation.PANDAS: "Pandas",
+            Implementation.POLARS: "Polars",
+            Implementation.DASK: "Dask",
+            Implementation.IBIS: "Ibis",
+            Implementation.MODIN: "Modin",
+            Implementation.CUDF: "cuDF",
+            Implementation.PYARROW: "PyArrow",
+            Implementation.PYSPARK: "PySpark",
+            Implementation.DUCKDB: "DuckDB",
+            Implementation.SQLFRAME: "SQLFrame",
+        }
+        return mapping[self]
+
+    def _backend_version(self) -> tuple[int, ...]:
+        native = self.to_native_namespace()
+        into_version: Any
+        if self not in {
+            Implementation.PYSPARK,
+            Implementation.DASK,
+            Implementation.SQLFRAME,
+        }:
+            into_version = native
+        elif self is Implementation.PYSPARK:
+            into_version = get_pyspark()  # pragma: no cover
+        elif self is Implementation.DASK:
+            into_version = get_dask()
+        else:
+            import sqlframe._version
+
+            into_version = sqlframe._version
+        return parse_version(into_version)
 
 
 MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
@@ -565,10 +583,14 @@ def validate_backend_version(
 
 
 def import_dtypes_module(version: Version) -> DTypes:
-    if version is Version.V1:
-        from narwhals.stable.v1 import dtypes
-    elif version is Version.MAIN:
-        from narwhals import dtypes  # type: ignore[no-redef]
+    if version is Version.MAIN:
+        from narwhals import dtypes
+
+        return dtypes
+    elif version is Version.V1:
+        from narwhals.stable.v1 import dtypes as v1_dtypes
+
+        return v1_dtypes
     else:  # pragma: no cover
         msg = (
             "Congratulations, you have entered unreachable code.\n"
@@ -576,7 +598,34 @@ def import_dtypes_module(version: Version) -> DTypes:
             f"Version: {version}"
         )
         raise AssertionError(msg)
-    return dtypes  # type: ignore[return-value]
+
+
+def _into_version(obj: Version | _StoresVersion, /) -> Version:
+    if isinstance(obj, Version):
+        return obj
+    elif _hasattr_static(obj, "_version"):
+        return obj._version
+    msg = f"Expected {Version} but got {type(obj).__name__!r}"
+    raise TypeError(msg)
+
+
+def import_namespace(version: Version | _StoresVersion, /) -> type[Namespace[Any]]:
+    version = _into_version(version)
+    if version is Version.MAIN:
+        from narwhals._namespace import Namespace
+
+        return Namespace
+    elif version is Version.V1:
+        from narwhals.stable.v1._namespace import Namespace
+
+        return Namespace
+    else:  # pragma: no cover
+        msg = (
+            "Congratulations, you have entered unreachable code.\n"
+            "Please report an issue at https://github.com/narwhals-dev/narwhals/issues.\n"
+            f"Version: {version}"
+        )
+        raise AssertionError(msg)
 
 
 def remove_prefix(text: str, prefix: str) -> str:  # pragma: no cover
@@ -748,48 +797,46 @@ def maybe_align_index(
     if isinstance(
         getattr(lhs_any, "_compliant_frame", None), PandasLikeDataFrame
     ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasLikeDataFrame):
-        _validate_index(lhs_any._compliant_frame._native_frame.index)
-        _validate_index(rhs_any._compliant_frame._native_frame.index)
-        return lhs_any._from_compliant_dataframe(
-            lhs_any._compliant_frame._from_native_frame(
-                lhs_any._compliant_frame._native_frame.loc[
-                    rhs_any._compliant_frame._native_frame.index
-                ]
+        _validate_index(lhs_any._compliant_frame.native.index)
+        _validate_index(rhs_any._compliant_frame.native.index)
+        return lhs_any._with_compliant(
+            lhs_any._compliant_frame._with_native(
+                lhs_any._compliant_frame.native.loc[rhs_any._compliant_frame.native.index]
             )
         )
     if isinstance(
         getattr(lhs_any, "_compliant_frame", None), PandasLikeDataFrame
     ) and isinstance(getattr(rhs_any, "_compliant_series", None), PandasLikeSeries):
-        _validate_index(lhs_any._compliant_frame._native_frame.index)
-        _validate_index(rhs_any._compliant_series._native_series.index)
-        return lhs_any._from_compliant_dataframe(
-            lhs_any._compliant_frame._from_native_frame(
-                lhs_any._compliant_frame._native_frame.loc[
-                    rhs_any._compliant_series._native_series.index
+        _validate_index(lhs_any._compliant_frame.native.index)
+        _validate_index(rhs_any._compliant_series.native.index)
+        return lhs_any._with_compliant(
+            lhs_any._compliant_frame._with_native(
+                lhs_any._compliant_frame.native.loc[
+                    rhs_any._compliant_series.native.index
                 ]
             )
         )
     if isinstance(
         getattr(lhs_any, "_compliant_series", None), PandasLikeSeries
     ) and isinstance(getattr(rhs_any, "_compliant_frame", None), PandasLikeDataFrame):
-        _validate_index(lhs_any._compliant_series._native_series.index)
-        _validate_index(rhs_any._compliant_frame._native_frame.index)
-        return lhs_any._from_compliant_series(
-            lhs_any._compliant_series._from_native_series(
-                lhs_any._compliant_series._native_series.loc[
-                    rhs_any._compliant_frame._native_frame.index
+        _validate_index(lhs_any._compliant_series.native.index)
+        _validate_index(rhs_any._compliant_frame.native.index)
+        return lhs_any._with_compliant(
+            lhs_any._compliant_series._with_native(
+                lhs_any._compliant_series.native.loc[
+                    rhs_any._compliant_frame.native.index
                 ]
             )
         )
     if isinstance(
         getattr(lhs_any, "_compliant_series", None), PandasLikeSeries
     ) and isinstance(getattr(rhs_any, "_compliant_series", None), PandasLikeSeries):
-        _validate_index(lhs_any._compliant_series._native_series.index)
-        _validate_index(rhs_any._compliant_series._native_series.index)
-        return lhs_any._from_compliant_series(
-            lhs_any._compliant_series._from_native_series(
-                lhs_any._compliant_series._native_series.loc[
-                    rhs_any._compliant_series._native_series.index
+        _validate_index(lhs_any._compliant_series.native.index)
+        _validate_index(rhs_any._compliant_series.native.index)
+        return lhs_any._with_compliant(
+            lhs_any._compliant_series._with_native(
+                lhs_any._compliant_series.native.loc[
+                    rhs_any._compliant_series.native.index
                 ]
             )
         )
@@ -905,8 +952,8 @@ def maybe_set_index(
         keys = column_names
 
     if is_pandas_like_dataframe(native_obj):
-        return df_any._from_compliant_dataframe(
-            df_any._compliant_frame._from_native_frame(native_obj.set_index(keys))
+        return df_any._with_compliant(
+            df_any._compliant_frame._with_native(native_obj.set_index(keys))
         )
     elif is_pandas_like_series(native_obj):
         from narwhals._pandas_like.utils import set_index
@@ -921,9 +968,7 @@ def maybe_set_index(
             implementation=obj._compliant_series._implementation,  # type: ignore[union-attr]
             backend_version=obj._compliant_series._backend_version,  # type: ignore[union-attr]
         )
-        return df_any._from_compliant_series(
-            df_any._compliant_series._from_native_series(native_obj)
-        )
+        return df_any._with_compliant(df_any._compliant_series._with_native(native_obj))
     else:
         return df_any
 
@@ -965,17 +1010,15 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
         native_namespace = obj_any.__native_namespace__()
         if _has_default_index(native_obj, native_namespace):
             return obj_any
-        return obj_any._from_compliant_dataframe(
-            obj_any._compliant_frame._from_native_frame(native_obj.reset_index(drop=True))
+        return obj_any._with_compliant(
+            obj_any._compliant_frame._with_native(native_obj.reset_index(drop=True))
         )
     if is_pandas_like_series(native_obj):
         native_namespace = obj_any.__native_namespace__()
         if _has_default_index(native_obj, native_namespace):
             return obj_any
-        return obj_any._from_compliant_series(
-            obj_any._compliant_series._from_native_series(
-                native_obj.reset_index(drop=True)
-            )
+        return obj_any._with_compliant(
+            obj_any._compliant_series._with_native(native_obj.reset_index(drop=True))
         )
     return obj_any
 
@@ -1036,14 +1079,14 @@ def maybe_convert_dtypes(
     obj_any = cast("Any", obj)
     native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj):
-        return obj_any._from_compliant_dataframe(
-            obj_any._compliant_frame._from_native_frame(
+        return obj_any._with_compliant(
+            obj_any._compliant_frame._with_native(
                 native_obj.convert_dtypes(*args, **kwargs)
             )
         )
     if is_pandas_like_series(native_obj):
-        return obj_any._from_compliant_series(
-            obj_any._compliant_series._from_native_series(
+        return obj_any._with_compliant(
+            obj_any._compliant_series._with_native(
                 native_obj.convert_dtypes(*args, **kwargs)
             )
         )
@@ -1125,7 +1168,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         isinstance(series._compliant_series, InterchangeSeries)
         and series.dtype == dtypes.Categorical
     ):
-        return series._compliant_series._native_series.describe_categorical["is_ordered"]
+        return series._compliant_series.native.describe_categorical["is_ordered"]
     if series.dtype == dtypes.Enum:
         return True
     if series.dtype != dtypes.Categorical:
@@ -1215,6 +1258,11 @@ def parse_columns_to_drop(
 
 def is_sequence_but_not_str(sequence: Any | Sequence[_T]) -> TypeIs[Sequence[_T]]:
     return isinstance(sequence, Sequence) and not isinstance(sequence, str)
+
+
+def is_list_of(obj: Any, tp: type[_T]) -> TypeIs[list[_T]]:
+    # Check if an object is a list of `tp`, only sniffing the first element.
+    return bool(isinstance(obj, list) and obj and isinstance(obj[0], tp))
 
 
 def find_stacklevel() -> int:
@@ -1463,7 +1511,7 @@ def exclude_column_names(frame: _StoresColumns, names: Container[str]) -> Sequen
     return [col_name for col_name in frame.columns if col_name not in names]
 
 
-def passthrough_column_names(names: Sequence[str], /) -> Callable[[Any], Sequence[str]]:
+def passthrough_column_names(names: Sequence[str], /) -> EvalNames[Any]:
     def fn(_frame: Any, /) -> Sequence[str]:
         return names
 
@@ -1476,19 +1524,20 @@ def _hasattr_static(obj: Any, attr: str) -> bool:
 
 
 def is_compliant_dataframe(
-    obj: CompliantDataFrame[CompliantSeriesT_co, CompliantExprT_co, NativeFrameT_co]
-    | Any,
-) -> TypeIs[CompliantDataFrame[CompliantSeriesT_co, CompliantExprT_co, NativeFrameT_co]]:
+    obj: CompliantDataFrame[CompliantSeriesT, CompliantExprT, NativeFrameT_co] | Any,
+) -> TypeIs[CompliantDataFrame[CompliantSeriesT, CompliantExprT, NativeFrameT_co]]:
     return _hasattr_static(obj, "__narwhals_dataframe__")
 
 
 def is_compliant_lazyframe(
-    obj: CompliantLazyFrame[CompliantExprT_co, NativeFrameT_co] | Any,
-) -> TypeIs[CompliantLazyFrame[CompliantExprT_co, NativeFrameT_co]]:
+    obj: CompliantLazyFrame[CompliantExprT, NativeFrameT_co] | Any,
+) -> TypeIs[CompliantLazyFrame[CompliantExprT, NativeFrameT_co]]:
     return _hasattr_static(obj, "__narwhals_lazyframe__")
 
 
-def is_compliant_series(obj: Any) -> TypeIs[CompliantSeries]:
+def is_compliant_series(
+    obj: CompliantSeries[NativeSeriesT_co] | Any,
+) -> TypeIs[CompliantSeries[NativeSeriesT_co]]:
     return _hasattr_static(obj, "__narwhals_series__")
 
 
@@ -1496,6 +1545,16 @@ def is_compliant_expr(
     obj: CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | Any,
 ) -> TypeIs[CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co]]:
     return hasattr(obj, "__narwhals_expr__")
+
+
+def is_eager_allowed(obj: Implementation) -> TypeIs[EagerAllowedImplementation]:
+    return obj in {
+        Implementation.PANDAS,
+        Implementation.MODIN,
+        Implementation.CUDF,
+        Implementation.POLARS,
+        Implementation.PYARROW,
+    }
 
 
 def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
@@ -1506,9 +1565,53 @@ def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
     return hasattr(obj, "__dataframe__")
 
 
-def is_tracks_depth(obj: Implementation, /) -> TypeIs[_TracksDepth]:  # pragma: no cover
-    # Return `True` for implementations that utilize `CompliantExpr._depth`.
-    return obj.is_pandas_like() or obj in {Implementation.PYARROW, Implementation.DASK}
+def supports_arrow_c_stream(obj: Any) -> TypeIs[ArrowStreamExportable]:
+    return _hasattr_static(obj, "__arrow_c_stream__")
+
+
+def _remap_full_join_keys(
+    left_on: Sequence[str], right_on: Sequence[str], suffix: str
+) -> dict[str, str]:
+    """Remap join keys to avoid collisions.
+
+    If left keys collide with the right keys, append the suffix.
+    If there's no collision, let the right keys be.
+
+    Arguments:
+        left_on: Left keys.
+        right_on: Right keys.
+        suffix: Suffix to append to right keys.
+
+    Returns:
+        A map of old to new right keys.
+    """
+    right_keys_suffixed = (
+        f"{key}{suffix}" if key in left_on else key for key in right_on
+    )
+    return dict(zip(right_on, right_keys_suffixed))
+
+
+def _into_arrow_table(data: IntoArrowTable, context: _FullContext, /) -> pa.Table:
+    """Guards `ArrowDataFrame.from_arrow` w/ safer imports.
+
+    Arguments:
+        data: Object which implements `__arrow_c_stream__`.
+        context: Initialized compliant object.
+
+    Returns:
+        A PyArrow Table.
+    """
+    if find_spec("pyarrow"):
+        import pyarrow as pa  # ignore-banned-import
+
+        from narwhals._arrow.namespace import ArrowNamespace
+
+        version = context._version
+        ns = ArrowNamespace(backend_version=parse_version(pa), version=version)
+        return ns._dataframe.from_arrow(data, context=ns).native
+    else:  # pragma: no cover
+        msg = f"PyArrow>=14.0.0 is required for `from_arrow` for object of type {type(data).__name__!r}."
+        raise ModuleNotFoundError(msg)
 
 
 # TODO @dangotbanned: Extend with runtime behavior for `v1.*`
@@ -1645,3 +1748,73 @@ def _not_implemented_error(what: str, who: str, /) -> NotImplementedError:
         "please open an issue at: https://github.com/narwhals-dev/narwhals/issues"
     )
     return NotImplementedError(msg)
+
+
+class requires:  # noqa: N801
+    """Method decorator for raising under certain constraints.
+
+    Attributes:
+        _min_version: Minimum backend version.
+        _hint: Optional suggested alternative.
+
+    Examples:
+        >>> from narwhals.utils import requires, Implementation
+        >>> class SomeBackend:
+        ...     _implementation = Implementation.PYARROW
+        ...     _backend_version = 20, 0, 0
+        ...
+        ...     @requires.backend_version((9000, 0, 0))
+        ...     def really_complex_feature(self) -> str:
+        ...         return "hello"
+        >>> backend = SomeBackend()
+        >>> backend.really_complex_feature()
+        Traceback (most recent call last):
+            ...
+        NotImplementedError: `really_complex_feature` is only available in PyArrow>='9000.0.0', found version '20.0.0'.
+    """
+
+    _min_version: tuple[int, ...]
+    _hint: str
+
+    @classmethod
+    def backend_version(cls, minimum: tuple[int, ...], /, hint: str = "") -> Self:
+        """Method decorator for raising below a minimum `_backend_version`.
+
+        Arguments:
+            minimum: Minimum backend version.
+            hint: Optional suggested alternative.
+
+        Returns:
+            An exception-raising decorator.
+        """
+        obj = cls.__new__(cls)
+        obj._min_version = minimum
+        obj._hint = hint
+        return obj
+
+    @staticmethod
+    def _unparse_version(backend_version: tuple[int, ...], /) -> str:
+        return ".".join(f"{d}" for d in backend_version)
+
+    def _ensure_version(self, instance: _FullContext, /) -> None:
+        if instance._backend_version >= self._min_version:
+            return
+        method = self._wrapped_name
+        backend = instance._implementation._alias
+        minimum = self._unparse_version(self._min_version)
+        found = self._unparse_version(instance._backend_version)
+        msg = f"`{method}` is only available in {backend}>={minimum!r}, found version {found!r}."
+        if self._hint:
+            msg = f"{msg}\n{self._hint}"
+        raise NotImplementedError(msg)
+
+    def __call__(self, fn: _Method[_ContextT, P, R], /) -> _Method[_ContextT, P, R]:
+        self._wrapped_name = fn.__name__
+
+        @wraps(fn)
+        def wrapper(instance: _ContextT, *args: P.args, **kwds: P.kwargs) -> R:
+            self._ensure_version(instance)
+            return fn(instance, *args, **kwds)
+
+        # NOTE: Only getting a complaint from `mypy`
+        return wrapper  # type: ignore[return-value]

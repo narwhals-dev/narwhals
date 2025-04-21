@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
@@ -13,24 +12,27 @@ from typing import overload
 import pyarrow as pa
 import pyarrow.compute as pc
 
+from narwhals._compliant.series import _SeriesNamespace
 from narwhals.exceptions import ShapeError
-from narwhals.utils import _SeriesNamespace
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from typing import TypeVar
 
-    from typing_extensions import Self
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
     from narwhals._arrow.series import ArrowSeries
+    from narwhals._arrow.typing import ArrayAny
+    from narwhals._arrow.typing import ArrayOrScalarAny
+    from narwhals._arrow.typing import ArrayOrScalarT1
+    from narwhals._arrow.typing import ArrayOrScalarT2
     from narwhals._arrow.typing import ArrowArray
     from narwhals._arrow.typing import ArrowChunkedArray
-    from narwhals._arrow.typing import Incomplete
-    from narwhals._arrow.typing import StringArray
+    from narwhals._arrow.typing import ScalarAny
     from narwhals.dtypes import DType
+    from narwhals.typing import PythonLiteral
     from narwhals.typing import _AnyDArray
     from narwhals.utils import Version
 
@@ -76,12 +78,12 @@ def extract_py_scalar(value: Any, /) -> Any:
 
 
 def chunked_array(
-    arr: ArrowArray | list[Iterable[pa.Scalar[Any]]] | ArrowChunkedArray,
+    arr: ArrayAny | list[Iterable[Any]] | ScalarAny, dtype: pa.DataType | None = None, /
 ) -> ArrowChunkedArray:
     if isinstance(arr, pa.ChunkedArray):
         return arr
     if isinstance(arr, list):
-        return pa.chunked_array(cast("Any", arr))
+        return pa.chunked_array(arr, dtype)
     else:
         return pa.chunked_array([arr], arr.type)
 
@@ -91,8 +93,7 @@ def nulls_like(n: int, series: ArrowSeries) -> ArrowArray:
 
     Uses the type of `series`, without upseting `mypy`.
     """
-    nulls: Incomplete = pa.nulls
-    return nulls(n, series._type)
+    return pa.nulls(n, series.native.type)
 
 
 @lru_cache(maxsize=16)
@@ -221,10 +222,8 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
 
 
 def extract_native(
-    lhs: ArrowSeries, rhs: ArrowSeries | object
-) -> tuple[
-    ArrowChunkedArray | pa.Scalar[Any], ArrowChunkedArray | pa.Scalar[Any] | object
-]:
+    lhs: ArrowSeries, rhs: ArrowSeries | PythonLiteral | ScalarAny
+) -> tuple[ArrowChunkedArray | ScalarAny, ArrowChunkedArray | ScalarAny]:
     """Extract native objects in binary  operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -236,7 +235,7 @@ def extract_native(
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
 
-    if rhs is None:
+    if rhs is None:  # pragma: no cover
         return lhs.native, lit(None, type=lhs._type)
 
     if isinstance(rhs, ArrowDataFrame):
@@ -252,7 +251,8 @@ def extract_native(
     if isinstance(rhs, list):
         msg = "Expected Series or scalar, got list."
         raise TypeError(msg)
-    return lhs.native, rhs
+
+    return lhs.native, rhs if isinstance(rhs, pa.Scalar) else lit(rhs)
 
 
 def align_series_full_broadcast(*series: ArrowSeries) -> Sequence[ArrowSeries]:
@@ -264,96 +264,25 @@ def align_series_full_broadcast(*series: ArrowSeries) -> Sequence[ArrowSeries]:
     if fast_path:
         return series
 
-    is_max_length_gt_1 = max_length > 1
     reshaped = []
-    for s, length in zip(series, lengths):
-        if is_max_length_gt_1 and length == 1:
+    for s in series:
+        if s._broadcast:
             value = s.native[0]
             if s._backend_version < (13,) and hasattr(value, "as_py"):
                 value = value.as_py()
-            reshaped.append(
-                s._from_native_series(pa.array([value] * max_length, type=s._type))
-            )
+            reshaped.append(s._with_native(pa.array([value] * max_length, type=s._type)))
         else:
+            if (actual_len := len(s)) != max_length:
+                msg = f"Expected object of length {max_length}, got {actual_len}."
+                raise ShapeError(msg)
             reshaped.append(s)
 
     return reshaped
 
 
-def extract_dataframe_comparand(
-    length: int,
-    other: ArrowSeries,
-    backend_version: tuple[int, ...],
-) -> ArrowChunkedArray:
-    """Extract native Series, broadcasting to `length` if necessary."""
-    if not other._broadcast:
-        if (len_other := len(other)) != length:
-            msg = f"Expected object of length {length}, got: {len_other}."
-            raise ShapeError(msg)
-        return other.native
-
-    import numpy as np  # ignore-banned-import
-
-    value = other.native[0]
-    if backend_version < (13,) and hasattr(value, "as_py"):
-        value = value.as_py()
-    return pa.chunked_array([np.full(shape=length, fill_value=value)])
-
-
-def horizontal_concat(dfs: list[pa.Table]) -> pa.Table:
-    """Concatenate (native) DataFrames horizontally.
-
-    Should be in namespace.
-    """
-    names = [name for df in dfs for name in df.column_names]
-
-    if len(set(names)) < len(names):  # pragma: no cover
-        msg = "Expected unique column names"
-        raise ValueError(msg)
-    arrays = list(chain.from_iterable(df.itercolumns() for df in dfs))
-    return pa.Table.from_arrays(arrays, names=names)
-
-
-def vertical_concat(dfs: list[pa.Table]) -> pa.Table:
-    """Concatenate (native) DataFrames vertically.
-
-    Should be in namespace.
-    """
-    cols_0 = dfs[0].column_names
-    for i, df in enumerate(dfs[1:], start=1):
-        cols_current = df.column_names
-        if cols_current != cols_0:
-            msg = (
-                "unable to vstack, column names don't match:\n"
-                f"   - dataframe 0: {cols_0}\n"
-                f"   - dataframe {i}: {cols_current}\n"
-            )
-            raise TypeError(msg)
-
-    return pa.concat_tables(dfs)
-
-
-def diagonal_concat(dfs: list[pa.Table], backend_version: tuple[int, ...]) -> pa.Table:
-    """Concatenate (native) DataFrames diagonally.
-
-    Should be in namespace.
-    """
-    kwargs: dict[str, Any] = (
-        {"promote": True}
-        if backend_version < (14, 0, 0)
-        else {"promote_options": "default"}
-    )
-    return pa.concat_tables(dfs, **kwargs)
-
-
-def floordiv_compat(left: Any, right: Any) -> Any:
+def floordiv_compat(left: ArrayOrScalarAny, right: ArrayOrScalarAny) -> Any:
     # The following lines are adapted from pandas' pyarrow implementation.
     # Ref: https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L124-L154
-    if isinstance(left, (int, float)):
-        left = lit(left)
-
-    if isinstance(right, (int, float)):
-        right = lit(right)
 
     if pa.types.is_integer(left.type) and pa.types.is_integer(right.type):
         divided = pc.divide_checked(left, right)
@@ -365,7 +294,6 @@ def floordiv_compat(left: Any, right: Any) -> Any:
             )
             result = pc.if_else(
                 pc.and_(has_remainder, has_one_negative_operand),
-                # GH: 55561 ruff: ignore
                 pc.subtract(divided, lit(1, type=divided.type)),
                 divided,
             )
@@ -379,12 +307,8 @@ def floordiv_compat(left: Any, right: Any) -> Any:
 
 
 def cast_for_truediv(
-    arrow_array: ArrowChunkedArray | pa.Scalar[Any],
-    pa_object: ArrowChunkedArray | ArrowArray | pa.Scalar[Any],
-) -> tuple[
-    ArrowChunkedArray | pa.Scalar[Any],
-    ArrowChunkedArray | ArrowArray | pa.Scalar[Any],
-]:
+    arrow_array: ArrayOrScalarT1, pa_object: ArrayOrScalarT2
+) -> tuple[ArrayOrScalarT1, ArrayOrScalarT2]:
     # Lifted from:
     # https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L108-L122
     # Ensure int / int -> float mirroring Python/Numpy behavior
@@ -392,6 +316,7 @@ def cast_for_truediv(
     if pa.types.is_integer(arrow_array.type) and pa.types.is_integer(pa_object.type):
         # GH: 56645.  # noqa: ERA001
         # https://github.com/apache/arrow/issues/35563
+        # NOTE: `pyarrow==11.*` doesn't allow keywords in `Array.cast`
         return pc.cast(arrow_array, pa.float64(), safe=False), pc.cast(
             pa_object, pa.float64(), safe=False
         )
@@ -495,8 +420,8 @@ def parse_datetime_format(arr: ArrowChunkedArray) -> str:
         msg = "Found multiple timezone values while inferring datetime format."
         raise ValueError(msg)
 
-    date_value = _parse_date_format(cast("StringArray", matches.field("date")))
-    time_value = _parse_time_format(cast("StringArray", matches.field("time")))
+    date_value = _parse_date_format(cast("pc.StringArray", matches.field("date")))
+    time_value = _parse_time_format(cast("pc.StringArray", matches.field("time")))
 
     sep_value = separators[0].as_py()
     tz_value = "%z" if tz[0].as_py() else ""
@@ -504,7 +429,7 @@ def parse_datetime_format(arr: ArrowChunkedArray) -> str:
     return f"{date_value}{sep_value}{time_value}{tz_value}"
 
 
-def _parse_date_format(arr: StringArray) -> str:
+def _parse_date_format(arr: pc.StringArray) -> str:
     for date_rgx, date_fmt in DATE_FORMATS:
         matches = pc.extract_regex(arr, pattern=date_rgx)
         if date_fmt == "%Y%m%d" and pc.all(matches.is_valid()).as_py():
@@ -524,7 +449,7 @@ def _parse_date_format(arr: StringArray) -> str:
     raise ValueError(msg)
 
 
-def _parse_time_format(arr: StringArray) -> str:
+def _parse_time_format(arr: pc.StringArray) -> str:
     for time_rgx, time_fmt in TIME_FORMATS:
         matches = pc.extract_regex(arr, pattern=time_rgx)
         if pc.all(matches.is_valid()).as_py():
@@ -553,7 +478,7 @@ def pad_series(
     pad_left = pa.array([None] * offset_left, type=series._type)
     pad_right = pa.array([None] * offset_right, type=series._type)
     concat = pa.concat_arrays([pad_left, *series.native.chunks, pad_right])
-    return series._from_native_series(concat), offset_left + offset_right
+    return series._with_native(concat), offset_left + offset_right
 
 
 def cast_to_comparable_string_types(
@@ -570,5 +495,5 @@ def cast_to_comparable_string_types(
 
 
 class ArrowSeriesNamespace(_SeriesNamespace["ArrowSeries", "ArrowChunkedArray"]):
-    def __init__(self: Self, series: ArrowSeries, /) -> None:
+    def __init__(self, series: ArrowSeries, /) -> None:
         self._compliant_series = series

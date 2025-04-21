@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import functools
 import re
-import warnings
 from contextlib import suppress
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Iterable
+from typing import Sequence
 from typing import Sized
 from typing import TypeVar
 from typing import cast
 
 import pandas as pd
 
+from narwhals._compliant.series import EagerSeriesNamespace
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import ShapeError
@@ -100,165 +100,34 @@ def align_and_extract_native(
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
 
-    lhs_index = lhs._native_series.index
+    lhs_index = lhs.native.index
 
     if isinstance(rhs, PandasLikeDataFrame):
         return NotImplemented
 
     if lhs._broadcast and isinstance(rhs, PandasLikeSeries) and not rhs._broadcast:
-        return lhs._native_series.iloc[0], rhs._native_series
+        return lhs.native.iloc[0], rhs.native
 
-    lhs_native = lhs._native_series
     if isinstance(rhs, PandasLikeSeries):
         if rhs._broadcast:
-            return (lhs_native, rhs._native_series.iloc[0])
-        rhs_native = rhs._native_series
-        if rhs_native.index is not lhs_index:
+            return (lhs.native, rhs.native.iloc[0])
+        if rhs.native.index is not lhs_index:
             return (
-                lhs_native,
+                lhs.native,
                 set_index(
-                    rhs_native,
+                    rhs.native,
                     lhs_index,
                     implementation=rhs._implementation,
                     backend_version=rhs._backend_version,
                 ),
             )
-        return (lhs_native, rhs_native)
+        return (lhs.native, rhs.native)
 
     if isinstance(rhs, list):
         msg = "Expected Series or scalar, got list."
         raise TypeError(msg)
     # `rhs` must be scalar, so just leave it as-is
-    return lhs_native, rhs
-
-
-def extract_dataframe_comparand(
-    index: pd.Index[Any], other: PandasLikeSeries
-) -> pd.Series[Any]:
-    """Extract native Series, broadcasting to `length` if necessary."""
-    if other._broadcast:
-        s = other._native_series
-        return s.__class__(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
-    if (len_other := len(other)) != (len_idx := len(index)):
-        msg = f"Expected object of length {len_idx}, got: {len_other}."
-        raise ShapeError(msg)
-    if other._native_series.index is not index:
-        return set_index(
-            other._native_series,
-            index,
-            implementation=other._implementation,
-            backend_version=other._backend_version,
-        )
-    return other._native_series
-
-
-def horizontal_concat(
-    dfs: list[Any], *, implementation: Implementation, backend_version: tuple[int, ...]
-) -> Any:
-    """Concatenate (native) DataFrames horizontally.
-
-    Should be in namespace.
-    """
-    if implementation is Implementation.CUDF:
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                message="The behavior of array concatenation with empty entries is deprecated",
-                category=FutureWarning,
-            )
-            return implementation.to_native_namespace().concat(dfs, axis=1)
-
-    if implementation.is_pandas_like():
-        extra_kwargs = (
-            {"copy": False}
-            if implementation is Implementation.PANDAS and backend_version < (3,)
-            else {}
-        )
-        return implementation.to_native_namespace().concat(dfs, axis=1, **extra_kwargs)
-
-    else:  # pragma: no cover
-        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
-        raise TypeError(msg)
-
-
-def vertical_concat(
-    dfs: list[Any], *, implementation: Implementation, backend_version: tuple[int, ...]
-) -> Any:
-    """Concatenate (native) DataFrames vertically.
-
-    Should be in namespace.
-    """
-    if not dfs:
-        msg = "No dataframes to concatenate"  # pragma: no cover
-        raise AssertionError(msg)
-    cols_0 = dfs[0].columns
-    for i, df in enumerate(dfs[1:], start=1):
-        cols_current = df.columns
-        if not ((len(cols_current) == len(cols_0)) and (cols_current == cols_0).all()):
-            msg = (
-                "unable to vstack, column names don't match:\n"
-                f"   - dataframe 0: {cols_0.to_list()}\n"
-                f"   - dataframe {i}: {cols_current.to_list()}\n"
-            )
-            raise TypeError(msg)
-
-    if implementation in PANDAS_LIKE_IMPLEMENTATION:
-        extra_kwargs = (
-            {"copy": False}
-            if implementation is Implementation.PANDAS and backend_version < (3,)
-            else {}
-        )
-        return implementation.to_native_namespace().concat(dfs, axis=0, **extra_kwargs)
-
-    else:  # pragma: no cover
-        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
-        raise TypeError(msg)
-
-
-def diagonal_concat(
-    dfs: list[Any], *, implementation: Implementation, backend_version: tuple[int, ...]
-) -> Any:
-    """Concatenate (native) DataFrames diagonally.
-
-    Should be in namespace.
-    """
-    if not dfs:
-        msg = "No dataframes to concatenate"  # pragma: no cover
-        raise AssertionError(msg)
-
-    if implementation in PANDAS_LIKE_IMPLEMENTATION:
-        extra_kwargs = (
-            {"copy": False, "sort": False}
-            if implementation is Implementation.PANDAS and backend_version < (1,)
-            else {"copy": False}
-            if implementation is Implementation.PANDAS and backend_version < (3,)
-            else {}
-        )
-        return implementation.to_native_namespace().concat(dfs, axis=0, **extra_kwargs)
-
-    else:  # pragma: no cover
-        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
-        raise TypeError(msg)
-
-
-def native_series_from_iterable(
-    data: Iterable[Any],
-    name: str,
-    index: Any,
-    implementation: Implementation,
-) -> Any:
-    """Return native series."""
-    if implementation in PANDAS_LIKE_IMPLEMENTATION:
-        extra_kwargs = {"copy": False} if implementation is Implementation.PANDAS else {}
-        if len(index) == 0:
-            index = None
-        return implementation.to_native_namespace().Series(
-            data, name=name, index=index, **extra_kwargs
-        )
-
-    else:  # pragma: no cover
-        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
-        raise TypeError(msg)
+    return lhs.native, rhs
 
 
 def set_index(
@@ -272,6 +141,11 @@ def set_index(
 
     We can set `copy` / `inplace` based on implementation/version.
     """
+    if isinstance(index, implementation.to_native_namespace().Index) and (
+        expected_len := len(index)
+    ) != (actual_len := len(obj)):
+        msg = f"Expected object of length {expected_len}, got length: {actual_len}"
+        raise ShapeError(msg)
     if implementation is Implementation.CUDF:  # pragma: no cover
         obj = obj.copy(deep=False)  # type: ignore[attr-defined]
         obj.index = index  # type: ignore[attr-defined]
@@ -337,7 +211,9 @@ def rename(
 
 
 @functools.lru_cache(maxsize=16)
-def non_object_native_to_narwhals_dtype(dtype: str, version: Version) -> DType:
+def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> DType:
+    dtype = str(native_dtype)
+
     dtypes = import_dtypes_module(version)
     if dtype in {"int64", "Int64", "Int64[pyarrow]", "int64[pyarrow]"}:
         return dtypes.Int64()
@@ -375,7 +251,13 @@ def non_object_native_to_narwhals_dtype(dtype: str, version: Version) -> DType:
         return dtypes.String()
     if dtype in {"bool", "boolean", "boolean[pyarrow]", "bool[pyarrow]"}:
         return dtypes.Boolean()
-    if dtype == "category" or dtype.startswith("dictionary<"):
+    if dtype.startswith("dictionary<"):
+        return dtypes.Categorical()
+    if dtype == "category":
+        if version is Version.V1:
+            return dtypes.Categorical()
+        if native_dtype.ordered:
+            return dtypes.Enum(native_dtype.categories)
         return dtypes.Categorical()
     if (match_ := PATTERN_PD_DATETIME.match(dtype)) or (
         match_ := PATTERN_PA_DATETIME.match(dtype)
@@ -436,7 +318,7 @@ def native_to_narwhals_dtype(
             return arrow_native_to_narwhals_dtype(native_dtype.to_arrow(), version)
         return arrow_native_to_narwhals_dtype(native_dtype.pyarrow_dtype, version)
     if str_dtype != "object":
-        return non_object_native_to_narwhals_dtype(str_dtype, version)
+        return non_object_native_to_narwhals_dtype(native_dtype, version)
     elif implementation is Implementation.DASK:
         # Per conversations with their maintainers, they don't support arbitrary
         # objects, so we can just return String.
@@ -465,6 +347,11 @@ def get_dtype_backend(dtype: Any, implementation: Implementation) -> DTypeBacken
         ):
             return "numpy_nullable"
     return None
+
+
+@functools.lru_cache(maxsize=16)
+def is_pyarrow_dtype_backend(dtype: Any, implementation: Implementation) -> bool:
+    return get_dtype_backend(dtype, implementation) == "pyarrow"
 
 
 def narwhals_to_native_dtype(  # noqa: PLR0915
@@ -592,8 +479,15 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
             msg = "PyArrow>=11.0.0 is required for `Date` dtype."
         return "date32[pyarrow]"
     if isinstance_or_issubclass(dtype, dtypes.Enum):
-        msg = "Converting to Enum is not (yet) supported"
-        raise NotImplementedError(msg)
+        if version is Version.V1:
+            msg = "Converting to Enum is not supported in narwhals.stable.v1"
+            raise NotImplementedError(msg)
+        if isinstance(dtype, dtypes.Enum):
+            ns = implementation.to_native_namespace()
+            return ns.CategoricalDtype(dtype.categories, ordered=True)
+        msg = "Can not cast / initialize Enum without categories present"
+        raise ValueError(msg)
+
     if isinstance_or_issubclass(
         dtype, (dtypes.Struct, dtypes.Array, dtypes.List, dtypes.Time, dtypes.Binary)
     ):
@@ -632,28 +526,26 @@ def align_series_full_broadcast(
     lengths = [len(s) for s in series]
     max_length = max(lengths)
 
-    idx = series[lengths.index(max_length)]._native_series.index
+    idx = series[lengths.index(max_length)].native.index
     reindexed = []
-    max_length_gt_1 = max_length > 1
-    for s, length in zip(series, lengths):
-        s_native = s._native_series
-        if max_length_gt_1 and length == 1:
+    for s in series:
+        if s._broadcast:
             reindexed.append(
-                s._from_native_series(
+                s._with_native(
                     native_namespace.Series(
-                        [s_native.iloc[0]] * max_length,
+                        [s.native.iloc[0]] * max_length,
                         index=idx,
-                        name=s_native.name,
-                        dtype=s_native.dtype,
+                        name=s.name,
+                        dtype=s.native.dtype,
                     )
                 )
             )
 
-        elif s_native.index is not idx:
+        elif s.native.index is not idx:
             reindexed.append(
-                s._from_native_series(
+                s._with_native(
                     set_index(
-                        s_native,
+                        s.native,
                         idx,
                         implementation=s._implementation,
                         backend_version=s._backend_version,
@@ -663,17 +555,6 @@ def align_series_full_broadcast(
         else:
             reindexed.append(s)
     return reindexed
-
-
-def to_datetime(implementation: Implementation, *, utc: bool) -> Any:
-    if implementation in PANDAS_LIKE_IMPLEMENTATION:
-        return functools.partial(
-            implementation.to_native_namespace().to_datetime, utc=utc
-        )
-
-    else:  # pragma: no cover
-        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
-        raise TypeError(msg)
 
 
 def int_dtype_mapper(dtype: Any) -> str:
@@ -787,9 +668,9 @@ def select_columns_by_name(
 
 def pivot_table(
     df: PandasLikeDataFrame,
-    values: list[str],
-    index: list[str],
-    columns: list[str],
+    values: Sequence[str],
+    index: Sequence[str],
+    columns: Sequence[str],
     aggregate_function: str | None,
 ) -> Any:
     dtypes = import_dtypes_module(df._version)
@@ -837,3 +718,17 @@ def check_column_names_are_unique(columns: pd.Index[str]) -> None:
                 msg += f"\n- '{key}' {value} times"
         msg = f"Expected unique column names, got:{msg}"
         raise DuplicateError(msg)
+
+
+class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]):
+    @property
+    def implementation(self) -> Implementation:
+        return self.compliant._implementation
+
+    @property
+    def backend_version(self) -> tuple[int, ...]:
+        return self.compliant._backend_version
+
+    @property
+    def version(self) -> Version:
+        return self.compliant._version

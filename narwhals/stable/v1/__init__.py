@@ -90,15 +90,21 @@ if TYPE_CHECKING:
     from typing_extensions import Self
     from typing_extensions import TypeVar
 
+    from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
-    from narwhals.functions import ArrowStreamExportable
+    from narwhals.typing import ConcatMethod
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
     from narwhals.typing import IntoLazyFrameT
     from narwhals.typing import IntoSeries
+    from narwhals.typing import NonNestedLiteral
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
 
+    FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
+    DataFrameT = TypeVar("DataFrameT", bound="DataFrame[Any]")
+    LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[Any]")
+    SeriesT = TypeVar("SeriesT", bound="Series[Any]")
     IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
     T = TypeVar("T", default=Any)
 else:
@@ -137,21 +143,21 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     # annotations are correct.
 
     @property
-    def _series(self: Self) -> type[Series[Any]]:
+    def _series(self) -> type[Series[Any]]:
         return Series
 
     @property
-    def _lazyframe(self: Self) -> type[LazyFrame[Any]]:
+    def _lazyframe(self) -> type[LazyFrame[Any]]:
         return LazyFrame
 
     @overload
     def __getitem__(  # type: ignore[overload-overlap]
-        self: Self,
+        self,
         item: str | tuple[slice | Sequence[int] | _1DArray, int | str],
     ) -> Series[Any]: ...
     @overload
     def __getitem__(
-        self: Self,
+        self,
         item: (
             int
             | slice
@@ -164,11 +170,11 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         ),
     ) -> Self: ...
 
-    def __getitem__(self: Self, item: Any) -> Any:
+    def __getitem__(self, item: Any) -> Any:
         return super().__getitem__(item)
 
     def lazy(
-        self: Self,
+        self,
         backend: ModuleType | Implementation | str | None = None,
     ) -> LazyFrame[Any]:
         """Restrict available API methods to lazy-only ones.
@@ -202,17 +208,15 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     # Not sure what mypy is complaining about, probably some fancy
     # thing that I need to understand category theory for
     @overload  # type: ignore[override]
-    def to_dict(
-        self: Self, *, as_series: Literal[True] = ...
-    ) -> dict[str, Series[Any]]: ...
+    def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series[Any]]: ...
     @overload
-    def to_dict(self: Self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
+    def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
     def to_dict(
-        self: Self, *, as_series: bool
+        self, *, as_series: bool
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]: ...
     def to_dict(
-        self: Self, *, as_series: bool = True
+        self, *, as_series: bool = True
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]:
         """Convert DataFrame to a dictionary mapping column name to values.
 
@@ -225,7 +229,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         """
         return super().to_dict(as_series=as_series)  # type: ignore[return-value]
 
-    def is_duplicated(self: Self) -> Series[Any]:
+    def is_duplicated(self) -> Series[Any]:
         r"""Get a mask of all duplicated rows in this DataFrame.
 
         Returns:
@@ -233,7 +237,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         """
         return super().is_duplicated()  # type: ignore[return-value]
 
-    def is_unique(self: Self) -> Series[Any]:
+    def is_unique(self) -> Series[Any]:
         r"""Get a mask of all unique rows in this DataFrame.
 
         Returns:
@@ -241,7 +245,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         """
         return super().is_unique()  # type: ignore[return-value]
 
-    def _l1_norm(self: Self) -> Self:
+    def _l1_norm(self) -> Self:
         """Private, just used to test the stable API.
 
         Returns:
@@ -264,10 +268,10 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
     """
 
     @property
-    def _dataframe(self: Self) -> type[DataFrame[Any]]:
+    def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame
 
-    def _extract_compliant(self: Self, arg: Any) -> Any:
+    def _extract_compliant(self, arg: Any) -> Any:
         # After v1, we raise when passing order-dependent or length-changing
         # expressions to LazyFrame
         from narwhals.dataframe import BaseFrame
@@ -296,7 +300,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     def collect(
-        self: Self,
+        self,
         backend: ModuleType | Implementation | str | None = None,
         **kwargs: Any,
     ) -> DataFrame[Any]:
@@ -333,7 +337,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         """
         return super().collect(backend=backend, **kwargs)  # type: ignore[return-value]
 
-    def _l1_norm(self: Self) -> Self:
+    def _l1_norm(self) -> Self:
         """Private, just used to test the stable API.
 
         Returns:
@@ -352,7 +356,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         """
         return super().tail(n)
 
-    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+    def gather_every(self, n: int, offset: int = 0) -> Self:
         r"""Take every nth row in the DataFrame and return as a new DataFrame.
 
         Arguments:
@@ -362,7 +366,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         Returns:
             The LazyFrame containing only the selected rows.
         """
-        return self._from_compliant_dataframe(
+        return self._with_compliant(
             self._compliant_frame.gather_every(n=n, offset=offset)
         )
 
@@ -396,10 +400,10 @@ class Series(NwSeries[IntoSeriesT]):
     # annotations are correct.
 
     @property
-    def _dataframe(self: Self) -> type[DataFrame[Any]]:
+    def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame
 
-    def to_frame(self: Self) -> DataFrame[Any]:
+    def to_frame(self) -> DataFrame[Any]:
         """Convert to dataframe.
 
         Returns:
@@ -408,7 +412,7 @@ class Series(NwSeries[IntoSeriesT]):
         return super().to_frame()  # type: ignore[return-value]
 
     def value_counts(
-        self: Self,
+        self,
         *,
         sort: bool = False,
         parallel: bool = False,
@@ -434,264 +438,8 @@ class Series(NwSeries[IntoSeriesT]):
             sort=sort, parallel=parallel, name=name, normalize=normalize
         )
 
-    def ewm_mean(
-        self: Self,
-        *,
-        com: float | None = None,
-        span: float | None = None,
-        half_life: float | None = None,
-        alpha: float | None = None,
-        adjust: bool = True,
-        min_samples: int = 1,
-        ignore_nulls: bool = False,
-    ) -> Self:
-        r"""Compute exponentially-weighted moving average.
-
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
-
-        Arguments:
-            com: Specify decay in terms of center of mass, $\gamma$, with <br> $\alpha = \frac{1}{1+\gamma}\forall\gamma\geq0$
-            span: Specify decay in terms of span, $\theta$, with <br> $\alpha = \frac{2}{\theta + 1} \forall \theta \geq 1$
-            half_life: Specify decay in terms of half-life, $\tau$, with <br> $\alpha = 1 - \exp \left\{ \frac{ -\ln(2) }{ \tau } \right\} \forall \tau > 0$
-            alpha: Specify smoothing factor alpha directly, $0 < \alpha \leq 1$.
-            adjust: Divide by decaying adjustment factor in beginning periods to account for imbalance in relative weightings
-
-                - When `adjust=True` (the default) the EW function is calculated
-                  using weights $w_i = (1 - \alpha)^i$
-                - When `adjust=False` the EW function is calculated recursively by
-                  $$
-                  y_0=x_0
-                  $$
-                  $$
-                  y_t = (1 - \alpha)y_{t - 1} + \alpha x_t
-                  $$
-            min_samples: Minimum number of observations in window required to have a value (otherwise result is null).
-            ignore_nulls: Ignore missing values when calculating weights.
-
-                - When `ignore_nulls=False` (default), weights are based on absolute
-                  positions.
-                  For example, the weights of $x_0$ and $x_2$ used in
-                  calculating the final weighted average of $[x_0, None, x_2]$ are
-                  $(1-\alpha)^2$ and $1$ if `adjust=True`, and
-                  $(1-\alpha)^2$ and $\alpha$ if `adjust=False`.
-                - When `ignore_nulls=True`, weights are based
-                  on relative positions. For example, the weights of
-                  $x_0$ and $x_2$ used in calculating the final weighted
-                  average of $[x_0, None, x_2]$ are
-                  $1-\alpha$ and $1$ if `adjust=True`,
-                  and $1-\alpha$ and $\alpha$ if `adjust=False`.
-
-        Returns:
-            Series
-        """
-        from narwhals.exceptions import NarwhalsUnstableWarning
-        from narwhals.utils import find_stacklevel
-
-        msg = (
-            "`Series.ewm_mean` is being called from the stable API although considered "
-            "an unstable feature."
-        )
-        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
-        return super().ewm_mean(
-            com=com,
-            span=span,
-            half_life=half_life,
-            alpha=alpha,
-            adjust=adjust,
-            min_samples=min_samples,
-            ignore_nulls=ignore_nulls,
-        )
-
-    def rolling_sum(
-        self: Self,
-        window_size: int,
-        *,
-        min_samples: int | None = None,
-        center: bool = False,
-    ) -> Self:
-        """Apply a rolling sum (moving sum) over the values.
-
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
-
-        A window of length `window_size` will traverse the values. The resulting values
-        will be aggregated to their sum.
-
-        The window at a given row will include the row itself and the `window_size - 1`
-        elements before it.
-
-        Arguments:
-            window_size: The length of the window in number of elements. It must be a
-                strictly positive integer.
-            min_samples: The number of values in the window that should be non-null before
-                computing a result. If set to `None` (default), it will be set equal to
-                `window_size`. If provided, it must be a strictly positive integer, and
-                less than or equal to `window_size`
-            center: Set the labels at the center of the window.
-
-        Returns:
-            A new series.
-        """
-        from narwhals.exceptions import NarwhalsUnstableWarning
-        from narwhals.utils import find_stacklevel
-
-        msg = (
-            "`Series.rolling_sum` is being called from the stable API although considered "
-            "an unstable feature."
-        )
-        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
-        return super().rolling_sum(
-            window_size=window_size,
-            min_samples=min_samples,
-            center=center,
-        )
-
-    def rolling_mean(
-        self: Self,
-        window_size: int,
-        *,
-        min_samples: int | None = None,
-        center: bool = False,
-    ) -> Self:
-        """Apply a rolling mean (moving mean) over the values.
-
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
-
-        A window of length `window_size` will traverse the values. The resulting values
-        will be aggregated to their mean.
-
-        The window at a given row will include the row itself and the `window_size - 1`
-        elements before it.
-
-        Arguments:
-            window_size: The length of the window in number of elements. It must be a
-                strictly positive integer.
-            min_samples: The number of values in the window that should be non-null before
-                computing a result. If set to `None` (default), it will be set equal to
-                `window_size`. If provided, it must be a strictly positive integer, and
-                less than or equal to `window_size`
-            center: Set the labels at the center of the window.
-
-        Returns:
-            A new series.
-        """
-        from narwhals.exceptions import NarwhalsUnstableWarning
-        from narwhals.utils import find_stacklevel
-
-        msg = (
-            "`Series.rolling_mean` is being called from the stable API although considered "
-            "an unstable feature."
-        )
-        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
-        return super().rolling_mean(
-            window_size=window_size,
-            min_samples=min_samples,
-            center=center,
-        )
-
-    def rolling_var(
-        self: Self,
-        window_size: int,
-        *,
-        min_samples: int | None = None,
-        center: bool = False,
-        ddof: int = 1,
-    ) -> Self:
-        """Apply a rolling variance (moving variance) over the values.
-
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
-
-        A window of length `window_size` will traverse the values. The resulting values
-        will be aggregated to their variance.
-
-        The window at a given row will include the row itself and the `window_size - 1`
-        elements before it.
-
-        Arguments:
-            window_size: The length of the window in number of elements. It must be a
-                strictly positive integer.
-            min_samples: The number of values in the window that should be non-null before
-                computing a result. If set to `None` (default), it will be set equal to
-                `window_size`. If provided, it must be a strictly positive integer, and
-                less than or equal to `window_size`.
-            center: Set the labels at the center of the window.
-            ddof: Delta Degrees of Freedom; the divisor for a length N window is N - ddof.
-
-        Returns:
-            A new series.
-        """
-        from narwhals.exceptions import NarwhalsUnstableWarning
-        from narwhals.utils import find_stacklevel
-
-        msg = (
-            "`Series.rolling_var` is being called from the stable API although considered "
-            "an unstable feature."
-        )
-        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
-        return super().rolling_var(
-            window_size=window_size,
-            min_samples=min_samples,
-            center=center,
-            ddof=ddof,
-        )
-
-    def rolling_std(
-        self: Self,
-        window_size: int,
-        *,
-        min_samples: int | None = None,
-        center: bool = False,
-        ddof: int = 1,
-    ) -> Self:
-        """Apply a rolling standard deviation (moving standard deviation) over the values.
-
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
-
-        A window of length `window_size` will traverse the values. The resulting values
-        will be aggregated to their standard deviation.
-
-        The window at a given row will include the row itself and the `window_size - 1`
-        elements before it.
-
-        Arguments:
-            window_size: The length of the window in number of elements. It must be a
-                strictly positive integer.
-            min_samples: The number of values in the window that should be non-null before
-                computing a result. If set to `None` (default), it will be set equal to
-                `window_size`. If provided, it must be a strictly positive integer, and
-                less than or equal to `window_size`.
-            center: Set the labels at the center of the window.
-            ddof: Delta Degrees of Freedom; the divisor for a length N window is N - ddof.
-
-        Returns:
-            A new series.
-        """
-        from narwhals.exceptions import NarwhalsUnstableWarning
-        from narwhals.utils import find_stacklevel
-
-        msg = (
-            "`Series.rolling_std` is being called from the stable API although considered "
-            "an unstable feature."
-        )
-        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
-        return super().rolling_std(
-            window_size=window_size,
-            min_samples=min_samples,
-            center=center,
-            ddof=ddof,
-        )
-
     def hist(
-        self: Self,
+        self,
         bins: list[float | int] | None = None,
         *,
         bin_count: int | None = None,
@@ -727,263 +475,10 @@ class Series(NwSeries[IntoSeriesT]):
 
 
 class Expr(NwExpr):
-    def _l1_norm(self: Self) -> Self:
+    def _l1_norm(self) -> Self:
         return super()._taxicab_norm()
 
-    def ewm_mean(
-        self: Self,
-        *,
-        com: float | None = None,
-        span: float | None = None,
-        half_life: float | None = None,
-        alpha: float | None = None,
-        adjust: bool = True,
-        min_samples: int = 1,
-        ignore_nulls: bool = False,
-    ) -> Self:
-        r"""Compute exponentially-weighted moving average.
-
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
-
-        Arguments:
-            com: Specify decay in terms of center of mass, $\gamma$, with <br> $\alpha = \frac{1}{1+\gamma}\forall\gamma\geq0$
-            span: Specify decay in terms of span, $\theta$, with <br> $\alpha = \frac{2}{\theta + 1} \forall \theta \geq 1$
-            half_life: Specify decay in terms of half-life, $\tau$, with <br> $\alpha = 1 - \exp \left\{ \frac{ -\ln(2) }{ \tau } \right\} \forall \tau > 0$
-            alpha: Specify smoothing factor alpha directly, $0 < \alpha \leq 1$.
-            adjust: Divide by decaying adjustment factor in beginning periods to account for imbalance in relative weightings
-
-                - When `adjust=True` (the default) the EW function is calculated
-                  using weights $w_i = (1 - \alpha)^i$
-                - When `adjust=False` the EW function is calculated recursively by
-                  $$
-                  y_0=x_0
-                  $$
-                  $$
-                  y_t = (1 - \alpha)y_{t - 1} + \alpha x_t
-                  $$
-            min_samples: Minimum number of observations in window required to have a value, (otherwise result is null).
-            ignore_nulls: Ignore missing values when calculating weights.
-
-                - When `ignore_nulls=False` (default), weights are based on absolute
-                  positions.
-                  For example, the weights of $x_0$ and $x_2$ used in
-                  calculating the final weighted average of $[x_0, None, x_2]$ are
-                  $(1-\alpha)^2$ and $1$ if `adjust=True`, and
-                  $(1-\alpha)^2$ and $\alpha$ if `adjust=False`.
-                - When `ignore_nulls=True`, weights are based
-                  on relative positions. For example, the weights of
-                  $x_0$ and $x_2$ used in calculating the final weighted
-                  average of $[x_0, None, x_2]$ are
-                  $1-\alpha$ and $1$ if `adjust=True`,
-                  and $1-\alpha$ and $\alpha$ if `adjust=False`.
-
-        Returns:
-            Expr
-        """
-        from narwhals.exceptions import NarwhalsUnstableWarning
-        from narwhals.utils import find_stacklevel
-
-        msg = (
-            "`Expr.ewm_mean` is being called from the stable API although considered "
-            "an unstable feature."
-        )
-        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
-        return super().ewm_mean(
-            com=com,
-            span=span,
-            half_life=half_life,
-            alpha=alpha,
-            adjust=adjust,
-            min_samples=min_samples,
-            ignore_nulls=ignore_nulls,
-        )
-
-    def rolling_sum(
-        self: Self,
-        window_size: int,
-        *,
-        min_samples: int | None = None,
-        center: bool = False,
-    ) -> Self:
-        """Apply a rolling sum (moving sum) over the values.
-
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
-
-        A window of length `window_size` will traverse the values. The resulting values
-        will be aggregated to their sum.
-
-        The window at a given row will include the row itself and the `window_size - 1`
-        elements before it.
-
-        Arguments:
-            window_size: The length of the window in number of elements. It must be a
-                strictly positive integer.
-            min_samples: The number of values in the window that should be non-null before
-                computing a result. If set to `None` (default), it will be set equal to
-                `window_size`. If provided, it must be a strictly positive integer, and
-                less than or equal to `window_size`
-            center: Set the labels at the center of the window.
-
-        Returns:
-            A new expression.
-        """
-        from narwhals.exceptions import NarwhalsUnstableWarning
-        from narwhals.utils import find_stacklevel
-
-        msg = (
-            "`Expr.rolling_sum` is being called from the stable API although considered "
-            "an unstable feature."
-        )
-        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
-        return super().rolling_sum(
-            window_size=window_size,
-            min_samples=min_samples,
-            center=center,
-        )
-
-    def rolling_mean(
-        self: Self,
-        window_size: int,
-        *,
-        min_samples: int | None = None,
-        center: bool = False,
-    ) -> Self:
-        """Apply a rolling mean (moving mean) over the values.
-
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
-
-        A window of length `window_size` will traverse the values. The resulting values
-        will be aggregated to their mean.
-
-        The window at a given row will include the row itself and the `window_size - 1`
-        elements before it.
-
-        Arguments:
-            window_size: The length of the window in number of elements. It must be a
-                strictly positive integer.
-            min_samples: The number of values in the window that should be non-null before
-                computing a result. If set to `None` (default), it will be set equal to
-                `window_size`. If provided, it must be a strictly positive integer, and
-                less than or equal to `window_size`
-            center: Set the labels at the center of the window.
-
-        Returns:
-            A new expression.
-        """
-        from narwhals.exceptions import NarwhalsUnstableWarning
-        from narwhals.utils import find_stacklevel
-
-        msg = (
-            "`Expr.rolling_mean` is being called from the stable API although considered "
-            "an unstable feature."
-        )
-        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
-        return super().rolling_mean(
-            window_size=window_size,
-            min_samples=min_samples,
-            center=center,
-        )
-
-    def rolling_var(
-        self: Self,
-        window_size: int,
-        *,
-        min_samples: int | None = None,
-        center: bool = False,
-        ddof: int = 1,
-    ) -> Self:
-        """Apply a rolling variance (moving variance) over the values.
-
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
-
-        A window of length `window_size` will traverse the values. The resulting values
-        will be aggregated to their variance.
-
-        The window at a given row will include the row itself and the `window_size - 1`
-        elements before it.
-
-        Arguments:
-            window_size: The length of the window in number of elements. It must be a
-                strictly positive integer.
-            min_samples: The number of values in the window that should be non-null before
-                computing a result. If set to `None` (default), it will be set equal to
-                `window_size`. If provided, it must be a strictly positive integer, and
-                less than or equal to `window_size`.
-            center: Set the labels at the center of the window.
-            ddof: Delta Degrees of Freedom; the divisor for a length N window is N - ddof.
-
-        Returns:
-            A new expression.
-        """
-        from narwhals.exceptions import NarwhalsUnstableWarning
-        from narwhals.utils import find_stacklevel
-
-        msg = (
-            "`Expr.rolling_var` is being called from the stable API although considered "
-            "an unstable feature."
-        )
-        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
-        return super().rolling_var(
-            window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
-        )
-
-    def rolling_std(
-        self: Self,
-        window_size: int,
-        *,
-        min_samples: int | None = None,
-        center: bool = False,
-        ddof: int = 1,
-    ) -> Self:
-        """Apply a rolling standard deviation (moving standard deviation) over the values.
-
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
-
-        A window of length `window_size` will traverse the values. The resulting values
-        will be aggregated to their standard deviation.
-
-        The window at a given row will include the row itself and the `window_size - 1`
-        elements before it.
-
-        Arguments:
-            window_size: The length of the window in number of elements. It must be a
-                strictly positive integer.
-            min_samples: The number of values in the window that should be non-null before
-                computing a result. If set to `None` (default), it will be set equal to
-                `window_size`. If provided, it must be a strictly positive integer, and
-                less than or equal to `window_size`
-            center: Set the labels at the center of the window.
-            ddof: Delta Degrees of Freedom; the divisor for a length N window is N - ddof.
-
-        Returns:
-            A new expression.
-        """
-        from narwhals.exceptions import NarwhalsUnstableWarning
-        from narwhals.utils import find_stacklevel
-
-        msg = (
-            "`Expr.rolling_std` is being called from the stable API although considered "
-            "an unstable feature."
-        )
-        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
-        return super().rolling_std(
-            window_size=window_size,
-            min_samples=min_samples,
-            center=center,
-            ddof=ddof,
-        )
-
-    def head(self: Self, n: int = 10) -> Self:
+    def head(self, n: int = 10) -> Self:
         r"""Get the first `n` rows.
 
         Arguments:
@@ -994,10 +489,10 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).head(n),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
+            self._metadata.with_kind_and_closeable_window(ExprKind.FILTRATION),
         )
 
-    def tail(self: Self, n: int = 10) -> Self:
+    def tail(self, n: int = 10) -> Self:
         r"""Get the last `n` rows.
 
         Arguments:
@@ -1008,10 +503,10 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).tail(n),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
+            self._metadata.with_kind_and_closeable_window(ExprKind.FILTRATION),
         )
 
-    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+    def gather_every(self, n: int, offset: int = 0) -> Self:
         r"""Take every nth value in the Series and return as new Series.
 
         Arguments:
@@ -1023,10 +518,10 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
+            self._metadata.with_kind_and_closeable_window(ExprKind.FILTRATION),
         )
 
-    def unique(self: Self, *, maintain_order: bool | None = None) -> Self:
+    def unique(self, *, maintain_order: bool | None = None) -> Self:
         """Return unique values of this expression.
 
         Arguments:
@@ -1048,7 +543,7 @@ class Expr(NwExpr):
             self._metadata.with_kind(ExprKind.FILTRATION),
         )
 
-    def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """Sort this column. Place null values first.
 
         Arguments:
@@ -1062,10 +557,10 @@ class Expr(NwExpr):
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             ),
-            self._metadata.with_extra_open_window(),
+            self._metadata.with_uncloseable_window(),
         )
 
-    def arg_true(self: Self) -> Self:
+    def arg_true(self) -> Self:
         """Find elements where boolean expression is True.
 
         Returns:
@@ -1073,11 +568,11 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).arg_true(),
-            self._metadata.with_kind_and_extra_open_window(ExprKind.FILTRATION),
+            self._metadata.with_kind_and_closeable_window(ExprKind.FILTRATION),
         )
 
     def sample(
-        self: Self,
+        self,
         n: int | None = None,
         *,
         fraction: float | None = None,
@@ -1143,23 +638,32 @@ def _stableify(
     | Any,
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT] | Expr | Any:
     if isinstance(obj, NwDataFrame):
-        return DataFrame(
-            obj._compliant_frame._change_version(Version.V1),
-            level=obj._level,
-        )
+        return DataFrame(obj._compliant_frame._with_version(Version.V1), level=obj._level)
     if isinstance(obj, NwLazyFrame):
-        return LazyFrame(
-            obj._compliant_frame._change_version(Version.V1),
-            level=obj._level,
-        )
+        return LazyFrame(obj._compliant_frame._with_version(Version.V1), level=obj._level)
     if isinstance(obj, NwSeries):
-        return Series(
-            obj._compliant_series._change_version(Version.V1),
-            level=obj._level,
-        )
+        return Series(obj._compliant_series._with_version(Version.V1), level=obj._level)
     if isinstance(obj, NwExpr):
         return Expr(obj._to_compliant_expr, obj._metadata)
     return obj
+
+
+@overload
+def from_native(native_object: SeriesT, **kwds: Any) -> SeriesT: ...
+
+
+@overload
+def from_native(native_object: DataFrameT, **kwds: Any) -> DataFrameT: ...
+
+
+@overload
+def from_native(native_object: LazyFrameT, **kwds: Any) -> LazyFrameT: ...
+
+
+@overload
+def from_native(
+    native_object: DataFrameT | LazyFrameT, **kwds: Any
+) -> DataFrameT | LazyFrameT: ...
 
 
 @overload
@@ -1548,7 +1052,7 @@ def from_native(
 ) -> Any: ...
 
 
-def from_native(
+def from_native(  # noqa: D417
     native_object: IntoFrameT | IntoFrame | IntoSeriesT | IntoSeries | T,
     *,
     strict: bool | None = None,
@@ -1557,6 +1061,7 @@ def from_native(
     eager_or_interchange_only: bool = False,
     series_only: bool = False,
     allow_series: bool | None = None,
+    **kwds: Any,
 ) -> LazyFrame[IntoFrameT] | DataFrame[IntoFrameT] | Series[IntoSeriesT] | T:
     """Convert `native_object` to Narwhals Dataframe, Lazyframe, or Series.
 
@@ -1616,6 +1121,9 @@ def from_native(
     pass_through = validate_strict_and_pass_though(
         strict, pass_through, pass_through_default=False, emit_deprecation_warning=False
     )
+    if kwds:
+        msg = f"from_native() got an unexpected keyword argument {next(iter(kwds))!r}"
+        raise TypeError(msg)
 
     result = _from_native_impl(
         native_object,
@@ -1699,7 +1207,7 @@ def to_native(
     if isinstance(narwhals_object, BaseFrame):
         return narwhals_object._compliant_frame._native_frame
     if isinstance(narwhals_object, Series):
-        return narwhals_object._compliant_series._native_series
+        return narwhals_object._compliant_series.native
 
     if not pass_through:
         msg = f"Expected Narwhals object, got {type(narwhals_object)}."
@@ -1880,7 +1388,7 @@ def len() -> Expr:
     return _stableify(nw.len())
 
 
-def lit(value: Any, dtype: DType | type[DType] | None = None) -> Expr:
+def lit(value: NonNestedLiteral, dtype: DType | type[DType] | None = None) -> Expr:
     """Return an expression representing a literal value.
 
     Arguments:
@@ -2058,35 +1566,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return _stableify(nw.max_horizontal(*exprs))
 
 
-@overload
-def concat(
-    items: Iterable[DataFrame[IntoDataFrameT]],
-    *,
-    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def concat(
-    items: Iterable[LazyFrame[IntoFrameT]],
-    *,
-    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> LazyFrame[IntoFrameT]: ...
-
-
-@overload
-def concat(
-    items: Iterable[DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]],
-    *,
-    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]: ...
-
-
-def concat(
-    items: Iterable[DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]],
-    *,
-    how: Literal["horizontal", "vertical", "diagonal"] = "vertical",
-) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoFrameT]:
+def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT:
     """Concatenate multiple DataFrames, LazyFrames into a single entity.
 
     Arguments:
@@ -2095,17 +1575,18 @@ def concat(
 
             - vertical: Concatenate vertically. Column names must match.
             - horizontal: Concatenate horizontally. If lengths don't match, then
-                missing rows are filled with null values.
+                missing rows are filled with null values. This is only supported
+                when all inputs are (eager) DataFrames.
             - diagonal: Finds a union between the column schemas and fills missing column
                 values with null.
 
     Returns:
-        A new DataFrame, Lazyframe resulting from the concatenation.
+        A new DataFrame or LazyFrame resulting from the concatenation.
 
     Raises:
         TypeError: The items to concatenate should either all be eager, or all lazy
     """
-    return _stableify(nw.concat(items, how=how))
+    return cast("FrameT", _stableify(nw.concat(items, how=how)))
 
 
 def concat_str(
@@ -2137,21 +1618,19 @@ def concat_str(
 
 class When(NwWhen):
     @classmethod
-    def from_when(cls: type, when: NwWhen) -> When:
-        return cls(when._predicate)  # type: ignore[no-any-return]
+    def from_when(cls, when: NwWhen) -> When:
+        return cls(when._predicate)
 
-    def then(self: Self, value: Any) -> Then:
+    def then(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
         return Then.from_then(super().then(value))
 
 
 class Then(NwThen, Expr):
     @classmethod
-    def from_then(cls: type, then: NwThen) -> Then:
-        return cls(  # type: ignore[no-any-return]
-            then._to_compliant_expr, then._metadata
-        )
+    def from_then(cls, then: NwThen) -> Then:
+        return cls(then._to_compliant_expr, then._metadata)
 
-    def otherwise(self: Self, value: Any) -> Expr:
+    def otherwise(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
         return _stableify(super().otherwise(value))
 
 
@@ -2222,7 +1701,7 @@ def new_series(
 
 @deprecate_native_namespace(required=True)
 def from_arrow(
-    native_frame: ArrowStreamExportable,
+    native_frame: IntoArrowTable,
     *,
     backend: ModuleType | Implementation | str | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
@@ -2251,7 +1730,7 @@ def from_arrow(
     """
     backend = cast("ModuleType | Implementation | str", backend)
     return _stableify(  # type: ignore[no-any-return]
-        _from_arrow_impl(native_frame, backend=backend)
+        _from_arrow_impl(native_frame, backend=backend, version=Version.V1)
     )
 
 
@@ -2296,7 +1775,7 @@ def from_dict(
         A new DataFrame.
     """
     return _stableify(  # type: ignore[no-any-return]
-        _from_dict_impl(data, schema, backend=backend)
+        _from_dict_impl(data, schema, backend=backend, version=Version.V1)
     )
 
 
@@ -2338,7 +1817,7 @@ def from_numpy(
         A new DataFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(_from_numpy_impl(data, schema, backend=backend))  # type: ignore[no-any-return]
+    return _stableify(_from_numpy_impl(data, schema, backend=backend, version=Version.V1))  # type: ignore[no-any-return]
 
 
 @deprecate_native_namespace(required=True)
@@ -2471,15 +1950,29 @@ def scan_parquet(
     For the libraries that do not support lazy dataframes, the function reads
     a parquet file eagerly and then converts the resulting dataframe to a lazyframe.
 
+    !!! note
+        Spark like backends require a session object to be passed in `kwargs`.
+
+        For instance:
+
+        ```py
+        import narwhals as nw
+        from sqlframe.duckdb import DuckDBSession
+
+        nw.scan_parquet(source, backend="sqlframe", session=DuckDBSession())
+        ```
+
     Arguments:
         source: Path to a file.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways:
 
             - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+                `POLARS`, `MODIN`, `CUDF`, `PYSPARK` or `SQLFRAME`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"cudf"`,
+                `"pyspark"` or `"sqlframe"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `cudf`,
+                `pyspark.sql` or `sqlframe`.
         native_namespace: The native library to use for DataFrame creation.
 
             **Deprecated** (v1.31.0):

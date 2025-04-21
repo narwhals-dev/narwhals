@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.31.0"
+version = "1.35.0"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
@@ -46,24 +46,6 @@ ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
 sqlframe = ["sqlframe>=3.22.0"]
 
 [dependency-groups]
-dev = [
-  "pre-commit",
-  {include-group = "tests"},
-  {include-group = "typing"},
-]
-dev-core = [
-  {include-group = "dev"},
-  {include-group = "core"},
-]
-core-tests = [
-  {include-group = "core"},
-  {include-group = "tests"},
-]
-local-dev = [
-  {include-group = "dev"},
-  {include-group = "core"},
-  {include-group = "docs"}
-]
 core = [
   "narwhals[duckdb,pandas,polars,pyarrow,sqlframe]"
 ] 
@@ -85,8 +67,8 @@ typing = [
   "typing_extensions",
   "mypy~=1.15.0",
   "pyright",
-  "pyarrow-stubs==17.18",
-  "sqlframe==3.24.1",
+  "pyarrow-stubs==19.1",
+  "sqlframe",
   "polars==1.25.2",
   "uv",
 ]
@@ -100,9 +82,28 @@ docs = [
   "mkdocs-material",
   "mkdocstrings[python]",
   "mkdocstrings-python>=1.16",
+  "sqlframe",
   "pandas",
   "polars>=1.0.0",
   "pyarrow",
+]
+dev = [
+  "pre-commit",
+  {include-group = "tests"},
+  {include-group = "typing"},
+]
+dev-core = [
+  {include-group = "dev"},
+  {include-group = "core"},
+]
+core-tests = [
+  {include-group = "core"},
+  {include-group = "tests"},
+]
+local-dev = [
+  {include-group = "dev"},
+  {include-group = "core"},
+  {include-group = "docs"}
 ]
 
 [tool.hatch.build]
@@ -242,6 +243,7 @@ omit = [
   'narwhals/stable/v1/typing.py',
   'narwhals/this.py',
   'narwhals/_arrow/typing.py',
+  'narwhals/_duckdb/typing.py',
   'narwhals/_spark_like/typing.py',
   # we can't run this in every environment that we measure coverage on due to upper-bound constraits
   'narwhals/_ibis/*',
@@ -253,12 +255,15 @@ omit = [
 exclude_also = [
   "if sys.version_info() <",
   "if .*implementation is Implementation.CUDF",
+  "if .*implementation is Implementation.MODIN",
   "if .*implementation is Implementation.PYSPARK",
   "if .*implementation.is_cudf",
+  "if .*implementation.is_modin",
   "if .*implementation.is_pyspark",
   'request.applymarker\(pytest.mark.xfail',
   'backend_version <',
   'if "cudf" in str\(constructor',
+  'if "modin" in str\(constructor',
   'if "pyspark" in str\(constructor',
   'pytest.skip\('
 ]

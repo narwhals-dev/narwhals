@@ -3,6 +3,7 @@ from __future__ import annotations
 from importlib import import_module
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Sequence
 
 from narwhals.exceptions import UnsupportedDTypeError
 from narwhals.utils import Implementation
@@ -25,10 +26,24 @@ if TYPE_CHECKING:
     _NativeDType: TypeAlias = sqlframe_types.DataType
 
 
+class WindowInputs:
+    __slots__ = ("expr", "order_by", "partition_by")
+
+    def __init__(
+        self,
+        expr: Column,
+        partition_by: Sequence[str],
+        order_by: Sequence[str],
+    ) -> None:
+        self.expr = expr
+        self.partition_by = partition_by
+        self.order_by = order_by
+
+
 # NOTE: don't lru_cache this as `ModuleType` isn't hashable
 def native_to_narwhals_dtype(
     dtype: _NativeDType, version: Version, spark_types: ModuleType
-) -> DType:  # pragma: no cover
+) -> DType:
     dtypes = import_dtypes_module(version=version)
     if TYPE_CHECKING:
         native = sqlframe_types
@@ -54,13 +69,15 @@ def native_to_narwhals_dtype(
     if isinstance(dtype, native.DateType):
         return dtypes.Date()
     if isinstance(dtype, native.TimestampNTZType):
-        return dtypes.Datetime()
+        # TODO(marco): cover this
+        return dtypes.Datetime()  # pragma: no cover
     if isinstance(dtype, native.TimestampType):
         # TODO(marco): is UTC correct, or should we be getting the connection timezone?
         # https://github.com/narwhals-dev/narwhals/issues/2165
         return dtypes.Datetime(time_zone="UTC")
     if isinstance(dtype, native.DecimalType):
-        return dtypes.Decimal()
+        # TODO(marco): cover this
+        return dtypes.Decimal()  # pragma: no cover
     if isinstance(dtype, native.ArrayType):
         return dtypes.List(
             inner=native_to_narwhals_dtype(
@@ -81,7 +98,7 @@ def native_to_narwhals_dtype(
         )
     if isinstance(dtype, native.BinaryType):
         return dtypes.Binary()
-    return dtypes.Unknown()
+    return dtypes.Unknown()  # pragma: no cover
 
 
 def narwhals_to_native_dtype(
@@ -175,18 +192,6 @@ def evaluate_exprs(
         native_results.extend(zip(output_names, native_series_list))
 
     return native_results
-
-
-def maybe_evaluate_expr(df: SparkLikeLazyFrame, obj: SparkLikeExpr | object) -> Column:
-    from narwhals._spark_like.expr import SparkLikeExpr
-
-    if isinstance(obj, SparkLikeExpr):
-        column_results = obj._call(df)
-        if len(column_results) != 1:
-            msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
-            raise ValueError(msg)
-        return column_results[0]
-    return df._F.lit(obj)
 
 
 def _std(

@@ -3,16 +3,16 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
 from typing import Iterable
-from typing import Literal
 from typing import Sequence
 
 import dask.dataframe as dd
 import pandas as pd
 
-from narwhals._compliant import CompliantNamespace
+from narwhals._compliant import CompliantThen
+from narwhals._compliant import CompliantWhen
+from narwhals._compliant import LazyNamespace
+from narwhals._compliant.namespace import DepthTrackingNamespace
 from narwhals._dask.dataframe import DaskLazyFrame
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
@@ -26,9 +26,9 @@ from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals.dtypes import DType
+    from narwhals.typing import ConcatMethod
+    from narwhals.typing import NonNestedLiteral
     from narwhals.utils import Version
 
     try:
@@ -37,24 +37,29 @@ if TYPE_CHECKING:
         import dask_expr as dx
 
 
-class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
+class DaskNamespace(
+    LazyNamespace[DaskLazyFrame, DaskExpr, dd.DataFrame],
+    DepthTrackingNamespace[DaskLazyFrame, DaskExpr],
+):
     _implementation: Implementation = Implementation.DASK
 
     @property
-    def selectors(self: Self) -> DaskSelectorNamespace:
-        return DaskSelectorNamespace(self)
+    def selectors(self) -> DaskSelectorNamespace:
+        return DaskSelectorNamespace.from_namespace(self)
 
     @property
     def _expr(self) -> type[DaskExpr]:
         return DaskExpr
 
-    def __init__(
-        self: Self, *, backend_version: tuple[int, ...], version: Version
-    ) -> None:
+    @property
+    def _lazyframe(self) -> type[DaskLazyFrame]:
+        return DaskLazyFrame
+
+    def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
         self._backend_version = backend_version
         self._version = version
 
-    def lit(self: Self, value: Any, dtype: DType | None) -> DaskExpr:
+    def lit(self, value: NonNestedLiteral, dtype: DType | type[DType] | None) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             if dtype is not None:
                 native_dtype = narwhals_to_native_dtype(dtype, self._version)
@@ -75,7 +80,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
             version=self._version,
         )
 
-    def len(self: Self) -> DaskExpr:
+    def len(self) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             # We don't allow dataframes with 0 columns, so `[0]` is safe.
             return [df._native_frame[df.columns[0]].size.to_series()]
@@ -90,7 +95,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
             version=self._version,
         )
 
-    def all_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
+    def all_horizontal(self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = align_series_full_broadcast(
                 df, *(s for _expr in exprs for s in _expr(df))
@@ -107,7 +112,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
             version=self._version,
         )
 
-    def any_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
+    def any_horizontal(self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = align_series_full_broadcast(
                 df, *(s for _expr in exprs for s in _expr(df))
@@ -124,7 +129,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
             version=self._version,
         )
 
-    def sum_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
+    def sum_horizontal(self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = align_series_full_broadcast(
                 df, *(s for _expr in exprs for s in _expr(df))
@@ -142,10 +147,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
         )
 
     def concat(
-        self: Self,
-        items: Iterable[DaskLazyFrame],
-        *,
-        how: Literal["horizontal", "vertical", "diagonal"],
+        self, items: Iterable[DaskLazyFrame], *, how: ConcatMethod
     ) -> DaskLazyFrame:
         if not items:
             msg = "No items to concatenate"  # pragma: no cover
@@ -169,24 +171,6 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
                 backend_version=self._backend_version,
                 version=self._version,
             )
-        if how == "horizontal":
-            all_column_names: list[str] = [
-                column for frame in dfs for column in frame.columns
-            ]
-            if len(all_column_names) != len(set(all_column_names)):  # pragma: no cover
-                duplicates = [
-                    i for i in all_column_names if all_column_names.count(i) > 1
-                ]
-                msg = (
-                    f"Columns with name(s): {', '.join(duplicates)} "
-                    "have more than one occurrence"
-                )
-                raise AssertionError(msg)
-            return DaskLazyFrame(
-                dd.concat(dfs, axis=1, join="outer"),
-                backend_version=self._backend_version,
-                version=self._version,
-            )
         if how == "diagonal":
             return DaskLazyFrame(
                 dd.concat(dfs, axis=0, join="outer"),
@@ -196,7 +180,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
 
         raise NotImplementedError
 
-    def mean_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
+    def mean_horizontal(self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
             series = align_series_full_broadcast(df, *(s.fillna(0) for s in expr_results))
@@ -220,7 +204,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
             version=self._version,
         )
 
-    def min_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
+    def min_horizontal(self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = align_series_full_broadcast(
                 df, *(s for _expr in exprs for s in _expr(df))
@@ -238,7 +222,7 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
             version=self._version,
         )
 
-    def max_horizontal(self: Self, *exprs: DaskExpr) -> DaskExpr:
+    def max_horizontal(self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = align_series_full_broadcast(
                 df, *(s for _expr in exprs for s in _expr(df))
@@ -256,11 +240,11 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
             version=self._version,
         )
 
-    def when(self: Self, predicate: DaskExpr) -> DaskWhen:
-        return DaskWhen(predicate, self._backend_version, version=self._version)
+    def when(self, predicate: DaskExpr) -> DaskWhen:
+        return DaskWhen.from_expr(predicate, context=self)
 
     def concat_str(
-        self: Self,
+        self,
         *exprs: DaskExpr,
         separator: str,
         ignore_nulls: bool,
@@ -307,23 +291,12 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, "DaskExpr"]):
         )
 
 
-class DaskWhen:
-    def __init__(
-        self: Self,
-        condition: DaskExpr,
-        backend_version: tuple[int, ...],
-        then_value: Any = None,
-        otherwise_value: Any = None,
-        *,
-        version: Version,
-    ) -> None:
-        self._backend_version = backend_version
-        self._condition: DaskExpr = condition
-        self._then_value: DaskExpr | Any = then_value
-        self._otherwise_value: DaskExpr | Any = otherwise_value
-        self._version = version
+class DaskWhen(CompliantWhen[DaskLazyFrame, "dx.Series", DaskExpr]):
+    @property
+    def _then(self) -> type[DaskThen]:
+        return DaskThen
 
-    def __call__(self: Self, df: DaskLazyFrame) -> Sequence[dx.Series]:
+    def __call__(self, df: DaskLazyFrame) -> Sequence[dx.Series]:
         condition = self._condition(df)[0]
 
         if isinstance(self._then_value, DaskExpr):
@@ -339,50 +312,10 @@ class DaskWhen:
         if isinstance(self._otherwise_value, DaskExpr):
             otherwise_value = self._otherwise_value(df)[0]
         else:
-            return [then_series.where(condition, self._otherwise_value)]
+            return [then_series.where(condition, self._otherwise_value)]  # pyright: ignore[reportArgumentType]
         (otherwise_series,) = align_series_full_broadcast(df, otherwise_value)
         validate_comparand(condition, otherwise_series)
         return [then_series.where(condition, otherwise_series)]  # pyright: ignore[reportArgumentType]
 
-    def then(self: Self, value: DaskExpr | Any) -> DaskThen:
-        self._then_value = value
 
-        return DaskThen(
-            self,
-            depth=0,
-            function_name="whenthen",
-            evaluate_output_names=getattr(
-                value, "_evaluate_output_names", lambda _df: ["literal"]
-            ),
-            alias_output_names=getattr(value, "_alias_output_names", None),
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-
-
-class DaskThen(DaskExpr):
-    def __init__(
-        self: Self,
-        call: DaskWhen,
-        *,
-        depth: int,
-        function_name: str,
-        evaluate_output_names: Callable[[DaskLazyFrame], Sequence[str]],
-        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
-        backend_version: tuple[int, ...],
-        version: Version,
-        call_kwargs: dict[str, Any] | None = None,
-    ) -> None:
-        self._backend_version = backend_version
-        self._version = version
-        self._call: DaskWhen = call
-        self._depth = depth
-        self._function_name = function_name
-        self._evaluate_output_names = evaluate_output_names
-        self._alias_output_names = alias_output_names
-        self._call_kwargs = call_kwargs or {}
-
-    def otherwise(self: Self, value: DaskExpr | Any) -> DaskExpr:
-        self._call._otherwise_value = value
-        self._function_name = "whenotherwise"
-        return self
+class DaskThen(CompliantThen[DaskLazyFrame, "dx.Series", DaskExpr], DaskExpr): ...

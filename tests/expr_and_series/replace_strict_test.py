@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import NarwhalsError
 from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
@@ -24,7 +24,7 @@ def test_replace_strict(
 ) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if ("sqlframe" in str(constructor)) or "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     result = df.select(
@@ -59,7 +59,7 @@ def test_replace_non_full(
 ) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     if isinstance(df, nw.LazyFrame):
@@ -80,7 +80,7 @@ def test_replace_strict_mapping(
 ) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor({"a": [1, 2, 3]}))

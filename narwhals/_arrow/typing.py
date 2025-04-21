@@ -15,7 +15,6 @@ if TYPE_CHECKING:
         from typing_extensions import TypeAlias
 
     import pyarrow as pa
-    import pyarrow.compute as pc
     from pyarrow._stubs_typing import (  # pyright: ignore[reportMissingModuleSource]
         Indices,  # noqa: F401
     )
@@ -33,9 +32,13 @@ if TYPE_CHECKING:
     TieBreaker: TypeAlias = Literal["min", "max", "first", "dense"]
     NullPlacement: TypeAlias = Literal["at_start", "at_end"]
 
-    StringArray: TypeAlias = pc.StringArray
     ArrowChunkedArray: TypeAlias = pa.ChunkedArray[Any]
     ArrowArray: TypeAlias = pa.Array[Any]
+    ArrayAny: TypeAlias = "ArrowArray | ArrowChunkedArray"
+    ScalarAny: TypeAlias = pa.Scalar[Any]
+    ArrayOrScalarAny: TypeAlias = "ArrayAny | ScalarAny"
+    ArrayOrScalarT1 = TypeVar("ArrayOrScalarT1", ArrowArray, ArrowChunkedArray, ScalarAny)
+    ArrayOrScalarT2 = TypeVar("ArrayOrScalarT2", ArrowArray, ArrowChunkedArray, ScalarAny)
     _AsPyType = TypeVar("_AsPyType")
 
     class _BasicDataType(pa.DataType, Generic[_AsPyType]): ...

@@ -7,8 +7,9 @@ import pandas as pd
 import pyarrow as pa
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import LengthChangingExprError
+from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
@@ -30,36 +31,38 @@ data_cum = {
 }
 
 
-def test_over_single(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_over_single(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
 
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, 3, 5, 3],
         "c": [5, 4, 3, 2, 1],
+        "i": list(range(5)),
         "c_max": [5, 5, 3, 3, 3],
     }
 
-    result = df.with_columns(c_max=nw.col("c").max().over("a")).sort("i").drop("i")
+    result = df.with_columns(c_max=nw.col("c").max().over("a")).sort("i")
     assert_equal_data(result, expected)
-    result = df.with_columns(c_max=nw.col("c").max().over(["a"])).sort("i").drop("i")
+    result = df.with_columns(c_max=nw.col("c").max().over(["a"])).sort("i")
     assert_equal_data(result, expected)
 
 
 def test_over_std_var(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
 
     df = nw.from_native(constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, 3, 5, 3],
         "c": [5, 4, 3, 2, 1],
+        "i": list(range(5)),
         "c_std0": [0.5, 0.5, 0.816496580927726, 0.816496580927726, 0.816496580927726],
         "c_std1": [0.7071067811865476, 0.7071067811865476, 1.0, 1.0, 1.0],
         "c_var0": [
@@ -72,37 +75,28 @@ def test_over_std_var(request: pytest.FixtureRequest, constructor: Constructor) 
         "c_var1": [0.5, 0.5, 1.0, 1.0, 1.0],
     }
 
-    result = (
-        df.with_columns(
-            c_std0=nw.col("c").std(ddof=0).over("a"),
-            c_std1=nw.col("c").std(ddof=1).over("a"),
-            c_var0=nw.col("c").var(ddof=0).over("a"),
-            c_var1=nw.col("c").var(ddof=1).over("a"),
-        )
-        .sort("i")
-        .drop("i")
-    )
+    result = df.with_columns(
+        c_std0=nw.col("c").std(ddof=0).over("a"),
+        c_std1=nw.col("c").std(ddof=1).over("a"),
+        c_var0=nw.col("c").var(ddof=0).over("a"),
+        c_var1=nw.col("c").var(ddof=1).over("a"),
+    ).sort("i")
     assert_equal_data(result, expected)
 
 
-def test_over_multiple(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
+def test_over_multiple(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     df = nw.from_native(constructor(data))
-    expected = {
-        "a": ["a", "a", "b", "b", "b"],
-        "b": [1, 2, 3, 3, 5],
-        "c": [5, 4, 3, 1, 2],
-        "c_min": [5, 4, 1, 1, 2],
-    }
     expected = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, 3, 5, 3],
         "c": [5, 4, 3, 2, 1],
+        "i": list(range(5)),
+        "c_min": [5, 4, 1, 2, 1],
     }
 
-    result = df.with_columns(c_min=nw.col("c").min().over("a", "b")).sort("i").drop("i")
+    result = df.with_columns(c_min=nw.col("c").min().over("a", "b")).sort("i")
     assert_equal_data(result, expected)
 
 
@@ -275,9 +269,8 @@ def test_over_anonymous_cumulative(
 def test_over_anonymous_reduction(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor):
-        # TODO(unassigned): we should be able to support these
-        request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     if "modin" in str(constructor):
         # probably bugged
         request.applymarker(pytest.mark.xfail)
@@ -421,7 +414,7 @@ def test_over_without_partition_by(
 ) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
-    if "duckdb" in str(constructor):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         # windows not yet supported
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
@@ -429,9 +422,24 @@ def test_over_without_partition_by(
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, -1, 2], "i": [0, 2, 1]}))
     result = (
-        df.with_columns(b=nw.col("a").abs().cum_sum().over(_order_by="i"))
+        df.with_columns(b=nw.col("a").abs().cum_sum().over(order_by="i"))
         .sort("i")
         .select("a", "b", "i")
     )
     expected = {"a": [1, 2, -1], "b": [1, 3, 4], "i": [0, 1, 2]}
+    assert_equal_data(result, expected)
+
+
+def test_len_over_2369(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 5):
+        pytest.skip()
+    if any(x in str(constructor) for x in ("modin", "cudf")):
+        # https://github.com/modin-project/modin/issues/7508
+        # https://github.com/rapidsai/cudf/issues/18491
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor({"a": [1, 2, 4], "b": ["x", "x", "y"]}))
+    result = df.with_columns(a_len_per_group=nw.len().over("b")).sort("a")
+    expected = {"a": [1, 2, 4], "b": ["x", "x", "y"], "a_len_per_group": [2, 2, 1]}
     assert_equal_data(result, expected)

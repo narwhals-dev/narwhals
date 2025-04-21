@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
@@ -15,25 +15,25 @@ if TYPE_CHECKING:
     from narwhals.stable.v1.dtypes import DType
 
 data = {
-    "a": ["x", "y", "z"],
+    "a": [7, 8, 9],
     "b": [1, 3, 5],
     "c": [2, 4, 6],
 }
 
 expected_on_b_idx_a = {
-    "a": ["x", "y", "z"],
+    "a": [7, 8, 9],
     "variable": ["b", "b", "b"],
     "value": [1, 3, 5],
 }
 
 expected_on_b_c_idx_a = {
-    "a": ["x", "y", "z", "x", "y", "z"],
+    "a": [7, 8, 9, 7, 8, 9],
     "variable": ["b", "b", "b", "c", "c", "c"],
     "value": [1, 3, 5, 2, 4, 6],
 }
 
 expected_on_none_idx_a = {
-    "a": ["x", "y", "z", "x", "y", "z"],
+    "a": [7, 8, 9, 7, 8, 9],
     "variable": ["b", "b", "b", "c", "c", "c"],
     "value": [1, 3, 5, 2, 4, 6],
 }
@@ -45,7 +45,7 @@ expected_on_b_c_idx_none = {
 
 expected_on_none_idx_none = {
     "variable": ["a", "a", "a", "b", "b", "b", "c", "c", "c"],
-    "value": ["x", "y", "z", "1", "3", "5", "2", "4", "6"],
+    "value": [7, 8, 9, 1, 3, 5, 2, 4, 6],
 }
 
 
@@ -64,11 +64,7 @@ def test_unpivot(
     on: str | list[str] | None,
     index: list[str] | None,
     expected: dict[str, list[float]],
-    request: pytest.FixtureRequest,
 ) -> None:
-    if on is None and index is None and "polars" not in str(constructor):
-        # TODO(2082): add support in other backends
-        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     sort_columns = ["variable"] if index is None else ["variable", "a"]
     result = df.unpivot(on=on, index=index).sort(by=sort_columns)
