@@ -147,8 +147,8 @@ class PandasLikeSeries(EagerSeries[Any]):
             self._implementation, self._backend_version, self._version
         )
 
-    def _gather(self, rows: SizedMultiIndexSelector[pd.Series[Any]]) -> Self:
-        rows = list(rows) if isinstance(rows, tuple) else rows
+    def _gather(self, item: SizedMultiIndexSelector[pd.Series[Any]]) -> Self:
+        rows = list(item) if isinstance(item, tuple) else item
         return self._with_native(self.native.iloc[rows])
 
     def _gather_slice(self, item: _SliceIndex | range) -> Self:

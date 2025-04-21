@@ -283,8 +283,8 @@ class PandasLikeDataFrame(
     def __array__(self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
         return self.to_numpy(dtype=dtype, copy=copy)
 
-    def _gather(self, items: SizedMultiIndexSelector[pd.Series[Any]]) -> Self:
-        items = list(items) if isinstance(items, tuple) else items
+    def _gather(self, item: SizedMultiIndexSelector[pd.Series[Any]]) -> Self:
+        items = list(item) if isinstance(item, tuple) else item
         return self._with_native(self.native.iloc[items, :])
 
     def _gather_slice(self, item: _SliceIndex | range) -> Self:
@@ -293,30 +293,30 @@ class PandasLikeDataFrame(
             validate_column_names=False,
         )
 
-    def _select_slice_of_labels(self, item: _SliceName) -> Self:
+    def _select_slice_name(self, item: _SliceName) -> Self:
         start, stop, step = convert_str_slice_to_int_slice(item, self.native.columns)
         return self._with_native(
             self.native.iloc[:, slice(start, stop, step)],
             validate_column_names=False,
         )
 
-    def _select_slice_of_indices(self, item: _SliceIndex | range) -> Self:
+    def _select_slice_index(self, item: _SliceIndex | range) -> Self:
         return self._with_native(
             self.native.iloc[:, slice(item.start, item.stop, item.step)],
             validate_column_names=False,
         )
 
-    def _select_indices(self, item: SizedMultiIndexSelector[pd.Series[Any]]) -> Self:
+    def _select_multi_index(self, item: SizedMultiIndexSelector[pd.Series[Any]]) -> Self:
         item = list(item) if isinstance(item, tuple) else item
         return self._with_native(
             self.native.iloc[:, item],
             validate_column_names=False,
         )
 
-    def _select_labels(
-        self, indices: SizedMultiNameSelector[pd.Series[Any]]
+    def _select_multi_name(
+        self, item: SizedMultiNameSelector[pd.Series[Any]]
     ) -> PandasLikeDataFrame:
-        return self._with_native(self.native.loc[:, indices])
+        return self._with_native(self.native.loc[:, item])
 
     # --- properties ---
     @property

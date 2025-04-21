@@ -396,15 +396,14 @@ class EagerDataFrame(
     ) -> list[str]:
         return list(columns or (f"column_{x}" for x in range(data.shape[1])))
 
-    def _gather(self, indices: SizedMultiIndexSelector[NativeSeriesT]) -> Self: ...
-    def _gather_slice(self, indices: _SliceIndex | range) -> Self: ...
-    def _select_indices(
-        self, indices: SizedMultiIndexSelector[NativeSeriesT]
+    def _gather(self, item: SizedMultiIndexSelector[NativeSeriesT]) -> Self: ...
+    def _gather_slice(self, item: _SliceIndex | range) -> Self: ...
+    def _select_multi_index(
+        self, item: SizedMultiIndexSelector[NativeSeriesT]
     ) -> Self: ...
-    def _select_labels(self, indices: SizedMultiNameSelector[NativeSeriesT]) -> Self: ...
-    def _select_slice_of_indices(self, indices: _SliceIndex | range) -> Self: ...
-    def _select_slice_of_labels(self, item: _SliceName) -> Self: ...
-
+    def _select_multi_name(self, item: SizedMultiNameSelector[NativeSeriesT]) -> Self: ...
+    def _select_slice_index(self, item: _SliceIndex | range) -> Self: ...
+    def _select_slice_name(self, item: _SliceName) -> Self: ...
     def __getitem__(
         self,
         item: tuple[
@@ -419,17 +418,17 @@ class EagerDataFrame(
                 return compliant.select()
             if is_index_selector(columns):
                 if is_slice_index(columns) or is_range(columns):
-                    compliant = compliant._select_slice_of_indices(columns)
+                    compliant = compliant._select_slice_index(columns)
                 elif is_compliant_series(columns):
-                    compliant = self._select_indices(columns.native)
+                    compliant = self._select_multi_index(columns.native)
                 else:
-                    compliant = compliant._select_indices(columns)
+                    compliant = compliant._select_multi_index(columns)
             elif isinstance(columns, slice):
-                compliant = compliant._select_slice_of_labels(columns)
+                compliant = compliant._select_slice_name(columns)
             elif is_compliant_series(columns):
-                compliant = self._select_labels(columns.native)
+                compliant = self._select_multi_name(columns.native)
             elif is_sequence_like(columns):
-                compliant = self._select_labels(columns)
+                compliant = self._select_multi_name(columns)
             else:
                 msg = f"Unreachable code, got unexpected type: {type(columns)}"
                 raise AssertionError(msg)

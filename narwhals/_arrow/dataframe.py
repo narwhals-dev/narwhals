@@ -269,16 +269,18 @@ class ArrowDataFrame(
             raise NotImplementedError(msg)
         return self._with_native(self.native.slice(start, stop - start))
 
-    def _select_slice_of_labels(self, item: _SliceName) -> Self:
+    def _select_slice_name(self, item: _SliceName) -> Self:
         start, stop, step = convert_str_slice_to_int_slice(item, self.columns)
         return self._with_native(self.native.select(self.columns[start:stop:step]))
 
-    def _select_slice_of_indices(self, item: _SliceIndex | range) -> Self:
+    def _select_slice_index(self, item: _SliceIndex | range) -> Self:
         return self._with_native(
             self.native.select(self.columns[item.start : item.stop : item.step])
         )
 
-    def _select_indices(self, item: SizedMultiIndexSelector[ArrowChunkedArray]) -> Self:
+    def _select_multi_index(
+        self, item: SizedMultiIndexSelector[ArrowChunkedArray]
+    ) -> Self:
         selector: Sequence[int] | Sequence[str]
         if isinstance(item, pa.ChunkedArray):
             # TODO @dangotbanned: Fix upstream with `pa.ChunkedArray.to_pylist(self) -> list[Any]:`
@@ -291,7 +293,7 @@ class ArrowDataFrame(
             selector = item
         return self._with_native(self.native.select(selector))
 
-    def _select_labels(self, item: SizedMultiNameSelector[ArrowChunkedArray]) -> Self:
+    def _select_multi_name(self, item: SizedMultiNameSelector[ArrowChunkedArray]) -> Self:
         selector: Sequence[str] | _1DArray
         if isinstance(item, pa.ChunkedArray):
             # TODO @dangotbanned: Fix upstream with `pa.ChunkedArray.to_pylist(self) -> list[Any]:`
