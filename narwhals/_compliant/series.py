@@ -52,6 +52,7 @@ if TYPE_CHECKING:
     from narwhals.typing import SizedMultiIndexSelector
     from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
+    from narwhals.typing import _SliceIndex
     from narwhals.utils import Implementation
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -320,8 +321,8 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
     def _to_expr(self) -> EagerExpr[Any, Any]:
         return self.__narwhals_namespace__()._expr._from_series(self)  # type: ignore[no-any-return]
 
-    def _gather(self, indices: SizedMultiIndexSelector) -> Self: ...
-    def _gather_slice(self, indices: slice | range) -> Self: ...
+    def _gather(self, indices: SizedMultiIndexSelector[NativeSeriesT]) -> Self: ...
+    def _gather_slice(self, indices: _SliceIndex | range) -> Self: ...
 
     def __getitem__(self, item: Any) -> Self:
         if is_slice_none(item):

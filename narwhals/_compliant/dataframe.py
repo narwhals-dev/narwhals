@@ -13,7 +13,6 @@ from typing import TypeVar
 from typing import overload
 
 from narwhals._compliant.typing import CompliantExprT_contra
-from narwhals._compliant.typing import CompliantSeriesAny
 from narwhals._compliant.typing import CompliantSeriesT
 from narwhals._compliant.typing import EagerExprT
 from narwhals._compliant.typing import EagerSeriesT
@@ -55,6 +54,7 @@ if TYPE_CHECKING:
     from narwhals.typing import LazyUniqueKeepStrategy
     from narwhals.typing import MultiColSelector
     from narwhals.typing import MultiIndexSelector
+    from narwhals.typing import NativeSeries
     from narwhals.typing import PivotAgg
     from narwhals.typing import SingleIndexSelector
     from narwhals.typing import SizedMultiIndexSelector
@@ -396,22 +396,18 @@ class EagerDataFrame(
     ) -> list[str]:
         return list(columns or (f"column_{x}" for x in range(data.shape[1])))
 
-    def _gather(self, indices: SizedMultiIndexSelector[CompliantSeriesAny]) -> Self: ...
+    def _gather(self, indices: SizedMultiIndexSelector[NativeSeries]) -> Self: ...
     def _gather_slice(self, indices: _SliceIndex | range) -> Self: ...
-    def _select_indices(
-        self, indices: SizedMultiIndexSelector[CompliantSeriesAny]
-    ) -> Self: ...
-    def _select_labels(
-        self, indices: SizedMultiNameSelector[CompliantSeriesAny]
-    ) -> Self: ...
+    def _select_indices(self, indices: SizedMultiIndexSelector[NativeSeries]) -> Self: ...
+    def _select_labels(self, indices: SizedMultiNameSelector[NativeSeries]) -> Self: ...
     def _select_slice_of_indices(self, indices: _SliceIndex | range) -> Self: ...
     def _select_slice_of_labels(self, item: _SliceName) -> Self: ...
 
     def __getitem__(
         self,
         item: tuple[
-            SingleIndexSelector | MultiIndexSelector[CompliantSeriesAny],
-            MultiIndexSelector[CompliantSeriesAny] | MultiColSelector[CompliantSeriesAny],
+            SingleIndexSelector | MultiIndexSelector[EagerSeriesT],
+            MultiIndexSelector[EagerSeriesT] | MultiColSelector[EagerSeriesT],
         ],
     ) -> Self:
         rows, columns = item

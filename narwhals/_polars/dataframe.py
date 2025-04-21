@@ -302,7 +302,7 @@ class PolarsDataFrame:
                     elif is_compliant_series(columns):
                         native = native[:, columns.native.to_list()]
                     else:
-                        native = native[:, columns]  # type: ignore[index]
+                        native = native[:, columns]
                 elif isinstance(columns, slice):
                     native = native.select(
                         self.columns[

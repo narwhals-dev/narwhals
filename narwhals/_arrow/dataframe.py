@@ -49,7 +49,6 @@ if TYPE_CHECKING:
     from narwhals._arrow.group_by import ArrowGroupBy
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.typing import ArrowChunkedArray
-    from narwhals._arrow.typing import Indices  # type: ignore[attr-defined]
     from narwhals._arrow.typing import Mask  # type: ignore[attr-defined]
     from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
     from narwhals._translate import IntoArrowTable
@@ -62,6 +61,7 @@ if TYPE_CHECKING:
     from narwhals.typing import SizedMultiNameSelector
     from narwhals.typing import SizeUnit
     from narwhals.typing import UniqueKeepStrategy
+    from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
     from narwhals.typing import _SliceIndex
     from narwhals.typing import _SliceName
@@ -248,12 +248,12 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
     def __array__(self, dtype: Any, *, copy: bool | None) -> _2DArray:
         return self.native.__array__(dtype, copy=copy)
 
-    def _gather(self, item: SizedMultiIndexSelector) -> Self:
+    def _gather(self, item: SizedMultiIndexSelector[ArrowChunkedArray]) -> Self:
         if len(item) == 0:
             return self._with_native(self.native.slice(0, 0))
         if self._backend_version < (18,) and isinstance(item, tuple):
             item = list(item)
-        return self._with_native(self.native.take(item))  # pyright: ignore[reportArgumentType]
+        return self._with_native(self.native.take(item))
 
     def _gather_slice(self, item: _SliceIndex | range) -> Self:
         start = item.start or 0
@@ -276,18 +276,28 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             self.native.select(self.columns[item.start : item.stop : item.step])
         )
 
-    def _select_indices(self, item: SizedMultiIndexSelector) -> Self:
+    def _select_indices(self, item: SizedMultiIndexSelector[ArrowChunkedArray]) -> Self:
+        selector: Sequence[int] | Sequence[str]
         if isinstance(item, pa.ChunkedArray):
-            item = item.to_pylist()  # pyright: ignore[reportAssignmentType]
-        if is_numpy_array(item):
-            item = item.tolist()
-        return self._with_native(self.native.select(cast("Indices", item)))
+            # TODO @dangotbanned: Fix upstream with `pa.ChunkedArray.to_pylist(self) -> list[Any]:`
+            selector = cast("Sequence[int]", item.to_pylist())
+        # NOTE: Probably don't need to convert to a list here?
+        elif is_numpy_array(item):
+            selector = item.tolist()
+        else:
+            selector = item
+        return self._with_native(self.native.select(selector))
 
-    def _select_labels(self, item: SizedMultiNameSelector) -> Self:
+    def _select_labels(self, item: SizedMultiNameSelector[ArrowChunkedArray]) -> Self:
+        selector: Sequence[str] | _1DArray
         if isinstance(item, pa.ChunkedArray):
-            item = item.to_pylist()  # pyright: ignore[reportAssignmentType]
-        # pyarrow-stubs overly strict, accept list[str] | Indices
-        return self._with_native(self.native.select(item))  # pyright: ignore[reportArgumentType]
+            # TODO @dangotbanned: Fix upstream with `pa.ChunkedArray.to_pylist(self) -> list[Any]:`
+            selector = cast("Sequence[str]", item.to_pylist())
+        else:
+            selector = item
+        # TODO @dangotbanned: Fix upstream `pa.Table.select` https://github.com/zen-xu/pyarrow-stubs/blob/f899bb35e10b36f7906a728e9f8acf3e0a1f9f64/pyarrow-stubs/__lib_pxi/table.pyi#L597
+        # NOTE: Investigate what `cython` actually checks
+        return self._with_native(self.native.select(selector))  # pyright: ignore[reportArgumentType]
 
     @property
     def schema(self) -> dict[str, DType]:

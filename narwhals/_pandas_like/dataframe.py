@@ -281,7 +281,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
     def __array__(self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
         return self.to_numpy(dtype=dtype, copy=copy)
 
-    def _gather(self, items: SizedMultiIndexSelector) -> Self:
+    def _gather(self, items: SizedMultiIndexSelector[pd.Series[Any]]) -> Self:
         items = list(items) if isinstance(items, tuple) else items
         return self._with_native(self.native.iloc[items, :])
 
@@ -304,14 +304,16 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             validate_column_names=False,
         )
 
-    def _select_indices(self, item: SizedMultiIndexSelector) -> Self:
+    def _select_indices(self, item: SizedMultiIndexSelector[pd.Series[Any]]) -> Self:
         item = list(item) if isinstance(item, tuple) else item
         return self._with_native(
             self.native.iloc[:, item],
             validate_column_names=False,
         )
 
-    def _select_labels(self, indices: SizedMultiNameSelector) -> PandasLikeDataFrame:
+    def _select_labels(
+        self, indices: SizedMultiNameSelector[pd.Series[Any]]
+    ) -> PandasLikeDataFrame:
         return self._with_native(self.native.loc[:, indices])
 
     # --- properties ---
