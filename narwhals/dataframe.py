@@ -884,13 +884,21 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         from narwhals.series import Series
 
+        msg = (
+            f"Unexpected type for `DataFrame.__getitem__`, got: {type(item)}.\n\n"
+            "Hints:\n"
+            "- use `df.item` to select a single item.\n"
+            "- Use `df[indices, :]` to select rows positionally.\n"
+            "- Use `df.filter(mask)` to filter rows based on a boolean mask."
+        )
+
         if isinstance(item, tuple):
             if len(item) > 2:
-                msg = (
+                tuple_msg = (
                     "Tuples cannot be passed to DataFrame.__getitem__ directly.\n\n"
                     "Hint: instead of `df[indices]`, did you mean `df[indices, :]`?"
                 )
-                raise TypeError(msg)
+                raise TypeError(tuple_msg)
             # These are so heavily overloaded that we just ignore the types for now.
             rows = None if not item or is_slice_none(item[0]) else item[0]
             columns = None if len(item) < 2 or is_slice_none(item[1]) else item[1]
@@ -903,18 +911,14 @@ class DataFrame(BaseFrame[DataFrameT]):
             rows = None
             columns = item
         else:
-            msg = (
-                f"Unexpected type for `DataFrame.__getitem__`, got: {type(item)}.\n\n"
-                "Hints:\n"
-                "- use `df.item` to select a single item.\n"
-                "- Use `df[indices, :]` to select rows positionally.\n"
-                "- Use `df.filter(mask)` to filter rows based on a boolean mask."
-            )
+            raise TypeError(msg)
+
+        if isinstance(rows, str):
             raise TypeError(msg)
 
         compliant = self._compliant_frame
 
-        if isinstance(columns, (int, str)) and not isinstance(rows, str):
+        if isinstance(columns, (int, str)):
             if isinstance(rows, int):
                 return self.item(rows, columns)
             col_name = columns if isinstance(columns, str) else self.columns[columns]

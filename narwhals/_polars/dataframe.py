@@ -24,7 +24,9 @@ from narwhals.utils import _into_arrow_table
 from narwhals.utils import convert_str_slice_to_int_slice
 from narwhals.utils import is_compliant_series
 from narwhals.utils import is_index_selector
+from narwhals.utils import is_range
 from narwhals.utils import is_sequence_like
+from narwhals.utils import is_slice_index
 from narwhals.utils import is_slice_none
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -291,9 +293,9 @@ class PolarsDataFrame:
             native = self.native
             if not is_slice_none(columns):
                 if isinstance(columns, Sized) and len(columns) == 0:
-                    native = native.select()
+                    return self.select()
                 if is_index_selector(columns):
-                    if isinstance(columns, (slice, range)):
+                    if is_slice_index(columns) or is_range(columns):
                         native = native.select(
                             self.columns[slice(columns.start, columns.stop, columns.step)]
                         )
