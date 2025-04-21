@@ -19,7 +19,6 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_and_extract_native
 from narwhals._pandas_like.utils import align_series_full_broadcast
 from narwhals._pandas_like.utils import check_column_names_are_unique
-from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
 from narwhals._pandas_like.utils import get_dtype_backend
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
@@ -294,10 +293,12 @@ class PandasLikeDataFrame(
         )
 
     def _select_slice_name(self, item: _SliceName) -> Self:
-        start, stop, step = convert_str_slice_to_int_slice(item, self.native.columns)
+        columns = self.native.columns
+        start = columns.get_loc(item.start) if item.start is not None else None
+        stop = columns.get_loc(item.stop) + 1 if item.stop is not None else None
+        selector = slice(start, stop, item.step)
         return self._with_native(
-            self.native.iloc[:, slice(start, stop, step)],
-            validate_column_names=False,
+            self.native.iloc[:, selector], validate_column_names=False
         )
 
     def _select_slice_index(self, item: _SliceIndex | range) -> Self:
