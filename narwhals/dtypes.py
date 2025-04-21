@@ -502,6 +502,8 @@ class Enum(DType):
         return hash((self.__class__, tuple(self.categories)))
 
     def __repr__(self) -> str:  # pragma: no cover
+        if self._categories is None:
+            return f"{type(self).__name__}(categories=[...])"
         return f"{type(self).__name__}(categories={list(self.categories)!r})"
 
 

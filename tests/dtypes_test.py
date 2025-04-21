@@ -435,3 +435,28 @@ def test_enum_categories_immutable() -> None:
     dtype = nw.Enum(["a", "b"])
     with pytest.raises(TypeError, match="does not support item assignment"):
         dtype.categories[0] = "c"  # type: ignore[index]
+
+
+def test_enum_repr_pd() -> None:
+    df = nw.from_native(
+        pd.DataFrame({"a": ["a", "b"]}, dtype=pd.CategoricalDtype(ordered=True))
+    )
+    dtype = df.schema["a"]
+    result = str(dtype)
+    assert "Enum(categories=[...])" in result
+    assert dtype.categories == ("a", "b")  # type: ignore[attr-defined]
+    assert "Enum(categories=['a', 'b'])" in str(dtype)
+
+
+def test_enum_repr_pl() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = nw.from_native(
+        pl.DataFrame({"a": ["a", "b"]}, schema={"a": pl.Enum(["a", "b"])})
+    )
+    dtype = df.schema["a"]
+    result = str(dtype)
+    assert "Enum(categories=[...])" in result
+    assert dtype.categories == ("a", "b")  # type: ignore[attr-defined]
+    assert "Enum(categories=['a', 'b'])" in str(dtype)
