@@ -467,3 +467,8 @@ def test_enum_repr() -> None:
     assert "Enum(categories=['a', 'b'])" in str(result)
     result = nw.Enum(nw.Implementation)
     assert "Enum(categories=[1, 2, 3" in str(result)
+
+
+def test_enum_hash() -> None:
+    assert nw.Enum(["a", "b"]) in {nw.Enum(["a", "b"])}
+    assert nw.Enum(["a", "b"]) not in {nw.Enum(["a", "b", "c"])}

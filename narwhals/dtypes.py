@@ -464,7 +464,8 @@ class Categorical(DType):
 class Enum(DType):
     """A fixed categorical encoding of a unique set of strings.
 
-    Polars has an Enum data type, while pandas and PyArrow do not.
+    Polars has an Enum data type. In pandas, ordered categories get mapped
+    to Enum. PyArrow has no Enum equivalent.
 
     Examples:
        >>> import narwhals as nw
@@ -501,10 +502,10 @@ class Enum(DType):
             return other is Enum
         return isinstance(other, type(self)) and self.categories == other.categories
 
-    def __hash__(self) -> int:  # pragma: no cover
+    def __hash__(self) -> int:
         return hash((self.__class__, tuple(self.categories)))
 
-    def __repr__(self) -> str:  # pragma: no cover
+    def __repr__(self) -> str:
         if self._categories is None:
             return f"{type(self).__name__}(categories=[...])"
         return f"{type(self).__name__}(categories={list(self.categories)!r})"
