@@ -10,6 +10,7 @@ from typing import Mapping
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
+    from typing import Callable
     from typing import Iterable
     from typing import Iterator
     from typing import Sequence
@@ -471,13 +472,25 @@ class Enum(DType):
        Enum(categories=['beluga', 'narwhal', 'orca'])
     """
 
-    categories: Sequence[str]
-
-    def __init__(self, categories: Iterable[str] | type[enum.Enum]) -> None:
+    def __init__(
+        self, categories: Iterable[str] | type[enum.Enum] | Callable[[], tuple[str, ...]]
+    ) -> None:
+        self._get_categories: Callable[[], tuple[str, ...]]
         if isinstance(categories, type) and issubclass(categories, enum.Enum):
-            self.categories = tuple(member.value for member in categories)
+            self._get_categories = lambda: tuple(member.value for member in categories)
+        elif callable(categories):
+            self._get_categories = categories
         else:
-            self.categories = tuple(categories)
+            self._get_categories = lambda: tuple(categories)
+        self._categories: tuple[str, ...] | None = None
+
+    @property
+    def categories(self) -> tuple[str, ...]:
+        # Converting the native categories object to a tuple isn't free, so we make
+        # sure to only do so when necessary.
+        if self._categories is None:
+            self._categories = self._get_categories()
+        return self._categories
 
     def __eq__(self, other: object) -> bool:
         # allow comparing object instances to class
