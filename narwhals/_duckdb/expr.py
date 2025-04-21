@@ -683,7 +683,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         limit: int | None,
     ) -> Self:
         if strategy is not None:
-            if self._backend_version < (1, 3):
+            if self._backend_version < (1, 3):  # pragma: no cover
                 msg = f"`fill_null` with `strategy={strategy} is only available in DuckDB>=1.3.0."
                 raise NotImplementedError(msg)
 

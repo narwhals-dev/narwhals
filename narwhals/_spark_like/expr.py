@@ -705,8 +705,10 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         strategy: FillNullStrategy | None,
         limit: int | None,
     ) -> Self:
-        if strategy is not None:
-
+        if strategy is not None:  # pragma: no cover
+            # TODO(Fbruzzesi): This is covered by pyspark, which however we do not run in
+            # the main CI suite. On the other hand, SQLFrame fails. We should figure out
+            # why and how to fix it, either upstream or from our side!
             def _fill_with_strategy(window_inputs: WindowInputs) -> Column:
                 fill_func = self._F.last if strategy == "forward" else self._F.first
 
