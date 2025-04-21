@@ -485,7 +485,9 @@ class Enum(DType):
             self._get_categories = lambda: tuple(categories)
             self._categories = self._get_categories()
         elif callable(categories):
-            self._get_categories = categories
+            # Incompatible types in assignment (expression has type "Callable[[], tuple[str, ...]] | type[object]",
+            # variable has type "Callable[[], tuple[str, ...]]")
+            self._get_categories = categories  # type: ignore[assignment]
             self._categories = None
         else:
             msg = f"Invalid type, expected Iterable of strings or Enum, got: {type(categories)}"
