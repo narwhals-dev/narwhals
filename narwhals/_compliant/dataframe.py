@@ -17,6 +17,7 @@ from narwhals._compliant.typing import CompliantSeriesT
 from narwhals._compliant.typing import EagerExprT
 from narwhals._compliant.typing import EagerSeriesT
 from narwhals._compliant.typing import NativeFrameT
+from narwhals._compliant.typing import NativeSeriesT
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._translate import ArrowConvertible
 from narwhals._translate import DictConvertible
@@ -54,7 +55,6 @@ if TYPE_CHECKING:
     from narwhals.typing import LazyUniqueKeepStrategy
     from narwhals.typing import MultiColSelector
     from narwhals.typing import MultiIndexSelector
-    from narwhals.typing import NativeSeries
     from narwhals.typing import PivotAgg
     from narwhals.typing import SingleIndexSelector
     from narwhals.typing import SizedMultiIndexSelector
@@ -353,11 +353,11 @@ class CompliantLazyFrame(
 class EagerDataFrame(
     CompliantDataFrame[EagerSeriesT, EagerExprT, NativeFrameT],
     CompliantLazyFrame[EagerExprT, NativeFrameT],
-    Protocol[EagerSeriesT, EagerExprT, NativeFrameT],
+    Protocol[EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
 ):
     def __narwhals_namespace__(
         self,
-    ) -> EagerNamespace[Self, EagerSeriesT, EagerExprT, NativeFrameT, Any]: ...
+    ) -> EagerNamespace[Self, EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT]: ...
 
     def _evaluate_expr(self, expr: EagerExprT, /) -> EagerSeriesT:
         """Evaluate `expr` and ensure it has a **single** output."""
@@ -396,10 +396,12 @@ class EagerDataFrame(
     ) -> list[str]:
         return list(columns or (f"column_{x}" for x in range(data.shape[1])))
 
-    def _gather(self, indices: SizedMultiIndexSelector[NativeSeries]) -> Self: ...
+    def _gather(self, indices: SizedMultiIndexSelector[NativeSeriesT]) -> Self: ...
     def _gather_slice(self, indices: _SliceIndex | range) -> Self: ...
-    def _select_indices(self, indices: SizedMultiIndexSelector[NativeSeries]) -> Self: ...
-    def _select_labels(self, indices: SizedMultiNameSelector[NativeSeries]) -> Self: ...
+    def _select_indices(
+        self, indices: SizedMultiIndexSelector[NativeSeriesT]
+    ) -> Self: ...
+    def _select_labels(self, indices: SizedMultiNameSelector[NativeSeriesT]) -> Self: ...
     def _select_slice_of_indices(self, indices: _SliceIndex | range) -> Self: ...
     def _select_slice_of_labels(self, item: _SliceName) -> Self: ...
 

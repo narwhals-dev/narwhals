@@ -81,7 +81,9 @@ if TYPE_CHECKING:
     PromoteOptions: TypeAlias = Literal["none", "default", "permissive"]
 
 
-class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
+class ArrowDataFrame(
+    EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table", "pa.ChunkedArray[Any]"]
+):
     def __init__(
         self,
         native_dataframe: pa.Table,
