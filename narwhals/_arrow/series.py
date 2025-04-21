@@ -412,7 +412,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             return self._with_native(self.native.slice(0, 0))
         if self._backend_version < (18,) and isinstance(item, tuple):
             item = list(item)
-        return self._with_native(self.native.take(item))
+        return self._with_native(self.native.take(item))  # pyright: ignore[reportArgumentType]
 
     def _gather_slice(self, item: slice | range) -> Self:
         start = item.start or 0

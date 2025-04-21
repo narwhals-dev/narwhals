@@ -277,7 +277,7 @@ class PolarsDataFrame:
             rows_native = rows.native if is_compliant_series(rows) else rows
             columns_native = columns.native if is_compliant_series(columns) else columns
             selector = rows_native, columns_native
-            selected = self.native.__getitem__(selector)
+            selected = self.native.__getitem__(selector)  # type: ignore[index]
             return self._from_native_object(selected)
         else:  # pragma: no cover
             # TODO(marco): we can delete this branch after Polars==0.20.30 becomes the minimum
@@ -300,7 +300,7 @@ class PolarsDataFrame:
                     elif is_compliant_series(columns):
                         native = native[:, columns.native.to_list()]
                     else:
-                        native = native[:, columns]
+                        native = native[:, columns]  # type: ignore[index]
                 elif isinstance(columns, slice):
                     native = native.select(
                         self.columns[
@@ -317,18 +317,18 @@ class PolarsDataFrame:
 
             if not is_slice_none(rows):
                 if isinstance(rows, int):
-                    native = native[[rows], :]
+                    native = native[[rows], :]  # pyright: ignore[reportArgumentType,reportCallIssue]
                 elif isinstance(rows, (slice, range)):
-                    native = native[rows, :]
+                    native = native[rows, :]  # pyright: ignore[reportArgumentType,reportCallIssue]
                 elif is_compliant_series(rows):
-                    native = native[rows.native, :]
+                    native = native[rows.native, :]  # pyright: ignore[reportArgumentType,reportCallIssue]
                 elif is_sequence_like(rows):
-                    native = native[rows, :]
+                    native = native[rows, :]  # type: ignore[index]
                 else:
                     msg = f"Unreachable code, got unexpected type: {type(rows)}"
                     raise AssertionError(msg)
 
-            return self._with_native(native)
+            return self._with_native(native)  # pyright: ignore[reportArgumentType]
 
     def simple_select(self, *column_names: str) -> Self:
         return self._with_native(self.native.select(*column_names))

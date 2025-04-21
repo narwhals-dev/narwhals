@@ -253,7 +253,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             return self._with_native(self.native.slice(0, 0))
         if self._backend_version < (18,) and isinstance(item, tuple):
             item = list(item)
-        return self._with_native(self.native.take(item))
+        return self._with_native(self.native.take(item))  # pyright: ignore[reportArgumentType]
 
     def _gather_slice(self, item: _SliceIndex | range) -> Self:
         start = item.start or 0
@@ -278,14 +278,14 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
 
     def _select_indices(self, item: SizedMultiIndexSelector) -> Self:
         if isinstance(item, pa.ChunkedArray):
-            item = item.to_pylist()
+            item = item.to_pylist()  # pyright: ignore[reportAssignmentType]
         if is_numpy_array(item):
             item = item.tolist()
         return self._with_native(self.native.select(cast("Indices", item)))
 
     def _select_labels(self, item: SizedMultiNameSelector) -> Self:
         if isinstance(item, pa.ChunkedArray):
-            item = item.to_pylist()
+            item = item.to_pylist()  # pyright: ignore[reportAssignmentType]
         # pyarrow-stubs overly strict, accept list[str] | Indices
         return self._with_native(self.native.select(item))  # pyright: ignore[reportArgumentType]
 
