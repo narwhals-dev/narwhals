@@ -317,6 +317,10 @@ def native_to_narwhals_dtype(
             # cudf, cudf.pandas
             return arrow_native_to_narwhals_dtype(native_dtype.to_arrow(), version)
         return arrow_native_to_narwhals_dtype(native_dtype.pyarrow_dtype, version)
+    if str_dtype == "category" and implementation.is_cudf():
+        # https://github.com/rapidsai/cudf/issues/18536
+        dtypes = import_dtypes_module(version)
+        return dtypes.Categorical()
     if str_dtype != "object":
         return non_object_native_to_narwhals_dtype(native_dtype, version)
     elif implementation is Implementation.DASK:
