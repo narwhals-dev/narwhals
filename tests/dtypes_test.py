@@ -439,13 +439,15 @@ def test_enum_categories_immutable() -> None:
 
 def test_enum_repr_pd() -> None:
     df = nw.from_native(
-        pd.DataFrame({"a": ["a", "b"]}, dtype=pd.CategoricalDtype(ordered=True))
+        pd.DataFrame(
+            {"a": ["broccoli", "cabbage"]}, dtype=pd.CategoricalDtype(ordered=True)
+        )
     )
     dtype = df.schema["a"]
     result = str(dtype)
     assert "Enum(categories=[...])" in result
-    assert dtype.categories == ("a", "b")  # type: ignore[attr-defined]
-    assert "Enum(categories=['a', 'b'])" in str(dtype)
+    assert dtype.categories == ("broccoli", "cabbage")  # type: ignore[attr-defined]
+    assert "Enum(categories=['broccoli', 'cabbage'])" in str(dtype)
 
 
 def test_enum_repr_pl() -> None:
@@ -453,13 +455,15 @@ def test_enum_repr_pl() -> None:
     import polars as pl
 
     df = nw.from_native(
-        pl.DataFrame({"a": ["a", "b"]}, schema={"a": pl.Enum(["a", "b"])})
+        pl.DataFrame(
+            {"a": ["broccoli", "cabbage"]}, schema={"a": pl.Enum(["broccoli", "cabbage"])}
+        )
     )
     dtype = df.schema["a"]
     result = repr(dtype)
     assert "Enum(categories=[...])" in result
-    assert dtype.categories == ("a", "b")  # type: ignore[attr-defined]
-    assert "Enum(categories=['a', 'b'])" in repr(dtype)
+    assert dtype.categories == ("broccoli", "cabbage")  # type: ignore[attr-defined]
+    assert "Enum(categories=['broccoli', 'cabbage'])" in repr(dtype)
 
 
 def test_enum_repr() -> None:
