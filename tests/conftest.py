@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
     from pyspark.sql import DataFrame as PySparkDataFrame
+    from pyspark.sql.connect.dataframe import DataFrame as PySparkConnectDataFrame
     from typing_extensions import TypeAlias
 
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
@@ -201,6 +202,48 @@ def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma:
         return _constructor
 
 
+def pyspark_connect_lazy_constructor() -> Callable[
+    [Data], PySparkConnectDataFrame
+]:  # pragma: no cover
+    pytest.importorskip("pyspark")
+    import warnings
+    from atexit import register
+
+    from pyspark.sql.connect.session import SparkSession
+
+    with warnings.catch_warnings():
+        # The spark session seems to trigger a polars warning.
+        # Polars is imported in the tests, but not used in the spark operations
+        warnings.filterwarnings(
+            "ignore", r"Using fork\(\) can cause Polars", category=RuntimeWarning
+        )
+        builder = cast("SparkSession.Builder", SparkSession.builder)
+        session = (
+            builder.appName("unit-tests")
+            .remote("sc://localhost:15002")
+            .config("spark.default.parallelism", "1")
+            .config("spark.sql.shuffle.partitions", "2")
+            .config("spark.sql.session.timeZone", "UTC")
+            .getOrCreate()
+        )
+
+        register(session.stop)
+
+        def _constructor(obj: Data) -> PySparkConnectDataFrame:
+            _obj = deepcopy(obj)
+            index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
+            _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
+
+            return (
+                session.createDataFrame([*zip(*_obj.values())], schema=[*_obj.keys()])
+                .repartition(2)
+                .orderBy(index_col_name)
+                .drop(index_col_name)
+            )
+
+        return _constructor
+
+
 def sqlframe_pyspark_lazy_constructor(obj: Data) -> SQLFrameDataFrame:  # pragma: no cover
     from sqlframe.duckdb import DuckDBSession
 
@@ -223,6 +266,7 @@ LAZY_CONSTRUCTORS: dict[str, Constructor] = {
     "polars[lazy]": polars_lazy_constructor,
     "duckdb": duckdb_lazy_constructor,
     "pyspark": pyspark_lazy_constructor,  # type: ignore[dict-item]
+    "pyspark[connect]": pyspark_connect_lazy_constructor,  # type: ignore[dict-item]
     "sqlframe": sqlframe_pyspark_lazy_constructor,
 }
 GPU_CONSTRUCTORS: dict[str, ConstructorEager] = {"cudf": cudf_constructor}
@@ -261,6 +305,8 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             constructors.append(EAGER_CONSTRUCTORS[constructor])
         elif constructor == "pyspark":  # pragma: no cover
             constructors.append(pyspark_lazy_constructor())
+        elif constructor == "pyspark[connect]":  # pragma: no cover
+            constructors.append(pyspark_connect_lazy_constructor())
         elif constructor in LAZY_CONSTRUCTORS:
             constructors.append(LAZY_CONSTRUCTORS[constructor])
         else:  # pragma: no cover

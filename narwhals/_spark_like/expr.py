@@ -438,7 +438,8 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def median(self) -> Self:
         def _median(_input: Column) -> Column:
             if (
-                self._implementation.is_pyspark()
+                self._implementation
+                in {Implementation.PYSPARK, Implementation.PYSPARK_CONNECT}
                 and (pyspark := get_pyspark()) is not None
                 and parse_version(pyspark) < (3, 4)
             ):  # pragma: no cover

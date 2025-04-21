@@ -179,6 +179,13 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
                     return pa.Table.from_pydict(data, schema=pa.schema(schema))
                 else:  # pragma: no cover
                     raise
+        elif (
+            self._implementation is Implementation.PYSPARK_CONNECT
+            and self._backend_version < (4,)
+        ):
+            import pyarrow as pa  # ignore-banned-import
+
+            return pa.Table.from_pandas(self.native.toPandas())
         else:
             return self.native.toArrow()
 
@@ -444,7 +451,10 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
             )
             raise NotImplementedError(msg)
 
-        if self._implementation.is_pyspark():
+        if self._implementation in {
+            Implementation.PYSPARK,
+            Implementation.PYSPARK_CONNECT,
+        }:
             return self._with_native(
                 self.native.select(
                     *[

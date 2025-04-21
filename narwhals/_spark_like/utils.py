@@ -205,7 +205,10 @@ def _std(
         F = sqlframe_functions  # noqa: N806
     else:
         F = functions  # noqa: N806
-    if implementation is Implementation.PYSPARK and np_version < (2, 0):
+    if implementation in {
+        Implementation.PYSPARK,
+        Implementation.PYSPARK_CONNECT,
+    } and np_version < (2, 0):
         from pyspark.pandas.spark.functions import stddev
 
         return stddev(column, ddof)  # pyright: ignore[reportReturnType, reportArgumentType]
@@ -228,7 +231,10 @@ def _var(
         F = sqlframe_functions  # noqa: N806
     else:
         F = functions  # noqa: N806
-    if implementation is Implementation.PYSPARK and np_version < (2, 0):
+    if implementation in {
+        Implementation.PYSPARK,
+        Implementation.PYSPARK_CONNECT,
+    } and np_version < (2, 0):
         from pyspark.pandas.spark.functions import var
 
         return var(column, ddof)  # pyright: ignore[reportReturnType, reportArgumentType]
@@ -246,6 +252,10 @@ def import_functions(implementation: Implementation, /) -> ModuleType:
         from pyspark.sql import functions
 
         return functions
+    if implementation is Implementation.PYSPARK_CONNECT:
+        from pyspark.sql.connect import functions
+
+        return functions
     from sqlframe.base.session import _BaseSession
 
     return import_module(f"sqlframe.{_BaseSession().execution_dialect_name}.functions")
@@ -256,6 +266,10 @@ def import_native_dtypes(implementation: Implementation, /) -> ModuleType:
         from pyspark.sql import types
 
         return types
+    if implementation is Implementation.PYSPARK_CONNECT:
+        from pyspark.sql.connect import types
+
+        return types
     from sqlframe.base.session import _BaseSession
 
     return import_module(f"sqlframe.{_BaseSession().execution_dialect_name}.types")
@@ -264,6 +278,11 @@ def import_native_dtypes(implementation: Implementation, /) -> ModuleType:
 def import_window(implementation: Implementation, /) -> type[Any]:
     if implementation is Implementation.PYSPARK:
         from pyspark.sql import Window
+
+        return Window
+
+    if implementation is Implementation.PYSPARK_CONNECT:
+        from pyspark.sql.connect.window import Window
 
         return Window
     from sqlframe.base.session import _BaseSession
