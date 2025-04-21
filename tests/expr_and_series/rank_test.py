@@ -166,9 +166,6 @@ def test_lazy_rank_expr(
     ):
         request.applymarker(pytest.mark.xfail)
 
-    if "pyspark" in str(constructor) and method in {"average", "max", "ordinal"}:
-        request.applymarker(pytest.mark.xfail)
-
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         request.applymarker(pytest.mark.xfail)
 
@@ -206,9 +203,6 @@ def test_lazy_rank_expr_desc(
         and PANDAS_VERSION < (2, 1)
         and isinstance(data["a"][0], int)
     ):
-        request.applymarker(pytest.mark.xfail)
-
-    if "pyspark" in str(constructor) and method in {"average", "max", "ordinal"}:
         request.applymarker(pytest.mark.xfail)
 
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):

@@ -761,23 +761,38 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         )
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
-        if method == "min":
+        if method in {"min", "max", "average"}:
             func_name = "rank"
         elif method == "dense":
             func_name = "dense_rank"
-        else:  # pragma: no cover
-            msg = f"Method {method} is not yet implemented."
-            raise NotImplementedError(msg)
+        else:  # method == "ordinal"
+            func_name = "row_number"
 
         def _rank(_input: Column) -> Column:
             if descending:
                 order_by_cols = [self._F.desc_nulls_last(_input)]
             else:
                 order_by_cols = [self._F.asc_nulls_last(_input)]
+
             window = self._Window().orderBy(order_by_cols)
-            return self._F.when(
-                _input.isNotNull(), getattr(self._F, func_name)().over(window)
-            )
+            count_window = self._Window().partitionBy(_input)
+
+            if method == "max":
+                expr = (
+                    getattr(self._F, func_name)().over(window)
+                    + self._F.count(_input).over(count_window)
+                    - self._F.lit(1)
+                )
+
+            elif method == "average":
+                expr = getattr(self._F, func_name)().over(window) + (
+                    self._F.count(_input).over(count_window) - self._F.lit(1)
+                ) / self._F.lit(2)
+
+            else:
+                expr = getattr(self._F, func_name)().over(window)
+
+            return self._F.when(_input.isNotNull(), expr)
 
         return self._with_callable(_rank)
 
