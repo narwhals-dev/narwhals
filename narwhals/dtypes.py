@@ -476,13 +476,16 @@ class Enum(DType):
         self, categories: Iterable[str] | type[enum.Enum] | Callable[[], tuple[str, ...]]
     ) -> None:
         self._get_categories: Callable[[], tuple[str, ...]]
+        self._categories = tuple[str, ...] | None
         if isinstance(categories, type) and issubclass(categories, enum.Enum):
             self._get_categories = lambda: tuple(member.value for member in categories)
+            self._categories = self._get_categories()
         elif callable(categories):
             self._get_categories = categories
+            self._categories = None
         else:
             self._get_categories = lambda: tuple(categories)
-        self._categories: tuple[str, ...] | None = None
+            self._categories = self._get_categories()
 
     @property
     def categories(self) -> tuple[str, ...]:

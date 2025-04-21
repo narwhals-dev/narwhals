@@ -460,3 +460,10 @@ def test_enum_repr_pl() -> None:
     assert "Enum(categories=[...])" in result
     assert dtype.categories == ("a", "b")  # type: ignore[attr-defined]
     assert "Enum(categories=['a', 'b'])" in str(dtype)
+
+
+def test_enum_repr() -> None:
+    result = nw.Enum(["a", "b"])
+    assert "Enum(categories=['a', 'b'])" in str(result)
+    result = nw.Enum(nw.Implementation)
+    assert "Enum(categories=['a', 'b'])" in str(result)
