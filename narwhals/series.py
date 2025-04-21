@@ -20,7 +20,6 @@ from narwhals.series_str import SeriesStringNamespace
 from narwhals.series_struct import SeriesStructNamespace
 from narwhals.translate import to_native
 from narwhals.typing import IntoSeriesT
-from narwhals.typing import MultiIndexSelector
 from narwhals.typing import NonNestedLiteral
 from narwhals.typing import SingleIndexSelector
 from narwhals.utils import _validate_rolling_arguments
@@ -40,6 +39,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import ArrowArray
     from narwhals._compliant import CompliantSeries
     from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import ClosedInterval
     from narwhals.typing import FillNullStrategy

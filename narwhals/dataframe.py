@@ -53,6 +53,7 @@ if TYPE_CHECKING:
     from typing_extensions import Concatenate
     from typing_extensions import ParamSpec
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
 
     from narwhals._compliant import CompliantDataFrame
     from narwhals._compliant import CompliantLazyFrame
@@ -67,8 +68,8 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoFrame
     from narwhals.typing import JoinStrategy
     from narwhals.typing import LazyUniqueKeepStrategy
-    from narwhals.typing import MultiColSelector
-    from narwhals.typing import MultiIndexSelector
+    from narwhals.typing import MultiColSelector as _MultiColSelector
+    from narwhals.typing import MultiIndexSelector as _MultiIndexSelector
     from narwhals.typing import PivotAgg
     from narwhals.typing import SingleColSelector
     from narwhals.typing import SingleIndexSelector
@@ -82,6 +83,9 @@ _FrameT = TypeVar("_FrameT", bound="IntoFrame")
 FrameT = TypeVar("FrameT", bound="IntoFrame")
 DataFrameT = TypeVar("DataFrameT", bound="IntoDataFrame")
 R = TypeVar("R")
+
+MultiColSelector: TypeAlias = "_MultiColSelector[Series[Any]]"
+MultiIndexSelector: TypeAlias = "_MultiIndexSelector[Series[Any]]"
 
 
 class BaseFrame(Generic[_FrameT]):

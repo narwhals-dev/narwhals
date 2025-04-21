@@ -1274,7 +1274,7 @@ def is_slice_none(obj: Any) -> TypeIs[_SliceNone]:
     return isinstance(obj, slice) and obj == slice(None)
 
 
-def is_sized_multi_index_selector(obj: Any) -> TypeIs[SizedMultiIndexSelector]:
+def is_sized_multi_index_selector(obj: Any) -> TypeIs[SizedMultiIndexSelector[Any]]:
     np = get_numpy()
     return (
         (
@@ -1316,7 +1316,7 @@ def is_single_index_selector(obj: Any) -> TypeIs[SingleIndexSelector]:
     return bool(isinstance(obj, int) and not isinstance(obj, bool))
 
 
-def is_index_selector(obj: Any) -> TypeIs[SingleIndexSelector | MultiIndexSelector]:
+def is_index_selector(obj: Any) -> TypeIs[SingleIndexSelector | MultiIndexSelector[Any]]:
     return (
         is_single_index_selector(obj)
         or is_sized_multi_index_selector(obj)
