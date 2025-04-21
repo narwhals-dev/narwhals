@@ -119,10 +119,18 @@ def test_gather_rows_cols(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_slice_both_tuples_of_ints(constructor_eager: ConstructorEager) -> None:
+def test_slice_both_list_of_ints(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df[[0, 1], [0, 2]]
+    expected = {"a": [1, 2], "c": [7, 8]}
+    assert_equal_data(result, expected)
+
+
+def test_slice_both_tuple(constructor_eager: ConstructorEager) -> None:
+    data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = df[(0, 1), ("a", "c")]
     expected = {"a": [1, 2], "c": [7, 8]}
     assert_equal_data(result, expected)
 
@@ -258,6 +266,15 @@ def test_getitem_ndarray_columns(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
+def test_getitem_ndarray_columns_labels(constructor_eager: ConstructorEager) -> None:
+    data = {"col1": ["a", "b", "c", "d"], "col2": np.arange(4), "col3": [4, 3, 2, 1]}
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
+    arr: np.ndarray[tuple[int], np.dtype[Any]] = np.array(["col1", "col2"])  # pyright: ignore[reportAssignmentType]
+    result = nw_df[:, arr]
+    expected = {"col1": ["a", "b", "c", "d"], "col2": [0, 1, 2, 3]}
+    assert_equal_data(result, expected)
+
+
 def test_getitem_negative_slice(constructor_eager: ConstructorEager) -> None:
     data = {"col1": ["a", "b", "c", "d"], "col2": np.arange(4), "col3": [4, 3, 2, 1]}
     nw_df = nw.from_native(constructor_eager(data), eager_only=True)
@@ -349,3 +366,9 @@ def test_pandas_non_str_columns() -> None:
     result = df[:, [datetime(2020, 1, 1)]]  # type: ignore[index]
     expected = {datetime(2020, 1, 1): [1, 2, 3]}
     assert result.to_dict(as_series=False) == expected
+
+
+def test_select_rows_by_name(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager({"a": [0, 2, 1]}), eager_only=True)
+    with pytest.raises(TypeError, match="Unexpected type"):
+        df["a", :]  # type: ignore[index]
