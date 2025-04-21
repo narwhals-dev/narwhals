@@ -5,13 +5,13 @@ from collections import OrderedDict
 from datetime import timezone
 from itertools import starmap
 from typing import TYPE_CHECKING
+from typing import Iterable
 from typing import Mapping
 
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from typing import Callable
-    from typing import Iterable
     from typing import Iterator
     from typing import Sequence
 
@@ -481,12 +481,15 @@ class Enum(DType):
         if isinstance(categories, type) and issubclass(categories, enum.Enum):
             self._get_categories = lambda: tuple(member.value for member in categories)
             self._categories = self._get_categories()
+        elif isinstance(categories, Iterable):
+            self._get_categories = lambda: tuple(categories)
+            self._categories = self._get_categories()
         elif callable(categories):
             self._get_categories = categories
             self._categories = None
         else:
-            self._get_categories = lambda: tuple(categories)
-            self._categories = self._get_categories()
+            msg = f"Invalid type, expected Iterable of strings or Enum, got: {type(categories)}"
+            raise TypeError(msg)
 
     @property
     def categories(self) -> tuple[str, ...]:
