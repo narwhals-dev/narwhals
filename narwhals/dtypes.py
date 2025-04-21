@@ -491,10 +491,10 @@ class Enum(DType):
         self._delayed_categories: _DelayedCategories | None = None
         self._cached_categories: tuple[str, ...] | None = None
 
-        if isinstance(categories, type) and issubclass(categories, enum.Enum):
-            self._cached_categories = tuple(member.value for member in categories)
-        elif isinstance(categories, _DelayedCategories):
+        if isinstance(categories, _DelayedCategories):
             self._delayed_categories = categories
+        elif isinstance(categories, type) and issubclass(categories, enum.Enum):
+            self._cached_categories = tuple(member.value for member in categories)
         else:
             self._cached_categories = tuple(categories)
 
