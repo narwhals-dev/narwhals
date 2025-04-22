@@ -590,6 +590,8 @@ class PolarsSeries:
     __ror__: Method[Self]
     __rtruediv__: Method[Self]
     __truediv__: Method[Self]
+    _gather: Method[Self]
+    _gather_slice: Method[Self]
     abs: Method[Self]
     all: Method[bool]
     any: Method[bool]

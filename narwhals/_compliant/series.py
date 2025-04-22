@@ -324,9 +324,7 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
     def _gather(self, rows: SizedMultiIndexSelector[NativeSeriesT]) -> Self: ...
     def _gather_slice(self, rows: _SliceIndex | range) -> Self: ...
     def __getitem__(self, item: Any) -> Self:
-        if isinstance(item, int):
-            return self._gather([item])
-        elif isinstance(item, (slice, range)):
+        if isinstance(item, (slice, range)):
             return self._gather_slice(item)
         elif is_compliant_series(item):
             return self._gather(item.native)
