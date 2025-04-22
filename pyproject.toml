@@ -235,7 +235,6 @@ env = [
   "MODIN_ENGINE=python",
   "PYARROW_IGNORE_TIMEZONE=1",
   "TZ=UTC",
-  "SPARK_REMOTE='sc://localhost'",
 ]
 
 [tool.coverage.run]
