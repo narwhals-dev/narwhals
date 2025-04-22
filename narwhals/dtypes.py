@@ -472,6 +472,9 @@ class _DelayedCategories:
     def __init__(self, get_categories: Callable[[], tuple[str, ...]]) -> None:
         self.get_categories = get_categories
 
+    def __iter__(self) -> Iterator[str]:
+        yield from self.get_categories()
+
 
 class Enum(DType):
     """A fixed categorical encoding of a unique set of strings.
@@ -485,9 +488,7 @@ class Enum(DType):
        Enum(categories=['beluga', 'narwhal', 'orca'])
     """
 
-    def __init__(
-        self, categories: Iterable[str] | type[enum.Enum] | _DelayedCategories
-    ) -> None:
+    def __init__(self, categories: Iterable[str] | type[enum.Enum]) -> None:
         self._delayed_categories: _DelayedCategories | None = None
         self._cached_categories: tuple[str, ...] | None = None
 
