@@ -247,10 +247,8 @@ omit = [
   'narwhals/_spark_like/typing.py',
   # we can't run this in every environment that we measure coverage on due to upper-bound constraits
   'narwhals/_ibis/*',
-  # we don't run these in every environment
-  'tests/ibis_test.py',
   # Remove after finishing eager sub-protocols
-  'narwhals/_compliant/*',
+  'narwhals/_compliant/namespace.py',
 ]
 exclude_also = [
   "if sys.version_info() <",

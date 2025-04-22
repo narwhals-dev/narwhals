@@ -49,7 +49,6 @@ if TYPE_CHECKING:
     from narwhals._arrow.group_by import ArrowGroupBy
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.typing import ArrowChunkedArray
-    from narwhals._arrow.typing import Indices  # type: ignore[attr-defined]
     from narwhals._arrow.typing import Mask  # type: ignore[attr-defined]
     from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
     from narwhals._translate import IntoArrowTable
@@ -248,7 +247,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
     def __array__(self, dtype: Any, *, copy: bool | None) -> _2DArray:
         return self.native.__array__(dtype, copy=copy)
 
-    def _gather(self, rows: SizedMultiIndexSelector) -> Self:
+    def _gather(self, rows: SizedMultiIndexSelector[ArrowChunkedArray]) -> Self:
         if len(rows) == 0:
             return self._with_native(self.native.slice(0, 0))
         if self._backend_version < (18,) and isinstance(rows, tuple):
@@ -276,16 +275,20 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             self.native.select(self.columns[columns.start : columns.stop : columns.step])
         )
 
-    def _select_indices(self, columns: SizedMultiIndexSelector) -> Self:
+    def _select_indices(
+        self, columns: SizedMultiIndexSelector[ArrowChunkedArray]
+    ) -> Self:
         if isinstance(columns, pa.ChunkedArray):
-            columns = columns.to_pylist()  # pyright: ignore[reportAssignmentType]
+            columns = cast("list[int]", columns.to_pylist())
         if is_numpy_array(columns):
-            columns = columns.tolist()
-        return self._with_native(self.native.select(cast("Indices", columns)))
+            columns = cast("list[int]", columns.tolist())
+        return self._with_native(self.native.select(columns))
 
-    def _select_multi_name(self, columns: SizedMultiNameSelector) -> Self:
+    def _select_multi_name(
+        self, columns: SizedMultiNameSelector[ArrowChunkedArray]
+    ) -> Self:
         if isinstance(columns, pa.ChunkedArray):
-            columns = columns.to_pylist()  # pyright: ignore[reportAssignmentType]
+            columns = cast("list[str]", columns.to_pylist())
         # pyarrow-stubs overly strict, accepts list[str] | Indices
         return self._with_native(self.native.select(columns))  # pyright: ignore[reportArgumentType]
 

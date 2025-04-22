@@ -189,6 +189,7 @@ class Series(Generic[IntoSeriesT]):
             raise TypeError(msg)
         if isinstance(idx, Series):
             return self._with_compliant(self._compliant_series[idx._compliant_series])
+        assert not isinstance(idx, int)  # noqa: S101  # help mypy
         return self._with_compliant(self._compliant_series[idx])
 
     def __native_namespace__(self) -> ModuleType:

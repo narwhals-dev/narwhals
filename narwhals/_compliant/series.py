@@ -25,7 +25,6 @@ from narwhals.utils import _StoresCompliant
 from narwhals.utils import _StoresNative
 from narwhals.utils import is_compliant_series
 from narwhals.utils import is_sized_multi_index_selector
-from narwhals.utils import is_slice_none
 from narwhals.utils import unstable
 
 if TYPE_CHECKING:
@@ -83,7 +82,7 @@ class CompliantSeries(
     def __native_namespace__(self) -> ModuleType: ...
     def __array__(self, dtype: Any, *, copy: bool | None) -> _1DArray: ...
     def __contains__(self, other: Any) -> bool: ...
-    def __getitem__(self, item: Any) -> Any: ...
+    def __getitem__(self, item: MultiIndexSelector[Self]) -> Any: ...
     def __iter__(self) -> Iterator[Any]: ...
     def __len__(self) -> int:
         return len(self.native)
@@ -321,21 +320,19 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
     def _to_expr(self) -> EagerExpr[Any, Any]:
         return self.__narwhals_namespace__()._expr._from_series(self)  # type: ignore[no-any-return]
 
-    def _gather(self, rows: SizedMultiIndexSelector) -> Self: ...
+    def _gather(self, rows: SizedMultiIndexSelector[NativeSeriesT]) -> Self: ...
     def _gather_slice(self, rows: slice | range) -> Self: ...
 
-    def __getitem__(self, item: MultiIndexSelector) -> Self:
-        if is_slice_none(item):
-            return self
-        if isinstance(item, int):
-            return self._gather([item])
-        elif isinstance(item, (slice, range)):
+    def __getitem__(
+        self, item: MultiIndexSelector[CompliantSeries[NativeSeriesT]]
+    ) -> Self:
+        if isinstance(item, (slice, range)):
             return self._gather_slice(item)
         elif is_compliant_series(item):
             return self._gather(item.native)
         elif is_sized_multi_index_selector(item):
             return self._gather(item)
-        else:
+        else:  # pragma: no cover
             msg = f"Unreachable code, got unexpected type: {type(item)}"
             raise AssertionError(msg)
 

@@ -407,7 +407,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def name(self) -> str:
         return self._name
 
-    def _gather(self, rows: SizedMultiIndexSelector) -> Self:
+    def _gather(self, rows: SizedMultiIndexSelector[ArrowChunkedArray]) -> Self:
         if len(rows) == 0:
             return self._with_native(self.native.slice(0, 0))
         if self._backend_version < (18,) and isinstance(rows, tuple):

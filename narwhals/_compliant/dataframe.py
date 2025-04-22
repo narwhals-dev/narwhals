@@ -381,7 +381,9 @@ class EagerDataFrame(
         """
         _, aliases = evaluate_output_names_and_aliases(expr, self, [])
         result = expr(self)
-        if list(aliases) != (result_aliases := [s.name for s in result]):
+        if list(aliases) != (
+            result_aliases := [s.name for s in result]
+        ):  # pragma: no cover
             msg = f"Safety assertion failed, expected {aliases}, got {result_aliases}"
             raise AssertionError(msg)
         return result
@@ -396,13 +398,17 @@ class EagerDataFrame(
     ) -> list[str]:
         return list(columns or (f"column_{x}" for x in range(data.shape[1])))
 
-    def _gather(self, rows: SizedMultiIndexSelector[CompliantSeriesAny]) -> Self: ...
+    def _gather(self, rows: SizedMultiIndexSelector[Any]) -> Self: ...
     def _gather_slice(self, rows: _SliceIndex | range) -> Self: ...
     def _select_indices(
-        self, columns: SizedMultiIndexSelector[CompliantSeriesAny]
+        # TODO(unassigned): `Any` should be `NativeSeriesT`
+        self,
+        columns: SizedMultiIndexSelector[Any],
     ) -> Self: ...
     def _select_multi_name(
-        self, columns: SizedMultiNameSelector[CompliantSeriesAny]
+        # TODO(unassigned): `Any` should be `NativeSeriesT`
+        self,
+        columns: SizedMultiNameSelector[Any],
     ) -> Self: ...
     def _select_slice_index(self, columns: _SliceIndex | range) -> Self: ...
     def _select_slice_name(self, columns: _SliceName) -> Self: ...
@@ -432,7 +438,7 @@ class EagerDataFrame(
                 compliant = self._select_multi_name(columns.native)
             elif is_sequence_like(columns):
                 compliant = self._select_multi_name(columns)
-            else:
+            else:  # pragma: no cover
                 msg = f"Unreachable code, got unexpected type: {type(columns)}"
                 raise AssertionError(msg)
 
@@ -445,7 +451,7 @@ class EagerDataFrame(
                 compliant = compliant._gather(rows.native)
             elif is_sized_multi_index_selector(rows):
                 compliant = compliant._gather(rows)
-            else:
+            else:  # pragma: no cover
                 msg = f"Unreachable code, got unexpected type: {type(rows)}"
                 raise AssertionError(msg)
 

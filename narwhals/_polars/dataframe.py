@@ -300,9 +300,9 @@ class PolarsDataFrame:
                             self.columns[slice(columns.start, columns.stop, columns.step)]
                         )
                     elif is_compliant_series(columns):
-                        native = native[:, columns.native.to_list()]
+                        native = native[:, columns.native.to_list()]  # type: ignore[attr-defined,index]
                     else:
-                        native = native[:, columns]  # type: ignore[index]
+                        native = native[:, columns]
                 elif isinstance(columns, slice):
                     native = native.select(
                         self.columns[
@@ -325,7 +325,7 @@ class PolarsDataFrame:
                 elif is_compliant_series(rows):
                     native = native[rows.native, :]  # pyright: ignore[reportArgumentType,reportCallIssue]
                 elif is_sequence_like(rows):
-                    native = native[rows, :]  # type: ignore[index]
+                    native = native[rows, :]
                 else:
                     msg = f"Unreachable code, got unexpected type: {type(rows)}"
                     raise AssertionError(msg)
