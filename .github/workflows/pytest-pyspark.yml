@@ -35,3 +35,48 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: pytest tests --cov=narwhals/_spark_like --cov-fail-under=95 --runslow --constructors pyspark
+
+
+  pytest-pyspark-connect-constructor:
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'pyspark-connect') || contains(github.event.pull_request.labels.*.name, 'release') }}
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+        os: [ubuntu-latest]
+    env:
+      SPARK_VERSION: 3.5.1
+      SPARK_PORT: 15002
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: "true"
+          cache-suffix: ${{ matrix.python-version }}
+          cache-dependency-glob: "pyproject.toml"
+      - name: install-reqs
+        run: uv pip install -e . --group core-tests --group extra --system
+      - name: install pyspark
+        run: echo "setuptools<78" | uv pip install -b - -e . "pyspark[connect]==3.5.1" --system
+      - name: show-deps
+        run: uv pip freeze
+
+      - name: Download Spark
+        run: |
+          curl -sL https://downloads.apache.org/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz | tar xz
+          echo "SPARK_HOME=$PWD/spark-${SPARK_VERSION}-bin-hadoop3" >> $GITHUB_ENV
+          echo "$PWD/spark-${SPARK_VERSION}-bin-hadoop3/bin" >> $GITHUB_PATH
+
+      - name: Start Spark Connect Server
+        run: |
+          nohup spark-connect-server \
+            --conf spark.connect.grpc.binding=localhost:$SPARK_PORT > connect.log 2>&1 &
+          # wait for port to open
+          for i in {1..10}; do nc -z localhost $SPARK_PORT && break || sleep 1; done
+
+      - name: Run pytest
+        run: pytest tests --cov=narwhals/_spark_like --cov-fail-under=95 --runslow --constructors "pyspark[connect]""
