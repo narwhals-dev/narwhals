@@ -325,7 +325,7 @@ class Implementation(Enum):
 
             return sqlframe
 
-        if self is Implementation.PYSPARK_CONNECT:
+        if self is Implementation.PYSPARK_CONNECT:  # pragma: no cover
             import pyspark.sql  # ignore-banned-import
 
             return pyspark.sql
@@ -452,6 +452,22 @@ class Implementation(Enum):
             False
         """
         return self is Implementation.PYSPARK  # pragma: no cover
+
+    def is_pyspark_connect(self) -> bool:
+        """Return whether implementation is PySpark.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_pyspark_connect()
+            False
+        """
+        return self is Implementation.PYSPARK_CONNECT  # pragma: no cover
 
     def is_pyarrow(self) -> bool:
         """Return whether implementation is PyArrow.

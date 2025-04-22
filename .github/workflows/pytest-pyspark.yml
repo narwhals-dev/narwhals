@@ -67,7 +67,7 @@ jobs:
 
       - name: Download Spark
         run: |
-          curl -sL https://downloads.apache.org/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz | tar xz
+          curl -sL https://downloads.apache.org/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz | tar -xz
           echo "SPARK_HOME=$PWD/spark-${SPARK_VERSION}-bin-hadoop3" >> $GITHUB_ENV
           echo "$PWD/spark-${SPARK_VERSION}-bin-hadoop3/bin" >> $GITHUB_PATH
 

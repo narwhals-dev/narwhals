@@ -451,10 +451,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
             )
             raise NotImplementedError(msg)
 
-        if self._implementation in {
-            Implementation.PYSPARK,
-            Implementation.PYSPARK_CONNECT,
-        }:
+        if self._implementation.is_pyspark() or self._implementation.is_pyspark_connect():
             return self._with_native(
                 self.native.select(
                     *[
