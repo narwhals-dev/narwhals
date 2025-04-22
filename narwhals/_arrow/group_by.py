@@ -57,10 +57,11 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
         aggs: list[tuple[str, str, Any]] = []
         expected_pyarrow_column_names: list[str] = self._keys.copy()
         new_column_names: list[str] = self._keys.copy()
+        exclude = (*self._keys, *self._output_key_names)
 
         for expr in exprs:
             output_names, aliases = evaluate_output_names_and_aliases(
-                expr, self.compliant, [*self._keys, *self._output_key_names]
+                expr, self.compliant, exclude
             )
 
             if expr._depth == 0:
