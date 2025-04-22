@@ -177,13 +177,7 @@ class PolarsSeries:
     def alias(self, name: str) -> Self:
         return self._from_native_object(self.native.alias(name))
 
-    @overload
-    def __getitem__(self, item: int) -> Any: ...
-
-    @overload
-    def __getitem__(self, item: slice | Sequence[int] | pl.Series) -> Self: ...
-
-    def __getitem__(self, item: MultiIndexSelector[pl.Series]) -> Any | Self:
+    def __getitem__(self, item: MultiIndexSelector[Self]) -> Any | Self:
         if is_compliant_series(item):
             item = item.native
         return self._from_native_object(self.native.__getitem__(item))
