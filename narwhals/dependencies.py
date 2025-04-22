@@ -115,7 +115,7 @@ def get_pyspark_sql() -> Any:
 
 def get_pyspark_connect() -> Any:
     """Get pyspark.sql.connect module (if already imported - else return None)."""
-    return sys.modules.get("pyspark.sql", None)
+    return sys.modules.get("pyspark.sql.connect", None)
 
 
 def get_sqlframe() -> Any:
@@ -240,7 +240,7 @@ def is_pyspark_connect_dataframe(df: Any) -> TypeIs[PySparkConnectDataFrame]:
     """Check whether `df` is a PySpark Connect DataFrame without importing PySpark."""
     return bool(
         (pyspark_sql := get_pyspark_connect()) is not None
-        and isinstance(df, pyspark_sql.connect.dataframe.DataFrame)
+        and isinstance(df, pyspark_sql.dataframe.DataFrame)
     )
 
 
