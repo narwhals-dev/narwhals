@@ -220,8 +220,9 @@ class LazyGroupBy(
         )
         native_exprs = expr(self.compliant)
         if expr._is_multi_output_unnamed():
+            exclude = {*self._keys, *self._output_key_names}
             for native_expr, name, alias in zip(native_exprs, output_names, aliases):
-                if name not in {*self._keys, *self._output_key_names}:
+                if name not in exclude:
                     yield native_expr.alias(alias)
         else:
             for native_expr, alias in zip(native_exprs, aliases):
