@@ -72,6 +72,22 @@ def test_scan_csv(
             "inferSchema": True,
             "header": True,
         }
+    elif "pyspark_connect" in str(constructor):
+        from pyspark.sql.connect.session import SparkSession
+
+        kwargs = {
+            "session": (
+                SparkSession.builder.appName("unit-tests")  # pyright: ignore[reportAttributeAccessIssue]
+                .remote("sc://localhost:15002")
+                .config("spark.default.parallelism", "1")
+                .config("spark.sql.shuffle.partitions", "2")
+                .config("spark.sql.session.timeZone", "UTC")
+                .getOrCreate()
+            ),
+            "inferSchema": True,
+            "header": True,
+        }
+
     elif "pyspark" in str(constructor):
         from pyspark.sql import SparkSession
 
@@ -148,6 +164,22 @@ def test_scan_parquet(
         from sqlframe.duckdb import DuckDBSession
 
         kwargs = {"session": DuckDBSession(), "inferSchema": True}
+    elif "pyspark_connect" in str(constructor):
+        from pyspark.sql.connect.session import SparkSession
+
+        kwargs = {
+            "session": (
+                SparkSession.builder.appName("unit-tests")  # pyright: ignore[reportAttributeAccessIssue]
+                .remote("sc://localhost:15002")
+                .config("spark.default.parallelism", "1")
+                .config("spark.sql.shuffle.partitions", "2")
+                .config("spark.sql.session.timeZone", "UTC")
+                .getOrCreate()
+            ),
+            "inferSchema": True,
+            "header": True,
+        }
+
     elif "pyspark" in str(constructor):
         from pyspark.sql import SparkSession
 

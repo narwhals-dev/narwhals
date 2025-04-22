@@ -363,7 +363,7 @@ def is_native_pandas_like(obj: Any) -> TypeIs[_NativePandasLike]:
 
 def is_native_spark_like(obj: Any) -> TypeIs[_NativeSparkLike]:
     return (
-        is_native_pyspark(obj)
+        is_native_sqlframe(obj)
+        or is_native_pyspark(obj)
         or is_native_pyspark_connect(obj)
-        or is_native_sqlframe(obj)
     )
