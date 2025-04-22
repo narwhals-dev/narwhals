@@ -377,10 +377,6 @@ class EagerDataFrame(
         """Extract native Series, broadcasting to `len(self)` if necessary."""
         ...
 
-    def _evaluate_aliases(self, *exprs: EagerExprT_contra) -> list[str]:
-        it = (expr._evaluate_aliases(self) for expr in exprs)
-        return list(chain.from_iterable(it))
-
     @staticmethod
     def _numpy_column_names(
         data: _2DArray, columns: Sequence[str] | None, /
