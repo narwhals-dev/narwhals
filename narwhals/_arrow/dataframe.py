@@ -281,7 +281,7 @@ class ArrowDataFrame(
     def _select_multi_index(
         self, columns: SizedMultiIndexSelector[ArrowChunkedArray]
     ) -> Self:
-        selector: Sequence[int] | Sequence[str]
+        selector: Sequence[int]
         if isinstance(columns, pa.ChunkedArray):
             # TODO @dangotbanned: Fix upstream with `pa.ChunkedArray.to_pylist(self) -> list[Any]:`
             selector = cast("Sequence[int]", columns.to_pylist())
