@@ -248,46 +248,46 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
     def __array__(self, dtype: Any, *, copy: bool | None) -> _2DArray:
         return self.native.__array__(dtype, copy=copy)
 
-    def _gather(self, item: SizedMultiIndexSelector) -> Self:
-        if len(item) == 0:
+    def _gather(self, rows: SizedMultiIndexSelector) -> Self:
+        if len(rows) == 0:
             return self._with_native(self.native.slice(0, 0))
-        if self._backend_version < (18,) and isinstance(item, tuple):
-            item = list(item)
-        return self._with_native(self.native.take(item))  # pyright: ignore[reportArgumentType]
+        if self._backend_version < (18,) and isinstance(rows, tuple):
+            rows = list(rows)
+        return self._with_native(self.native.take(rows))  # pyright: ignore[reportArgumentType]
 
-    def _gather_slice(self, item: _SliceIndex | range) -> Self:
-        start = item.start or 0
-        stop = item.stop if item.stop is not None else len(self.native)
+    def _gather_slice(self, rows: _SliceIndex | range) -> Self:
+        start = rows.start or 0
+        stop = rows.stop if rows.stop is not None else len(self.native)
         if start < 0:
             start = len(self.native) + start
         if stop < 0:
             stop = len(self.native) + stop
-        if item.step is not None and item.step != 1:
+        if rows.step is not None and rows.step != 1:
             msg = "Slicing with step is not supported on PyArrow tables"
             raise NotImplementedError(msg)
         return self._with_native(self.native.slice(start, stop - start))
 
-    def _select_slice_of_labels(self, item: _SliceName) -> Self:
-        start, stop, step = convert_str_slice_to_int_slice(item, self.columns)
+    def _select_slice_name(self, columns: _SliceName) -> Self:
+        start, stop, step = convert_str_slice_to_int_slice(columns, self.columns)
         return self._with_native(self.native.select(self.columns[start:stop:step]))
 
-    def _select_slice_of_indices(self, item: _SliceIndex | range) -> Self:
+    def _select_slice_index(self, columns: _SliceIndex | range) -> Self:
         return self._with_native(
-            self.native.select(self.columns[item.start : item.stop : item.step])
+            self.native.select(self.columns[columns.start : columns.stop : columns.step])
         )
 
-    def _select_indices(self, item: SizedMultiIndexSelector) -> Self:
-        if isinstance(item, pa.ChunkedArray):
-            item = item.to_pylist()  # pyright: ignore[reportAssignmentType]
-        if is_numpy_array(item):
-            item = item.tolist()
-        return self._with_native(self.native.select(cast("Indices", item)))
+    def _select_indices(self, columns: SizedMultiIndexSelector) -> Self:
+        if isinstance(columns, pa.ChunkedArray):
+            columns = columns.to_pylist()  # pyright: ignore[reportAssignmentType]
+        if is_numpy_array(columns):
+            columns = columns.tolist()
+        return self._with_native(self.native.select(cast("Indices", columns)))
 
-    def _select_labels(self, item: SizedMultiNameSelector) -> Self:
-        if isinstance(item, pa.ChunkedArray):
-            item = item.to_pylist()  # pyright: ignore[reportAssignmentType]
-        # pyarrow-stubs overly strict, accept list[str] | Indices
-        return self._with_native(self.native.select(item))  # pyright: ignore[reportArgumentType]
+    def _select_multi_name(self, columns: SizedMultiNameSelector) -> Self:
+        if isinstance(columns, pa.ChunkedArray):
+            columns = columns.to_pylist()  # pyright: ignore[reportAssignmentType]
+        # pyarrow-stubs overly strict, accepts list[str] | Indices
+        return self._with_native(self.native.select(columns))  # pyright: ignore[reportArgumentType]
 
     @property
     def schema(self) -> dict[str, DType]:

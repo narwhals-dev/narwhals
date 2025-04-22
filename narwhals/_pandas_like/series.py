@@ -150,9 +150,9 @@ class PandasLikeSeries(EagerSeries[Any]):
         rows = list(rows) if isinstance(rows, tuple) else rows
         return self._with_native(self.native.iloc[rows])
 
-    def _gather_slice(self, item: slice | range) -> Self:
+    def _gather_slice(self, rows: slice | range) -> Self:
         return self._with_native(
-            self.native.iloc[slice(item.start, item.stop, item.step)]
+            self.native.iloc[slice(rows.start, rows.stop, rows.step)]
         )
 
     def _with_version(self, version: Version) -> Self:

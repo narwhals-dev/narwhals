@@ -407,21 +407,21 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def name(self) -> str:
         return self._name
 
-    def _gather(self, item: SizedMultiIndexSelector) -> Self:
-        if len(item) == 0:
+    def _gather(self, rows: SizedMultiIndexSelector) -> Self:
+        if len(rows) == 0:
             return self._with_native(self.native.slice(0, 0))
-        if self._backend_version < (18,) and isinstance(item, tuple):
-            item = list(item)
-        return self._with_native(self.native.take(item))  # pyright: ignore[reportArgumentType]
+        if self._backend_version < (18,) and isinstance(rows, tuple):
+            rows = list(rows)
+        return self._with_native(self.native.take(rows))  # pyright: ignore[reportArgumentType]
 
-    def _gather_slice(self, item: slice | range) -> Self:
-        start = item.start or 0
-        stop = item.stop if item.stop is not None else len(self.native)
+    def _gather_slice(self, rows: slice | range) -> Self:
+        start = rows.start or 0
+        stop = rows.stop if rows.stop is not None else len(self.native)
         if start < 0:
             start = len(self.native) + start
         if stop < 0:
             stop = len(self.native) + stop
-        if item.step is not None and item.step != 1:
+        if rows.step is not None and rows.step != 1:
             msg = "Slicing with step is not supported on PyArrow tables"
             raise NotImplementedError(msg)
         return self._with_native(self.native.slice(start, stop - start))

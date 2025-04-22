@@ -281,32 +281,36 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
     def __array__(self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
         return self.to_numpy(dtype=dtype, copy=copy)
 
-    def _gather(self, items: SizedMultiIndexSelector) -> Self:
-        items = list(items) if isinstance(items, tuple) else items
-        return self._with_native(self.native.iloc[items, :])
+    def _gather(self, rows: SizedMultiIndexSelector) -> Self:
+        rows = list(rows) if isinstance(rows, tuple) else rows
+        return self._with_native(self.native.iloc[rows, :])
 
-    def _gather_slice(self, item: _SliceIndex | range) -> Self:
+    def _gather_slice(self, rows: _SliceIndex | range) -> Self:
         return self._with_native(
-            self.native.iloc[slice(item.start, item.stop, item.step), :],
+            self.native.iloc[slice(rows.start, rows.stop, rows.step), :],
             validate_column_names=False,
         )
 
-    def _select_slice_of_labels(self, item: _SliceName) -> Self:
-        start, stop, step = convert_str_slice_to_int_slice(item, self.native.columns)
+    def _select_slice_name(self, columns: _SliceName) -> Self:
+        start, stop, step = convert_str_slice_to_int_slice(columns, self.native.columns)
         return self._with_native(
             self.native.iloc[:, slice(start, stop, step)],
             validate_column_names=False,
         )
 
-    def _select_slice_of_indices(self, item: _SliceIndex | range) -> Self:
-        return self._with_native(self.native.iloc[:, item], validate_column_names=False)
+    def _select_slice_index(self, columns: _SliceIndex | range) -> Self:
+        return self._with_native(
+            self.native.iloc[:, columns], validate_column_names=False
+        )
 
-    def _select_indices(self, item: SizedMultiIndexSelector) -> Self:
-        item = list(item) if isinstance(item, tuple) else item
-        return self._with_native(self.native.iloc[:, item], validate_column_names=False)
+    def _select_indices(self, columns: SizedMultiIndexSelector) -> Self:
+        columns = list(columns) if isinstance(columns, tuple) else columns
+        return self._with_native(
+            self.native.iloc[:, columns], validate_column_names=False
+        )
 
-    def _select_labels(self, indices: SizedMultiNameSelector) -> PandasLikeDataFrame:
-        return self._with_native(self.native.loc[:, indices])
+    def _select_multi_name(self, columns: SizedMultiNameSelector) -> PandasLikeDataFrame:
+        return self._with_native(self.native.loc[:, columns])
 
     # --- properties ---
     @property
