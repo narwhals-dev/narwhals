@@ -85,10 +85,9 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
         new_names: list[str] = self._keys.copy()
 
         all_aggs_are_simple = True
+        exclude = (*self._keys, *self._output_key_names)
         for expr in exprs:
-            _, aliases = evaluate_output_names_and_aliases(
-                expr, self.compliant, [*self._keys, *self._output_key_names]
-            )
+            _, aliases = evaluate_output_names_and_aliases(expr, self.compliant, exclude)
             new_names.extend(aliases)
             if not self._is_simple(expr):
                 all_aggs_are_simple = False
@@ -114,7 +113,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
         if all_aggs_are_simple:
             for expr in exprs:
                 output_names, aliases = evaluate_output_names_and_aliases(
-                    expr, self.compliant, [*self._keys, *self._output_key_names]
+                    expr, self.compliant, exclude
                 )
                 if expr._depth == 0:
                     # e.g. `agg(nw.len())`

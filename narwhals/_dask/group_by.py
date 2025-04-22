@@ -101,9 +101,10 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
         # - https://github.com/rapidsai/cudf/issues/15118
         # - https://github.com/rapidsai/cudf/issues/15084
         simple_aggregations: dict[str, tuple[str, Aggregation]] = {}
+        exclude = (*self._keys, *self._output_key_names)
         for expr in exprs:
             output_names, aliases = evaluate_output_names_and_aliases(
-                expr, self.compliant, [*self._keys, *self._output_key_names]
+                expr, self.compliant, exclude
             )
             if expr._depth == 0:
                 # e.g. `agg(nw.len())`
