@@ -61,6 +61,7 @@ if TYPE_CHECKING:
     from narwhals.typing import SizedMultiNameSelector
     from narwhals.typing import SizeUnit
     from narwhals.typing import UniqueKeepStrategy
+    from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
     from narwhals.typing import _SliceIndex
     from narwhals.typing import _SliceName
@@ -80,7 +81,9 @@ if TYPE_CHECKING:
     PromoteOptions: TypeAlias = Literal["none", "default", "permissive"]
 
 
-class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
+class ArrowDataFrame(
+    EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table", "pa.ChunkedArray[Any]"]
+):
     def __init__(
         self,
         native_dataframe: pa.Table,
@@ -275,22 +278,33 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             self.native.select(self.columns[columns.start : columns.stop : columns.step])
         )
 
-    def _select_indices(
+    def _select_multi_index(
         self, columns: SizedMultiIndexSelector[ArrowChunkedArray]
     ) -> Self:
+        selector: Sequence[int] | Sequence[str]
         if isinstance(columns, pa.ChunkedArray):
-            columns = cast("list[int]", columns.to_pylist())
-        if is_numpy_array(columns):
-            columns = cast("list[int]", columns.tolist())
-        return self._with_native(self.native.select(columns))
+            # TODO @dangotbanned: Fix upstream with `pa.ChunkedArray.to_pylist(self) -> list[Any]:`
+            selector = cast("Sequence[int]", columns.to_pylist())
+        # TODO @dangotbanned: Fix upstream, it is actually much narrower
+        # **Doesn't accept `ndarray`**
+        elif is_numpy_array(columns):
+            selector = columns.tolist()
+        else:
+            selector = columns
+        return self._with_native(self.native.select(selector))
 
     def _select_multi_name(
         self, columns: SizedMultiNameSelector[ArrowChunkedArray]
     ) -> Self:
+        selector: Sequence[str] | _1DArray
         if isinstance(columns, pa.ChunkedArray):
-            columns = cast("list[str]", columns.to_pylist())
-        # pyarrow-stubs overly strict, accepts list[str] | Indices
-        return self._with_native(self.native.select(columns))  # pyright: ignore[reportArgumentType]
+            # TODO @dangotbanned: Fix upstream with `pa.ChunkedArray.to_pylist(self) -> list[Any]:`
+            selector = cast("Sequence[str]", columns.to_pylist())
+        else:
+            selector = columns
+        # TODO @dangotbanned: Fix upstream `pa.Table.select` https://github.com/zen-xu/pyarrow-stubs/blob/f899bb35e10b36f7906a728e9f8acf3e0a1f9f64/pyarrow-stubs/__lib_pxi/table.pyi#L597
+        # NOTE: Investigate what `cython` actually checks
+        return self._with_native(self.native.select(selector))  # pyright: ignore[reportArgumentType]
 
     @property
     def schema(self) -> dict[str, DType]:

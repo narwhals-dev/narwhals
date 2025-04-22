@@ -13,11 +13,11 @@ from typing import TypeVar
 from typing import overload
 
 from narwhals._compliant.typing import CompliantExprT_contra
-from narwhals._compliant.typing import CompliantSeriesAny
 from narwhals._compliant.typing import CompliantSeriesT
 from narwhals._compliant.typing import EagerExprT
 from narwhals._compliant.typing import EagerSeriesT
 from narwhals._compliant.typing import NativeFrameT
+from narwhals._compliant.typing import NativeSeriesT
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._translate import ArrowConvertible
 from narwhals._translate import DictConvertible
@@ -353,11 +353,11 @@ class CompliantLazyFrame(
 class EagerDataFrame(
     CompliantDataFrame[EagerSeriesT, EagerExprT, NativeFrameT],
     CompliantLazyFrame[EagerExprT, NativeFrameT],
-    Protocol[EagerSeriesT, EagerExprT, NativeFrameT],
+    Protocol[EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
 ):
     def __narwhals_namespace__(
         self,
-    ) -> EagerNamespace[Self, EagerSeriesT, EagerExprT, NativeFrameT, Any]: ...
+    ) -> EagerNamespace[Self, EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT]: ...
 
     def _evaluate_expr(self, expr: EagerExprT, /) -> EagerSeriesT:
         """Evaluate `expr` and ensure it has a **single** output."""
@@ -398,26 +398,21 @@ class EagerDataFrame(
     ) -> list[str]:
         return list(columns or (f"column_{x}" for x in range(data.shape[1])))
 
-    def _gather(self, rows: SizedMultiIndexSelector[Any]) -> Self: ...
+    def _gather(self, rows: SizedMultiIndexSelector[NativeSeriesT]) -> Self: ...
     def _gather_slice(self, rows: _SliceIndex | range) -> Self: ...
-    def _select_indices(
-        # TODO(unassigned): `Any` should be `NativeSeriesT`
-        self,
-        columns: SizedMultiIndexSelector[Any],
+    def _select_multi_index(
+        self, columns: SizedMultiIndexSelector[NativeSeriesT]
     ) -> Self: ...
     def _select_multi_name(
-        # TODO(unassigned): `Any` should be `NativeSeriesT`
-        self,
-        columns: SizedMultiNameSelector[Any],
+        self, columns: SizedMultiNameSelector[NativeSeriesT]
     ) -> Self: ...
     def _select_slice_index(self, columns: _SliceIndex | range) -> Self: ...
     def _select_slice_name(self, columns: _SliceName) -> Self: ...
-
     def __getitem__(
         self,
         item: tuple[
-            SingleIndexSelector | MultiIndexSelector[CompliantSeriesAny],
-            MultiIndexSelector[CompliantSeriesAny] | MultiColSelector[CompliantSeriesAny],
+            SingleIndexSelector | MultiIndexSelector[EagerSeriesT],
+            MultiIndexSelector[EagerSeriesT] | MultiColSelector[EagerSeriesT],
         ],
     ) -> Self:
         rows, columns = item
@@ -429,9 +424,9 @@ class EagerDataFrame(
                 if is_slice_index(columns) or is_range(columns):
                     compliant = compliant._select_slice_index(columns)
                 elif is_compliant_series(columns):
-                    compliant = self._select_indices(columns.native)
+                    compliant = self._select_multi_index(columns.native)
                 else:
-                    compliant = compliant._select_indices(columns)
+                    compliant = compliant._select_multi_index(columns)
             elif isinstance(columns, slice):
                 compliant = compliant._select_slice_name(columns)
             elif is_compliant_series(columns):

@@ -57,6 +57,7 @@ if TYPE_CHECKING:
     from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
     from narwhals.typing import _AnyDArray
+    from narwhals.typing import _SliceIndex
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -150,7 +151,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         rows = list(rows) if isinstance(rows, tuple) else rows
         return self._with_native(self.native.iloc[rows])
 
-    def _gather_slice(self, rows: slice | range) -> Self:
+    def _gather_slice(self, rows: _SliceIndex | range) -> Self:
         return self._with_native(
             self.native.iloc[slice(rows.start, rows.stop, rows.step)]
         )

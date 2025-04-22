@@ -71,6 +71,7 @@ if TYPE_CHECKING:
     from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
+    from narwhals.typing import _SliceIndex
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -412,9 +413,9 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             return self._with_native(self.native.slice(0, 0))
         if self._backend_version < (18,) and isinstance(rows, tuple):
             rows = list(rows)
-        return self._with_native(self.native.take(rows))  # pyright: ignore[reportArgumentType]
+        return self._with_native(self.native.take(rows))
 
-    def _gather_slice(self, rows: slice | range) -> Self:
+    def _gather_slice(self, rows: _SliceIndex | range) -> Self:
         start = rows.start or 0
         stop = rows.stop if rows.stop is not None else len(self.native)
         if start < 0:

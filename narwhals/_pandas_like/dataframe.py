@@ -19,7 +19,6 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_and_extract_native
 from narwhals._pandas_like.utils import align_series_full_broadcast
 from narwhals._pandas_like.utils import check_column_names_are_unique
-from narwhals._pandas_like.utils import convert_str_slice_to_int_slice
 from narwhals._pandas_like.utils import get_dtype_backend
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
@@ -103,7 +102,9 @@ CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
 )
 
 
-class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "Any"]):
+class PandasLikeDataFrame(
+    EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "Any", "pd.Series[Any]"]
+):
     def __init__(
         self,
         native_dataframe: Any,
@@ -282,8 +283,8 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         return self.to_numpy(dtype=dtype, copy=copy)
 
     def _gather(self, rows: SizedMultiIndexSelector[pd.Series[Any]]) -> Self:
-        rows = list(rows) if isinstance(rows, tuple) else rows
-        return self._with_native(self.native.iloc[rows, :])
+        items = list(rows) if isinstance(rows, tuple) else rows
+        return self._with_native(self.native.iloc[items, :])
 
     def _gather_slice(self, rows: _SliceIndex | range) -> Self:
         return self._with_native(
@@ -292,10 +293,19 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         )
 
     def _select_slice_name(self, columns: _SliceName) -> Self:
-        start, stop, step = convert_str_slice_to_int_slice(columns, self.native.columns)
+        start = (
+            self.native.columns.get_loc(columns.start)
+            if columns.start is not None
+            else None
+        )
+        stop = (
+            self.native.columns.get_loc(columns.stop) + 1
+            if columns.stop is not None
+            else None
+        )
+        selector = slice(start, stop, columns.step)
         return self._with_native(
-            self.native.iloc[:, slice(start, stop, step)],
-            validate_column_names=False,
+            self.native.iloc[:, selector], validate_column_names=False
         )
 
     def _select_slice_index(self, columns: _SliceIndex | range) -> Self:
@@ -303,7 +313,9 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             self.native.iloc[:, columns], validate_column_names=False
         )
 
-    def _select_indices(self, columns: SizedMultiIndexSelector[pd.Series[Any]]) -> Self:
+    def _select_multi_index(
+        self, columns: SizedMultiIndexSelector[pd.Series[Any]]
+    ) -> Self:
         columns = list(columns) if isinstance(columns, tuple) else columns
         return self._with_native(
             self.native.iloc[:, columns], validate_column_names=False
