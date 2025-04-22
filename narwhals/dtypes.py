@@ -472,8 +472,9 @@ class _DelayedCategories:
     def __init__(self, get_categories: Callable[[], tuple[str, ...]]) -> None:
         self.get_categories = get_categories
 
-    def __iter__(self) -> Iterator[str]:
-        yield from self.get_categories()
+    def __iter__(self) -> Iterator[str]:  # pragma: no cover
+        msg = "This is only provided for type-checking and should not be called"
+        raise AssertionError(msg)
 
 
 class Enum(DType):
