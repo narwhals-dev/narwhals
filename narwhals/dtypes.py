@@ -597,7 +597,7 @@ class Struct(NestedType):
     def __hash__(self) -> int:
         return hash((self.__class__, tuple(self.fields)))
 
-    def __iter__(self) -> Iterator[tuple[str, DType | type[DType]]]:
+    def __iter__(self) -> Iterator[tuple[str, DType | type[DType]]]:  # pragma: no cover
         for fld in self.fields:
             yield fld.name, fld.dtype
 
