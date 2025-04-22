@@ -299,17 +299,11 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         )
 
     def _select_slice_of_indices(self, item: _SliceIndex | range) -> Self:
-        return self._with_native(
-            self.native.iloc[:, slice(item.start, item.stop, item.step)],
-            validate_column_names=False,
-        )
+        return self._with_native(self.native.iloc[:, item], validate_column_names=False)
 
     def _select_indices(self, item: SizedMultiIndexSelector) -> Self:
         item = list(item) if isinstance(item, tuple) else item
-        return self._with_native(
-            self.native.iloc[:, item],
-            validate_column_names=False,
-        )
+        return self._with_native(self.native.iloc[:, item], validate_column_names=False)
 
     def _select_labels(self, indices: SizedMultiNameSelector) -> PandasLikeDataFrame:
         return self._with_native(self.native.loc[:, indices])

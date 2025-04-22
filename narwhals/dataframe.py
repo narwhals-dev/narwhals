@@ -903,7 +903,6 @@ class DataFrame(BaseFrame[DataFrameT]):
                     "Hint: instead of `df[indices]`, did you mean `df[indices, :]`?"
                 )
                 raise TypeError(tuple_msg)
-            # These are so heavily overloaded that we just ignore the types for now.
             rows = None if not item or is_slice_none(item[0]) else item[0]
             columns = None if len(item) < 2 or is_slice_none(item[1]) else item[1]
             if rows is None and columns is None:

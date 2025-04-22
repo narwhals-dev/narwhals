@@ -45,6 +45,7 @@ if TYPE_CHECKING:
     from narwhals.typing import ClosedInterval
     from narwhals.typing import FillNullStrategy
     from narwhals.typing import Into1DArray
+    from narwhals.typing import MultiIndexSelector
     from narwhals.typing import NonNestedLiteral
     from narwhals.typing import NumericLiteral
     from narwhals.typing import RankMethod
@@ -323,7 +324,7 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
     def _gather(self, indices: SizedMultiIndexSelector) -> Self: ...
     def _gather_slice(self, indices: slice | range) -> Self: ...
 
-    def __getitem__(self, item: Any) -> Self:
+    def __getitem__(self, item: MultiIndexSelector) -> Self:
         if is_slice_none(item):
             return self
         if isinstance(item, int):
