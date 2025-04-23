@@ -14,7 +14,7 @@ def query(line_item_ds: FrameT, part_ds: FrameT) -> FrameT:
     var2 = datetime(1995, 10, 1)
 
     return (
-        line_item_ds.join(part_ds, left_on="l_partkey", right_on="p_partkey")
+        line_item_ds.join(part_ds, left_on="l_partkey", right_on="p_partkey")  # pyright: ignore[reportArgumentType]
         .filter(nw.col("l_shipdate").is_between(var1, var2, closed="left"))
         .select(
             (

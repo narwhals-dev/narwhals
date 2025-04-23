@@ -19,8 +19,8 @@ def query(
 
     return (
         customer_ds.filter(nw.col("c_mktsegment") == var_3)
-        .join(orders_ds, left_on="c_custkey", right_on="o_custkey")
-        .join(line_item_ds, left_on="o_orderkey", right_on="l_orderkey")
+        .join(orders_ds, left_on="c_custkey", right_on="o_custkey")  # pyright: ignore[reportArgumentType]
+        .join(line_item_ds, left_on="o_orderkey", right_on="l_orderkey")  # pyright: ignore[reportArgumentType]
         .filter(
             nw.col("o_orderdate") < var_2,
             nw.col("l_shipdate") > var_1,

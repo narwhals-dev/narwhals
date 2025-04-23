@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 def query(lineitem_ds: FrameT, part_ds: FrameT) -> FrameT:
     return (
-        part_ds.join(lineitem_ds, left_on="p_partkey", right_on="l_partkey")
+        part_ds.join(lineitem_ds, left_on="p_partkey", right_on="l_partkey")  # pyright: ignore[reportArgumentType]
         .filter(nw.col("l_shipmode").is_in(["AIR", "AIR REG"]))
         .filter(nw.col("l_shipinstruct") == "DELIVER IN PERSON")
         .filter(

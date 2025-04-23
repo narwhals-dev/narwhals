@@ -17,8 +17,8 @@ def query(
     var2 = 0.0001
 
     q1 = (
-        partsupp_ds.join(supplier_ds, left_on="ps_suppkey", right_on="s_suppkey")
-        .join(nation_ds, left_on="s_nationkey", right_on="n_nationkey")
+        partsupp_ds.join(supplier_ds, left_on="ps_suppkey", right_on="s_suppkey")  # pyright: ignore[reportArgumentType]
+        .join(nation_ds, left_on="s_nationkey", right_on="n_nationkey")  # pyright: ignore[reportArgumentType]
         .filter(nw.col("n_name") == var1)
     )
     q2 = q1.select(
@@ -30,7 +30,7 @@ def query(
         q1.with_columns((nw.col("ps_supplycost") * nw.col("ps_availqty")).alias("value"))
         .group_by("ps_partkey")
         .agg(nw.sum("value"))
-        .join(q2, how="cross")
+        .join(q2, how="cross")  # pyright: ignore[reportArgumentType]
         .filter(nw.col("value") > nw.col("tmp"))
         .select("ps_partkey", "value")
         .sort("value", descending=True)

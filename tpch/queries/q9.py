@@ -17,15 +17,15 @@ def query(
     supplier_ds: FrameT,
 ) -> FrameT:
     return (
-        part_ds.join(partsupp_ds, left_on="p_partkey", right_on="ps_partkey")
-        .join(supplier_ds, left_on="ps_suppkey", right_on="s_suppkey")
+        part_ds.join(partsupp_ds, left_on="p_partkey", right_on="ps_partkey")  # pyright: ignore[reportArgumentType]
+        .join(supplier_ds, left_on="ps_suppkey", right_on="s_suppkey")  # pyright: ignore[reportArgumentType]
         .join(
-            lineitem_ds,
+            lineitem_ds,  # pyright: ignore[reportArgumentType]
             left_on=["p_partkey", "ps_suppkey"],
             right_on=["l_partkey", "l_suppkey"],
         )
-        .join(orders_ds, left_on="l_orderkey", right_on="o_orderkey")
-        .join(nation_ds, left_on="s_nationkey", right_on="n_nationkey")
+        .join(orders_ds, left_on="l_orderkey", right_on="o_orderkey")  # pyright: ignore[reportArgumentType]
+        .join(nation_ds, left_on="s_nationkey", right_on="n_nationkey")  # pyright: ignore[reportArgumentType]
         .filter(nw.col("p_name").str.contains("green"))
         .select(
             nw.col("n_name").alias("nation"),

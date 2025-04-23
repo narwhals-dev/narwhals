@@ -14,7 +14,7 @@ def query(customer_ds: FrameT, orders_ds: FrameT) -> FrameT:
 
     orders = orders_ds.filter(~nw.col("o_comment").str.contains(f"{var1}.*{var2}"))
     return (
-        customer_ds.join(orders, left_on="c_custkey", right_on="o_custkey", how="left")
+        customer_ds.join(orders, left_on="c_custkey", right_on="o_custkey", how="left")  # pyright: ignore[reportArgumentType]
         .group_by("c_custkey")
         .agg(nw.col("o_orderkey").count().alias("c_count"))
         .group_by("c_count")

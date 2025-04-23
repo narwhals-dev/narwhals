@@ -16,7 +16,7 @@ def query(line_item_ds: FrameT, orders_ds: FrameT) -> FrameT:
     var4 = datetime(1995, 1, 1)
 
     return (
-        orders_ds.join(line_item_ds, left_on="o_orderkey", right_on="l_orderkey")
+        orders_ds.join(line_item_ds, left_on="o_orderkey", right_on="l_orderkey")  # pyright: ignore[reportArgumentType]
         .filter(nw.col("l_shipmode").is_in([var1, var2]))
         .filter(nw.col("l_commitdate") < nw.col("l_receiptdate"))
         .filter(nw.col("l_shipdate") < nw.col("l_commitdate"))
