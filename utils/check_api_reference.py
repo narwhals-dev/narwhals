@@ -9,7 +9,6 @@ from typing import Iterator
 import polars as pl
 
 import narwhals as nw
-from narwhals._expression_parsing import ExprMetadata
 from narwhals.utils import remove_prefix
 
 
@@ -193,9 +192,7 @@ if extra := set(documented).difference(expr_methods):
 for namespace in NAMESPACES:
     expr_ns_methods = [
         i
-        for i in dir(
-            getattr(nw.Expr(lambda: 0, ExprMetadata.selector_single()), namespace)
-        )
+        for i in dir(getattr(nw.col("a"), namespace))
         if not i[0].isupper() and i[0] != "_"
     ]
     with open(f"docs/api-reference/expr_{namespace}.md") as fd:
@@ -251,9 +248,7 @@ if extra := set(series).difference(expr_methods).difference(SERIES_ONLY_METHODS)
 for namespace in NAMESPACES.difference({"name"}):
     expr_internal = [
         i
-        for i in dir(
-            getattr(nw.Expr(lambda: 0, ExprMetadata.selector_single()), namespace)
-        )
+        for i in dir(getattr(nw.col("a"), namespace))
         if not i[0].isupper() and i[0] != "_"
     ]
     series_internal = [
