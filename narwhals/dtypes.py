@@ -517,8 +517,6 @@ class Enum(DType):
         return hash((self.__class__, tuple(self.categories)))
 
     def __repr__(self) -> str:
-        if self._cached_categories is None:
-            return f"{type(self).__name__}(categories=[...])"
         return f"{type(self).__name__}(categories={list(self.categories)!r})"
 
 

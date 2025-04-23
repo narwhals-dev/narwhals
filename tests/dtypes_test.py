@@ -444,8 +444,6 @@ def test_enum_repr_pd() -> None:
         )
     )
     dtype = df.schema["a"]
-    result = str(dtype)
-    assert "Enum(categories=[...])" in result
     assert dtype.categories == ("broccoli", "cabbage")  # type: ignore[attr-defined]
     assert "Enum(categories=['broccoli', 'cabbage'])" in str(dtype)
 
@@ -460,8 +458,6 @@ def test_enum_repr_pl() -> None:
         )
     )
     dtype = df.schema["a"]
-    result = repr(dtype)
-    assert "Enum(categories=[...])" in result
     assert dtype.categories == ("broccoli", "cabbage")  # type: ignore[attr-defined]
     assert "Enum(categories=['broccoli', 'cabbage'])" in repr(dtype)
 
