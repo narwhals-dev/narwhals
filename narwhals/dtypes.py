@@ -5,12 +5,13 @@ from collections import OrderedDict
 from datetime import timezone
 from itertools import starmap
 from typing import TYPE_CHECKING
+from typing import Iterable
 from typing import Mapping
 
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    from typing import Iterable
+    from typing import Callable
     from typing import Iterator
     from typing import Sequence
 
@@ -460,10 +461,27 @@ class Categorical(DType):
     """
 
 
+class _DelayedCategories:
+    """Store callable which produces tupleified version of Enum's categories.
+
+    !!! warning
+        This class is not meant to be instantiated directly and exists
+        for internal usage only.
+    """
+
+    def __init__(self, get_categories: Callable[[], tuple[str, ...]]) -> None:
+        self.get_categories = get_categories
+
+    def __iter__(self) -> Iterator[str]:  # pragma: no cover
+        msg = "This is only provided for type-checking and should not be called"
+        raise AssertionError(msg)
+
+
 class Enum(DType):
     """A fixed categorical encoding of a unique set of strings.
 
-    Polars has an Enum data type, while pandas and PyArrow do not.
+    Polars has an Enum data type. In pandas, ordered categories get mapped
+    to Enum. PyArrow has no Enum equivalent.
 
     Examples:
        >>> import narwhals as nw
@@ -471,13 +489,23 @@ class Enum(DType):
        Enum(categories=['beluga', 'narwhal', 'orca'])
     """
 
-    categories: Sequence[str]
-
     def __init__(self, categories: Iterable[str] | type[enum.Enum]) -> None:
-        if isinstance(categories, type) and issubclass(categories, enum.Enum):
-            self.categories = tuple(member.value for member in categories)
+        self._delayed_categories: _DelayedCategories | None = None
+        self._cached_categories: tuple[str, ...] | None = None
+
+        if isinstance(categories, _DelayedCategories):
+            self._delayed_categories = categories
+        elif isinstance(categories, type) and issubclass(categories, enum.Enum):
+            self._cached_categories = tuple(member.value for member in categories)
         else:
-            self.categories = tuple(categories)
+            self._cached_categories = tuple(categories)
+
+    @property
+    def categories(self) -> tuple[str, ...]:
+        if self._cached_categories is None:
+            assert self._delayed_categories is not None  # noqa: S101
+            self._cached_categories = self._delayed_categories.get_categories()
+        return self._cached_categories
 
     def __eq__(self, other: object) -> bool:
         # allow comparing object instances to class
@@ -485,10 +513,10 @@ class Enum(DType):
             return other is Enum
         return isinstance(other, type(self)) and self.categories == other.categories
 
-    def __hash__(self) -> int:  # pragma: no cover
+    def __hash__(self) -> int:
         return hash((self.__class__, tuple(self.categories)))
 
-    def __repr__(self) -> str:  # pragma: no cover
+    def __repr__(self) -> str:
         return f"{type(self).__name__}(categories={list(self.categories)!r})"
 
 
@@ -568,7 +596,7 @@ class Struct(NestedType):
     def __hash__(self) -> int:
         return hash((self.__class__, tuple(self.fields)))
 
-    def __iter__(self) -> Iterator[tuple[str, DType | type[DType]]]:
+    def __iter__(self) -> Iterator[tuple[str, DType | type[DType]]]:  # pragma: no cover
         for fld in self.fields:
             yield fld.name, fld.dtype
 

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
 from typing import Protocol
+from typing import Sequence
 from typing import TypeVar
 from typing import Union
 
@@ -308,6 +309,25 @@ NonNestedLiteral: TypeAlias = (
     "NumericLiteral | TemporalLiteral | str | bool | bytes | None"
 )
 PythonLiteral: TypeAlias = "NonNestedLiteral | list[Any] | tuple[Any, ...]"
+
+# Annotations for `__getitem__` methods
+_T = TypeVar("_T")
+_Slice: TypeAlias = "slice[_T, Any, Any] | slice[Any, _T, Any] | slice[None, None, _T]"
+_SliceNone: TypeAlias = "slice[None, None, None]"
+# Index/column positions
+SingleIndexSelector: TypeAlias = int
+_SliceIndex: TypeAlias = "_Slice[int] | _SliceNone"
+"""E.g. `[1:]` or `[:3]` or `[::2]`."""
+SizedMultiIndexSelector: TypeAlias = "Sequence[int] | _T | _1DArray"
+MultiIndexSelector: TypeAlias = "_SliceIndex | SizedMultiIndexSelector[_T]"
+# Labels/column names
+SingleNameSelector: TypeAlias = str
+_SliceName: TypeAlias = "_Slice[str] | _SliceNone"
+SizedMultiNameSelector: TypeAlias = "Sequence[str] | _T | _1DArray"
+MultiNameSelector: TypeAlias = "_SliceName | SizedMultiNameSelector[_T]"
+# Mixed selectors
+SingleColSelector: TypeAlias = "SingleIndexSelector | SingleNameSelector"
+MultiColSelector: TypeAlias = "MultiIndexSelector[_T] | MultiNameSelector[_T]"
 
 
 # ruff: noqa: N802
