@@ -8,7 +8,6 @@ from typing import Any
 from typing import Sequence
 from typing import Sized
 from typing import TypeVar
-from typing import cast
 
 import pandas as pd
 
@@ -579,24 +578,6 @@ def int_dtype_mapper(dtype: Any) -> str:
     if str(dtype).lower() != str(dtype):  # pragma: no cover
         return "Int64"
     return "int64"
-
-
-def convert_str_slice_to_int_slice(
-    str_slice: slice, columns: pd.Index[str]
-) -> tuple[int | None, int | None, int | None]:
-    # We can safely cast to int because we know that `columns` doesn't contain duplicates.
-    start = (
-        cast("int", columns.get_loc(str_slice.start))
-        if str_slice.start is not None
-        else None
-    )
-    stop = (
-        cast("int", columns.get_loc(str_slice.stop)) + 1
-        if str_slice.stop is not None
-        else None
-    )
-    step = str_slice.step
-    return (start, stop, step)
 
 
 def calculate_timestamp_datetime(
