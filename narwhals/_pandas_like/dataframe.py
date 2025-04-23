@@ -571,10 +571,7 @@ class PandasLikeDataFrame(
 
     # --- actions ---
     def group_by(
-        self,
-        keys: Sequence[str] | Sequence[PandasLikeExpr],
-        *,
-        drop_null_keys: bool,
+        self, keys: Sequence[str] | Sequence[PandasLikeExpr], *, drop_null_keys: bool
     ) -> PandasLikeGroupBy:
         from narwhals._pandas_like.group_by import PandasLikeGroupBy
 
