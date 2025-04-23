@@ -7,6 +7,7 @@ from typing import Iterable
 from typing import Iterator
 from typing import Mapping
 from typing import TypeVar
+from typing import cast
 from typing import overload
 
 import polars as pl
@@ -114,7 +115,12 @@ def native_to_narwhals_dtype(
     if isinstance_or_issubclass(dtype, pl.Enum):
         if version is Version.V1:
             return dtypes.Enum()  # type: ignore[call-arg]
-        return dtypes.Enum(_DeferredIterable(dtype.categories.to_list))
+        categories = _DeferredIterable(
+            dtype.categories.to_list
+            if backend_version >= (0, 20, 4)
+            else lambda: cast("list[str]", dtype.categories)
+        )
+        return dtypes.Enum(categories)
     if dtype == pl.Date:
         return dtypes.Date()
     if isinstance_or_issubclass(dtype, pl.Datetime):
