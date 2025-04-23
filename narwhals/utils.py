@@ -13,7 +13,9 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Container
+from typing import Generic
 from typing import Iterable
+from typing import Iterator
 from typing import Literal
 from typing import Protocol
 from typing import Sequence
@@ -99,7 +101,7 @@ if TYPE_CHECKING:
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
     )
-    _T = TypeVar("_T")
+
     _T1 = TypeVar("_T1")
     _T2 = TypeVar("_T2")
     _T3 = TypeVar("_T3")
@@ -145,6 +147,7 @@ if TYPE_CHECKING:
         def columns(self) -> Sequence[str]: ...
 
 
+_T = TypeVar("_T")
 NativeT_co = TypeVar("NativeT_co", covariant=True)
 CompliantT_co = TypeVar("CompliantT_co", covariant=True)
 _ContextT = TypeVar("_ContextT", bound="_FullContext")
@@ -1891,3 +1894,13 @@ def convert_str_slice_to_int_slice(
     stop = columns.index(str_slice.stop) + 1 if str_slice.stop is not None else None
     step = str_slice.step
     return (start, stop, step)
+
+
+class _DeferredIterable(Generic[_T]):
+    """Store a callable producing an iterable to defer collection until we need it."""
+
+    def __init__(self, into_iter: Callable[[], Iterable[_T]], /) -> None:
+        self._into_iter: Callable[[], Iterable[_T]] = into_iter
+
+    def __iter__(self) -> Iterator[_T]:
+        yield from self._into_iter()

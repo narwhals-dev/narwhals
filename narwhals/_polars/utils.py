@@ -11,7 +11,6 @@ from typing import overload
 
 import polars as pl
 
-from narwhals.dtypes import _DelayedCategories
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import ComputeError
 from narwhals.exceptions import DuplicateError
@@ -19,6 +18,7 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import NarwhalsError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Version
+from narwhals.utils import _DeferredIterable
 from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
@@ -114,7 +114,7 @@ def native_to_narwhals_dtype(
     if isinstance_or_issubclass(dtype, pl.Enum):
         if version is Version.V1:
             return dtypes.Enum()  # type: ignore[call-arg]
-        return dtypes.Enum(_DelayedCategories(lambda: tuple(dtype.categories)))
+        return dtypes.Enum(_DeferredIterable(dtype.categories.to_list))
     if dtype == pl.Date:
         return dtypes.Date()
     if isinstance_or_issubclass(dtype, pl.Datetime):

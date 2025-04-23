@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING
 from typing import Iterable
 from typing import Mapping
 
+from narwhals.utils import _DeferredIterable
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    from typing import Callable
     from typing import Iterator
     from typing import Sequence
 
@@ -461,22 +461,6 @@ class Categorical(DType):
     """
 
 
-class _DelayedCategories:
-    """Store callable which produces tupleified version of Enum's categories.
-
-    !!! warning
-        This class is not meant to be instantiated directly and exists
-        for internal usage only.
-    """
-
-    def __init__(self, get_categories: Callable[[], tuple[str, ...]]) -> None:
-        self.get_categories = get_categories
-
-    def __iter__(self) -> Iterator[str]:  # pragma: no cover
-        msg = "This is only provided for type-checking and should not be called"
-        raise AssertionError(msg)
-
-
 class Enum(DType):
     """A fixed categorical encoding of a unique set of strings.
 
@@ -490,10 +474,10 @@ class Enum(DType):
     """
 
     def __init__(self, categories: Iterable[str] | type[enum.Enum]) -> None:
-        self._delayed_categories: _DelayedCategories | None = None
+        self._delayed_categories: _DeferredIterable[str] | None = None
         self._cached_categories: tuple[str, ...] | None = None
 
-        if isinstance(categories, _DelayedCategories):
+        if isinstance(categories, _DeferredIterable):
             self._delayed_categories = categories
         elif isinstance(categories, type) and issubclass(categories, enum.Enum):
             self._cached_categories = tuple(member.value for member in categories)
@@ -504,7 +488,7 @@ class Enum(DType):
     def categories(self) -> tuple[str, ...]:
         if self._cached_categories is None:
             assert self._delayed_categories is not None  # noqa: S101
-            self._cached_categories = self._delayed_categories.get_categories()
+            self._cached_categories = tuple(self._delayed_categories)
         return self._cached_categories
 
     def __eq__(self, other: object) -> bool:
