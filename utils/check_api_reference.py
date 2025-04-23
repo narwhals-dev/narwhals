@@ -51,7 +51,7 @@ files = {fp.stem for fp in Path("narwhals").iterdir()}
 
 # Top level functions
 top_level_functions = [
-    i for i in nw.__dir__() if not i[0].isupper() and i[0] != "_" and i not in files
+    i for i in dir(nw) if not i[0].isupper() and i[0] != "_" and i not in files
 ]
 with open("docs/api-reference/narwhals.md") as fd:
     content = fd.read()
@@ -71,9 +71,7 @@ if extra := set(documented).difference(top_level_functions):
 
 # DataFrame methods
 dataframe_methods = [
-    i
-    for i in nw.from_native(pl.DataFrame()).__dir__()
-    if not i[0].isupper() and i[0] != "_"
+    i for i in dir(nw.from_native(pl.DataFrame())) if not i[0].isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/dataframe.md") as fd:
     content = fd.read()
@@ -93,9 +91,7 @@ if extra := set(documented).difference(dataframe_methods):
 
 # LazyFrame methods
 lazyframe_methods = [
-    i
-    for i in nw.from_native(pl.LazyFrame()).__dir__()
-    if not i[0].isupper() and i[0] != "_"
+    i for i in dir(nw.from_native(pl.LazyFrame())) if not i[0].isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/lazyframe.md") as fd:
     content = fd.read()
@@ -116,7 +112,7 @@ if extra := set(documented).difference(lazyframe_methods):
 # Series methods
 series_methods = [
     i
-    for i in nw.from_native(pl.Series(), series_only=True).__dir__()
+    for i in dir(nw.from_native(pl.Series(), series_only=True))
     if not i[0].isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/series.md") as fd:
@@ -139,9 +135,7 @@ if extra := set(documented).difference(series_methods):
 for namespace in NAMESPACES.difference({"name"}):
     series_methods = [
         i
-        for i in getattr(
-            nw.from_native(pl.Series(), series_only=True), namespace
-        ).__dir__()
+        for i in dir(getattr(nw.from_native(pl.Series(), series_only=True), namespace))
         if not i[0].isupper() and i[0] != "_"
     ]
     with open(f"docs/api-reference/series_{namespace}.md") as fd:
@@ -163,7 +157,7 @@ for namespace in NAMESPACES.difference({"name"}):
 # Expr methods
 expr_methods = [
     i
-    for i in nw.Expr(lambda: 0, ExprMetadata.selector_single()).__dir__()
+    for i in dir(nw.Expr(lambda: 0, ExprMetadata.selector_single()))
     if not i[0].isupper() and i[0] != "_"
 ]
 with open("docs/api-reference/expr.md") as fd:
@@ -186,10 +180,9 @@ if extra := set(documented).difference(expr_methods):
 for namespace in NAMESPACES:
     expr_methods = [
         i
-        for i in getattr(
-            nw.Expr(lambda: 0, ExprMetadata.selector_single()),
-            namespace,
-        ).__dir__()
+        for i in dir(
+            getattr(nw.Expr(lambda: 0, ExprMetadata.selector_single()), namespace)
+        )
         if not i[0].isupper() and i[0] != "_"
     ]
     with open(f"docs/api-reference/expr_{namespace}.md") as fd:
@@ -209,9 +202,7 @@ for namespace in NAMESPACES:
         ret = 1
 
 # DTypes
-dtypes = [
-    i for i in nw.dtypes.__dir__() if i[0].isupper() and not i.isupper() and i[0] != "_"
-]
+dtypes = [i for i in dir(nw.dtypes) if i[0].isupper() and not i.isupper() and i[0] != "_"]
 with open("docs/api-reference/dtypes.md") as fd:
     content = fd.read()
 documented = [
@@ -231,12 +222,12 @@ if extra := set(documented).difference(dtypes):
 # Check Expr vs Series
 expr = [
     i
-    for i in nw.Expr(lambda: 0, ExprMetadata.selector_single()).__dir__()
+    for i in dir(nw.Expr(lambda: 0, ExprMetadata.selector_single()))
     if not i[0].isupper() and i[0] != "_"
 ]
 series = [
     i
-    for i in nw.from_native(pl.Series(), series_only=True).__dir__()
+    for i in dir(nw.from_native(pl.Series(), series_only=True))
     if not i[0].isupper() and i[0] != "_"
 ]
 if missing := set(expr).difference(series).difference(EXPR_ONLY_METHODS):
@@ -252,17 +243,14 @@ if extra := set(series).difference(expr).difference(SERIES_ONLY_METHODS):
 for namespace in NAMESPACES.difference({"name"}):
     expr_internal = [
         i
-        for i in getattr(
-            nw.Expr(lambda: 0, ExprMetadata.selector_single()),
-            namespace,
-        ).__dir__()
+        for i in dir(
+            getattr(nw.Expr(lambda: 0, ExprMetadata.selector_single()), namespace)
+        )
         if not i[0].isupper() and i[0] != "_"
     ]
     series_internal = [
         i
-        for i in getattr(
-            nw.from_native(pl.Series(), series_only=True), namespace
-        ).__dir__()
+        for i in dir(getattr(nw.from_native(pl.Series(), series_only=True), namespace))
         if not i[0].isupper() and i[0] != "_"
     ]
     if missing := set(expr_internal).difference(series_internal):
