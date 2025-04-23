@@ -91,6 +91,8 @@ if TYPE_CHECKING:
     from typing_extensions import TypeVar
 
     from narwhals._translate import IntoArrowTable
+    from narwhals.dataframe import MultiColSelector
+    from narwhals.dataframe import MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import ConcatMethod
     from narwhals.typing import IntoExpr
@@ -98,6 +100,8 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoLazyFrameT
     from narwhals.typing import IntoSeries
     from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import SingleColSelector
+    from narwhals.typing import SingleIndexSelector
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
 
@@ -151,26 +155,37 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         return LazyFrame
 
     @overload
+    def __getitem__(self, item: tuple[SingleIndexSelector, SingleColSelector]) -> Any: ...
+
+    @overload
     def __getitem__(  # type: ignore[overload-overlap]
-        self,
-        item: str | tuple[slice | Sequence[int] | _1DArray, int | str],
+        self, item: str | tuple[MultiIndexSelector, SingleColSelector]
     ) -> Series[Any]: ...
+
     @overload
     def __getitem__(
         self,
         item: (
-            int
-            | slice
-            | _1DArray
-            | Sequence[int]
-            | Sequence[str]
-            | tuple[
-                slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
-            ]
+            SingleIndexSelector
+            | MultiIndexSelector
+            | MultiColSelector
+            | tuple[SingleIndexSelector, MultiColSelector]
+            | tuple[MultiIndexSelector, MultiColSelector]
         ),
     ) -> Self: ...
-
-    def __getitem__(self, item: Any) -> Any:
+    def __getitem__(
+        self,
+        item: (
+            SingleIndexSelector
+            | SingleColSelector
+            | MultiColSelector
+            | MultiIndexSelector
+            | tuple[SingleIndexSelector, SingleColSelector]
+            | tuple[SingleIndexSelector, MultiColSelector]
+            | tuple[MultiIndexSelector, SingleColSelector]
+            | tuple[MultiIndexSelector, MultiColSelector]
+        ),
+    ) -> Series[Any] | Self | Any:
         return super().__getitem__(item)
 
     def lazy(

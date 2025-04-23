@@ -21,9 +21,11 @@ from narwhals.series_struct import SeriesStructNamespace
 from narwhals.translate import to_native
 from narwhals.typing import IntoSeriesT
 from narwhals.typing import NonNestedLiteral
+from narwhals.typing import SingleIndexSelector
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import generate_repr
 from narwhals.utils import is_compliant_series
+from narwhals.utils import is_index_selector
 from narwhals.utils import parse_version
 from narwhals.utils import supports_arrow_c_stream
 
@@ -37,6 +39,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import ArrowArray
     from narwhals._compliant import CompliantSeries
     from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import ClosedInterval
     from narwhals.typing import FillNullStrategy
@@ -129,12 +132,12 @@ class Series(Generic[IntoSeriesT]):
         return self._compliant_series.__array__(dtype=dtype, copy=copy)
 
     @overload
-    def __getitem__(self, idx: int) -> Any: ...
+    def __getitem__(self, idx: SingleIndexSelector) -> Any: ...
 
     @overload
-    def __getitem__(self, idx: slice | Sequence[int] | Self) -> Self: ...
+    def __getitem__(self, idx: MultiIndexSelector) -> Self: ...
 
-    def __getitem__(self, idx: int | slice | Sequence[int] | Self) -> Any | Self:
+    def __getitem__(self, idx: SingleIndexSelector | MultiIndexSelector) -> Any | Self:
         """Retrieve elements from the object using integer indexing or slicing.
 
         Arguments:
@@ -169,10 +172,25 @@ class Series(Generic[IntoSeriesT]):
         if isinstance(idx, int) or (
             is_numpy_scalar(idx) and idx.dtype.kind in {"i", "u"}
         ):
-            return self._compliant_series[idx]
-        return self._with_compliant(
-            self._compliant_series[to_native(idx, pass_through=True)]
-        )
+            idx = int(idx) if not isinstance(idx, int) else idx
+            return self._compliant_series.item(idx)
+
+        if isinstance(idx, self.to_native().__class__):
+            idx = self._with_compliant(self._compliant_series._with_native(idx))
+
+        if not is_index_selector(idx):
+            msg = (
+                f"Unexpected type for `Series.__getitem__`: {type(idx)}.\n\n"
+                "Hints:\n"
+                "- use `s.item` to select a single item.\n"
+                "- Use `s[indices]` to select rows positionally.\n"
+                "- Use `s.filter(mask)` to filter rows based on a boolean mask."
+            )
+            raise TypeError(msg)
+        if isinstance(idx, Series):
+            return self._with_compliant(self._compliant_series[idx._compliant_series])
+        assert not isinstance(idx, int)  # noqa: S101  # help mypy
+        return self._with_compliant(self._compliant_series[idx])
 
     def __native_namespace__(self) -> ModuleType:
         return self._compliant_series.__native_namespace__()

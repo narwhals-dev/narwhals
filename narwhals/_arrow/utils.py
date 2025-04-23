@@ -7,7 +7,6 @@ from typing import Iterable
 from typing import Iterator
 from typing import Sequence
 from typing import cast
-from typing import overload
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -18,8 +17,6 @@ from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    from typing import TypeVar
-
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
@@ -33,14 +30,11 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import ScalarAny
     from narwhals.dtypes import DType
     from narwhals.typing import PythonLiteral
-    from narwhals.typing import _AnyDArray
     from narwhals.utils import Version
 
     # NOTE: stubs don't allow for `ChunkedArray[StructArray]`
     # Intended to represent the `.chunks` property storing `list[pa.StructArray]`
     ChunkedArrayStructArray: TypeAlias = ArrowChunkedArray
-
-    _T = TypeVar("_T")
 
     def is_timestamp(t: Any) -> TypeIs[pa.TimestampType[Any, Any]]: ...
     def is_duration(t: Any) -> TypeIs[pa.DurationType[Any]]: ...
@@ -322,41 +316,6 @@ def cast_for_truediv(
         )
 
     return arrow_array, pa_object
-
-
-@overload
-def convert_slice_to_nparray(num_rows: int, rows_slice: slice) -> _AnyDArray: ...
-@overload
-def convert_slice_to_nparray(num_rows: int, rows_slice: _T) -> _T: ...
-def convert_slice_to_nparray(num_rows: int, rows_slice: slice | _T) -> _AnyDArray | _T:
-    if isinstance(rows_slice, slice):
-        import numpy as np  # ignore-banned-import
-
-        return np.arange(num_rows)[rows_slice]
-    else:
-        return rows_slice
-
-
-def select_rows(
-    table: pa.Table, rows: slice | int | Sequence[int] | _AnyDArray
-) -> pa.Table:
-    if isinstance(rows, slice) and rows == slice(None):
-        selected_rows = table
-    elif isinstance(rows, Sequence) and not rows:
-        selected_rows = table.slice(0, 0)
-    else:
-        range_ = convert_slice_to_nparray(num_rows=len(table), rows_slice=rows)
-        selected_rows = table.take(cast("list[int]", range_))
-    return selected_rows
-
-
-def convert_str_slice_to_int_slice(
-    str_slice: slice, columns: list[str]
-) -> tuple[int | None, int | None, int | None]:
-    start = columns.index(str_slice.start) if str_slice.start is not None else None
-    stop = columns.index(str_slice.stop) + 1 if str_slice.stop is not None else None
-    step = str_slice.step
-    return (start, stop, step)
 
 
 # Regex for date, time, separator and timezone components

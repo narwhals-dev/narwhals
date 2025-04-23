@@ -7,7 +7,6 @@ from typing import Iterator
 from typing import Mapping
 from typing import Sequence
 from typing import cast
-from typing import overload
 
 import numpy as np
 
@@ -26,7 +25,6 @@ from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_index
 from narwhals.dependencies import is_numpy_array_1d
-from narwhals.dependencies import is_numpy_scalar
 from narwhals.dependencies import is_pandas_like_series
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
@@ -55,9 +53,11 @@ if TYPE_CHECKING:
     from narwhals.typing import NumericLiteral
     from narwhals.typing import RankMethod
     from narwhals.typing import RollingInterpolationMethod
+    from narwhals.typing import SizedMultiIndexSelector
     from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
     from narwhals.typing import _AnyDArray
+    from narwhals.typing import _SliceIndex
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -147,16 +147,14 @@ class PandasLikeSeries(EagerSeries[Any]):
             self._implementation, self._backend_version, self._version
         )
 
-    @overload
-    def __getitem__(self, idx: int) -> Any: ...
+    def _gather(self, rows: SizedMultiIndexSelector[pd.Series[Any]]) -> Self:
+        rows = list(rows) if isinstance(rows, tuple) else rows
+        return self._with_native(self.native.iloc[rows])
 
-    @overload
-    def __getitem__(self, idx: slice | Sequence[int]) -> Self: ...
-
-    def __getitem__(self, idx: int | slice | Sequence[int]) -> Any | Self:
-        if isinstance(idx, int) or is_numpy_scalar(idx):
-            return self.native.iloc[idx]
-        return self._with_native(self.native.iloc[idx])
+    def _gather_slice(self, rows: _SliceIndex | range) -> Self:
+        return self._with_native(
+            self.native.iloc[slice(rows.start, rows.stop, rows.step)]
+        )
 
     def _with_version(self, version: Version) -> Self:
         return self.__class__(
