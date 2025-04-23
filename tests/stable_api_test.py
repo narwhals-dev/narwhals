@@ -4,6 +4,7 @@ from datetime import datetime
 from datetime import timedelta
 from inspect import getdoc
 from typing import Any
+from typing import Iterator
 
 import pytest
 
@@ -105,24 +106,29 @@ def test_stable_api_docstrings() -> None:
         assert remove_docstring_examples(v1_doc) == remove_docstring_examples(doc), item
 
 
+def _iter_api_method_docs(obj: Any, *exclude: str) -> Iterator[tuple[str, str]]:
+    for name in dir(obj):
+        if (
+            not name.startswith("_")
+            and name not in exclude
+            and (doc := getdoc(getattr(obj, name)))
+        ):
+            yield name, doc
+
+
 def test_dataframe_docstrings() -> None:
     pytest.importorskip("polars")
     import polars as pl
 
     df_v1 = nw_v1.from_native(pl.DataFrame())
     df = nw.from_native(pl.DataFrame())
-    api = [i for i in df.__dir__() if not i.startswith("_")]
-    for item in api:
-        method = getattr(df_v1, item)
-        if doc_v1 := getdoc(method):
-            doc = getdoc(getattr(df, item))
-            assert doc
-            assert remove_docstring_examples(
-                doc_v1.replace("import narwhals.stable.v1 as nw", "import narwhals as nw")
-            ) == remove_docstring_examples(doc)
-        else:  # pragma: no cover
-            # NOTE: Would only be possible if `main` didn't define a doc
-            assert getdoc(getattr(df, item)) is None
+    for method_name, doc in _iter_api_method_docs(df):
+        doc_v1 = getdoc(getattr(df_v1, method_name))
+        assert doc_v1
+        doc_v1 = doc_v1.replace(
+            "import narwhals.stable.v1 as nw", "import narwhals as nw"
+        )
+        assert remove_docstring_examples(doc_v1) == remove_docstring_examples(doc)
 
 
 def test_lazyframe_docstrings() -> None:
