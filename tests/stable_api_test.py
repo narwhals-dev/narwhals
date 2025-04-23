@@ -118,7 +118,8 @@ def test_dataframe_docstrings() -> None:
             assert remove_docstring_examples(
                 doc.replace("import narwhals.stable.v1 as nw", "import narwhals as nw")
             ) == remove_docstring_examples(getattr(df, item).__doc__)
-        else:
+        else:  # pragma: no cover
+            # NOTE: Would only be possible if `main` didn't define a doc
             assert getdoc(getattr(df, item)) is None
 
 
