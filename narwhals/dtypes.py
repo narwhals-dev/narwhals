@@ -486,13 +486,14 @@ class Enum(DType):
 
     @property
     def categories(self) -> tuple[str, ...]:
-        if self._cached_categories is None:
-            if categories := self._delayed_categories:
-                self._cached_categories = tuple(categories)
-            else:  # pragma: no cover
-                msg = f"Internal structure of {type(self).__name__!r} is invalid."
-                raise TypeError(msg)
-        return self._cached_categories
+        if cached := self._cached_categories:
+            return cached
+        elif delayed := self._delayed_categories:
+            self._cached_categories = tuple(delayed)
+            return self._cached_categories
+        else:  # pragma: no cover
+            msg = f"Internal structure of {type(self).__name__!r} is invalid."
+            raise TypeError(msg)
 
     def __eq__(self, other: object) -> bool:
         # allow comparing object instances to class
