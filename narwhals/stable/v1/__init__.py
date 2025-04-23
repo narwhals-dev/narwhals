@@ -119,30 +119,6 @@ else:
 
 
 class DataFrame(NwDataFrame[IntoDataFrameT]):
-    """Narwhals DataFrame, backed by a native eager dataframe.
-
-    !!! warning
-        This class is not meant to be instantiated directly - instead:
-
-        - If the native object is a eager dataframe from one of the supported
-            backend (e.g. pandas.DataFrame, polars.DataFrame, pyarrow.Table),
-            you can use [`narwhals.from_native`][]:
-            ```py
-            narwhals.from_native(native_dataframe)
-            narwhals.from_native(native_dataframe, eager_only=True)
-            ```
-
-        - If the object is a dictionary of column names and generic sequences mapping
-            (e.g. `dict[str, list]`), you can create a DataFrame via
-            [`narwhals.from_dict`][]:
-            ```py
-            narwhals.from_dict(
-                data={"a": [1, 2, 3]},
-                backend=narwhals.get_native_namespace(another_object),
-            )
-            ```
-    """
-
     # We need to override any method which don't return Self so that type
     # annotations are correct.
 
@@ -207,31 +183,12 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def to_dict(
         self, *, as_series: bool = True
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]:
-        """Convert DataFrame to a dictionary mapping column name to values.
-
-        Arguments:
-            as_series: If set to true ``True``, then the values are Narwhals Series,
-                    otherwise the values are Any.
-
-        Returns:
-            A mapping from column name to values / Series.
-        """
         return super().to_dict(as_series=as_series)  # type: ignore[return-value]
 
     def is_duplicated(self) -> Series[Any]:
-        r"""Get a mask of all duplicated rows in this DataFrame.
-
-        Returns:
-            A new Series.
-        """
         return super().is_duplicated()  # type: ignore[return-value]
 
     def is_unique(self) -> Series[Any]:
-        r"""Get a mask of all unique rows in this DataFrame.
-
-        Returns:
-            A new Series.
-        """
         return super().is_unique()  # type: ignore[return-value]
 
     def _l1_norm(self) -> Self:
