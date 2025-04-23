@@ -192,32 +192,6 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         self,
         backend: ModuleType | Implementation | str | None = None,
     ) -> LazyFrame[Any]:
-        """Restrict available API methods to lazy-only ones.
-
-        If `backend` is specified, then a conversion between different backends
-        might be triggered.
-
-        If a library does not support lazy execution and `backend` is not specified,
-        then this is will only restrict the API to lazy-only operations. This is useful
-        if you want to ensure that you write dataframe-agnostic code which all has
-        the possibility of running entirely lazily.
-
-        Arguments:
-            backend: Which lazy backend collect to. This will be the underlying
-                backend for the resulting Narwhals LazyFrame. If not specified, and the
-                given library does not support lazy execution, then this will restrict
-                the API to lazy-only operations.
-
-                `backend` can be specified in various ways:
-
-                - As `Implementation.<BACKEND>` with `BACKEND` being `DASK`, `DUCKDB`
-                    or `POLARS`.
-                - As a string: `"dask"`, `"duckdb"` or `"polars"`
-                - Directly as a module `dask.dataframe`, `duckdb` or `polars`.
-
-        Returns:
-            A new LazyFrame.
-        """
         return super().lazy(backend=backend)  # type: ignore[return-value]
 
     # Not sure what mypy is complaining about, probably some fancy
