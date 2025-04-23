@@ -86,9 +86,7 @@ if extra := set(documented).difference(top_level_functions):
     ret = 1
 
 # DataFrame methods
-dataframe_methods = [
-    i for i in dir(nw.from_native(pl.DataFrame())) if not i[0].isupper() and i[0] != "_"
-]
+dataframe_methods = list(iter_api_reference_names(nw.DataFrame))
 with open("docs/api-reference/dataframe.md") as fd:
     content = fd.read()
 documented = [
@@ -106,9 +104,7 @@ if extra := set(documented).difference(dataframe_methods):
     ret = 1
 
 # LazyFrame methods
-lazyframe_methods = [
-    i for i in dir(nw.from_native(pl.LazyFrame())) if not i[0].isupper() and i[0] != "_"
-]
+lazyframe_methods = list(iter_api_reference_names(nw.LazyFrame))
 with open("docs/api-reference/lazyframe.md") as fd:
     content = fd.read()
 documented = [
@@ -126,11 +122,7 @@ if extra := set(documented).difference(lazyframe_methods):
     ret = 1
 
 # Series methods
-series_methods = [
-    i
-    for i in dir(nw.from_native(pl.Series(), series_only=True))
-    if not i[0].isupper() and i[0] != "_"
-]
+series_methods = list(iter_api_reference_names(nw.Series))
 with open("docs/api-reference/series.md") as fd:
     content = fd.read()
 documented = [
@@ -149,7 +141,7 @@ if extra := set(documented).difference(series_methods):
 
 # Series.{cat, dt, list, str} methods
 for namespace in NAMESPACES.difference({"name"}):
-    series_methods = [
+    series_ns_methods = [
         i
         for i in dir(getattr(nw.from_native(pl.Series(), series_only=True), namespace))
         if not i[0].isupper() and i[0] != "_"
@@ -161,11 +153,11 @@ for namespace in NAMESPACES.difference({"name"}):
         for i in content.splitlines()
         if i.startswith("        - ") and not i.startswith("        - _")
     ]
-    if missing := set(series_methods).difference(documented):
+    if missing := set(series_ns_methods).difference(documented):
         print(f"Series.{namespace}: not documented")  # noqa: T201
         print(missing)  # noqa: T201
         ret = 1
-    if extra := set(documented).difference(series_methods):
+    if extra := set(documented).difference(series_ns_methods):
         print(f"Series.{namespace}: outdated")  # noqa: T201
         print(extra)  # noqa: T201
         ret = 1
@@ -230,16 +222,11 @@ if extra := set(documented).difference(dtypes):
     ret = 1
 
 # Check Expr vs Series
-series = [
-    i
-    for i in dir(nw.from_native(pl.Series(), series_only=True))
-    if not i[0].isupper() and i[0] != "_"
-]
-if missing := set(expr_methods).difference(series).difference(EXPR_ONLY_METHODS):
+if missing := set(expr_methods).difference(series_methods).difference(EXPR_ONLY_METHODS):
     print("In Expr but not in Series")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
-if extra := set(series).difference(expr_methods).difference(SERIES_ONLY_METHODS):
+if extra := set(series_methods).difference(expr_methods).difference(SERIES_ONLY_METHODS):
     print("In Series but not in Expr")  # noqa: T201
     print(extra)  # noqa: T201
     ret = 1
