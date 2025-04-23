@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from narwhals.typing import FrameT
+    from tpch.typing import FrameT
 
 
 def query(
@@ -22,12 +22,12 @@ def query(
     var_3 = datetime(1995, 1, 1)
 
     return (
-        region_ds.join(nation_ds, left_on="r_regionkey", right_on="n_regionkey")  # pyright: ignore[reportArgumentType]
-        .join(customer_ds, left_on="n_nationkey", right_on="c_nationkey")  # pyright: ignore[reportArgumentType]
-        .join(orders_ds, left_on="c_custkey", right_on="o_custkey")  # pyright: ignore[reportArgumentType]
-        .join(line_item_ds, left_on="o_orderkey", right_on="l_orderkey")  # pyright: ignore[reportArgumentType]
+        region_ds.join(nation_ds, left_on="r_regionkey", right_on="n_regionkey")
+        .join(customer_ds, left_on="n_nationkey", right_on="c_nationkey")
+        .join(orders_ds, left_on="c_custkey", right_on="o_custkey")
+        .join(line_item_ds, left_on="o_orderkey", right_on="l_orderkey")
         .join(
-            supplier_ds,  # pyright: ignore[reportArgumentType]
+            supplier_ds,
             left_on=["l_suppkey", "n_nationkey"],
             right_on=["s_suppkey", "s_nationkey"],
         )

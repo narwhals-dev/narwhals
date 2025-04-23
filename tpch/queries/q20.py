@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from narwhals.typing import FrameT
+    from tpch.typing import FrameT
 
 
 def query(
@@ -34,7 +34,7 @@ def query(
         part_ds.filter(nw.col("p_name").str.starts_with(var4))
         .select("p_partkey")
         .unique("p_partkey")
-        .join(partsupp_ds, left_on="p_partkey", right_on="ps_partkey")  # pyright: ignore[reportArgumentType]
+        .join(partsupp_ds, left_on="p_partkey", right_on="ps_partkey")
         .join(
             query1,  # pyright: ignore[reportArgumentType]
             left_on=["ps_suppkey", "p_partkey"],

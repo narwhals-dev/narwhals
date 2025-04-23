@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from narwhals.typing import FrameT
+    from tpch.typing import FrameT
 
 
 def query(customer_ds: FrameT, lineitem_ds: FrameT, orders_ds: FrameT) -> FrameT:
@@ -19,8 +19,8 @@ def query(customer_ds: FrameT, lineitem_ds: FrameT, orders_ds: FrameT) -> FrameT
 
     return (
         orders_ds.join(query1, left_on="o_orderkey", right_on="l_orderkey", how="semi")  # pyright: ignore[reportArgumentType]
-        .join(lineitem_ds, left_on="o_orderkey", right_on="l_orderkey")  # pyright: ignore[reportArgumentType]
-        .join(customer_ds, left_on="o_custkey", right_on="c_custkey")  # pyright: ignore[reportArgumentType]
+        .join(lineitem_ds, left_on="o_orderkey", right_on="l_orderkey")
+        .join(customer_ds, left_on="o_custkey", right_on="c_custkey")
         .group_by("c_name", "o_custkey", "o_orderkey", "o_orderdate", "o_totalprice")
         .agg(nw.col("l_quantity").sum().alias("sum"))
         .select(

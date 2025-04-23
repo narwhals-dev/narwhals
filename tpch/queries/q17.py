@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from narwhals.typing import FrameT
+    from tpch.typing import FrameT
 
 
 def query(lineitem_ds: FrameT, part_ds: FrameT) -> FrameT:
@@ -15,7 +15,7 @@ def query(lineitem_ds: FrameT, part_ds: FrameT) -> FrameT:
     query1 = (
         part_ds.filter(nw.col("p_brand") == var1)
         .filter(nw.col("p_container") == var2)
-        .join(lineitem_ds, how="left", left_on="p_partkey", right_on="l_partkey")  # pyright: ignore[reportArgumentType]
+        .join(lineitem_ds, how="left", left_on="p_partkey", right_on="l_partkey")
     )
 
     return (

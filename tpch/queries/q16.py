@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from narwhals.typing import FrameT
+    from tpch.typing import FrameT
 
 
 def query(part_ds: FrameT, partsupp_ds: FrameT, supplier_ds: FrameT) -> FrameT:
@@ -16,7 +16,7 @@ def query(part_ds: FrameT, partsupp_ds: FrameT, supplier_ds: FrameT) -> FrameT:
     ).select(nw.col("s_suppkey"), nw.col("s_suppkey").alias("ps_suppkey"))
 
     return (
-        part_ds.join(partsupp_ds, left_on="p_partkey", right_on="ps_partkey")  # pyright: ignore[reportArgumentType]
+        part_ds.join(partsupp_ds, left_on="p_partkey", right_on="ps_partkey")
         .filter(nw.col("p_brand") != var1)
         .filter(~nw.col("p_type").str.contains("MEDIUM POLISHED*"))
         .filter(nw.col("p_size").is_in([49, 14, 23, 45, 19, 3, 36, 9]))

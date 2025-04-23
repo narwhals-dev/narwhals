@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from narwhals.typing import FrameT
+    from tpch.typing import FrameT
 
 
 def query(
@@ -20,10 +20,10 @@ def query(
     var_3 = "EUROPE"
 
     result_q2 = (
-        part_ds.join(part_supp_ds, left_on="p_partkey", right_on="ps_partkey")  # pyright: ignore[reportArgumentType]
-        .join(supplier_ds, left_on="ps_suppkey", right_on="s_suppkey")  # pyright: ignore[reportArgumentType]
-        .join(nation_ds, left_on="s_nationkey", right_on="n_nationkey")  # pyright: ignore[reportArgumentType]
-        .join(region_ds, left_on="n_regionkey", right_on="r_regionkey")  # pyright: ignore[reportArgumentType]
+        part_ds.join(part_supp_ds, left_on="p_partkey", right_on="ps_partkey")
+        .join(supplier_ds, left_on="ps_suppkey", right_on="s_suppkey")
+        .join(nation_ds, left_on="s_nationkey", right_on="n_nationkey")
+        .join(region_ds, left_on="n_regionkey", right_on="r_regionkey")
         .filter(
             nw.col("p_size") == var_1,
             nw.col("p_type").str.ends_with(var_2),

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from narwhals.typing import FrameT
+    from tpch.typing import FrameT
 
 
 def query(
@@ -35,9 +35,9 @@ def query(
             left_on="l_orderkey",
             right_on="l_orderkey",
         )
-        .join(supplier, left_on="l_suppkey", right_on="s_suppkey")  # pyright: ignore[reportArgumentType]
-        .join(nation, left_on="s_nationkey", right_on="n_nationkey")  # pyright: ignore[reportArgumentType]
-        .join(orders, left_on="l_orderkey", right_on="o_orderkey")  # pyright: ignore[reportArgumentType]
+        .join(supplier, left_on="l_suppkey", right_on="s_suppkey")
+        .join(nation, left_on="s_nationkey", right_on="n_nationkey")
+        .join(orders, left_on="l_orderkey", right_on="o_orderkey")
         .filter(nw.col("n_supp_by_order") == 1)
         .filter(nw.col("n_name") == var1)
         .filter(nw.col("o_orderstatus") == "F")

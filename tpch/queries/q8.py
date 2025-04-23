@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from narwhals.typing import FrameT
+    from tpch.typing import FrameT
 
 
 def query(
@@ -28,12 +28,12 @@ def query(
     n2 = nation_ds.select("n_nationkey", "n_name")
 
     return (
-        part_ds.join(line_item_ds, left_on="p_partkey", right_on="l_partkey")  # pyright: ignore[reportArgumentType]
-        .join(supplier_ds, left_on="l_suppkey", right_on="s_suppkey")  # pyright: ignore[reportArgumentType]
-        .join(orders_ds, left_on="l_orderkey", right_on="o_orderkey")  # pyright: ignore[reportArgumentType]
-        .join(customer_ds, left_on="o_custkey", right_on="c_custkey")  # pyright: ignore[reportArgumentType]
+        part_ds.join(line_item_ds, left_on="p_partkey", right_on="l_partkey")
+        .join(supplier_ds, left_on="l_suppkey", right_on="s_suppkey")
+        .join(orders_ds, left_on="l_orderkey", right_on="o_orderkey")
+        .join(customer_ds, left_on="o_custkey", right_on="c_custkey")
         .join(n1, left_on="c_nationkey", right_on="n_nationkey")  # pyright: ignore[reportArgumentType]
-        .join(region_ds, left_on="n_regionkey", right_on="r_regionkey")  # pyright: ignore[reportArgumentType]
+        .join(region_ds, left_on="n_regionkey", right_on="r_regionkey")
         .filter(nw.col("r_name") == region)
         .join(n2, left_on="s_nationkey", right_on="n_nationkey")  # pyright: ignore[reportArgumentType]
         .filter(nw.col("o_orderdate").is_between(date1, date2))
