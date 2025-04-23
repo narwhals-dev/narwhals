@@ -114,10 +114,12 @@ def test_dataframe_docstrings() -> None:
     api = [i for i in df.__dir__() if not i.startswith("_")]
     for item in api:
         method = getattr(df_v1, item)
-        if doc := getdoc(method):
+        if doc_v1 := getdoc(method):
+            doc = getdoc(getattr(df, item))
+            assert doc
             assert remove_docstring_examples(
-                doc.replace("import narwhals.stable.v1 as nw", "import narwhals as nw")
-            ) == remove_docstring_examples(getattr(df, item).__doc__)
+                doc_v1.replace("import narwhals.stable.v1 as nw", "import narwhals as nw")
+            ) == remove_docstring_examples(doc)
         else:  # pragma: no cover
             # NOTE: Would only be possible if `main` didn't define a doc
             assert getdoc(getattr(df, item)) is None
