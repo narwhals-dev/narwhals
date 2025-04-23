@@ -1,13 +1,30 @@
 from __future__ import annotations
 
+import inspect
 import sys
 from pathlib import Path
+from typing import Any
+from typing import Iterator
 
 import polars as pl
 
 import narwhals as nw
 from narwhals._expression_parsing import ExprMetadata
 from narwhals.utils import remove_prefix
+
+
+def _is_public_method_or_property(obj: Any) -> bool:
+    return (
+        (inspect.isfunction(obj) or isinstance(obj, property))
+        and not obj.__name__[0].isupper()
+        and obj.__name__[0] != "_"
+    )
+
+
+def iter_api_reference_names(tp: type[Any]) -> Iterator[str]:
+    for name, _ in inspect.getmembers(tp, _is_public_method_or_property):
+        yield name
+
 
 ret = 0
 
@@ -155,11 +172,7 @@ for namespace in NAMESPACES.difference({"name"}):
         ret = 1
 
 # Expr methods
-expr_methods = [
-    i
-    for i in dir(nw.Expr(lambda: 0, ExprMetadata.selector_single()))
-    if not i[0].isupper() and i[0] != "_"
-]
+expr_methods = list(iter_api_reference_names(nw.Expr))
 with open("docs/api-reference/expr.md") as fd:
     content = fd.read()
 documented = [
@@ -178,7 +191,7 @@ if extra := set(documented).difference(expr_methods):
 
 # Expr.{cat, dt, list, name, str} methods
 for namespace in NAMESPACES:
-    expr_methods = [
+    expr_ns_methods = [
         i
         for i in dir(
             getattr(nw.Expr(lambda: 0, ExprMetadata.selector_single()), namespace)
@@ -192,11 +205,11 @@ for namespace in NAMESPACES:
         for i in content.splitlines()
         if i.startswith("        - ")
     ]
-    if missing := set(expr_methods).difference(documented):
+    if missing := set(expr_ns_methods).difference(documented):
         print(f"Expr.{namespace}: not documented")  # noqa: T201
         print(missing)  # noqa: T201
         ret = 1
-    if extra := set(documented).difference(expr_methods):
+    if extra := set(documented).difference(expr_ns_methods):
         print(f"Expr.{namespace}: outdated")  # noqa: T201
         print(extra)  # noqa: T201
         ret = 1
@@ -220,21 +233,16 @@ if extra := set(documented).difference(dtypes):
     ret = 1
 
 # Check Expr vs Series
-expr = [
-    i
-    for i in dir(nw.Expr(lambda: 0, ExprMetadata.selector_single()))
-    if not i[0].isupper() and i[0] != "_"
-]
 series = [
     i
     for i in dir(nw.from_native(pl.Series(), series_only=True))
     if not i[0].isupper() and i[0] != "_"
 ]
-if missing := set(expr).difference(series).difference(EXPR_ONLY_METHODS):
+if missing := set(expr_methods).difference(series).difference(EXPR_ONLY_METHODS):
     print("In Expr but not in Series")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
-if extra := set(series).difference(expr).difference(SERIES_ONLY_METHODS):
+if extra := set(series).difference(expr_methods).difference(SERIES_ONLY_METHODS):
     print("In Series but not in Expr")  # noqa: T201
     print(extra)  # noqa: T201
     ret = 1
