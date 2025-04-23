@@ -426,13 +426,6 @@ class Expr(NwExpr):
     ) -> Self:
         """Sample randomly from this expression.
 
-        !!! warning
-            `Expr.sample` is deprecated and will be removed in a future version.
-            Hint: instead of `df.select(nw.col('a').sample())`, use
-            `df.select(nw.col('a')).sample()` instead.
-            Note: this will remain available in `narwhals.stable.v1`.
-            See [stable api](../backcompat.md/) for more information.
-
         Arguments:
             n: Number of items to return. Cannot be used with fraction.
             fraction: Fraction of items to return. Cannot be used with n.
