@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from datetime import timedelta
+from inspect import getdoc
 from typing import Any
 
 import pytest
@@ -108,15 +109,17 @@ def test_dataframe_docstrings() -> None:
     pytest.importorskip("polars")
     import polars as pl
 
-    stable_df = nw_v1.from_native(pl.DataFrame())
+    df_v1 = nw_v1.from_native(pl.DataFrame())
     df = nw.from_native(pl.DataFrame())
     api = [i for i in df.__dir__() if not i.startswith("_")]
     for item in api:
-        assert remove_docstring_examples(
-            getattr(stable_df, item).__doc__.replace(
-                "import narwhals.stable.v1 as nw", "import narwhals as nw"
-            )
-        ) == remove_docstring_examples(getattr(df, item).__doc__), item
+        method = getattr(df_v1, item)
+        if doc := getdoc(method):
+            assert remove_docstring_examples(
+                doc.replace("import narwhals.stable.v1 as nw", "import narwhals as nw")
+            ) == remove_docstring_examples(getattr(df, item).__doc__)
+        else:
+            assert getdoc(getattr(df, item)) is None
 
 
 def test_lazyframe_docstrings() -> None:
