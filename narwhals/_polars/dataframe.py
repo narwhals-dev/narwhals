@@ -6,6 +6,7 @@ from typing import Iterator
 from typing import Literal
 from typing import Mapping
 from typing import Sequence
+from typing import Sized
 from typing import cast
 from typing import overload
 
@@ -14,13 +15,19 @@ import polars as pl
 from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import catch_polars_exception
-from narwhals._polars.utils import convert_str_slice_to_int_slice
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import native_to_narwhals_dtype
+from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import _into_arrow_table
-from narwhals.utils import is_sequence_but_not_str
+from narwhals.utils import convert_str_slice_to_int_slice
+from narwhals.utils import is_compliant_series
+from narwhals.utils import is_index_selector
+from narwhals.utils import is_range
+from narwhals.utils import is_sequence_like
+from narwhals.utils import is_slice_index
+from narwhals.utils import is_slice_none
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import requires
@@ -46,7 +53,10 @@ if TYPE_CHECKING:
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import JoinStrategy
+    from narwhals.typing import MultiColSelector
+    from narwhals.typing import MultiIndexSelector
     from narwhals.typing import PivotAgg
+    from narwhals.typing import SingleIndexSelector
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -257,54 +267,70 @@ class PolarsDataFrame:
     def shape(self) -> tuple[int, int]:
         return self.native.shape
 
-    def __getitem__(self, item: Any) -> Any:
+    def __getitem__(
+        self,
+        item: tuple[
+            SingleIndexSelector | MultiIndexSelector[PolarsSeries],
+            MultiIndexSelector[PolarsSeries] | MultiColSelector[PolarsSeries],
+        ],
+    ) -> Any:
+        rows, columns = item
         if self._backend_version > (0, 20, 30):
-            return self._from_native_object(self.native.__getitem__(item))
+            rows_native = rows.native if is_compliant_series(rows) else rows
+            columns_native = columns.native if is_compliant_series(columns) else columns
+            selector = rows_native, columns_native
+            selected = self.native.__getitem__(selector)  # type: ignore[index]
+            return self._from_native_object(selected)
         else:  # pragma: no cover
             # TODO(marco): we can delete this branch after Polars==0.20.30 becomes the minimum
             # Polars version we support
-            if isinstance(item, tuple):
-                item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)
+            # This mostly mirrors the logic in `EagerDataFrame.__getitem__`.
+            rows = list(rows) if isinstance(rows, tuple) else rows
+            columns = list(columns) if isinstance(columns, tuple) else columns
+            if is_numpy_array_1d(columns):
+                columns = columns.tolist()
 
-            columns = self.columns
-            if isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], slice):
-                if item[1] == slice(None):
-                    if isinstance(item[0], Sequence) and not len(item[0]):
-                        return self._with_native(self.native[0:0])
-                    return self._with_native(self.native.__getitem__(item[0]))
-                if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
-                    start, stop, step = convert_str_slice_to_int_slice(item[1], columns)
-                    return self._with_native(
-                        self.native.select(columns[start:stop:step]).__getitem__(item[0])
+            native = self.native
+            if not is_slice_none(columns):
+                if isinstance(columns, Sized) and len(columns) == 0:
+                    return self.select()
+                if is_index_selector(columns):
+                    if is_slice_index(columns) or is_range(columns):
+                        native = native.select(
+                            self.columns[slice(columns.start, columns.stop, columns.step)]
+                        )
+                    elif is_compliant_series(columns):
+                        native = native[:, columns.native.to_list()]  # type: ignore[attr-defined, index]
+                    else:
+                        native = native[:, columns]
+                elif isinstance(columns, slice):
+                    native = native.select(
+                        self.columns[
+                            slice(*convert_str_slice_to_int_slice(columns, self.columns))
+                        ]
                     )
-                if isinstance(item[1].start, int) or isinstance(item[1].stop, int):
-                    return self._with_native(
-                        self.native.select(
-                            columns[item[1].start : item[1].stop : item[1].step]
-                        ).__getitem__(item[0])
-                    )
-                msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
-                raise TypeError(msg)  # pragma: no cover
+                elif is_compliant_series(columns):
+                    native = native.select(columns.native.to_list())
+                elif is_sequence_like(columns):
+                    native = native.select(columns)
+                else:
+                    msg = f"Unreachable code, got unexpected type: {type(columns)}"
+                    raise AssertionError(msg)
 
-            if (
-                isinstance(item, tuple)
-                and (len(item) == 2)
-                and is_sequence_but_not_str(item[1])
-                and (len(item[1]) == 0)
-            ):
-                result = self.native.select(item[1])
-            elif isinstance(item, slice) and (
-                isinstance(item.start, str) or isinstance(item.stop, str)
-            ):
-                start, stop, step = convert_str_slice_to_int_slice(item, columns)
-                return self._with_native(self.native.select(columns[start:stop:step]))
-            elif is_sequence_but_not_str(item) and (len(item) == 0):
-                result = self.native.slice(0, 0)
-            else:
-                result = self.native.__getitem__(item)
-            if isinstance(result, pl.Series):
-                return PolarsSeries.from_native(result, context=self)
-            return self._from_native_object(result)
+            if not is_slice_none(rows):
+                if isinstance(rows, int):
+                    native = native[[rows], :]  # pyright: ignore[reportArgumentType,reportCallIssue]
+                elif isinstance(rows, (slice, range)):
+                    native = native[rows, :]  # pyright: ignore[reportArgumentType,reportCallIssue]
+                elif is_compliant_series(rows):
+                    native = native[rows.native, :]  # pyright: ignore[reportArgumentType,reportCallIssue]
+                elif is_sequence_like(rows):
+                    native = native[rows, :]  # pyright: ignore[reportArgumentType,reportCallIssue]
+                else:
+                    msg = f"Unreachable code, got unexpected type: {type(rows)}"
+                    raise AssertionError(msg)
+
+            return self._with_native(native)  # pyright: ignore[reportArgumentType]
 
     def simple_select(self, *column_names: str) -> Self:
         return self._with_native(self.native.select(*column_names))

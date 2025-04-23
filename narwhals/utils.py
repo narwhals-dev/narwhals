@@ -29,6 +29,7 @@ from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_duckdb
 from narwhals.dependencies import get_ibis
 from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
@@ -37,6 +38,8 @@ from narwhals.dependencies import get_pyspark_sql
 from narwhals.dependencies import get_sqlframe
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_modin_series
+from narwhals.dependencies import is_narwhals_series
+from narwhals.dependencies import is_numpy_array_1d
 from narwhals.dependencies import is_pandas_dataframe
 from narwhals.dependencies import is_pandas_like_dataframe
 from narwhals.dependencies import is_pandas_like_series
@@ -82,9 +85,16 @@ if TYPE_CHECKING:
     from narwhals.typing import DataFrameLike
     from narwhals.typing import DTypes
     from narwhals.typing import IntoSeriesT
+    from narwhals.typing import MultiIndexSelector
+    from narwhals.typing import SingleIndexSelector
+    from narwhals.typing import SizedMultiIndexSelector
     from narwhals.typing import SizeUnit
     from narwhals.typing import SupportsNativeNamespace
     from narwhals.typing import TimeUnit
+    from narwhals.typing import _1DArray
+    from narwhals.typing import _SliceIndex
+    from narwhals.typing import _SliceName
+    from narwhals.typing import _SliceNone
 
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
@@ -1256,8 +1266,62 @@ def parse_columns_to_drop(
     return to_drop
 
 
-def is_sequence_but_not_str(sequence: Any | Sequence[_T]) -> TypeIs[Sequence[_T]]:
+def is_sequence_but_not_str(sequence: Sequence[_T] | Any) -> TypeIs[Sequence[_T]]:
     return isinstance(sequence, Sequence) and not isinstance(sequence, str)
+
+
+def is_slice_none(obj: Any) -> TypeIs[_SliceNone]:
+    return isinstance(obj, slice) and obj == slice(None)
+
+
+def is_sized_multi_index_selector(obj: Any) -> TypeIs[SizedMultiIndexSelector[Any]]:
+    np = get_numpy()
+    return (
+        (
+            is_sequence_but_not_str(obj)
+            and ((len(obj) > 0 and isinstance(obj[0], int)) or (len(obj) == 0))
+        )
+        or (is_numpy_array_1d(obj) and np.issubdtype(obj.dtype, np.integer))
+        or (
+            (is_narwhals_series(obj) or is_compliant_series(obj))
+            and obj.dtype.is_integer()
+        )
+    )
+
+
+def is_sequence_like(
+    obj: Sequence[_T] | Any,
+) -> TypeIs[Sequence[_T] | Series[Any] | _1DArray]:
+    return (
+        is_sequence_but_not_str(obj)
+        or is_numpy_array_1d(obj)
+        or is_narwhals_series(obj)
+        or is_compliant_series(obj)
+    )
+
+
+def is_slice_index(obj: Any) -> TypeIs[_SliceIndex]:
+    return isinstance(obj, slice) and (
+        isinstance(obj.start, int)
+        or isinstance(obj.stop, int)
+        or (isinstance(obj.step, int) and obj.start is None and obj.stop is None)
+    )
+
+
+def is_range(obj: Any) -> TypeIs[range]:
+    return isinstance(obj, range)
+
+
+def is_single_index_selector(obj: Any) -> TypeIs[SingleIndexSelector]:
+    return bool(isinstance(obj, int) and not isinstance(obj, bool))
+
+
+def is_index_selector(obj: Any) -> TypeIs[SingleIndexSelector | MultiIndexSelector[Any]]:
+    return (
+        is_single_index_selector(obj)
+        or is_sized_multi_index_selector(obj)
+        or is_slice_index(obj)
+    )
 
 
 def is_list_of(obj: Any, tp: type[_T]) -> TypeIs[list[_T]]:
@@ -1827,3 +1891,12 @@ class requires:  # noqa: N801
 
         # NOTE: Only getting a complaint from `mypy`
         return wrapper  # type: ignore[return-value]
+
+
+def convert_str_slice_to_int_slice(
+    str_slice: _SliceName, columns: Sequence[str]
+) -> tuple[int | None, int | None, Any]:
+    start = columns.index(str_slice.start) if str_slice.start is not None else None
+    stop = columns.index(str_slice.stop) + 1 if str_slice.stop is not None else None
+    step = str_slice.step
+    return (start, stop, step)

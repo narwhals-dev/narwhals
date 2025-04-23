@@ -14,9 +14,10 @@ from typing import overload
 
 from narwhals._compliant.typing import CompliantExprT_contra
 from narwhals._compliant.typing import CompliantSeriesT
-from narwhals._compliant.typing import EagerExprT_contra
+from narwhals._compliant.typing import EagerExprT
 from narwhals._compliant.typing import EagerSeriesT
 from narwhals._compliant.typing import NativeFrameT
+from narwhals._compliant.typing import NativeSeriesT
 from narwhals._translate import ArrowConvertible
 from narwhals._translate import DictConvertible
 from narwhals._translate import FromNative
@@ -24,6 +25,13 @@ from narwhals._translate import NumpyConvertible
 from narwhals.utils import Version
 from narwhals.utils import _StoresNative
 from narwhals.utils import deprecated
+from narwhals.utils import is_compliant_series
+from narwhals.utils import is_index_selector
+from narwhals.utils import is_range
+from narwhals.utils import is_sequence_like
+from narwhals.utils import is_sized_multi_index_selector
+from narwhals.utils import is_slice_index
+from narwhals.utils import is_slice_none
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -37,16 +45,24 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.group_by import CompliantGroupBy
     from narwhals._compliant.group_by import DataFrameGroupBy
+    from narwhals._compliant.namespace import EagerNamespace
     from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import AsofJoinStrategy
     from narwhals.typing import JoinStrategy
     from narwhals.typing import LazyUniqueKeepStrategy
+    from narwhals.typing import MultiColSelector
+    from narwhals.typing import MultiIndexSelector
     from narwhals.typing import PivotAgg
+    from narwhals.typing import SingleIndexSelector
+    from narwhals.typing import SizedMultiIndexSelector
+    from narwhals.typing import SizedMultiNameSelector
     from narwhals.typing import SizeUnit
     from narwhals.typing import UniqueKeepStrategy
     from narwhals.typing import _2DArray
+    from narwhals.typing import _SliceIndex
+    from narwhals.typing import _SliceName
     from narwhals.utils import Implementation
     from narwhals.utils import _FullContext
 
@@ -98,7 +114,13 @@ class CompliantDataFrame(
         schema: Mapping[str, DType] | Schema | Sequence[str] | None,
     ) -> Self: ...
     def __array__(self, dtype: Any, *, copy: bool | None) -> _2DArray: ...
-    def __getitem__(self, item: Any) -> CompliantSeriesT | Self: ...
+    def __getitem__(
+        self,
+        item: tuple[
+            SingleIndexSelector | MultiIndexSelector[CompliantSeriesT],
+            MultiIndexSelector[CompliantSeriesT] | MultiColSelector[CompliantSeriesT],
+        ],
+    ) -> Self: ...
     def simple_select(self, *column_names: str) -> Self:
         """`select` where all args are column names."""
         ...
@@ -342,21 +364,25 @@ class CompliantLazyFrame(
 
 
 class EagerDataFrame(
-    CompliantDataFrame[EagerSeriesT, EagerExprT_contra, NativeFrameT],
-    CompliantLazyFrame[EagerExprT_contra, NativeFrameT],
-    Protocol[EagerSeriesT, EagerExprT_contra, NativeFrameT],
+    CompliantDataFrame[EagerSeriesT, EagerExprT, NativeFrameT],
+    CompliantLazyFrame[EagerExprT, NativeFrameT],
+    Protocol[EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
 ):
-    def _evaluate_expr(self, expr: EagerExprT_contra, /) -> EagerSeriesT:
+    def __narwhals_namespace__(
+        self,
+    ) -> EagerNamespace[Self, EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT]: ...
+
+    def _evaluate_expr(self, expr: EagerExprT, /) -> EagerSeriesT:
         """Evaluate `expr` and ensure it has a **single** output."""
         result: Sequence[EagerSeriesT] = expr(self)
         assert len(result) == 1  # debug assertion  # noqa: S101
         return result[0]
 
-    def _evaluate_into_exprs(self, *exprs: EagerExprT_contra) -> Sequence[EagerSeriesT]:
+    def _evaluate_into_exprs(self, *exprs: EagerExprT) -> Sequence[EagerSeriesT]:
         # NOTE: Ignore is to avoid an intermittent false positive
         return list(chain.from_iterable(self._evaluate_into_expr(expr) for expr in exprs))  # pyright: ignore[reportArgumentType]
 
-    def _evaluate_into_expr(self, expr: EagerExprT_contra, /) -> Sequence[EagerSeriesT]:
+    def _evaluate_into_expr(self, expr: EagerExprT, /) -> Sequence[EagerSeriesT]:
         """Return list of raw columns.
 
         For eager backends we alias operations at each step.
@@ -368,7 +394,9 @@ class EagerDataFrame(
         """
         aliases = expr._evaluate_aliases(self)
         result = expr(self)
-        if list(aliases) != (result_aliases := [s.name for s in result]):
+        if list(aliases) != (
+            result_aliases := [s.name for s in result]
+        ):  # pragma: no cover
             msg = f"Safety assertion failed, expected {aliases}, got {result_aliases}"
             raise AssertionError(msg)
         return result
@@ -382,3 +410,57 @@ class EagerDataFrame(
         data: _2DArray, columns: Sequence[str] | None, /
     ) -> list[str]:
         return list(columns or (f"column_{x}" for x in range(data.shape[1])))
+
+    def _gather(self, rows: SizedMultiIndexSelector[NativeSeriesT]) -> Self: ...
+    def _gather_slice(self, rows: _SliceIndex | range) -> Self: ...
+    def _select_multi_index(
+        self, columns: SizedMultiIndexSelector[NativeSeriesT]
+    ) -> Self: ...
+    def _select_multi_name(
+        self, columns: SizedMultiNameSelector[NativeSeriesT]
+    ) -> Self: ...
+    def _select_slice_index(self, columns: _SliceIndex | range) -> Self: ...
+    def _select_slice_name(self, columns: _SliceName) -> Self: ...
+    def __getitem__(
+        self,
+        item: tuple[
+            SingleIndexSelector | MultiIndexSelector[EagerSeriesT],
+            MultiIndexSelector[EagerSeriesT] | MultiColSelector[EagerSeriesT],
+        ],
+    ) -> Self:
+        rows, columns = item
+        compliant = self
+        if not is_slice_none(columns):
+            if isinstance(columns, Sized) and len(columns) == 0:
+                return compliant.select()
+            if is_index_selector(columns):
+                if is_slice_index(columns) or is_range(columns):
+                    compliant = compliant._select_slice_index(columns)
+                elif is_compliant_series(columns):
+                    compliant = self._select_multi_index(columns.native)
+                else:
+                    compliant = compliant._select_multi_index(columns)
+            elif isinstance(columns, slice):
+                compliant = compliant._select_slice_name(columns)
+            elif is_compliant_series(columns):
+                compliant = self._select_multi_name(columns.native)
+            elif is_sequence_like(columns):
+                compliant = self._select_multi_name(columns)
+            else:  # pragma: no cover
+                msg = f"Unreachable code, got unexpected type: {type(columns)}"
+                raise AssertionError(msg)
+
+        if not is_slice_none(rows):
+            if isinstance(rows, int):
+                compliant = compliant._gather([rows])
+            elif isinstance(rows, (slice, range)):
+                compliant = compliant._gather_slice(rows)
+            elif is_compliant_series(rows):
+                compliant = compliant._gather(rows.native)
+            elif is_sized_multi_index_selector(rows):
+                compliant = compliant._gather(rows)
+            else:  # pragma: no cover
+                msg = f"Unreachable code, got unexpected type: {type(rows)}"
+                raise AssertionError(msg)
+
+        return compliant
