@@ -135,38 +135,32 @@ def test_lazyframe_docstrings() -> None:
     pytest.importorskip("polars")
     import polars as pl
 
-    stable_df = nw_v1.from_native(pl.LazyFrame())
-    df = nw.from_native(pl.LazyFrame())
-    api = [i for i in df.__dir__() if not i.startswith("_")]
-    for item in api:
-        if item in {"schema", "columns"}:
-            # to avoid performance warning
-            continue
-        if item in {"tail", "gather_every"}:
-            # deprecated
-            continue
-        assert remove_docstring_examples(
-            getattr(stable_df, item).__doc__.replace(
-                "import narwhals.stable.v1 as nw", "import narwhals as nw"
-            )
-        ) == remove_docstring_examples(getattr(df, item).__doc__)
+    ldf_v1 = nw_v1.from_native(pl.LazyFrame())
+    ldf = nw.from_native(pl.LazyFrame())
+    performance_warning = {"schema", "columns"}
+    deprecated = {"tail", "gather_every"}
+    for method_name, doc in _iter_api_method_docs(ldf, *performance_warning, *deprecated):
+        doc_v1 = getdoc(getattr(ldf_v1, method_name))
+        assert doc_v1
+        doc_v1 = doc_v1.replace(
+            "import narwhals.stable.v1 as nw", "import narwhals as nw"
+        )
+        assert remove_docstring_examples(doc_v1) == remove_docstring_examples(doc)
 
 
 def test_series_docstrings() -> None:
     pytest.importorskip("polars")
     import polars as pl
 
-    stable_df = nw_v1.from_native(pl.Series(), series_only=True)
-    df = nw.from_native(pl.Series(), series_only=True)
-    api = [i for i in df.__dir__() if not i.startswith("_")]
-    for item in api:
-        if getattr(df, item).__doc__ is None:
-            continue
-        assert remove_docstring_examples(
-            getattr(stable_df, item).__doc__.replace(
-                "import narwhals.stable.v1 as nw", "import narwhals as nw"
-            )
-        ) == remove_docstring_examples(getattr(df, item).__doc__), item
+    ser_v1 = nw_v1.from_native(pl.Series(), series_only=True)
+    ser = nw.from_native(pl.Series(), series_only=True)
+    for method_name, doc in _iter_api_method_docs(ser):
+        doc_v1 = getdoc(getattr(ser_v1, method_name))
+        assert doc_v1
+        doc_v1 = doc_v1.replace(
+            "import narwhals.stable.v1 as nw", "import narwhals as nw"
+        )
+        assert remove_docstring_examples(doc_v1) == remove_docstring_examples(doc)
 
 
 def test_dtypes(request: pytest.FixtureRequest, constructor: Constructor) -> None:
