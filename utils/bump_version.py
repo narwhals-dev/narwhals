@@ -44,7 +44,7 @@ how = sys.argv[1]
 
 with open("pyproject.toml", encoding="utf-8") as f:
     content = f.read()
-old_version = re.search(r'version = "(.*)"', content).group(1)
+old_version = re.search(r'version = "(.*)"', content).group(1)  # pyright: ignore[reportOptionalMemberAccess]
 version = old_version.split(".")
 if how == "patch":
     version = ".".join(version[:-1] + [str(int(version[-1]) + 1)])
