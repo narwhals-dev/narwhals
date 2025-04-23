@@ -445,14 +445,6 @@ class Expr(NwExpr):
 
 
 class Schema(NwSchema):
-    """Ordered mapping of column names to their data type.
-
-    Arguments:
-        schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None
-            The schema definition given by column names and their associated.
-            *instantiated* Narwhals data type. Accepts a mapping or an iterable of tuples.
-    """
-
     _version = Version.V1
 
 
