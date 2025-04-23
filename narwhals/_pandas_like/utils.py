@@ -5,6 +5,7 @@ import re
 from contextlib import suppress
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Sequence
 from typing import Sized
 from typing import TypeVar
@@ -12,6 +13,7 @@ from typing import TypeVar
 import pandas as pd
 
 from narwhals._compliant.series import EagerSeriesNamespace
+from narwhals.dtypes import _DelayedCategories
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import ShapeError
@@ -254,7 +256,7 @@ def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> 
         return dtypes.Categorical()
     if dtype == "category":
         return native_categorical_to_narwhals_dtype(
-            native_dtype, version, native_dtype.categories
+            native_dtype, version, lambda: tuple(native_dtype.categories)
         )
     if (match_ := PATTERN_PD_DATETIME.match(dtype)) or (
         match_ := PATTERN_PA_DATETIME.match(dtype)
@@ -301,13 +303,15 @@ def object_native_to_narwhals_dtype(
 
 
 def native_categorical_to_narwhals_dtype(
-    native_dtype: pd.CategoricalDtype, version: Version, categories: pd.Index[Any]
+    native_dtype: pd.CategoricalDtype,
+    version: Version,
+    get_categories: Callable[[], tuple[str, ...]],
 ) -> DType:
     dtypes = import_dtypes_module(version)
     if version is Version.V1:
         return dtypes.Categorical()
     if native_dtype.ordered:
-        return dtypes.Enum(categories)
+        return dtypes.Enum(_DelayedCategories(get_categories))
     return dtypes.Categorical()
 
 
@@ -330,7 +334,7 @@ def native_to_narwhals_dtype(
     if str_dtype == "category" and implementation.is_cudf():
         # https://github.com/rapidsai/cudf/issues/18536
         return native_categorical_to_narwhals_dtype(
-            native_dtype, version, native_dtype.categories.to_pandas()
+            native_dtype, version, lambda: tuple(native_dtype.categories.to_pandas())
         )
     if str_dtype != "object":
         return non_object_native_to_narwhals_dtype(native_dtype, version)

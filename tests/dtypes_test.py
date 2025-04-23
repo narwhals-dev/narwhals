@@ -435,3 +435,40 @@ def test_enum_categories_immutable() -> None:
     dtype = nw.Enum(["a", "b"])
     with pytest.raises(TypeError, match="does not support item assignment"):
         dtype.categories[0] = "c"  # type: ignore[index]
+
+
+def test_enum_repr_pd() -> None:
+    df = nw.from_native(
+        pd.DataFrame(
+            {"a": ["broccoli", "cabbage"]}, dtype=pd.CategoricalDtype(ordered=True)
+        )
+    )
+    dtype = df.schema["a"]
+    assert dtype.categories == ("broccoli", "cabbage")  # type: ignore[attr-defined]
+    assert "Enum(categories=['broccoli', 'cabbage'])" in str(dtype)
+
+
+def test_enum_repr_pl() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = nw.from_native(
+        pl.DataFrame(
+            {"a": ["broccoli", "cabbage"]}, schema={"a": pl.Enum(["broccoli", "cabbage"])}
+        )
+    )
+    dtype = df.schema["a"]
+    assert dtype.categories == ("broccoli", "cabbage")  # type: ignore[attr-defined]
+    assert "Enum(categories=['broccoli', 'cabbage'])" in repr(dtype)
+
+
+def test_enum_repr() -> None:
+    result = nw.Enum(["a", "b"])
+    assert "Enum(categories=['a', 'b'])" in repr(result)
+    result = nw.Enum(nw.Implementation)
+    assert "Enum(categories=[1, 2, 3" in repr(result)
+
+
+def test_enum_hash() -> None:
+    assert nw.Enum(["a", "b"]) in {nw.Enum(["a", "b"])}
+    assert nw.Enum(["a", "b"]) not in {nw.Enum(["a", "b", "c"])}
