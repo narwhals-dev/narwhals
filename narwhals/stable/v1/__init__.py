@@ -275,30 +275,6 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
 
 
 class Series(NwSeries[IntoSeriesT]):
-    """Narwhals Series, backed by a native series.
-
-    !!! warning
-        This class is not meant to be instantiated directly - instead:
-
-        - If the native object is a series from one of the supported backend (e.g.
-            pandas.Series, polars.Series, pyarrow.ChunkedArray), you can use
-            [`narwhals.from_native`][]:
-            ```py
-            narwhals.from_native(native_series, allow_series=True)
-            narwhals.from_native(native_series, series_only=True)
-            ```
-
-        - If the object is a generic sequence (e.g. a list or a tuple of values), you can
-            create a series via [`narwhals.new_series`][]:
-            ```py
-            narwhals.new_series(
-                name=name,
-                values=values,
-                backend=narwhals.get_native_namespace(another_object),
-            )
-            ```
-    """
-
     # We need to override any method which don't return Self so that type
     # annotations are correct.
 
@@ -307,11 +283,6 @@ class Series(NwSeries[IntoSeriesT]):
         return DataFrame
 
     def to_frame(self) -> DataFrame[Any]:
-        """Convert to dataframe.
-
-        Returns:
-            A DataFrame containing this Series as a single column.
-        """
         return super().to_frame()  # type: ignore[return-value]
 
     def value_counts(
@@ -322,21 +293,6 @@ class Series(NwSeries[IntoSeriesT]):
         name: str | None = None,
         normalize: bool = False,
     ) -> DataFrame[Any]:
-        r"""Count the occurrences of unique values.
-
-        Arguments:
-            sort: Sort the output by count in descending order. If set to False (default),
-                the order of the output is random.
-            parallel: Execute the computation in parallel. Used for Polars only.
-            name: Give the resulting count column a specific name; if `normalize` is True
-                defaults to "proportion", otherwise defaults to "count".
-            normalize: If true gives relative frequencies of the unique values
-
-        Returns:
-            A DataFrame with two columns:
-            - The original values as first column
-            - Either count or proportion as second column, depending on normalize parameter.
-        """
         return super().value_counts(  # type: ignore[return-value]
             sort=sort, parallel=parallel, name=name, normalize=normalize
         )
@@ -348,20 +304,6 @@ class Series(NwSeries[IntoSeriesT]):
         bin_count: int | None = None,
         include_breakpoint: bool = True,
     ) -> DataFrame[Any]:
-        """Bin values into buckets and count their occurrences.
-
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
-
-        Arguments:
-            bins: A monotonically increasing sequence of values.
-            bin_count: If no bins provided, this will be used to determine the distance of the bins.
-            include_breakpoint: Include a column that shows the intervals as categories.
-
-        Returns:
-            A new DataFrame containing the counts of values that occur within each passed bin.
-        """
         from narwhals.exceptions import NarwhalsUnstableWarning
         from narwhals.utils import find_stacklevel
 
