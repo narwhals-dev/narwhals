@@ -435,6 +435,8 @@ def test_enum_categories_immutable() -> None:
     dtype = nw.Enum(["a", "b"])
     with pytest.raises(TypeError, match="does not support item assignment"):
         dtype.categories[0] = "c"  # type: ignore[index]
+    with pytest.raises(AttributeError):
+        dtype.categories = "a", "b", "c"  # type: ignore[misc]
 
 
 def test_enum_repr_pd() -> None:
