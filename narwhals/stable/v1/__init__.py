@@ -201,18 +201,6 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
 
 class LazyFrame(NwLazyFrame[IntoFrameT]):
-    """Narwhals LazyFrame, backed by a native lazyframe.
-
-    !!! warning
-        This class is not meant to be instantiated directly - instead use
-        [`narwhals.from_native`][] with a native
-        object that is a lazy dataframe from one of the supported
-        backend (e.g. polars.LazyFrame, dask_expr._collection.DataFrame):
-        ```py
-        narwhals.from_native(native_lazyframe)
-        ```
-    """
-
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame
@@ -250,37 +238,6 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         backend: ModuleType | Implementation | str | None = None,
         **kwargs: Any,
     ) -> DataFrame[Any]:
-        r"""Materialize this LazyFrame into a DataFrame.
-
-        As each underlying lazyframe has different arguments to set when materializing
-        the lazyframe into a dataframe, we allow to pass them as kwargs (see examples
-        below for how to generalize the specification).
-
-        Arguments:
-            backend: specifies which eager backend collect to. This will be the underlying
-                backend for the resulting Narwhals DataFrame. If None, then the following
-                default conversions will be applied:
-
-                - `polars.LazyFrame` -> `polars.DataFrame`
-                - `dask.DataFrame` -> `pandas.DataFrame`
-                - `duckdb.PyRelation` -> `pyarrow.Table`
-                - `pyspark.DataFrame` -> `pyarrow.Table`
-
-                `backend` can be specified in various ways:
-
-                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`
-                    or `POLARS`.
-                - As a string: `"pandas"`, `"pyarrow"` or `"polars"`
-                - Directly as a module `pandas`, `pyarrow` or `polars`.
-            kwargs: backend specific kwargs to pass along. To know more please check the
-                backend specific documentation:
-
-                - [polars.LazyFrame.collect](https://docs.pola.rs/api/python/dev/reference/lazyframe/api/polars.LazyFrame.collect.html)
-                - [dask.dataframe.DataFrame.compute](https://docs.dask.org/en/stable/generated/dask.dataframe.DataFrame.compute.html)
-
-        Returns:
-            DataFrame
-        """
         return super().collect(backend=backend, **kwargs)  # type: ignore[return-value]
 
     def _l1_norm(self) -> Self:
