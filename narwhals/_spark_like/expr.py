@@ -710,7 +710,9 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             # the main CI suite. On the other hand, SQLFrame fails. We should figure out
             # why and how to fix it, either upstream or from our side!
             def _fill_with_strategy(window_inputs: WindowInputs) -> Column:
-                fill_func = self._F.last if strategy == "forward" else self._F.first
+                fill_func = (
+                    self._F.last_value if strategy == "forward" else self._F.first_value
+                )
 
                 if strategy == "forward":
                     start = (
@@ -725,14 +727,14 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
                 window = (
                     self._Window()
-                    .partitionBy(list(window_inputs.partition_by))
+                    .partitionBy(list(window_inputs.partition_by) or self._F.lit(1))
                     .orderBy(
                         [self._F.col(x).asc_nulls_first() for x in window_inputs.order_by]
                     )
                     .rowsBetween(start, end)
                 )
 
-                return fill_func(window_inputs.expr, ignorenulls=True).over(window)
+                return fill_func(window_inputs.expr, ignoreNulls=True).over(window)
 
             return self._with_window_function(_fill_with_strategy)
 
