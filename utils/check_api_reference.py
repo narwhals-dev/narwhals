@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import inspect
+import string
 import sys
+from inspect import isfunction
 from pathlib import Path
 from typing import Any
 from typing import Iterator
@@ -11,13 +13,20 @@ import polars as pl
 import narwhals as nw
 from narwhals.utils import remove_prefix
 
+LOWERCASE = tuple(string.ascii_lowercase)
 
-def _is_public_method_or_property(obj: Any) -> bool:
-    return (
-        (inspect.isfunction(obj) or isinstance(obj, property))
-        and not obj.__name__[0].isupper()
-        and obj.__name__[0] != "_"
-    )
+if sys.version_info >= (3, 13):
+
+    def _is_public_method_or_property(obj: Any) -> bool:
+        return (isfunction(obj) or isinstance(obj, property)) and obj.__name__.startswith(
+            LOWERCASE
+        )
+else:
+
+    def _is_public_method_or_property(obj: Any) -> bool:
+        return (isfunction(obj) and obj.__name__.startswith(LOWERCASE)) or (
+            isinstance(obj, property) and obj.fget.__name__.startswith(LOWERCASE)
+        )
 
 
 def iter_api_reference_names(tp: type[Any]) -> Iterator[str]:
