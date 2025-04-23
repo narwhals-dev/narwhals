@@ -90,7 +90,7 @@ def test_stable_api_completeness() -> None:
 def test_stable_api_docstrings() -> None:
     main_namespace_api = nw.__all__
     for item in main_namespace_api:
-        if getattr(nw, item).__doc__ is None:
+        if (doc := getdoc(getattr(nw, item))) is None:
             continue
         if item in {"from_native", "narwhalify"}:
             # `eager_or_interchange` param was removed from main namespace,
@@ -100,9 +100,9 @@ def test_stable_api_docstrings() -> None:
             # In v1 this was Polars-only, after that pandas ordered categoricals
             # started to be mapped to it too, so the docstring changed.
             continue
-        v1_doc = remove_docstring_examples(getattr(nw_v1, item).__doc__)
-        nw_doc = remove_docstring_examples(getattr(nw, item).__doc__)
-        assert v1_doc == nw_doc, item
+        v1_doc = getdoc(getattr(nw_v1, item))
+        assert v1_doc is not None
+        assert remove_docstring_examples(v1_doc) == remove_docstring_examples(doc), item
 
 
 def test_dataframe_docstrings() -> None:
