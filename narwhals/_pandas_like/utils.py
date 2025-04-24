@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import re
 from contextlib import suppress
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -340,8 +341,7 @@ def native_to_narwhals_dtype(
     elif implementation is Implementation.DASK:
         # Per conversations with their maintainers, they don't support arbitrary
         # objects, so we can just return String.
-        dtypes = version.dtypes
-        return dtypes.String()
+        return version.dtypes.String()
     msg = (
         "Unreachable code, object dtype should be handled separately"  # pragma: no cover
     )
@@ -673,12 +673,10 @@ def pivot_table(
     columns: Sequence[str],
     aggregate_function: str | None,
 ) -> Any:
-    dtypes = df._version.dtypes
+    categorical = df._version.dtypes.Categorical
     if df._implementation is Implementation.CUDF:
-        if any(
-            x == dtypes.Categorical
-            for x in df.simple_select(*[*values, *index, *columns]).schema.values()
-        ):
+        dtypes = df.simple_select(*chain(values, index, columns)).schema.values()
+        if any(isinstance(x, categorical) for x in dtypes):
             msg = "`pivot` with Categoricals is not implemented for cuDF backend"
             raise NotImplementedError(msg)
         # cuDF doesn't support `observed` argument

@@ -282,13 +282,11 @@ class PandasLikeNamespace(
         separator: str,
         ignore_nulls: bool,
     ) -> PandasLikeExpr:
-        dtypes = self._version.dtypes
+        string = self._version.dtypes.String()
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
-            series = align_series_full_broadcast(
-                *(s.cast(dtypes.String()) for s in expr_results)
-            )
+            series = align_series_full_broadcast(*(s.cast(string) for s in expr_results))
             null_mask = align_series_full_broadcast(*(s.is_null() for s in expr_results))
 
             if not ignore_nulls:

@@ -837,12 +837,11 @@ class PandasLikeDataFrame(
                 return self.native.to_numpy(dtype=dtype, copy=copy)
             return self.native.to_numpy(copy=copy)
 
-        dtypes = self._version.dtypes
-
+        dtype_datetime = self._version.dtypes.Datetime
         to_convert = [
             key
             for key, val in self.schema.items()
-            if val == dtypes.Datetime and val.time_zone is not None  # type: ignore[attr-defined]
+            if isinstance(val, dtype_datetime) and val.time_zone is not None
         ]
         if to_convert:
             df = self.with_columns(
@@ -1077,8 +1076,6 @@ class PandasLikeDataFrame(
                 (native_frame[col_name].list.len() == anchor_series).all()
                 for col_name in columns[1:]
             ):
-                from narwhals.exceptions import ShapeError
-
                 msg = "exploded columns must have matching element counts"
                 raise ShapeError(msg)
 

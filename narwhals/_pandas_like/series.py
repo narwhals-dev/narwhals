@@ -683,24 +683,17 @@ class PandasLikeSeries(EagerSeries[Any]):
             s = self.dt.convert_time_zone("UTC").dt.replace_time_zone(None).native
         else:
             s = self.native
-
+        dtype_native = str(s.dtype)
         has_missing = s.isna().any()
-        if has_missing and str(s.dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
-            if self._implementation is Implementation.PANDAS and self._backend_version < (
-                1,
-            ):  # pragma: no cover
-                kwargs = {}
-            else:
+        kwargs = {}
+        if has_missing and dtype_native in PANDAS_TO_NUMPY_DTYPE_MISSING:
+            if self._implementation.is_pandas() and self._backend_version >= (1,):
                 kwargs = {"na_value": float("nan")}
-            return s.to_numpy(
-                dtype=dtype or PANDAS_TO_NUMPY_DTYPE_MISSING[str(s.dtype)],
-                copy=copy,
-                **kwargs,
-            )
-        if not has_missing and str(s.dtype) in PANDAS_TO_NUMPY_DTYPE_NO_MISSING:
-            return s.to_numpy(
-                dtype=dtype or PANDAS_TO_NUMPY_DTYPE_NO_MISSING[str(s.dtype)], copy=copy
-            )
+            dtype = dtype or PANDAS_TO_NUMPY_DTYPE_MISSING[dtype_native]
+            return s.to_numpy(dtype=dtype, copy=copy, **kwargs)
+        if not has_missing and dtype_native in PANDAS_TO_NUMPY_DTYPE_NO_MISSING:
+            dtype = dtype or PANDAS_TO_NUMPY_DTYPE_MISSING[dtype_native]
+            return s.to_numpy(dtype=dtype, copy=copy)
         return s.to_numpy(dtype=dtype, copy=copy)
 
     def to_pandas(self) -> pd.Series[Any]:
