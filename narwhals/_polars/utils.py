@@ -11,6 +11,7 @@ from typing import overload
 
 import polars as pl
 
+from narwhals.dtypes import _DelayedCategories
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import ComputeError
 from narwhals.exceptions import DuplicateError
@@ -113,7 +114,7 @@ def native_to_narwhals_dtype(
     if isinstance_or_issubclass(dtype, pl.Enum):
         if version is Version.V1:
             return dtypes.Enum()  # type: ignore[call-arg]
-        return dtypes.Enum(dtype.categories)
+        return dtypes.Enum(_DelayedCategories(lambda: tuple(dtype.categories)))
     if dtype == pl.Date:
         return dtypes.Date()
     if isinstance_or_issubclass(dtype, pl.Datetime):
@@ -226,15 +227,6 @@ def narwhals_to_native_dtype(
             narwhals_to_native_dtype(dtype.inner, version, backend_version), **kwargs
         )
     return pl.Unknown()  # pragma: no cover
-
-
-def convert_str_slice_to_int_slice(
-    str_slice: slice, columns: list[str]
-) -> tuple[int | None, int | None, int | None]:  # pragma: no cover
-    start = columns.index(str_slice.start) if str_slice.start is not None else None
-    stop = columns.index(str_slice.stop) + 1 if str_slice.stop is not None else None
-    step = str_slice.step
-    return (start, stop, step)
 
 
 def catch_polars_exception(

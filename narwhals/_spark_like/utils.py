@@ -32,7 +32,7 @@ class WindowInputs:
     def __init__(
         self,
         expr: Column,
-        partition_by: Sequence[str],
+        partition_by: Sequence[str] | Sequence[Column],
         order_by: Sequence[str],
     ) -> None:
         self.expr = expr

@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals.dtypes import DType
     from narwhals.typing import Into1DArray
+    from narwhals.typing import MultiIndexSelector
     from narwhals.typing import _1DArray
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -175,13 +176,9 @@ class PolarsSeries:
     def alias(self, name: str) -> Self:
         return self._from_native_object(self.native.alias(name))
 
-    @overload
-    def __getitem__(self, item: int) -> Any: ...
-
-    @overload
-    def __getitem__(self, item: slice | Sequence[int] | pl.Series) -> Self: ...
-
-    def __getitem__(self, item: int | slice | Sequence[int] | pl.Series) -> Any | Self:
+    def __getitem__(self, item: MultiIndexSelector[Self]) -> Any | Self:
+        if isinstance(item, PolarsSeries):
+            return self._from_native_object(self.native.__getitem__(item.native))
         return self._from_native_object(self.native.__getitem__(item))
 
     def cast(self, dtype: DType | type[DType]) -> Self:

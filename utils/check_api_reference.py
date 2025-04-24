@@ -44,6 +44,7 @@ BASE_DTYPES = {
     "Literal",
     "OrderedDict",
     "Mapping",
+    "Iterable",
 }
 
 files = {fp.stem for fp in Path("narwhals").iterdir()}
