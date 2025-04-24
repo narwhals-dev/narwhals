@@ -75,7 +75,8 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
             return [
-                result.over(df._Window().partitionBy(df._F.lit(1))) for result in self(df)
+                result.over(df._Window().partitionBy(self._F.lit(1)))
+                for result in self(df)
             ]
 
         return self.__class__(
@@ -773,7 +774,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             else:
                 order_by_cols = [self._F.asc_nulls_last(_input)]
 
-            window = self._Window().orderBy(order_by_cols)
+            window = self._Window().partitionBy(self._F.lit(1)).orderBy(order_by_cols)
             count_window = self._Window().partitionBy(_input)
 
             if method == "max":

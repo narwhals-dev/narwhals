@@ -577,6 +577,7 @@ class Implementation(Enum):
             Implementation.PYSPARK: "PySpark",
             Implementation.DUCKDB: "DuckDB",
             Implementation.SQLFRAME: "SQLFrame",
+            Implementation.PYSPARK_CONNECT: "PySpark Connect",
         }
         return mapping[self]
 

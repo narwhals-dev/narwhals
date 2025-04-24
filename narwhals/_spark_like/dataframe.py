@@ -143,9 +143,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
         )
 
     def _collect_to_arrow(self) -> pa.Table:
-        if self._implementation is Implementation.PYSPARK and self._backend_version < (
-            4,
-        ):
+        if self._implementation.is_pyspark() and self._backend_version < (4,):
             import pyarrow as pa  # ignore-banned-import
 
             try:
@@ -179,13 +177,14 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
                     return pa.Table.from_pydict(data, schema=pa.schema(schema))
                 else:  # pragma: no cover
                     raise
-        elif (
-            self._implementation is Implementation.PYSPARK_CONNECT
-            and self._backend_version < (4,)
-        ):
+        elif self._implementation.is_pyspark_connect() and self._backend_version < (4,):
             import pyarrow as pa  # ignore-banned-import
 
-            return pa.Table.from_pandas(self.native.toPandas())
+            from narwhals.schema import Schema
+
+            # TODO(FBruzzesi): Handle Unknown dtype
+            pa_schema = Schema(self.collect_schema()).to_arrow()
+            return pa.Table.from_pandas(self.native.toPandas(), schema=pa_schema)
         else:
             return self.native.toArrow()
 
