@@ -38,31 +38,11 @@ from narwhals.dtypes import UnsignedIntegerType
 
 
 class Datetime(NwDatetime):
-    """Data type representing a calendar date and time of day.
-
-    Arguments:
-        time_unit: Unit of time. Defaults to `'us'` (microseconds).
-        time_zone: Time zone string, as defined in zoneinfo (to see valid strings run
-            `import zoneinfo; zoneinfo.available_timezones()` for a full list).
-
-    Notes:
-        Adapted from [Polars implementation](https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L398-L457)
-    """
-
     def __hash__(self) -> int:
         return hash(self.__class__)
 
 
 class Duration(NwDuration):
-    """Data type representing a time duration.
-
-    Arguments:
-        time_unit: Unit of time. Defaults to `'us'` (microseconds).
-
-    Notes:
-        Adapted from [Polars implementation](https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L460-L502)
-    """
-
     def __hash__(self) -> int:
         return hash(self.__class__)
 
