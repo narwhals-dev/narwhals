@@ -28,7 +28,6 @@ from narwhals.dependencies import is_numpy_array_1d
 from narwhals.dependencies import is_pandas_like_series
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_list_of
 from narwhals.utils import parse_version
 from narwhals.utils import validate_backend_version
@@ -679,7 +678,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         # the default is meant to be None, but pandas doesn't allow it?
         # https://numpy.org/doc/stable/reference/generated/numpy.ndarray.__array__.html
         copy = copy or self._implementation is Implementation.CUDF
-        dtypes = import_dtypes_module(self._version)
+        dtypes = self._version.dtypes
         if isinstance(self.dtype, dtypes.Datetime) and self.dtype.time_zone is not None:
             s = self.dt.convert_time_zone("UTC").dt.replace_time_zone(None).native
         else:

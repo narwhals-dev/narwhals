@@ -201,7 +201,6 @@ class Version(Enum):
             from narwhals import dtypes
 
             return dtypes
-
         from narwhals.stable.v1 import dtypes as v1_dtypes
 
         return v1_dtypes
@@ -611,24 +610,6 @@ def validate_backend_version(
     if backend_version < (min_version := MIN_VERSIONS[implementation]):
         msg = f"Minimum version of {implementation} supported by Narwhals is {min_version}, found: {backend_version}"
         raise ValueError(msg)
-
-
-def import_dtypes_module(version: Version) -> DTypes:
-    if version is Version.MAIN:
-        from narwhals import dtypes
-
-        return dtypes
-    elif version is Version.V1:
-        from narwhals.stable.v1 import dtypes as v1_dtypes
-
-        return v1_dtypes
-    else:  # pragma: no cover
-        msg = (
-            "Congratulations, you have entered unreachable code.\n"
-            "Please report an issue at https://github.com/narwhals-dev/narwhals/issues.\n"
-            f"Version: {version}"
-        )
-        raise AssertionError(msg)
 
 
 def remove_prefix(text: str, prefix: str) -> str:  # pragma: no cover
@@ -1165,7 +1146,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
     """
     from narwhals._interchange.series import InterchangeSeries
 
-    dtypes = import_dtypes_module(series._compliant_series._version)
+    dtypes = series._compliant_series._version.dtypes
 
     if (
         isinstance(series._compliant_series, InterchangeSeries)

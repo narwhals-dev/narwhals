@@ -22,7 +22,6 @@ from narwhals._compliant import EagerWhen
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.utils import Implementation
-from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
     from narwhals._arrow.typing import ArrayOrScalarAny
@@ -135,7 +134,7 @@ class ArrowNamespace(
         )
 
     def mean_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
-        dtypes = import_dtypes_module(self._version)
+        dtypes = self._version.dtypes
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             expr_results = list(chain.from_iterable(expr(df) for expr in exprs))

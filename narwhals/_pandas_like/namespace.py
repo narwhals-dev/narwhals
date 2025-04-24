@@ -18,7 +18,6 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_series_full_broadcast
-from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -283,7 +282,7 @@ class PandasLikeNamespace(
         separator: str,
         ignore_nulls: bool,
     ) -> PandasLikeExpr:
-        dtypes = import_dtypes_module(self._version)
+        dtypes = self._version.dtypes
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             expr_results = [s for _expr in exprs for s in _expr(df)]

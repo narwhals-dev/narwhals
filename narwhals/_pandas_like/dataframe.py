@@ -34,7 +34,6 @@ from narwhals.utils import _into_arrow_table
 from narwhals.utils import _remap_full_join_keys
 from narwhals.utils import check_column_exists
 from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import scale_bytes
@@ -838,7 +837,7 @@ class PandasLikeDataFrame(
                 return self.native.to_numpy(dtype=dtype, copy=copy)
             return self.native.to_numpy(copy=copy)
 
-        dtypes = import_dtypes_module(self._version)
+        dtypes = self._version.dtypes
 
         to_convert = [
             key
@@ -1053,7 +1052,7 @@ class PandasLikeDataFrame(
         )
 
     def explode(self, columns: Sequence[str]) -> Self:
-        dtypes = import_dtypes_module(self._version)
+        dtypes = self._version.dtypes
 
         schema = self.collect_schema()
         for col_to_explode in columns:
