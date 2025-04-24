@@ -36,7 +36,6 @@ from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import deprecate_native_namespace
 from narwhals.utils import flatten
-from narwhals.utils import import_namespace
 from narwhals.utils import is_compliant_expr
 from narwhals.utils import is_eager_allowed
 from narwhals.utils import is_sequence_but_not_str
@@ -241,7 +240,7 @@ def _new_series_impl(
 ) -> Series[Any]:
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
-        ns = import_namespace(version).from_backend(implementation).compliant
+        ns = version.namespace.from_backend(implementation).compliant
         series = ns._series.from_iterable(values, name=name, context=ns, dtype=dtype)
         return from_native(series, series_only=True)
     elif implementation is Implementation.DASK:  # pragma: no cover
@@ -327,7 +326,7 @@ def _from_dict_impl(
         data, backend = _from_dict_no_backend(data)
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
-        ns = import_namespace(version).from_backend(implementation).compliant
+        ns = version.namespace.from_backend(implementation).compliant
         frame = ns._dataframe.from_dict(data, schema=schema, context=ns)
         return from_native(frame, eager_only=True)
     elif implementation is Implementation.UNKNOWN:  # pragma: no cover
@@ -443,7 +442,7 @@ def _from_numpy_impl(
         raise TypeError(msg)
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
-        ns = import_namespace(version).from_backend(implementation).compliant
+        ns = version.namespace.from_backend(implementation).compliant
         frame = ns.from_numpy(data, schema)
         return from_native(frame, eager_only=True)
     else:  # pragma: no cover
@@ -531,7 +530,7 @@ def _from_arrow_impl(
         raise TypeError(msg)
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
-        ns = import_namespace(version).from_backend(implementation).compliant
+        ns = version.namespace.from_backend(implementation).compliant
         frame = ns._dataframe.from_arrow(data, context=ns)
         return from_native(frame, eager_only=True)
     else:  # pragma: no cover
