@@ -494,8 +494,14 @@ def test_fancy_functions(constructor: Constructor) -> None:
             {"y": [1, 2], "ac": [1, 4], "xc": [5, 5]},
             ["y"],
         ),
+        (
+            [nw.selectors.by_dtype(nw.Float64()).abs()],
+            [nw.selectors.numeric().sum()],
+            {"y": [0.5, 1.0, 1.5], "a": [2, 4, -1], "x": [1, 5, 4]},
+            ["y"],
+        ),
     ],
-    ids=range(5),
+    ids=range(6),
 )
 def test_group_by_expr(
     request: pytest.FixtureRequest,

@@ -111,7 +111,7 @@ class ParseKeysGroupBy(
     ) -> tuple[_SameFrameT, list[str], list[str]]:
         """Parses key expressions to set up `.agg` operation with correct information.
 
-        Since keys are expressions, it's possible to incour in aliases that match
+        Since keys are expressions, it's possible to alias any such key to match
         other dataframe column names.
 
         In order to match polars behavior and not overwrite columns when evaluating keys:

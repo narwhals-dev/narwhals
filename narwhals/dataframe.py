@@ -1526,8 +1526,8 @@ class DataFrame(BaseFrame[DataFrameT]):
         r"""Start a group by operation.
 
         Arguments:
-            *keys: Column(s) to group by. Accepts expression input. Strings are parsed as column names.
-                Multiple columns can be passed as a list.
+            *keys: Column(s) to group by. Accepts expression input. Strings are parsed as
+                column names.
             drop_null_keys: if True, then groups where any key is null won't be included
                 in the result.
 
@@ -1569,6 +1569,16 @@ class DataFrame(BaseFrame[DataFrameT]):
             1  b  2  4
             2  b  3  2
             3  c  3  1
+
+            Expressions are also accepted.
+
+            >>> nw.from_native(df_native, eager_only=True).group_by(
+            ...     "a", nw.col("b") // 2
+            ... ).agg(nw.col("c").mean()).to_native()
+               a  b    c
+            0  a  0  4.0
+            1  b  1  3.0
+            2  c  1  1.0
         """
         from narwhals.group_by import GroupBy
 
@@ -2837,9 +2847,8 @@ class LazyFrame(BaseFrame[FrameT]):
         r"""Start a group by operation.
 
         Arguments:
-            *keys:
-                Column(s) to group by. Accepts expression input. Strings are
-                parsed as column names. Multiple columns can be passed as a list.
+            *keys: Column(s) to group by. Accepts expression input. Strings are parsed as
+                column names.
             drop_null_keys: if True, then groups where any key is null won't be
                 included in the result.
 
@@ -2861,6 +2870,19 @@ class LazyFrame(BaseFrame[FrameT]):
             │ a       │      4 │
             │ b       │      2 │
             └─────────┴────────┘
+            <BLANKLINE>
+
+            Expressions are also accepted.
+
+            >>> df.group_by(nw.col("b").str.len_chars()).agg(
+            ...     nw.col("a").sum()
+            ... ).to_native()
+            ┌───────┬────────┐
+            │   b   │   a    │
+            │ int64 │ int128 │
+            ├───────┼────────┤
+            │     1 │      6 │
+            └───────┴────────┘
             <BLANKLINE>
         """
         from narwhals.group_by import LazyGroupBy
