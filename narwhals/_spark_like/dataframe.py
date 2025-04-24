@@ -142,7 +142,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
             implementation=self._implementation,
         )
 
-    def _to_arrow_schema(self) -> pa.Schema:
+    def _to_arrow_schema(self) -> pa.Schema:  # pragma: no cover
         import pyarrow as pa  # ignore-banned-import
 
         from narwhals._arrow.utils import narwhals_to_native_dtype

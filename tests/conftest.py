@@ -6,8 +6,10 @@ from copy import deepcopy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Literal
 from typing import Sequence
 from typing import cast
+from typing import overload
 
 import pytest
 
@@ -159,12 +161,31 @@ def pyarrow_table_constructor(obj: dict[str, Any]) -> pa.Table:
     return pa.table(obj)
 
 
-def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma: no cover
+@overload
+def pyspark_lazy_constructor(
+    kind: Literal["local"],
+) -> Callable[[Data], PySparkDataFrame]: ...  # pragma: no cover
+
+
+@overload
+def pyspark_lazy_constructor(
+    kind: Literal["connect"],
+) -> Callable[[Data], PySparkConnectDataFrame]: ...  # pragma: no cover
+
+
+def pyspark_lazy_constructor(
+    kind: Literal["local", "connect"] = "local",
+) -> (
+    Callable[[Data], PySparkDataFrame] | Callable[[Data], PySparkConnectDataFrame]
+):  # pragma: no cover
     pytest.importorskip("pyspark")
     import warnings
     from atexit import register
 
-    from pyspark.sql import SparkSession
+    if kind == "local":
+        from pyspark.sql import SparkSession
+    else:
+        from pyspark.sql.connect.session import SparkSession
 
     with warnings.catch_warnings():
         # The spark session seems to trigger a polars warning.
@@ -172,12 +193,14 @@ def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma:
         warnings.filterwarnings(
             "ignore", r"Using fork\(\) can cause Polars", category=RuntimeWarning
         )
-        builder = cast("SparkSession.Builder", SparkSession.builder)
+        builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
+
         session = (
-            builder.appName("unit-tests")
-            .master("local[1]")
-            .config("spark.ui.enabled", "false")
-            # executing one task at a time makes the tests faster
+            (
+                builder.master("local[1]").config("spark.ui.enabled", "false")
+                if kind == "local"
+                else builder.remote("sc://localhost:15002")
+            )
             .config("spark.default.parallelism", "1")
             .config("spark.sql.shuffle.partitions", "2")
             # common timezone for all tests environments
@@ -187,7 +210,7 @@ def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma:
 
         register(session.stop)
 
-        def _constructor(obj: Data) -> PySparkDataFrame:
+        def _constructor(obj: Data) -> PySparkDataFrame | PySparkConnectDataFrame:
             _obj = deepcopy(obj)
             index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
             _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
@@ -199,49 +222,10 @@ def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma:
                 .drop(index_col_name)
             )
 
-        return _constructor
-
-
-def pyspark_connect_lazy_constructor() -> Callable[
-    [Data], PySparkConnectDataFrame
-]:  # pragma: no cover
-    pytest.importorskip("pyspark")
-    import warnings
-    from atexit import register
-
-    from pyspark.sql.connect.session import SparkSession
-
-    with warnings.catch_warnings():
-        # The spark session seems to trigger a polars warning.
-        # Polars is imported in the tests, but not used in the spark operations
-        warnings.filterwarnings(
-            "ignore", r"Using fork\(\) can cause Polars", category=RuntimeWarning
-        )
-        builder = cast("SparkSession.Builder", SparkSession.builder)
-        session = (
-            builder.appName("unit-tests")
-            .remote("sc://localhost:15002")
-            .config("spark.default.parallelism", "1")
-            .config("spark.sql.shuffle.partitions", "2")
-            .config("spark.sql.session.timeZone", "UTC")
-            .getOrCreate()
-        )
-
-        register(session.stop)
-
-        def _constructor(obj: Data) -> PySparkConnectDataFrame:
-            _obj = deepcopy(obj)
-            index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
-            _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
-
-            return (
-                session.createDataFrame([*zip(*_obj.values())], schema=[*_obj.keys()])
-                .repartition(2)
-                .orderBy(index_col_name)
-                .drop(index_col_name)
-            )
-
-        return _constructor
+        if kind == "local":
+            return cast("Callable[[Data], PySparkDataFrame]", _constructor)
+        else:
+            return cast("Callable[[Data], PySparkConnectDataFrame]", _constructor)
 
 
 def sqlframe_pyspark_lazy_constructor(obj: Data) -> SQLFrameDataFrame:  # pragma: no cover
@@ -266,7 +250,7 @@ LAZY_CONSTRUCTORS: dict[str, Constructor] = {
     "polars[lazy]": polars_lazy_constructor,
     "duckdb": duckdb_lazy_constructor,
     "pyspark": pyspark_lazy_constructor,  # type: ignore[dict-item]
-    "pyspark[connect]": pyspark_connect_lazy_constructor,  # type: ignore[dict-item]
+    "pyspark[connect]": pyspark_lazy_constructor,  # type: ignore[dict-item]
     "sqlframe": sqlframe_pyspark_lazy_constructor,
 }
 GPU_CONSTRUCTORS: dict[str, ConstructorEager] = {"cudf": cudf_constructor}
@@ -304,9 +288,9 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             eager_constructors_ids.append(constructor)
             constructors.append(EAGER_CONSTRUCTORS[constructor])
         elif constructor == "pyspark":  # pragma: no cover
-            constructors.append(pyspark_lazy_constructor())
+            constructors.append(pyspark_lazy_constructor(kind="local"))
         elif constructor == "pyspark[connect]":  # pragma: no cover
-            constructors.append(pyspark_connect_lazy_constructor())
+            constructors.append(pyspark_lazy_constructor(kind="connect"))
         elif constructor in LAZY_CONSTRUCTORS:
             constructors.append(LAZY_CONSTRUCTORS[constructor])
         else:  # pragma: no cover
