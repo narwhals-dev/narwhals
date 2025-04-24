@@ -436,8 +436,8 @@ jobs:
       - name: install-deps
         run: |
           cd pointblank
-          uv pip install --system ".[dev]"
-          uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny --system    
+          uv pip install . --group dev --system
+          uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny --system
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals --system
