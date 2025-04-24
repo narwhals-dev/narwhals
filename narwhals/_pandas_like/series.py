@@ -692,15 +692,11 @@ class PandasLikeSeries(EagerSeries[Any]):
                 kwargs = {}
             else:
                 kwargs = {"na_value": float("nan")}
-            return s.to_numpy(
-                dtype=dtype or PANDAS_TO_NUMPY_DTYPE_MISSING[str(s.dtype)],
-                copy=copy,
-                **kwargs,
-            )
+            dtype = dtype or PANDAS_TO_NUMPY_DTYPE_MISSING[str(s.dtype)]
+            return s.to_numpy(dtype=dtype, copy=copy, **kwargs)
         if not has_missing and str(s.dtype) in PANDAS_TO_NUMPY_DTYPE_NO_MISSING:
-            return s.to_numpy(
-                dtype=dtype or PANDAS_TO_NUMPY_DTYPE_NO_MISSING[str(s.dtype)], copy=copy
-            )
+            dtype = dtype or PANDAS_TO_NUMPY_DTYPE_NO_MISSING[str(s.dtype)]
+            return s.to_numpy(dtype=dtype, copy=copy)
         return s.to_numpy(dtype=dtype, copy=copy)
 
     def to_pandas(self) -> pd.Series[Any]:
