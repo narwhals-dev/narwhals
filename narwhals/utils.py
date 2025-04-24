@@ -195,6 +195,17 @@ class Version(Enum):
 
         return Namespace
 
+    @property
+    def dtypes(self) -> DTypes:
+        if self is Version.MAIN:
+            from narwhals import dtypes
+
+            return dtypes
+
+        from narwhals.stable.v1 import dtypes as v1_dtypes
+
+        return v1_dtypes
+
 
 class Implementation(Enum):
     """Implementation of native object (pandas, Polars, PyArrow, ...)."""
