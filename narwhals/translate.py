@@ -670,10 +670,15 @@ def _from_native_impl(  # noqa: PLR0915
     elif is_native_spark_like(native_object):  # pragma: no cover
         ns_spark = import_namespace(version).from_native_object(native_object)
         if series_only:
-            msg = f"Cannot only use `series_only` with {ns_spark.implementation._alias} DataFrame"
+            msg = (
+                f"Cannot only use `series_only` with {ns_spark.implementation} DataFrame"
+            )
             raise TypeError(msg)
         if eager_only or eager_or_interchange_only:
-            msg = f"Cannot only use `eager_only` or `eager_or_interchange_only` with {ns_spark.implementation._alias} DataFrame"
+            msg = (
+                "Cannot only use `eager_only` or `eager_or_interchange_only` with "
+                f"{ns_spark.implementation} DataFrame"
+            )
             raise TypeError(msg)
         return LazyFrame(ns_spark.compliant.from_native(native_object), level="lazy")
 

@@ -189,29 +189,32 @@ class Version(Enum):
 class Implementation(Enum):
     """Implementation of native object (pandas, Polars, PyArrow, ...)."""
 
-    PANDAS = auto()
+    PANDAS = "Pandas"
     """Pandas implementation."""
-    MODIN = auto()
+    MODIN = "Modin"
     """Modin implementation."""
-    CUDF = auto()
+    CUDF = "cuDF"
     """cuDF implementation."""
-    PYARROW = auto()
+    PYARROW = "PyArrow"
     """PyArrow implementation."""
-    PYSPARK = auto()
+    PYSPARK = "PySpark"
     """PySpark implementation."""
-    POLARS = auto()
+    POLARS = "Polars"
     """Polars implementation."""
-    DASK = auto()
+    DASK = "Dask"
     """Dask implementation."""
-    DUCKDB = auto()
+    DUCKDB = "DuckDB"
     """DuckDB implementation."""
-    IBIS = auto()
+    IBIS = "Ibis"
     """Ibis implementation."""
-    SQLFRAME = auto()
+    SQLFRAME = "SQLFrame"
     """SQLFrame implementation."""
 
-    UNKNOWN = auto()
+    UNKNOWN = "Unknown"
     """Unknown implementation."""
+
+    def __str__(self) -> str:
+        return self.value
 
     @classmethod
     def from_native_namespace(
@@ -528,27 +531,6 @@ class Implementation(Enum):
             False
         """
         return self is Implementation.SQLFRAME  # pragma: no cover
-
-    @property
-    def _alias(self) -> LiteralString:
-        """Friendly name for errors.
-
-        Returns:
-            String.
-        """
-        mapping: dict[Implementation, LiteralString] = {
-            Implementation.PANDAS: "Pandas",
-            Implementation.POLARS: "Polars",
-            Implementation.DASK: "Dask",
-            Implementation.IBIS: "Ibis",
-            Implementation.MODIN: "Modin",
-            Implementation.CUDF: "cuDF",
-            Implementation.PYARROW: "PyArrow",
-            Implementation.PYSPARK: "PySpark",
-            Implementation.DUCKDB: "DuckDB",
-            Implementation.SQLFRAME: "SQLFrame",
-        }
-        return mapping[self]
 
     def _backend_version(self) -> tuple[int, ...]:
         native = self.to_native_namespace()
@@ -1864,7 +1846,7 @@ class requires:  # noqa: N801
         if instance._backend_version >= self._min_version:
             return
         method = self._wrapped_name
-        backend = instance._implementation._alias
+        backend = instance._implementation
         minimum = self._unparse_version(self._min_version)
         found = self._unparse_version(instance._backend_version)
         msg = f"`{method}` is only available in {backend}>={minimum!r}, found version {found!r}."
