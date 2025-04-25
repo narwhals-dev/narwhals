@@ -480,7 +480,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
             >>> df = nw.from_native(df_native)
             >>> df.implementation
-            <Implementation.PANDAS: 1>
+            <Implementation.PANDAS: 'pandas'>
             >>> df.implementation.is_pandas()
             True
             >>> df.implementation.is_pandas_like()
@@ -2219,7 +2219,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import dask.dataframe as dd
             >>> lf_native = dd.from_dict({"a": [1, 2]}, npartitions=1)
             >>> nw.from_native(lf_native).implementation
-            <Implementation.DASK: 7>
+            <Implementation.DASK: 'Dask'>
         """
         return self._compliant_frame._implementation
 

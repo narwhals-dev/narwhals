@@ -115,7 +115,7 @@ class Series(Generic[IntoSeriesT]):
             >>> s = nw.from_native(s_native, series_only=True)
 
             >>> s.implementation
-            <Implementation.PANDAS: 1>
+            <Implementation.PANDAS: 'pandas'>
 
             >>> s.implementation.is_pandas()
             True
