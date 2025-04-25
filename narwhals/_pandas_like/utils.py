@@ -674,30 +674,22 @@ def pivot_table(
     aggregate_function: str | None,
 ) -> Any:
     categorical = df._version.dtypes.Categorical
+    kwds: dict[Any, Any] = {"observed": True}
     if df._implementation is Implementation.CUDF:
+        kwds.pop("observed")
         cols = set(chain(values, index, columns))
         schema = df.schema.items()
         if any(tp for name, tp in schema if name in cols and isinstance(tp, categorical)):
             msg = "`pivot` with Categoricals is not implemented for cuDF backend"
             raise NotImplementedError(msg)
-        # cuDF doesn't support `observed` argument
-        result = df._native_frame.pivot_table(
-            values=values,
-            index=index,
-            columns=columns,
-            aggfunc=aggregate_function,
-            margins=False,
-        )
-    else:
-        result = df._native_frame.pivot_table(
-            values=values,
-            index=index,
-            columns=columns,
-            aggfunc=aggregate_function,
-            margins=False,
-            observed=True,
-        )
-    return result
+    return df.native.pivot_table(
+        values=values,
+        index=index,
+        columns=columns,
+        aggfunc=aggregate_function,
+        margins=False,
+        **kwds,
+    )
 
 
 def check_column_names_are_unique(columns: pd.Index[str]) -> None:
