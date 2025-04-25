@@ -675,12 +675,9 @@ def pivot_table(
 ) -> Any:
     categorical = df._version.dtypes.Categorical
     if df._implementation is Implementation.CUDF:
-        dtypes = (
-            dtype
-            for key, dtype in df.schema.items()
-            if key in set(chain(values, index, columns))
-        )
-        if any(isinstance(x, categorical) for x in dtypes):
+        cols = set(chain(values, index, columns))
+        schema = df.schema.items()
+        if any(tp for name, tp in schema if name in cols and isinstance(tp, categorical)):
             msg = "`pivot` with Categoricals is not implemented for cuDF backend"
             raise NotImplementedError(msg)
         # cuDF doesn't support `observed` argument
