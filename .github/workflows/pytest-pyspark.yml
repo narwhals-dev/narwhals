@@ -73,11 +73,22 @@ jobs:
         run: echo "setuptools<78" | uv pip install -e . "pyspark[connect]==${SPARK_VERSION}" --system
       - name: show-deps
         run: uv pip freeze
+      
+      - name: Cache Spark
+        id: cache-spark
+        uses: actions/cache@v4
+        with:
+          path: spark-${SPARK_VERSION}-bin-hadoop3
+          key: spark-${SPARK_VERSION}-bin-hadoop3
 
       - name: Download Spark
+        if: steps.cache-spark.outputs.cache-hit != 'true'
         run: |
           wget https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz
           tar -xzf spark-${SPARK_VERSION}-bin-hadoop3.tgz
+      
+      - name: Set Spark env variables
+        run: |
           echo "SPARK_HOME=$PWD/spark-${SPARK_VERSION}-bin-hadoop3" >> $GITHUB_ENV
           echo "$PWD/spark-${SPARK_VERSION}-bin-hadoop3/bin" >> $GITHUB_PATH
 
