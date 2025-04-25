@@ -78,23 +78,26 @@ jobs:
         id: cache-spark
         uses: actions/cache@v4
         with:
-          path: spark-${SPARK_VERSION}-bin-hadoop3
-          key: spark-${SPARK_VERSION}-bin-hadoop3
+          path: /opt/spark
+          key: spark-${{ env.SPARK_VERSION }}-bin-hadoop3
 
       - name: Download Spark
         if: steps.cache-spark.outputs.cache-hit != 'true'
         run: |
           wget https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz
           tar -xzf spark-${SPARK_VERSION}-bin-hadoop3.tgz
+          sudo mv spark-${SPARK_VERSION}-bin-hadoop3 /opt/spark
       
       - name: Set Spark env variables
         run: |
-          echo "SPARK_HOME=$PWD/spark-${SPARK_VERSION}-bin-hadoop3" >> $GITHUB_ENV
-          echo "$PWD/spark-${SPARK_VERSION}-bin-hadoop3/bin" >> $GITHUB_PATH
+          echo "SPARK_HOME=/opt/spark" >> $GITHUB_ENV
+          echo "/opt/spark/bin" >> $GITHUB_PATH
 
       - name: Start Spark Connect server
         run: |
-          ./spark-${SPARK_VERSION}-bin-hadoop3/sbin/start-connect-server.sh --packages org.apache.spark:spark-connect_2.12:${SPARK_VERSION}
+          $SPARK_HOME/sbin/start-connect-server.sh \
+            --packages org.apache.spark:spark-connect_2.12:${SPARK_VERSION} \
+            --conf spark.connect.grpc.binding.port=${SPARK_PORT}
           sleep 5
           echo "Spark Connect server started"
 
@@ -103,5 +106,4 @@ jobs:
 
       - name: Stop Spark Connect server
         if: always()
-        run: |
-          ./spark-${SPARK_VERSION}-bin-hadoop3/sbin/stop-connect-server.sh
+        run: $SPARK_HOME/sbin/stop-connect-server.sh
