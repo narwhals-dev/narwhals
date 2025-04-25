@@ -652,9 +652,12 @@ class ArrowDataFrame(
         return maybe_extract_py_scalar(self.native[_col][row], return_py_scalar=True)
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
-        df = self.native
-        new_cols = [mapping.get(c, c) for c in df.column_names]
-        return self._with_native(df.rename_columns(new_cols))
+        names: dict[str, str] | list[str]
+        if self._backend_version >= (17,):
+            names = cast("dict[str, str]", mapping)
+        else:
+            names = [mapping.get(c, c) for c in self.columns]
+        return self._with_native(self.native.rename_columns(names))
 
     def write_parquet(self, file: str | Path | BytesIO) -> None:
         import pyarrow.parquet as pp
