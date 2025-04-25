@@ -325,7 +325,7 @@ class ArrowDataFrame(
 
     @property
     def columns(self) -> list[str]:
-        return self.native.schema.names
+        return self.native.column_names
 
     def simple_select(self, *column_names: str) -> Self:
         return self._with_native(
