@@ -6,10 +6,8 @@ from copy import deepcopy
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
-from typing import Literal
 from typing import Sequence
 from typing import cast
-from typing import overload
 
 import pytest
 
@@ -22,7 +20,6 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
     from pyspark.sql import DataFrame as PySparkDataFrame
-    from pyspark.sql.connect.dataframe import DataFrame as PySparkConnectDataFrame
     from typing_extensions import TypeAlias
 
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
@@ -161,31 +158,15 @@ def pyarrow_table_constructor(obj: dict[str, Any]) -> pa.Table:
     return pa.table(obj)
 
 
-@overload
-def pyspark_lazy_constructor(
-    kind: Literal["local"],
-) -> Callable[[Data], PySparkDataFrame]: ...  # pragma: no cover
-
-
-@overload
-def pyspark_lazy_constructor(
-    kind: Literal["connect"],
-) -> Callable[[Data], PySparkConnectDataFrame]: ...  # pragma: no cover
-
-
-def pyspark_lazy_constructor(
-    kind: Literal["local", "connect"] = "local",
-) -> (
-    Callable[[Data], PySparkDataFrame] | Callable[[Data], PySparkConnectDataFrame]
-):  # pragma: no cover
+def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma: no cover
     pytest.importorskip("pyspark")
     import warnings
     from atexit import register
 
-    if kind == "local":
-        from pyspark.sql import SparkSession
-    else:
+    if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
         from pyspark.sql.connect.session import SparkSession
+    else:
+        from pyspark.sql import SparkSession
 
     with warnings.catch_warnings():
         # The spark session seems to trigger a polars warning.
@@ -197,9 +178,9 @@ def pyspark_lazy_constructor(
 
         session = (
             (
-                builder.master("local[1]").config("spark.ui.enabled", "false")
-                if kind == "local"
-                else builder.remote("sc://localhost:15002")
+                builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
+                if is_spark_connect
+                else builder.master("local[1]").config("spark.ui.enabled", "false")
             )
             .config("spark.default.parallelism", "1")
             .config("spark.sql.shuffle.partitions", "2")
@@ -210,22 +191,21 @@ def pyspark_lazy_constructor(
 
         register(session.stop)
 
-        def _constructor(obj: Data) -> PySparkDataFrame | PySparkConnectDataFrame:
+        def _constructor(obj: Data) -> PySparkDataFrame:
             _obj = deepcopy(obj)
             index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
             _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
 
-            return (
+            frame = (
                 session.createDataFrame([*zip(*_obj.values())], schema=[*_obj.keys()])
                 .repartition(2)
                 .orderBy(index_col_name)
                 .drop(index_col_name)
             )
 
-        if kind == "local":
-            return cast("Callable[[Data], PySparkDataFrame]", _constructor)
-        else:
-            return cast("Callable[[Data], PySparkConnectDataFrame]", _constructor)
+            return cast("PySparkDataFrame", frame)
+
+        return _constructor
 
 
 def sqlframe_pyspark_lazy_constructor(obj: Data) -> SQLFrameDataFrame:  # pragma: no cover
@@ -250,7 +230,6 @@ LAZY_CONSTRUCTORS: dict[str, Constructor] = {
     "polars[lazy]": polars_lazy_constructor,
     "duckdb": duckdb_lazy_constructor,
     "pyspark": pyspark_lazy_constructor,  # type: ignore[dict-item]
-    "pyspark[connect]": pyspark_lazy_constructor,  # type: ignore[dict-item]
     "sqlframe": sqlframe_pyspark_lazy_constructor,
 }
 GPU_CONSTRUCTORS: dict[str, ConstructorEager] = {"cudf": cudf_constructor}
@@ -265,7 +244,12 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         selected_constructors = [
             x
             for x in selected_constructors
-            if x not in GPU_CONSTRUCTORS and x != "modin"  # too slow
+            if x not in GPU_CONSTRUCTORS
+            and x
+            not in {
+                "modin",  # too slow
+                "spark[connect]",  # complex local setup; can't run together with local spark
+            }
         ]
     else:  # pragma: no cover
         opt = cast("str", metafunc.config.getoption("constructors"))
@@ -287,10 +271,8 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             eager_constructors.append(EAGER_CONSTRUCTORS[constructor])
             eager_constructors_ids.append(constructor)
             constructors.append(EAGER_CONSTRUCTORS[constructor])
-        elif constructor == "pyspark":  # pragma: no cover
-            constructors.append(pyspark_lazy_constructor(kind="local"))
-        elif constructor == "pyspark[connect]":  # pragma: no cover
-            constructors.append(pyspark_lazy_constructor(kind="connect"))
+        elif constructor in {"pyspark", "pyspark[connect]"}:  # pragma: no cover
+            constructors.append(pyspark_lazy_constructor())
         elif constructor in LAZY_CONSTRUCTORS:
             constructors.append(LAZY_CONSTRUCTORS[constructor])
         else:  # pragma: no cover

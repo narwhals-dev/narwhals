@@ -46,6 +46,7 @@ jobs:
     env:
       SPARK_VERSION: 3.5.5
       SPARK_PORT: 15002
+      SPARK_CONNECT: true
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
