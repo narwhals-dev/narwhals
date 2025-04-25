@@ -186,6 +186,16 @@ class Version(Enum):
     V1 = auto()
     MAIN = auto()
 
+    @property
+    def namespace(self) -> type[Namespace[Any]]:
+        if self is Version.MAIN:
+            from narwhals._namespace import Namespace
+
+            return Namespace
+        from narwhals.stable.v1._namespace import Namespace
+
+        return Namespace
+
 
 class Implementation(Enum):
     """Implementation of native object (pandas, Polars, PyArrow, ...)."""
@@ -634,34 +644,6 @@ def import_dtypes_module(version: Version) -> DTypes:
         from narwhals.stable.v1 import dtypes as v1_dtypes
 
         return v1_dtypes
-    else:  # pragma: no cover
-        msg = (
-            "Congratulations, you have entered unreachable code.\n"
-            "Please report an issue at https://github.com/narwhals-dev/narwhals/issues.\n"
-            f"Version: {version}"
-        )
-        raise AssertionError(msg)
-
-
-def _into_version(obj: Version | _StoresVersion, /) -> Version:
-    if isinstance(obj, Version):
-        return obj
-    elif _hasattr_static(obj, "_version"):
-        return obj._version
-    msg = f"Expected {Version} but got {type(obj).__name__!r}"
-    raise TypeError(msg)
-
-
-def import_namespace(version: Version | _StoresVersion, /) -> type[Namespace[Any]]:
-    version = _into_version(version)
-    if version is Version.MAIN:
-        from narwhals._namespace import Namespace
-
-        return Namespace
-    elif version is Version.V1:
-        from narwhals.stable.v1._namespace import Namespace
-
-        return Namespace
     else:  # pragma: no cover
         msg = (
             "Congratulations, you have entered unreachable code.\n"
