@@ -648,7 +648,7 @@ class ArrowDataFrame(
         names: dict[str, str] | list[str]
         if self._backend_version >= (17,):
             names = cast("dict[str, str]", mapping)
-        else:
+        else:  # pragma: no cover
             names = [mapping.get(c, c) for c in self.columns]
         return self._with_native(self.native.rename_columns(names))
 
