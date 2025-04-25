@@ -199,8 +199,8 @@ class Version(Enum):
 class Implementation(Enum):
     """Implementation of native object (pandas, Polars, PyArrow, ...)."""
 
-    PANDAS = "Pandas"
-    """Pandas implementation."""
+    PANDAS = "pandas"
+    """pandas implementation."""
     MODIN = "Modin"
     """Modin implementation."""
     CUDF = "cuDF"
