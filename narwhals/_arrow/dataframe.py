@@ -497,7 +497,9 @@ class ArrowDataFrame(
         self, *, as_series: bool
     ) -> dict[str, ArrowSeries] | dict[str, list[Any]]:
         it = self.iter_columns()
-        return {s.name: s for s in it} if as_series else {s.name: s.to_list() for s in it}
+        if as_series:
+            return {ser.name: ser for ser in it}
+        return {ser.name: ser.to_list() for ser in it}
 
     def with_row_index(self, name: str) -> Self:
         df = self.native
