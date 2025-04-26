@@ -536,15 +536,15 @@ def test_requires() -> None:
 
     converted = v_201.to_int()
     assert converted == 123
-    match = r"`to_int`.+Polars>=\'1.0.0\'.+found.+\'0.5\'"
+    match = r"`to_int`.+polars>=\'1.0.0\'.+found.+\'0.5\'"
     with pytest.raises(NotImplementedError, match=match):
         v_05.to_int()
     repeated = v_300.repeat(3)
     assert repeated == "123123123"
-    match = r"`repeat`.+Polars>=\'3.0.0\'.+found.+\'2.0.1\'"
+    match = r"`repeat`.+polars>=\'3.0.0\'.+found.+\'2.0.1\'"
     with pytest.raises(NotImplementedError, match=match):
         v_201.repeat(3)
-    match = r"`repeat`.+Polars>=\'3.0.0\'.+found.+\'0.5\'"
+    match = r"`repeat`.+polars>=\'3.0.0\'.+found.+\'0.5\'"
     with pytest.raises(NotImplementedError, match=match):
         v_05.repeat(3)
     joined = v_201.concat("456", "789")
@@ -553,7 +553,7 @@ def test_requires() -> None:
     assert joined_sep == "123 456 789"
     assert v_300.concat("forever") == "123forever"
     pattern = re.compile(
-        r"`concat`.+Polars>=\'2\'.+found.+\'0.5\'.+Something helpful I suppose", re.DOTALL
+        r"`concat`.+polars>=\'2\'.+found.+\'0.5\'.+Something helpful I suppose", re.DOTALL
     )
     with pytest.raises(NotImplementedError, match=pattern):
         v_05.concat("never")

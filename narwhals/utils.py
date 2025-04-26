@@ -196,35 +196,46 @@ class Version(Enum):
         return Namespace
 
 
-class Implementation(Enum):
+class Implementation(str, Enum):
     """Implementation of native object (pandas, Polars, PyArrow, ...)."""
 
-    PANDAS = "pandas"
-    """pandas implementation."""
-    MODIN = "Modin"
-    """Modin implementation."""
-    CUDF = "cuDF"
-    """cuDF implementation."""
-    PYARROW = "PyArrow"
-    """PyArrow implementation."""
-    PYSPARK = "PySpark"
-    """PySpark implementation."""
-    POLARS = "Polars"
-    """Polars implementation."""
-    DASK = "Dask"
-    """Dask implementation."""
-    DUCKDB = "DuckDB"
-    """DuckDB implementation."""
-    IBIS = "Ibis"
-    """Ibis implementation."""
-    SQLFRAME = "SQLFrame"
-    """SQLFrame implementation."""
-
-    UNKNOWN = "Unknown"
-    """Unknown implementation."""
+    def __new__(cls, value: str | auto) -> Self:
+        if not isinstance(value, (str, auto)):
+            msg = f"Values must be strings or auto(): {value!r} is a {type(value)}"
+            raise TypeError(msg)
+        return super().__new__(cls, value)
 
     def __str__(self) -> str:
-        return self.value
+        return str(self.value)
+
+    @staticmethod
+    def _generate_next_value_(name: str, *_: Any) -> str:
+        # See: https://docs.python.org/3.13/library/enum.html#enum.Enum._generate_next_value_
+        return name.lower()
+
+    PANDAS = auto()
+    """pandas implementation."""
+    MODIN = auto()
+    """Modin implementation."""
+    CUDF = auto()
+    """cuDF implementation."""
+    PYARROW = auto()
+    """PyArrow implementation."""
+    PYSPARK = auto()
+    """PySpark implementation."""
+    POLARS = auto()
+    """Polars implementation."""
+    DASK = auto()
+    """Dask implementation."""
+    DUCKDB = auto()
+    """DuckDB implementation."""
+    IBIS = auto()
+    """Ibis implementation."""
+    SQLFRAME = auto()
+    """SQLFrame implementation."""
+
+    UNKNOWN = auto()
+    """Unknown implementation."""
 
     @classmethod
     def from_native_namespace(
@@ -264,19 +275,10 @@ class Implementation(Enum):
         Returns:
             Implementation.
         """
-        mapping = {
-            "pandas": Implementation.PANDAS,
-            "modin": Implementation.MODIN,
-            "cudf": Implementation.CUDF,
-            "pyarrow": Implementation.PYARROW,
-            "pyspark": Implementation.PYSPARK,
-            "polars": Implementation.POLARS,
-            "dask": Implementation.DASK,
-            "duckdb": Implementation.DUCKDB,
-            "ibis": Implementation.IBIS,
-            "sqlframe": Implementation.SQLFRAME,
-        }
-        return mapping.get(backend_name, Implementation.UNKNOWN)
+        try:
+            return cls(backend_name)
+        except ValueError:
+            return Implementation.UNKNOWN
 
     @classmethod
     def from_backend(
@@ -1798,7 +1800,7 @@ class requires:  # noqa: N801
         >>> backend.really_complex_feature()
         Traceback (most recent call last):
             ...
-        NotImplementedError: `really_complex_feature` is only available in PyArrow>='9000.0.0', found version '20.0.0'.
+        NotImplementedError: `really_complex_feature` is only available in pyarrow>='9000.0.0', found version '20.0.0'.
     """
 
     _min_version: tuple[int, ...]

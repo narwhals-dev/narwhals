@@ -2219,7 +2219,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import dask.dataframe as dd
             >>> lf_native = dd.from_dict({"a": [1, 2]}, npartitions=1)
             >>> nw.from_native(lf_native).implementation
-            <Implementation.DASK: 'Dask'>
+            <Implementation.DASK: 'dask'>
         """
         return self._compliant_frame._implementation
 
