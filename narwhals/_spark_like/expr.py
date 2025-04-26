@@ -75,7 +75,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
             return [
-                result.over(df._Window().partitionBy(self._F.lit(1)))
+                result.over(self._Window().partitionBy(self._F.lit(1)))
                 for result in self(df)
             ]
 
