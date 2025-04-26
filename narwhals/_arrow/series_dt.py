@@ -10,7 +10,6 @@ import pyarrow.compute as pc
 from narwhals._arrow.utils import ArrowSeriesNamespace
 from narwhals._arrow.utils import floordiv_compat
 from narwhals._arrow.utils import lit
-from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
@@ -47,7 +46,7 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
 
     def timestamp(self, time_unit: TimeUnit) -> ArrowSeries:
         ser = self.compliant
-        dtypes = import_dtypes_module(ser._version)
+        dtypes = ser._version.dtypes
         if isinstance(ser.dtype, dtypes.Datetime):
             unit = ser.dtype.time_unit
             s_cast = self.native.cast(pa.int64())
