@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import re
 from contextlib import suppress
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -19,7 +20,6 @@ from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 T = TypeVar("T", bound=Sized)
@@ -215,7 +215,7 @@ def rename(
 def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> DType:
     dtype = str(native_dtype)
 
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if dtype in {"int64", "Int64", "Int64[pyarrow]", "int64[pyarrow]"}:
         return dtypes.Int64()
     if dtype in {"int32", "Int32", "Int32[pyarrow]", "int32[pyarrow]"}:
@@ -283,7 +283,7 @@ def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> 
 def object_native_to_narwhals_dtype(
     series: PandasLikeSeries, version: Version, implementation: Implementation
 ) -> DType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if implementation is Implementation.CUDF:  # pragma: no cover
         # Per conversations with their maintainers, they don't support arbitrary
         # objects, so we can just return String.
@@ -307,7 +307,7 @@ def native_categorical_to_narwhals_dtype(
     version: Version,
     get_categories: Callable[[], tuple[str, ...]],
 ) -> DType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if version is Version.V1:
         return dtypes.Categorical()
     if native_dtype.ordered:
@@ -341,8 +341,7 @@ def native_to_narwhals_dtype(
     elif implementation is Implementation.DASK:
         # Per conversations with their maintainers, they don't support arbitrary
         # objects, so we can just return String.
-        dtypes = import_dtypes_module(version)
-        return dtypes.String()
+        return version.dtypes.String()
     msg = (
         "Unreachable code, object dtype should be handled separately"  # pragma: no cover
     )
@@ -383,7 +382,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     if dtype_backend is not None and dtype_backend not in {"pyarrow", "numpy_nullable"}:
         msg = f"Expected one of {{None, 'pyarrow', 'numpy_nullable'}}, got: '{dtype_backend}'"
         raise ValueError(msg)
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         msg = "Casting to Decimal is not supported yet."
         raise NotImplementedError(msg)
@@ -674,32 +673,23 @@ def pivot_table(
     columns: Sequence[str],
     aggregate_function: str | None,
 ) -> Any:
-    dtypes = import_dtypes_module(df._version)
+    categorical = df._version.dtypes.Categorical
+    kwds: dict[Any, Any] = {"observed": True}
     if df._implementation is Implementation.CUDF:
-        if any(
-            x == dtypes.Categorical
-            for x in df.simple_select(*[*values, *index, *columns]).schema.values()
-        ):
+        kwds.pop("observed")
+        cols = set(chain(values, index, columns))
+        schema = df.schema.items()
+        if any(tp for name, tp in schema if name in cols and isinstance(tp, categorical)):
             msg = "`pivot` with Categoricals is not implemented for cuDF backend"
             raise NotImplementedError(msg)
-        # cuDF doesn't support `observed` argument
-        result = df._native_frame.pivot_table(
-            values=values,
-            index=index,
-            columns=columns,
-            aggfunc=aggregate_function,
-            margins=False,
-        )
-    else:
-        result = df._native_frame.pivot_table(
-            values=values,
-            index=index,
-            columns=columns,
-            aggfunc=aggregate_function,
-            margins=False,
-            observed=True,
-        )
-    return result
+    return df.native.pivot_table(
+        values=values,
+        index=index,
+        columns=columns,
+        aggfunc=aggregate_function,
+        margins=False,
+        **kwds,
+    )
 
 
 def check_column_names_are_unique(columns: pd.Index[str]) -> None:
