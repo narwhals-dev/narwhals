@@ -9,7 +9,6 @@ from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import int_dtype_mapper
 from narwhals._pandas_like.utils import is_pyarrow_dtype_backend
-from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -173,7 +172,7 @@ class PandasLikeSeriesDateTimeNamespace(
         s = self.native
         dtype = self.compliant.dtype
         mask_na = s.isna()
-        dtypes = import_dtypes_module(self.version)
+        dtypes = self.version.dtypes
         if dtype == dtypes.Date:
             # Date is only supported in pandas dtypes if pyarrow-backed
             s_cast = s.astype("Int32[pyarrow]")

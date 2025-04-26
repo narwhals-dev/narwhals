@@ -8,7 +8,6 @@ from typing import Sequence
 import duckdb
 
 from narwhals.utils import Version
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -83,7 +82,7 @@ def evaluate_exprs(
 
 def native_to_narwhals_dtype(duckdb_dtype: DuckDBPyType, version: Version) -> DType:
     duckdb_dtype_id = duckdb_dtype.id
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
 
     # Handle nested data types first
     if duckdb_dtype_id == "list":
@@ -121,7 +120,7 @@ def native_to_narwhals_dtype(duckdb_dtype: DuckDBPyType, version: Version) -> DT
 
 @lru_cache(maxsize=16)
 def _non_nested_native_to_narwhals_dtype(duckdb_dtype_id: str, version: Version) -> DType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     return {
         "hugeint": dtypes.Int128(),
         "bigint": dtypes.Int64(),
@@ -150,7 +149,7 @@ def _non_nested_native_to_narwhals_dtype(duckdb_dtype_id: str, version: Version)
 
 
 def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> str:  # noqa: PLR0915
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         msg = "Casting to Decimal is not supported yet."
         raise NotImplementedError(msg)
