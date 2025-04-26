@@ -163,7 +163,11 @@ def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma:
     import warnings
     from atexit import register
 
-    if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
+    is_spark_connect = bool(os.environ.get("SPARK_CONNECT", None))
+
+    if TYPE_CHECKING:
+        from pyspark.sql import SparkSession
+    elif is_spark_connect:
         from pyspark.sql.connect.session import SparkSession
     else:
         from pyspark.sql import SparkSession
@@ -196,14 +200,12 @@ def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma:
             index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
             _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
 
-            frame = (
+            return (
                 session.createDataFrame([*zip(*_obj.values())], schema=[*_obj.keys()])
                 .repartition(2)
                 .orderBy(index_col_name)
                 .drop(index_col_name)
             )
-
-            return cast("PySparkDataFrame", frame)
 
         return _constructor
 
