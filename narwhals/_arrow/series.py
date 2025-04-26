@@ -32,7 +32,6 @@ from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_list_of
 from narwhals.utils import not_implemented
 from narwhals.utils import requires
@@ -865,7 +864,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         return self._with_native(pc.is_finite(self.native))
 
     def cum_count(self, *, reverse: bool) -> Self:
-        dtypes = import_dtypes_module(self._version)
+        dtypes = self._version.dtypes
         return (~self.is_null()).cast(dtypes.UInt32()).cum_sum(reverse=reverse)
 
     @requires.backend_version((13,))

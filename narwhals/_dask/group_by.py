@@ -13,13 +13,9 @@ import dask.dataframe as dd
 from narwhals._compliant import DepthTrackingGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 
-try:
-    import dask.dataframe.dask_expr as dx
-except ModuleNotFoundError:  # pragma: no cover
-    import dask_expr as dx
-
 if TYPE_CHECKING:
     import pandas as pd
+    from dask.dataframe.api import GroupBy as _DaskGroupBy
     from pandas.core.groupby import SeriesGroupBy as _PandasSeriesGroupBy
     from typing_extensions import TypeAlias
 
@@ -30,8 +26,11 @@ if TYPE_CHECKING:
     PandasSeriesGroupBy: TypeAlias = _PandasSeriesGroupBy[Any, Any]
     _AggFn: TypeAlias = Callable[..., Any]
 
-    from dask_expr._groupby import GroupBy as _DaskGroupBy
 else:
+    try:
+        import dask.dataframe.dask_expr as dx
+    except ModuleNotFoundError:  # pragma: no cover
+        import dask_expr as dx
     _DaskGroupBy = dx._groupby.GroupBy
 
 Aggregation: TypeAlias = "str | _AggFn"

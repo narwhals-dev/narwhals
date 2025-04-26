@@ -10,13 +10,13 @@ import tempfile
 from pathlib import Path
 
 
-def extract_docstring_examples(files: list[Path]) -> list[tuple[Path, str, str]]:
+def extract_docstring_examples(files: list[str]) -> list[tuple[Path, str, str]]:
     """Extract examples from docstrings in Python files."""
     examples: list[tuple[Path, str, str]] = []
 
     for file in files:
-        with open(file, encoding="utf-8") as f:
-            tree = ast.parse(f.read())
+        fp = Path(file)
+        tree = ast.parse(fp.read_text("utf-8"))
 
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
@@ -27,7 +27,7 @@ def extract_docstring_examples(files: list[Path]) -> list[tuple[Path, str, str]]
                         example.source for example in parsed_examples
                     )
                     if example_code.strip():
-                        examples.append((file, node.name, example_code))
+                        examples.append((fp, node.name, example_code))
 
     return examples
 
@@ -41,14 +41,14 @@ def create_temp_files(examples: list[tuple[Path, str, str]]) -> list[tuple[Path,
         temp_file.write(example)
         temp_file_path = temp_file.name
         temp_file.close()
-        temp_files.append((Path(temp_file_path), f"{file}:{name}"))
+        temp_files.append((Path(temp_file_path), f"{file!s}:{name}"))
 
     return temp_files
 
 
 def run_ruff_on_temp_files(temp_files: list[tuple[Path, str]]) -> list[str]:
     """Run ruff on all temporary files and collect error messages."""
-    temp_file_paths = [str(temp_file[0]) for temp_file in temp_files]
+    temp_file_paths = [temp_file[0] for temp_file in temp_files]
 
     result = subprocess.run(  # noqa: S603
         [  # noqa: S607

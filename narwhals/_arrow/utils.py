@@ -13,7 +13,6 @@ import pyarrow.compute as pc
 
 from narwhals._compliant.series import _SeriesNamespace
 from narwhals.exceptions import ShapeError
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -92,7 +91,7 @@ def nulls_like(n: int, series: ArrowSeries) -> ArrowArray:
 
 @lru_cache(maxsize=16)
 def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if pa.types.is_int64(dtype):
         return dtypes.Int64()
     if pa.types.is_int32(dtype):
@@ -157,7 +156,7 @@ def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
 
 
 def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa.DataType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         msg = "Casting to Decimal is not supported yet."
         raise NotImplementedError(msg)
