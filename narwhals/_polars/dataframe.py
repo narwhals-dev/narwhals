@@ -271,7 +271,7 @@ class PolarsDataFrame:
         self,
         item: tuple[
             SingleIndexSelector | MultiIndexSelector[PolarsSeries],
-            MultiIndexSelector[PolarsSeries] | MultiColSelector[PolarsSeries],
+            MultiColSelector[PolarsSeries],
         ],
     ) -> Any:
         rows, columns = item

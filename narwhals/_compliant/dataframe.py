@@ -119,7 +119,7 @@ class CompliantDataFrame(
         self,
         item: tuple[
             SingleIndexSelector | MultiIndexSelector[CompliantSeriesT],
-            MultiIndexSelector[CompliantSeriesT] | MultiColSelector[CompliantSeriesT],
+            MultiColSelector[CompliantSeriesT],
         ],
     ) -> Self: ...
     def simple_select(self, *column_names: str) -> Self:
@@ -412,7 +412,7 @@ class EagerDataFrame(
         self,
         item: tuple[
             SingleIndexSelector | MultiIndexSelector[EagerSeriesT],
-            MultiIndexSelector[EagerSeriesT] | MultiColSelector[EagerSeriesT],
+            MultiColSelector[EagerSeriesT],
         ],
     ) -> Self:
         rows, columns = item
