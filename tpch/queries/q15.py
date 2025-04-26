@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from narwhals.typing import FrameT
+    from tpch._typing import FrameT
 
 
 def query(
@@ -29,7 +29,7 @@ def query(
     )
 
     return (
-        supplier_ds.join(revenue, left_on="s_suppkey", right_on="supplier_no")
+        supplier_ds.join(revenue, left_on="s_suppkey", right_on="supplier_no")  # pyright: ignore[reportArgumentType]
         .filter(nw.col("total_revenue") == nw.col("total_revenue").max())
         .with_columns(nw.col("total_revenue").round(2))
         .select("s_suppkey", "s_name", "s_address", "s_phone", "total_revenue")

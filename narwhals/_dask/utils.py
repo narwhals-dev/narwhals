@@ -10,7 +10,6 @@ from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow
 from narwhals.utils import Implementation
 from narwhals.utils import Version
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 from narwhals.utils import parse_version
 
@@ -96,7 +95,7 @@ def validate_comparand(lhs: dx.Series, rhs: dx.Series) -> None:
 
 
 def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> Any:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return "float64"
     if isinstance_or_issubclass(dtype, dtypes.Float32):

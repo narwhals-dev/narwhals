@@ -19,7 +19,6 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import NarwhalsError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Version
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -76,7 +75,7 @@ def extract_args_kwargs(
 def native_to_narwhals_dtype(
     dtype: pl.DataType, version: Version, backend_version: tuple[int, ...]
 ) -> DType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if dtype == pl.Float64:
         return dtypes.Float64()
     if dtype == pl.Float32:
@@ -156,7 +155,7 @@ def native_to_narwhals_dtype(
 def narwhals_to_native_dtype(
     dtype: DType | type[DType], version: Version, backend_version: tuple[int, ...]
 ) -> pl.DataType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if dtype == dtypes.Float64:
         return pl.Float64()
     if dtype == dtypes.Float32:

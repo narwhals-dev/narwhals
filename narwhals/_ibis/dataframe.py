@@ -9,7 +9,6 @@ import ibis.selectors as s
 from narwhals.dependencies import get_ibis
 from narwhals.utils import Implementation
 from narwhals.utils import Version
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
@@ -25,7 +24,7 @@ if TYPE_CHECKING:
 
 @lru_cache(maxsize=16)
 def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if ibis_dtype.is_int64():
         return dtypes.Int64()
     if ibis_dtype.is_int32():
