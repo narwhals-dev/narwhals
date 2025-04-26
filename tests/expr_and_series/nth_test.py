@@ -40,6 +40,6 @@ def test_nth_not_supported() -> None:  # pragma: no cover
     import polars as pl
 
     df = nw.from_native(pl.DataFrame(data))
-    pattern = re.compile(r"`nth` .+ Polars>=\'1.0.0\'.+`col`.+instead", re.DOTALL)
+    pattern = re.compile(r"`nth` .+ polars>=\'1.0.0\'.+`col`.+instead", re.DOTALL)
     with pytest.raises(NotImplementedError, match=pattern):
         df.select(nw.nth(0))

@@ -210,7 +210,7 @@ class Implementation(str, Enum):
     """Implementation of native object (pandas, Polars, PyArrow, ...)."""
 
     def __new__(cls, value: str | auto) -> Self:
-        if not isinstance(value, (str, auto)):
+        if not isinstance(value, (str, auto)):  # pragma: no cover
             msg = f"Values must be strings or auto(): {value!r} is a {type(value)}"
             raise TypeError(msg)
         return super().__new__(cls, value)
@@ -218,7 +218,12 @@ class Implementation(str, Enum):
     def __str__(self) -> str:
         return str(self.value)
 
-    def _generate_next_value_(name: str, *_: Any) -> str:  # noqa: N805
+    def _generate_next_value_(
+        name: str,  # noqa: N805
+        start: int,
+        count: int,
+        last_values: list[Any],
+    ) -> Any:
         # See: https://docs.python.org/3.10/library/enum.html#using-automatic-values
         return name.lower()
 
