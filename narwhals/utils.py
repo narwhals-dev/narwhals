@@ -218,9 +218,8 @@ class Implementation(str, Enum):
     def __str__(self) -> str:
         return str(self.value)
 
-    @staticmethod
-    def _generate_next_value_(name: str, *_: Any) -> str:
-        # See: https://docs.python.org/3.13/library/enum.html#enum.Enum._generate_next_value_
+    def _generate_next_value_(name: str, *_: Any) -> str:  # noqa: N805
+        # See: https://docs.python.org/3.10/library/enum.html#using-automatic-values
         return name.lower()
 
     PANDAS = auto()
