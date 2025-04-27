@@ -334,6 +334,12 @@ class ExprMetadata:
             lhs, rhs, str_as_lit=True, allow_multi_output=False, to_single_output=False
         )
 
+    @classmethod
+    def from_horizontal_op(cls, *exprs: IntoExpr) -> ExprMetadata:
+        return combine_metadata(
+            *exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
+        )
+
 
 def combine_metadata(  # noqa: PLR0915
     *args: IntoExpr | object | None,
@@ -438,12 +444,6 @@ def resolve_expansion_kind(lhs: ExpansionKind, rhs: ExpansionKind) -> ExpansionK
     # Don't attempt anything more complex, keep it simple and raise in the face of ambiguity.
     msg = f"Unsupported ExpansionKind combination, got {lhs} and {rhs}, please report a bug."  # pragma: no cover
     raise AssertionError(msg)  # pragma: no cover
-
-
-def combine_metadata_horizontal_op(*exprs: IntoExpr) -> ExprMetadata:
-    return combine_metadata(
-        *exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
-    )
 
 
 def check_expressions_preserve_length(*args: IntoExpr, function_name: str) -> None:
