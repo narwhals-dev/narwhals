@@ -501,26 +501,14 @@ def test_fancy_functions(constructor: Constructor) -> None:
             ["y"],
         ),
     ],
-    ids=range(6),
 )
 def test_group_by_expr(
-    request: pytest.FixtureRequest,
     constructor: Constructor,
     keys: list[nw.Expr],
     aggs: list[nw.Expr],
     expected: dict[str, list[Any]],
     sort_by: list[str],
 ) -> None:
-    request_id = request.node.callspec.id
-    if (
-        POLARS_COLLECT_STREAMING_ENGINE
-        and request_id.startswith("polars[lazy]")
-        and request_id.endswith("0")
-    ):
-        # Blocked by upstream issue as of polars==1.27.1
-        # See: https://github.com/pola-rs/polars/issues/22238
-        request.applymarker(pytest.mark.xfail)
-
     data = {
         "a": [1, 1, 2, 2, -1],
         "x": [0, 1, 2, 3, 4],
