@@ -569,7 +569,9 @@ class PandasLikeDataFrame(
         raise ValueError(msg)  # pragma: no cover
 
     # --- actions ---
-    def group_by(self, *keys: str, drop_null_keys: bool) -> PandasLikeGroupBy:
+    def group_by(
+        self, keys: Sequence[str] | Sequence[PandasLikeExpr], *, drop_null_keys: bool
+    ) -> PandasLikeGroupBy:
         from narwhals._pandas_like.group_by import PandasLikeGroupBy
 
         return PandasLikeGroupBy(self, keys, drop_null_keys=drop_null_keys)

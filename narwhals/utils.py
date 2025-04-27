@@ -1290,6 +1290,15 @@ def is_list_of(obj: Any, tp: type[_T]) -> TypeIs[list[_T]]:
     return bool(isinstance(obj, list) and obj and isinstance(obj[0], tp))
 
 
+def is_sequence_of(obj: Any, tp: type[_T]) -> TypeIs[Sequence[_T]]:
+    # Check if an object is a sequence of `tp`, only sniffing the first element.
+    return bool(
+        is_sequence_but_not_str(obj)
+        and (first := next(iter(obj), None))
+        and isinstance(first, tp)
+    )
+
+
 def find_stacklevel() -> int:
     """Find the first place in the stack that is not inside narwhals.
 

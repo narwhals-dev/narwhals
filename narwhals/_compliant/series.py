@@ -307,7 +307,7 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
         """Return a new `CompliantSeries`, wrapping the native `series`.
 
         In cases when operations are known to not affect whether a result should
-        be broadcast, we can pass `preverse_broadcast=True`.
+        be broadcast, we can pass `preserve_broadcast=True`.
         Set this with care - it should only be set for unary expressions which don't
         change length or order, such as `.alias` or `.fill_null`. If in doubt, don't
         set it, you probably don't need it.
@@ -323,9 +323,7 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
 
     def _gather(self, rows: SizedMultiIndexSelector[NativeSeriesT]) -> Self: ...
     def _gather_slice(self, rows: _SliceIndex | range) -> Self: ...
-    def __getitem__(
-        self, item: MultiIndexSelector[CompliantSeries[NativeSeriesT]]
-    ) -> Self:
+    def __getitem__(self, item: MultiIndexSelector[Self]) -> Self:
         if isinstance(item, (slice, range)):
             return self._gather_slice(item)
         elif is_compliant_series(item):

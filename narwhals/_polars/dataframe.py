@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
+    from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.group_by import PolarsGroupBy
     from narwhals._polars.group_by import PolarsLazyGroupBy
     from narwhals._translate import IntoArrowTable
@@ -97,12 +98,11 @@ class PolarsDataFrame:
     write_csv: Method[Any]
     write_parquet: Method[None]
 
+    # CompliantDataFrame
+    _evaluate_aliases: Any
+
     def __init__(
-        self,
-        df: pl.DataFrame,
-        *,
-        backend_version: tuple[int, ...],
-        version: Version,
+        self, df: pl.DataFrame, *, backend_version: tuple[int, ...], version: Version
     ) -> None:
         self._native_frame = df
         self._backend_version = backend_version
@@ -271,7 +271,7 @@ class PolarsDataFrame:
         self,
         item: tuple[
             SingleIndexSelector | MultiIndexSelector[PolarsSeries],
-            MultiIndexSelector[PolarsSeries] | MultiColSelector[PolarsSeries],
+            MultiColSelector[PolarsSeries],
         ],
     ) -> Any:
         rows, columns = item
@@ -403,7 +403,9 @@ class PolarsDataFrame:
         else:
             return self.native.to_dict(as_series=False)
 
-    def group_by(self, *keys: str, drop_null_keys: bool) -> PolarsGroupBy:
+    def group_by(
+        self, keys: Sequence[str] | Sequence[PolarsExpr], *, drop_null_keys: bool
+    ) -> PolarsGroupBy:
         from narwhals._polars.group_by import PolarsGroupBy
 
         return PolarsGroupBy(self, keys, drop_null_keys=drop_null_keys)
@@ -507,15 +509,13 @@ class PolarsLazyFrame:
     tail: Method[Self]
     unique: Method[Self]
     with_columns: Method[Self]
-    # NOTE: Temporary, just trying to factor out utils
+
+    # CompliantLazyFrame
     _evaluate_expr: Any
+    _evaluate_aliases: Any
 
     def __init__(
-        self,
-        df: pl.LazyFrame,
-        *,
-        backend_version: tuple[int, ...],
-        version: Version,
+        self, df: pl.LazyFrame, *, backend_version: tuple[int, ...], version: Version
     ) -> None:
         self._native_frame = df
         self._backend_version = backend_version
@@ -651,7 +651,9 @@ class PolarsLazyFrame:
         msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
         raise ValueError(msg)  # pragma: no cover
 
-    def group_by(self, *keys: str, drop_null_keys: bool) -> PolarsLazyGroupBy:
+    def group_by(
+        self, keys: Sequence[str] | Sequence[PolarsExpr], *, drop_null_keys: bool
+    ) -> PolarsLazyGroupBy:
         from narwhals._polars.group_by import PolarsLazyGroupBy
 
         return PolarsLazyGroupBy(self, keys, drop_null_keys=drop_null_keys)
