@@ -366,3 +366,44 @@ def test_fill_null_series_exceptions(constructor_eager: ConstructorEager) -> Non
         df_float.select(
             a_zero_digit=df_float["a"].fill_null(strategy="invalid"),  # type: ignore  # noqa: PGH003
         )
+
+
+def test_fill_null_strategies_with_partition_by(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow", "dask")):
+        request.applymarker(pytest.mark.xfail)
+
+    if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)) or (
+        "polars" in str(constructor) and POLARS_VERSION < (1, 10)
+    ):
+        pytest.skip()
+
+    data = {
+        "partition": ["A", "B", "C", "B", "A", "B", "A", "C", "C"],
+        "values": [1, None, None, 2, None, 3, None, None, 4],
+        "idx": list(range(9)),
+    }
+    df = nw.from_native(constructor(data))
+
+    # Forward fill within each group
+    result_forward = df.with_columns(
+        nw.col("values").fill_null(strategy="forward").over("partition", order_by="idx")
+    ).sort("idx")
+    expected_forward = {
+        "partition": ["A", "B", "C", "B", "A", "B", "A", "C", "C"],
+        "values": [1, None, None, 2, 1, 3, 1, None, 4],
+        "idx": list(range(9)),
+    }
+    assert_equal_data(result_forward, expected_forward)
+
+    # Backward fill within each group
+    result_backward = df.with_columns(
+        nw.col("values").fill_null(strategy="backward").over("partition", order_by="idx")
+    ).sort("idx")
+    expected_backward = {
+        "partition": ["A", "B", "C", "B", "A", "B", "A", "C", "C"],
+        "values": [1, 2, 4, 2, None, 3, None, 4, 4],
+        "idx": list(range(9)),
+    }
+    assert_equal_data(result_backward, expected_backward)
