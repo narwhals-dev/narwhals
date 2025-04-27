@@ -75,6 +75,7 @@ from narwhals.utils import Version
 from narwhals.utils import deprecate_native_namespace
 from narwhals.utils import find_stacklevel
 from narwhals.utils import generate_temporary_column_name
+from narwhals.utils import inherit_doc
 from narwhals.utils import is_ordered_categorical
 from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
@@ -87,6 +88,7 @@ if TYPE_CHECKING:
     from types import ModuleType
     from typing import Mapping
 
+    from typing_extensions import ParamSpec
     from typing_extensions import Self
     from typing_extensions import TypeVar
 
@@ -111,6 +113,8 @@ if TYPE_CHECKING:
     SeriesT = TypeVar("SeriesT", bound="Series[Any]")
     IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
     T = TypeVar("T", default=Any)
+    P = ParamSpec("P")
+    R = TypeVar("R")
 else:
     from typing import TypeVar
 
@@ -119,16 +123,20 @@ else:
 
 
 class DataFrame(NwDataFrame[IntoDataFrameT]):
+    @inherit_doc(NwDataFrame)
+    def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
+        super().__init__(df, level=level)
+
     # We need to override any method which don't return Self so that type
     # annotations are correct.
 
     @property
     def _series(self) -> type[Series[Any]]:
-        return Series
+        return cast("type[Series[Any]]", Series)
 
     @property
     def _lazyframe(self) -> type[LazyFrame[Any]]:
-        return LazyFrame
+        return cast("type[LazyFrame[Any]]", LazyFrame)
 
     @overload
     def __getitem__(self, item: tuple[SingleIndexSelector, SingleColSelector]) -> Any: ...
@@ -201,6 +209,10 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
 
 class LazyFrame(NwLazyFrame[IntoFrameT]):
+    @inherit_doc(NwLazyFrame)
+    def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
+        super().__init__(df, level=level)
+
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame
@@ -275,6 +287,12 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
 
 
 class Series(NwSeries[IntoSeriesT]):
+    @inherit_doc(NwSeries)
+    def __init__(
+        self, series: Any, *, level: Literal["full", "lazy", "interchange"]
+    ) -> None:
+        super().__init__(series, level=level)
+
     # We need to override any method which don't return Self so that type
     # annotations are correct.
 
@@ -446,6 +464,12 @@ class Expr(NwExpr):
 
 class Schema(NwSchema):
     _version = Version.V1
+
+    @inherit_doc(NwSchema)
+    def __init__(
+        self, schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None = None
+    ) -> None:
+        super().__init__(schema)
 
 
 @overload
