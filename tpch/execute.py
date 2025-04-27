@@ -16,7 +16,7 @@ from sqlframe.duckdb import DuckDBSession
 import narwhals as nw
 
 pd.options.mode.copy_on_write = True
-pd.options.future.infer_string = True
+pd.options.future.infer_string = True  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
 pl.Config.set_fmt_float("full")
 
 DATA_DIR = Path("data")

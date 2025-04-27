@@ -325,7 +325,7 @@ class ArrowDataFrame(
 
     @property
     def columns(self) -> list[str]:
-        return self.native.schema.names
+        return self.native.column_names
 
     def simple_select(self, *column_names: str) -> Self:
         return self._with_native(
@@ -381,7 +381,9 @@ class ArrowDataFrame(
 
         return self._with_native(native_frame, validate_column_names=False)
 
-    def group_by(self, *keys: str, drop_null_keys: bool) -> ArrowGroupBy:
+    def group_by(
+        self, keys: Sequence[str] | Sequence[ArrowExpr], *, drop_null_keys: bool
+    ) -> ArrowGroupBy:
         from narwhals._arrow.group_by import ArrowGroupBy
 
         return ArrowGroupBy(self, keys, drop_null_keys=drop_null_keys)
@@ -496,15 +498,10 @@ class ArrowDataFrame(
     def to_dict(
         self, *, as_series: bool
     ) -> dict[str, ArrowSeries] | dict[str, list[Any]]:
-        df = self.native
-        names_and_values = zip(df.column_names, df.columns)
+        it = self.iter_columns()
         if as_series:
-            return {
-                name: ArrowSeries.from_native(col, context=self, name=name)
-                for name, col in names_and_values
-            }
-        else:
-            return {name: col.to_pylist() for name, col in names_and_values}
+            return {ser.name: ser for ser in it}
+        return {ser.name: ser.to_list() for ser in it}
 
     def with_row_index(self, name: str) -> Self:
         df = self.native
@@ -652,9 +649,12 @@ class ArrowDataFrame(
         return maybe_extract_py_scalar(self.native[_col][row], return_py_scalar=True)
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
-        df = self.native
-        new_cols = [mapping.get(c, c) for c in df.column_names]
-        return self._with_native(df.rename_columns(new_cols))
+        names: dict[str, str] | list[str]
+        if self._backend_version >= (17,):
+            names = cast("dict[str, str]", mapping)
+        else:  # pragma: no cover
+            names = [mapping.get(c, c) for c in self.columns]
+        return self._with_native(self.native.rename_columns(names))
 
     def write_parquet(self, file: str | Path | BytesIO) -> None:
         import pyarrow.parquet as pp

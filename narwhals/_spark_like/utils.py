@@ -7,7 +7,6 @@ from typing import Sequence
 
 from narwhals.exceptions import UnsupportedDTypeError
 from narwhals.utils import Implementation
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -32,7 +31,7 @@ class WindowInputs:
     def __init__(
         self,
         expr: Column,
-        partition_by: Sequence[str],
+        partition_by: Sequence[str] | Sequence[Column],
         order_by: Sequence[str],
     ) -> None:
         self.expr = expr
@@ -44,7 +43,7 @@ class WindowInputs:
 def native_to_narwhals_dtype(
     dtype: _NativeDType, version: Version, spark_types: ModuleType
 ) -> DType:
-    dtypes = import_dtypes_module(version=version)
+    dtypes = version.dtypes
     if TYPE_CHECKING:
         native = sqlframe_types
     else:
@@ -104,7 +103,7 @@ def native_to_narwhals_dtype(
 def narwhals_to_native_dtype(
     dtype: DType | type[DType], version: Version, spark_types: ModuleType
 ) -> _NativeDType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if TYPE_CHECKING:
         native = sqlframe_types
     else:

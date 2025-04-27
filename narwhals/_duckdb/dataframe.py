@@ -26,7 +26,6 @@ from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -249,7 +248,9 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             df, backend_version=self._backend_version, version=self._version
         )
 
-    def group_by(self, *keys: str, drop_null_keys: bool) -> DuckDBGroupBy:
+    def group_by(
+        self, keys: Sequence[str] | Sequence[DuckDBExpr], *, drop_null_keys: bool
+    ) -> DuckDBGroupBy:
         from narwhals._duckdb.group_by import DuckDBGroupBy
 
         return DuckDBGroupBy(self, keys, drop_null_keys=drop_null_keys)
@@ -414,7 +415,7 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
         return self._with_native(self.native.filter(keep_condition))
 
     def explode(self, columns: Sequence[str]) -> Self:
-        dtypes = import_dtypes_module(self._version)
+        dtypes = self._version.dtypes
         schema = self.collect_schema()
         for name in columns:
             dtype = schema[name]

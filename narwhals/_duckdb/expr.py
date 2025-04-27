@@ -346,13 +346,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
                 raise ValueError(msg)
             return [name]
 
-        return self.__class__(
-            self._call,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=alias_output_names,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        return self._with_alias_output_names(alias_output_names)
 
     def abs(self) -> Self:
         return self._with_callable(lambda _input: FunctionExpression("abs", _input))

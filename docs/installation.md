@@ -30,7 +30,7 @@ To verify the installation, start the Python REPL and execute:
 ```python
 >>> import narwhals
 >>> narwhals.__version__
-'1.35.0'
+'1.36.0'
 ```
 
 If you see the version number, then the installation was successful!

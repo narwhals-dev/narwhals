@@ -34,7 +34,6 @@ from narwhals.utils import _into_arrow_table
 from narwhals.utils import _remap_full_join_keys
 from narwhals.utils import check_column_exists
 from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import scale_bytes
@@ -570,7 +569,9 @@ class PandasLikeDataFrame(
         raise ValueError(msg)  # pragma: no cover
 
     # --- actions ---
-    def group_by(self, *keys: str, drop_null_keys: bool) -> PandasLikeGroupBy:
+    def group_by(
+        self, keys: Sequence[str] | Sequence[PandasLikeExpr], *, drop_null_keys: bool
+    ) -> PandasLikeGroupBy:
         from narwhals._pandas_like.group_by import PandasLikeGroupBy
 
         return PandasLikeGroupBy(self, keys, drop_null_keys=drop_null_keys)
@@ -838,12 +839,11 @@ class PandasLikeDataFrame(
                 return self.native.to_numpy(dtype=dtype, copy=copy)
             return self.native.to_numpy(copy=copy)
 
-        dtypes = import_dtypes_module(self._version)
-
+        dtype_datetime = self._version.dtypes.Datetime
         to_convert = [
             key
             for key, val in self.schema.items()
-            if val == dtypes.Datetime and val.time_zone is not None  # type: ignore[attr-defined]
+            if isinstance(val, dtype_datetime) and val.time_zone is not None
         ]
         if to_convert:
             df = self.with_columns(
@@ -1053,7 +1053,7 @@ class PandasLikeDataFrame(
         )
 
     def explode(self, columns: Sequence[str]) -> Self:
-        dtypes = import_dtypes_module(self._version)
+        dtypes = self._version.dtypes
 
         schema = self.collect_schema()
         for col_to_explode in columns:
@@ -1078,8 +1078,6 @@ class PandasLikeDataFrame(
                 (native_frame[col_name].list.len() == anchor_series).all()
                 for col_name in columns[1:]
             ):
-                from narwhals.exceptions import ShapeError
-
                 msg = "exploded columns must have matching element counts"
                 raise ShapeError(msg)
 
