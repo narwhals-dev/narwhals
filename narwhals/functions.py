@@ -20,7 +20,6 @@ from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import check_expressions_preserve_length
 from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import extract_compliant
-from narwhals._expression_parsing import infer_kind
 from narwhals._expression_parsing import is_scalar_like
 from narwhals.dependencies import is_narwhals_series
 from narwhals.dependencies import is_numpy_array
@@ -1516,7 +1515,7 @@ class When:
 
 class Then(Expr):
     def otherwise(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
-        kind = infer_kind(value, str_as_lit=False)
+        kind = ExprKind.from_into_expr(value, str_as_lit=False)
 
         def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
             compliant_expr = self._to_compliant_expr(plx)

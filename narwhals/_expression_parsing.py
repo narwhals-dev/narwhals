@@ -161,6 +161,20 @@ class ExprKind(Enum):
     def is_scalar_like(self) -> bool:
         return is_scalar_like(self)
 
+    @classmethod
+    def from_into_expr(
+        cls, obj: IntoExpr | NonNestedLiteral | _1DArray, *, str_as_lit: bool
+    ) -> ExprKind:
+        if is_expr(obj):
+            return obj._metadata.kind
+        if (
+            is_narwhals_series(obj)
+            or is_numpy_array(obj)
+            or (isinstance(obj, str) and not str_as_lit)
+        ):
+            return ExprKind.TRANSFORM
+        return ExprKind.LITERAL
+
 
 def is_scalar_like(
     kind: ExprKind,
@@ -468,20 +482,6 @@ def all_exprs_are_scalar_like(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
     return all(is_expr(x) and x._metadata.kind.is_scalar_like() for x in exprs)
 
 
-def infer_kind(
-    obj: IntoExpr | NonNestedLiteral | _1DArray, *, str_as_lit: bool
-) -> ExprKind:
-    if is_expr(obj):
-        return obj._metadata.kind
-    if (
-        is_narwhals_series(obj)
-        or is_numpy_array(obj)
-        or (isinstance(obj, str) and not str_as_lit)
-    ):
-        return ExprKind.TRANSFORM
-    return ExprKind.LITERAL
-
-
 def apply_n_ary_operation(
     plx: CompliantNamespaceAny,
     function: Any,
@@ -492,7 +492,10 @@ def apply_n_ary_operation(
         extract_compliant(plx, comparand, str_as_lit=str_as_lit)
         for comparand in comparands
     )
-    kinds = [infer_kind(comparand, str_as_lit=str_as_lit) for comparand in comparands]
+    kinds = [
+        ExprKind.from_into_expr(comparand, str_as_lit=str_as_lit)
+        for comparand in comparands
+    ]
 
     broadcast = any(not kind.is_scalar_like() for kind in kinds)
     compliant_exprs = (
