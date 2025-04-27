@@ -12,6 +12,7 @@ from narwhals.exceptions import InvalidIntoExprError
 from narwhals.exceptions import NarwhalsError
 from tests.utils import DASK_VERSION
 from tests.utils import DUCKDB_VERSION
+from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -53,7 +54,18 @@ def test_invalid_select(constructor: Constructor, invalid_select: Any) -> None:
         nw.from_native(constructor({"a": [1, 2, 3]})).select(invalid_select)
 
 
-def test_select_boolean_cols() -> None:
+def test_select_boolean_cols(request: pytest.FixtureRequest) -> None:
+    if PANDAS_VERSION < (1, 1):
+        # bug in old pandas
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(pd.DataFrame({True: [1, 2], False: [3, 4]}), eager_only=True)
+    result = df.group_by(True).agg(nw.col(False).max())  # type: ignore[arg-type]# noqa: FBT003
+    assert_equal_data(result.to_dict(as_series=False), {True: [1, 2]})  # type: ignore[dict-item]
+    result = df.select(nw.col([False, True]))  # type: ignore[list-item]
+    assert_equal_data(result.to_dict(as_series=False), {True: [1, 2], False: [3, 4]})  # type: ignore[dict-item]
+
+
+def test_select_boolean_cols_multi_group_by() -> None:
     df = nw.from_native(
         pd.DataFrame({True: [1, 2], False: [3, 4], 2: [1, 1]}), eager_only=True
     )
