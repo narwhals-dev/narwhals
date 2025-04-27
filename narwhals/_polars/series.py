@@ -215,17 +215,18 @@ class PolarsSeries:
     def __ne__(self, other: object) -> Self:  # type: ignore[override]
         return self._with_native(self.native.__ne__(extract_native(other)))
 
+    # NOTE: `pyright` is being reasonable here
     def __ge__(self, other: Any) -> Self:
-        return self._with_native(self.native.__ge__(extract_native(other)))
+        return self._with_native(self.native.__ge__(extract_native(other)))  # pyright: ignore[reportArgumentType]
 
     def __gt__(self, other: Any) -> Self:
-        return self._with_native(self.native.__gt__(extract_native(other)))
+        return self._with_native(self.native.__gt__(extract_native(other)))  # pyright: ignore[reportArgumentType]
 
     def __le__(self, other: Any) -> Self:
-        return self._with_native(self.native.__le__(extract_native(other)))
+        return self._with_native(self.native.__le__(extract_native(other)))  # pyright: ignore[reportArgumentType]
 
     def __lt__(self, other: Any) -> Self:
-        return self._with_native(self.native.__lt__(extract_native(other)))
+        return self._with_native(self.native.__lt__(extract_native(other)))  # pyright: ignore[reportArgumentType]
 
     def __and__(self, other: PolarsSeries | bool | Any) -> Self:
         return self._with_native(self.native.__and__(extract_native(other)))

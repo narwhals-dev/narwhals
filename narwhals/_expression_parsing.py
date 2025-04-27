@@ -96,8 +96,6 @@ def evaluate_output_names_and_aliases(
     expr: CompliantExprAny, df: CompliantFrameAny, exclude: Sequence[str]
 ) -> tuple[Sequence[str], Sequence[str]]:
     output_names = expr._evaluate_output_names(df)
-    if not output_names:
-        return [], []
     aliases = (
         output_names
         if expr._alias_output_names is None

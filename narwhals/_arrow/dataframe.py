@@ -381,7 +381,9 @@ class ArrowDataFrame(
 
         return self._with_native(native_frame, validate_column_names=False)
 
-    def group_by(self, *keys: str, drop_null_keys: bool) -> ArrowGroupBy:
+    def group_by(
+        self, keys: Sequence[str] | Sequence[ArrowExpr], *, drop_null_keys: bool
+    ) -> ArrowGroupBy:
         from narwhals._arrow.group_by import ArrowGroupBy
 
         return ArrowGroupBy(self, keys, drop_null_keys=drop_null_keys)
