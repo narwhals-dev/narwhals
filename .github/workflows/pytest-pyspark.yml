@@ -61,11 +61,11 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
 
-      - name: Set up JDK
+      - name: Install Java 17
         uses: actions/setup-java@v4
         with:
-          java-version: '11'
-          distribution: 'temurin'
+          distribution: zulu
+          java-version: 17
 
       - name: install-reqs
         run: uv pip install -e . --group core-tests --group extra --system
