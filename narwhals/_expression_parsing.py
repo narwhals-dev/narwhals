@@ -184,6 +184,14 @@ class ExpansionKind(Enum):
     def is_multi_unnamed(self) -> bool:
         return self is ExpansionKind.MULTI_UNNAMED
 
+    def __and__(self, other: ExpansionKind) -> Literal[ExpansionKind.MULTI_UNNAMED]:
+        if self is ExpansionKind.MULTI_UNNAMED and other is ExpansionKind.MULTI_UNNAMED:
+            # e.g. nw.selectors.all() - nw.selectors.numeric().
+            return ExpansionKind.MULTI_UNNAMED
+        # Don't attempt anything more complex, keep it simple and raise in the face of ambiguity.
+        msg = f"Unsupported ExpansionKind combination, got {self} and {other}, please report a bug."  # pragma: no cover
+        raise AssertionError(msg)  # pragma: no cover
+
 
 def is_multi_output(
     expansion_kind: ExpansionKind,
@@ -370,6 +378,7 @@ def combine_metadata(  # noqa: PLR0915
             has_transforms_or_windows = True
         elif is_expr(arg):
             if is_multi_output(arg._metadata.expansion_kind):
+                expansion_kind = arg._metadata.expansion_kind
                 if i > 0 and not allow_multi_output:
                     # Left-most argument is always allowed to be multi-output.
                     msg = (
@@ -379,11 +388,10 @@ def combine_metadata(  # noqa: PLR0915
                     raise MultiOutputExpressionError(msg)
                 if not to_single_output:
                     if i == 0:
-                        result_expansion_kind = arg._metadata.expansion_kind
+                        result_expansion_kind = expansion_kind
                     else:
-                        result_expansion_kind = resolve_expansion_kind(
-                            result_expansion_kind, arg._metadata.expansion_kind
-                        )
+                        result_expansion_kind = result_expansion_kind & expansion_kind
+
             kind = arg._metadata.kind
             if kind is ExprKind.AGGREGATION:
                 has_aggregations = True
@@ -435,15 +443,6 @@ def combine_metadata(  # noqa: PLR0915
     return ExprMetadata(
         result_kind, window_kind=result_window_kind, expansion_kind=result_expansion_kind
     )
-
-
-def resolve_expansion_kind(lhs: ExpansionKind, rhs: ExpansionKind) -> ExpansionKind:
-    if lhs is ExpansionKind.MULTI_UNNAMED and rhs is ExpansionKind.MULTI_UNNAMED:
-        # e.g. nw.selectors.all() - nw.selectors.numeric().
-        return ExpansionKind.MULTI_UNNAMED
-    # Don't attempt anything more complex, keep it simple and raise in the face of ambiguity.
-    msg = f"Unsupported ExpansionKind combination, got {lhs} and {rhs}, please report a bug."  # pragma: no cover
-    raise AssertionError(msg)  # pragma: no cover
 
 
 def check_expressions_preserve_length(*args: IntoExpr, function_name: str) -> None:
