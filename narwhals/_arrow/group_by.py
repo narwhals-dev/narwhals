@@ -144,13 +144,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
             null_handling="replace",
             null_replacement=null_token,
         )
-        mapping = dict(zip(self._keys, self._output_key_names))
-
         table = table.add_column(i=0, field_=col_token, column=key_values)
-
-        original_table = self._df
-        if self._drop_null_keys:
-            original_table = original_table.drop_nulls(list(mapping.values()))
 
         for v in pc.unique(key_values):
             t = self.compliant._with_native(
