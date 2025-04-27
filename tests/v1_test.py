@@ -78,6 +78,14 @@ def test_constructors() -> None:
         {"a": [1, 3], "b": [2, 4]},
     )
     assert_equal_data(
+        nw_v1.from_numpy(
+            arr,
+            schema=nw_v1.Schema({"a": nw_v1.Int64(), "b": nw_v1.Int64()}),
+            backend="pandas",
+        ),
+        {"a": [1, 3], "b": [2, 4]},
+    )
+    assert_equal_data(
         nw_v1.from_dict({"a": [1, 2, 3]}, backend="pandas"), {"a": [1, 2, 3]}
     )
     assert_equal_data(

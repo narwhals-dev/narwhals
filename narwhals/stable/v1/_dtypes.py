@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from narwhals.dtypes import Array
 from narwhals.dtypes import Binary
 from narwhals.dtypes import Boolean
@@ -35,33 +37,29 @@ from narwhals.dtypes import UInt64
 from narwhals.dtypes import UInt128
 from narwhals.dtypes import Unknown
 from narwhals.dtypes import UnsignedIntegerType
+from narwhals.utils import inherit_doc
+
+if TYPE_CHECKING:
+    from datetime import timezone
+
+    from narwhals.typing import TimeUnit
 
 
 class Datetime(NwDatetime):
-    """Data type representing a calendar date and time of day.
-
-    Arguments:
-        time_unit: Unit of time. Defaults to `'us'` (microseconds).
-        time_zone: Time zone string, as defined in zoneinfo (to see valid strings run
-            `import zoneinfo; zoneinfo.available_timezones()` for a full list).
-
-    Notes:
-        Adapted from [Polars implementation](https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L398-L457)
-    """
+    @inherit_doc(NwDatetime)
+    def __init__(
+        self, time_unit: TimeUnit = "us", time_zone: str | timezone | None = None
+    ) -> None:
+        super().__init__(time_unit, time_zone)
 
     def __hash__(self) -> int:
         return hash(self.__class__)
 
 
 class Duration(NwDuration):
-    """Data type representing a time duration.
-
-    Arguments:
-        time_unit: Unit of time. Defaults to `'us'` (microseconds).
-
-    Notes:
-        Adapted from [Polars implementation](https://github.com/pola-rs/polars/blob/py-1.7.1/py-polars/polars/datatypes/classes.py#L460-L502)
-    """
+    @inherit_doc(NwDuration)
+    def __init__(self, time_unit: TimeUnit = "us") -> None:
+        super().__init__(time_unit)
 
     def __hash__(self) -> int:
         return hash(self.__class__)

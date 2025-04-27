@@ -8,6 +8,7 @@ from enum import auto
 from functools import wraps
 from importlib.util import find_spec
 from inspect import getattr_static
+from inspect import getdoc
 from secrets import token_hex
 from typing import TYPE_CHECKING
 from typing import Any
@@ -107,6 +108,8 @@ if TYPE_CHECKING:
     _Fn = TypeVar("_Fn", bound="Callable[..., Any]")
     P = ParamSpec("P")
     R = TypeVar("R")
+    R1 = TypeVar("R1")
+    R2 = TypeVar("R2")
 
     class _SupportsVersion(Protocol):
         __version__: str
@@ -150,6 +153,7 @@ NativeT_co = TypeVar("NativeT_co", covariant=True)
 CompliantT_co = TypeVar("CompliantT_co", covariant=True)
 _ContextT = TypeVar("_ContextT", bound="_FullContext")
 _Method: TypeAlias = "Callable[Concatenate[_ContextT, P], R]"
+_Constructor: TypeAlias = "Callable[Concatenate[_T, P], R2]"
 
 
 class _StoresNative(Protocol[NativeT_co]):  # noqa: PYI046
@@ -1844,3 +1848,31 @@ def convert_str_slice_to_int_slice(
     stop = columns.index(str_slice.stop) + 1 if str_slice.stop is not None else None
     step = str_slice.step
     return (start, stop, step)
+
+
+def inherit_doc(
+    tp_parent: Callable[P, R1], /
+) -> Callable[[_Constructor[_T, P, R2]], _Constructor[_T, P, R2]]:
+    """Steal the class-level docstring from parent and attach to child `__init__`.
+
+    Returns:
+        Decorated constructor.
+
+    Notes:
+        - Passes static typing (mostly)
+        - Passes at runtime
+    """
+
+    def decorate(init_child: _Constructor[_T, P, R2], /) -> _Constructor[_T, P, R2]:
+        if init_child.__name__ == "__init__" and issubclass(type(tp_parent), type):
+            init_child.__doc__ = getdoc(tp_parent)
+            return init_child
+        else:  # pragma: no cover
+            msg = (
+                f"`@{inherit_doc.__name__}` is only allowed to decorate an `__init__` with a class-level doc.\n"
+                f"Method: {init_child.__qualname__!r}\n"
+                f"Parent: {tp_parent!r}"
+            )
+            raise TypeError(msg)
+
+    return decorate
