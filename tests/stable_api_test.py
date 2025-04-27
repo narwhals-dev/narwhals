@@ -125,9 +125,6 @@ def test_dataframe_docstrings() -> None:
     for method_name, doc in _iter_api_method_docs(df):
         doc_v1 = getdoc(getattr(df_v1, method_name))
         assert doc_v1
-        doc_v1 = doc_v1.replace(
-            "import narwhals.stable.v1 as nw", "import narwhals as nw"
-        )
         assert remove_docstring_examples(doc_v1) == remove_docstring_examples(doc)
 
 
@@ -142,9 +139,6 @@ def test_lazyframe_docstrings() -> None:
     for method_name, doc in _iter_api_method_docs(ldf, *performance_warning, *deprecated):
         doc_v1 = getdoc(getattr(ldf_v1, method_name))
         assert doc_v1
-        doc_v1 = doc_v1.replace(
-            "import narwhals.stable.v1 as nw", "import narwhals as nw"
-        )
         assert remove_docstring_examples(doc_v1) == remove_docstring_examples(doc)
 
 
@@ -157,9 +151,6 @@ def test_series_docstrings() -> None:
     for method_name, doc in _iter_api_method_docs(ser):
         doc_v1 = getdoc(getattr(ser_v1, method_name))
         assert doc_v1
-        doc_v1 = doc_v1.replace(
-            "import narwhals.stable.v1 as nw", "import narwhals as nw"
-        )
         assert remove_docstring_examples(doc_v1) == remove_docstring_examples(doc)
 
 
