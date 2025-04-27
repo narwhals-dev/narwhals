@@ -326,6 +326,14 @@ class ExprMetadata:
             expansion_kind=ExpansionKind.MULTI_UNNAMED,
         )
 
+    @classmethod
+    def from_binary_op(cls, lhs: Expr, rhs: IntoExpr, /) -> ExprMetadata:
+        # We may be able to allow multi-output rhs in the future:
+        # https://github.com/narwhals-dev/narwhals/issues/2244.
+        return combine_metadata(
+            lhs, rhs, str_as_lit=True, allow_multi_output=False, to_single_output=False
+        )
+
 
 def combine_metadata(  # noqa: PLR0915
     *args: IntoExpr | object | None,
@@ -430,14 +438,6 @@ def resolve_expansion_kind(lhs: ExpansionKind, rhs: ExpansionKind) -> ExpansionK
     # Don't attempt anything more complex, keep it simple and raise in the face of ambiguity.
     msg = f"Unsupported ExpansionKind combination, got {lhs} and {rhs}, please report a bug."  # pragma: no cover
     raise AssertionError(msg)  # pragma: no cover
-
-
-def combine_metadata_binary_op(lhs: Expr, rhs: IntoExpr) -> ExprMetadata:
-    # We may be able to allow multi-output rhs in the future:
-    # https://github.com/narwhals-dev/narwhals/issues/2244.
-    return combine_metadata(
-        lhs, rhs, str_as_lit=True, allow_multi_output=False, to_single_output=False
-    )
 
 
 def combine_metadata_horizontal_op(*exprs: IntoExpr) -> ExprMetadata:
