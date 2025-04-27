@@ -8,10 +8,7 @@ from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
-    try:
-        import dask.dataframe.dask_expr as dx
-    except ModuleNotFoundError:
-        import dask_expr as dx
+    import dask.dataframe.dask_expr as dx
 
     from narwhals._dask.expr import DaskExpr
     from narwhals.typing import TimeUnit
