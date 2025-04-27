@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from contextlib import nullcontext
 from typing import Any
 from typing import Mapping
@@ -9,7 +10,10 @@ import pyarrow as pa
 import pytest
 
 import narwhals as nw
+from narwhals.exceptions import ComputeError
 from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import LengthChangingExprError
+from narwhals.exceptions import OrderDependentExprError
 from tests.utils import PANDAS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
@@ -19,6 +23,8 @@ from tests.utils import assert_equal_data
 data: Mapping[str, Any] = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
 
 df_pandas = pd.DataFrame(data)
+
+POLARS_COLLECT_STREAMING_ENGINE = os.environ.get("NARWHALS_POLARS_NEW_STREAMING", None)
 
 
 def test_group_by_complex() -> None:
@@ -294,7 +300,11 @@ def test_key_with_nulls_iter(
 ) -> None:
     if PANDAS_VERSION < (1, 0) and "pandas_constructor" in str(constructor_eager):
         pytest.skip("Grouping by null values is not supported in pandas < 1.0.0")
-    data = {"b": ["4", "5", None, "7"], "a": [1, 2, 3, 4], "c": ["4", "3", None, None]}
+    data = {
+        "b": [None, "4", "5", None, "7"],
+        "a": [None, 1, 2, 3, 4],
+        "c": [None, "4", "3", None, None],
+    }
     result = dict(
         nw.from_native(constructor_eager(data), eager_only=True)
         .group_by("b", "c", drop_null_keys=True)
@@ -415,12 +425,6 @@ def test_all_kind_of_aggs(
     assert_equal_data(result, expected)
 
 
-def test_group_by_expr(constructor: Constructor) -> None:
-    df = nw.from_native(constructor({"a": [1, 1, 3], "b": [4, 5, 6]}))
-    with pytest.raises(NotImplementedError, match=r"not \(yet\?\) supported"):
-        df.group_by(nw.col("a")).agg(nw.col("b").mean())  # type: ignore[arg-type]
-
-
 def test_pandas_group_by_index_and_column_overlap() -> None:
     df = pd.DataFrame(
         {"a": [1, 1, 2], "b": [4, 5, 6]}, index=pd.Index([0, 1, 2], name="a")
@@ -431,7 +435,7 @@ def test_pandas_group_by_index_and_column_overlap() -> None:
 
     key, result = next(iter(nw.from_native(df, eager_only=True).group_by("a")))
     assert key == (1,)
-    expected_native = pd.DataFrame({"a": [1, 1], "b": [4, 5]})
+    expected_native = pd.DataFrame({"a": [1, 1], "b": [4, 5]}, index=pd.Index([0, 1]))
     pd.testing.assert_frame_equal(result.to_native(), expected_native)
 
 
@@ -454,4 +458,128 @@ def test_fancy_functions(constructor: Constructor) -> None:
         .agg(nw.selectors.matches("b").std(ddof=0).name.map(lambda _x: "c"))
         .sort("a")
     )
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("keys", "aggs", "expected", "sort_by"),
+    [
+        (
+            [nw.col("a").abs(), nw.col("a").abs().alias("a_with_alias")],
+            [nw.col("x").sum()],
+            {"a": [1, 2], "a_with_alias": [1, 2], "x": [5, 5]},
+            ["a"],
+        ),
+        (
+            [nw.col("a").alias("x")],
+            [nw.col("x").mean().alias("y")],
+            {"x": [-1, 1, 2], "y": [4.0, 0.5, 2.5]},
+            ["x"],
+        ),
+        (
+            [nw.col("a")],
+            [nw.col("a").count().alias("foo-bar"), nw.all().sum()],
+            {"a": [-1, 1, 2], "foo-bar": [1, 2, 2], "x": [4, 1, 5], "y": [1.5, 0, 0]},
+            ["a"],
+        ),
+        (
+            [nw.col("a", "y").abs()],
+            [nw.col("x").sum()],
+            {"a": [1, 1, 2], "y": [0.5, 1.5, 1], "x": [1, 4, 5]},
+            ["a", "y"],
+        ),
+        (
+            [nw.col("a").abs().alias("y")],
+            [nw.all().sum().name.suffix("c")],
+            {"y": [1, 2], "ac": [1, 4], "xc": [5, 5]},
+            ["y"],
+        ),
+        (
+            [nw.selectors.by_dtype(nw.Float64()).abs()],
+            [nw.selectors.numeric().sum()],
+            {"y": [0.5, 1.0, 1.5], "a": [2, 4, -1], "x": [1, 5, 4]},
+            ["y"],
+        ),
+    ],
+)
+def test_group_by_expr(
+    constructor: Constructor,
+    keys: list[nw.Expr],
+    aggs: list[nw.Expr],
+    expected: dict[str, list[Any]],
+    sort_by: list[str],
+) -> None:
+    data = {
+        "a": [1, 1, 2, 2, -1],
+        "x": [0, 1, 2, 3, 4],
+        "y": [0.5, -0.5, 1.0, -1.0, 1.5],
+    }
+    df = nw.from_native(constructor(data))
+    result = df.group_by(*keys).agg(*aggs).sort(*sort_by)
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("keys", "lazy_context"),
+    [
+        (
+            [nw.col("a").drop_nulls()],
+            pytest.raises(LengthChangingExprError),
+        ),  # Filtration
+        (
+            [nw.col("a").alias("foo"), nw.col("a").drop_nulls()],
+            pytest.raises(LengthChangingExprError),
+        ),  # Transform and Filtration
+        (
+            [nw.col("a").alias("foo"), nw.col("a").max()],
+            pytest.raises(ComputeError),
+        ),  # Transform and Aggregation
+        (
+            [nw.col("a").alias("foo"), nw.col("a").cum_max()],
+            pytest.raises(OrderDependentExprError),
+        ),  # Transform and Window
+        ([nw.lit(42)], pytest.raises(ComputeError)),  # Literal
+    ],
+)
+def test_group_by_raise_if_not_transform(
+    constructor: Constructor, keys: list[nw.Expr], lazy_context: Any
+) -> None:
+    data = {"a": [1, 2, 2, None], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
+    df = nw.from_native(constructor(data))
+
+    context: Any = (
+        lazy_context if isinstance(df, nw.LazyFrame) else pytest.raises(ComputeError)
+    )
+    with context:
+        df.group_by(keys).agg(nw.col("x").max())
+
+
+@pytest.mark.parametrize(
+    "keys", [[nw.col("a").abs()], ["a", nw.col("a").abs().alias("a_test")]]
+)
+def test_group_by_raise_drop_null_keys_with_exprs(
+    constructor: Constructor, keys: list[nw.Expr | str]
+) -> None:
+    data = {
+        "a": [1, 1, 2, 2, -1],
+        "x": [0, 1, 2, 3, 4],
+        "y": [0.5, -0.5, 1.0, -1.0, 1.5],
+    }
+    df = nw.from_native(constructor(data))
+    with pytest.raises(
+        NotImplementedError,
+        match="drop_null_keys cannot be True when keys contains Expr",
+    ):
+        df.group_by(*keys, drop_null_keys=True)  # type: ignore[call-overload]
+
+
+def test_group_by_selector(constructor: Constructor) -> None:
+    data = {"a": [1, 1, 1], "b": [4, 4, 6], "c": [7.5, 8.5, 9.0]}
+    result = (
+        nw.from_native(constructor(data))
+        .group_by(nw.selectors.by_dtype(nw.Int64))
+        .agg(nw.col("c").mean())
+        .sort("a", "b")
+    )
+    expected = {"a": [1, 1], "b": [4, 6], "c": [8.0, 9.0]}
     assert_equal_data(result, expected)
