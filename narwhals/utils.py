@@ -1875,6 +1875,9 @@ def inherit_doc(
 ) -> Callable[[_Constructor[_T, P, R2]], _Constructor[_T, P, R2]]:
     """Steal the class-level docstring from parent and attach to child `__init__`.
 
+    Returns:
+        Decorated constructor.
+
     Notes:
         - Passes static typing (mostly)
         - Passes at runtime
