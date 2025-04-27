@@ -305,7 +305,9 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
     def head(self, n: int) -> Self:
         return self._with_native(self.native.limit(n))
 
-    def group_by(self, *keys: str, drop_null_keys: bool) -> SparkLikeLazyGroupBy:
+    def group_by(
+        self, keys: Sequence[str] | Sequence[SparkLikeExpr], *, drop_null_keys: bool
+    ) -> SparkLikeLazyGroupBy:
         from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
 
         return SparkLikeLazyGroupBy(self, keys, drop_null_keys=drop_null_keys)
