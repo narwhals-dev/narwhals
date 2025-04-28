@@ -198,6 +198,9 @@ class ExpansionKind(Enum):
     def is_multi_unnamed(self) -> bool:
         return self is ExpansionKind.MULTI_UNNAMED
 
+    def is_multi_output(self) -> bool:
+        return self in {ExpansionKind.MULTI_NAMED, ExpansionKind.MULTI_UNNAMED}
+
     def __and__(self, other: ExpansionKind) -> Literal[ExpansionKind.MULTI_UNNAMED]:
         if self is ExpansionKind.MULTI_UNNAMED and other is ExpansionKind.MULTI_UNNAMED:
             # e.g. nw.selectors.all() - nw.selectors.numeric().
@@ -205,12 +208,6 @@ class ExpansionKind(Enum):
         # Don't attempt anything more complex, keep it simple and raise in the face of ambiguity.
         msg = f"Unsupported ExpansionKind combination, got {self} and {other}, please report a bug."  # pragma: no cover
         raise AssertionError(msg)  # pragma: no cover
-
-
-def is_multi_output(
-    expansion_kind: ExpansionKind,
-) -> TypeIs[Literal[ExpansionKind.MULTI_NAMED, ExpansionKind.MULTI_UNNAMED]]:
-    return expansion_kind in {ExpansionKind.MULTI_NAMED, ExpansionKind.MULTI_UNNAMED}
 
 
 class WindowKind(Enum):
@@ -391,8 +388,9 @@ def combine_metadata(  # noqa: PLR0915
         if isinstance(arg, str) and not str_as_lit:
             has_transforms_or_windows = True
         elif is_expr(arg):
-            if is_multi_output(arg._metadata.expansion_kind):
-                expansion_kind = arg._metadata.expansion_kind
+            metadata = arg._metadata
+            if metadata.expansion_kind.is_multi_output():
+                expansion_kind = metadata.expansion_kind
                 if i > 0 and not allow_multi_output:
                     # Left-most argument is always allowed to be multi-output.
                     msg = (
@@ -406,7 +404,7 @@ def combine_metadata(  # noqa: PLR0915
                     else:
                         result_expansion_kind = result_expansion_kind & expansion_kind
 
-            kind = arg._metadata.kind
+            kind = metadata.kind
             if kind is ExprKind.AGGREGATION:
                 has_aggregations = True
             elif kind is ExprKind.LITERAL:
@@ -419,7 +417,7 @@ def combine_metadata(  # noqa: PLR0915
                 msg = "unreachable code"
                 raise AssertionError(msg)
 
-            window_kind = arg._metadata.window_kind
+            window_kind = metadata.window_kind
             if window_kind is WindowKind.UNCLOSEABLE:
                 has_uncloseable_windows = True
             elif window_kind is WindowKind.CLOSEABLE:
