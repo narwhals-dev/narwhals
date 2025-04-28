@@ -24,8 +24,8 @@ from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
-    from narwhals._arrow.typing import ArrayOrScalarAny
-    from narwhals._arrow.typing import ArrowChunkedArray
+    from narwhals._arrow.typing import ArrayOrScalar
+    from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._arrow.typing import Incomplete
     from narwhals.dtypes import DType
     from narwhals.typing import NonNestedLiteral
@@ -33,9 +33,7 @@ if TYPE_CHECKING:
 
 
 class ArrowNamespace(
-    EagerNamespace[
-        ArrowDataFrame, ArrowSeries, ArrowExpr, "pa.Table", "ArrowChunkedArray"
-    ]
+    EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, "pa.Table", "ChunkedArrayAny"]
 ):
     @property
     def _dataframe(self) -> type[ArrowDataFrame]:
@@ -274,18 +272,18 @@ class ArrowNamespace(
         )
 
 
-class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ArrowChunkedArray"]):
+class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ChunkedArrayAny"]):
     @property
     def _then(self) -> type[ArrowThen]:
         return ArrowThen
 
     def _if_then_else(
         self,
-        when: ArrowChunkedArray,
-        then: ArrowChunkedArray,
-        otherwise: ArrayOrScalarAny | NonNestedLiteral,
+        when: ChunkedArrayAny,
+        then: ChunkedArrayAny,
+        otherwise: ArrayOrScalar | NonNestedLiteral,
         /,
-    ) -> ArrowChunkedArray:
+    ) -> ChunkedArrayAny:
         otherwise = pa.nulls(len(when), then.type) if otherwise is None else otherwise
         return pc.if_else(when, then, otherwise)
 
