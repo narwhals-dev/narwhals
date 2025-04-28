@@ -13,11 +13,13 @@ if TYPE_CHECKING:
     import duckdb
     import ibis
     import modin.pandas as mpd
+    import numpy as np
     import pandas as pd
     import polars as pl
     import pyarrow as pa
     import pyspark.sql as pyspark_sql
     from pyspark.sql.connect.dataframe import DataFrame as PySparkConnectDataFrame
+    from typing_extensions import TypeAlias
     from typing_extensions import TypeGuard
     from typing_extensions import TypeIs
 
@@ -34,6 +36,8 @@ if TYPE_CHECKING:
     from narwhals.typing import _NDArray
     from narwhals.typing import _NumpyScalar
     from narwhals.typing import _ShapeT
+
+    _1DArrayInt: TypeAlias = "np.ndarray[tuple[int], np.dtype[np.integer[Any]]]"  # noqa: PYI042
 
 # We silently allow these but - given that they claim
 # to be drop-in replacements for pandas - testing is
@@ -263,6 +267,14 @@ def is_numpy_array_1d(arr: Any) -> TypeIs[_1DArray]:
     return is_numpy_array(arr) and arr.ndim == 1
 
 
+def is_numpy_array_1d_int(arr: Any) -> TypeIs[_1DArrayInt]:
+    return (
+        (np := get_numpy())
+        and is_numpy_array_1d(arr)
+        and np.issubdtype(arr.dtype, np.integer)
+    )
+
+
 def is_numpy_array_2d(arr: Any) -> TypeIs[_2DArray]:
     """Check whether `arr` is a 2D NumPy Array without importing NumPy."""
     return is_numpy_array(arr) and arr.ndim == 2
@@ -412,6 +424,10 @@ def is_narwhals_series(ser: Any | Series[IntoSeriesT]) -> TypeIs[Series[IntoSeri
     from narwhals.series import Series
 
     return isinstance(ser, Series)
+
+
+def is_narwhals_series_int(ser: Any | Series[IntoSeriesT]) -> TypeIs[Series[IntoSeriesT]]:
+    return is_narwhals_series(ser) and ser.dtype.is_integer()
 
 
 __all__ = [
