@@ -30,7 +30,7 @@ jobs:
       - name: install-reqs
         run: uv pip install -e . --group core-tests --group extra --system
       - name: install pyspark
-        run: echo "setuptools<78" | uv pip install -b - -e ".[pyspark]" --system
+        run: uv pip install -b - -e ".[pyspark]" --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
