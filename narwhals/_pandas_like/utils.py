@@ -319,7 +319,9 @@ def native_categorical_to_narwhals_dtype(
     return dtypes.Categorical()
 
 
-def _cudf_categorical_to_list(native_dtype: Any) -> Callable[[], list[Any]]:
+def _cudf_categorical_to_list(
+    native_dtype: Any,
+) -> Callable[[], list[Any]]:  # pragma: no cover
     # NOTE: https://docs.rapids.ai/api/cudf/stable/user_guide/api_docs/api/cudf.core.dtypes.categoricaldtype/#cudf.core.dtypes.CategoricalDtype
     def fn() -> list[Any]:
         return native_dtype.categories.to_arrow().to_pylist()
