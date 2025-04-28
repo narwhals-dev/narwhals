@@ -30,10 +30,12 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoSeriesT
     from narwhals.typing import _1DArray
+    from narwhals.typing import _1DArrayInt
     from narwhals.typing import _2DArray
     from narwhals.typing import _NDArray
     from narwhals.typing import _NumpyScalar
     from narwhals.typing import _ShapeT
+
 
 # We silently allow these but - given that they claim
 # to be drop-in replacements for pandas - testing is
@@ -263,6 +265,14 @@ def is_numpy_array_1d(arr: Any) -> TypeIs[_1DArray]:
     return is_numpy_array(arr) and arr.ndim == 1
 
 
+def is_numpy_array_1d_int(arr: Any) -> TypeIs[_1DArrayInt]:
+    return (
+        (np := get_numpy())
+        and is_numpy_array_1d(arr)
+        and np.issubdtype(arr.dtype, np.integer)
+    )
+
+
 def is_numpy_array_2d(arr: Any) -> TypeIs[_2DArray]:
     """Check whether `arr` is a 2D NumPy Array without importing NumPy."""
     return is_numpy_array(arr) and arr.ndim == 2
@@ -412,6 +422,10 @@ def is_narwhals_series(ser: Any | Series[IntoSeriesT]) -> TypeIs[Series[IntoSeri
     from narwhals.series import Series
 
     return isinstance(ser, Series)
+
+
+def is_narwhals_series_int(ser: Any | Series[IntoSeriesT]) -> TypeIs[Series[IntoSeriesT]]:
+    return is_narwhals_series(ser) and ser.dtype.is_integer()
 
 
 __all__ = [

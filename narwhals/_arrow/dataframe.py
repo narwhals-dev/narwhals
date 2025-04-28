@@ -19,7 +19,7 @@ from narwhals._arrow.utils import align_series_full_broadcast
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
-from narwhals.dependencies import is_numpy_array
+from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
@@ -287,7 +287,7 @@ class ArrowDataFrame(
             selector = cast("Sequence[int]", columns.to_pylist())
         # TODO @dangotbanned: Fix upstream, it is actually much narrower
         # **Doesn't accept `ndarray`**
-        elif is_numpy_array(columns):
+        elif is_numpy_array_1d(columns):
             selector = columns.tolist()
         else:
             selector = columns
