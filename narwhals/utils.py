@@ -35,6 +35,7 @@ from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyspark
+from narwhals.dependencies import get_pyspark_connect
 from narwhals.dependencies import get_pyspark_sql
 from narwhals.dependencies import get_sqlframe
 from narwhals.dependencies import is_cudf_series
@@ -233,6 +234,8 @@ class Implementation(Enum):
     """Ibis implementation."""
     SQLFRAME = auto()
     """SQLFrame implementation."""
+    PYSPARK_CONNECT = auto()
+    """PySpark Connect implementation."""
 
     UNKNOWN = auto()
     """Unknown implementation."""
@@ -260,6 +263,7 @@ class Implementation(Enum):
             get_duckdb(): Implementation.DUCKDB,
             get_ibis(): Implementation.IBIS,
             get_sqlframe(): Implementation.SQLFRAME,
+            get_pyspark_connect(): Implementation.PYSPARK_CONNECT,
         }
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 
@@ -286,6 +290,7 @@ class Implementation(Enum):
             "duckdb": Implementation.DUCKDB,
             "ibis": Implementation.IBIS,
             "sqlframe": Implementation.SQLFRAME,
+            "pyspark_connect": Implementation.PYSPARK_CONNECT,
         }
         return mapping.get(backend_name, Implementation.UNKNOWN)
 
@@ -354,6 +359,11 @@ class Implementation(Enum):
 
             return sqlframe
 
+        if self is Implementation.PYSPARK_CONNECT:  # pragma: no cover
+            import pyspark.sql  # ignore-banned-import
+
+            return pyspark.sql
+
         msg = "Not supported Implementation"  # pragma: no cover
         raise AssertionError(msg)
 
@@ -407,7 +417,11 @@ class Implementation(Enum):
             >>> df.implementation.is_spark_like()
             False
         """
-        return self in {Implementation.PYSPARK, Implementation.SQLFRAME}
+        return self in {
+            Implementation.PYSPARK,
+            Implementation.SQLFRAME,
+            Implementation.PYSPARK_CONNECT,
+        }
 
     def is_polars(self) -> bool:
         """Return whether implementation is Polars.
@@ -472,6 +486,22 @@ class Implementation(Enum):
             False
         """
         return self is Implementation.PYSPARK  # pragma: no cover
+
+    def is_pyspark_connect(self) -> bool:
+        """Return whether implementation is PySpark.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_pyspark_connect()
+            False
+        """
+        return self is Implementation.PYSPARK_CONNECT  # pragma: no cover
 
     def is_pyarrow(self) -> bool:
         """Return whether implementation is PyArrow.
@@ -571,6 +601,7 @@ class Implementation(Enum):
             Implementation.PYSPARK: "PySpark",
             Implementation.DUCKDB: "DuckDB",
             Implementation.SQLFRAME: "SQLFrame",
+            Implementation.PYSPARK_CONNECT: "PySpark Connect",
         }
         return mapping[self]
 
@@ -579,11 +610,12 @@ class Implementation(Enum):
         into_version: Any
         if self not in {
             Implementation.PYSPARK,
+            Implementation.PYSPARK_CONNECT,
             Implementation.DASK,
             Implementation.SQLFRAME,
         }:
             into_version = native
-        elif self is Implementation.PYSPARK:
+        elif self in {Implementation.PYSPARK, Implementation.PYSPARK_CONNECT}:
             into_version = get_pyspark()  # pragma: no cover
         elif self is Implementation.DASK:
             into_version = get_dask()
@@ -600,6 +632,7 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.CUDF: (24, 10),
     Implementation.PYARROW: (11,),
     Implementation.PYSPARK: (3, 5),
+    Implementation.PYSPARK_CONNECT: (3, 5),
     Implementation.POLARS: (0, 20, 3),
     Implementation.DASK: (2024, 8),
     Implementation.DUCKDB: (1,),
