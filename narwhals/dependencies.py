@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
     import pyspark.sql as pyspark_sql
+    from pyspark.sql.connect.dataframe import DataFrame as PySparkConnectDataFrame
     from typing_extensions import TypeGuard
     from typing_extensions import TypeIs
 
@@ -110,6 +111,11 @@ def get_pyspark() -> Any:  # pragma: no cover
 def get_pyspark_sql() -> Any:
     """Get pyspark.sql module (if already imported - else return None)."""
     return sys.modules.get("pyspark.sql", None)
+
+
+def get_pyspark_connect() -> Any:
+    """Get pyspark.sql.connect module (if already imported - else return None)."""
+    return sys.modules.get("pyspark.sql.connect", None)
 
 
 def get_sqlframe() -> Any:
@@ -227,6 +233,14 @@ def is_pyspark_dataframe(df: Any) -> TypeIs[pyspark_sql.DataFrame]:
     return bool(
         (pyspark_sql := get_pyspark_sql()) is not None
         and isinstance(df, pyspark_sql.DataFrame)
+    )
+
+
+def is_pyspark_connect_dataframe(df: Any) -> TypeIs[PySparkConnectDataFrame]:
+    """Check whether `df` is a PySpark Connect DataFrame without importing PySpark."""
+    return bool(
+        (pyspark_connect := get_pyspark_connect()) is not None
+        and isinstance(df, pyspark_connect.dataframe.DataFrame)
     )
 
 
