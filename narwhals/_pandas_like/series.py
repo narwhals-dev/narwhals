@@ -38,10 +38,10 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
+    import pyarrow as pa
     from typing_extensions import Self
     from typing_extensions import TypeIs
 
-    from narwhals._arrow.typing import ArrowArray
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.dtypes import DType
@@ -824,7 +824,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         kwargs = {"axis": 0} if self._implementation is Implementation.MODIN else {}
         return self._with_native(self.native.clip(lower, upper, **kwargs))
 
-    def to_arrow(self) -> ArrowArray:
+    def to_arrow(self) -> pa.Array[Any]:
         if self._implementation is Implementation.CUDF:
             return self.native.to_arrow()
 

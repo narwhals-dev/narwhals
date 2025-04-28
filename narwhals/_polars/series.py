@@ -26,10 +26,10 @@ if TYPE_CHECKING:
     from typing import TypeVar
 
     import pandas as pd
+    import pyarrow as pa
     from typing_extensions import Self
     from typing_extensions import TypeIs
 
-    from narwhals._arrow.typing import ArrowArray
     from narwhals._polars.dataframe import Method
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.expr import PolarsExpr
@@ -628,7 +628,7 @@ class PolarsSeries:
     std: Method[float]
     sum: Method[float]
     tail: Method[Self]
-    to_arrow: Method[ArrowArray]
+    to_arrow: Method[pa.Array[Any]]
     to_frame: Method[PolarsDataFrame]
     to_list: Method[list[Any]]
     to_pandas: Method[pd.Series[Any]]

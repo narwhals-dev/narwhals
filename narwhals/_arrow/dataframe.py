@@ -19,7 +19,7 @@ from narwhals._arrow.utils import align_series_full_broadcast
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
-from narwhals.dependencies import is_numpy_array
+from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
@@ -48,7 +48,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.group_by import ArrowGroupBy
     from narwhals._arrow.namespace import ArrowNamespace
-    from narwhals._arrow.typing import ArrowChunkedArray
+    from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._arrow.typing import Mask  # type: ignore[attr-defined]
     from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
     from narwhals._translate import IntoArrowTable
@@ -82,7 +82,7 @@ if TYPE_CHECKING:
 
 
 class ArrowDataFrame(
-    EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table", "pa.ChunkedArray[Any]"]
+    EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table", "ChunkedArrayAny"]
 ):
     def __init__(
         self,
@@ -250,7 +250,7 @@ class ArrowDataFrame(
     def __array__(self, dtype: Any, *, copy: bool | None) -> _2DArray:
         return self.native.__array__(dtype, copy=copy)
 
-    def _gather(self, rows: SizedMultiIndexSelector[ArrowChunkedArray]) -> Self:
+    def _gather(self, rows: SizedMultiIndexSelector[ChunkedArrayAny]) -> Self:
         if len(rows) == 0:
             return self._with_native(self.native.slice(0, 0))
         if self._backend_version < (18,) and isinstance(rows, tuple):
@@ -279,7 +279,7 @@ class ArrowDataFrame(
         )
 
     def _select_multi_index(
-        self, columns: SizedMultiIndexSelector[ArrowChunkedArray]
+        self, columns: SizedMultiIndexSelector[ChunkedArrayAny]
     ) -> Self:
         selector: Sequence[int]
         if isinstance(columns, pa.ChunkedArray):
@@ -287,14 +287,14 @@ class ArrowDataFrame(
             selector = cast("Sequence[int]", columns.to_pylist())
         # TODO @dangotbanned: Fix upstream, it is actually much narrower
         # **Doesn't accept `ndarray`**
-        elif is_numpy_array(columns):
+        elif is_numpy_array_1d(columns):
             selector = columns.tolist()
         else:
             selector = columns
         return self._with_native(self.native.select(selector))
 
     def _select_multi_name(
-        self, columns: SizedMultiNameSelector[ArrowChunkedArray]
+        self, columns: SizedMultiNameSelector[ChunkedArrayAny]
     ) -> Self:
         selector: Sequence[str] | _1DArray
         if isinstance(columns, pa.ChunkedArray):
@@ -344,7 +344,7 @@ class ArrowDataFrame(
         df = pa.Table.from_arrays([s.native for s in reshaped], names=names)
         return self._with_native(df, validate_column_names=True)
 
-    def _extract_comparand(self, other: ArrowSeries) -> ArrowChunkedArray:
+    def _extract_comparand(self, other: ArrowSeries) -> ChunkedArrayAny:
         length = len(self)
         if not other._broadcast:
             if (len_other := len(other)) != length:
@@ -516,7 +516,7 @@ class ArrowDataFrame(
         self: ArrowDataFrame, predicate: ArrowExpr | list[bool | None]
     ) -> ArrowDataFrame:
         if isinstance(predicate, list):
-            mask_native: Mask | ArrowChunkedArray = predicate
+            mask_native: Mask | ChunkedArrayAny = predicate
         else:
             # `[0]` is safe as the predicate's expression only returns a single column
             mask_native = self._evaluate_into_exprs(predicate)[0].native
@@ -773,7 +773,7 @@ class ArrowDataFrame(
                         [
                             *(self.native.column(idx_col) for idx_col in index_),
                             cast(
-                                "ArrowChunkedArray",
+                                "ChunkedArrayAny",
                                 pa.array([on_col] * n_rows, pa.string()),
                             ),
                             self.native.column(on_col),

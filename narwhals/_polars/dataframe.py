@@ -300,7 +300,7 @@ class PolarsDataFrame:
                             self.columns[slice(columns.start, columns.stop, columns.step)]
                         )
                     elif is_compliant_series(columns):
-                        native = native[:, columns.native.to_list()]  # type: ignore[attr-defined, index]
+                        native = native[:, columns.native.to_list()]
                     else:
                         native = native[:, columns]
                 elif isinstance(columns, slice):
@@ -319,18 +319,18 @@ class PolarsDataFrame:
 
             if not is_slice_none(rows):
                 if isinstance(rows, int):
-                    native = native[[rows], :]  # pyright: ignore[reportArgumentType,reportCallIssue]
+                    native = native[[rows], :]
                 elif isinstance(rows, (slice, range)):
-                    native = native[rows, :]  # pyright: ignore[reportArgumentType,reportCallIssue]
+                    native = native[rows, :]
                 elif is_compliant_series(rows):
-                    native = native[rows.native, :]  # pyright: ignore[reportArgumentType,reportCallIssue]
+                    native = native[rows.native, :]
                 elif is_sequence_like(rows):
-                    native = native[rows, :]  # pyright: ignore[reportArgumentType,reportCallIssue]
+                    native = native[rows, :]
                 else:
                     msg = f"Unreachable code, got unexpected type: {type(rows)}"
                     raise AssertionError(msg)
 
-            return self._with_native(native)  # pyright: ignore[reportArgumentType]
+            return self._with_native(native)
 
     def simple_select(self, *column_names: str) -> Self:
         return self._with_native(self.native.select(*column_names))

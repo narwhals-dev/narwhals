@@ -296,6 +296,7 @@ LazyUniqueKeepStrategy: TypeAlias = Literal["any", "none"]
 _ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
 _NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
 _1DArray: TypeAlias = "_NDArray[tuple[int]]"  # noqa: PYI042
+_1DArrayInt: TypeAlias = "np.ndarray[tuple[int], np.dtype[np.integer[Any]]]"  # noqa: PYI042
 _2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI042, PYI047
 _AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
 _NumpyScalar: TypeAlias = "np.generic[Any]"
@@ -318,7 +319,7 @@ _SliceNone: TypeAlias = "slice[None, None, None]"
 SingleIndexSelector: TypeAlias = int
 _SliceIndex: TypeAlias = "_Slice[int] | _SliceNone"
 """E.g. `[1:]` or `[:3]` or `[::2]`."""
-SizedMultiIndexSelector: TypeAlias = "Sequence[int] | _T | _1DArray"
+SizedMultiIndexSelector: TypeAlias = "Sequence[int] | _T | _1DArrayInt"
 MultiIndexSelector: TypeAlias = "_SliceIndex | SizedMultiIndexSelector[_T]"
 # Labels/column names
 SingleNameSelector: TypeAlias = str

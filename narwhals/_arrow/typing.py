@@ -32,13 +32,13 @@ if TYPE_CHECKING:
     TieBreaker: TypeAlias = Literal["min", "max", "first", "dense"]
     NullPlacement: TypeAlias = Literal["at_start", "at_end"]
 
-    ArrowChunkedArray: TypeAlias = pa.ChunkedArray[Any]
-    ArrowArray: TypeAlias = pa.Array[Any]
-    ArrayAny: TypeAlias = "ArrowArray | ArrowChunkedArray"
+    ChunkedArrayAny: TypeAlias = pa.ChunkedArray[Any]
+    ArrayAny: TypeAlias = pa.Array[Any]
+    ArrayOrChunkedArray: TypeAlias = "ArrayAny | ChunkedArrayAny"
     ScalarAny: TypeAlias = pa.Scalar[Any]
-    ArrayOrScalarAny: TypeAlias = "ArrayAny | ScalarAny"
-    ArrayOrScalarT1 = TypeVar("ArrayOrScalarT1", ArrowArray, ArrowChunkedArray, ScalarAny)
-    ArrayOrScalarT2 = TypeVar("ArrayOrScalarT2", ArrowArray, ArrowChunkedArray, ScalarAny)
+    ArrayOrScalar: TypeAlias = "ArrayOrChunkedArray | ScalarAny"
+    ArrayOrScalarT1 = TypeVar("ArrayOrScalarT1", ArrayAny, ChunkedArrayAny, ScalarAny)
+    ArrayOrScalarT2 = TypeVar("ArrayOrScalarT2", ArrayAny, ChunkedArrayAny, ScalarAny)
     _AsPyType = TypeVar("_AsPyType")
 
     class _BasicDataType(pa.DataType, Generic[_AsPyType]): ...

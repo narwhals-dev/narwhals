@@ -32,7 +32,6 @@ from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_duckdb
 from narwhals.dependencies import get_ibis
 from narwhals.dependencies import get_modin
-from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
@@ -43,7 +42,9 @@ from narwhals.dependencies import get_sqlframe
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_modin_series
 from narwhals.dependencies import is_narwhals_series
+from narwhals.dependencies import is_narwhals_series_int
 from narwhals.dependencies import is_numpy_array_1d
+from narwhals.dependencies import is_numpy_array_1d_int
 from narwhals.dependencies import is_pandas_dataframe
 from narwhals.dependencies import is_pandas_like_dataframe
 from narwhals.dependencies import is_pandas_like_series
@@ -1287,18 +1288,17 @@ def is_slice_none(obj: Any) -> TypeIs[_SliceNone]:
     return isinstance(obj, slice) and obj == slice(None)
 
 
-def is_sized_multi_index_selector(obj: Any) -> TypeIs[SizedMultiIndexSelector[Any]]:
-    np = get_numpy()
+def is_sized_multi_index_selector(
+    obj: Any,
+) -> TypeIs[SizedMultiIndexSelector[Series[Any] | CompliantSeries[Any]]]:
     return (
         (
             is_sequence_but_not_str(obj)
             and ((len(obj) > 0 and isinstance(obj[0], int)) or (len(obj) == 0))
         )
-        or (is_numpy_array_1d(obj) and np.issubdtype(obj.dtype, np.integer))
-        or (
-            (is_narwhals_series(obj) or is_compliant_series(obj))
-            and obj.dtype.is_integer()
-        )
+        or is_numpy_array_1d_int(obj)
+        or is_narwhals_series_int(obj)
+        or is_compliant_series_int(obj)
     )
 
 
@@ -1329,7 +1329,9 @@ def is_single_index_selector(obj: Any) -> TypeIs[SingleIndexSelector]:
     return bool(isinstance(obj, int) and not isinstance(obj, bool))
 
 
-def is_index_selector(obj: Any) -> TypeIs[SingleIndexSelector | MultiIndexSelector[Any]]:
+def is_index_selector(
+    obj: Any,
+) -> TypeIs[SingleIndexSelector | MultiIndexSelector[Series[Any] | CompliantSeries[Any]]]:
     return (
         is_single_index_selector(obj)
         or is_sized_multi_index_selector(obj)
@@ -1625,6 +1627,12 @@ def is_compliant_series(
     obj: CompliantSeries[NativeSeriesT_co] | Any,
 ) -> TypeIs[CompliantSeries[NativeSeriesT_co]]:
     return _hasattr_static(obj, "__narwhals_series__")
+
+
+def is_compliant_series_int(
+    obj: CompliantSeries[NativeSeriesT_co] | Any,
+) -> TypeIs[CompliantSeries[NativeSeriesT_co]]:
+    return is_compliant_series(obj) and obj.dtype.is_integer()
 
 
 def is_compliant_expr(
