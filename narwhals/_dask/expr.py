@@ -616,6 +616,10 @@ class DaskExpr(
                 "https://narwhals-dev.github.io/narwhals/pandas_like_concepts/improve_group_by_operation/"
             )
             raise NotImplementedError(msg)
+        elif order_by:
+            # Wrong results https://github.com/dask/dask/issues/11806.
+            msg = "`over` with `order_by` is not yet supported in Dask."
+            raise NotImplementedError(msg)
         else:
             function_name = PandasLikeGroupBy._leaf_name(self)
             try:
