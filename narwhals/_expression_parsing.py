@@ -403,7 +403,6 @@ def combine_metadata(  # noqa: PLR0915
                         result_expansion_kind = expansion_kind
                     else:
                         result_expansion_kind = result_expansion_kind & expansion_kind
-
             kind = metadata.kind
             if kind is ExprKind.AGGREGATION:
                 has_aggregations = True
