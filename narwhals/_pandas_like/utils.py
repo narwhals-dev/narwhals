@@ -6,6 +6,8 @@ from contextlib import suppress
 from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
+from typing import Literal
 from typing import Sequence
 from typing import Sized
 from typing import TypeVar
@@ -300,20 +302,33 @@ def object_native_to_narwhals_dtype(
 
 
 def native_categorical_to_narwhals_dtype(
-    native_dtype: pd.CategoricalDtype, version: Version
+    native_dtype: pd.CategoricalDtype,
+    version: Version,
+    implementation: Literal[Implementation.CUDF] | None = None,
 ) -> DType:
     dtypes = version.dtypes
     if version is Version.V1:
         return dtypes.Categorical()
     if native_dtype.ordered:
-        return dtypes.Enum(_DeferredIterable(native_dtype.categories.to_list))
+        into_iter = (
+            _cudf_categorical_to_list(native_dtype)
+            if implementation is Implementation.CUDF
+            else native_dtype.categories.to_list
+        )
+        return dtypes.Enum(_DeferredIterable(into_iter))
     return dtypes.Categorical()
 
 
+def _cudf_categorical_to_list(native_dtype: Any) -> Callable[[], list[Any]]:
+    # NOTE: https://docs.rapids.ai/api/cudf/stable/user_guide/api_docs/api/cudf.core.dtypes.categoricaldtype/#cudf.core.dtypes.CategoricalDtype
+    def fn() -> list[Any]:
+        return native_dtype.categories.to_arrow().to_pylist()
+
+    return fn
+
+
 def native_to_narwhals_dtype(
-    native_dtype: Any,
-    version: Version,
-    implementation: Implementation,
+    native_dtype: Any, version: Version, implementation: Implementation
 ) -> DType:
     str_dtype = str(native_dtype)
 
@@ -329,8 +344,9 @@ def native_to_narwhals_dtype(
     if str_dtype == "category" and implementation.is_cudf():
         # https://github.com/rapidsai/cudf/issues/18536
         # https://github.com/rapidsai/cudf/issues/14027
-        # https://docs.rapids.ai/api/cudf/stable/user_guide/api_docs/api/cudf.core.dtypes.categoricaldtype/#cudf.core.dtypes.CategoricalDtype
-        native_dtype = native_dtype.to_pandas()
+        return native_categorical_to_narwhals_dtype(
+            native_dtype, version, Implementation.CUDF
+        )
     if str_dtype != "object":
         return non_object_native_to_narwhals_dtype(native_dtype, version)
     elif implementation is Implementation.DASK:
