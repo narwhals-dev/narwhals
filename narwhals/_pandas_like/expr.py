@@ -279,7 +279,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     else:
                         res_native = getattr(rolling, pandas_function_name)()
                 elif function_name == "fill_null":
-                    df_grouped = grouped[output_names]
+                    df_grouped = grouped[list(output_names)]
                     if self._call_kwargs["strategy"] == "forward":
                         res_native = df_grouped.ffill(limit=self._call_kwargs["limit"])
                     elif self._call_kwargs["strategy"] == "backward":
