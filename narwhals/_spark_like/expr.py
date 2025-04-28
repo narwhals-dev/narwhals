@@ -75,7 +75,8 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
             return [
-                result.over(df._Window().partitionBy(df._F.lit(1))) for result in self(df)
+                result.over(self._Window().partitionBy(self._F.lit(1)))
+                for result in self(df)
             ]
 
         return self.__class__(
@@ -438,7 +439,8 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def median(self) -> Self:
         def _median(_input: Column) -> Column:
             if (
-                self._implementation.is_pyspark()
+                self._implementation
+                in {Implementation.PYSPARK, Implementation.PYSPARK_CONNECT}
                 and (pyspark := get_pyspark()) is not None
                 and parse_version(pyspark) < (3, 4)
             ):  # pragma: no cover
@@ -799,7 +801,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             else:
                 order_by_cols = [self._F.asc_nulls_last(_input)]
 
-            window = self._Window().orderBy(order_by_cols)
+            window = self._Window().partitionBy(self._F.lit(1)).orderBy(order_by_cols)
             count_window = self._Window().partitionBy(_input)
 
             if method == "max":
