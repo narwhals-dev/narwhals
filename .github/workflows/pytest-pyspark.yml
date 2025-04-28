@@ -10,7 +10,7 @@ env:
 jobs:
 
   pytest-pyspark-constructor:
-    if: ${{ contains(github.event.pull_request.labels.*.name, 'pyspark') || contains(github.event.pull_request.labels.*.name, 'release') }}
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'pyspark') || contains(github.event.pull_request.labels.*.name, 'spark-like') || contains(github.event.pull_request.labels.*.name, 'release')}}
     strategy:
       matrix:
         python-version: ["3.10", "3.11"]
