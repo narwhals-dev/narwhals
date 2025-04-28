@@ -13,13 +13,11 @@ if TYPE_CHECKING:
     import duckdb
     import ibis
     import modin.pandas as mpd
-    import numpy as np
     import pandas as pd
     import polars as pl
     import pyarrow as pa
     import pyspark.sql as pyspark_sql
     from pyspark.sql.connect.dataframe import DataFrame as PySparkConnectDataFrame
-    from typing_extensions import TypeAlias
     from typing_extensions import TypeGuard
     from typing_extensions import TypeIs
 
@@ -32,12 +30,12 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoSeriesT
     from narwhals.typing import _1DArray
+    from narwhals.typing import _1DArrayInt
     from narwhals.typing import _2DArray
     from narwhals.typing import _NDArray
     from narwhals.typing import _NumpyScalar
     from narwhals.typing import _ShapeT
 
-    _1DArrayInt: TypeAlias = "np.ndarray[tuple[int], np.dtype[np.integer[Any]]]"  # noqa: PYI042
 
 # We silently allow these but - given that they claim
 # to be drop-in replacements for pandas - testing is
