@@ -284,9 +284,11 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         res_native = df_grouped.ffill(limit=self._call_kwargs["limit"])
                     elif self._call_kwargs["strategy"] == "backward":
                         res_native = df_grouped.bfill(limit=self._call_kwargs["limit"])
-                    else:
-                        value = self._call_kwargs["value"]
-                        res_native = getattr(df_grouped, pandas_function_name)(value)
+                    else:  # pragma: no cover
+                        # This is deprecated in pandas. Indeed, `nw.col('a').fill_null(3).over('b')`
+                        # does not seem very useful, and DuckDB doesn't support it either.
+                        msg = "`fill_null` with `over` without `strategy` specified is not supported."
+                        raise NotImplementedError(msg)
                 elif function_name == "len":
                     if len(output_names) != 1:  # pragma: no cover
                         msg = "Safety check failed, please report a bug."
@@ -340,10 +342,10 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         return self._reuse_series(
             "fill_null",
             call_kwargs={
-                "value": value,
                 "strategy": strategy,
                 "limit": limit,
             },
+            value=value,
         )
 
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:

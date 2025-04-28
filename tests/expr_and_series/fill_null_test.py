@@ -371,7 +371,7 @@ def test_fill_null_series_exceptions(constructor_eager: ConstructorEager) -> Non
 def test_fill_null_strategies_with_partition_by(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow", "dask")):
+    if any(x in str(constructor) for x in ("modin", "cudf", "pyarrow_table", "dask")):
         request.applymarker(pytest.mark.xfail)
 
     if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)) or (
