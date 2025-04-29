@@ -16,7 +16,7 @@ from joblib import delayed
 
 def test_parallelisability(constructor_eager: ConstructorEager) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/2450
-    def do_something(df: nw.DataFrame[Any]) -> nw.DataFrame[Any]:
+    def do_something(df: nw.DataFrame[Any]) -> nw.DataFrame[Any]:  # pragma: no cover
         return df.with_columns(nw.col("col1") * 2)
 
     dfs = [nw.from_native(constructor_eager({"col1": [0, 2], "col2": [3, 7]}))]
