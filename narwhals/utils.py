@@ -216,30 +216,29 @@ class Version(Enum):
 class Implementation(StrEnum):
     """Implementation of native object (pandas, Polars, PyArrow, ...)."""
 
-    PANDAS = auto()
+    PANDAS = "pandas"
     """pandas implementation."""
-    MODIN = auto()
+    MODIN = "modin"
     """Modin implementation."""
-    CUDF = auto()
+    CUDF = "cudf"
     """cuDF implementation."""
-    PYARROW = auto()
+    PYARROW = "pyarrow"
     """PyArrow implementation."""
-    PYSPARK = auto()
+    PYSPARK = "pyspark"
     """PySpark implementation."""
-    POLARS = auto()
+    POLARS = "polars"
     """Polars implementation."""
-    DASK = auto()
+    DASK = "dask"
     """Dask implementation."""
-    DUCKDB = auto()
+    DUCKDB = "duckdb"
     """DuckDB implementation."""
-    IBIS = auto()
+    IBIS = "ibis"
     """Ibis implementation."""
-    SQLFRAME = auto()
+    SQLFRAME = "sqlframe"
     """SQLFrame implementation."""
-    PYSPARK_CONNECT = auto()
+    PYSPARK_CONNECT = "pyspark[connect]"
     """PySpark Connect implementation."""
-
-    UNKNOWN = auto()
+    UNKNOWN = "unknown"
     """Unknown implementation."""
 
     @classmethod
@@ -352,9 +351,9 @@ class Implementation(StrEnum):
             return sqlframe
 
         if self is Implementation.PYSPARK_CONNECT:  # pragma: no cover
-            import pyspark.sql  # ignore-banned-import
+            import pyspark.sql.connect  # ignore-banned-import
 
-            return pyspark.sql
+            return pyspark.sql.connect
 
         msg = "Not supported Implementation"  # pragma: no cover
         raise AssertionError(msg)
@@ -1830,7 +1829,7 @@ class requires:  # noqa: N801
         >>> backend.really_complex_feature()
         Traceback (most recent call last):
             ...
-        NotImplementedError: `really_complex_feature` is only available in pyarrow>='9000.0.0', found version '20.0.0'.
+        NotImplementedError: `really_complex_feature` is only available in 'pyarrow>=9000.0.0', found version '20.0.0'.
     """
 
     _min_version: tuple[int, ...]
@@ -1863,7 +1862,10 @@ class requires:  # noqa: N801
         backend = instance._implementation
         minimum = self._unparse_version(self._min_version)
         found = self._unparse_version(instance._backend_version)
-        msg = f"`{method}` is only available in {backend}>={minimum!r}, found version {found!r}."
+        msg = (
+            f"`{method}` is only available in '{backend}>={minimum}', "
+            f"found version {found!r}."
+        )
         if self._hint:
             msg = f"{msg}\n{self._hint}"
         raise NotImplementedError(msg)
