@@ -70,6 +70,35 @@ Method: TypeAlias = "Callable[..., R]"
 Where `R` is the return type.
 """
 
+# DataFrame methods where PolarsDataFrame just defers to Polars.DataFrame
+# directly.
+INHERITED_METHODS = frozenset(
+    [
+        "filter",
+        "drop_nulls",
+        "gather_every",
+        "estimated_size",
+        "to_arrow",
+        "sort",
+        "to_pandas",
+        "write_csv",
+        "clone",
+        "sample",
+        "with_columns",
+        "join_asof",
+        "is_unique",
+        "rename",
+        "rows",
+        "write_parquet",
+        "row",
+        "explode",
+        "select",
+        "unique",
+        "item",
+        "iter_rows",
+    ]
+)
+
 
 class PolarsDataFrame:
     clone: Method[Self]
@@ -221,6 +250,10 @@ class PolarsDataFrame:
         return self._with_native(self.native.tail(n))
 
     def __getattr__(self, attr: str) -> Any:
+        if attr not in INHERITED_METHODS:  # pragma: no cover
+            msg = f"{self.__class__.__name__} has not attribute '{attr}'."
+            raise AttributeError(msg)
+
         def func(*args: Any, **kwargs: Any) -> Any:
             pos, kwds = extract_args_kwargs(args, kwargs)
             try:

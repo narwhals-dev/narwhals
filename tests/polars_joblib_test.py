@@ -1,0 +1,22 @@
+from __future__ import annotations
+
+from typing import Any
+
+from joblib import Parallel
+from joblib import delayed
+
+import narwhals as nw
+from tests.utils import ConstructorEager
+from tests.utils import assert_equal_data
+
+
+def test_parallelisability(constructor_eager: ConstructorEager) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/2450
+    def do_something(df: nw.DataFrame[Any]) -> nw.DataFrame[Any]:
+        return df.with_columns(nw.col("col1") * 2)
+
+    dfs = [nw.from_native(constructor_eager({"col1": [0, 2], "col2": [3, 7]}))]
+    result = list(Parallel(n_jobs=-1)(delayed(do_something)(df_) for df_ in dfs))
+    assert len(result) == 1
+    expected = {"col1": [0, 4], "col2": [3, 7]}
+    assert_equal_data(result[0], expected)
