@@ -26,16 +26,17 @@ if TYPE_CHECKING:
     from typing import TypeVar
 
     import pandas as pd
+    import pyarrow as pa
     from typing_extensions import Self
     from typing_extensions import TypeIs
 
-    from narwhals._arrow.typing import ArrowArray
     from narwhals._polars.dataframe import Method
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals.dtypes import DType
     from narwhals.typing import Into1DArray
+    from narwhals.typing import MultiIndexSelector
     from narwhals.typing import _1DArray
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -175,13 +176,9 @@ class PolarsSeries:
     def alias(self, name: str) -> Self:
         return self._from_native_object(self.native.alias(name))
 
-    @overload
-    def __getitem__(self, item: int) -> Any: ...
-
-    @overload
-    def __getitem__(self, item: slice | Sequence[int] | pl.Series) -> Self: ...
-
-    def __getitem__(self, item: int | slice | Sequence[int] | pl.Series) -> Any | Self:
+    def __getitem__(self, item: MultiIndexSelector[Self]) -> Any | Self:
+        if isinstance(item, PolarsSeries):
+            return self._from_native_object(self.native.__getitem__(item.native))
         return self._from_native_object(self.native.__getitem__(item))
 
     def cast(self, dtype: DType | type[DType]) -> Self:
@@ -218,17 +215,18 @@ class PolarsSeries:
     def __ne__(self, other: object) -> Self:  # type: ignore[override]
         return self._with_native(self.native.__ne__(extract_native(other)))
 
+    # NOTE: `pyright` is being reasonable here
     def __ge__(self, other: Any) -> Self:
-        return self._with_native(self.native.__ge__(extract_native(other)))
+        return self._with_native(self.native.__ge__(extract_native(other)))  # pyright: ignore[reportArgumentType]
 
     def __gt__(self, other: Any) -> Self:
-        return self._with_native(self.native.__gt__(extract_native(other)))
+        return self._with_native(self.native.__gt__(extract_native(other)))  # pyright: ignore[reportArgumentType]
 
     def __le__(self, other: Any) -> Self:
-        return self._with_native(self.native.__le__(extract_native(other)))
+        return self._with_native(self.native.__le__(extract_native(other)))  # pyright: ignore[reportArgumentType]
 
     def __lt__(self, other: Any) -> Self:
-        return self._with_native(self.native.__lt__(extract_native(other)))
+        return self._with_native(self.native.__lt__(extract_native(other)))  # pyright: ignore[reportArgumentType]
 
     def __and__(self, other: PolarsSeries | bool | Any) -> Self:
         return self._with_native(self.native.__and__(extract_native(other)))
@@ -630,7 +628,7 @@ class PolarsSeries:
     std: Method[float]
     sum: Method[float]
     tail: Method[Self]
-    to_arrow: Method[ArrowArray]
+    to_arrow: Method[pa.Array[Any]]
     to_frame: Method[PolarsDataFrame]
     to_list: Method[list[Any]]
     to_pandas: Method[pd.Series[Any]]

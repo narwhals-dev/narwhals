@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import NoReturn
 
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
@@ -33,7 +32,7 @@ class DtypeKind(enum.IntEnum):
 def map_interchange_dtype_to_narwhals_dtype(
     interchange_dtype: tuple[DtypeKind, int, Any, Any], version: Version
 ) -> DType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if interchange_dtype[0] == DtypeKind.INT:
         if interchange_dtype[1] == 64:
             return dtypes.Int64()
@@ -105,11 +104,11 @@ class InterchangeFrame:
         )
         raise NotImplementedError(msg)
 
-    def __getitem__(self, item: str) -> InterchangeSeries:
+    def get_column(self, name: str) -> InterchangeSeries:
         from narwhals._interchange.series import InterchangeSeries
 
         return InterchangeSeries(
-            self._interchange_frame.get_column_by_name(item), version=self._version
+            self._interchange_frame.get_column_by_name(name), version=self._version
         )
 
     def to_pandas(self) -> pd.DataFrame:

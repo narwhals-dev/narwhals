@@ -22,7 +22,6 @@ from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
 from narwhals.utils import find_stacklevel
 from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -142,10 +141,35 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
             implementation=self._implementation,
         )
 
+    def _to_arrow_schema(self) -> pa.Schema:  # pragma: no cover
+        import pyarrow as pa  # ignore-banned-import
+
+        from narwhals._arrow.utils import narwhals_to_native_dtype
+
+        schema: list[tuple[str, pa.DataType]] = []
+        nw_schema = self.collect_schema()
+        native_schema = self.native.schema
+        for key, value in nw_schema.items():
+            try:
+                native_dtype = narwhals_to_native_dtype(value, self._version)
+            except Exception as exc:  # noqa: BLE001,PERF203
+                native_spark_dtype = native_schema[key].dataType  # type: ignore[index]
+                # If we can't convert the type, just set it to `pa.null`, and warn.
+                # Avoid the warning if we're starting from PySpark's void type.
+                # We can avoid the check when we introduce `nw.Null` dtype.
+                null_type = self._native_dtypes.NullType  # pyright: ignore[reportAttributeAccessIssue]
+                if not isinstance(native_spark_dtype, null_type):
+                    warnings.warn(
+                        f"Could not convert dtype {native_spark_dtype} to PyArrow dtype, {exc!r}",
+                        stacklevel=find_stacklevel(),
+                    )
+                schema.append((key, pa.null()))
+            else:
+                schema.append((key, native_dtype))
+        return pa.schema(schema)
+
     def _collect_to_arrow(self) -> pa.Table:
-        if self._implementation is Implementation.PYSPARK and self._backend_version < (
-            4,
-        ):
+        if self._implementation.is_pyspark() and self._backend_version < (4,):
             import pyarrow as pa  # ignore-banned-import
 
             try:
@@ -153,32 +177,17 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
             except ValueError as exc:
                 if "at least one RecordBatch" in str(exc):
                     # Empty dataframe
-                    from narwhals._arrow.utils import narwhals_to_native_dtype
 
-                    data: dict[str, list[Any]] = {}
-                    schema: list[tuple[str, pa.DataType]] = []
-                    current_schema = self.collect_schema()
-                    for key, value in current_schema.items():
-                        data[key] = []
-                        try:
-                            native_dtype = narwhals_to_native_dtype(value, self._version)
-                        except Exception as exc:  # noqa: BLE001
-                            native_spark_dtype = self.native.schema[key].dataType  # type: ignore[index]
-                            # If we can't convert the type, just set it to `pa.null`, and warn.
-                            # Avoid the warning if we're starting from PySpark's void type.
-                            # We can avoid the check when we introduce `nw.Null` dtype.
-                            null_type = self._native_dtypes.NullType  # pyright: ignore[reportAttributeAccessIssue]
-                            if not isinstance(native_spark_dtype, null_type):
-                                warnings.warn(
-                                    f"Could not convert dtype {native_spark_dtype} to PyArrow dtype, {exc!r}",
-                                    stacklevel=find_stacklevel(),
-                                )
-                            schema.append((key, pa.null()))
-                        else:
-                            schema.append((key, native_dtype))
-                    return pa.Table.from_pydict(data, schema=pa.schema(schema))
+                    data: dict[str, list[Any]] = {k: [] for k in self.columns}
+                    pa_schema = self._to_arrow_schema()
+                    return pa.Table.from_pydict(data, schema=pa_schema)
                 else:  # pragma: no cover
                     raise
+        elif self._implementation.is_pyspark_connect() and self._backend_version < (4,):
+            import pyarrow as pa  # ignore-banned-import
+
+            pa_schema = self._to_arrow_schema()
+            return pa.Table.from_pandas(self.native.toPandas(), schema=pa_schema)
         else:
             return self.native.toArrow()
 
@@ -294,9 +303,11 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
         return self._with_native(self.native.drop(*columns_to_drop))
 
     def head(self, n: int) -> Self:
-        return self._with_native(self.native.limit(num=n))
+        return self._with_native(self.native.limit(n))
 
-    def group_by(self, *keys: str, drop_null_keys: bool) -> SparkLikeLazyGroupBy:
+    def group_by(
+        self, keys: Sequence[str] | Sequence[SparkLikeExpr], *, drop_null_keys: bool
+    ) -> SparkLikeLazyGroupBy:
         from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
 
         return SparkLikeLazyGroupBy(self, keys, drop_null_keys=drop_null_keys)
@@ -422,7 +433,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
         )
 
     def explode(self, columns: Sequence[str]) -> Self:
-        dtypes = import_dtypes_module(self._version)
+        dtypes = self._version.dtypes
 
         schema = self.collect_schema()
         for col_to_explode in columns:
@@ -444,7 +455,7 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
             )
             raise NotImplementedError(msg)
 
-        if self._implementation.is_pyspark():
+        if self._implementation.is_pyspark() or self._implementation.is_pyspark_connect():
             return self._with_native(
                 self.native.select(
                     *[

@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.typing import WindowFunction
     from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
+    from narwhals.typing import FillNullStrategy
     from narwhals.typing import NonNestedLiteral
     from narwhals.typing import NumericLiteral
     from narwhals.typing import RankMethod
@@ -345,13 +346,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
                 raise ValueError(msg)
             return [name]
 
-        return self.__class__(
-            self._call,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=alias_output_names,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        return self._with_alias_output_names(alias_output_names)
 
     def abs(self) -> Self:
         return self._with_callable(lambda _input: FunctionExpression("abs", _input))
@@ -676,16 +671,41 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         )
 
     def fill_null(
-        self, value: Self | NonNestedLiteral, strategy: Any, limit: int | None
+        self,
+        value: Self | NonNestedLiteral,
+        strategy: FillNullStrategy | None,
+        limit: int | None,
     ) -> Self:
         if strategy is not None:
-            msg = "todo"
-            raise NotImplementedError(msg)
+            if self._backend_version < (1, 3):  # pragma: no cover
+                msg = f"`fill_null` with `strategy={strategy}` is only available in DuckDB>=1.3.0."
+                raise NotImplementedError(msg)
 
-        def func(_input: duckdb.Expression, value: Any) -> duckdb.Expression:
+            def _fill_with_strategy(window_inputs: WindowInputs) -> duckdb.Expression:
+                order_by_sql = generate_order_by_sql(
+                    *window_inputs.order_by, ascending=True
+                )
+                partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
+
+                fill_func = "last_value" if strategy == "forward" else "first_value"
+                _limit = "unbounded" if limit is None else limit
+                rows_between = (
+                    f"{_limit} preceding and current row"
+                    if strategy == "forward"
+                    else f"current row and {_limit} following"
+                )
+                sql = (
+                    f"{fill_func}({window_inputs.expr} ignore nulls) over "
+                    f"({partition_by_sql} {order_by_sql} rows between {rows_between})"
+                )
+                return SQLExpression(sql)  # type: ignore[no-any-return, unused-ignore]
+
+            return self._with_window_function(_fill_with_strategy)
+
+        def _fill_constant(_input: duckdb.Expression, value: Any) -> duckdb.Expression:
             return CoalesceOperator(_input, value)
 
-        return self._with_callable(func, value=value)
+        return self._with_callable(_fill_constant, value=value)
 
     def cast(self, dtype: DType | type[DType]) -> Self:
         def func(_input: duckdb.Expression) -> duckdb.Expression:

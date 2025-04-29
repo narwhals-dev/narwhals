@@ -16,9 +16,7 @@ import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import align_series_full_broadcast
-from narwhals._arrow.utils import convert_str_slice_to_int_slice
 from narwhals._arrow.utils import native_to_narwhals_dtype
-from narwhals._arrow.utils import select_rows
 from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
 from narwhals.dependencies import is_numpy_array_1d
@@ -27,8 +25,8 @@ from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import check_column_exists
 from narwhals.utils import check_column_names_are_unique
+from narwhals.utils import convert_str_slice_to_int_slice
 from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import is_sequence_but_not_str
 from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -50,8 +48,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.group_by import ArrowGroupBy
     from narwhals._arrow.namespace import ArrowNamespace
-    from narwhals._arrow.typing import ArrowChunkedArray
-    from narwhals._arrow.typing import Indices  # type: ignore[attr-defined]
+    from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._arrow.typing import Mask  # type: ignore[attr-defined]
     from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
     from narwhals._translate import IntoArrowTable
@@ -60,10 +57,14 @@ if TYPE_CHECKING:
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import JoinStrategy
+    from narwhals.typing import SizedMultiIndexSelector
+    from narwhals.typing import SizedMultiNameSelector
     from narwhals.typing import SizeUnit
     from narwhals.typing import UniqueKeepStrategy
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
+    from narwhals.typing import _SliceIndex
+    from narwhals.typing import _SliceName
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -80,8 +81,9 @@ if TYPE_CHECKING:
     PromoteOptions: TypeAlias = Literal["none", "default", "permissive"]
 
 
-class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
-    # --- not in the spec ---
+class ArrowDataFrame(
+    EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table", "ChunkedArrayAny"]
+):
     def __init__(
         self,
         native_dataframe: pa.Table,
@@ -248,118 +250,61 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
     def __array__(self, dtype: Any, *, copy: bool | None) -> _2DArray:
         return self.native.__array__(dtype, copy=copy)
 
-    @overload
-    def __getitem__(  # type: ignore[overload-overlap, unused-ignore]
-        self, item: str | tuple[slice | Sequence[int] | _1DArray, int | str]
-    ) -> ArrowSeries: ...
-    @overload
-    def __getitem__(
-        self,
-        item: (
-            int
-            | slice
-            | Sequence[int]
-            | Sequence[str]
-            | _1DArray
-            | tuple[
-                slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
-            ]
-        ),
-    ) -> Self: ...
-    def __getitem__(
-        self,
-        item: (
-            str
-            | int
-            | slice
-            | Sequence[int]
-            | Sequence[str]
-            | _1DArray
-            | tuple[slice | Sequence[int] | _1DArray, int | str]
-            | tuple[
-                slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
-            ]
-        ),
-    ) -> ArrowSeries | Self:
-        if isinstance(item, tuple):
-            item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)  # pyright: ignore[reportAssignmentType]
+    def _gather(self, rows: SizedMultiIndexSelector[ChunkedArrayAny]) -> Self:
+        if len(rows) == 0:
+            return self._with_native(self.native.slice(0, 0))
+        if self._backend_version < (18,) and isinstance(rows, tuple):
+            rows = list(rows)
+        return self._with_native(self.native.take(rows))  # pyright: ignore[reportArgumentType]
 
-        if isinstance(item, str):
-            return ArrowSeries.from_native(self.native[item], context=self, name=item)
-        elif (
-            isinstance(item, tuple)
-            and len(item) == 2
-            and is_sequence_but_not_str(item[1])
-            and not isinstance(item[0], str)
-        ):
-            if len(item[1]) == 0:
-                # Return empty dataframe
-                return self._with_native(self.native.slice(0, 0).select([]))
-            selected_rows = select_rows(self.native, item[0])
-            return self._with_native(selected_rows.select(cast("Indices", item[1])))
+    def _gather_slice(self, rows: _SliceIndex | range) -> Self:
+        start = rows.start or 0
+        stop = rows.stop if rows.stop is not None else len(self.native)
+        if start < 0:
+            start = len(self.native) + start
+        if stop < 0:
+            stop = len(self.native) + stop
+        if rows.step is not None and rows.step != 1:
+            msg = "Slicing with step is not supported on PyArrow tables"
+            raise NotImplementedError(msg)
+        return self._with_native(self.native.slice(start, stop - start))
 
-        elif isinstance(item, tuple) and len(item) == 2:
-            if isinstance(item[1], slice):
-                columns = self.columns
-                indices = cast("Indices", item[0])
-                if item[1] == slice(None):
-                    if isinstance(item[0], Sequence) and len(item[0]) == 0:
-                        return self._with_native(self.native.slice(0, 0))
-                    return self._with_native(self.native.take(indices))
-                if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
-                    start, stop, step = convert_str_slice_to_int_slice(item[1], columns)
-                    return self._with_native(
-                        self.native.take(indices).select(columns[start:stop:step])
-                    )
-                if isinstance(item[1].start, int) or isinstance(item[1].stop, int):
-                    return self._with_native(
-                        self.native.take(indices).select(
-                            columns[item[1].start : item[1].stop : item[1].step]
-                        )
-                    )
-                msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
-                raise TypeError(msg)  # pragma: no cover
+    def _select_slice_name(self, columns: _SliceName) -> Self:
+        start, stop, step = convert_str_slice_to_int_slice(columns, self.columns)
+        return self._with_native(self.native.select(self.columns[start:stop:step]))
 
-            # PyArrow columns are always strings
-            col_name = (
-                item[1]
-                if isinstance(item[1], str)
-                else self.columns[cast("int", item[1])]
-            )
-            if isinstance(item[0], str):  # pragma: no cover
-                msg = "Can not slice with tuple with the first element as a str"
-                raise TypeError(msg)
-            if (isinstance(item[0], slice)) and (item[0] == slice(None)):
-                return ArrowSeries.from_native(
-                    self.native[col_name], context=self, name=col_name
-                )
-            selected_rows = select_rows(self.native, item[0])
-            return ArrowSeries.from_native(
-                selected_rows[col_name], context=self, name=col_name
-            )
+    def _select_slice_index(self, columns: _SliceIndex | range) -> Self:
+        return self._with_native(
+            self.native.select(self.columns[columns.start : columns.stop : columns.step])
+        )
 
-        elif isinstance(item, slice):
-            if item.step is not None and item.step != 1:
-                msg = "Slicing with step is not supported on PyArrow tables"
-                raise NotImplementedError(msg)
-            columns = self.columns
-            if isinstance(item.start, str) or isinstance(item.stop, str):
-                start, stop, step = convert_str_slice_to_int_slice(item, columns)
-                return self._with_native(self.native.select(columns[start:stop:step]))
-            start = item.start or 0
-            stop = item.stop if item.stop is not None else len(self.native)
-            return self._with_native(self.native.slice(start, stop - start))
+    def _select_multi_index(
+        self, columns: SizedMultiIndexSelector[ChunkedArrayAny]
+    ) -> Self:
+        selector: Sequence[int]
+        if isinstance(columns, pa.ChunkedArray):
+            # TODO @dangotbanned: Fix upstream with `pa.ChunkedArray.to_pylist(self) -> list[Any]:`
+            selector = cast("Sequence[int]", columns.to_pylist())
+        # TODO @dangotbanned: Fix upstream, it is actually much narrower
+        # **Doesn't accept `ndarray`**
+        elif is_numpy_array_1d(columns):
+            selector = columns.tolist()
+        else:
+            selector = columns
+        return self._with_native(self.native.select(selector))
 
-        elif isinstance(item, Sequence) or is_numpy_array_1d(item):
-            if isinstance(item, Sequence) and len(item) > 0 and isinstance(item[0], str):
-                return self._with_native(self.native.select(cast("Indices", item)))
-            if isinstance(item, Sequence) and len(item) == 0:
-                return self._with_native(self.native.slice(0, 0))
-            return self._with_native(self.native.take(cast("Indices", item)))
-
-        else:  # pragma: no cover
-            msg = f"Expected str or slice, got: {type(item)}"
-            raise TypeError(msg)
+    def _select_multi_name(
+        self, columns: SizedMultiNameSelector[ChunkedArrayAny]
+    ) -> Self:
+        selector: Sequence[str] | _1DArray
+        if isinstance(columns, pa.ChunkedArray):
+            # TODO @dangotbanned: Fix upstream with `pa.ChunkedArray.to_pylist(self) -> list[Any]:`
+            selector = cast("Sequence[str]", columns.to_pylist())
+        else:
+            selector = columns
+        # TODO @dangotbanned: Fix upstream `pa.Table.select` https://github.com/zen-xu/pyarrow-stubs/blob/f899bb35e10b36f7906a728e9f8acf3e0a1f9f64/pyarrow-stubs/__lib_pxi/table.pyi#L597
+        # NOTE: Investigate what `cython` actually checks
+        return self._with_native(self.native.select(selector))  # pyright: ignore[reportArgumentType]
 
     @property
     def schema(self) -> dict[str, DType]:
@@ -380,7 +325,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
 
     @property
     def columns(self) -> list[str]:
-        return self.native.schema.names
+        return self.native.column_names
 
     def simple_select(self, *column_names: str) -> Self:
         return self._with_native(
@@ -399,7 +344,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         df = pa.Table.from_arrays([s.native for s in reshaped], names=names)
         return self._with_native(df, validate_column_names=True)
 
-    def _extract_comparand(self, other: ArrowSeries) -> ArrowChunkedArray:
+    def _extract_comparand(self, other: ArrowSeries) -> ChunkedArrayAny:
         length = len(self)
         if not other._broadcast:
             if (len_other := len(other)) != length:
@@ -436,7 +381,9 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
 
         return self._with_native(native_frame, validate_column_names=False)
 
-    def group_by(self, *keys: str, drop_null_keys: bool) -> ArrowGroupBy:
+    def group_by(
+        self, keys: Sequence[str] | Sequence[ArrowExpr], *, drop_null_keys: bool
+    ) -> ArrowGroupBy:
         from narwhals._arrow.group_by import ArrowGroupBy
 
         return ArrowGroupBy(self, keys, drop_null_keys=drop_null_keys)
@@ -551,15 +498,10 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
     def to_dict(
         self, *, as_series: bool
     ) -> dict[str, ArrowSeries] | dict[str, list[Any]]:
-        df = self.native
-        names_and_values = zip(df.column_names, df.columns)
+        it = self.iter_columns()
         if as_series:
-            return {
-                name: ArrowSeries.from_native(col, context=self, name=name)
-                for name, col in names_and_values
-            }
-        else:
-            return {name: col.to_pylist() for name, col in names_and_values}
+            return {ser.name: ser for ser in it}
+        return {ser.name: ser.to_list() for ser in it}
 
     def with_row_index(self, name: str) -> Self:
         df = self.native
@@ -574,7 +516,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         self: ArrowDataFrame, predicate: ArrowExpr | list[bool | None]
     ) -> ArrowDataFrame:
         if isinstance(predicate, list):
-            mask_native: Mask | ArrowChunkedArray = predicate
+            mask_native: Mask | ChunkedArrayAny = predicate
         else:
             # `[0]` is safe as the predicate's expression only returns a single column
             mask_native = self._evaluate_into_exprs(predicate)[0].native
@@ -707,9 +649,12 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         return maybe_extract_py_scalar(self.native[_col][row], return_py_scalar=True)
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
-        df = self.native
-        new_cols = [mapping.get(c, c) for c in df.column_names]
-        return self._with_native(df.rename_columns(new_cols))
+        names: dict[str, str] | list[str]
+        if self._backend_version >= (17,):
+            names = cast("dict[str, str]", mapping)
+        else:  # pragma: no cover
+            names = [mapping.get(c, c) for c in self.columns]
+        return self._with_native(self.native.rename_columns(names))
 
     def write_parquet(self, file: str | Path | BytesIO) -> None:
         import pyarrow.parquet as pp
@@ -828,7 +773,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
                         [
                             *(self.native.column(idx_col) for idx_col in index_),
                             cast(
-                                "ArrowChunkedArray",
+                                "ChunkedArrayAny",
                                 pa.array([on_col] * n_rows, pa.string()),
                             ),
                             self.native.column(on_col),

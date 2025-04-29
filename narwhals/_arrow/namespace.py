@@ -22,11 +22,10 @@ from narwhals._compliant import EagerWhen
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.utils import Implementation
-from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
-    from narwhals._arrow.typing import ArrayOrScalarAny
-    from narwhals._arrow.typing import ArrowChunkedArray
+    from narwhals._arrow.typing import ArrayOrScalar
+    from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._arrow.typing import Incomplete
     from narwhals.dtypes import DType
     from narwhals.typing import NonNestedLiteral
@@ -34,9 +33,7 @@ if TYPE_CHECKING:
 
 
 class ArrowNamespace(
-    EagerNamespace[
-        ArrowDataFrame, ArrowSeries, ArrowExpr, "pa.Table", "ArrowChunkedArray"
-    ]
+    EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, "pa.Table", "ChunkedArrayAny"]
 ):
     @property
     def _dataframe(self) -> type[ArrowDataFrame]:
@@ -135,7 +132,7 @@ class ArrowNamespace(
         )
 
     def mean_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
-        dtypes = import_dtypes_module(self._version)
+        int_64 = self._version.dtypes.Int64()
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             expr_results = list(chain.from_iterable(expr(df) for expr in exprs))
@@ -143,7 +140,7 @@ class ArrowNamespace(
                 *(s.fill_null(0, strategy=None, limit=None) for s in expr_results)
             )
             non_na = align_series_full_broadcast(
-                *(1 - s.is_null().cast(dtypes.Int64()) for s in expr_results)
+                *(1 - s.is_null().cast(int_64) for s in expr_results)
             )
             return [reduce(operator.add, series) / reduce(operator.add, non_na)]
 
@@ -275,18 +272,18 @@ class ArrowNamespace(
         )
 
 
-class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ArrowChunkedArray"]):
+class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ChunkedArrayAny"]):
     @property
     def _then(self) -> type[ArrowThen]:
         return ArrowThen
 
     def _if_then_else(
         self,
-        when: ArrowChunkedArray,
-        then: ArrowChunkedArray,
-        otherwise: ArrayOrScalarAny | NonNestedLiteral,
+        when: ChunkedArrayAny,
+        then: ChunkedArrayAny,
+        otherwise: ArrayOrScalar | NonNestedLiteral,
         /,
-    ) -> ArrowChunkedArray:
+    ) -> ChunkedArrayAny:
         otherwise = pa.nulls(len(when), then.type) if otherwise is None else otherwise
         return pc.if_else(when, then, otherwise)
 

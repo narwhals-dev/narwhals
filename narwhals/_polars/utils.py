@@ -11,6 +11,7 @@ from typing import overload
 
 import polars as pl
 
+from narwhals.dtypes import _DelayedCategories
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import ComputeError
 from narwhals.exceptions import DuplicateError
@@ -18,50 +19,37 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import NarwhalsError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Version
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    from narwhals._polars.dataframe import PolarsDataFrame
-    from narwhals._polars.dataframe import PolarsLazyFrame
-    from narwhals._polars.expr import PolarsExpr
-    from narwhals._polars.series import PolarsSeries
+    from typing_extensions import TypeIs
+
     from narwhals.dtypes import DType
+    from narwhals.utils import _StoresNative
 
     T = TypeVar("T")
+    NativeT = TypeVar(
+        "NativeT", bound="pl.DataFrame | pl.LazyFrame | pl.Series | pl.Expr"
+    )
 
 
 @overload
-def extract_native(obj: PolarsDataFrame) -> pl.DataFrame: ...
-
-
-@overload
-def extract_native(obj: PolarsLazyFrame) -> pl.LazyFrame: ...
-
-
-@overload
-def extract_native(obj: PolarsSeries) -> pl.Series: ...
-
-
-@overload
-def extract_native(obj: PolarsExpr) -> pl.Expr: ...
-
-
+def extract_native(obj: _StoresNative[NativeT]) -> NativeT: ...
 @overload
 def extract_native(obj: T) -> T: ...
+def extract_native(obj: _StoresNative[NativeT] | T) -> NativeT | T:
+    return obj.native if _is_compliant_polars(obj) else obj
 
 
-def extract_native(
-    obj: PolarsDataFrame | PolarsLazyFrame | PolarsSeries | PolarsExpr | T,
-) -> pl.DataFrame | pl.LazyFrame | pl.Series | pl.Expr | T:
+def _is_compliant_polars(
+    obj: _StoresNative[NativeT] | Any,
+) -> TypeIs[_StoresNative[NativeT]]:
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.dataframe import PolarsLazyFrame
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.series import PolarsSeries
 
-    if isinstance(obj, (PolarsDataFrame, PolarsLazyFrame, PolarsSeries, PolarsExpr)):
-        return obj.native
-    return obj
+    return isinstance(obj, (PolarsDataFrame, PolarsLazyFrame, PolarsSeries, PolarsExpr))
 
 
 def extract_args_kwargs(
@@ -75,7 +63,7 @@ def extract_args_kwargs(
 def native_to_narwhals_dtype(
     dtype: pl.DataType, version: Version, backend_version: tuple[int, ...]
 ) -> DType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if dtype == pl.Float64:
         return dtypes.Float64()
     if dtype == pl.Float32:
@@ -113,7 +101,7 @@ def native_to_narwhals_dtype(
     if isinstance_or_issubclass(dtype, pl.Enum):
         if version is Version.V1:
             return dtypes.Enum()  # type: ignore[call-arg]
-        return dtypes.Enum(dtype.categories)
+        return dtypes.Enum(_DelayedCategories(lambda: tuple(dtype.categories)))
     if dtype == pl.Date:
         return dtypes.Date()
     if isinstance_or_issubclass(dtype, pl.Datetime):
@@ -155,7 +143,7 @@ def native_to_narwhals_dtype(
 def narwhals_to_native_dtype(
     dtype: DType | type[DType], version: Version, backend_version: tuple[int, ...]
 ) -> pl.DataType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if dtype == dtypes.Float64:
         return pl.Float64()
     if dtype == dtypes.Float32:
@@ -226,15 +214,6 @@ def narwhals_to_native_dtype(
             narwhals_to_native_dtype(dtype.inner, version, backend_version), **kwargs
         )
     return pl.Unknown()  # pragma: no cover
-
-
-def convert_str_slice_to_int_slice(
-    str_slice: slice, columns: list[str]
-) -> tuple[int | None, int | None, int | None]:  # pragma: no cover
-    start = columns.index(str_slice.start) if str_slice.start is not None else None
-    stop = columns.index(str_slice.stop) + 1 if str_slice.stop is not None else None
-    step = str_slice.step
-    return (start, stop, step)
 
 
 def catch_polars_exception(

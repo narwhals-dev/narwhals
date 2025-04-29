@@ -7,7 +7,6 @@ from typing import Sequence
 
 from narwhals.exceptions import UnsupportedDTypeError
 from narwhals.utils import Implementation
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -32,7 +31,7 @@ class WindowInputs:
     def __init__(
         self,
         expr: Column,
-        partition_by: Sequence[str],
+        partition_by: Sequence[str] | Sequence[Column],
         order_by: Sequence[str],
     ) -> None:
         self.expr = expr
@@ -44,7 +43,7 @@ class WindowInputs:
 def native_to_narwhals_dtype(
     dtype: _NativeDType, version: Version, spark_types: ModuleType
 ) -> DType:
-    dtypes = import_dtypes_module(version=version)
+    dtypes = version.dtypes
     if TYPE_CHECKING:
         native = sqlframe_types
     else:
@@ -104,7 +103,7 @@ def native_to_narwhals_dtype(
 def narwhals_to_native_dtype(
     dtype: DType | type[DType], version: Version, spark_types: ModuleType
 ) -> _NativeDType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if TYPE_CHECKING:
         native = sqlframe_types
     else:
@@ -246,6 +245,10 @@ def import_functions(implementation: Implementation, /) -> ModuleType:
         from pyspark.sql import functions
 
         return functions
+    if implementation is Implementation.PYSPARK_CONNECT:
+        from pyspark.sql.connect import functions
+
+        return functions
     from sqlframe.base.session import _BaseSession
 
     return import_module(f"sqlframe.{_BaseSession().execution_dialect_name}.functions")
@@ -256,6 +259,10 @@ def import_native_dtypes(implementation: Implementation, /) -> ModuleType:
         from pyspark.sql import types
 
         return types
+    if implementation is Implementation.PYSPARK_CONNECT:
+        from pyspark.sql.connect import types
+
+        return types
     from sqlframe.base.session import _BaseSession
 
     return import_module(f"sqlframe.{_BaseSession().execution_dialect_name}.types")
@@ -264,6 +271,11 @@ def import_native_dtypes(implementation: Implementation, /) -> ModuleType:
 def import_window(implementation: Implementation, /) -> type[Any]:
     if implementation is Implementation.PYSPARK:
         from pyspark.sql import Window
+
+        return Window
+
+    if implementation is Implementation.PYSPARK_CONNECT:
+        from pyspark.sql.connect.window import Window
 
         return Window
     from sqlframe.base.session import _BaseSession

@@ -4,27 +4,26 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
 
-from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_pyarrow
 from narwhals.utils import Implementation
 from narwhals.utils import Version
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 from narwhals.utils import parse_version
 
-try:
-    import dask.dataframe.dask_expr as dx
-except ModuleNotFoundError:  # pragma: no cover
-    import dask_expr as dx
-
 if TYPE_CHECKING:
     import dask.dataframe as dd
+    import dask.dataframe.dask_expr as dx
 
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.expr import DaskExpr
     from narwhals.dtypes import DType
+else:
+    try:
+        import dask.dataframe.dask_expr as dx
+    except ModuleNotFoundError:  # pragma: no cover
+        import dask_expr as dx
 
 
 def maybe_evaluate_expr(df: DaskLazyFrame, obj: DaskExpr | object) -> dx.Series | object:
@@ -40,8 +39,8 @@ def maybe_evaluate_expr(df: DaskLazyFrame, obj: DaskExpr | object) -> dx.Series 
 def evaluate_exprs(df: DaskLazyFrame, /, *exprs: DaskExpr) -> list[tuple[str, dx.Series]]:
     native_results: list[tuple[str, dx.Series]] = []
     for expr in exprs:
-        native_series_list = expr._call(df)
-        _, aliases = evaluate_output_names_and_aliases(expr, df, [])
+        native_series_list = expr(df)
+        aliases = expr._evaluate_aliases(df)
         if len(aliases) != len(native_series_list):  # pragma: no cover
             msg = f"Internal error: got aliases {aliases}, but only got {len(native_series_list)} results"
             raise AssertionError(msg)
@@ -75,11 +74,6 @@ def add_row_index(
 
 
 def validate_comparand(lhs: dx.Series, rhs: dx.Series) -> None:
-    try:
-        import dask.dataframe.dask_expr as dx
-    except ModuleNotFoundError:  # pragma: no cover
-        import dask_expr as dx
-
     if not dx.expr.are_co_aligned(lhs._expr, rhs._expr):  # pragma: no cover
         # are_co_aligned is a method which cheaply checks if two Dask expressions
         # have the same index, and therefore don't require index alignment.
@@ -96,7 +90,7 @@ def validate_comparand(lhs: dx.Series, rhs: dx.Series) -> None:
 
 
 def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> Any:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return "float64"
     if isinstance_or_issubclass(dtype, dtypes.Float32):

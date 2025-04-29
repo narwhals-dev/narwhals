@@ -17,10 +17,10 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
     import pyspark.sql as pyspark_sql
+    from pyspark.sql.connect.dataframe import DataFrame as PySparkConnectDataFrame
     from typing_extensions import TypeGuard
     from typing_extensions import TypeIs
 
-    from narwhals._arrow.typing import ArrowChunkedArray
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
@@ -29,10 +29,12 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoSeriesT
     from narwhals.typing import _1DArray
+    from narwhals.typing import _1DArrayInt
     from narwhals.typing import _2DArray
     from narwhals.typing import _NDArray
     from narwhals.typing import _NumpyScalar
     from narwhals.typing import _ShapeT
+
 
 # We silently allow these but - given that they claim
 # to be drop-in replacements for pandas - testing is
@@ -110,6 +112,11 @@ def get_pyspark() -> Any:  # pragma: no cover
 def get_pyspark_sql() -> Any:
     """Get pyspark.sql module (if already imported - else return None)."""
     return sys.modules.get("pyspark.sql", None)
+
+
+def get_pyspark_connect() -> Any:
+    """Get pyspark.sql.connect module (if already imported - else return None)."""
+    return sys.modules.get("pyspark.sql.connect", None)
 
 
 def get_sqlframe() -> Any:
@@ -210,9 +217,7 @@ def is_polars_series(ser: Any) -> TypeIs[pl.Series]:
     return (pl := get_polars()) is not None and isinstance(ser, pl.Series)
 
 
-def is_pyarrow_chunked_array(
-    ser: Any | ArrowChunkedArray,
-) -> TypeIs[ArrowChunkedArray]:
+def is_pyarrow_chunked_array(ser: Any) -> TypeIs[pa.ChunkedArray[Any]]:
     """Check whether `ser` is a PyArrow ChunkedArray without importing PyArrow."""
     return (pa := get_pyarrow()) is not None and isinstance(ser, pa.ChunkedArray)
 
@@ -227,6 +232,14 @@ def is_pyspark_dataframe(df: Any) -> TypeIs[pyspark_sql.DataFrame]:
     return bool(
         (pyspark_sql := get_pyspark_sql()) is not None
         and isinstance(df, pyspark_sql.DataFrame)
+    )
+
+
+def is_pyspark_connect_dataframe(df: Any) -> TypeIs[PySparkConnectDataFrame]:
+    """Check whether `df` is a PySpark Connect DataFrame without importing PySpark."""
+    return bool(
+        (pyspark_connect := get_pyspark_connect()) is not None
+        and isinstance(df, pyspark_connect.dataframe.DataFrame)
     )
 
 
@@ -247,6 +260,14 @@ def is_numpy_array(arr: Any | _NDArray[_ShapeT]) -> TypeIs[_NDArray[_ShapeT]]:
 def is_numpy_array_1d(arr: Any) -> TypeIs[_1DArray]:
     """Check whether `arr` is a 1D NumPy Array without importing NumPy."""
     return is_numpy_array(arr) and arr.ndim == 1
+
+
+def is_numpy_array_1d_int(arr: Any) -> TypeIs[_1DArrayInt]:
+    return (
+        (np := get_numpy())
+        and is_numpy_array_1d(arr)
+        and np.issubdtype(arr.dtype, np.integer)
+    )
 
 
 def is_numpy_array_2d(arr: Any) -> TypeIs[_2DArray]:
@@ -398,6 +419,10 @@ def is_narwhals_series(ser: Any | Series[IntoSeriesT]) -> TypeIs[Series[IntoSeri
     from narwhals.series import Series
 
     return isinstance(ser, Series)
+
+
+def is_narwhals_series_int(ser: Any | Series[IntoSeriesT]) -> TypeIs[Series[IntoSeriesT]]:
+    return is_narwhals_series(ser) and ser.dtype.is_integer()
 
 
 __all__ = [

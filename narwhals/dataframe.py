@@ -22,7 +22,6 @@ from narwhals._expression_parsing import infer_kind
 from narwhals._expression_parsing import is_scalar_like
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
-from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.exceptions import LengthChangingExprError
@@ -35,8 +34,10 @@ from narwhals.utils import flatten
 from narwhals.utils import generate_repr
 from narwhals.utils import is_compliant_dataframe
 from narwhals.utils import is_compliant_lazyframe
+from narwhals.utils import is_index_selector
 from narwhals.utils import is_list_of
-from narwhals.utils import is_sequence_but_not_str
+from narwhals.utils import is_sequence_like
+from narwhals.utils import is_slice_none
 from narwhals.utils import issue_deprecation_warning
 from narwhals.utils import parse_version
 from narwhals.utils import supports_arrow_c_stream
@@ -52,10 +53,11 @@ if TYPE_CHECKING:
     from typing_extensions import Concatenate
     from typing_extensions import ParamSpec
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
 
     from narwhals._compliant import CompliantDataFrame
     from narwhals._compliant import CompliantLazyFrame
-    from narwhals._compliant import IntoCompliantExpr
+    from narwhals._compliant.typing import CompliantExprAny
     from narwhals._compliant.typing import EagerNamespaceAny
     from narwhals.group_by import GroupBy
     from narwhals.group_by import LazyGroupBy
@@ -66,10 +68,13 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoFrame
     from narwhals.typing import JoinStrategy
     from narwhals.typing import LazyUniqueKeepStrategy
+    from narwhals.typing import MultiColSelector as _MultiColSelector
+    from narwhals.typing import MultiIndexSelector as _MultiIndexSelector
     from narwhals.typing import PivotAgg
+    from narwhals.typing import SingleColSelector
+    from narwhals.typing import SingleIndexSelector
     from narwhals.typing import SizeUnit
     from narwhals.typing import UniqueKeepStrategy
-    from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
 
     PS = ParamSpec("PS")
@@ -78,6 +83,9 @@ _FrameT = TypeVar("_FrameT", bound="IntoFrame")
 FrameT = TypeVar("FrameT", bound="IntoFrame")
 DataFrameT = TypeVar("DataFrameT", bound="IntoDataFrame")
 R = TypeVar("R")
+
+MultiColSelector: TypeAlias = "_MultiColSelector[Series[Any]]"
+MultiIndexSelector: TypeAlias = "_MultiIndexSelector[Series[Any]]"
 
 
 class BaseFrame(Generic[_FrameT]):
@@ -96,7 +104,7 @@ class BaseFrame(Generic[_FrameT]):
 
     def _flatten_and_extract(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> tuple[list[IntoCompliantExpr[Any, Any]], list[ExprKind]]:
+    ) -> tuple[list[CompliantExprAny], list[ExprKind]]:
         """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
         out_exprs = []
         out_kinds = []
@@ -795,41 +803,40 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return self._compliant_frame.estimated_size(unit=unit)
 
+    # `str` overlaps with `Sequence[str]`
+    # We can ignore this but we must keep this overload ordering
+    @overload
+    def __getitem__(self, item: tuple[SingleIndexSelector, SingleColSelector]) -> Any: ...
+
     @overload
     def __getitem__(  # type: ignore[overload-overlap]
-        self,
-        item: str | tuple[slice | Sequence[int] | _1DArray, int | str],
+        self, item: str | tuple[MultiIndexSelector, SingleColSelector]
     ) -> Series[Any]: ...
 
     @overload
     def __getitem__(
         self,
         item: (
-            int
-            | slice
-            | Sequence[int]
-            | Sequence[str]
-            | _1DArray
-            | tuple[
-                slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
-            ]
+            SingleIndexSelector
+            | MultiIndexSelector
+            | MultiColSelector
+            | tuple[SingleIndexSelector, MultiColSelector]
+            | tuple[MultiIndexSelector, MultiColSelector]
         ),
     ) -> Self: ...
     def __getitem__(
         self,
         item: (
-            str
-            | int
-            | slice
-            | Sequence[int]
-            | Sequence[str]
-            | _1DArray
-            | tuple[slice | Sequence[int] | _1DArray, int | str]
-            | tuple[
-                slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
-            ]
+            SingleIndexSelector
+            | SingleColSelector
+            | MultiColSelector
+            | MultiIndexSelector
+            | tuple[SingleIndexSelector, SingleColSelector]
+            | tuple[SingleIndexSelector, MultiColSelector]
+            | tuple[MultiIndexSelector, SingleColSelector]
+            | tuple[MultiIndexSelector, MultiColSelector]
         ),
-    ) -> Series[Any] | Self:
+    ) -> Series[Any] | Self | Any:
         """Extract column or slice of DataFrame.
 
         Arguments:
@@ -879,40 +886,56 @@ class DataFrame(BaseFrame[DataFrameT]):
             1    2
             Name: a, dtype: int64
         """
-        if isinstance(item, int):
-            item = [item]
-        if (
-            isinstance(item, tuple)
-            and len(item) == 2
-            and (isinstance(item[0], (str, int)))
-        ):
-            msg = (
-                f"Expected str or slice, got: {type(item)}.\n\n"
-                "Hint: if you were trying to get a single element out of a "
-                "dataframe, use `DataFrame.item`."
-            )
-            raise TypeError(msg)
-        if (
-            isinstance(item, tuple)
-            and len(item) == 2
-            and (is_sequence_but_not_str(item[1]) or isinstance(item[1], slice))
-        ):
-            if item[1] == slice(None) and item[0] == slice(None):
+        from narwhals.series import Series
+
+        msg = (
+            f"Unexpected type for `DataFrame.__getitem__`, got: {type(item)}.\n\n"
+            "Hints:\n"
+            "- use `df.item` to select a single item.\n"
+            "- Use `df[indices, :]` to select rows positionally.\n"
+            "- Use `df.filter(mask)` to filter rows based on a boolean mask."
+        )
+
+        if isinstance(item, tuple):
+            if len(item) > 2:
+                tuple_msg = (
+                    "Tuples cannot be passed to DataFrame.__getitem__ directly.\n\n"
+                    "Hint: instead of `df[indices]`, did you mean `df[indices, :]`?"
+                )
+                raise TypeError(tuple_msg)
+            rows = None if not item or is_slice_none(item[0]) else item[0]
+            columns = None if len(item) < 2 or is_slice_none(item[1]) else item[1]
+            if rows is None and columns is None:
                 return self
-            return self._with_compliant(self._compliant_frame[item])
-        if isinstance(item, str) or (isinstance(item, tuple) and len(item) == 2):
-            return self._series(self._compliant_frame[item], level=self._level)
-
-        elif (
-            is_sequence_but_not_str(item)
-            or isinstance(item, slice)
-            or (is_numpy_array_1d(item))
-        ):
-            return self._with_compliant(self._compliant_frame[item])
-
+        elif is_index_selector(item):
+            rows = item
+            columns = None
+        elif is_sequence_like(item) or isinstance(item, (slice, str)):
+            rows = None
+            columns = item
         else:
-            msg = f"Expected str or slice, got: {type(item)}"
             raise TypeError(msg)
+
+        if isinstance(rows, str):
+            raise TypeError(msg)
+
+        compliant = self._compliant_frame
+
+        if isinstance(columns, (int, str)):
+            if isinstance(rows, int):
+                return self.item(rows, columns)
+            col_name = columns if isinstance(columns, str) else self.columns[columns]
+            series = self.get_column(col_name)
+            return series[rows] if rows is not None else series
+        if isinstance(rows, Series):
+            rows = rows._compliant_series
+        if isinstance(columns, Series):
+            columns = columns._compliant_series
+        if rows is None:
+            return self._with_compliant(compliant[:, columns])
+        if columns is None:
+            return self._with_compliant(compliant[rows, :])
+        return self._with_compliant(compliant[rows, columns])
 
     def __contains__(self, key: str) -> bool:
         return key in self.columns
@@ -1487,13 +1510,24 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return super().filter(*predicates, **constraints)
 
+    @overload
     def group_by(
-        self, *keys: str | Iterable[str], drop_null_keys: bool = False
+        self, *keys: IntoExpr | Iterable[IntoExpr], drop_null_keys: Literal[False] = ...
+    ) -> GroupBy[Self]: ...
+
+    @overload
+    def group_by(
+        self, *keys: str | Iterable[str], drop_null_keys: Literal[True]
+    ) -> GroupBy[Self]: ...
+
+    def group_by(
+        self, *keys: IntoExpr | Iterable[IntoExpr], drop_null_keys: bool = False
     ) -> GroupBy[Self]:
         r"""Start a group by operation.
 
         Arguments:
-            *keys: Column(s) to group by. Accepts multiple columns names as a list.
+            *keys: Column(s) to group by. Accepts expression input. Strings are parsed as
+                column names.
             drop_null_keys: if True, then groups where any key is null won't be included
                 in the result.
 
@@ -1535,19 +1569,47 @@ class DataFrame(BaseFrame[DataFrameT]):
             1  b  2  4
             2  b  3  2
             3  c  3  1
+
+            Expressions are also accepted.
+
+            >>> nw.from_native(df_native, eager_only=True).group_by(
+            ...     "a", nw.col("b") // 2
+            ... ).agg(nw.col("c").mean()).to_native()
+               a  b    c
+            0  a  0  4.0
+            1  b  1  3.0
+            2  c  1  1.0
         """
-        from narwhals.expr import Expr
         from narwhals.group_by import GroupBy
-        from narwhals.series import Series
 
         flat_keys = flatten(keys)
-        if any(isinstance(x, (Expr, Series)) for x in flat_keys):
-            msg = (
-                "`group_by` with expression or Series keys is not (yet?) supported.\n\n"
-                "Hint: instead of `df.group_by(nw.col('a'))`, use `df.group_by('a')`."
-            )
+
+        if all(isinstance(key, str) for key in flat_keys):
+            return GroupBy(self, flat_keys, drop_null_keys=drop_null_keys)
+
+        from narwhals import col
+        from narwhals.expr import Expr
+        from narwhals.series import Series
+
+        key_is_expr_or_series = tuple(isinstance(k, (Expr, Series)) for k in flat_keys)
+
+        if drop_null_keys and any(key_is_expr_or_series):
+            msg = "drop_null_keys cannot be True when keys contains Expr or Series"
             raise NotImplementedError(msg)
-        return GroupBy(self, *flat_keys, drop_null_keys=drop_null_keys)
+
+        _keys = [
+            k if is_expr else col(k)
+            for k, is_expr in zip(flat_keys, key_is_expr_or_series)
+        ]
+        expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
+
+        if not all(kind is ExprKind.TRANSFORM for kind in kinds):
+            from narwhals.exceptions import ComputeError
+
+            msg = "Group by is not supported with keys that are not transformation expressions"
+            raise ComputeError(msg)
+
+        return GroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
         self,
@@ -2769,15 +2831,24 @@ class LazyFrame(BaseFrame[FrameT]):
 
         return super().filter(*predicates, **constraints)
 
+    @overload
     def group_by(
-        self, *keys: str | Iterable[str], drop_null_keys: bool = False
+        self, *keys: IntoExpr | Iterable[IntoExpr], drop_null_keys: Literal[False] = ...
+    ) -> LazyGroupBy[Self]: ...
+
+    @overload
+    def group_by(
+        self, *keys: str | Iterable[str], drop_null_keys: Literal[True]
+    ) -> LazyGroupBy[Self]: ...
+
+    def group_by(
+        self, *keys: IntoExpr | Iterable[IntoExpr], drop_null_keys: bool = False
     ) -> LazyGroupBy[Self]:
         r"""Start a group by operation.
 
         Arguments:
-            *keys:
-                Column(s) to group by. Accepts expression input. Strings are
-                parsed as column names.
+            *keys: Column(s) to group by. Accepts expression input. Strings are parsed as
+                column names.
             drop_null_keys: if True, then groups where any key is null won't be
                 included in the result.
 
@@ -2800,19 +2871,46 @@ class LazyFrame(BaseFrame[FrameT]):
             │ b       │      2 │
             └─────────┴────────┘
             <BLANKLINE>
+
+            Expressions are also accepted.
+
+            >>> df.group_by(nw.col("b").str.len_chars()).agg(
+            ...     nw.col("a").sum()
+            ... ).to_native()
+            ┌───────┬────────┐
+            │   b   │   a    │
+            │ int64 │ int128 │
+            ├───────┼────────┤
+            │     1 │      6 │
+            └───────┴────────┘
+            <BLANKLINE>
         """
-        from narwhals.expr import Expr
         from narwhals.group_by import LazyGroupBy
-        from narwhals.series import Series
 
         flat_keys = flatten(keys)
-        if any(isinstance(x, (Expr, Series)) for x in flat_keys):
-            msg = (
-                "`group_by` with expression or Series keys is not (yet?) supported.\n\n"
-                "Hint: instead of `df.group_by(nw.col('a'))`, use `df.group_by('a')`."
-            )
+
+        if all(isinstance(key, str) for key in flat_keys):
+            return LazyGroupBy(self, flat_keys, drop_null_keys=drop_null_keys)
+
+        from narwhals import col
+        from narwhals.expr import Expr
+
+        key_is_expr = tuple(isinstance(k, Expr) for k in flat_keys)
+
+        if drop_null_keys and any(key_is_expr):
+            msg = "drop_null_keys cannot be True when keys contains Expr"
             raise NotImplementedError(msg)
-        return LazyGroupBy(self, *flat_keys, drop_null_keys=drop_null_keys)
+
+        _keys = [k if is_expr else col(k) for k, is_expr in zip(flat_keys, key_is_expr)]
+        expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
+
+        if not all(kind is ExprKind.TRANSFORM for kind in kinds):
+            from narwhals.exceptions import ComputeError
+
+            msg = "Group by is not supported with keys that are not transformation expressions"
+            raise ComputeError(msg)
+
+        return LazyGroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
         self,

@@ -75,7 +75,8 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
             return [
-                result.over(df._Window().partitionBy(df._F.lit(1))) for result in self(df)
+                result.over(self._Window().partitionBy(self._F.lit(1)))
+                for result in self(df)
             ]
 
         return self.__class__(
@@ -438,7 +439,8 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def median(self) -> Self:
         def _median(_input: Column) -> Column:
             if (
-                self._implementation.is_pyspark()
+                self._implementation
+                in {Implementation.PYSPARK, Implementation.PYSPARK_CONNECT}
                 and (pyspark := get_pyspark()) is not None
                 and parse_version(pyspark) < (3, 4)
             ):  # pragma: no cover
@@ -577,17 +579,15 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_callable(_n_unique)
 
-    def over(
-        self,
-        partition_by: Sequence[str],
-        order_by: Sequence[str] | None,
-    ) -> Self:
+    def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
         if (window_function := self._window_function) is not None:
             assert order_by is not None  # noqa: S101
 
             def func(df: SparkLikeLazyFrame) -> list[Column]:
                 return [
-                    window_function(WindowInputs(expr, partition_by, order_by))
+                    window_function(
+                        WindowInputs(expr, partition_by or [self._F.lit(1)], order_by)
+                    )
                     for expr in self._call(df)
                 ]
         else:
@@ -706,13 +706,40 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         limit: int | None,
     ) -> Self:
         if strategy is not None:
-            msg = "Support for strategies is not yet implemented."
-            raise NotImplementedError(msg)
 
-        def _fill_null(_input: Column, value: Column) -> Column:
+            def _fill_with_strategy(window_inputs: WindowInputs) -> Column:
+                fill_func = (
+                    self._F.last_value if strategy == "forward" else self._F.first_value
+                )
+
+                if strategy == "forward":
+                    start = (
+                        -limit if limit is not None else self._Window().unboundedPreceding
+                    )
+                    end = self._Window().currentRow
+                else:
+                    start = self._Window().currentRow
+                    end = (
+                        limit if limit is not None else self._Window().unboundedFollowing
+                    )
+
+                window = (
+                    self._Window()
+                    .partitionBy(list(window_inputs.partition_by) or self._F.lit(1))
+                    .orderBy(
+                        [self._F.col(x).asc_nulls_first() for x in window_inputs.order_by]
+                    )
+                    .rowsBetween(start, end)
+                )
+
+                return fill_func(window_inputs.expr, ignoreNulls=True).over(window)
+
+            return self._with_window_function(_fill_with_strategy)
+
+        def _fill_constant(_input: Column, value: Column) -> Column:
             return self._F.ifnull(_input, value)
 
-        return self._with_callable(_fill_null, value=value)
+        return self._with_callable(_fill_constant, value=value)
 
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._with_window_function(
@@ -774,7 +801,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             else:
                 order_by_cols = [self._F.asc_nulls_last(_input)]
 
-            window = self._Window().orderBy(order_by_cols)
+            window = self._Window().partitionBy(self._F.lit(1)).orderBy(order_by_cols)
             count_window = self._Window().partitionBy(_input)
 
             if method == "max":

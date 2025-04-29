@@ -38,7 +38,6 @@ from narwhals.dependencies import is_polars_series
 from narwhals.dependencies import is_pyarrow_chunked_array
 from narwhals.dependencies import is_pyarrow_table
 from narwhals.utils import Version
-from narwhals.utils import import_namespace
 
 if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
@@ -591,11 +590,9 @@ def _from_native_impl(  # noqa: PLR0915
                 msg = "Please set `allow_series=True` or `series_only=True`"
                 raise TypeError(msg)
             return native_object
-        pa_compliant = (
-            import_namespace(version)
-            .from_native_object(native_object)
-            .compliant.from_native(native_object)
-        )
+        pa_compliant = version.namespace.from_native_object(
+            native_object
+        ).compliant.from_native(native_object)
         if is_compliant_dataframe(pa_compliant):
             return DataFrame(pa_compliant, level="full")
         return Series(pa_compliant, level="full")
@@ -628,11 +625,9 @@ def _from_native_impl(  # noqa: PLR0915
                 msg = "Cannot only use `series_only=True` or `eager_only=False` with DuckDBPyRelation"
                 raise TypeError(msg)
             return native_object
-        duckdb_compliant = (
-            import_namespace(version)
-            .from_native_object(native_object)
-            .compliant.from_native(native_object)
-        )
+        duckdb_compliant = version.namespace.from_native_object(
+            native_object
+        ).compliant.from_native(native_object)
         if version is Version.V1:
             return DataFrame(duckdb_compliant, level="interchange")
         return LazyFrame(duckdb_compliant, level="lazy")
@@ -668,7 +663,7 @@ def _from_native_impl(  # noqa: PLR0915
 
     # PySpark
     elif is_native_spark_like(native_object):  # pragma: no cover
-        ns_spark = import_namespace(version).from_native_object(native_object)
+        ns_spark = version.namespace.from_native_object(native_object)
         if series_only:
             msg = f"Cannot only use `series_only` with {ns_spark.implementation._alias} DataFrame"
             raise TypeError(msg)

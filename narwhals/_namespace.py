@@ -20,6 +20,7 @@ from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import is_dask_dataframe
 from narwhals.dependencies import is_duckdb_relation
+from narwhals.dependencies import is_pyspark_connect_dataframe
 from narwhals.dependencies import is_pyspark_dataframe
 from narwhals.dependencies import is_sqlframe_dataframe
 from narwhals.utils import Implementation
@@ -34,6 +35,7 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
     import pyspark.sql as pyspark_sql
+    from pyspark.sql.connect.dataframe import DataFrame as PySparkConnectDataFrame
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
@@ -72,7 +74,10 @@ if TYPE_CHECKING:
         _PandasLike, Implementation.PANDAS, Implementation.CUDF, Implementation.MODIN
     ]
     SparkLike: TypeAlias = Literal[
-        _SparkLike, Implementation.PYSPARK, Implementation.SQLFRAME
+        _SparkLike,
+        Implementation.PYSPARK,
+        Implementation.SQLFRAME,
+        Implementation.PYSPARK_CONNECT,
     ]
     EagerOnly: TypeAlias = "PandasLike | Arrow"
     EagerAllowed: TypeAlias = "EagerOnly | Polars"
@@ -111,7 +116,10 @@ if TYPE_CHECKING:
     _NativePandasLike: TypeAlias = "_NativePandas | _NativeCuDF | _NativeModin"
     _NativeSQLFrame: TypeAlias = "SQLFrameDataFrame"
     _NativePySpark: TypeAlias = "pyspark_sql.DataFrame"
-    _NativeSparkLike: TypeAlias = "_NativeSQLFrame | _NativePySpark"
+    _NativePySparkConnect: TypeAlias = "PySparkConnectDataFrame"
+    _NativeSparkLike: TypeAlias = (
+        "_NativeSQLFrame | _NativePySpark | _NativePySparkConnect"
+    )
 
     NativeKnown: TypeAlias = "_NativePolars | _NativeArrow | _NativePandasLike | _NativeSparkLike | _NativeDuckDB | _NativeDask"
     NativeUnknown: TypeAlias = (
@@ -292,6 +300,8 @@ class Namespace(Generic[CompliantNamespaceT_co]):
             return cls.from_backend(
                 Implementation.SQLFRAME
                 if is_native_sqlframe(native)
+                else Implementation.PYSPARK_CONNECT
+                if is_native_pyspark_connect(native)
                 else Implementation.PYSPARK
             )
         elif is_native_dask(native):
@@ -326,6 +336,7 @@ def is_native_dask(obj: Any) -> TypeIs[_NativeDask]:
 is_native_duckdb: _Guard[_NativeDuckDB] = is_duckdb_relation
 is_native_sqlframe: _Guard[_NativeSQLFrame] = is_sqlframe_dataframe
 is_native_pyspark: _Guard[_NativePySpark] = is_pyspark_dataframe
+is_native_pyspark_connect: _Guard[_NativePySparkConnect] = is_pyspark_connect_dataframe
 
 
 def is_native_pandas(obj: Any) -> TypeIs[_NativePandas]:
@@ -351,4 +362,8 @@ def is_native_pandas_like(obj: Any) -> TypeIs[_NativePandasLike]:
 
 
 def is_native_spark_like(obj: Any) -> TypeIs[_NativeSparkLike]:
-    return is_native_pyspark(obj) or is_native_sqlframe(obj)
+    return (
+        is_native_sqlframe(obj)
+        or is_native_pyspark(obj)
+        or is_native_pyspark_connect(obj)
+    )

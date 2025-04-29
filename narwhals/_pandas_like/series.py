@@ -7,7 +7,6 @@ from typing import Iterator
 from typing import Mapping
 from typing import Sequence
 from typing import cast
-from typing import overload
 
 import numpy as np
 
@@ -26,11 +25,9 @@ from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_index
 from narwhals.dependencies import is_numpy_array_1d
-from narwhals.dependencies import is_numpy_scalar
 from narwhals.dependencies import is_pandas_like_series
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_list_of
 from narwhals.utils import parse_version
 from narwhals.utils import validate_backend_version
@@ -41,10 +38,10 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
+    import pyarrow as pa
     from typing_extensions import Self
     from typing_extensions import TypeIs
 
-    from narwhals._arrow.typing import ArrowArray
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.dtypes import DType
@@ -55,9 +52,11 @@ if TYPE_CHECKING:
     from narwhals.typing import NumericLiteral
     from narwhals.typing import RankMethod
     from narwhals.typing import RollingInterpolationMethod
+    from narwhals.typing import SizedMultiIndexSelector
     from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
     from narwhals.typing import _AnyDArray
+    from narwhals.typing import _SliceIndex
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -147,16 +146,14 @@ class PandasLikeSeries(EagerSeries[Any]):
             self._implementation, self._backend_version, self._version
         )
 
-    @overload
-    def __getitem__(self, idx: int) -> Any: ...
+    def _gather(self, rows: SizedMultiIndexSelector[pd.Series[Any]]) -> Self:
+        rows = list(rows) if isinstance(rows, tuple) else rows
+        return self._with_native(self.native.iloc[rows])
 
-    @overload
-    def __getitem__(self, idx: slice | Sequence[int]) -> Self: ...
-
-    def __getitem__(self, idx: int | slice | Sequence[int]) -> Any | Self:
-        if isinstance(idx, int) or is_numpy_scalar(idx):
-            return self.native.iloc[idx]
-        return self._with_native(self.native.iloc[idx])
+    def _gather_slice(self, rows: _SliceIndex | range) -> Self:
+        return self._with_native(
+            self.native.iloc[slice(rows.start, rows.stop, rows.step)]
+        )
 
     def _with_version(self, version: Version) -> Self:
         return self.__class__(
@@ -680,31 +677,25 @@ class PandasLikeSeries(EagerSeries[Any]):
     def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
         # the default is meant to be None, but pandas doesn't allow it?
         # https://numpy.org/doc/stable/reference/generated/numpy.ndarray.__array__.html
-        copy = copy or self._implementation is Implementation.CUDF
-        dtypes = import_dtypes_module(self._version)
+        dtypes = self._version.dtypes
         if isinstance(self.dtype, dtypes.Datetime) and self.dtype.time_zone is not None:
             s = self.dt.convert_time_zone("UTC").dt.replace_time_zone(None).native
         else:
             s = self.native
 
         has_missing = s.isna().any()
+        kwargs: dict[Any, Any] = {"copy": copy or self._implementation.is_cudf()}
         if has_missing and str(s.dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
             if self._implementation is Implementation.PANDAS and self._backend_version < (
                 1,
             ):  # pragma: no cover
-                kwargs = {}
+                ...
             else:
-                kwargs = {"na_value": float("nan")}
-            return s.to_numpy(
-                dtype=dtype or PANDAS_TO_NUMPY_DTYPE_MISSING[str(s.dtype)],
-                copy=copy,
-                **kwargs,
-            )
+                kwargs.update({"na_value": float("nan")})
+            dtype = dtype or PANDAS_TO_NUMPY_DTYPE_MISSING[str(s.dtype)]
         if not has_missing and str(s.dtype) in PANDAS_TO_NUMPY_DTYPE_NO_MISSING:
-            return s.to_numpy(
-                dtype=dtype or PANDAS_TO_NUMPY_DTYPE_NO_MISSING[str(s.dtype)], copy=copy
-            )
-        return s.to_numpy(dtype=dtype, copy=copy)
+            dtype = dtype or PANDAS_TO_NUMPY_DTYPE_NO_MISSING[str(s.dtype)]
+        return s.to_numpy(dtype=dtype, **kwargs)
 
     def to_pandas(self) -> pd.Series[Any]:
         if self._implementation is Implementation.PANDAS:
@@ -833,7 +824,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         kwargs = {"axis": 0} if self._implementation is Implementation.MODIN else {}
         return self._with_native(self.native.clip(lower, upper, **kwargs))
 
-    def to_arrow(self) -> ArrowArray:
+    def to_arrow(self) -> pa.Array[Any]:
         if self._implementation is Implementation.CUDF:
             return self.native.to_arrow()
 
