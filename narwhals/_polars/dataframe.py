@@ -70,8 +70,7 @@ Method: TypeAlias = "Callable[..., R]"
 Where `R` is the return type.
 """
 
-# DataFrame methods where PolarsDataFrame just defers to Polars.DataFrame
-# directly.
+# DataFrame methods where PolarsDataFrame just defers to Polars.DataFrame directly.
 INHERITED_METHODS = frozenset(
     [
         "clone",

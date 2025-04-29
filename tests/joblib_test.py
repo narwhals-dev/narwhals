@@ -24,3 +24,20 @@ def test_parallelisability(constructor_eager: ConstructorEager) -> None:
     assert len(result) == 1
     expected = {"col1": [0, 4], "col2": [3, 7]}
     assert_equal_data(result[0], expected)
+
+
+def test_parallelisability_series(constructor_eager: ConstructorEager) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/2450
+    def do_something(s: nw.Series[Any]) -> nw.Series[Any]:  # pragma: no cover
+        return s * 2
+
+    columns = [
+        nw.from_native(
+            constructor_eager({"col1": [0, 2], "col2": [3, 7]}), eager_only=True
+        )["col1"]
+    ]
+    result = list(
+        Parallel(n_jobs=-1)(delayed(do_something)(column) for column in columns)
+    )
+    assert len(result) == 1
+    assert_equal_data({"col1": result[0]}, {"col1": [0, 4]})

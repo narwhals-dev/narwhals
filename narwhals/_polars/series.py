@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
-from typing import Iterator
 from typing import Mapping
 from typing import Sequence
 from typing import cast
@@ -42,6 +41,82 @@ if TYPE_CHECKING:
     from narwhals.utils import _FullContext
 
     T = TypeVar("T")
+
+
+# Series methods where PolarsSeries just defers to Polars.Series directly.
+INHERITED_METHODS = frozenset(
+    [
+        "__add__",
+        "__and__",
+        "__floordiv__",
+        "__invert__",
+        "__iter__",
+        "__mod__",
+        "__mul__",
+        "__or__",
+        "__pow__",
+        "__radd__",
+        "__rand__",
+        "__rfloordiv__",
+        "__rmod__",
+        "__rmul__",
+        "__ror__",
+        "__rsub__",
+        "__rtruediv__",
+        "__sub__",
+        "__truediv__",
+        "abs",
+        "all",
+        "any",
+        "arg_max",
+        "arg_min",
+        "arg_true",
+        "clip",
+        "count",
+        "cum_max",
+        "cum_min",
+        "cum_prod",
+        "cum_sum",
+        "diff",
+        "drop_nulls",
+        "fill_null",
+        "filter",
+        "gather_every",
+        "head",
+        "is_between",
+        "is_finite",
+        "is_first_distinct",
+        "is_in",
+        "is_last_distinct",
+        "is_null",
+        "is_sorted",
+        "is_unique",
+        "item",
+        "len",
+        "max",
+        "mean",
+        "min",
+        "mode",
+        "n_unique",
+        "null_count",
+        "quantile",
+        "rank",
+        "round",
+        "sample",
+        "shift",
+        "skew",
+        "std",
+        "sum",
+        "tail",
+        "to_arrow",
+        "to_frame",
+        "to_list",
+        "to_pandas",
+        "unique",
+        "var",
+        "zip_with",
+    ]
+)
 
 
 class PolarsSeries:
@@ -147,8 +222,9 @@ class PolarsSeries:
         return self.__narwhals_namespace__()._expr._from_series(self)
 
     def __getattr__(self, attr: str) -> Any:
-        if attr == "as_py":  # pragma: no cover
-            raise AttributeError
+        if attr not in INHERITED_METHODS:
+            msg = f"{self.__class__.__name__} has not attribute '{attr}'."
+            raise AttributeError(msg)
 
         def func(*args: Any, **kwargs: Any) -> Any:
             pos, kwds = extract_args_kwargs(args, kwargs)
@@ -228,42 +304,12 @@ class PolarsSeries:
     def __lt__(self, other: Any) -> Self:
         return self._with_native(self.native.__lt__(extract_native(other)))  # pyright: ignore[reportArgumentType]
 
-    def __and__(self, other: PolarsSeries | bool | Any) -> Self:
-        return self._with_native(self.native.__and__(extract_native(other)))
-
-    def __or__(self, other: PolarsSeries | bool | Any) -> Self:
-        return self._with_native(self.native.__or__(extract_native(other)))
-
-    def __add__(self, other: PolarsSeries | Any) -> Self:
-        return self._with_native(self.native.__add__(extract_native(other)))
-
-    def __radd__(self, other: PolarsSeries | Any) -> Self:
-        return self._with_native(self.native.__radd__(extract_native(other)))
-
-    def __sub__(self, other: PolarsSeries | Any) -> Self:
-        return self._with_native(self.native.__sub__(extract_native(other)))
-
-    def __rsub__(self, other: PolarsSeries | Any) -> Self:
-        return self._with_native(self.native.__rsub__(extract_native(other)))
-
-    def __mul__(self, other: PolarsSeries | Any) -> Self:
-        return self._with_native(self.native.__mul__(extract_native(other)))
-
-    def __rmul__(self, other: PolarsSeries | Any) -> Self:
-        return self._with_native(self.native.__rmul__(extract_native(other)))
-
-    def __pow__(self, other: PolarsSeries | Any) -> Self:
-        return self._with_native(self.native.__pow__(extract_native(other)))
-
     def __rpow__(self, other: PolarsSeries | Any) -> Self:
         result = self.native.__rpow__(extract_native(other))
         if self._backend_version < (1, 16, 1):
             # Explicitly set alias to work around https://github.com/pola-rs/polars/issues/20071
             result = result.alias(self.name)
         return self._with_native(result)
-
-    def __invert__(self) -> Self:
-        return self._with_native(self.native.__invert__())
 
     def is_nan(self) -> Self:
         try:
@@ -576,15 +622,6 @@ class PolarsSeries:
     def struct(self) -> PolarsSeriesStructNamespace:
         return PolarsSeriesStructNamespace(self)
 
-    __iter__: Method[Iterator[Any]]
-    __floordiv__: Method[Self]
-    __mod__: Method[Self]
-    __rand__: Method[Self]
-    __rfloordiv__: Method[Self]
-    __rmod__: Method[Self]
-    __ror__: Method[Self]
-    __rtruediv__: Method[Self]
-    __truediv__: Method[Self]
     abs: Method[Self]
     all: Method[bool]
     any: Method[bool]
