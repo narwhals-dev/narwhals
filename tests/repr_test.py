@@ -89,8 +89,8 @@ def test_polars_series_repr() -> None:
         "|shape: (2,)         |\n"
         "|Series: 'col1' [i64]|\n"
         "|[                   |\n"
-        "|    null            |\n"
-        "|    2               |\n"
+        "|        null        |\n"
+        "|        2           |\n"
         "|]                   |\n"
         "└────────────────────┘"
     )
