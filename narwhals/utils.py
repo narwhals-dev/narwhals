@@ -1862,10 +1862,7 @@ class requires:  # noqa: N801
         backend = instance._implementation
         minimum = self._unparse_version(self._min_version)
         found = self._unparse_version(instance._backend_version)
-        msg = (
-            f"`{method}` is only available in '{backend}>={minimum}', "
-            f"found version {found!r}."
-        )
+        msg = f"`{method}` is only available in '{backend}>={minimum}', found version {found!r}."
         if self._hint:
             msg = f"{msg}\n{self._hint}"
         raise NotImplementedError(msg)
