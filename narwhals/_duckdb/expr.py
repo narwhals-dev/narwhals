@@ -680,7 +680,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             if self._backend_version < (1, 3):  # pragma: no cover
                 msg = (
                     f"`fill_null` with `strategy={strategy}` is only available in "
-                    "'DuckDB>=1.3.0'."
+                    "'duckdb>=1.3.0'."
                 )
                 raise NotImplementedError(msg)
 
