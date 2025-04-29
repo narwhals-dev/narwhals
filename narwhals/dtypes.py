@@ -489,7 +489,7 @@ class Enum(DType):
         if cached := self._cached_categories:
             return cached
         elif delayed := self._delayed_categories:
-            self._cached_categories = tuple(delayed)
+            self._cached_categories = delayed.to_tuple()
             return self._cached_categories
         else:  # pragma: no cover
             msg = f"Internal structure of {type(self).__name__!r} is invalid."
