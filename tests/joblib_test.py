@@ -26,8 +26,13 @@ def test_parallelisability(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result[0], expected)
 
 
-def test_parallelisability_series(constructor_eager: ConstructorEager) -> None:
+def test_parallelisability_series(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/2450
+    if "modin" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
+
     def do_something(s: nw.Series[Any]) -> nw.Series[Any]:  # pragma: no cover
         return s * 2
 
