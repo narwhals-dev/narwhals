@@ -73,3 +73,25 @@ def test_repr() -> None:
         "└───────────────────────────────────────┘"
     )
     assert result == expected
+
+
+def test_polars_series_repr() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = nw.from_native(pl.DataFrame({"col1": [None, 2], "col2": [3, 7]}))
+    s = df["col1"]
+    result = repr(s)
+    expected = (
+        "┌────────────────────┐\n"
+        "|  Narwhals Series   |\n"
+        "|--------------------|\n"
+        "|shape: (2,)         |\n"
+        "|Series: 'col1' [i64]|\n"
+        "|[                   |\n"
+        "|    null            |\n"
+        "|    2               |\n"
+        "|]                   |\n"
+        "└────────────────────┘"
+    )
+    assert result == expected

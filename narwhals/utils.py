@@ -1511,7 +1511,7 @@ def generate_repr(header: str, native_repr: str) -> str:
         terminal_width = os.get_terminal_size().columns
     except OSError:
         terminal_width = int(os.getenv("COLUMNS", 80))  # noqa: PLW1508
-    native_lines = native_repr.splitlines()
+    native_lines = native_repr.replace("\t", "    ").splitlines()
     max_native_width = max(len(line) for line in native_lines)
 
     if max_native_width + 2 <= terminal_width:
