@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.37.0"
+version = "1.37.1"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
@@ -284,10 +284,11 @@ module = [
   "dask_expr.*",
   "duckdb.*",
   "ibis.*",
+  "joblib.*",
   "modin.*",
   "numpy.*",
-  "sklearn.*",
   "pyspark.*",
+  "sklearn.*",
 ]
 # TODO: remove follow_imports
 follow_imports = "skip"

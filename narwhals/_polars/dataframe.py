@@ -70,6 +70,36 @@ Method: TypeAlias = "Callable[..., R]"
 Where `R` is the return type.
 """
 
+# DataFrame methods where PolarsDataFrame just defers to Polars.DataFrame directly.
+INHERITED_METHODS = frozenset(
+    [
+        "clone",
+        "drop_nulls",
+        "estimated_size",
+        "explode",
+        "filter",
+        "gather_every",
+        "head",
+        "is_unique",
+        "item",
+        "iter_rows",
+        "join_asof",
+        "rename",
+        "row",
+        "rows",
+        "sample",
+        "select",
+        "sort",
+        "tail",
+        "to_arrow",
+        "to_pandas",
+        "unique",
+        "with_columns",
+        "write_csv",
+        "write_parquet",
+    ]
+)
+
 
 class PolarsDataFrame:
     clone: Method[Self]
@@ -221,6 +251,10 @@ class PolarsDataFrame:
         return self._with_native(self.native.tail(n))
 
     def __getattr__(self, attr: str) -> Any:
+        if attr not in INHERITED_METHODS:  # pragma: no cover
+            msg = f"{self.__class__.__name__} has not attribute '{attr}'."
+            raise AttributeError(msg)
+
         def func(*args: Any, **kwargs: Any) -> Any:
             pos, kwds = extract_args_kwargs(args, kwargs)
             try:
@@ -562,6 +596,10 @@ class PolarsLazyFrame:
         )
 
     def __getattr__(self, attr: str) -> Any:
+        if attr not in INHERITED_METHODS:  # pragma: no cover
+            msg = f"{self.__class__.__name__} has not attribute '{attr}'."
+            raise AttributeError(msg)
+
         def func(*args: Any, **kwargs: Any) -> Any:
             pos, kwds = extract_args_kwargs(args, kwargs)
             try:
