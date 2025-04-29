@@ -595,6 +595,10 @@ class PolarsLazyFrame:
         )
 
     def __getattr__(self, attr: str) -> Any:
+        if attr not in INHERITED_METHODS:  # pragma: no cover
+            msg = f"{self.__class__.__name__} has not attribute '{attr}'."
+            raise AttributeError(msg)
+
         def func(*args: Any, **kwargs: Any) -> Any:
             pos, kwds = extract_args_kwargs(args, kwargs)
             try:
