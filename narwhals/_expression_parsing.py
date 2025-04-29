@@ -161,6 +161,20 @@ class ExprKind(Enum):
     def is_scalar_like(self) -> bool:
         return is_scalar_like(self)
 
+    @classmethod
+    def from_into_expr(
+        cls, obj: IntoExpr | NonNestedLiteral | _1DArray, *, str_as_lit: bool
+    ) -> ExprKind:
+        if is_expr(obj):
+            return obj._metadata.kind
+        if (
+            is_narwhals_series(obj)
+            or is_numpy_array(obj)
+            or (isinstance(obj, str) and not str_as_lit)
+        ):
+            return ExprKind.TRANSFORM
+        return ExprKind.LITERAL
+
 
 def is_scalar_like(
     kind: ExprKind,
@@ -184,11 +198,16 @@ class ExpansionKind(Enum):
     def is_multi_unnamed(self) -> bool:
         return self is ExpansionKind.MULTI_UNNAMED
 
+    def is_multi_output(self) -> bool:
+        return self in {ExpansionKind.MULTI_NAMED, ExpansionKind.MULTI_UNNAMED}
 
-def is_multi_output(
-    expansion_kind: ExpansionKind,
-) -> TypeIs[Literal[ExpansionKind.MULTI_NAMED, ExpansionKind.MULTI_UNNAMED]]:
-    return expansion_kind in {ExpansionKind.MULTI_NAMED, ExpansionKind.MULTI_UNNAMED}
+    def __and__(self, other: ExpansionKind) -> Literal[ExpansionKind.MULTI_UNNAMED]:
+        if self is ExpansionKind.MULTI_UNNAMED and other is ExpansionKind.MULTI_UNNAMED:
+            # e.g. nw.selectors.all() - nw.selectors.numeric().
+            return ExpansionKind.MULTI_UNNAMED
+        # Don't attempt anything more complex, keep it simple and raise in the face of ambiguity.
+        msg = f"Unsupported ExpansionKind combination, got {self} and {other}, please report a bug."  # pragma: no cover
+        raise AssertionError(msg)  # pragma: no cover
 
 
 class WindowKind(Enum):
@@ -326,6 +345,20 @@ class ExprMetadata:
             expansion_kind=ExpansionKind.MULTI_UNNAMED,
         )
 
+    @classmethod
+    def from_binary_op(cls, lhs: Expr, rhs: IntoExpr, /) -> ExprMetadata:
+        # We may be able to allow multi-output rhs in the future:
+        # https://github.com/narwhals-dev/narwhals/issues/2244.
+        return combine_metadata(
+            lhs, rhs, str_as_lit=True, allow_multi_output=False, to_single_output=False
+        )
+
+    @classmethod
+    def from_horizontal_op(cls, *exprs: IntoExpr) -> ExprMetadata:
+        return combine_metadata(
+            *exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
+        )
+
 
 def combine_metadata(  # noqa: PLR0915
     *args: IntoExpr | object | None,
@@ -355,7 +388,9 @@ def combine_metadata(  # noqa: PLR0915
         if isinstance(arg, str) and not str_as_lit:
             has_transforms_or_windows = True
         elif is_expr(arg):
-            if is_multi_output(arg._metadata.expansion_kind):
+            metadata = arg._metadata
+            if metadata.expansion_kind.is_multi_output():
+                expansion_kind = metadata.expansion_kind
                 if i > 0 and not allow_multi_output:
                     # Left-most argument is always allowed to be multi-output.
                     msg = (
@@ -365,12 +400,10 @@ def combine_metadata(  # noqa: PLR0915
                     raise MultiOutputExpressionError(msg)
                 if not to_single_output:
                     if i == 0:
-                        result_expansion_kind = arg._metadata.expansion_kind
+                        result_expansion_kind = expansion_kind
                     else:
-                        result_expansion_kind = resolve_expansion_kind(
-                            result_expansion_kind, arg._metadata.expansion_kind
-                        )
-            kind = arg._metadata.kind
+                        result_expansion_kind = result_expansion_kind & expansion_kind
+            kind = metadata.kind
             if kind is ExprKind.AGGREGATION:
                 has_aggregations = True
             elif kind is ExprKind.LITERAL:
@@ -383,7 +416,7 @@ def combine_metadata(  # noqa: PLR0915
                 msg = "unreachable code"
                 raise AssertionError(msg)
 
-            window_kind = arg._metadata.window_kind
+            window_kind = metadata.window_kind
             if window_kind is WindowKind.UNCLOSEABLE:
                 has_uncloseable_windows = True
             elif window_kind is WindowKind.CLOSEABLE:
@@ -423,29 +456,6 @@ def combine_metadata(  # noqa: PLR0915
     )
 
 
-def resolve_expansion_kind(lhs: ExpansionKind, rhs: ExpansionKind) -> ExpansionKind:
-    if lhs is ExpansionKind.MULTI_UNNAMED and rhs is ExpansionKind.MULTI_UNNAMED:
-        # e.g. nw.selectors.all() - nw.selectors.numeric().
-        return ExpansionKind.MULTI_UNNAMED
-    # Don't attempt anything more complex, keep it simple and raise in the face of ambiguity.
-    msg = f"Unsupported ExpansionKind combination, got {lhs} and {rhs}, please report a bug."  # pragma: no cover
-    raise AssertionError(msg)  # pragma: no cover
-
-
-def combine_metadata_binary_op(lhs: Expr, rhs: IntoExpr) -> ExprMetadata:
-    # We may be able to allow multi-output rhs in the future:
-    # https://github.com/narwhals-dev/narwhals/issues/2244.
-    return combine_metadata(
-        lhs, rhs, str_as_lit=True, allow_multi_output=False, to_single_output=False
-    )
-
-
-def combine_metadata_horizontal_op(*exprs: IntoExpr) -> ExprMetadata:
-    return combine_metadata(
-        *exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
-    )
-
-
 def check_expressions_preserve_length(*args: IntoExpr, function_name: str) -> None:
     # Raise if any argument in `args` isn't length-preserving.
     # For Series input, we don't raise (yet), we let such checks happen later,
@@ -469,20 +479,6 @@ def all_exprs_are_scalar_like(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
     return all(is_expr(x) and x._metadata.kind.is_scalar_like() for x in exprs)
 
 
-def infer_kind(
-    obj: IntoExpr | NonNestedLiteral | _1DArray, *, str_as_lit: bool
-) -> ExprKind:
-    if is_expr(obj):
-        return obj._metadata.kind
-    if (
-        is_narwhals_series(obj)
-        or is_numpy_array(obj)
-        or (isinstance(obj, str) and not str_as_lit)
-    ):
-        return ExprKind.TRANSFORM
-    return ExprKind.LITERAL
-
-
 def apply_n_ary_operation(
     plx: CompliantNamespaceAny,
     function: Any,
@@ -493,7 +489,10 @@ def apply_n_ary_operation(
         extract_compliant(plx, comparand, str_as_lit=str_as_lit)
         for comparand in comparands
     )
-    kinds = [infer_kind(comparand, str_as_lit=str_as_lit) for comparand in comparands]
+    kinds = [
+        ExprKind.from_into_expr(comparand, str_as_lit=str_as_lit)
+        for comparand in comparands
+    ]
 
     broadcast = any(not kind.is_scalar_like() for kind in kinds)
     compliant_exprs = (
