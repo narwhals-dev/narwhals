@@ -1961,6 +1961,6 @@ class _DeferredIterable(Generic[_T]):
         yield from self._into_iter()
 
     def to_tuple(self) -> tuple[_T, ...]:
-        """Collect and return as a `tuple`."""
+        # Collect and return as a `tuple`.
         it = self._into_iter()
         return it if isinstance(it, tuple) else tuple(it)
