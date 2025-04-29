@@ -119,7 +119,7 @@ class InterchangeFrame:
         else:  # pragma: no cover
             msg = (
                 "Conversion to pandas is achieved via interchange protocol which requires"
-                f" pandas>=1.5.0 to be installed, found {pd.__version__}"
+                f" 'pandas>=1.5.0' to be installed, found {pd.__version__}"
             )
             raise NotImplementedError(msg)
 
