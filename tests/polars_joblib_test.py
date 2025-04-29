@@ -2,12 +2,16 @@ from __future__ import annotations
 
 from typing import Any
 
-from joblib import Parallel
-from joblib import delayed
+import pytest
 
 import narwhals as nw
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
+
+pytest.importorskip("joblib")
+
+from joblib import Parallel
+from joblib import delayed
 
 
 def test_parallelisability(constructor_eager: ConstructorEager) -> None:
