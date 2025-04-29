@@ -284,10 +284,11 @@ module = [
   "dask_expr.*",
   "duckdb.*",
   "ibis.*",
+  "joblib.*",
   "modin.*",
   "numpy.*",
-  "sklearn.*",
   "pyspark.*",
+  "sklearn.*",
 ]
 # TODO: remove follow_imports
 follow_imports = "skip"
