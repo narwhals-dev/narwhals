@@ -271,7 +271,7 @@ class PolarsDataFrame:
         self, dtype: Any | None = None, *, copy: bool | None = None
     ) -> _2DArray:
         if self._backend_version < (0, 20, 28) and copy is not None:
-            msg = "`copy` in `__array__` is only supported for Polars>=0.20.28"
+            msg = "`copy` in `__array__` is only supported for polars>=0.20.28"
             raise NotImplementedError(msg)
         if self._backend_version < (0, 20, 28):
             return self.native.__array__(dtype)

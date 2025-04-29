@@ -494,7 +494,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
         try:
             import pyarrow as pa  # ignore-banned-import
         except ModuleNotFoundError:  # pragma: no cover
-            msg = "PyArrow>=11.0.0 is required for `Date` dtype."
+            msg = "pyarrow>=11.0.0 is required for `Date` dtype."
         return "date32[pyarrow]"
     if isinstance_or_issubclass(dtype, dtypes.Enum):
         if version is Version.V1:
