@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
+from typing import Iterator
 from typing import Mapping
 from typing import Sequence
 from typing import cast
@@ -622,6 +623,25 @@ class PolarsSeries:
     def struct(self) -> PolarsSeriesStructNamespace:
         return PolarsSeriesStructNamespace(self)
 
+    __add__: Method[Self]
+    __and__: Method[Self]
+    __floordiv__: Method[Self]
+    __invert__: Method[Self]
+    __iter__: Method[Iterator[Any]]
+    __mod__: Method[Self]
+    __mul__: Method[Self]
+    __or__: Method[Self]
+    __pow__: Method[Self]
+    __radd__: Method[Self]
+    __rand__: Method[Self]
+    __rfloordiv__: Method[Self]
+    __rmod__: Method[Self]
+    __rmul__: Method[Self]
+    __ror__: Method[Self]
+    __rsub__: Method[Self]
+    __rtruediv__: Method[Self]
+    __sub__: Method[Self]
+    __truediv__: Method[Self]
     abs: Method[Self]
     all: Method[bool]
     any: Method[bool]
