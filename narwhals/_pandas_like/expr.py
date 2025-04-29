@@ -20,6 +20,8 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals.typing import FillNullStrategy
+    from narwhals.typing import NonNestedLiteral
     from narwhals.typing import RankMethod
     from narwhals.utils import Implementation
     from narwhals.utils import Version
@@ -41,6 +43,7 @@ WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
     "shift": "shift",
     "rank": "rank",
     "diff": "diff",
+    "fill_null": "fillna",
 }
 
 
@@ -275,6 +278,17 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         )
                     else:
                         res_native = getattr(rolling, pandas_function_name)()
+                elif function_name == "fill_null":
+                    df_grouped = grouped[list(output_names)]
+                    if self._call_kwargs["strategy"] == "forward":
+                        res_native = df_grouped.ffill(limit=self._call_kwargs["limit"])
+                    elif self._call_kwargs["strategy"] == "backward":
+                        res_native = df_grouped.bfill(limit=self._call_kwargs["limit"])
+                    else:  # pragma: no cover
+                        # This is deprecated in pandas. Indeed, `nw.col('a').fill_null(3).over('b')`
+                        # does not seem very useful, and DuckDB doesn't support it either.
+                        msg = "`fill_null` with `over` without `strategy` specified is not supported."
+                        raise NotImplementedError(msg)
                 elif function_name == "len":
                     if len(output_names) != 1:  # pragma: no cover
                         msg = "Safety check failed, please report a bug."
@@ -318,6 +332,16 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
 
     def cum_prod(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_prod", call_kwargs={"reverse": reverse})
+
+    def fill_null(
+        self,
+        value: Self | NonNestedLiteral,
+        strategy: FillNullStrategy | None,
+        limit: int | None,
+    ) -> Self:
+        return self._reuse_series(
+            "fill_null", call_kwargs={"strategy": strategy, "limit": limit}, value=value
+        )
 
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._reuse_series(

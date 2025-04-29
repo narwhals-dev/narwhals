@@ -26,7 +26,6 @@ from narwhals._compliant.typing import DepthTrackingExprT_contra
 from narwhals._compliant.typing import EagerExprT_contra
 from narwhals._compliant.typing import LazyExprT_contra
 from narwhals._compliant.typing import NativeExprT_co
-from narwhals._expression_parsing import is_multi_output
 from narwhals.utils import is_sequence_of
 
 if TYPE_CHECKING:
@@ -129,7 +128,7 @@ class ParseKeysGroupBy(
         safe_keys = [
             # multi-output expression cannot have duplicate names, hence it's safe to suffix
             key.name.suffix(suffix_token)
-            if key._metadata is not None and is_multi_output(key._metadata.expansion_kind)
+            if (metadata := key._metadata) and metadata.expansion_kind.is_multi_output()
             # otherwise it's single named and we can use Expr.alias
             else key.alias(f"{new_name}{suffix_token}")
             for key, new_name in zip(keys, output_names)

@@ -18,7 +18,6 @@ from warnings import warn
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import all_exprs_are_scalar_like
 from narwhals._expression_parsing import check_expressions_preserve_length
-from narwhals._expression_parsing import infer_kind
 from narwhals._expression_parsing import is_scalar_like
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
@@ -111,11 +110,11 @@ class BaseFrame(Generic[_FrameT]):
         for expr in flatten(exprs):
             compliant_expr = self._extract_compliant(expr)
             out_exprs.append(compliant_expr)
-            out_kinds.append(infer_kind(expr, str_as_lit=False))
+            out_kinds.append(ExprKind.from_into_expr(expr, str_as_lit=False))
         for alias, expr in named_exprs.items():
             compliant_expr = self._extract_compliant(expr).alias(alias)
             out_exprs.append(compliant_expr)
-            out_kinds.append(infer_kind(expr, str_as_lit=False))
+            out_kinds.append(ExprKind.from_into_expr(expr, str_as_lit=False))
         return out_exprs, out_kinds
 
     @abstractmethod

@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.36.0"
+version = "1.37.0"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
@@ -39,6 +39,7 @@ modin = ["modin"]
 cudf = ["cudf>=24.10.0"]
 pyarrow = ["pyarrow>=11.0.0"]
 pyspark = ["pyspark>=3.5.0"]
+pyspark-connect = ["pyspark[connect]>=3.5.0"]
 polars = ["polars>=0.20.3"]
 dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.0"]
@@ -257,14 +258,17 @@ exclude_also = [
   "if .*implementation is Implementation.CUDF",
   "if .*implementation is Implementation.MODIN",
   "if .*implementation is Implementation.PYSPARK",
+  "if .*implementation is Implementation.PYSPARK_CONNECT",
   "if .*implementation.is_cudf",
   "if .*implementation.is_modin",
   "if .*implementation.is_pyspark",
+  "if .*implementation.is_pyspark_connect",
   'request.applymarker\(pytest.mark.xfail',
   'backend_version <',
   'if "cudf" in str\(constructor',
   'if "modin" in str\(constructor',
   'if "pyspark" in str\(constructor',
+  'if "pyspark_connect" in str\(constructor',
   'pytest.skip\('
 ]
 

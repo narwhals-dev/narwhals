@@ -21,11 +21,10 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import ArrayAny
-    from narwhals._arrow.typing import ArrayOrScalarAny
+    from narwhals._arrow.typing import ArrayOrScalar
     from narwhals._arrow.typing import ArrayOrScalarT1
     from narwhals._arrow.typing import ArrayOrScalarT2
-    from narwhals._arrow.typing import ArrowArray
-    from narwhals._arrow.typing import ArrowChunkedArray
+    from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._arrow.typing import ScalarAny
     from narwhals.dtypes import DType
     from narwhals.typing import PythonLiteral
@@ -33,7 +32,7 @@ if TYPE_CHECKING:
 
     # NOTE: stubs don't allow for `ChunkedArray[StructArray]`
     # Intended to represent the `.chunks` property storing `list[pa.StructArray]`
-    ChunkedArrayStructArray: TypeAlias = ArrowChunkedArray
+    ChunkedArrayStructArray: TypeAlias = ChunkedArrayAny
 
     def is_timestamp(t: Any) -> TypeIs[pa.TimestampType[Any, Any]]: ...
     def is_duration(t: Any) -> TypeIs[pa.DurationType[Any]]: ...
@@ -44,7 +43,7 @@ if TYPE_CHECKING:
         t: Any,
     ) -> TypeIs[pa.DictionaryType[Any, Any, Any]]: ...
     def extract_regex(
-        strings: ArrowChunkedArray,
+        strings: ChunkedArrayAny,
         /,
         pattern: str,
         *,
@@ -71,8 +70,8 @@ def extract_py_scalar(value: Any, /) -> Any:
 
 
 def chunked_array(
-    arr: ArrayAny | list[Iterable[Any]] | ScalarAny, dtype: pa.DataType | None = None, /
-) -> ArrowChunkedArray:
+    arr: ArrayOrScalar | list[Iterable[Any]], dtype: pa.DataType | None = None, /
+) -> ChunkedArrayAny:
     if isinstance(arr, pa.ChunkedArray):
         return arr
     if isinstance(arr, list):
@@ -81,7 +80,7 @@ def chunked_array(
         return pa.chunked_array([arr], arr.type)
 
 
-def nulls_like(n: int, series: ArrowSeries) -> ArrowArray:
+def nulls_like(n: int, series: ArrowSeries) -> ArrayAny:
     """Create a strongly-typed Array instance with all elements null.
 
     Uses the type of `series`, without upseting `mypy`.
@@ -216,7 +215,7 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
 
 def extract_native(
     lhs: ArrowSeries, rhs: ArrowSeries | PythonLiteral | ScalarAny
-) -> tuple[ArrowChunkedArray | ScalarAny, ArrowChunkedArray | ScalarAny]:
+) -> tuple[ChunkedArrayAny | ScalarAny, ChunkedArrayAny | ScalarAny]:
     """Extract native objects in binary  operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -273,7 +272,7 @@ def align_series_full_broadcast(*series: ArrowSeries) -> Sequence[ArrowSeries]:
     return reshaped
 
 
-def floordiv_compat(left: ArrayOrScalarAny, right: ArrayOrScalarAny) -> Any:
+def floordiv_compat(left: ArrayOrScalar, right: ArrayOrScalar) -> Any:
     # The following lines are adapted from pandas' pyarrow implementation.
     # Ref: https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L124-L154
 
@@ -343,7 +342,7 @@ TIME_FORMATS = ((HMS_RE, "%H:%M:%S"), (HM_RE, "%H:%M"), (HMS_RE_NO_SEP, "%H%M%S"
 
 
 def _extract_regex_concat_arrays(
-    strings: ArrowChunkedArray,
+    strings: ChunkedArrayAny,
     /,
     pattern: str,
     *,
@@ -356,7 +355,7 @@ def _extract_regex_concat_arrays(
     return cast("pa.StructArray", r)
 
 
-def parse_datetime_format(arr: ArrowChunkedArray) -> str:
+def parse_datetime_format(arr: ChunkedArrayAny) -> str:
     """Try to infer datetime format from StringArray."""
     matches = _extract_regex_concat_arrays(arr.drop_null().slice(0, 10), pattern=FULL_RE)
     if not pc.all(matches.is_valid()).as_py():
@@ -440,9 +439,8 @@ def pad_series(
 
 
 def cast_to_comparable_string_types(
-    *chunked_arrays: ArrowChunkedArray,
-    separator: str,
-) -> tuple[Iterator[ArrowChunkedArray], pa.Scalar[Any]]:
+    *chunked_arrays: ChunkedArrayAny, separator: str
+) -> tuple[Iterator[ChunkedArrayAny], ScalarAny]:
     # Ensure `chunked_arrays` are either all `string` or all `large_string`.
     dtype = (
         pa.string()  # (PyArrow default)
@@ -452,6 +450,6 @@ def cast_to_comparable_string_types(
     return (ca.cast(dtype) for ca in chunked_arrays), lit(separator, dtype)
 
 
-class ArrowSeriesNamespace(_SeriesNamespace["ArrowSeries", "ArrowChunkedArray"]):
+class ArrowSeriesNamespace(_SeriesNamespace["ArrowSeries", "ChunkedArrayAny"]):
     def __init__(self, series: ArrowSeries, /) -> None:
         self._compliant_series = series

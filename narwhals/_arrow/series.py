@@ -47,13 +47,13 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
-    from narwhals._arrow.typing import ArrayOrScalarAny
-    from narwhals._arrow.typing import ArrowArray
-    from narwhals._arrow.typing import ArrowChunkedArray
+    from narwhals._arrow.typing import ArrayAny
+    from narwhals._arrow.typing import ArrayOrChunkedArray
+    from narwhals._arrow.typing import ArrayOrScalar
+    from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._arrow.typing import Incomplete
     from narwhals._arrow.typing import NullPlacement
     from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
-    from narwhals._arrow.typing import ScalarAny
     from narwhals._arrow.typing import TieBreaker
     from narwhals._arrow.typing import _AsPyType
     from narwhals._arrow.typing import _BasicDataType
@@ -113,17 +113,17 @@ def maybe_extract_py_scalar(value: Any, return_py_scalar: bool) -> Any:  # noqa:
     return value
 
 
-class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
+class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def __init__(
         self,
-        native_series: ArrowChunkedArray,
+        native_series: ChunkedArrayAny,
         *,
         name: str,
         backend_version: tuple[int, ...],
         version: Version,
     ) -> None:
         self._name = name
-        self._native_series: ArrowChunkedArray = native_series
+        self._native_series: ChunkedArrayAny = native_series
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
         self._version = version
@@ -131,7 +131,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         self._broadcast = False
 
     @property
-    def native(self) -> ArrowChunkedArray:
+    def native(self) -> ChunkedArrayAny:
         return self._native_series
 
     def _with_version(self, version: Version) -> Self:
@@ -143,10 +143,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         )
 
     def _with_native(
-        self,
-        series: ArrowArray | ArrowChunkedArray | ScalarAny,
-        *,
-        preserve_broadcast: bool = False,
+        self, series: ArrayOrScalar, *, preserve_broadcast: bool = False
     ) -> Self:
         result = self.from_native(chunked_array(series), name=self.name, context=self)
         if preserve_broadcast:
@@ -174,12 +171,12 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         return super()._from_scalar(value)
 
     @staticmethod
-    def _is_native(obj: ArrowChunkedArray | Any) -> TypeIs[ArrowChunkedArray]:
+    def _is_native(obj: ChunkedArrayAny | Any) -> TypeIs[ChunkedArrayAny]:
         return isinstance(obj, pa.ChunkedArray)
 
     @classmethod
     def from_native(
-        cls, data: ArrowChunkedArray, /, *, context: _FullContext, name: str = ""
+        cls, data: ChunkedArrayAny, /, *, context: _FullContext, name: str = ""
     ) -> Self:
         return cls(
             data,
@@ -407,7 +404,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
     def name(self) -> str:
         return self._name
 
-    def _gather(self, rows: SizedMultiIndexSelector[ArrowChunkedArray]) -> Self:
+    def _gather(self, rows: SizedMultiIndexSelector[ChunkedArrayAny]) -> Self:
         if len(rows) == 0:
             return self._with_native(self.native.slice(0, 0))
         if self._backend_version < (18,) and isinstance(rows, tuple):
@@ -561,7 +558,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
 
     def is_in(self, other: Any) -> Self:
         if self._is_native(other):
-            value_set: ArrowChunkedArray | ArrowArray = other
+            value_set: ArrayOrChunkedArray = other
         else:
             value_set = pa.array(other)
         return self._with_native(pc.is_in(self.native, value_set=value_set))
@@ -599,7 +596,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
 
         val_counts = pc.value_counts(self.native)
         values = val_counts.field("values")
-        counts = cast("ArrowChunkedArray", val_counts.field("counts"))
+        counts = cast("ChunkedArrayAny", val_counts.field("counts"))
 
         if normalize:
             arrays = [values, pc.divide(*cast_for_truediv(counts, pc.sum(counts)))]
@@ -650,8 +647,8 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         import numpy as np  # ignore-banned-import
 
         def fill_aux(
-            arr: ArrowChunkedArray, limit: int, direction: FillNullStrategy | None
-        ) -> ArrowArray:
+            arr: ChunkedArrayAny, limit: int, direction: FillNullStrategy | None
+        ) -> ArrayAny:
             # this algorithm first finds the indices of the valid values to fill all the null value positions
             # then it calculates the distance of each new index and the original index
             # if the distance is equal to or less than the limit and the original value is null, it is replaced
@@ -673,7 +670,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
 
         if value is not None:
             _, native_value = extract_native(self, value)
-            series: ArrayOrScalarAny = pc.fill_null(self.native, native_value)
+            series: ArrayOrScalar = pc.fill_null(self.native, native_value)
         elif limit is None:
             fill_func = (
                 pc.fill_null_forward if strategy == "forward" else pc.fill_null_backward
@@ -846,7 +843,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
             pc.max_element_wise(pc.min_element_wise(self.native, upper), lower)
         )
 
-    def to_arrow(self) -> ArrowArray:
+    def to_arrow(self) -> ArrayAny:
         return self.native.combine_chunks()
 
     def mode(self) -> ArrowSeries:
@@ -1011,7 +1008,7 @@ class ArrowSeries(EagerSeries["ArrowChunkedArray"]):
         sort_keys: Order = "descending" if descending else "ascending"
         tiebreaker: TieBreaker = "first" if method == "ordinal" else method
 
-        native_series: ArrowChunkedArray | ArrowArray
+        native_series: ArrayOrChunkedArray
         if self._backend_version < (14, 0, 0):  # pragma: no cover
             native_series = self.native.combine_chunks()
         else:

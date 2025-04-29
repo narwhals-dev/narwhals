@@ -32,9 +32,9 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
+    import pyarrow as pa
     from typing_extensions import Self
 
-    from narwhals._arrow.typing import ArrowArray
     from narwhals._compliant.dataframe import CompliantDataFrame
     from narwhals._compliant.expr import CompliantExpr
     from narwhals._compliant.expr import EagerExpr
@@ -259,7 +259,7 @@ class CompliantSeries(
     def std(self, *, ddof: int) -> float: ...
     def sum(self) -> float: ...
     def tail(self, n: int) -> Self: ...
-    def to_arrow(self) -> ArrowArray: ...
+    def to_arrow(self) -> pa.Array[Any]: ...
     def to_dummies(
         self, *, separator: str, drop_first: bool
     ) -> CompliantDataFrame[Self, Any, Any]: ...

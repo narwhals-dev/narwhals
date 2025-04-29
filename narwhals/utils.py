@@ -31,17 +31,19 @@ from narwhals.dependencies import get_dask_dataframe
 from narwhals.dependencies import get_duckdb
 from narwhals.dependencies import get_ibis
 from narwhals.dependencies import get_modin
-from narwhals.dependencies import get_numpy
 from narwhals.dependencies import get_pandas
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import get_pyspark
+from narwhals.dependencies import get_pyspark_connect
 from narwhals.dependencies import get_pyspark_sql
 from narwhals.dependencies import get_sqlframe
 from narwhals.dependencies import is_cudf_series
 from narwhals.dependencies import is_modin_series
 from narwhals.dependencies import is_narwhals_series
+from narwhals.dependencies import is_narwhals_series_int
 from narwhals.dependencies import is_numpy_array_1d
+from narwhals.dependencies import is_numpy_array_1d_int
 from narwhals.dependencies import is_pandas_dataframe
 from narwhals.dependencies import is_pandas_like_dataframe
 from narwhals.dependencies import is_pandas_like_series
@@ -234,6 +236,8 @@ class Implementation(StrEnum):
     """Ibis implementation."""
     SQLFRAME = auto()
     """SQLFrame implementation."""
+    PYSPARK_CONNECT = auto()
+    """PySpark Connect implementation."""
 
     UNKNOWN = auto()
     """Unknown implementation."""
@@ -261,6 +265,7 @@ class Implementation(StrEnum):
             get_duckdb(): Implementation.DUCKDB,
             get_ibis(): Implementation.IBIS,
             get_sqlframe(): Implementation.SQLFRAME,
+            get_pyspark_connect(): Implementation.PYSPARK_CONNECT,
         }
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 
@@ -346,6 +351,11 @@ class Implementation(StrEnum):
 
             return sqlframe
 
+        if self is Implementation.PYSPARK_CONNECT:  # pragma: no cover
+            import pyspark.sql  # ignore-banned-import
+
+            return pyspark.sql
+
         msg = "Not supported Implementation"  # pragma: no cover
         raise AssertionError(msg)
 
@@ -399,7 +409,11 @@ class Implementation(StrEnum):
             >>> df.implementation.is_spark_like()
             False
         """
-        return self in {Implementation.PYSPARK, Implementation.SQLFRAME}
+        return self in {
+            Implementation.PYSPARK,
+            Implementation.SQLFRAME,
+            Implementation.PYSPARK_CONNECT,
+        }
 
     def is_polars(self) -> bool:
         """Return whether implementation is Polars.
@@ -464,6 +478,22 @@ class Implementation(StrEnum):
             False
         """
         return self is Implementation.PYSPARK  # pragma: no cover
+
+    def is_pyspark_connect(self) -> bool:
+        """Return whether implementation is PySpark.
+
+        Returns:
+            Boolean.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_pyspark_connect()
+            False
+        """
+        return self is Implementation.PYSPARK_CONNECT  # pragma: no cover
 
     def is_pyarrow(self) -> bool:
         """Return whether implementation is PyArrow.
@@ -550,11 +580,12 @@ class Implementation(StrEnum):
         into_version: Any
         if self not in {
             Implementation.PYSPARK,
+            Implementation.PYSPARK_CONNECT,
             Implementation.DASK,
             Implementation.SQLFRAME,
         }:
             into_version = native
-        elif self is Implementation.PYSPARK:
+        elif self in {Implementation.PYSPARK, Implementation.PYSPARK_CONNECT}:
             into_version = get_pyspark()  # pragma: no cover
         elif self is Implementation.DASK:
             into_version = get_dask()
@@ -571,6 +602,7 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.CUDF: (24, 10),
     Implementation.PYARROW: (11,),
     Implementation.PYSPARK: (3, 5),
+    Implementation.PYSPARK_CONNECT: (3, 5),
     Implementation.POLARS: (0, 20, 3),
     Implementation.DASK: (2024, 8),
     Implementation.DUCKDB: (1,),
@@ -1222,18 +1254,17 @@ def is_slice_none(obj: Any) -> TypeIs[_SliceNone]:
     return isinstance(obj, slice) and obj == slice(None)
 
 
-def is_sized_multi_index_selector(obj: Any) -> TypeIs[SizedMultiIndexSelector[Any]]:
-    np = get_numpy()
+def is_sized_multi_index_selector(
+    obj: Any,
+) -> TypeIs[SizedMultiIndexSelector[Series[Any] | CompliantSeries[Any]]]:
     return (
         (
             is_sequence_but_not_str(obj)
             and ((len(obj) > 0 and isinstance(obj[0], int)) or (len(obj) == 0))
         )
-        or (is_numpy_array_1d(obj) and np.issubdtype(obj.dtype, np.integer))
-        or (
-            (is_narwhals_series(obj) or is_compliant_series(obj))
-            and obj.dtype.is_integer()
-        )
+        or is_numpy_array_1d_int(obj)
+        or is_narwhals_series_int(obj)
+        or is_compliant_series_int(obj)
     )
 
 
@@ -1264,7 +1295,9 @@ def is_single_index_selector(obj: Any) -> TypeIs[SingleIndexSelector]:
     return bool(isinstance(obj, int) and not isinstance(obj, bool))
 
 
-def is_index_selector(obj: Any) -> TypeIs[SingleIndexSelector | MultiIndexSelector[Any]]:
+def is_index_selector(
+    obj: Any,
+) -> TypeIs[SingleIndexSelector | MultiIndexSelector[Series[Any] | CompliantSeries[Any]]]:
     return (
         is_single_index_selector(obj)
         or is_sized_multi_index_selector(obj)
@@ -1560,6 +1593,12 @@ def is_compliant_series(
     obj: CompliantSeries[NativeSeriesT_co] | Any,
 ) -> TypeIs[CompliantSeries[NativeSeriesT_co]]:
     return _hasattr_static(obj, "__narwhals_series__")
+
+
+def is_compliant_series_int(
+    obj: CompliantSeries[NativeSeriesT_co] | Any,
+) -> TypeIs[CompliantSeries[NativeSeriesT_co]]:
+    return is_compliant_series(obj) and obj.dtype.is_integer()
 
 
 def is_compliant_expr(

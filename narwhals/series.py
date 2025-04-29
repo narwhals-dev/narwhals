@@ -34,9 +34,9 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
+    import pyarrow as pa
     from typing_extensions import Self
 
-    from narwhals._arrow.typing import ArrowArray
     from narwhals._compliant import CompliantSeries
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import MultiIndexSelector
@@ -2069,7 +2069,7 @@ class Series(Generic[IntoSeriesT]):
             self._compliant_series.gather_every(n=n, offset=offset)
         )
 
-    def to_arrow(self) -> ArrowArray:
+    def to_arrow(self) -> pa.Array[Any]:
         r"""Convert to arrow.
 
         Returns:
