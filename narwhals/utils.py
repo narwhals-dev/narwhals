@@ -26,7 +26,7 @@ from typing import cast
 from typing import overload
 from warnings import warn
 
-from narwhals._enum import StrEnum
+from narwhals._enum import NoAutoEnum
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_dask_dataframe
@@ -216,7 +216,7 @@ class Version(Enum):
         return v1_dtypes
 
 
-class Implementation(StrEnum):
+class Implementation(NoAutoEnum):
     """Implementation of native object (pandas, Polars, PyArrow, ...)."""
 
     PANDAS = "pandas"
@@ -243,6 +243,9 @@ class Implementation(StrEnum):
     """PySpark Connect implementation."""
     UNKNOWN = "unknown"
     """Unknown implementation."""
+
+    def __str__(self) -> str:
+        return str(self.value)
 
     @classmethod
     def from_native_namespace(
