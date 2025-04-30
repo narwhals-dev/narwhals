@@ -456,7 +456,7 @@ def _from_native_impl(  # noqa: PLR0915
         pl_ns = PolarsNamespace(backend_version=pl_version, version=version)
         pl_compliant = pl_ns.from_native(native_object)
         if is_compliant_dataframe(pl_compliant):
-            return DataFrame(pl_compliant, level="full")
+            return pl_compliant.to_narwhals()
         elif is_compliant_lazyframe(pl_compliant):
             return LazyFrame(pl_compliant, level="lazy")
         return Series(pl_compliant, level="full")
