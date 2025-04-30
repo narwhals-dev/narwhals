@@ -20,12 +20,15 @@ from narwhals.utils import generate_temporary_column_name
 if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.expr import ArrowExpr
+    from narwhals._arrow.typing import AggregateOptions  # type: ignore[attr-defined]
+    from narwhals._arrow.typing import Aggregation  # type: ignore[attr-defined]
     from narwhals._arrow.typing import Incomplete
     from narwhals._compliant.group_by import NarwhalsAggregation
+    from narwhals.typing import UniqueKeepStrategy
 
 
-class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
-    _REMAP_AGGS: ClassVar[Mapping[NarwhalsAggregation, Any]] = {
+class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
+    _REMAP_AGGS: ClassVar[Mapping[NarwhalsAggregation, Aggregation]] = {
         "sum": "sum",
         "mean": "mean",
         "median": "approximate_median",
@@ -36,6 +39,11 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
         "len": "count",
         "n_unique": "count_distinct",
         "count": "count",
+    }
+    _REMAP_UNIQUE: ClassVar[Mapping[UniqueKeepStrategy, Aggregation]] = {
+        "any": "min",
+        "first": "min",
+        "last": "max",
     }
 
     def __init__(
@@ -54,7 +62,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
 
     def agg(self, *exprs: ArrowExpr) -> ArrowDataFrame:
         self._ensure_all_simple(exprs)
-        aggs: list[tuple[str, str, Any]] = []
+        aggs: list[tuple[str, Aggregation, AggregateOptions | None]] = []
         expected_pyarrow_column_names: list[str] = self._keys.copy()
         new_column_names: list[str] = self._keys.copy()
         exclude = (*self._keys, *self._output_key_names)
