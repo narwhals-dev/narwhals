@@ -287,7 +287,7 @@ class Namespace(Generic[CompliantNamespaceT_co]):
     ) -> Namespace[CompliantNamespaceAny]: ...
 
     @classmethod
-    def from_native_object(
+    def from_native_object(  # noqa: PLR0911
         cls: type[Namespace[Any]], native: NativeAny, /
     ) -> Namespace[Any]:
         if is_native_polars(native):

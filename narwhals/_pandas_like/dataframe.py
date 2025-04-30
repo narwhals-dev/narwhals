@@ -576,7 +576,7 @@ class PandasLikeDataFrame(
 
         return PandasLikeGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
-    def join(  # noqa: C901
+    def join(  # noqa: C901, PLR0911
         self,
         other: Self,
         *,

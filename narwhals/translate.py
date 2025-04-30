@@ -358,7 +358,7 @@ def from_native(  # noqa: D417
     )
 
 
-def _from_native_impl(  # noqa: C901, PLR0915
+def _from_native_impl(  # noqa: C901, PLR0911, PLR0915
     native_object: Any,
     *,
     pass_through: bool = False,
@@ -729,7 +729,7 @@ def get_native_namespace(
     return result.pop()
 
 
-def _get_native_namespace_single_obj(
+def _get_native_namespace_single_obj(  # noqa: PLR0911
     obj: DataFrame[Any] | LazyFrame[Any] | Series[Any] | IntoFrame | IntoSeries,
 ) -> Any:
     from narwhals.utils import has_native_namespace
@@ -871,7 +871,7 @@ def narwhalify(
         return decorator(func)
 
 
-def to_py_scalar(scalar_like: Any) -> Any:  # noqa: C901
+def to_py_scalar(scalar_like: Any) -> Any:  # noqa: C901, PLR0911
     """If a scalar is not Python native, converts it to Python native.
 
     Arguments:
