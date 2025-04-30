@@ -22,6 +22,7 @@ from narwhals._translate import ArrowConvertible
 from narwhals._translate import DictConvertible
 from narwhals._translate import FromNative
 from narwhals._translate import NumpyConvertible
+from narwhals._translate import ToNarwhals
 from narwhals.utils import Version
 from narwhals.utils import _StoresNative
 from narwhals.utils import deprecated
@@ -47,6 +48,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.group_by import DataFrameGroupBy
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals._translate import IntoArrowTable
+    from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import AsofJoinStrategy
@@ -81,6 +83,7 @@ class CompliantDataFrame(
     ArrowConvertible["pa.Table", "IntoArrowTable"],
     _StoresNative[NativeFrameT],
     FromNative[NativeFrameT],
+    ToNarwhals["DataFrame[NativeFrameT]"],
     Sized,
     Protocol[CompliantSeriesT, CompliantExprT_contra, NativeFrameT],
 ):
@@ -113,6 +116,15 @@ class CompliantDataFrame(
         context: _FullContext,
         schema: Mapping[str, DType] | Schema | Sequence[str] | None,
     ) -> Self: ...
+    def to_narwhals(self, *args: Any, **kwds: Any) -> DataFrame[NativeFrameT]:
+        if self._version is Version.MAIN:
+            from narwhals.dataframe import DataFrame
+
+            return DataFrame(self, level="full")
+        from narwhals.stable.v1 import DataFrame as DataFrameV1
+
+        return DataFrameV1(self, level="full")  # type: ignore[no-any-return]
+
     def __array__(self, dtype: Any, *, copy: bool | None) -> _2DArray: ...
     def __getitem__(
         self,

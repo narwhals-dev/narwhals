@@ -20,6 +20,7 @@ from narwhals._polars.utils import native_to_narwhals_dtype
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
+from narwhals.utils import Version
 from narwhals.utils import _into_arrow_table
 from narwhals.utils import convert_str_slice_to_int_slice
 from narwhals.utils import is_compliant_series
@@ -48,6 +49,7 @@ if TYPE_CHECKING:
     from narwhals._polars.group_by import PolarsGroupBy
     from narwhals._polars.group_by import PolarsLazyGroupBy
     from narwhals._translate import IntoArrowTable
+    from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import CompliantDataFrame
@@ -58,7 +60,6 @@ if TYPE_CHECKING:
     from narwhals.typing import PivotAgg
     from narwhals.typing import SingleIndexSelector
     from narwhals.typing import _2DArray
-    from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
     T = TypeVar("T")
@@ -189,6 +190,15 @@ class PolarsDataFrame:
             else schema
         )
         return cls.from_native(pl.from_numpy(data, pl_schema), context=context)
+
+    def to_narwhals(self, *args: Any, **kwds: Any) -> DataFrame[pl.DataFrame]:
+        if self._version is Version.MAIN:
+            from narwhals.dataframe import DataFrame
+
+            return DataFrame(self, level="full")
+        from narwhals.stable.v1 import DataFrame as DataFrameV1
+
+        return DataFrameV1(self, level="full")  # type: ignore[no-any-return]
 
     @property
     def native(self) -> pl.DataFrame:
