@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# ruff: noqa: ARG004
 from enum import Enum
 from typing import Any
 
@@ -38,10 +39,7 @@ class NoAutoEnum(Enum):
 
     @staticmethod
     def _generate_next_value_(
-        name: str,  # noqa: ARG004
-        start: int,  # noqa: ARG004
-        count: int,  # noqa: ARG004
-        last_values: list[Any],  # noqa: ARG004
+        name: str, start: int, count: int, last_values: list[Any]
     ) -> Any:
         msg = "Creating values with `auto()` is not allowed. Please provide a value manually instead."
         raise ValueError(msg)
