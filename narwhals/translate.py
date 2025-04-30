@@ -551,9 +551,9 @@ def _from_native_impl(  # noqa: PLR0915
         pa_compliant = version.namespace.from_native_object(
             native_object
         ).compliant.from_native(native_object)
-        if is_compliant_dataframe(pa_compliant):
-            return DataFrame(pa_compliant, level="full")
-        return Series(pa_compliant, level="full")
+        if is_compliant_series(pa_compliant):
+            return Series(pa_compliant, level="full")
+        return pa_compliant.to_narwhals()
 
     # Dask
     elif is_dask_dataframe(native_object):
