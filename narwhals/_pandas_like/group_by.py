@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
 
 
-class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
+class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", str]):
     _REMAP_AGGS: ClassVar[Mapping[NarwhalsAggregation, Any]] = {
         "sum": "sum",
         "mean": "mean",

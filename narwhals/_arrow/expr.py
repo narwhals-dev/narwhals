@@ -161,7 +161,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                 # TODO(marco): is there a way to do this efficiently without
                 # doing 2 sorts? Here we're sorting the dataframe and then
                 # again calling `sort_indices`. `ArrowSeries.scatter` would also sort.
-                sorting_indices = pc.sort_indices(df.get_column(token).native)  # type: ignore[call-overload]
+                sorting_indices = pc.sort_indices(df.get_column(token).native)
                 return [s._with_native(s.native.take(sorting_indices)) for s in result]
         else:
 
