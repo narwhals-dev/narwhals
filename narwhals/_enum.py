@@ -6,10 +6,9 @@ from typing import Any
 
 
 class NoAutoEnum(Enum):
-    """Enum base class that prohibits the use of auto() for value assignment.
+    """Enum base class that prohibits the use of enum.auto() for value assignment.
 
-    This class inherits from enum.Enum but overrides the value generation mechanism
-    to prevent automatic value assignment via enum.auto().
+    This behavior is achieved by overriding the value generation mechanism.
 
     Examples:
         >>> from enum import auto
@@ -29,12 +28,7 @@ class NoAutoEnum(Enum):
         ValueError: Creating values with `auto()` is not allowed. Please provide a value manually instead.
 
     Raises:
-        TypeError: If `auto()` is attempted to be used for any enum member value.
-
-    Note:
-        All enum values must be explicitly assigned. This is useful when you want
-        to maintain full control over enum values and prevent automatic numbering.
-
+        ValueError: If `auto()` is attempted to be used for any enum member value.
     """
 
     @staticmethod

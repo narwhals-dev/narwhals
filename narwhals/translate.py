@@ -670,10 +670,7 @@ def _from_native_impl(  # noqa: PLR0915
             )
             raise TypeError(msg)
         if eager_only or eager_or_interchange_only:
-            msg = (
-                "Cannot only use `eager_only` or `eager_or_interchange_only` with "
-                f"{ns_spark.implementation} DataFrame"
-            )
+            msg = f"Cannot only use `eager_only` or `eager_or_interchange_only` with {ns_spark.implementation} DataFrame"
             raise TypeError(msg)
         return LazyFrame(ns_spark.compliant.from_native(native_object), level="lazy")
 
