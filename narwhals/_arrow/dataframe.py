@@ -255,7 +255,7 @@ class ArrowDataFrame(
             return self._with_native(self.native.slice(0, 0))
         if self._backend_version < (18,) and isinstance(rows, tuple):
             rows = list(rows)
-        return self._with_native(self.native.take(rows))  # pyright: ignore[reportArgumentType]
+        return self._with_native(self.native.take(rows))
 
     def _gather_slice(self, rows: _SliceIndex | range) -> Self:
         start = rows.start or 0
