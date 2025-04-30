@@ -29,7 +29,7 @@ class DtypeKind(enum.IntEnum):
     CATEGORICAL = 23
 
 
-def map_interchange_dtype_to_narwhals_dtype(  # noqa: C901, PLR0911
+def map_interchange_dtype_to_narwhals_dtype(  # noqa: C901, PLR0911, PLR0912
     interchange_dtype: tuple[DtypeKind, int, Any, Any], version: Version
 ) -> DType:
     dtypes = version.dtypes

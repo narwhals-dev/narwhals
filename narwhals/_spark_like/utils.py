@@ -40,7 +40,7 @@ class WindowInputs:
 
 
 # NOTE: don't lru_cache this as `ModuleType` isn't hashable
-def native_to_narwhals_dtype(  # noqa: C901
+def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     dtype: _NativeDType, version: Version, spark_types: ModuleType
 ) -> DType:
     dtypes = version.dtypes
@@ -100,7 +100,7 @@ def native_to_narwhals_dtype(  # noqa: C901
     return dtypes.Unknown()  # pragma: no cover
 
 
-def narwhals_to_native_dtype(  # noqa: C901
+def narwhals_to_native_dtype(  # noqa: C901, PLR0912
     dtype: DType | type[DType], version: Version, spark_types: ModuleType
 ) -> _NativeDType:
     dtypes = version.dtypes

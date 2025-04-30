@@ -823,7 +823,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             | tuple[MultiIndexSelector, MultiColSelector]
         ),
     ) -> Self: ...
-    def __getitem__(  # noqa: C901
+    def __getitem__(  # noqa: C901, PLR0912
         self,
         item: (
             SingleIndexSelector

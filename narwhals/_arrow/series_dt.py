@@ -44,7 +44,7 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
         ser = self.replace_time_zone("UTC") if self.time_zone is None else self.compliant
         return self.with_native(ser.native.cast(pa.timestamp(self.unit, time_zone)))
 
-    def timestamp(self, time_unit: TimeUnit) -> ArrowSeries:  # noqa: C901
+    def timestamp(self, time_unit: TimeUnit) -> ArrowSeries:  # noqa: C901, PLR0912
         ser = self.compliant
         dtypes = ser._version.dtypes
         if isinstance(ser.dtype, dtypes.Datetime):
