@@ -140,6 +140,7 @@ extend-safe-fixes = [
 extend-select = [
   "PLR0914", # too-many-locals
   "PLR0916", # too-many-boolean-expressions
+  "PLR1702", # too-many-nested-blocks
   "PLR6201", # literal-membership
 ]
 select = ["ALL"]
@@ -201,6 +202,9 @@ builtins-ignorelist = ["format"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.ruff.lint.pylint]
+max-nested-blocks = 4
 
 [tool.ruff.lint.isort]
 force-single-line = true

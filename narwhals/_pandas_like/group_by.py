@@ -110,7 +110,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
         expected_old_names: list[str] = []
         simple_agg_new_names: list[str] = []
 
-        if all_aggs_are_simple:
+        if all_aggs_are_simple:  # noqa: PLR1702
             for expr in exprs:
                 output_names, aliases = evaluate_output_names_and_aliases(
                     expr, self.compliant, exclude
