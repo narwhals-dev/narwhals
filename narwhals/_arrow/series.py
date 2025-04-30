@@ -426,6 +426,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
         import numpy as np  # ignore-banned-import
 
+        values_native: ArrayAny
         if isinstance(indices, int):
             indices_native = pa.array([indices])
             values_native = pa.array([values])
@@ -436,20 +437,25 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             if isinstance(values, self.__class__):
                 values_native = values.native.combine_chunks()
             else:
-                values_native = pa.array(values)
+                # NOTE: Requires fixes in https://github.com/zen-xu/pyarrow-stubs/pull/209
+                pa_array: Incomplete = pa.array
+                values_native = pa_array(values)
 
         sorting_indices = pc.sort_indices(indices_native)
-        indices_native = pc.take(indices_native, sorting_indices)
-        values_native = pc.take(values_native, sorting_indices)
+        indices_native = indices_native.take(sorting_indices)
+        values_native = values_native.take(sorting_indices)
 
         mask: _1DArray = np.zeros(self.len(), dtype=bool)
         mask[indices_native] = True
-        result = pc.replace_with_mask(
-            self.native,
-            cast("list[bool]", mask),
-            values_native.take(indices_native),
+        # NOTE: Multiple issues
+        # - Missing `values` type
+        # - `mask` accepts a `np.ndarray`, but not mentioned in stubs
+        # - Missing `replacements` type
+        # - Missing return type
+        pc_replace_with_mask: Incomplete = pc.replace_with_mask
+        return self._with_native(
+            pc_replace_with_mask(self.native, mask, values_native.take(indices_native))
         )
-        return self._with_native(result)
 
     def to_list(self) -> list[Any]:
         return self.native.to_pylist()
