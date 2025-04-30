@@ -139,6 +139,7 @@ extend-safe-fixes = [
 ]
 extend-select = [
   "PLR0914", # too-many-locals
+  "PLR0916", # too-many-boolean-expressions
   "PLR6201", # literal-membership
 ]
 select = ["ALL"]
@@ -183,6 +184,7 @@ builtins-ignorelist = ["format"]
   "S101", 
   "C901",    # complex-structure
   "PLR0912", # too-many-branches
+  "PLR0916", # too-many-boolean-expressions
 ]
 "tpch/tests/*" = ["S101"]
 "utils/*" = ["S311", "PTH123"]
