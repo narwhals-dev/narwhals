@@ -138,6 +138,7 @@ extend-safe-fixes = [
   "UP",      # pyupgrade
 ]
 extend-select = [
+  "PLR0914", # too-many-locals
   "PLR6201", # literal-membership
 ]
 select = ["ALL"]
