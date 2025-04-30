@@ -298,7 +298,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_native(res)
 
     def __invert__(self) -> Self:
-        return self._with_native(pc.invert(self.native))  # type: ignore[call-overload]
+        return self._with_native(pc.invert(self.native))
 
     @property
     def _type(self) -> pa.DataType:
@@ -438,7 +438,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             else:
                 values_native = pa.array(values)
 
-        sorting_indices = pc.sort_indices(indices_native)  # type: ignore[call-overload]
+        sorting_indices = pc.sort_indices(indices_native)
         indices_native = pc.take(indices_native, sorting_indices)
         values_native = pc.take(values_native, sorting_indices)
 

@@ -370,13 +370,9 @@ class ArrowDataFrame(
             col_name = col_value.name
             column = self._extract_comparand(col_value)
             native_frame = (
-                native_frame.set_column(
-                    columns.index(col_name),
-                    field_=col_name,
-                    column=column,  # type: ignore[arg-type]
-                )
+                native_frame.set_column(columns.index(col_name), col_name, column=column)
                 if col_name in columns
-                else native_frame.append_column(field_=col_name, column=column)
+                else native_frame.append_column(col_name, column=column)
             )
 
         return self._with_native(native_frame, validate_column_names=False)
