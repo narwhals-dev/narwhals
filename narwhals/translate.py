@@ -470,16 +470,10 @@ def _from_native_impl(  # noqa: PLR0915
                 msg = "Cannot only use `series_only` with dataframe"
                 raise TypeError(msg)
             return native_object
-        pd = get_pandas()
-        return DataFrame(
-            PandasLikeDataFrame(
-                native_object,
-                backend_version=parse_version(pd),
-                implementation=Implementation.PANDAS,
-                version=version,
-                validate_column_names=True,
-            ),
-            level="full",
+        return (
+            version.namespace.from_native_object(native_object)
+            .compliant.from_native(native_object)
+            .to_narwhals()
         )
     elif is_pandas_series(native_object):
         from narwhals._pandas_like.series import PandasLikeSeries
