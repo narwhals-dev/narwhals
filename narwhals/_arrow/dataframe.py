@@ -302,8 +302,7 @@ class ArrowDataFrame(
             selector = cast("Sequence[str]", columns.to_pylist())
         else:
             selector = columns
-        # TODO @dangotbanned: Fix upstream `pa.Table.select` https://github.com/zen-xu/pyarrow-stubs/blob/f899bb35e10b36f7906a728e9f8acf3e0a1f9f64/pyarrow-stubs/__lib_pxi/table.pyi#L597
-        # NOTE: Investigate what `cython` actually checks
+        # NOTE: Fixed in https://github.com/zen-xu/pyarrow-stubs/pull/221
         return self._with_native(self.native.select(selector))  # pyright: ignore[reportArgumentType]
 
     @property
