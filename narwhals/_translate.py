@@ -157,3 +157,12 @@ class FromNative(Protocol[FromNativeT]):
     def from_native(cls, data: FromNativeT, *args: Any, **kwds: Any) -> Self: ...
     @staticmethod
     def _is_native(obj: FromNativeT | Any, /) -> TypeIs[FromNativeT]: ...
+
+
+ToNarwhalsT_co = TypeVar("ToNarwhalsT_co", covariant=True)
+
+
+class ToNarwhals(Protocol[ToNarwhalsT_co]):
+    def to_narwhals(self, *args: Any, **kwds: Any) -> ToNarwhalsT_co:
+        """Convert into public representation."""
+        ...
