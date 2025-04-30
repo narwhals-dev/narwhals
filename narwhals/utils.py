@@ -14,7 +14,9 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Container
+from typing import Generic
 from typing import Iterable
+from typing import Iterator
 from typing import Literal
 from typing import Protocol
 from typing import Sequence
@@ -103,7 +105,7 @@ if TYPE_CHECKING:
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
     )
-    _T = TypeVar("_T")
+
     _T1 = TypeVar("_T1")
     _T2 = TypeVar("_T2")
     _T3 = TypeVar("_T3")
@@ -151,6 +153,7 @@ if TYPE_CHECKING:
         def columns(self) -> Sequence[str]: ...
 
 
+_T = TypeVar("_T")
 NativeT_co = TypeVar("NativeT_co", covariant=True)
 CompliantT_co = TypeVar("CompliantT_co", covariant=True)
 _ContextT = TypeVar("_ContextT", bound="_FullContext")
@@ -1914,3 +1917,18 @@ def inherit_doc(
             raise TypeError(msg)
 
     return decorate
+
+
+class _DeferredIterable(Generic[_T]):
+    """Store a callable producing an iterable to defer collection until we need it."""
+
+    def __init__(self, into_iter: Callable[[], Iterable[_T]], /) -> None:
+        self._into_iter: Callable[[], Iterable[_T]] = into_iter
+
+    def __iter__(self) -> Iterator[_T]:
+        yield from self._into_iter()
+
+    def to_tuple(self) -> tuple[_T, ...]:
+        # Collect and return as a `tuple`.
+        it = self._into_iter()
+        return it if isinstance(it, tuple) else tuple(it)

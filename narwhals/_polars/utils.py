@@ -7,11 +7,11 @@ from typing import Iterable
 from typing import Iterator
 from typing import Mapping
 from typing import TypeVar
+from typing import cast
 from typing import overload
 
 import polars as pl
 
-from narwhals.dtypes import _DelayedCategories
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import ComputeError
 from narwhals.exceptions import DuplicateError
@@ -19,6 +19,7 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import NarwhalsError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Version
+from narwhals.utils import _DeferredIterable
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -101,7 +102,12 @@ def native_to_narwhals_dtype(
     if isinstance_or_issubclass(dtype, pl.Enum):
         if version is Version.V1:
             return dtypes.Enum()  # type: ignore[call-arg]
-        return dtypes.Enum(_DelayedCategories(lambda: tuple(dtype.categories)))
+        categories = _DeferredIterable(
+            dtype.categories.to_list
+            if backend_version >= (0, 20, 4)
+            else lambda: cast("list[str]", dtype.categories)
+        )
+        return dtypes.Enum(categories)
     if dtype == pl.Date:
         return dtypes.Date()
     if isinstance_or_issubclass(dtype, pl.Datetime):

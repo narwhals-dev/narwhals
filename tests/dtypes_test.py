@@ -435,6 +435,8 @@ def test_enum_categories_immutable() -> None:
     dtype = nw.Enum(["a", "b"])
     with pytest.raises(TypeError, match="does not support item assignment"):
         dtype.categories[0] = "c"  # type: ignore[index]
+    with pytest.raises(AttributeError):
+        dtype.categories = "a", "b", "c"  # type: ignore[misc]
 
 
 def test_enum_repr_pd() -> None:
@@ -444,7 +446,8 @@ def test_enum_repr_pd() -> None:
         )
     )
     dtype = df.schema["a"]
-    assert dtype.categories == ("broccoli", "cabbage")  # type: ignore[attr-defined]
+    assert isinstance(dtype, nw.Enum)
+    assert dtype.categories == ("broccoli", "cabbage")
     assert "Enum(categories=['broccoli', 'cabbage'])" in str(dtype)
 
 
@@ -458,7 +461,8 @@ def test_enum_repr_pl() -> None:
         )
     )
     dtype = df.schema["a"]
-    assert dtype.categories == ("broccoli", "cabbage")  # type: ignore[attr-defined]
+    assert isinstance(dtype, nw.Enum)
+    assert dtype.categories == ("broccoli", "cabbage")
     assert "Enum(categories=['broccoli', 'cabbage'])" in repr(dtype)
 
 

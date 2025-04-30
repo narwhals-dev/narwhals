@@ -1717,7 +1717,8 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         This is similar to a left-join except that we match on nearest key rather than equal keys.
 
-        Both DataFrames must be sorted by the asof_join key.
+        For Polars, both DataFrames must be sorted by the `on` key (within each `by` group
+        if specified).
 
         Arguments:
             other: DataFrame to join with.
@@ -3034,7 +3035,8 @@ class LazyFrame(BaseFrame[FrameT]):
 
         This is similar to a left-join except that we match on nearest key rather than equal keys.
 
-        Both DataFrames must be sorted by the asof_join key.
+        For Polars, both DataFrames must be sorted by the `on` key (within each `by` group
+        if specified).
 
         Arguments:
             other: DataFrame to join with.
