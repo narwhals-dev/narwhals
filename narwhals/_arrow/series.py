@@ -1028,7 +1028,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_native(result)
 
     @requires.backend_version((13,))
-    def hist(  # noqa: PLR0915
+    def hist(  # noqa: C901, PLR0915
         self,
         bins: list[float | int] | None,
         *,

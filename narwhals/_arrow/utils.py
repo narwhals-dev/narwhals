@@ -89,7 +89,7 @@ def nulls_like(n: int, series: ArrowSeries) -> ArrayAny:
 
 
 @lru_cache(maxsize=16)
-def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
+def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:  # noqa: C901
     dtypes = version.dtypes
     if pa.types.is_int64(dtype):
         return dtypes.Int64()
@@ -154,7 +154,7 @@ def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
     return dtypes.Unknown()  # pragma: no cover
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa.DataType:
+def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa.DataType:  # noqa: C901
     dtypes = version.dtypes
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         msg = "Casting to Decimal is not supported yet."

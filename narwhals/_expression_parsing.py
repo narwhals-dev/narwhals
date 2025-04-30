@@ -360,7 +360,7 @@ class ExprMetadata:
         )
 
 
-def combine_metadata(  # noqa: PLR0915
+def combine_metadata(  # noqa: C901, PLR0915
     *args: IntoExpr | object | None,
     str_as_lit: bool,
     allow_multi_output: bool,

@@ -147,7 +147,6 @@ ignore = [
   "A005",    # stdlib-module-shadowing
   "ARG002",  # unused-method-argument
   "ANN401",  # any-type
-  "C901",    # complex-structure
   "COM812",  # missing-trailing-comma
   "D100",    # undocumented-public-module
   "D101",    # undocumented-public-class
@@ -178,7 +177,7 @@ builtins-ignorelist = ["format"]
 
 [tool.ruff.lint.per-file-ignores]
 "narwhals/expr_dt.py" = ["RUF002"]
-"tests/*" = ["S101"]
+"tests/*" = ["S101", "C901"]
 "tpch/tests/*" = ["S101"]
 "utils/*" = ["S311", "PTH123"]
 "tpch/execute/*" = ["T201"]

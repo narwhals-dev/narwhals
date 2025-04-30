@@ -358,7 +358,7 @@ def from_native(  # noqa: D417
     )
 
 
-def _from_native_impl(  # noqa: PLR0915
+def _from_native_impl(  # noqa: C901, PLR0915
     native_object: Any,
     *,
     pass_through: bool = False,
@@ -871,7 +871,7 @@ def narwhalify(
         return decorator(func)
 
 
-def to_py_scalar(scalar_like: Any) -> Any:
+def to_py_scalar(scalar_like: Any) -> Any:  # noqa: C901
     """If a scalar is not Python native, converts it to Python native.
 
     Arguments:

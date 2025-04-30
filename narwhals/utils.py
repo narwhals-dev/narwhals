@@ -318,7 +318,7 @@ class Implementation(Enum):
             else cls.from_native_namespace(backend)
         )
 
-    def to_native_namespace(self) -> ModuleType:
+    def to_native_namespace(self) -> ModuleType:  # noqa: C901
         """Return the native namespace module corresponding to Implementation.
 
         Returns:

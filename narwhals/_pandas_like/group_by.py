@@ -79,7 +79,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
                 observed=True,
             )
 
-    def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:  # noqa: PLR0915
+    def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:  # noqa: C901, PLR0915
         implementation = self.compliant._implementation
         backend_version = self.compliant._backend_version
         new_names: list[str] = self._keys.copy()

@@ -254,7 +254,7 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
             self.native.sort_values(list(by), ascending=ascending, na_position=position)
         )
 
-    def join(
+    def join(  # noqa: C901
         self,
         other: Self,
         *,

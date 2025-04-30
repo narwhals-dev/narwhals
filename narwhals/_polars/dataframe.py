@@ -301,7 +301,7 @@ class PolarsDataFrame:
     def shape(self) -> tuple[int, int]:
         return self.native.shape
 
-    def __getitem__(
+    def __getitem__(  # noqa: C901
         self,
         item: tuple[
             SingleIndexSelector | MultiIndexSelector[PolarsSeries],
