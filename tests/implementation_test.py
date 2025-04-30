@@ -31,3 +31,24 @@ def test_implementation_polars() -> None:
     ].implementation.is_pandas()
     assert nw.from_native(pl.DataFrame({"a": [1, 2, 3]})).implementation.is_polars()
     assert nw.from_native(pl.LazyFrame({"a": [1, 2, 3]})).implementation.is_polars()
+
+
+@pytest.mark.parametrize(
+    ("member", "value"),
+    [
+        ("PANDAS", "pandas"),
+        ("MODIN", "modin"),
+        ("CUDF", "cudf"),
+        ("PYARROW", "pyarrow"),
+        ("PYSPARK", "pyspark"),
+        ("POLARS", "polars"),
+        ("DASK", "dask"),
+        ("DUCKDB", "duckdb"),
+        ("IBIS", "ibis"),
+        ("SQLFRAME", "sqlframe"),
+        ("PYSPARK_CONNECT", "pyspark[connect]"),
+        ("UNKNOWN", "unknown"),
+    ],
+)
+def test_implementation_new(member: str, value: str) -> None:
+    assert nw.Implementation(value) is getattr(nw.Implementation, member)
