@@ -462,12 +462,14 @@ def _from_native_impl(  # noqa: PLR0915
         return Series(pl_compliant, level="full")
 
     # pandas
-    elif is_pandas_dataframe(native_object):
-        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-
+    elif (
+        is_pandas_dataframe(native_object)
+        or is_modin_dataframe(native_object)
+        or is_cudf_dataframe(native_object)
+    ):
         if series_only:
             if not pass_through:
-                msg = "Cannot only use `series_only` with dataframe"
+                msg = f"Cannot only use `series_only` with {type(native_object).__qualname__}"
                 raise TypeError(msg)
             return native_object
         return (
@@ -495,25 +497,6 @@ def _from_native_impl(  # noqa: PLR0915
         )
 
     # Modin
-    elif is_modin_dataframe(native_object):  # pragma: no cover
-        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-
-        mpd = get_modin()
-        if series_only:
-            if not pass_through:
-                msg = "Cannot only use `series_only` with modin.DataFrame"
-                raise TypeError(msg)
-            return native_object
-        return DataFrame(
-            PandasLikeDataFrame(
-                native_object,
-                implementation=Implementation.MODIN,
-                backend_version=parse_version(mpd),
-                version=version,
-                validate_column_names=True,
-            ),
-            level="full",
-        )
     elif is_modin_series(native_object):  # pragma: no cover
         from narwhals._pandas_like.series import PandasLikeSeries
 
@@ -534,25 +517,6 @@ def _from_native_impl(  # noqa: PLR0915
         )
 
     # cuDF
-    elif is_cudf_dataframe(native_object):  # pragma: no cover
-        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-
-        cudf = get_cudf()
-        if series_only:
-            if not pass_through:
-                msg = "Cannot only use `series_only` with cudf.DataFrame"
-                raise TypeError(msg)
-            return native_object
-        return DataFrame(
-            PandasLikeDataFrame(
-                native_object,
-                implementation=Implementation.CUDF,
-                backend_version=parse_version(cudf),
-                version=version,
-                validate_column_names=True,
-            ),
-            level="full",
-        )
     elif is_cudf_series(native_object):  # pragma: no cover
         from narwhals._pandas_like.series import PandasLikeSeries
 
