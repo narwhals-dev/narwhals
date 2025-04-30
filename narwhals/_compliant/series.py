@@ -21,6 +21,8 @@ from narwhals._compliant.typing import NativeSeriesT_co
 from narwhals._translate import FromIterable
 from narwhals._translate import FromNative
 from narwhals._translate import NumpyConvertible
+from narwhals._translate import ToNarwhals
+from narwhals.utils import Version
 from narwhals.utils import _StoresCompliant
 from narwhals.utils import _StoresNative
 from narwhals.utils import is_compliant_series
@@ -41,6 +43,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.namespace import CompliantNamespace
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals.dtypes import DType
+    from narwhals.series import Series
     from narwhals.typing import ClosedInterval
     from narwhals.typing import FillNullStrategy
     from narwhals.typing import Into1DArray
@@ -54,7 +57,6 @@ if TYPE_CHECKING:
     from narwhals.typing import _1DArray
     from narwhals.typing import _SliceIndex
     from narwhals.utils import Implementation
-    from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
 __all__ = ["CompliantSeries", "EagerSeries"]
@@ -64,6 +66,7 @@ class CompliantSeries(
     NumpyConvertible["_1DArray", "Into1DArray"],
     FromIterable,
     FromNative[NativeSeriesT],
+    ToNarwhals["Series[NativeSeriesT]"],
     Protocol[NativeSeriesT],
 ):
     _implementation: Implementation
@@ -105,6 +108,14 @@ class CompliantSeries(
         name: str = "",
         dtype: DType | type[DType] | None = None,
     ) -> Self: ...
+    def to_narwhals(self, *args: Any, **kwds: Any) -> Series[NativeSeriesT]:
+        if self._version is Version.MAIN:
+            from narwhals.series import Series
+
+            return Series(self, level="full")
+        from narwhals.stable.v1 import Series as SeriesV1
+
+        return SeriesV1(self, level="full")  # type: ignore[no-any-return]
 
     # Operators
     def __add__(self, other: Any) -> Self: ...

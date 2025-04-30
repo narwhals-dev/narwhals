@@ -18,6 +18,7 @@ from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals._polars.utils import native_to_narwhals_dtype
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.utils import Implementation
+from narwhals.utils import Version
 from narwhals.utils import requires
 from narwhals.utils import validate_backend_version
 
@@ -35,10 +36,10 @@ if TYPE_CHECKING:
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals.dtypes import DType
+    from narwhals.series import Series
     from narwhals.typing import Into1DArray
     from narwhals.typing import MultiIndexSelector
     from narwhals.typing import _1DArray
-    from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
     T = TypeVar("T")
@@ -192,6 +193,15 @@ class PolarsSeries:
     def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
         native = pl.Series(data if is_numpy_array_1d(data) else [data])
         return cls.from_native(native, context=context)
+
+    def to_narwhals(self, *args: Any, **kwds: Any) -> Series[pl.Series]:
+        if self._version is Version.MAIN:
+            from narwhals.series import Series
+
+            return Series(self, level="full")
+        from narwhals.stable.v1 import Series as SeriesV1
+
+        return SeriesV1(self, level="full")  # type: ignore[no-any-return]
 
     def _with_native(self, series: pl.Series) -> Self:
         return self.__class__(
