@@ -195,9 +195,9 @@ class DepthTrackingGroupBy(
 
 
 class EagerGroupBy(
-    DepthTrackingGroupBy[CompliantDataFrameT, EagerExprT_contra, str],
+    DepthTrackingGroupBy[CompliantDataFrameT, EagerExprT_contra, NativeAggregationT_co],
     DataFrameGroupBy[CompliantDataFrameT, EagerExprT_contra],
-    Protocol38[CompliantDataFrameT, EagerExprT_contra],
+    Protocol38[CompliantDataFrameT, EagerExprT_contra, NativeAggregationT_co],
 ): ...
 
 

@@ -704,9 +704,9 @@ class ArrowDataFrame(
         subset = list(subset or self.columns)
 
         if keep in {"any", "first", "last"}:
-            agg_func_map = {"any": "min", "first": "min", "last": "max"}
+            from narwhals._arrow.group_by import ArrowGroupBy
 
-            agg_func = agg_func_map[keep]
+            agg_func = ArrowGroupBy._REMAP_UNIQUE[keep]
             col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
             keep_idx_native = (
                 self.native.append_column(col_token, pa.array(np.arange(len(self))))
