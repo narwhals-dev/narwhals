@@ -478,12 +478,13 @@ def _from_native_impl(  # noqa: PLR0915
 
     # PyArrow
     elif is_native_arrow(native_object):
-        if series_only and is_pyarrow_table(native_object):
-            if not pass_through:
-                msg = f"Cannot only use `series_only` with {type(native_object).__qualname__}"
-                raise TypeError(msg)
-            return native_object
-        if not allow_series and not is_pyarrow_table(native_object):
+        if is_pyarrow_table(native_object):
+            if series_only:
+                if not pass_through:
+                    msg = f"Cannot only use `series_only` with {type(native_object).__qualname__}"
+                    raise TypeError(msg)
+                return native_object
+        elif not allow_series:
             if not pass_through:
                 msg = "Please set `allow_series=True` or `series_only=True`"
                 raise TypeError(msg)
