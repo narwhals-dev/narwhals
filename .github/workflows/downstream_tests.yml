@@ -229,18 +229,15 @@ jobs:
       - name: install-tea-tasting-test
         run: |
           cd tea-tasting
-          uv venv
           uv sync --group test
       - name: install-narwhals-dev
         run: |
           cd tea-tasting
-          . .venv/bin/activate
           uv pip uninstall narwhals
           uv pip install -e ./..
       - name: show-deps
         run: |
           cd tea-tasting
-          . .venv/bin/activate
           uv pip freeze
       - name: run-pytest
         run: |
