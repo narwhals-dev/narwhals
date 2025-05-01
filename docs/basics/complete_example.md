@@ -30,7 +30,7 @@ the argument will be propagated to `nw.from_native`.
 
 
     class StandardScaler:
-        def fit(self: Self, df: IntoDataFrameT) -> Self:
+        def fit(self, df: IntoDataFrameT) -> Self:
             df_nw = nw.from_native(df, eager_only=True)
             self._means = {col: df_nw[col].mean() for col in df_nw.columns}
             self._std_devs = {col: df_nw[col].std() for col in df_nw.columns}
@@ -47,7 +47,7 @@ the argument will be propagated to `nw.from_native`.
 
     class StandardScaler:
         @nw.narwhalify(eager_only=True)
-        def fit(self: Self, df: DataFrameT) -> Self:
+        def fit(self, df: DataFrameT) -> Self:
             self._means = {col: df[col].mean() for col in df.columns}
             self._std_devs = {col: df[col].std() for col in df.columns}
             self._columns = df.columns
@@ -68,7 +68,7 @@ We're going to take in a dataframe, and return a dataframe of the same type:
     class StandardScaler:
         ...
 
-        def transform(self: Self, df: IntoFrameT) -> IntoFrameT:
+        def transform(self, df: IntoFrameT) -> IntoFrameT:
             df_nw = nw.from_native(df)
             return df_nw.with_columns(
                 (nw.col(col) - self._means[col]) / self._std_devs[col]
@@ -87,7 +87,7 @@ We're going to take in a dataframe, and return a dataframe of the same type:
         ...
 
         @nw.narwhalify
-        def transform(self: Self, df: FrameT) -> FrameT:
+        def transform(self, df: FrameT) -> FrameT:
             return df.with_columns(
                 (nw.col(col) - self._means[col]) / self._std_devs[col]
                 for col in self._columns
@@ -111,14 +111,14 @@ Here is our dataframe-agnostic standard scaler:
 
 
     class StandardScaler:
-        def fit(self: Self, df: IntoDataFrameT) -> Self:
+        def fit(self, df: IntoDataFrameT) -> Self:
             df_nw = nw.from_native(df, eager_only=True)
             self._means = {col: df_nw[col].mean() for col in df_nw.columns}
             self._std_devs = {col: df_nw[col].std() for col in df_nw.columns}
             self._columns = df_nw.columns
             return self
 
-        def transform(self: Self, df: IntoFrameT) -> IntoFrameT:
+        def transform(self, df: IntoFrameT) -> IntoFrameT:
             df_nw = nw.from_native(df)
             return df_nw.with_columns(
                 (nw.col(col) - self._means[col]) / self._std_devs[col]
@@ -136,14 +136,14 @@ Here is our dataframe-agnostic standard scaler:
 
     class StandardScaler:
         @nw.narwhalify(eager_only=True)
-        def fit(self: Self, df: DataFrameT) -> Self:
+        def fit(self, df: DataFrameT) -> Self:
             self._means = {col: df[col].mean() for col in df.columns}
             self._std_devs = {col: df[col].std() for col in df.columns}
             self._columns = df.columns
             return self
 
         @nw.narwhalify
-        def transform(self: Self, df: FrameT) -> FrameT:
+        def transform(self, df: FrameT) -> FrameT:
             return df.with_columns(
                 (nw.col(col) - self._means[col]) / self._std_devs[col]
                 for col in self._columns

@@ -19,9 +19,7 @@ from narwhals._expression_parsing import WindowKind
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import check_expressions_preserve_length
 from narwhals._expression_parsing import combine_metadata
-from narwhals._expression_parsing import combine_metadata_horizontal_op
 from narwhals._expression_parsing import extract_compliant
-from narwhals._expression_parsing import infer_kind
 from narwhals._expression_parsing import is_scalar_like
 from narwhals.dependencies import is_narwhals_series
 from narwhals.dependencies import is_numpy_array
@@ -34,7 +32,6 @@ from narwhals.translate import from_native
 from narwhals.translate import to_native
 from narwhals.utils import Implementation
 from narwhals.utils import Version
-from narwhals.utils import _into_compliant_namespace
 from narwhals.utils import deprecate_native_namespace
 from narwhals.utils import flatten
 from narwhals.utils import is_compliant_expr
@@ -47,7 +44,6 @@ from narwhals.utils import validate_laziness
 if TYPE_CHECKING:
     from types import ModuleType
 
-    from typing_extensions import Self
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
@@ -242,7 +238,7 @@ def _new_series_impl(
 ) -> Series[Any]:
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
-        ns = _into_compliant_namespace(implementation, version)
+        ns = version.namespace.from_backend(implementation).compliant
         series = ns._series.from_iterable(values, name=name, context=ns, dtype=dtype)
         return from_native(series, series_only=True)
     elif implementation is Implementation.DASK:  # pragma: no cover
@@ -328,7 +324,7 @@ def _from_dict_impl(
         data, backend = _from_dict_no_backend(data)
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
-        ns = _into_compliant_namespace(implementation, version)
+        ns = version.namespace.from_backend(implementation).compliant
         frame = ns._dataframe.from_dict(data, schema=schema, context=ns)
         return from_native(frame, eager_only=True)
     elif implementation is Implementation.UNKNOWN:  # pragma: no cover
@@ -444,7 +440,7 @@ def _from_numpy_impl(
         raise TypeError(msg)
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
-        ns = _into_compliant_namespace(implementation, version)
+        ns = version.namespace.from_backend(implementation).compliant
         frame = ns.from_numpy(data, schema)
         return from_native(frame, eager_only=True)
     else:  # pragma: no cover
@@ -532,7 +528,7 @@ def _from_arrow_impl(
         raise TypeError(msg)
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
-        ns = _into_compliant_namespace(implementation, version)
+        ns = version.namespace.from_backend(implementation).compliant
         frame = ns._dataframe.from_arrow(data, context=ns)
         return from_native(frame, eager_only=True)
     else:  # pragma: no cover
@@ -1402,7 +1398,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.sum_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata_horizontal_op(*flat_exprs),
+        ExprMetadata.from_horizontal_op(*flat_exprs),
     )
 
 
@@ -1446,7 +1442,7 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.min_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata_horizontal_op(*flat_exprs),
+        ExprMetadata.from_horizontal_op(*flat_exprs),
     )
 
 
@@ -1492,16 +1488,16 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.max_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata_horizontal_op(*flat_exprs),
+        ExprMetadata.from_horizontal_op(*flat_exprs),
     )
 
 
 class When:
-    def __init__(self: Self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
+    def __init__(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
         self._predicate = all_horizontal(*flatten(predicates))
         check_expressions_preserve_length(self._predicate, function_name="when")
 
-    def then(self: Self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
+    def then(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
         return Then(
             lambda plx: apply_n_ary_operation(
                 plx,
@@ -1521,8 +1517,8 @@ class When:
 
 
 class Then(Expr):
-    def otherwise(self: Self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
-        kind = infer_kind(value, str_as_lit=False)
+    def otherwise(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
+        kind = ExprKind.from_into_expr(value, str_as_lit=False)
 
         def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
             compliant_expr = self._to_compliant_expr(plx)
@@ -1628,7 +1624,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.all_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata_horizontal_op(*flat_exprs),
+        ExprMetadata.from_horizontal_op(*flat_exprs),
     )
 
 
@@ -1724,7 +1720,7 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.any_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata_horizontal_op(*flat_exprs),
+        ExprMetadata.from_horizontal_op(*flat_exprs),
     )
 
 
@@ -1770,7 +1766,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.mean_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata_horizontal_op(*flat_exprs),
+        ExprMetadata.from_horizontal_op(*flat_exprs),
     )
 
 

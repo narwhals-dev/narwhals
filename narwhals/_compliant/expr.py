@@ -30,7 +30,6 @@ from narwhals._compliant.typing import EagerExprT
 from narwhals._compliant.typing import EagerSeriesT
 from narwhals._compliant.typing import LazyExprT
 from narwhals._compliant.typing import NativeExprT
-from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
 from narwhals.dtypes import DType
@@ -195,19 +194,6 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         upper_bound: Self | NumericLiteral | TemporalLiteral | None,
     ) -> Self: ...
 
-    @property
-    def str(self) -> Any: ...
-    @property
-    def name(self) -> Any: ...
-    @property
-    def dt(self) -> Any: ...
-    @property
-    def cat(self) -> Any: ...
-    @property
-    def list(self) -> Any: ...
-    @property
-    def struct(self) -> Any: ...
-
     def ewm_mean(
         self,
         *,
@@ -287,6 +273,25 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         assert self._metadata is not None  # noqa: S101
         return self._metadata.expansion_kind.is_multi_unnamed()
 
+    def _evaluate_aliases(
+        self: CompliantExpr[CompliantFrameT, Any], frame: CompliantFrameT, /
+    ) -> Sequence[str]:
+        names = self._evaluate_output_names(frame)
+        return alias(names) if (alias := self._alias_output_names) else names
+
+    @property
+    def str(self) -> Any: ...
+    @property
+    def name(self) -> Any: ...
+    @property
+    def dt(self) -> Any: ...
+    @property
+    def cat(self) -> Any: ...
+    @property
+    def list(self) -> Any: ...
+    @property
+    def struct(self) -> Any: ...
+
 
 class DepthTrackingExpr(
     CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
@@ -334,7 +339,7 @@ class EagerExpr(
     _call_kwargs: dict[str, Any]
 
     def __init__(
-        self: Self,
+        self,
         call: EvalSeries[EagerDataFrameT, EagerSeriesT],
         *,
         depth: int,
@@ -393,7 +398,7 @@ class EagerExpr(
         )
 
     def _reuse_series(
-        self: Self,
+        self,
         method_name: str,
         *,
         returns_scalar: bool = False,
@@ -467,7 +472,7 @@ class EagerExpr(
             series._from_scalar(method(series)) if returns_scalar else method(series)
             for series in self(df)
         ]
-        _, aliases = evaluate_output_names_and_aliases(self, df, [])
+        aliases = self._evaluate_aliases(df)
         if [s.name for s in out] != list(aliases):  # pragma: no cover
             msg = (
                 f"Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues\n"
@@ -478,7 +483,7 @@ class EagerExpr(
         return out
 
     def _reuse_series_namespace(
-        self: Self,
+        self,
         series_namespace: Literal["cat", "dt", "list", "name", "str", "struct"],
         method_name: str,
         **kwargs: Any,
@@ -718,7 +723,7 @@ class EagerExpr(
             "sample", n=n, fraction=fraction, with_replacement=with_replacement, seed=seed
         )
 
-    def alias(self: Self, name: str) -> Self:
+    def alias(self, name: str) -> Self:
         def alias_output_names(names: Sequence[str]) -> Sequence[str]:
             if len(names) != 1:
                 msg = f"Expected function with single output, found output names: {names}"
@@ -815,7 +820,7 @@ class EagerExpr(
         )
 
     def map_batches(
-        self: Self,
+        self,
         function: Callable[[Any], Any],
         return_dtype: DType | type[DType] | None,
     ) -> Self:

@@ -12,7 +12,6 @@ from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import WindowKind
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import combine_metadata
-from narwhals._expression_parsing import combine_metadata_binary_op
 from narwhals._expression_parsing import extract_compliant
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import InvalidOperationError
@@ -56,9 +55,7 @@ if TYPE_CHECKING:
 
 
 class Expr:
-    def __init__(
-        self: Self, to_compliant_expr: _ToCompliant, metadata: ExprMetadata
-    ) -> None:
+    def __init__(self, to_compliant_expr: _ToCompliant, metadata: ExprMetadata) -> None:
         # callable from CompliantNamespace to CompliantExpr
         def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
             result = to_compliant_expr(plx)
@@ -107,10 +104,10 @@ class Expr:
             to_compliant_expr, self._metadata.with_kind(ExprKind.FILTRATION)
         )
 
-    def __repr__(self: Self) -> str:
+    def __repr__(self) -> str:
         return f"Narwhals Expr\nmetadata: {self._metadata}\n"
 
-    def _taxicab_norm(self: Self) -> Self:
+    def _taxicab_norm(self) -> Self:
         # This is just used to test out the stable api feature in a realistic-ish way.
         # It's not intended to be used.
         return self._with_aggregation(
@@ -118,7 +115,7 @@ class Expr:
         )
 
     # --- convert ---
-    def alias(self: Self, name: str) -> Self:
+    def alias(self, name: str) -> Self:
         """Rename the expression.
 
         Arguments:
@@ -144,7 +141,7 @@ class Expr:
         return self._with_callable(lambda plx: self._to_compliant_expr(plx).alias(name))
 
     def pipe(
-        self: Self,
+        self,
         function: Callable[Concatenate[Self, PS], R],
         *args: PS.args,
         **kwargs: PS.kwargs,
@@ -177,7 +174,7 @@ class Expr:
         """
         return function(self, *args, **kwargs)
 
-    def cast(self: Self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: DType | type[DType]) -> Self:
         """Redefine an object's data type.
 
         Arguments:
@@ -205,64 +202,64 @@ class Expr:
         return self._with_callable(lambda plx: self._to_compliant_expr(plx).cast(dtype))
 
     # --- binary ---
-    def __eq__(self: Self, other: Self | Any) -> Self:  # type: ignore[override]
+    def __eq__(self, other: Self | Any) -> Self:  # type: ignore[override]
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x == y, self, other, str_as_lit=True
             ),
-            combine_metadata_binary_op(self, other),
+            ExprMetadata.from_binary_op(self, other),
         )
 
-    def __ne__(self: Self, other: Self | Any) -> Self:  # type: ignore[override]
+    def __ne__(self, other: Self | Any) -> Self:  # type: ignore[override]
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x != y, self, other, str_as_lit=True
             ),
-            combine_metadata_binary_op(self, other),
+            ExprMetadata.from_binary_op(self, other),
         )
 
-    def __and__(self: Self, other: Any) -> Self:
+    def __and__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x & y, self, other, str_as_lit=True
             ),
-            combine_metadata_binary_op(self, other),
+            ExprMetadata.from_binary_op(self, other),
         )
 
-    def __rand__(self: Self, other: Any) -> Self:
+    def __rand__(self, other: Any) -> Self:
         return (self & other).alias("literal")  # type: ignore[no-any-return]
 
-    def __or__(self: Self, other: Any) -> Self:
+    def __or__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x | y, self, other, str_as_lit=True
             ),
-            combine_metadata_binary_op(self, other),
+            ExprMetadata.from_binary_op(self, other),
         )
 
-    def __ror__(self: Self, other: Any) -> Self:
+    def __ror__(self, other: Any) -> Self:
         return (self | other).alias("literal")  # type: ignore[no-any-return]
 
-    def __add__(self: Self, other: Any) -> Self:
+    def __add__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x + y, self, other, str_as_lit=True
             ),
-            combine_metadata_binary_op(self, other),
+            ExprMetadata.from_binary_op(self, other),
         )
 
-    def __radd__(self: Self, other: Any) -> Self:
+    def __radd__(self, other: Any) -> Self:
         return (self + other).alias("literal")  # type: ignore[no-any-return]
 
-    def __sub__(self: Self, other: Any) -> Self:
+    def __sub__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x - y, self, other, str_as_lit=True
             ),
-            combine_metadata_binary_op(self, other),
+            ExprMetadata.from_binary_op(self, other),
         )
 
-    def __rsub__(self: Self, other: Any) -> Self:
+    def __rsub__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx,
@@ -271,18 +268,18 @@ class Expr:
                 other,
                 str_as_lit=True,
             ),
-            combine_metadata_binary_op(self, other),
+            ExprMetadata.from_binary_op(self, other),
         )
 
-    def __truediv__(self: Self, other: Any) -> Self:
+    def __truediv__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x / y, self, other, str_as_lit=True
             ),
-            combine_metadata_binary_op(self, other),
+            ExprMetadata.from_binary_op(self, other),
         )
 
-    def __rtruediv__(self: Self, other: Any) -> Self:
+    def __rtruediv__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx,
@@ -291,61 +288,61 @@ class Expr:
                 other,
                 str_as_lit=True,
             ),
-            combine_metadata_binary_op(self, other),
+            ExprMetadata.from_binary_op(self, other),
         )
 
-    def __mul__(self: Self, other: Any) -> Self:
+    def __mul__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x * y, self, other, str_as_lit=True
             ),
-            combine_metadata_binary_op(self, other),
+            ExprMetadata.from_binary_op(self, other),
         )
 
-    def __rmul__(self: Self, other: Any) -> Self:
+    def __rmul__(self, other: Any) -> Self:
         return (self * other).alias("literal")  # type: ignore[no-any-return]
 
-    def __le__(self: Self, other: Any) -> Self:
+    def __le__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x <= y, self, other, str_as_lit=True
             ),
-            combine_metadata_binary_op(self, other),
+            ExprMetadata.from_binary_op(self, other),
         )
 
-    def __lt__(self: Self, other: Any) -> Self:
+    def __lt__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x < y, self, other, str_as_lit=True
             ),
-            combine_metadata_binary_op(self, other),
+            ExprMetadata.from_binary_op(self, other),
         )
 
-    def __gt__(self: Self, other: Any) -> Self:
+    def __gt__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x > y, self, other, str_as_lit=True
             ),
-            combine_metadata_binary_op(self, other),
+            ExprMetadata.from_binary_op(self, other),
         )
 
-    def __ge__(self: Self, other: Any) -> Self:
+    def __ge__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x >= y, self, other, str_as_lit=True
             ),
-            combine_metadata_binary_op(self, other),
+            ExprMetadata.from_binary_op(self, other),
         )
 
-    def __pow__(self: Self, other: Any) -> Self:
+    def __pow__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x**y, self, other, str_as_lit=True
             ),
-            combine_metadata_binary_op(self, other),
+            ExprMetadata.from_binary_op(self, other),
         )
 
-    def __rpow__(self: Self, other: Any) -> Self:
+    def __rpow__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx,
@@ -354,18 +351,18 @@ class Expr:
                 other,
                 str_as_lit=True,
             ),
-            combine_metadata_binary_op(self, other),
+            ExprMetadata.from_binary_op(self, other),
         )
 
-    def __floordiv__(self: Self, other: Any) -> Self:
+    def __floordiv__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x // y, self, other, str_as_lit=True
             ),
-            combine_metadata_binary_op(self, other),
+            ExprMetadata.from_binary_op(self, other),
         )
 
-    def __rfloordiv__(self: Self, other: Any) -> Self:
+    def __rfloordiv__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx,
@@ -374,18 +371,18 @@ class Expr:
                 other,
                 str_as_lit=True,
             ),
-            combine_metadata_binary_op(self, other),
+            ExprMetadata.from_binary_op(self, other),
         )
 
-    def __mod__(self: Self, other: Any) -> Self:
+    def __mod__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx, lambda x, y: x % y, self, other, str_as_lit=True
             ),
-            combine_metadata_binary_op(self, other),
+            ExprMetadata.from_binary_op(self, other),
         )
 
-    def __rmod__(self: Self, other: Any) -> Self:
+    def __rmod__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx,
@@ -394,14 +391,14 @@ class Expr:
                 other,
                 str_as_lit=True,
             ),
-            combine_metadata_binary_op(self, other),
+            ExprMetadata.from_binary_op(self, other),
         )
 
     # --- unary ---
-    def __invert__(self: Self) -> Self:
+    def __invert__(self) -> Self:
         return self._with_callable(lambda plx: self._to_compliant_expr(plx).__invert__())
 
-    def any(self: Self) -> Self:
+    def any(self) -> Self:
         """Return whether any of the values in the column are `True`.
 
         Returns:
@@ -422,7 +419,7 @@ class Expr:
         """
         return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).any())
 
-    def all(self: Self) -> Self:
+    def all(self) -> Self:
         """Return whether all values in the column are `True`.
 
         Returns:
@@ -444,7 +441,7 @@ class Expr:
         return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).all())
 
     def ewm_mean(
-        self: Self,
+        self,
         *,
         com: float | None = None,
         span: float | None = None,
@@ -541,7 +538,7 @@ class Expr:
             )
         )
 
-    def mean(self: Self) -> Self:
+    def mean(self) -> Self:
         """Get mean value.
 
         Returns:
@@ -562,7 +559,7 @@ class Expr:
         """
         return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).mean())
 
-    def median(self: Self) -> Self:
+    def median(self) -> Self:
         """Get median value.
 
         Returns:
@@ -586,7 +583,7 @@ class Expr:
         """
         return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).median())
 
-    def std(self: Self, *, ddof: int = 1) -> Self:
+    def std(self, *, ddof: int = 1) -> Self:
         """Get standard deviation.
 
         Arguments:
@@ -613,7 +610,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).std(ddof=ddof)
         )
 
-    def var(self: Self, *, ddof: int = 1) -> Self:
+    def var(self, *, ddof: int = 1) -> Self:
         """Get variance.
 
         Arguments:
@@ -641,7 +638,7 @@ class Expr:
         )
 
     def map_batches(
-        self: Self,
+        self,
         function: Callable[[Any], CompliantExpr[Any, Any]],
         return_dtype: DType | None = None,
     ) -> Self:
@@ -687,7 +684,7 @@ class Expr:
             self._metadata.with_kind_and_closeable_window(ExprKind.FILTRATION),
         )
 
-    def skew(self: Self) -> Self:
+    def skew(self) -> Self:
         """Calculate the sample skewness of a column.
 
         Returns:
@@ -708,7 +705,7 @@ class Expr:
         """
         return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).skew())
 
-    def sum(self: Self) -> Expr:
+    def sum(self) -> Expr:
         """Return the sum value.
 
         Returns:
@@ -733,7 +730,7 @@ class Expr:
         """
         return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).sum())
 
-    def min(self: Self) -> Self:
+    def min(self) -> Self:
         """Returns the minimum value(s) from a column(s).
 
         Returns:
@@ -754,7 +751,7 @@ class Expr:
         """
         return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).min())
 
-    def max(self: Self) -> Self:
+    def max(self) -> Self:
         """Returns the maximum value(s) from a column(s).
 
         Returns:
@@ -775,7 +772,7 @@ class Expr:
         """
         return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).max())
 
-    def arg_min(self: Self) -> Self:
+    def arg_min(self) -> Self:
         """Returns the index of the minimum value.
 
         Returns:
@@ -798,7 +795,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).arg_min()
         )
 
-    def arg_max(self: Self) -> Self:
+    def arg_max(self) -> Self:
         """Returns the index of the maximum value.
 
         Returns:
@@ -821,7 +818,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).arg_max()
         )
 
-    def count(self: Self) -> Self:
+    def count(self) -> Self:
         """Returns the number of non-null elements in the column.
 
         Returns:
@@ -842,7 +839,7 @@ class Expr:
         """
         return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).count())
 
-    def n_unique(self: Self) -> Self:
+    def n_unique(self) -> Self:
         """Returns count of unique values.
 
         Returns:
@@ -863,7 +860,7 @@ class Expr:
         """
         return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).n_unique())
 
-    def unique(self: Self) -> Self:
+    def unique(self) -> Self:
         """Return unique values of this expression.
 
         Returns:
@@ -884,7 +881,7 @@ class Expr:
         """
         return self._with_filtration(lambda plx: self._to_compliant_expr(plx).unique())
 
-    def abs(self: Self) -> Self:
+    def abs(self) -> Self:
         """Return absolute value of each element.
 
         Returns:
@@ -906,7 +903,7 @@ class Expr:
         """
         return self._with_callable(lambda plx: self._to_compliant_expr(plx).abs())
 
-    def cum_sum(self: Self, *, reverse: bool = False) -> Self:
+    def cum_sum(self, *, reverse: bool = False) -> Self:
         """Return cumulative sum.
 
         !!! info
@@ -941,7 +938,7 @@ class Expr:
             self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
         )
 
-    def diff(self: Self) -> Self:
+    def diff(self) -> Self:
         """Returns the difference between each element and the previous one.
 
         !!! info
@@ -988,7 +985,7 @@ class Expr:
             self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
         )
 
-    def shift(self: Self, n: int) -> Self:
+    def shift(self, n: int) -> Self:
         """Shift values by `n` positions.
 
         !!! info
@@ -1039,7 +1036,7 @@ class Expr:
         )
 
     def replace_strict(
-        self: Self,
+        self,
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any] | None = None,
         *,
@@ -1097,7 +1094,7 @@ class Expr:
             )
         )
 
-    def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """Sort this column. Place null values first.
 
         !!! warning
@@ -1130,7 +1127,7 @@ class Expr:
 
     # --- transform ---
     def is_between(
-        self: Self,
+        self,
         lower_bound: Any | IntoExpr,
         upper_bound: Any | IntoExpr,
         closed: ClosedInterval = "both",
@@ -1190,7 +1187,7 @@ class Expr:
             ),
         )
 
-    def is_in(self: Self, other: Any) -> Self:
+    def is_in(self, other: Any) -> Self:
         """Check if elements of this expression are present in the other iterable.
 
         Arguments:
@@ -1225,7 +1222,7 @@ class Expr:
             msg = "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
             raise NotImplementedError(msg)
 
-    def filter(self: Self, *predicates: Any) -> Self:
+    def filter(self, *predicates: Any) -> Self:
         """Filters elements based on a condition, returning a new expression.
 
         Arguments:
@@ -1273,7 +1270,7 @@ class Expr:
             metadata,
         )
 
-    def is_null(self: Self) -> Self:
+    def is_null(self) -> Self:
         """Returns a boolean Series indicating which values are null.
 
         Returns:
@@ -1308,7 +1305,7 @@ class Expr:
         """
         return self._with_callable(lambda plx: self._to_compliant_expr(plx).is_null())
 
-    def is_nan(self: Self) -> Self:
+    def is_nan(self) -> Self:
         """Indicate which values are NaN.
 
         Returns:
@@ -1343,7 +1340,7 @@ class Expr:
         """
         return self._with_callable(lambda plx: self._to_compliant_expr(plx).is_nan())
 
-    def arg_true(self: Self) -> Self:
+    def arg_true(self) -> Self:
         """Find elements where boolean expression is True.
 
         Returns:
@@ -1358,7 +1355,7 @@ class Expr:
         return self._with_filtration(lambda plx: self._to_compliant_expr(plx).arg_true())
 
     def fill_null(
-        self: Self,
+        self,
         value: Expr | NonNestedLiteral = None,
         strategy: FillNullStrategy | None = None,
         limit: int | None = None,
@@ -1442,16 +1439,20 @@ class Expr:
         if strategy is not None and strategy not in {"forward", "backward"}:
             msg = f"strategy not supported: {strategy}"
             raise ValueError(msg)
-        return self._with_callable(
+
+        return self.__class__(
             lambda plx: self._to_compliant_expr(plx).fill_null(
                 value=extract_compliant(plx, value, str_as_lit=True),
                 strategy=strategy,
                 limit=limit,
-            )
+            ),
+            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW)
+            if strategy is not None
+            else self._metadata,
         )
 
     # --- partial reduction ---
-    def drop_nulls(self: Self) -> Self:
+    def drop_nulls(self) -> Self:
         """Drop null values.
 
         Returns:
@@ -1490,7 +1491,7 @@ class Expr:
         )
 
     def sample(
-        self: Self,
+        self,
         n: int | None = None,
         *,
         fraction: float | None = None,
@@ -1530,7 +1531,7 @@ class Expr:
         )
 
     def over(
-        self: Self,
+        self,
         *partition_by: str | Sequence[str],
         order_by: str | Sequence[str] | None = None,
     ) -> Self:
@@ -1615,7 +1616,7 @@ class Expr:
             next_meta,
         )
 
-    def is_duplicated(self: Self) -> Self:
+    def is_duplicated(self) -> Self:
         r"""Return a boolean mask indicating duplicated values.
 
         Returns:
@@ -1639,7 +1640,7 @@ class Expr:
         """
         return ~self.is_unique()
 
-    def is_unique(self: Self) -> Self:
+    def is_unique(self) -> Self:
         r"""Return a boolean mask indicating unique values.
 
         Returns:
@@ -1663,7 +1664,7 @@ class Expr:
         """
         return self._with_callable(lambda plx: self._to_compliant_expr(plx).is_unique())
 
-    def null_count(self: Self) -> Self:
+    def null_count(self) -> Self:
         r"""Count null values.
 
         Returns:
@@ -1693,7 +1694,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).null_count()
         )
 
-    def is_first_distinct(self: Self) -> Self:
+    def is_first_distinct(self) -> Self:
         r"""Return a boolean mask indicating the first occurrence of each distinct value.
 
         !!! info
@@ -1726,7 +1727,7 @@ class Expr:
             self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
         )
 
-    def is_last_distinct(self: Self) -> Self:
+    def is_last_distinct(self) -> Self:
         r"""Return a boolean mask indicating the last occurrence of each distinct value.
 
         !!! info
@@ -1760,7 +1761,7 @@ class Expr:
         )
 
     def quantile(
-        self: Self, quantile: float, interpolation: RollingInterpolationMethod
+        self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> Self:
         r"""Get quantile value.
 
@@ -1797,7 +1798,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).quantile(quantile, interpolation)
         )
 
-    def head(self: Self, n: int = 10) -> Self:
+    def head(self, n: int = 10) -> Self:
         r"""Get the first `n` rows.
 
         !!! warning
@@ -1822,7 +1823,7 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.23.0")
         return self._with_filtration(lambda plx: self._to_compliant_expr(plx).head(n))
 
-    def tail(self: Self, n: int = 10) -> Self:
+    def tail(self, n: int = 10) -> Self:
         r"""Get the last `n` rows.
 
         !!! warning
@@ -1847,7 +1848,7 @@ class Expr:
         issue_deprecation_warning(msg, _version="1.23.0")
         return self._with_filtration(lambda plx: self._to_compliant_expr(plx).tail(n))
 
-    def round(self: Self, decimals: int = 0) -> Self:
+    def round(self, decimals: int = 0) -> Self:
         r"""Round underlying floating point data by `decimals` digits.
 
         Arguments:
@@ -1884,7 +1885,7 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).round(decimals)
         )
 
-    def len(self: Self) -> Self:
+    def len(self) -> Self:
         r"""Return the number of elements in the column.
 
         Null values count towards the total.
@@ -1910,7 +1911,7 @@ class Expr:
         """
         return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).len())
 
-    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+    def gather_every(self, n: int, offset: int = 0) -> Self:
         r"""Take every nth value in the Series and return as new Series.
 
         !!! warning
@@ -1939,7 +1940,7 @@ class Expr:
         )
 
     def clip(
-        self: Self,
+        self,
         lower_bound: IntoExpr | NumericLiteral | TemporalLiteral | None = None,
         upper_bound: IntoExpr | NumericLiteral | TemporalLiteral | None = None,
     ) -> Self:
@@ -1989,7 +1990,7 @@ class Expr:
             ),
         )
 
-    def mode(self: Self) -> Self:
+    def mode(self) -> Self:
         r"""Compute the most occurring value(s).
 
         Can return multiple values.
@@ -2012,7 +2013,7 @@ class Expr:
         """
         return self._with_filtration(lambda plx: self._to_compliant_expr(plx).mode())
 
-    def is_finite(self: Self) -> Self:
+    def is_finite(self) -> Self:
         """Returns boolean values indicating which original values are finite.
 
         Warning:
@@ -2050,7 +2051,7 @@ class Expr:
         """
         return self._with_callable(lambda plx: self._to_compliant_expr(plx).is_finite())
 
-    def cum_count(self: Self, *, reverse: bool = False) -> Self:
+    def cum_count(self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative count of the non-null values in the column.
 
         !!! info
@@ -2087,7 +2088,7 @@ class Expr:
             self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
         )
 
-    def cum_min(self: Self, *, reverse: bool = False) -> Self:
+    def cum_min(self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative min of the non-null values in the column.
 
         !!! info
@@ -2124,7 +2125,7 @@ class Expr:
             self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
         )
 
-    def cum_max(self: Self, *, reverse: bool = False) -> Self:
+    def cum_max(self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative max of the non-null values in the column.
 
         !!! info
@@ -2161,7 +2162,7 @@ class Expr:
             self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
         )
 
-    def cum_prod(self: Self, *, reverse: bool = False) -> Self:
+    def cum_prod(self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative product of the non-null values in the column.
 
         !!! info
@@ -2199,7 +2200,7 @@ class Expr:
         )
 
     def rolling_sum(
-        self: Self,
+        self,
         window_size: int,
         *,
         min_samples: int | None = None,
@@ -2261,7 +2262,7 @@ class Expr:
         )
 
     def rolling_mean(
-        self: Self,
+        self,
         window_size: int,
         *,
         min_samples: int | None = None,
@@ -2323,7 +2324,7 @@ class Expr:
         )
 
     def rolling_var(
-        self: Self,
+        self,
         window_size: int,
         *,
         min_samples: int | None = None,
@@ -2385,7 +2386,7 @@ class Expr:
         )
 
     def rolling_std(
-        self: Self,
+        self,
         window_size: int,
         *,
         min_samples: int | None = None,
@@ -2449,9 +2450,7 @@ class Expr:
             self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
         )
 
-    def rank(
-        self: Self, method: RankMethod = "average", *, descending: bool = False
-    ) -> Self:
+    def rank(self, method: RankMethod = "average", *, descending: bool = False) -> Self:
         """Assign ranks to data, dealing with ties appropriately.
 
         Notes:
@@ -2516,27 +2515,27 @@ class Expr:
         )
 
     @property
-    def str(self: Self) -> ExprStringNamespace[Self]:
+    def str(self) -> ExprStringNamespace[Self]:
         return ExprStringNamespace(self)
 
     @property
-    def dt(self: Self) -> ExprDateTimeNamespace[Self]:
+    def dt(self) -> ExprDateTimeNamespace[Self]:
         return ExprDateTimeNamespace(self)
 
     @property
-    def cat(self: Self) -> ExprCatNamespace[Self]:
+    def cat(self) -> ExprCatNamespace[Self]:
         return ExprCatNamespace(self)
 
     @property
-    def name(self: Self) -> ExprNameNamespace[Self]:
+    def name(self) -> ExprNameNamespace[Self]:
         return ExprNameNamespace(self)
 
     @property
-    def list(self: Self) -> ExprListNamespace[Self]:
+    def list(self) -> ExprListNamespace[Self]:
         return ExprListNamespace(self)
 
     @property
-    def struct(self: Self) -> ExprStructNamespace[Self]:
+    def struct(self) -> ExprStructNamespace[Self]:
         return ExprStructNamespace(self)
 
 

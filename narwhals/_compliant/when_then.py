@@ -158,7 +158,7 @@ class LazyWhen(
     when: Callable[..., NativeExprT]
     lit: Callable[..., NativeExprT]
 
-    def __call__(self: Self, df: CompliantLazyFrameT) -> Sequence[NativeExprT]:
+    def __call__(self, df: CompliantLazyFrameT) -> Sequence[NativeExprT]:
         is_expr = self._condition._is_expr
         when = self.when
         lit = self.lit

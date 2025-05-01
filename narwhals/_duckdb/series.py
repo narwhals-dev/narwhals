@@ -17,21 +17,21 @@ if TYPE_CHECKING:
 
 
 class DuckDBInterchangeSeries:
-    def __init__(self: Self, df: duckdb.DuckDBPyRelation, version: Version) -> None:
+    def __init__(self, df: duckdb.DuckDBPyRelation, version: Version) -> None:
         self._native_series = df
         self._version = version
 
-    def __narwhals_series__(self: Self) -> Self:
+    def __narwhals_series__(self) -> Self:
         return self
 
-    def __native_namespace__(self: Self) -> ModuleType:
+    def __native_namespace__(self) -> ModuleType:
         return get_duckdb()  # type: ignore[no-any-return]
 
     @property
-    def dtype(self: Self) -> DType:
-        return native_to_narwhals_dtype(str(self._native_series.types[0]), self._version)
+    def dtype(self) -> DType:
+        return native_to_narwhals_dtype(self._native_series.types[0], self._version)
 
-    def __getattr__(self: Self, attr: str) -> Never:
+    def __getattr__(self, attr: str) -> Never:
         msg = (  # pragma: no cover
             f"Attribute {attr} is not supported for metadata-only dataframes.\n\n"
             "If you would like to see this kind of object better supported in "

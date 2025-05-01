@@ -7,7 +7,6 @@ from typing import Sequence
 
 import ibis
 
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -53,7 +52,7 @@ def evaluate_exprs(df: IbisLazyFrame, /, *exprs: IbisExpr) -> list[tuple[str, ir
 
 @lru_cache(maxsize=16)
 def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if ibis_dtype.is_int64():
         return dtypes.Int64()
     if ibis_dtype.is_int32():
@@ -118,7 +117,7 @@ def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
 def narwhals_to_native_dtype(
     dtype: DType | type[DType], version: Version
 ) -> IbisDataType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     ibis_dtypes = ibis.expr.datatypes
 
     if isinstance_or_issubclass(dtype, dtypes.Decimal):

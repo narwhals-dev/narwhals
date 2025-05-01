@@ -33,7 +33,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
     _implementation: Implementation = Implementation.PYARROW
 
     def __init__(
-        self: Self,
+        self,
         call: EvalSeries[ArrowDataFrame, ArrowSeries],
         *,
         depth: int,
@@ -121,24 +121,24 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
             version=context._version,
         )
 
-    def __narwhals_namespace__(self: Self) -> ArrowNamespace:
+    def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
         return ArrowNamespace(
             backend_version=self._backend_version, version=self._version
         )
 
-    def __narwhals_expr__(self: Self) -> None: ...
+    def __narwhals_expr__(self) -> None: ...
 
     def _reuse_series_extra_kwargs(
         self, *, returns_scalar: bool = False
     ) -> dict[str, Any]:
         return {"_return_py_scalar": False} if returns_scalar else {}
 
-    def cum_sum(self: Self, *, reverse: bool) -> Self:
+    def cum_sum(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_sum", reverse=reverse)
 
-    def shift(self: Self, n: int) -> Self:
+    def shift(self, n: int) -> Self:
         return self._reuse_series("shift", n=n)
 
     def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
@@ -161,7 +161,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                 # TODO(marco): is there a way to do this efficiently without
                 # doing 2 sorts? Here we're sorting the dataframe and then
                 # again calling `sort_indices`. `ArrowSeries.scatter` would also sort.
-                sorting_indices = pc.sort_indices(df.get_column(token).native)  # type: ignore[call-overload]
+                sorting_indices = pc.sort_indices(df.get_column(token).native)
                 return [s._with_native(s.native.take(sorting_indices)) for s in result]
         else:
 
@@ -176,7 +176,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                     )
                     raise NotImplementedError(msg)
 
-                tmp = df.group_by(*partition_by, drop_null_keys=False).agg(self)
+                tmp = df.group_by(partition_by, drop_null_keys=False).agg(self)
                 tmp = df.simple_select(*partition_by).join(
                     tmp,
                     how="left",
@@ -196,16 +196,16 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
             version=self._version,
         )
 
-    def cum_count(self: Self, *, reverse: bool) -> Self:
+    def cum_count(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_count", reverse=reverse)
 
-    def cum_min(self: Self, *, reverse: bool) -> Self:
+    def cum_min(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_min", reverse=reverse)
 
-    def cum_max(self: Self, *, reverse: bool) -> Self:
+    def cum_max(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_max", reverse=reverse)
 
-    def cum_prod(self: Self, *, reverse: bool) -> Self:
+    def cum_prod(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_prod", reverse=reverse)
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:

@@ -6,6 +6,7 @@ from typing import Iterator
 from typing import Literal
 from typing import Mapping
 from typing import Sequence
+from typing import Sized
 from typing import cast
 from typing import overload
 
@@ -14,13 +15,19 @@ import polars as pl
 from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import catch_polars_exception
-from narwhals._polars.utils import convert_str_slice_to_int_slice
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import native_to_narwhals_dtype
+from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import _into_arrow_table
-from narwhals.utils import is_sequence_but_not_str
+from narwhals.utils import convert_str_slice_to_int_slice
+from narwhals.utils import is_compliant_series
+from narwhals.utils import is_index_selector
+from narwhals.utils import is_range
+from narwhals.utils import is_sequence_like
+from narwhals.utils import is_slice_index
+from narwhals.utils import is_slice_none
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import requires
@@ -37,6 +44,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
+    from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.group_by import PolarsGroupBy
     from narwhals._polars.group_by import PolarsLazyGroupBy
     from narwhals._translate import IntoArrowTable
@@ -45,7 +53,10 @@ if TYPE_CHECKING:
     from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import JoinStrategy
+    from narwhals.typing import MultiColSelector
+    from narwhals.typing import MultiIndexSelector
     from narwhals.typing import PivotAgg
+    from narwhals.typing import SingleIndexSelector
     from narwhals.typing import _2DArray
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -58,6 +69,36 @@ Method: TypeAlias = "Callable[..., R]"
 
 Where `R` is the return type.
 """
+
+# DataFrame methods where PolarsDataFrame just defers to Polars.DataFrame directly.
+INHERITED_METHODS = frozenset(
+    [
+        "clone",
+        "drop_nulls",
+        "estimated_size",
+        "explode",
+        "filter",
+        "gather_every",
+        "head",
+        "is_unique",
+        "item",
+        "iter_rows",
+        "join_asof",
+        "rename",
+        "row",
+        "rows",
+        "sample",
+        "select",
+        "sort",
+        "tail",
+        "to_arrow",
+        "to_pandas",
+        "unique",
+        "with_columns",
+        "write_csv",
+        "write_parquet",
+    ]
+)
 
 
 class PolarsDataFrame:
@@ -87,12 +128,11 @@ class PolarsDataFrame:
     write_csv: Method[Any]
     write_parquet: Method[None]
 
+    # CompliantDataFrame
+    _evaluate_aliases: Any
+
     def __init__(
-        self: Self,
-        df: pl.DataFrame,
-        *,
-        backend_version: tuple[int, ...],
-        version: Version,
+        self, df: pl.DataFrame, *, backend_version: tuple[int, ...], version: Version
     ) -> None:
         self._native_frame = df
         self._backend_version = backend_version
@@ -154,45 +194,45 @@ class PolarsDataFrame:
     def native(self) -> pl.DataFrame:
         return self._native_frame
 
-    def __repr__(self: Self) -> str:  # pragma: no cover
+    def __repr__(self) -> str:  # pragma: no cover
         return "PolarsDataFrame"
 
-    def __narwhals_dataframe__(self: Self) -> Self:
+    def __narwhals_dataframe__(self) -> Self:
         return self
 
-    def __narwhals_namespace__(self: Self) -> PolarsNamespace:
+    def __narwhals_namespace__(self) -> PolarsNamespace:
         return PolarsNamespace(
             backend_version=self._backend_version, version=self._version
         )
 
-    def __native_namespace__(self: Self) -> ModuleType:
+    def __native_namespace__(self) -> ModuleType:
         if self._implementation is Implementation.POLARS:
             return self._implementation.to_native_namespace()
 
         msg = f"Expected polars, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
-    def _with_version(self: Self, version: Version) -> Self:
+    def _with_version(self, version: Version) -> Self:
         return self.__class__(
             self.native, backend_version=self._backend_version, version=version
         )
 
-    def _with_native(self: Self, df: pl.DataFrame) -> Self:
+    def _with_native(self, df: pl.DataFrame) -> Self:
         return self.__class__(
             df, backend_version=self._backend_version, version=self._version
         )
 
     @overload
-    def _from_native_object(self: Self, obj: pl.Series) -> PolarsSeries: ...
+    def _from_native_object(self, obj: pl.Series) -> PolarsSeries: ...
 
     @overload
-    def _from_native_object(self: Self, obj: pl.DataFrame) -> Self: ...
+    def _from_native_object(self, obj: pl.DataFrame) -> Self: ...
 
     @overload
-    def _from_native_object(self: Self, obj: T) -> T: ...
+    def _from_native_object(self, obj: T) -> T: ...
 
     def _from_native_object(
-        self: Self, obj: pl.Series | pl.DataFrame | T
+        self, obj: pl.Series | pl.DataFrame | T
     ) -> Self | PolarsSeries | T:
         if isinstance(obj, pl.Series):
             return PolarsSeries.from_native(obj, context=self)
@@ -210,7 +250,11 @@ class PolarsDataFrame:
     def tail(self, n: int) -> Self:
         return self._with_native(self.native.tail(n))
 
-    def __getattr__(self: Self, attr: str) -> Any:
+    def __getattr__(self, attr: str) -> Any:
+        if attr not in INHERITED_METHODS:  # pragma: no cover
+            msg = f"{self.__class__.__name__} has not attribute '{attr}'."
+            raise AttributeError(msg)
+
         def func(*args: Any, **kwargs: Any) -> Any:
             pos, kwds = extract_args_kwargs(args, kwargs)
             try:
@@ -224,7 +268,7 @@ class PolarsDataFrame:
         return func
 
     def __array__(
-        self: Self, dtype: Any | None = None, *, copy: bool | None = None
+        self, dtype: Any | None = None, *, copy: bool | None = None
     ) -> _2DArray:
         if self._backend_version < (0, 20, 28) and copy is not None:
             msg = "`copy` in `__array__` is only supported for Polars>=0.20.28"
@@ -236,7 +280,7 @@ class PolarsDataFrame:
     def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
         return self.native.to_numpy()
 
-    def collect_schema(self: Self) -> dict[str, DType]:
+    def collect_schema(self) -> dict[str, DType]:
         if self._backend_version < (1,):
             return {
                 name: native_to_narwhals_dtype(
@@ -254,65 +298,81 @@ class PolarsDataFrame:
             }
 
     @property
-    def shape(self: Self) -> tuple[int, int]:
+    def shape(self) -> tuple[int, int]:
         return self.native.shape
 
-    def __getitem__(self: Self, item: Any) -> Any:
+    def __getitem__(
+        self,
+        item: tuple[
+            SingleIndexSelector | MultiIndexSelector[PolarsSeries],
+            MultiColSelector[PolarsSeries],
+        ],
+    ) -> Any:
+        rows, columns = item
         if self._backend_version > (0, 20, 30):
-            return self._from_native_object(self.native.__getitem__(item))
+            rows_native = rows.native if is_compliant_series(rows) else rows
+            columns_native = columns.native if is_compliant_series(columns) else columns
+            selector = rows_native, columns_native
+            selected = self.native.__getitem__(selector)  # type: ignore[index]
+            return self._from_native_object(selected)
         else:  # pragma: no cover
             # TODO(marco): we can delete this branch after Polars==0.20.30 becomes the minimum
             # Polars version we support
-            if isinstance(item, tuple):
-                item = tuple(list(i) if is_sequence_but_not_str(i) else i for i in item)
+            # This mostly mirrors the logic in `EagerDataFrame.__getitem__`.
+            rows = list(rows) if isinstance(rows, tuple) else rows
+            columns = list(columns) if isinstance(columns, tuple) else columns
+            if is_numpy_array_1d(columns):
+                columns = columns.tolist()
 
-            columns = self.columns
-            if isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], slice):
-                if item[1] == slice(None):
-                    if isinstance(item[0], Sequence) and not len(item[0]):
-                        return self._with_native(self.native[0:0])
-                    return self._with_native(self.native.__getitem__(item[0]))
-                if isinstance(item[1].start, str) or isinstance(item[1].stop, str):
-                    start, stop, step = convert_str_slice_to_int_slice(item[1], columns)
-                    return self._with_native(
-                        self.native.select(columns[start:stop:step]).__getitem__(item[0])
+            native = self.native
+            if not is_slice_none(columns):
+                if isinstance(columns, Sized) and len(columns) == 0:
+                    return self.select()
+                if is_index_selector(columns):
+                    if is_slice_index(columns) or is_range(columns):
+                        native = native.select(
+                            self.columns[slice(columns.start, columns.stop, columns.step)]
+                        )
+                    elif is_compliant_series(columns):
+                        native = native[:, columns.native.to_list()]
+                    else:
+                        native = native[:, columns]
+                elif isinstance(columns, slice):
+                    native = native.select(
+                        self.columns[
+                            slice(*convert_str_slice_to_int_slice(columns, self.columns))
+                        ]
                     )
-                if isinstance(item[1].start, int) or isinstance(item[1].stop, int):
-                    return self._with_native(
-                        self.native.select(
-                            columns[item[1].start : item[1].stop : item[1].step]
-                        ).__getitem__(item[0])
-                    )
-                msg = f"Expected slice of integers or strings, got: {type(item[1])}"  # pragma: no cover
-                raise TypeError(msg)  # pragma: no cover
+                elif is_compliant_series(columns):
+                    native = native.select(columns.native.to_list())
+                elif is_sequence_like(columns):
+                    native = native.select(columns)
+                else:
+                    msg = f"Unreachable code, got unexpected type: {type(columns)}"
+                    raise AssertionError(msg)
 
-            if (
-                isinstance(item, tuple)
-                and (len(item) == 2)
-                and is_sequence_but_not_str(item[1])
-                and (len(item[1]) == 0)
-            ):
-                result = self.native.select(item[1])
-            elif isinstance(item, slice) and (
-                isinstance(item.start, str) or isinstance(item.stop, str)
-            ):
-                start, stop, step = convert_str_slice_to_int_slice(item, columns)
-                return self._with_native(self.native.select(columns[start:stop:step]))
-            elif is_sequence_but_not_str(item) and (len(item) == 0):
-                result = self.native.slice(0, 0)
-            else:
-                result = self.native.__getitem__(item)
-            if isinstance(result, pl.Series):
-                return PolarsSeries.from_native(result, context=self)
-            return self._from_native_object(result)
+            if not is_slice_none(rows):
+                if isinstance(rows, int):
+                    native = native[[rows], :]
+                elif isinstance(rows, (slice, range)):
+                    native = native[rows, :]
+                elif is_compliant_series(rows):
+                    native = native[rows.native, :]
+                elif is_sequence_like(rows):
+                    native = native[rows, :]
+                else:
+                    msg = f"Unreachable code, got unexpected type: {type(rows)}"
+                    raise AssertionError(msg)
+
+            return self._with_native(native)
 
     def simple_select(self, *column_names: str) -> Self:
         return self._with_native(self.native.select(*column_names))
 
-    def aggregate(self: Self, *exprs: Any) -> Self:
+    def aggregate(self, *exprs: Any) -> Self:
         return self.select(*exprs)
 
-    def get_column(self: Self, name: str) -> PolarsSeries:
+    def get_column(self, name: str) -> PolarsSeries:
         return PolarsSeries.from_native(self.native.get_column(name), context=self)
 
     def iter_columns(self) -> Iterator[PolarsSeries]:
@@ -320,18 +380,18 @@ class PolarsDataFrame:
             yield PolarsSeries.from_native(series, context=self)
 
     @property
-    def columns(self: Self) -> list[str]:
+    def columns(self) -> list[str]:
         return self.native.columns
 
     @property
-    def schema(self: Self) -> dict[str, DType]:
+    def schema(self) -> dict[str, DType]:
         return {
             name: native_to_narwhals_dtype(dtype, self._version, self._backend_version)
             for name, dtype in self.native.schema.items()
         }
 
     def lazy(
-        self: Self, *, backend: Implementation | None = None
+        self, *, backend: Implementation | None = None
     ) -> CompliantLazyFrame[Any, Any]:
         if backend is None or backend is Implementation.POLARS:
             return PolarsLazyFrame.from_native(self.native.lazy(), context=self)
@@ -361,13 +421,13 @@ class PolarsDataFrame:
         raise AssertionError  # pragma: no cover
 
     @overload
-    def to_dict(self: Self, *, as_series: Literal[True]) -> dict[str, PolarsSeries]: ...
+    def to_dict(self, *, as_series: Literal[True]) -> dict[str, PolarsSeries]: ...
 
     @overload
-    def to_dict(self: Self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
+    def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
 
     def to_dict(
-        self: Self, *, as_series: bool
+        self, *, as_series: bool
     ) -> dict[str, PolarsSeries] | dict[str, list[Any]]:
         if as_series:
             return {
@@ -377,24 +437,26 @@ class PolarsDataFrame:
         else:
             return self.native.to_dict(as_series=False)
 
-    def group_by(self: Self, *keys: str, drop_null_keys: bool) -> PolarsGroupBy:
+    def group_by(
+        self, keys: Sequence[str] | Sequence[PolarsExpr], *, drop_null_keys: bool
+    ) -> PolarsGroupBy:
         from narwhals._polars.group_by import PolarsGroupBy
 
         return PolarsGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
-    def with_row_index(self: Self, name: str) -> Self:
+    def with_row_index(self, name: str) -> Self:
         if self._backend_version < (0, 20, 4):
             return self._with_native(self.native.with_row_count(name))
         return self._with_native(self.native.with_row_index(name))
 
-    def drop(self: Self, columns: Sequence[str], *, strict: bool) -> Self:
+    def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         to_drop = parse_columns_to_drop(
             compliant_frame=self, columns=columns, strict=strict
         )
         return self._with_native(self.native.drop(to_drop))
 
     def unpivot(
-        self: Self,
+        self,
         on: Sequence[str] | None,
         index: Sequence[str] | None,
         variable_name: str,
@@ -439,11 +501,11 @@ class PolarsDataFrame:
             raise catch_polars_exception(e, self._backend_version) from None
         return self._from_native_object(result)
 
-    def to_polars(self: Self) -> pl.DataFrame:
+    def to_polars(self) -> pl.DataFrame:
         return self.native
 
     def join(
-        self: Self,
+        self,
         other: Self,
         *,
         how: JoinStrategy,
@@ -481,15 +543,13 @@ class PolarsLazyFrame:
     tail: Method[Self]
     unique: Method[Self]
     with_columns: Method[Self]
-    # NOTE: Temporary, just trying to factor out utils
+
+    # CompliantLazyFrame
     _evaluate_expr: Any
+    _evaluate_aliases: Any
 
     def __init__(
-        self: Self,
-        df: pl.LazyFrame,
-        *,
-        backend_version: tuple[int, ...],
-        version: Version,
+        self, df: pl.LazyFrame, *, backend_version: tuple[int, ...], version: Version
     ) -> None:
         self._native_frame = df
         self._backend_version = backend_version
@@ -507,35 +567,39 @@ class PolarsLazyFrame:
             data, backend_version=context._backend_version, version=context._version
         )
 
-    def __repr__(self: Self) -> str:  # pragma: no cover
+    def __repr__(self) -> str:  # pragma: no cover
         return "PolarsLazyFrame"
 
-    def __narwhals_lazyframe__(self: Self) -> Self:
+    def __narwhals_lazyframe__(self) -> Self:
         return self
 
-    def __narwhals_namespace__(self: Self) -> PolarsNamespace:
+    def __narwhals_namespace__(self) -> PolarsNamespace:
         return PolarsNamespace(
             backend_version=self._backend_version, version=self._version
         )
 
-    def __native_namespace__(self: Self) -> ModuleType:
+    def __native_namespace__(self) -> ModuleType:
         if self._implementation is Implementation.POLARS:
             return self._implementation.to_native_namespace()
 
         msg = f"Expected polars, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
-    def _with_native(self: Self, df: pl.LazyFrame) -> Self:
+    def _with_native(self, df: pl.LazyFrame) -> Self:
         return self.__class__(
             df, backend_version=self._backend_version, version=self._version
         )
 
-    def _with_version(self: Self, version: Version) -> Self:
+    def _with_version(self, version: Version) -> Self:
         return self.__class__(
             self.native, backend_version=self._backend_version, version=version
         )
 
-    def __getattr__(self: Self, attr: str) -> Any:
+    def __getattr__(self, attr: str) -> Any:
+        if attr not in INHERITED_METHODS:  # pragma: no cover
+            msg = f"{self.__class__.__name__} has not attribute '{attr}'."
+            raise AttributeError(msg)
+
         def func(*args: Any, **kwargs: Any) -> Any:
             pos, kwds = extract_args_kwargs(args, kwargs)
             try:
@@ -553,18 +617,18 @@ class PolarsLazyFrame:
         return self._native_frame
 
     @property
-    def columns(self: Self) -> list[str]:
+    def columns(self) -> list[str]:
         return self.native.columns
 
     @property
-    def schema(self: Self) -> dict[str, DType]:
+    def schema(self) -> dict[str, DType]:
         schema = self.native.schema
         return {
             name: native_to_narwhals_dtype(dtype, self._version, self._backend_version)
             for name, dtype in schema.items()
         }
 
-    def collect_schema(self: Self) -> dict[str, DType]:
+    def collect_schema(self) -> dict[str, DType]:
         if self._backend_version < (1,):
             return {
                 name: native_to_narwhals_dtype(
@@ -585,7 +649,7 @@ class PolarsLazyFrame:
             }
 
     def collect(
-        self: Self,
+        self,
         backend: Implementation | None,
         **kwargs: Any,
     ) -> CompliantDataFrame[Any, Any, Any]:
@@ -625,23 +689,25 @@ class PolarsLazyFrame:
         msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
         raise ValueError(msg)  # pragma: no cover
 
-    def group_by(self: Self, *keys: str, drop_null_keys: bool) -> PolarsLazyGroupBy:
+    def group_by(
+        self, keys: Sequence[str] | Sequence[PolarsExpr], *, drop_null_keys: bool
+    ) -> PolarsLazyGroupBy:
         from narwhals._polars.group_by import PolarsLazyGroupBy
 
         return PolarsLazyGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
-    def with_row_index(self: Self, name: str) -> Self:
+    def with_row_index(self, name: str) -> Self:
         if self._backend_version < (0, 20, 4):
             return self._with_native(self.native.with_row_count(name))
         return self._with_native(self.native.with_row_index(name))
 
-    def drop(self: Self, columns: Sequence[str], *, strict: bool) -> Self:
+    def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         if self._backend_version < (1, 0, 0):
             return self._with_native(self.native.drop(columns))
         return self._with_native(self.native.drop(columns, strict=strict))
 
     def unpivot(
-        self: Self,
+        self,
         on: Sequence[str] | None,
         index: Sequence[str] | None,
         variable_name: str,
@@ -665,11 +731,11 @@ class PolarsLazyFrame:
     def simple_select(self, *column_names: str) -> Self:
         return self._with_native(self.native.select(*column_names))
 
-    def aggregate(self: Self, *exprs: Any) -> Self:
+    def aggregate(self, *exprs: Any) -> Self:
         return self.select(*exprs)
 
     def join(
-        self: Self,
+        self,
         other: Self,
         *,
         how: JoinStrategy,

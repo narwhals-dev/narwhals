@@ -19,7 +19,6 @@ from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import Version
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -86,10 +85,10 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
 
         return IbisNamespace(backend_version=self._backend_version, version=self._version)
 
-    def __getitem__(self, item: str) -> IbisInterchangeSeries:
+    def get_column(self, name: str) -> IbisInterchangeSeries:
         from narwhals._ibis.series import IbisInterchangeSeries
 
-        return IbisInterchangeSeries(self.native.select(item), version=self._version)
+        return IbisInterchangeSeries(self.native.select(name), version=self._version)
 
     def _iter_columns(self) -> Iterator[ir.Expr]:
         for name in self.columns:
@@ -235,7 +234,9 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
             version=self._version,
         )
 
-    def group_by(self, *keys: str, drop_null_keys: bool) -> IbisGroupBy:
+    def group_by(
+        self, keys: Sequence[str] | Sequence[IbisExpr], *, drop_null_keys: bool
+    ) -> IbisGroupBy:
         from narwhals._ibis.group_by import IbisGroupBy
 
         return IbisGroupBy(self, keys, drop_null_keys=drop_null_keys)
@@ -416,7 +417,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         return self._with_native(self.native.drop_null(subset_))
 
     def explode(self, columns: Sequence[str]) -> Self:
-        dtypes = import_dtypes_module(self._version)
+        dtypes = self._version.dtypes
         schema = self.collect_schema()
         for col in columns:
             dtype = schema[col]

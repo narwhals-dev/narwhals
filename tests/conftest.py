@@ -166,7 +166,14 @@ def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma:
     import warnings
     from atexit import register
 
-    from pyspark.sql import SparkSession
+    is_spark_connect = bool(os.environ.get("SPARK_CONNECT", None))
+
+    if TYPE_CHECKING:
+        from pyspark.sql import SparkSession
+    elif is_spark_connect:
+        from pyspark.sql.connect.session import SparkSession
+    else:
+        from pyspark.sql import SparkSession
 
     with warnings.catch_warnings():
         # The spark session seems to trigger a polars warning.
@@ -174,12 +181,14 @@ def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma:
         warnings.filterwarnings(
             "ignore", r"Using fork\(\) can cause Polars", category=RuntimeWarning
         )
-        builder = cast("SparkSession.Builder", SparkSession.builder)
+        builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
+
         session = (
-            builder.appName("unit-tests")
-            .master("local[1]")
-            .config("spark.ui.enabled", "false")
-            # executing one task at a time makes the tests faster
+            (
+                builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
+                if is_spark_connect
+                else builder.master("local[1]").config("spark.ui.enabled", "false")
+            )
             .config("spark.default.parallelism", "1")
             .config("spark.sql.shuffle.partitions", "2")
             # common timezone for all tests environments
@@ -257,7 +266,12 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         selected_constructors = [
             x
             for x in selected_constructors
-            if x not in GPU_CONSTRUCTORS and x != "modin"  # too slow
+            if x not in GPU_CONSTRUCTORS
+            and x
+            not in {
+                "modin",  # too slow
+                "spark[connect]",  # complex local setup; can't run together with local spark
+            }
         ]
     else:  # pragma: no cover
         opt = cast("str", metafunc.config.getoption("constructors"))
@@ -279,7 +293,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             eager_constructors.append(EAGER_CONSTRUCTORS[constructor])
             eager_constructors_ids.append(constructor)
             constructors.append(EAGER_CONSTRUCTORS[constructor])
-        elif constructor == "pyspark":  # pragma: no cover
+        elif constructor in {"pyspark", "pyspark[connect]"}:  # pragma: no cover
             constructors.append(pyspark_lazy_constructor())
         elif constructor in LAZY_CONSTRUCTORS:
             constructors.append(LAZY_CONSTRUCTORS[constructor])

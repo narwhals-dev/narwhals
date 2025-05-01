@@ -7,10 +7,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
+import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
+from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -73,6 +75,14 @@ def test_constructors() -> None:
     arr: np.ndarray[tuple[int, int], Any] = np.array([[1, 2], [3, 4]])  # pyright: ignore[reportAssignmentType]
     assert_equal_data(
         nw_v1.from_numpy(arr, schema=["a", "b"], backend="pandas"),
+        {"a": [1, 3], "b": [2, 4]},
+    )
+    assert_equal_data(
+        nw_v1.from_numpy(
+            arr,
+            schema=nw_v1.Schema({"a": nw_v1.Int64(), "b": nw_v1.Int64()}),
+            backend="pandas",
+        ),
         {"a": [1, 3], "b": [2, 4]},
     )
     assert_equal_data(
@@ -176,3 +186,56 @@ def test_int_select_pandas() -> None:
         nw_v1.exceptions.InvalidIntoExprError, match="\n\nHint:\n- if you were trying"
     ):
         nw_v1.to_native(df.lazy().select(0))  # type: ignore[arg-type]
+
+
+def test_enum_v1_is_enum_unstable() -> None:
+    enum_v1 = nw_v1.Enum()
+    enum_unstable = nw.Enum(("a", "b", "c"))
+    assert isinstance(enum_v1, nw.Enum)
+    assert issubclass(nw_v1.Enum, nw.Enum)
+    assert enum_v1 == nw.Enum
+    assert enum_v1 != enum_unstable
+    assert enum_unstable != nw_v1.Enum
+    assert enum_unstable == nw.Enum
+
+    with pytest.raises(TypeError, match=r"takes 1 positional argument"):
+        nw_v1.Enum(("a", "b"))  # type: ignore[call-arg]
+
+
+def test_cast_to_enum_v1(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    # Backends that do not (yet) support Enum dtype
+    if (
+        any(
+            backend in str(constructor)
+            for backend in ["pyarrow_table", "sqlframe", "pyspark"]
+        )
+        or str(constructor) == "modin"
+    ):
+        request.applymarker(pytest.mark.xfail)
+
+    df_native = constructor({"a": ["a", "b"]})
+
+    with pytest.raises(
+        NotImplementedError,
+        match="Converting to Enum is not supported in narwhals.stable.v1",
+    ):
+        nw_v1.from_native(df_native).select(nw_v1.col("a").cast(nw_v1.Enum))
+
+
+def test_v1_ordered_categorical_pandas() -> None:
+    s = nw_v1.from_native(
+        pd.Series([0, 1], dtype=pd.CategoricalDtype(ordered=True)), series_only=True
+    )
+    assert s.dtype == nw_v1.Categorical
+
+
+def test_v1_enum_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    s = nw_v1.from_native(
+        pl.Series(["a", "b"], dtype=pl.Enum(["a", "b"])), series_only=True
+    )
+    assert s.dtype == nw_v1.Enum
