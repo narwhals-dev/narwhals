@@ -432,8 +432,6 @@ def _from_native_impl(  # noqa: PLR0915
 
     # Polars
     elif is_native_polars(native_object):
-        from narwhals._polars.namespace import PolarsNamespace
-
         if series_only and not is_polars_series(native_object):
             if not pass_through:
                 msg = f"Cannot only use `series_only` with {type(native_object).__qualname__}"
@@ -451,12 +449,11 @@ def _from_native_impl(  # noqa: PLR0915
                 msg = "Please set `allow_series=True` or `series_only=True`"
                 raise TypeError(msg)
             return native_object
-        pl_version = parse_version(get_polars())
-        pl_ns = PolarsNamespace(backend_version=pl_version, version=version)
-        pl_compliant = pl_ns.from_native(native_object)
-        if is_compliant_lazyframe(pl_compliant):
-            return LazyFrame(pl_compliant, level="lazy")
-        return pl_compliant.to_narwhals()
+        return (
+            version.namespace.from_native_object(native_object)
+            .compliant.from_native(native_object)
+            .to_narwhals()
+        )
 
     # PandasLike
     # TODO @dangotbanned: Use `_translate.is_native_pandas_like`
