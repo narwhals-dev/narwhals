@@ -579,7 +579,7 @@ def _from_native_impl(  # noqa: PLR0915
         if eager_only or eager_or_interchange_only:
             msg = f"Cannot only use `eager_only` or `eager_or_interchange_only` with {ns_spark.implementation._alias} DataFrame"
             raise TypeError(msg)
-        return LazyFrame(ns_spark.compliant.from_native(native_object), level="lazy")
+        return ns_spark.compliant.from_native(native_object).to_narwhals()
 
     # Interchange protocol
     elif _supports_dataframe_interchange(native_object):
