@@ -67,7 +67,7 @@ if TYPE_CHECKING:
     _Ibis: TypeAlias = Literal["ibis"]
     _EagerOnly: TypeAlias = "_PandasLike | _Arrow"
     _EagerAllowed: TypeAlias = "_Polars | _EagerOnly"
-    _LazyOnly: TypeAlias = "_SparkLike | _Dask | _DuckDB"
+    _LazyOnly: TypeAlias = "_SparkLike | _Dask | _DuckDB | _Ibis"
     _LazyAllowed: TypeAlias = "_Polars | _LazyOnly"
 
     Polars: TypeAlias = Literal[_Polars, Implementation.POLARS]
@@ -86,7 +86,7 @@ if TYPE_CHECKING:
     ]
     EagerOnly: TypeAlias = "PandasLike | Arrow"
     EagerAllowed: TypeAlias = "EagerOnly | Polars"
-    LazyOnly: TypeAlias = "SparkLike | Dask | DuckDB"
+    LazyOnly: TypeAlias = "SparkLike | Dask | DuckDB | Ibis"
     LazyAllowed: TypeAlias = "LazyOnly | Polars"
 
     BackendName: TypeAlias = "_EagerAllowed | _LazyAllowed"
