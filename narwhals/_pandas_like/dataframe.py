@@ -51,6 +51,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
+    from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
@@ -58,7 +59,6 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import AsofJoinStrategy
-    from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import DTypeBackend
     from narwhals.typing import JoinStrategy
     from narwhals.typing import PivotAgg
@@ -771,9 +771,7 @@ class PandasLikeDataFrame(
         )
 
     # --- lazy-only ---
-    def lazy(
-        self, *, backend: Implementation | None = None
-    ) -> CompliantLazyFrame[Any, Any]:
+    def lazy(self, *, backend: Implementation | None = None) -> CompliantLazyFrameAny:
         from narwhals.utils import parse_version
 
         pandas_df = self.to_pandas()

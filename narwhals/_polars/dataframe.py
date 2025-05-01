@@ -46,6 +46,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
+    from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.group_by import PolarsGroupBy
     from narwhals._polars.group_by import PolarsLazyGroupBy
@@ -54,7 +55,6 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
-    from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import JoinStrategy
     from narwhals.typing import MultiColSelector
     from narwhals.typing import MultiIndexSelector
@@ -401,9 +401,7 @@ class PolarsDataFrame:
             for name, dtype in self.native.schema.items()
         }
 
-    def lazy(
-        self, *, backend: Implementation | None = None
-    ) -> CompliantLazyFrame[Any, Any]:
+    def lazy(self, *, backend: Implementation | None = None) -> CompliantLazyFrameAny:
         if backend is None or backend is Implementation.POLARS:
             return PolarsLazyFrame.from_native(self.native.lazy(), context=self)
         elif backend is Implementation.DUCKDB:
@@ -582,10 +580,10 @@ class PolarsLazyFrame:
         if self._version is Version.MAIN:
             from narwhals.dataframe import LazyFrame
 
-            return LazyFrame(self, level="full")
+            return LazyFrame(self, level="lazy")
         from narwhals.stable.v1 import LazyFrame as LazyFrameV1
 
-        return LazyFrameV1(self, level="full")  # type: ignore[no-any-return]
+        return LazyFrameV1(self, level="lazy")  # type: ignore[no-any-return]
 
     def __repr__(self) -> str:  # pragma: no cover
         return "PolarsLazyFrame"

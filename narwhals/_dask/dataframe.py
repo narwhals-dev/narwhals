@@ -15,6 +15,7 @@ from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
+from narwhals.utils import Version
 from narwhals.utils import _remap_full_join_keys
 from narwhals.utils import check_column_exists
 from narwhals.utils import check_column_names_are_unique
@@ -35,15 +36,17 @@ if TYPE_CHECKING:
     from narwhals._dask.expr import DaskExpr
     from narwhals._dask.group_by import DaskLazyGroupBy
     from narwhals._dask.namespace import DaskNamespace
+    from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import AsofJoinStrategy
     from narwhals.typing import JoinStrategy
     from narwhals.typing import LazyUniqueKeepStrategy
-    from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
 
-class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
+class DaskLazyFrame(
+    CompliantLazyFrame["DaskExpr", "dd.DataFrame", "LazyFrame[dd.DataFrame]"]
+):
     def __init__(
         self,
         native_dataframe: dd.DataFrame,
@@ -68,6 +71,15 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
         return cls(
             data, backend_version=context._backend_version, version=context._version
         )
+
+    def to_narwhals(self, *args: Any, **kwds: Any) -> LazyFrame[dd.DataFrame]:
+        if self._version is Version.MAIN:
+            from narwhals.dataframe import LazyFrame
+
+            return LazyFrame(self, level="lazy")
+        from narwhals.stable.v1 import LazyFrame as LazyFrameV1
+
+        return LazyFrameV1(self, level="lazy")
 
     def __native_namespace__(self) -> ModuleType:
         if self._implementation is Implementation.DASK:

@@ -1624,8 +1624,8 @@ def is_compliant_dataframe(
 
 
 def is_compliant_lazyframe(
-    obj: CompliantLazyFrame[CompliantExprT, NativeFrameT_co] | Any,
-) -> TypeIs[CompliantLazyFrame[CompliantExprT, NativeFrameT_co]]:
+    obj: CompliantLazyFrame[CompliantExprT, NativeFrameT_co, ToNarwhalsT_co] | Any,
+) -> TypeIs[CompliantLazyFrame[CompliantExprT, NativeFrameT_co, ToNarwhalsT_co]]:
     return _hasattr_static(obj, "__narwhals_lazyframe__")
 
 

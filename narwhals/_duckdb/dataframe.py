@@ -43,7 +43,9 @@ if TYPE_CHECKING:
     from narwhals._duckdb.group_by import DuckDBGroupBy
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.series import DuckDBInterchangeSeries
+    from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
+    from narwhals.stable.v1 import DataFrame as DataFrameV1
     from narwhals.typing import AsofJoinStrategy
     from narwhals.typing import JoinStrategy
     from narwhals.typing import LazyUniqueKeepStrategy
@@ -53,7 +55,13 @@ with contextlib.suppress(ImportError):  # requires duckdb>=1.3.0
     from duckdb import SQLExpression  # type: ignore[attr-defined, unused-ignore]
 
 
-class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"]):
+class DuckDBLazyFrame(
+    CompliantLazyFrame[
+        "DuckDBExpr",
+        "duckdb.DuckDBPyRelation",
+        "LazyFrame[duckdb.DuckDBPyRelation] | DataFrameV1[duckdb.DuckDBPyRelation]",
+    ]
+):
     _implementation = Implementation.DUCKDB
 
     def __init__(
@@ -81,6 +89,17 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
         return cls(
             data, backend_version=context._backend_version, version=context._version
         )
+
+    def to_narwhals(
+        self, *args: Any, **kwds: Any
+    ) -> LazyFrame[duckdb.DuckDBPyRelation] | DataFrameV1[duckdb.DuckDBPyRelation]:
+        if self._version is Version.MAIN:
+            from narwhals.dataframe import LazyFrame
+
+            return LazyFrame(self, level="lazy")
+        from narwhals.stable.v1 import DataFrame as DataFrameV1
+
+        return DataFrameV1(self, level="interchange")  # type: ignore[no-any-return]
 
     def __narwhals_dataframe__(self) -> Self:  # pragma: no cover
         # Keep around for backcompat.

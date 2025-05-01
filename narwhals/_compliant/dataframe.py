@@ -14,6 +14,7 @@ from typing import overload
 
 from narwhals._compliant.typing import CompliantDataFrameAny
 from narwhals._compliant.typing import CompliantExprT_contra
+from narwhals._compliant.typing import CompliantLazyFrameAny
 from narwhals._compliant.typing import CompliantSeriesT
 from narwhals._compliant.typing import EagerExprT
 from narwhals._compliant.typing import EagerSeriesT
@@ -196,7 +197,7 @@ class CompliantDataFrame(
         strategy: AsofJoinStrategy,
         suffix: str,
     ) -> Self: ...
-    def lazy(self, *, backend: Implementation | None) -> CompliantLazyFrame[Any, Any]: ...
+    def lazy(self, *, backend: Implementation | None) -> CompliantLazyFrameAny: ...
     def pivot(
         self,
         on: Sequence[str],
@@ -266,7 +267,8 @@ class CompliantDataFrame(
 class CompliantLazyFrame(
     _StoresNative[NativeFrameT],
     FromNative[NativeFrameT],
-    Protocol[CompliantExprT_contra, NativeFrameT],
+    ToNarwhals[ToNarwhalsT_co],
+    Protocol[CompliantExprT_contra, NativeFrameT, ToNarwhalsT_co],
 ):
     _native_frame: NativeFrameT
     _implementation: Implementation
@@ -371,7 +373,7 @@ class CompliantLazyFrame(
 
 class EagerDataFrame(
     CompliantDataFrame[EagerSeriesT, EagerExprT, NativeFrameT, "DataFrame[NativeFrameT]"],
-    CompliantLazyFrame[EagerExprT, NativeFrameT],
+    CompliantLazyFrame[EagerExprT, NativeFrameT, "DataFrame[NativeFrameT]"],
     Protocol[EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
 ):
     def __narwhals_namespace__(
