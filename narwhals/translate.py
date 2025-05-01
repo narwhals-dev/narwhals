@@ -372,7 +372,6 @@ def _from_native_impl(  # noqa: PLR0915
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
-    from narwhals.utils import Implementation
     from narwhals.utils import _supports_dataframe_interchange
     from narwhals.utils import is_compliant_dataframe
     from narwhals.utils import is_compliant_lazyframe
@@ -459,7 +458,9 @@ def _from_native_impl(  # noqa: PLR0915
             return LazyFrame(pl_compliant, level="lazy")
         return pl_compliant.to_narwhals()
 
-    # pandas
+    # PandasLike
+    # TODO @dangotbanned: Use `_translate.is_native_pandas_like`
+    # Then narrow further just for the errors
     elif (
         is_pandas_dataframe(native_object)
         or is_modin_dataframe(native_object)
@@ -475,63 +476,20 @@ def _from_native_impl(  # noqa: PLR0915
             .compliant.from_native(native_object)
             .to_narwhals()
         )
-    elif is_pandas_series(native_object):
-        from narwhals._pandas_like.series import PandasLikeSeries
-
+    elif (
+        is_pandas_series(native_object)
+        or is_modin_series(native_object)
+        or is_cudf_series(native_object)
+    ):
         if not allow_series:
             if not pass_through:
                 msg = "Please set `allow_series=True` or `series_only=True`"
                 raise TypeError(msg)
             return native_object
-        pd = get_pandas()
-        return Series(
-            PandasLikeSeries(
-                native_object,
-                implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd),
-                version=version,
-            ),
-            level="full",
-        )
-
-    # Modin
-    elif is_modin_series(native_object):  # pragma: no cover
-        from narwhals._pandas_like.series import PandasLikeSeries
-
-        mpd = get_modin()
-        if not allow_series:
-            if not pass_through:
-                msg = "Please set `allow_series=True` or `series_only=True`"
-                raise TypeError(msg)
-            return native_object
-        return Series(
-            PandasLikeSeries(
-                native_object,
-                implementation=Implementation.MODIN,
-                backend_version=parse_version(mpd),
-                version=version,
-            ),
-            level="full",
-        )
-
-    # cuDF
-    elif is_cudf_series(native_object):  # pragma: no cover
-        from narwhals._pandas_like.series import PandasLikeSeries
-
-        cudf = get_cudf()
-        if not allow_series:
-            if not pass_through:
-                msg = "Please set `allow_series=True` or `series_only=True`"
-                raise TypeError(msg)
-            return native_object
-        return Series(
-            PandasLikeSeries(
-                native_object,
-                implementation=Implementation.CUDF,
-                backend_version=parse_version(cudf),
-                version=version,
-            ),
-            level="full",
+        return (
+            version.namespace.from_native_object(native_object)
+            .compliant.from_native(native_object)
+            .to_narwhals()
         )
 
     # PyArrow
