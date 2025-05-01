@@ -12,6 +12,7 @@ from typing import TypeVar
 from typing import overload
 
 from narwhals._namespace import is_native_arrow
+from narwhals._namespace import is_native_pandas_like
 from narwhals._namespace import is_native_polars
 from narwhals._namespace import is_native_spark_like
 from narwhals.dependencies import get_cudf
@@ -31,6 +32,7 @@ from narwhals.dependencies import is_ibis_table
 from narwhals.dependencies import is_modin_dataframe
 from narwhals.dependencies import is_modin_series
 from narwhals.dependencies import is_pandas_dataframe
+from narwhals.dependencies import is_pandas_like_dataframe
 from narwhals.dependencies import is_pandas_series
 from narwhals.dependencies import is_polars_dataframe
 from narwhals.dependencies import is_polars_lazyframe
@@ -456,29 +458,14 @@ def _from_native_impl(  # noqa: PLR0915
         )
 
     # PandasLike
-    # TODO @dangotbanned: Use `_translate.is_native_pandas_like`
-    # Then narrow further just for the errors
-    elif (
-        is_pandas_dataframe(native_object)
-        or is_modin_dataframe(native_object)
-        or is_cudf_dataframe(native_object)
-    ):
-        if series_only:
-            if not pass_through:
-                msg = f"Cannot only use `series_only` with {type(native_object).__qualname__}"
-                raise TypeError(msg)
-            return native_object
-        return (
-            version.namespace.from_native_object(native_object)
-            .compliant.from_native(native_object)
-            .to_narwhals()
-        )
-    elif (
-        is_pandas_series(native_object)
-        or is_modin_series(native_object)
-        or is_cudf_series(native_object)
-    ):
-        if not allow_series:
+    elif is_native_pandas_like(native_object):
+        if is_pandas_like_dataframe(native_object):
+            if series_only:
+                if not pass_through:
+                    msg = f"Cannot only use `series_only` with {type(native_object).__qualname__}"
+                    raise TypeError(msg)
+                return native_object
+        elif not allow_series:
             if not pass_through:
                 msg = "Please set `allow_series=True` or `series_only=True`"
                 raise TypeError(msg)
