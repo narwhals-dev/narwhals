@@ -491,7 +491,8 @@ jobs:
           touch pytest.ini
           touch tests/__init__.py
           touch tests/utils/__init__.py
-          uv run pytest tests
+          # Keep `--no-sync` in case Narwhals is re-synced with PyPI version
+          uv run --no-sync pytest tests
         timeout-minutes: 15
   
   darts:
