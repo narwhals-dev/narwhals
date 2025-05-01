@@ -253,7 +253,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
             other = self._with_native(other.native.view())
 
         if native_how != "cross":
-            if left_on is None or right_on is None:
+            if left_on is None or right_on is None:  # pragma: no cover
                 msg = f"For '{native_how}' joins, both 'left_on' and 'right_on' must be provided."
                 raise ValueError(msg)  # pragma: no cover (caught upstream)
             predicates = self._convert_predicates(other, left_on, right_on)
@@ -265,12 +265,13 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
             other.native, predicates=predicates, how=native_how, rname="{name}" + suffix
         )
         if native_how == "left":
+            assert right_on is not None  # noqa: S101
+
             # Drop duplicate columns from the right table. Ibis keeps them.
-            if right_on is not None:
-                for right in right_on if not isinstance(right_on, str) else [right_on]:
-                    to_drop = right + suffix
-                    if to_drop in joined.columns:
-                        joined = joined.drop(right + suffix)
+            for right in right_on if not isinstance(right_on, str) else [right_on]:
+                to_drop = right + suffix
+                if to_drop in joined.columns:
+                    joined = joined.drop(right + suffix)
 
             for pred in predicates:
                 if isinstance(pred, str):
@@ -299,7 +300,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         strategy: AsofJoinStrategy,
         suffix: str,
     ) -> Self:
-        if left_on is None or right_on is None:
+        if left_on is None or right_on is None:  # pragma: no cover
             msg = "Both 'left_on' and 'right_on' must be provided for asof joins."
             raise ValueError(msg)
 
@@ -323,30 +324,30 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
             rname="{name}" + suffix,
         )
 
+        assert right_on is not None  # noqa: S101
+
         # Drop duplicate columns from the right table. Ibis keeps them.
-        if right_on is not None:
-            for right in right_on if isinstance(right_on, list) else [right_on]:
-                to_drop = right + suffix
-                if to_drop in joined.columns:
-                    joined = joined.drop(right + suffix)
+        for right in right_on if isinstance(right_on, list) else [right_on]:
+            to_drop = right + suffix
+            if to_drop in joined.columns:
+                joined = joined.drop(right + suffix)
+            else:  # pragma: no cover
+                continue
 
         if by_right is not None:
             for right in by_right if not isinstance(by_right, str) else [by_right]:
                 to_drop = right + suffix
                 if to_drop in joined.columns:
                     joined = joined.drop(right + suffix)
+                else:  # pragma: no cover
+                    continue
 
         return self._with_native(joined)
 
     def _convert_predicates(
-        self, other: Self, left_on: str | Sequence[str], right_on: str | Sequence[str]
+        self, other: Self, left_on: Sequence[str], right_on: Sequence[str]
     ) -> list[ir.BooleanColumn] | Sequence[str]:
-        if isinstance(left_on, str):
-            left_on = [left_on]
-        if isinstance(right_on, str):
-            right_on = [right_on]
-
-        if len(left_on) != len(right_on):
+        if len(left_on) != len(right_on):  # pragma: no cover
             msg = "'left_on' and 'right_on' must have the same number of columns."
             raise ValueError(msg)
 
