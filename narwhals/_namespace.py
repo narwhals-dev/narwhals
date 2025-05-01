@@ -356,7 +356,6 @@ def is_native_dask(obj: Any) -> TypeIs[_NativeDask]:
 
 
 is_native_duckdb: _Guard[_NativeDuckDB] = is_duckdb_relation
-is_native_ibis: _Guard[_NativeIbis] = is_ibis_table
 is_native_sqlframe: _Guard[_NativeSQLFrame] = is_sqlframe_dataframe
 is_native_pyspark: _Guard[_NativePySpark] = is_pyspark_dataframe
 is_native_pyspark_connect: _Guard[_NativePySparkConnect] = is_pyspark_connect_dataframe
@@ -390,3 +389,7 @@ def is_native_spark_like(obj: Any) -> TypeIs[_NativeSparkLike]:
         or is_native_pyspark(obj)
         or is_native_pyspark_connect(obj)
     )
+
+
+def is_native_ibis(obj: Any) -> TypeIs[_NativeIbis]:
+    return is_ibis_table(obj)
