@@ -107,6 +107,9 @@ if TYPE_CHECKING:
     class _NativeCuDF(Protocol):
         def to_pylibcudf(self, *args: Any, **kwds: Any) -> Any: ...
 
+    class _NativeIbis(Protocol):
+        def sql(self, query: str, /, *, dialect: str | None = None) -> ibis.Table: ...
+
     class _ModinDataFrame(Protocol):
         _pandas_class: type[pd.DataFrame]
 
@@ -116,7 +119,6 @@ if TYPE_CHECKING:
     _NativePolars: TypeAlias = "pl.DataFrame | pl.LazyFrame | pl.Series"
     _NativeArrow: TypeAlias = "pa.Table | pa.ChunkedArray[Any]"
     _NativeDuckDB: TypeAlias = "duckdb.DuckDBPyRelation"
-    _NativeIbis: TypeAlias = "ibis.Table"
     _NativePandas: TypeAlias = "pd.DataFrame | pd.Series[Any]"
     _NativeModin: TypeAlias = "_ModinDataFrame | _ModinSeries"
     _NativePandasLike: TypeAlias = "_NativePandas | _NativeCuDF | _NativeModin"
