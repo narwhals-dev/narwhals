@@ -109,13 +109,7 @@ class CompliantSeries(
         dtype: DType | type[DType] | None = None,
     ) -> Self: ...
     def to_narwhals(self, *args: Any, **kwds: Any) -> Series[NativeSeriesT]:
-        if self._version is Version.MAIN:
-            from narwhals.series import Series
-
-            return Series(self, level="full")
-        from narwhals.stable.v1 import Series as SeriesV1
-
-        return SeriesV1(self, level="full")  # type: ignore[no-any-return]
+        return self._version.series(self, level="full")
 
     # Operators
     def __add__(self, other: Any) -> Self: ...

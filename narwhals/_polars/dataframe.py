@@ -193,13 +193,7 @@ class PolarsDataFrame:
         return cls.from_native(pl.from_numpy(data, pl_schema), context=context)
 
     def to_narwhals(self, *args: Any, **kwds: Any) -> DataFrame[pl.DataFrame]:
-        if self._version is Version.MAIN:
-            from narwhals.dataframe import DataFrame
-
-            return DataFrame(self, level="full")
-        from narwhals.stable.v1 import DataFrame as DataFrameV1
-
-        return DataFrameV1(self, level="full")  # type: ignore[no-any-return]
+        return self._version.dataframe(self, level="full")
 
     @property
     def native(self) -> pl.DataFrame:
@@ -577,13 +571,7 @@ class PolarsLazyFrame:
         )
 
     def to_narwhals(self, *args: Any, **kwds: Any) -> LazyFrame[pl.LazyFrame]:
-        if self._version is Version.MAIN:
-            from narwhals.dataframe import LazyFrame
-
-            return LazyFrame(self, level="lazy")
-        from narwhals.stable.v1 import LazyFrame as LazyFrameV1
-
-        return LazyFrameV1(self, level="lazy")  # type: ignore[no-any-return]
+        return self._version.lazyframe(self, level="lazy")
 
     def __repr__(self) -> str:  # pragma: no cover
         return "PolarsLazyFrame"

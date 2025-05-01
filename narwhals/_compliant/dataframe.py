@@ -381,13 +381,7 @@ class EagerDataFrame(
     ) -> EagerNamespace[Self, EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT]: ...
 
     def to_narwhals(self, *args: Any, **kwds: Any) -> DataFrame[NativeFrameT]:
-        if self._version is Version.MAIN:
-            from narwhals.dataframe import DataFrame
-
-            return DataFrame(self, level="full")
-        from narwhals.stable.v1 import DataFrame as DataFrameV1
-
-        return DataFrameV1(self, level="full")  # type: ignore[no-any-return]
+        return self._version.dataframe(self, level="full")
 
     def _evaluate_expr(self, expr: EagerExprT, /) -> EagerSeriesT:
         """Evaluate `expr` and ensure it has a **single** output."""

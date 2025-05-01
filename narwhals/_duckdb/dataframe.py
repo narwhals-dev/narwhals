@@ -94,9 +94,8 @@ class DuckDBLazyFrame(
         self, *args: Any, **kwds: Any
     ) -> LazyFrame[duckdb.DuckDBPyRelation] | DataFrameV1[duckdb.DuckDBPyRelation]:
         if self._version is Version.MAIN:
-            from narwhals.dataframe import LazyFrame
+            return self._version.lazyframe(self, level="lazy")
 
-            return LazyFrame(self, level="lazy")
         from narwhals.stable.v1 import DataFrame as DataFrameV1
 
         return DataFrameV1(self, level="interchange")  # type: ignore[no-any-return]

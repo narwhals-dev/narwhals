@@ -215,6 +215,36 @@ class Version(Enum):
 
         return v1_dtypes
 
+    @property
+    def dataframe(self) -> type[DataFrame[Any]]:
+        if self is Version.MAIN:
+            from narwhals.dataframe import DataFrame
+
+            return DataFrame
+        from narwhals.stable.v1 import DataFrame as DataFrameV1
+
+        return DataFrameV1
+
+    @property
+    def lazyframe(self) -> type[LazyFrame[Any]]:
+        if self is Version.MAIN:
+            from narwhals.dataframe import LazyFrame
+
+            return LazyFrame
+        from narwhals.stable.v1 import LazyFrame as LazyFrameV1
+
+        return LazyFrameV1
+
+    @property
+    def series(self) -> type[Series[Any]]:
+        if self is Version.MAIN:
+            from narwhals.series import Series
+
+            return Series
+        from narwhals.stable.v1 import Series as SeriesV1
+
+        return SeriesV1
+
 
 class Implementation(Enum):
     """Implementation of native object (pandas, Polars, PyArrow, ...)."""

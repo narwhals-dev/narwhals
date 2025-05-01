@@ -195,13 +195,7 @@ class PolarsSeries:
         return cls.from_native(native, context=context)
 
     def to_narwhals(self, *args: Any, **kwds: Any) -> Series[pl.Series]:
-        if self._version is Version.MAIN:
-            from narwhals.series import Series
-
-            return Series(self, level="full")
-        from narwhals.stable.v1 import Series as SeriesV1
-
-        return SeriesV1(self, level="full")  # type: ignore[no-any-return]
+        return self._version.series(self, level="full")
 
     def _with_native(self, series: pl.Series) -> Self:
         return self.__class__(
