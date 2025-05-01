@@ -10,6 +10,8 @@ import pyarrow.compute as pc
 from narwhals._arrow.utils import ArrowSeriesNamespace
 from narwhals._arrow.utils import floordiv_compat
 from narwhals._arrow.utils import lit
+from narwhals.utils import parse_interval_string
+from narwhals.utils import unit_to_str
 
 if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
@@ -189,3 +191,10 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
         }
         factor = lit(unit_to_nano_factor[self.unit], type=pa.int64())
         return self.with_native(pc.multiply(self.native, factor).cast(pa.int64()))
+
+    def truncate(self, every: str) -> ArrowSeries:
+        number, unit = parse_interval_string(every)
+        unit_dict = unit_to_str()
+        return self.with_native(
+            pc.floor_temporal(self.native, multiple=int(number), unit=unit_dict[unit])  # type: ignore[call-overload]
+        )

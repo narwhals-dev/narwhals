@@ -5,6 +5,8 @@ from typing import Any
 from typing import Generic
 from typing import TypeVar
 
+from narwhals.utils import parse_interval_string
+
 if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import TimeUnit
@@ -652,4 +654,33 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             raise ValueError(msg)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.timestamp(time_unit)
+        )
+
+    def truncate(self, every: str) -> SeriesT:
+        """Divide the date/datetime range into buckets.
+
+        Arguments:
+            every: str
+                Every interval start and period length.
+
+        Returns:
+            Expression of data type `Date` or `Datetime`.
+
+        Examples:
+            >>> from datetime import datetime
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> s_native = pd.Series([datetime(2021, 3, 1, 12, 34)])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.dt.truncate("1h").to_native()
+            0   2021-03-01 12:00:00
+            dtype: datetime64[ns]
+        """
+        units = {"ns", "us", "ms", "s", "m", "h", "d"}
+        _, unit = parse_interval_string(every)
+        if unit not in units:
+            msg = f"Invalid interval unit: {unit}.\nExpected one of {units}."
+            raise ValueError(msg)
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.dt.truncate(every)
         )

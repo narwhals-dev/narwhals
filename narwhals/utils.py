@@ -1964,3 +1964,36 @@ class _DeferredIterable(Generic[_T]):
         # Collect and return as a `tuple`.
         it = self._into_iter()
         return it if isinstance(it, tuple) else tuple(it)
+
+
+def parse_interval_string(every: str) -> tuple[str, str]:
+    """Parse a string like "1d", "2h", "3m" into a tuple of (number, unit).
+
+    Returns:
+        A tuple of number and unit parsed from the interval string.
+    """
+    format = r"(\d+)([a-zA-Z]+)"
+    interval = re.match(format, every)
+    if interval is None:
+        msg = f"Invalid frequency string: {every}."
+        raise ValueError(msg)
+    number = interval.group(1)
+    unit = interval.group(2)
+    return number, unit
+
+
+def unit_to_str() -> dict[str, str]:
+    """Convert time unit to string.
+
+    Returns:
+        A dictionary mapping time unit to strings used by DuckDB and PyArrow.
+    """
+    return {
+        "d": "day",
+        "h": "hour",
+        "m": "minute",
+        "s": "second",
+        "ms": "millisecond",
+        "us": "microsecond",
+        "ns": "nanosecond",
+    }

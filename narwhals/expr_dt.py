@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING
 from typing import Generic
 from typing import TypeVar
 
+from narwhals.utils import parse_interval_string
+
 if TYPE_CHECKING:
     from narwhals.expr import Expr
     from narwhals.typing import TimeUnit
@@ -759,5 +761,47 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             raise ValueError(msg)
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.timestamp(time_unit),
+            self._expr._metadata,
+        )
+
+    def truncate(self, every: str) -> ExprT:
+        """Divide the date/datetime range into buckets.
+
+        Arguments:
+            every: str
+                Every interval start and period length.
+
+        Returns:
+            Expression of data type `Date` or `Datetime`.
+
+        Examples:
+            >>> from datetime import datetime
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"datetime": [datetime(2021, 3, 1, 12, 34)]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     nw.col("datetime").dt.truncate("1h").alias("datetime_trunc")
+            ... )
+            ┌─────────────────────────────────────────────┐
+            |             Narwhals DataFrame              |
+            |---------------------------------------------|
+            |shape: (1, 2)                                |
+            |┌─────────────────────┬─────────────────────┐|
+            |│ datetime            ┆ datetime_trunc      │|
+            |│ ---                 ┆ ---                 │|
+            |│ datetime[μs]        ┆ datetime[μs]        │|
+            |╞═════════════════════╪═════════════════════╡|
+            |│ 2021-03-01 12:34:00 ┆ 2021-03-01 12:00:00 │|
+            |└─────────────────────┴─────────────────────┘|
+            └─────────────────────────────────────────────┘
+        """
+        units = {"ns", "us", "ms", "s", "m", "h", "d"}
+        _, unit = parse_interval_string(every)
+        if unit not in units:
+            msg = f"Invalid interval unit: {unit}.\nExpected one of {units}."
+            raise ValueError(msg)
+        return self._expr.__class__(
+            lambda plx: self._expr._to_compliant_expr(plx).dt.truncate(every),
             self._expr._metadata,
         )

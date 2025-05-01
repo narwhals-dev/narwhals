@@ -6,6 +6,7 @@ from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.utils import Implementation
+from narwhals.utils import parse_interval_string
 
 if TYPE_CHECKING:
     import dask.dataframe.dask_expr as dx
@@ -156,4 +157,13 @@ class DaskExprDateTimeNamespace:
         return self._compliant_expr._with_callable(
             lambda _input: _input.dt.total_seconds() * 1_000_000_000 // 1,
             "total_nanoseconds",
+        )
+
+    def truncate(self, every: str) -> DaskExpr:
+        _, unit = parse_interval_string(every)
+        if unit == "m":  # replace "m" unit with "min"
+            every += "in"
+        return self._compliant_expr._with_callable(
+            lambda _input: _input.dt.floor(every),
+            "truncate",
         )

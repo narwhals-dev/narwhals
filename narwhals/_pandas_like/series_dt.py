@@ -9,6 +9,7 @@ from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import int_dtype_mapper
 from narwhals._pandas_like.utils import is_pyarrow_dtype_backend
+from narwhals.utils import parse_interval_string
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -190,3 +191,9 @@ class PandasLikeSeriesDateTimeNamespace(
             raise TypeError(msg)
         result[mask_na] = None
         return self.with_native(result)
+
+    def truncate(self, every: str) -> PandasLikeSeries:
+        _, unit = parse_interval_string(every)
+        if unit == "m":  # replace "m" unit with "min"
+            every += "in"
+        return self.with_native(self.native.dt.floor(every))
