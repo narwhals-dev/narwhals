@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals.dtypes import DType
+    from narwhals.series import Series
     from narwhals.typing import Into1DArray
     from narwhals.typing import MultiIndexSelector
     from narwhals.typing import _1DArray
@@ -192,6 +193,9 @@ class PolarsSeries:
     def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
         native = pl.Series(data if is_numpy_array_1d(data) else [data])
         return cls.from_native(native, context=context)
+
+    def to_narwhals(self) -> Series[pl.Series]:
+        return self._version.series(self, level="full")
 
     def _with_native(self, series: pl.Series) -> Self:
         return self.__class__(

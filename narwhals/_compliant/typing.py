@@ -40,8 +40,8 @@ __all__ = [
 CompliantExprAny: TypeAlias = "CompliantExpr[Any, Any]"
 CompliantSeriesAny: TypeAlias = "CompliantSeries[Any]"
 CompliantSeriesOrNativeExprAny: TypeAlias = "CompliantSeriesAny | NativeExpr"
-CompliantDataFrameAny: TypeAlias = "CompliantDataFrame[Any, Any, Any]"
-CompliantLazyFrameAny: TypeAlias = "CompliantLazyFrame[Any, Any]"
+CompliantDataFrameAny: TypeAlias = "CompliantDataFrame[Any, Any, Any, Any]"
+CompliantLazyFrameAny: TypeAlias = "CompliantLazyFrame[Any, Any, Any]"
 CompliantFrameAny: TypeAlias = "CompliantDataFrameAny | CompliantLazyFrameAny"
 CompliantNamespaceAny: TypeAlias = "CompliantNamespace[Any, Any]"
 
