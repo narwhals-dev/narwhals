@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from narwhals._polars.group_by import PolarsLazyGroupBy
     from narwhals._translate import IntoArrowTable
     from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import CompliantDataFrame
@@ -576,6 +577,15 @@ class PolarsLazyFrame:
         return cls(
             data, backend_version=context._backend_version, version=context._version
         )
+
+    def to_narwhals(self, *args: Any, **kwds: Any) -> LazyFrame[pl.LazyFrame]:
+        if self._version is Version.MAIN:
+            from narwhals.dataframe import LazyFrame
+
+            return LazyFrame(self, level="full")
+        from narwhals.stable.v1 import LazyFrame as LazyFrameV1
+
+        return LazyFrameV1(self, level="full")  # type: ignore[no-any-return]
 
     def __repr__(self) -> str:  # pragma: no cover
         return "PolarsLazyFrame"
