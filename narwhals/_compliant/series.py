@@ -108,7 +108,7 @@ class CompliantSeries(
         name: str = "",
         dtype: DType | type[DType] | None = None,
     ) -> Self: ...
-    def to_narwhals(self, *args: Any, **kwds: Any) -> Series[NativeSeriesT]:
+    def to_narwhals(self) -> Series[NativeSeriesT]:
         return self._version.series(self, level="full")
 
     # Operators

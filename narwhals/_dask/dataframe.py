@@ -72,7 +72,7 @@ class DaskLazyFrame(
             data, backend_version=context._backend_version, version=context._version
         )
 
-    def to_narwhals(self, *args: Any, **kwds: Any) -> LazyFrame[dd.DataFrame]:
+    def to_narwhals(self) -> LazyFrame[dd.DataFrame]:
         return self._version.lazyframe(self, level="lazy")
 
     def __native_namespace__(self) -> ModuleType:

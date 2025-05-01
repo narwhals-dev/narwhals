@@ -192,7 +192,7 @@ class PolarsDataFrame:
         )
         return cls.from_native(pl.from_numpy(data, pl_schema), context=context)
 
-    def to_narwhals(self, *args: Any, **kwds: Any) -> DataFrame[pl.DataFrame]:
+    def to_narwhals(self) -> DataFrame[pl.DataFrame]:
         return self._version.dataframe(self, level="full")
 
     @property
@@ -570,7 +570,7 @@ class PolarsLazyFrame:
             data, backend_version=context._backend_version, version=context._version
         )
 
-    def to_narwhals(self, *args: Any, **kwds: Any) -> LazyFrame[pl.LazyFrame]:
+    def to_narwhals(self) -> LazyFrame[pl.LazyFrame]:
         return self._version.lazyframe(self, level="lazy")
 
     def __repr__(self) -> str:  # pragma: no cover

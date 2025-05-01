@@ -380,7 +380,7 @@ class EagerDataFrame(
         self,
     ) -> EagerNamespace[Self, EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT]: ...
 
-    def to_narwhals(self, *args: Any, **kwds: Any) -> DataFrame[NativeFrameT]:
+    def to_narwhals(self) -> DataFrame[NativeFrameT]:
         return self._version.dataframe(self, level="full")
 
     def _evaluate_expr(self, expr: EagerExprT, /) -> EagerSeriesT:

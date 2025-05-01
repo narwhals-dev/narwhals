@@ -194,7 +194,7 @@ class PolarsSeries:
         native = pl.Series(data if is_numpy_array_1d(data) else [data])
         return cls.from_native(native, context=context)
 
-    def to_narwhals(self, *args: Any, **kwds: Any) -> Series[pl.Series]:
+    def to_narwhals(self) -> Series[pl.Series]:
         return self._version.series(self, level="full")
 
     def _with_native(self, series: pl.Series) -> Self:

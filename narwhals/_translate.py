@@ -163,6 +163,6 @@ ToNarwhalsT_co = TypeVar("ToNarwhalsT_co", covariant=True)
 
 
 class ToNarwhals(Protocol[ToNarwhalsT_co]):
-    def to_narwhals(self, *args: Any, **kwds: Any) -> ToNarwhalsT_co:
+    def to_narwhals(self) -> ToNarwhalsT_co:
         """Convert into public representation."""
         ...
