@@ -539,12 +539,11 @@ def _from_native_impl(  # noqa: PLR0915
                 msg = "Cannot only use `series_only=True` or `eager_only=False` with ibis.Table"
                 raise TypeError(msg)
             return native_object
-        ibis_compliant = version.namespace.from_native_object(
-            native_object
-        ).compliant.from_native(native_object)
-        if version is Version.V1:
-            return DataFrame(ibis_compliant, level="interchange")
-        return LazyFrame(ibis_compliant, level="lazy")
+        return (
+            version.namespace.from_native_object(native_object)
+            .compliant.from_native(native_object)
+            .to_narwhals()
+        )
 
     # PySpark
     elif is_native_spark_like(native_object):  # pragma: no cover

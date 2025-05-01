@@ -15,7 +15,6 @@ from narwhals._ibis.utils import evaluate_exprs
 from narwhals._ibis.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import Version
@@ -33,18 +32,25 @@ if TYPE_CHECKING:
     from typing_extensions import Self
     from typing_extensions import TypeIs
 
+    from narwhals._compliant.typing import CompliantDataFrameAny
     from narwhals._ibis.expr import IbisExpr
     from narwhals._ibis.group_by import IbisGroupBy
     from narwhals._ibis.namespace import IbisNamespace
     from narwhals._ibis.series import IbisInterchangeSeries
+    from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
+    from narwhals.stable.v1 import DataFrame as DataFrameV1
     from narwhals.typing import AsofJoinStrategy
     from narwhals.typing import JoinStrategy
     from narwhals.typing import LazyUniqueKeepStrategy
     from narwhals.utils import _FullContext
 
 
-class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
+class IbisLazyFrame(
+    CompliantLazyFrame[
+        "IbisExpr", "ir.Table", "LazyFrame[ir.Table] | DataFrameV1[ir.Table]"
+    ]
+):
     _implementation = Implementation.IBIS
 
     def __init__(
@@ -65,6 +71,16 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         return cls(
             data, backend_version=context._backend_version, version=context._version
         )
+
+    def to_narwhals(
+        self, *args: Any, **kwds: Any
+    ) -> LazyFrame[ir.Table] | DataFrameV1[ir.Table]:
+        if self._version is Version.MAIN:
+            return self._version.lazyframe(self, level="lazy")
+
+        from narwhals.stable.v1 import DataFrame as DataFrameV1
+
+        return DataFrameV1(self, level="interchange")
 
     def __narwhals_dataframe__(self) -> Self:  # pragma: no cover
         # Keep around for backcompat.
@@ -95,7 +111,7 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
 
     def collect(
         self, backend: ModuleType | Implementation | str | None, **kwargs: Any
-    ) -> CompliantDataFrame[Any, Any, Any]:
+    ) -> CompliantDataFrameAny:
         if backend is None or backend is Implementation.PYARROW:
             import pyarrow as pa  # ignore-banned-import
 
