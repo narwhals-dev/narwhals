@@ -244,7 +244,7 @@ jobs:
           cd tea-tasting
           # empty pytest.ini to avoid pytest using narwhals configs
           touch pytest.ini
-          uv run pytest tests
+          uv run --no-sync pytest tests
 
   # temporarily commented out until they address the `new_series` deprecation
   # tubular:
