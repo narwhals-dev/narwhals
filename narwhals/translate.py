@@ -12,6 +12,7 @@ from typing import TypeVar
 from typing import overload
 
 from narwhals._namespace import is_native_arrow
+from narwhals._namespace import is_native_pandas_like
 from narwhals._namespace import is_native_polars
 from narwhals._namespace import is_native_spark_like
 from narwhals.dependencies import get_cudf
@@ -31,6 +32,7 @@ from narwhals.dependencies import is_ibis_table
 from narwhals.dependencies import is_modin_dataframe
 from narwhals.dependencies import is_modin_series
 from narwhals.dependencies import is_pandas_dataframe
+from narwhals.dependencies import is_pandas_like_dataframe
 from narwhals.dependencies import is_pandas_series
 from narwhals.dependencies import is_polars_dataframe
 from narwhals.dependencies import is_polars_lazyframe
@@ -372,7 +374,6 @@ def _from_native_impl(  # noqa: PLR0915
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.series import Series
-    from narwhals.utils import Implementation
     from narwhals.utils import _supports_dataframe_interchange
     from narwhals.utils import is_compliant_dataframe
     from narwhals.utils import is_compliant_lazyframe
@@ -433,8 +434,6 @@ def _from_native_impl(  # noqa: PLR0915
 
     # Polars
     elif is_native_polars(native_object):
-        from narwhals._polars.namespace import PolarsNamespace
-
         if series_only and not is_polars_series(native_object):
             if not pass_through:
                 msg = f"Cannot only use `series_only` with {type(native_object).__qualname__}"
@@ -452,150 +451,49 @@ def _from_native_impl(  # noqa: PLR0915
                 msg = "Please set `allow_series=True` or `series_only=True`"
                 raise TypeError(msg)
             return native_object
-        pl_version = parse_version(get_polars())
-        pl_ns = PolarsNamespace(backend_version=pl_version, version=version)
-        pl_compliant = pl_ns.from_native(native_object)
-        if is_compliant_dataframe(pl_compliant):
-            return DataFrame(pl_compliant, level="full")
-        elif is_compliant_lazyframe(pl_compliant):
-            return LazyFrame(pl_compliant, level="lazy")
-        return Series(pl_compliant, level="full")
-
-    # pandas
-    elif is_pandas_dataframe(native_object):
-        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-
-        if series_only:
-            if not pass_through:
-                msg = "Cannot only use `series_only` with dataframe"
-                raise TypeError(msg)
-            return native_object
-        pd = get_pandas()
-        return DataFrame(
-            PandasLikeDataFrame(
-                native_object,
-                backend_version=parse_version(pd),
-                implementation=Implementation.PANDAS,
-                version=version,
-                validate_column_names=True,
-            ),
-            level="full",
+        return (
+            version.namespace.from_native_object(native_object)
+            .compliant.from_native(native_object)
+            .to_narwhals()
         )
-    elif is_pandas_series(native_object):
-        from narwhals._pandas_like.series import PandasLikeSeries
 
-        if not allow_series:
+    # PandasLike
+    elif is_native_pandas_like(native_object):
+        if is_pandas_like_dataframe(native_object):
+            if series_only:
+                if not pass_through:
+                    msg = f"Cannot only use `series_only` with {type(native_object).__qualname__}"
+                    raise TypeError(msg)
+                return native_object
+        elif not allow_series:
             if not pass_through:
                 msg = "Please set `allow_series=True` or `series_only=True`"
                 raise TypeError(msg)
             return native_object
-        pd = get_pandas()
-        return Series(
-            PandasLikeSeries(
-                native_object,
-                implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd),
-                version=version,
-            ),
-            level="full",
-        )
-
-    # Modin
-    elif is_modin_dataframe(native_object):  # pragma: no cover
-        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-
-        mpd = get_modin()
-        if series_only:
-            if not pass_through:
-                msg = "Cannot only use `series_only` with modin.DataFrame"
-                raise TypeError(msg)
-            return native_object
-        return DataFrame(
-            PandasLikeDataFrame(
-                native_object,
-                implementation=Implementation.MODIN,
-                backend_version=parse_version(mpd),
-                version=version,
-                validate_column_names=True,
-            ),
-            level="full",
-        )
-    elif is_modin_series(native_object):  # pragma: no cover
-        from narwhals._pandas_like.series import PandasLikeSeries
-
-        mpd = get_modin()
-        if not allow_series:
-            if not pass_through:
-                msg = "Please set `allow_series=True` or `series_only=True`"
-                raise TypeError(msg)
-            return native_object
-        return Series(
-            PandasLikeSeries(
-                native_object,
-                implementation=Implementation.MODIN,
-                backend_version=parse_version(mpd),
-                version=version,
-            ),
-            level="full",
-        )
-
-    # cuDF
-    elif is_cudf_dataframe(native_object):  # pragma: no cover
-        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-
-        cudf = get_cudf()
-        if series_only:
-            if not pass_through:
-                msg = "Cannot only use `series_only` with cudf.DataFrame"
-                raise TypeError(msg)
-            return native_object
-        return DataFrame(
-            PandasLikeDataFrame(
-                native_object,
-                implementation=Implementation.CUDF,
-                backend_version=parse_version(cudf),
-                version=version,
-                validate_column_names=True,
-            ),
-            level="full",
-        )
-    elif is_cudf_series(native_object):  # pragma: no cover
-        from narwhals._pandas_like.series import PandasLikeSeries
-
-        cudf = get_cudf()
-        if not allow_series:
-            if not pass_through:
-                msg = "Please set `allow_series=True` or `series_only=True`"
-                raise TypeError(msg)
-            return native_object
-        return Series(
-            PandasLikeSeries(
-                native_object,
-                implementation=Implementation.CUDF,
-                backend_version=parse_version(cudf),
-                version=version,
-            ),
-            level="full",
+        return (
+            version.namespace.from_native_object(native_object)
+            .compliant.from_native(native_object)
+            .to_narwhals()
         )
 
     # PyArrow
     elif is_native_arrow(native_object):
-        if series_only and is_pyarrow_table(native_object):
-            if not pass_through:
-                msg = f"Cannot only use `series_only` with {type(native_object).__qualname__}"
-                raise TypeError(msg)
-            return native_object
-        if not allow_series and not is_pyarrow_table(native_object):
+        if is_pyarrow_table(native_object):
+            if series_only:
+                if not pass_through:
+                    msg = f"Cannot only use `series_only` with {type(native_object).__qualname__}"
+                    raise TypeError(msg)
+                return native_object
+        elif not allow_series:
             if not pass_through:
                 msg = "Please set `allow_series=True` or `series_only=True`"
                 raise TypeError(msg)
             return native_object
-        pa_compliant = version.namespace.from_native_object(
-            native_object
-        ).compliant.from_native(native_object)
-        if is_compliant_dataframe(pa_compliant):
-            return DataFrame(pa_compliant, level="full")
-        return Series(pa_compliant, level="full")
+        return (
+            version.namespace.from_native_object(native_object)
+            .compliant.from_native(native_object)
+            .to_narwhals()
+        )
 
     # Dask
     elif is_dask_dataframe(native_object):
@@ -615,8 +513,11 @@ def _from_native_impl(  # noqa: PLR0915
         if dask_version <= (2024, 12, 1) and get_dask_expr() is None:  # pragma: no cover
             msg = "Please install dask-expr"
             raise ImportError(msg)
-        dd_ns = DaskNamespace(backend_version=dask_version, version=version)
-        return LazyFrame(dd_ns.from_native(native_object), level="lazy")
+        return (
+            DaskNamespace(backend_version=dask_version, version=version)
+            .from_native(native_object)
+            .to_narwhals()
+        )
 
     # DuckDB
     elif is_duckdb_relation(native_object):
@@ -625,12 +526,11 @@ def _from_native_impl(  # noqa: PLR0915
                 msg = "Cannot only use `series_only=True` or `eager_only=False` with DuckDBPyRelation"
                 raise TypeError(msg)
             return native_object
-        duckdb_compliant = version.namespace.from_native_object(
-            native_object
-        ).compliant.from_native(native_object)
-        if version is Version.V1:
-            return DataFrame(duckdb_compliant, level="interchange")
-        return LazyFrame(duckdb_compliant, level="lazy")
+        return (
+            version.namespace.from_native_object(native_object)
+            .compliant.from_native(native_object)
+            .to_narwhals()
+        )
 
     # Ibis
     elif is_ibis_table(native_object):  # pragma: no cover
@@ -670,7 +570,7 @@ def _from_native_impl(  # noqa: PLR0915
         if eager_only or eager_or_interchange_only:
             msg = f"Cannot only use `eager_only` or `eager_or_interchange_only` with {ns_spark.implementation._alias} DataFrame"
             raise TypeError(msg)
-        return LazyFrame(ns_spark.compliant.from_native(native_object), level="lazy")
+        return ns_spark.compliant.from_native(native_object).to_narwhals()
 
     # Interchange protocol
     elif _supports_dataframe_interchange(native_object):
