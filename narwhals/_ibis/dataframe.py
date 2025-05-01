@@ -30,7 +30,6 @@ if TYPE_CHECKING:
     import pandas as pd
     import pyarrow as pa
     from ibis.expr.operations import Binary
-    from ibis.expr.operations import Relation
     from typing_extensions import Self
     from typing_extensions import TypeIs
 
@@ -150,21 +149,12 @@ class IbisLazyFrame(CompliantLazyFrame["IbisExpr", "ir.Table"]):
         return self._with_native(self.native.aggregate(selection))
 
     def select(self, *exprs: IbisExpr) -> Self:
-        from ibis.expr.operations.window import WindowFunction
-
         selection = [val.name(name) for name, val in evaluate_exprs(self, *exprs)]
         if not selection:
             msg = "At least one expression must be provided to `select` with the Ibis backend."
             raise ValueError(msg)
 
         t = self.native.select(*selection)
-
-        # Ibis broadcasts aggregate functions in selects as window functions, keeping the original number of rows.
-        # Need to reduce it to a single row if they are all window functions, by calling .distinct()
-        t_op = cast("Relation", t.op())
-        if all(isinstance(c, WindowFunction) for c in t_op.values.values()):  # noqa: PD011
-            t = t.distinct()
-
         return self._with_native(t)
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:

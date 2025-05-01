@@ -20,6 +20,7 @@ from narwhals.dependencies import get_polars
 from narwhals.dependencies import get_pyarrow
 from narwhals.dependencies import is_dask_dataframe
 from narwhals.dependencies import is_duckdb_relation
+from narwhals.dependencies import is_ibis_table
 from narwhals.dependencies import is_pyspark_connect_dataframe
 from narwhals.dependencies import is_pyspark_dataframe
 from narwhals.dependencies import is_sqlframe_dataframe
@@ -31,6 +32,7 @@ if TYPE_CHECKING:
     from typing import ClassVar
 
     import duckdb
+    import ibis
     import pandas as pd
     import polars as pl
     import pyarrow as pa
@@ -42,6 +44,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._dask.namespace import DaskNamespace
     from narwhals._duckdb.namespace import DuckDBNamespace
+    from narwhals._ibis.namespace import IbisNamespace
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
@@ -61,6 +64,7 @@ if TYPE_CHECKING:
     _DuckDB: TypeAlias = Literal["duckdb"]
     _PandasLike: TypeAlias = Literal["pandas", "cudf", "modin"]
     _SparkLike: TypeAlias = Literal["pyspark", "sqlframe"]
+    _Ibis: TypeAlias = Literal["ibis"]
     _EagerOnly: TypeAlias = "_PandasLike | _Arrow"
     _EagerAllowed: TypeAlias = "_Polars | _EagerOnly"
     _LazyOnly: TypeAlias = "_SparkLike | _Dask | _DuckDB"
@@ -70,6 +74,7 @@ if TYPE_CHECKING:
     Arrow: TypeAlias = Literal[_Arrow, Implementation.PYARROW]
     Dask: TypeAlias = Literal[_Dask, Implementation.DASK]
     DuckDB: TypeAlias = Literal[_DuckDB, Implementation.DUCKDB]
+    Ibis: TypeAlias = Literal[_Ibis, Implementation.IBIS]
     PandasLike: TypeAlias = Literal[
         _PandasLike, Implementation.PANDAS, Implementation.CUDF, Implementation.MODIN
     ]
@@ -111,6 +116,7 @@ if TYPE_CHECKING:
     _NativePolars: TypeAlias = "pl.DataFrame | pl.LazyFrame | pl.Series"
     _NativeArrow: TypeAlias = "pa.Table | pa.ChunkedArray[Any]"
     _NativeDuckDB: TypeAlias = "duckdb.DuckDBPyRelation"
+    _NativeIbis: TypeAlias = "ibis.Table"
     _NativePandas: TypeAlias = "pd.DataFrame | pd.Series[Any]"
     _NativeModin: TypeAlias = "_ModinDataFrame | _ModinSeries"
     _NativePandasLike: TypeAlias = "_NativePandas | _NativeCuDF | _NativeModin"
@@ -121,7 +127,7 @@ if TYPE_CHECKING:
         "_NativeSQLFrame | _NativePySpark | _NativePySparkConnect"
     )
 
-    NativeKnown: TypeAlias = "_NativePolars | _NativeArrow | _NativePandasLike | _NativeSparkLike | _NativeDuckDB | _NativeDask"
+    NativeKnown: TypeAlias = "_NativePolars | _NativeArrow | _NativePandasLike | _NativeSparkLike | _NativeDuckDB | _NativeDask | _NativeIbis"
     NativeUnknown: TypeAlias = (
         "NativeFrame | NativeSeries | NativeLazyFrame | DataFrameLike"
     )
@@ -187,6 +193,10 @@ class Namespace(Generic[CompliantNamespaceT_co]):
 
     @overload
     @classmethod
+    def from_backend(cls, backend: Ibis, /) -> Namespace[IbisNamespace]: ...
+
+    @overload
+    @classmethod
     def from_backend(cls, backend: EagerAllowed, /) -> EagerAllowedNamespace: ...
 
     @overload
@@ -243,6 +253,10 @@ class Namespace(Generic[CompliantNamespaceT_co]):
             from narwhals._dask.namespace import DaskNamespace
 
             ns = DaskNamespace(backend_version=backend_version, version=version)
+        elif impl.is_ibis():
+            from narwhals._ibis.namespace import IbisNamespace
+
+            ns = IbisNamespace(backend_version=backend_version, version=version)
         else:
             msg = "Not supported Implementation"  # pragma: no cover
             raise AssertionError(msg)
@@ -282,6 +296,10 @@ class Namespace(Generic[CompliantNamespaceT_co]):
 
     @overload
     @classmethod
+    def from_native_object(cls, native: _NativeIbis, /) -> Namespace[IbisNamespace]: ...
+
+    @overload
+    @classmethod
     def from_native_object(
         cls, native: NativeUnknown, /
     ) -> Namespace[CompliantNamespaceAny]: ...
@@ -312,6 +330,8 @@ class Namespace(Generic[CompliantNamespaceT_co]):
             return cls.from_backend(Implementation.CUDF)
         elif is_native_modin(native):  # pragma: no cover
             return cls.from_backend(Implementation.MODIN)
+        elif is_native_ibis(native):
+            return cls.from_backend(Implementation.IBIS)
         else:
             msg = f"Unsupported type: {type(native).__qualname__!r}"
             raise TypeError(msg)
@@ -334,6 +354,7 @@ def is_native_dask(obj: Any) -> TypeIs[_NativeDask]:
 
 
 is_native_duckdb: _Guard[_NativeDuckDB] = is_duckdb_relation
+is_native_ibis: _Guard[_NativeIbis] = is_ibis_table
 is_native_sqlframe: _Guard[_NativeSQLFrame] = is_sqlframe_dataframe
 is_native_pyspark: _Guard[_NativePySpark] = is_pyspark_dataframe
 is_native_pyspark_connect: _Guard[_NativePySparkConnect] = is_pyspark_connect_dataframe

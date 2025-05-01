@@ -635,7 +635,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
             msg = "`strategy` is not supported for the Ibis backend"
             raise NotImplementedError(msg)
         if limit is not None:
-            msg = "`limit` is not supported for the Ibis backend"
+            msg = "`limit` is not supported for the Ibis backend"  # pragma: no cover
             raise NotImplementedError(msg)
 
         def _fill_null(_input: ir.Value, value: ir.Scalar) -> ir.Value:

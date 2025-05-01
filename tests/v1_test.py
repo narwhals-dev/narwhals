@@ -209,7 +209,7 @@ def test_cast_to_enum_v1(
     if (
         any(
             backend in str(constructor)
-            for backend in ["pyarrow_table", "sqlframe", "pyspark"]
+            for backend in ["pyarrow_table", "sqlframe", "pyspark", "ibis"]
         )
         or str(constructor) == "modin"
     ):
