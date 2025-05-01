@@ -525,8 +525,11 @@ def _from_native_impl(  # noqa: PLR0915
         if dask_version <= (2024, 12, 1) and get_dask_expr() is None:  # pragma: no cover
             msg = "Please install dask-expr"
             raise ImportError(msg)
-        dd_ns = DaskNamespace(backend_version=dask_version, version=version)
-        return LazyFrame(dd_ns.from_native(native_object), level="lazy")
+        return (
+            DaskNamespace(backend_version=dask_version, version=version)
+            .from_native(native_object)
+            .to_narwhals()
+        )
 
     # DuckDB
     elif is_duckdb_relation(native_object):
