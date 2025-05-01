@@ -225,22 +225,29 @@ jobs:
           enable-cache: true
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
+          python-version: ${{ matrix.python-version }}
       - name: install-tea-tasting-test
         run: |
           cd tea-tasting
-          uv pip install -e ".[test]" --system
+          uv venv
+          uv sync --group test
       - name: install-narwhals-dev
         run: |
-          uv pip uninstall narwhals --system
-          uv pip install -e . --system
+          cd tea-tasting
+          . .venv/bin/activate
+          uv pip uninstall narwhals
+          uv pip install -e ./..
       - name: show-deps
-        run: uv pip freeze
+        run: |
+          cd tea-tasting
+          . .venv/bin/activate
+          uv pip freeze
       - name: run-pytest
         run: |
           cd tea-tasting
           # empty pytest.ini to avoid pytest using narwhals configs
           touch pytest.ini
-          pytest tests
+          uv run pytest tests
 
   # temporarily commented out until they address the `new_series` deprecation
   # tubular:
