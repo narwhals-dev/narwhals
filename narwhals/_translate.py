@@ -221,3 +221,12 @@ class FromNative(Protocol[FromNativeT]):
     def _is_native(obj: FromNativeT | Any, /) -> TypeIs[FromNativeT]:
         """Return `True` if `obj` can be passed to `from_native`."""
         ...
+
+
+ToNarwhalsT_co = TypeVar("ToNarwhalsT_co", covariant=True)
+
+
+class ToNarwhals(Protocol[ToNarwhalsT_co]):
+    def to_narwhals(self) -> ToNarwhalsT_co:
+        """Convert into public representation."""
+        ...

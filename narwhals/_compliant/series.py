@@ -21,6 +21,7 @@ from narwhals._compliant.typing import NativeSeriesT_co
 from narwhals._translate import FromIterable
 from narwhals._translate import FromNative
 from narwhals._translate import NumpyConvertible
+from narwhals._translate import ToNarwhals
 from narwhals.utils import _StoresCompliant
 from narwhals.utils import _StoresNative
 from narwhals.utils import is_compliant_series
@@ -41,6 +42,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.namespace import CompliantNamespace
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals.dtypes import DType
+    from narwhals.series import Series
     from narwhals.typing import ClosedInterval
     from narwhals.typing import FillNullStrategy
     from narwhals.typing import Into1DArray
@@ -64,6 +66,7 @@ class CompliantSeries(
     NumpyConvertible["_1DArray", "Into1DArray"],
     FromIterable,
     FromNative[NativeSeriesT],
+    ToNarwhals["Series[NativeSeriesT]"],
     Protocol[NativeSeriesT],
 ):
     _implementation: Implementation
@@ -105,6 +108,8 @@ class CompliantSeries(
         name: str = "",
         dtype: DType | type[DType] | None = None,
     ) -> Self: ...
+    def to_narwhals(self) -> Series[NativeSeriesT]:
+        return self._version.series(self, level="full")
 
     # Operators
     def __add__(self, other: Any) -> Self: ...
@@ -180,7 +185,7 @@ class CompliantSeries(
         *,
         bin_count: int | None,
         include_breakpoint: bool,
-    ) -> CompliantDataFrame[Self, Any, Any]: ...
+    ) -> CompliantDataFrame[Self, Any, Any, Any]: ...
     def head(self, n: int) -> Self: ...
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: ClosedInterval
@@ -262,8 +267,8 @@ class CompliantSeries(
     def to_arrow(self) -> pa.Array[Any]: ...
     def to_dummies(
         self, *, separator: str, drop_first: bool
-    ) -> CompliantDataFrame[Self, Any, Any]: ...
-    def to_frame(self) -> CompliantDataFrame[Self, Any, Any]: ...
+    ) -> CompliantDataFrame[Self, Any, Any, Any]: ...
+    def to_frame(self) -> CompliantDataFrame[Self, Any, Any, Any]: ...
     def to_list(self) -> list[Any]: ...
     def to_pandas(self) -> pd.Series[Any]: ...
     def to_polars(self) -> pl.Series: ...
@@ -275,7 +280,7 @@ class CompliantSeries(
         parallel: bool,
         name: str | None,
         normalize: bool,
-    ) -> CompliantDataFrame[Self, Any, Any]: ...
+    ) -> CompliantDataFrame[Self, Any, Any, Any]: ...
     def var(self, *, ddof: int) -> float: ...
     def zip_with(self, mask: Any, other: Any) -> Self: ...
 
