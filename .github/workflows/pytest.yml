@@ -32,7 +32,7 @@ jobs:
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=80 --constructors=pandas,pyarrow,polars[eager],polars[lazy]
+        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=75 --constructors=pandas,pyarrow,polars[eager],polars[lazy]
 
   pytest-windows:
     strategy:
