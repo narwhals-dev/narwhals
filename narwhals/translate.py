@@ -546,12 +546,11 @@ def _from_native_impl(  # noqa: PLR0915
                 msg = "Please set `allow_series=True` or `series_only=True`"
                 raise TypeError(msg)
             return native_object
-        pa_compliant = version.namespace.from_native_object(
-            native_object
-        ).compliant.from_native(native_object)
-        if is_compliant_series(pa_compliant):
-            return Series(pa_compliant, level="full")
-        return pa_compliant.to_narwhals()
+        return (
+            version.namespace.from_native_object(native_object)
+            .compliant.from_native(native_object)
+            .to_narwhals()
+        )
 
     # Dask
     elif is_dask_dataframe(native_object):
