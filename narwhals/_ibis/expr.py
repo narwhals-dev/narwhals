@@ -154,12 +154,10 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
 
             rolling_calc = func_.over(window)
             valid_count = expr.count().over(window)
-            rolling_calc = ibis.cases(
+            return ibis.cases(
                 (valid_count >= ibis.literal(min_samples), rolling_calc),
                 else_=ibis.null(),
             )
-
-            return rolling_calc
 
         return func
 
