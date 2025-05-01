@@ -83,7 +83,7 @@ def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
         return dtypes.Datetime()
     if ibis_dtype.is_interval():
         _time_unit = ibis_dtype.unit.value
-        if _time_unit not in {"ns", "us", "ms", "s"}:
+        if _time_unit not in {"ns", "us", "ms", "s"}:  # pragma: no cover
             msg = f"Unsupported interval unit: {_time_unit}"
             raise NotImplementedError(msg)
         return dtypes.Duration(_time_unit)
@@ -105,7 +105,7 @@ def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
                 for ibis_dtype_name, ibis_dtype_field in ibis_dtype.items()
             ]
         )
-    if ibis_dtype.is_decimal():
+    if ibis_dtype.is_decimal():  # pragma: no cover
         return dtypes.Decimal()
     if ibis_dtype.is_time():
         return dtypes.Time()
@@ -120,13 +120,13 @@ def narwhals_to_native_dtype(
     dtypes = version.dtypes
     ibis_dtypes = ibis.expr.datatypes
 
-    if isinstance_or_issubclass(dtype, dtypes.Decimal):
+    if isinstance_or_issubclass(dtype, dtypes.Decimal):  # pragma: no cover
         return ibis_dtypes.Decimal()
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return ibis_dtypes.Float64()
     if isinstance_or_issubclass(dtype, dtypes.Float32):
         return ibis_dtypes.Float32()
-    if isinstance_or_issubclass(dtype, dtypes.Int128):
+    if isinstance_or_issubclass(dtype, dtypes.Int128):  # pragma: no cover
         msg = "Int128 not supported by Ibis"
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Int64):
@@ -137,7 +137,7 @@ def narwhals_to_native_dtype(
         return ibis_dtypes.Int16()
     if isinstance_or_issubclass(dtype, dtypes.Int8):
         return ibis_dtypes.Int8()
-    if isinstance_or_issubclass(dtype, dtypes.UInt128):
+    if isinstance_or_issubclass(dtype, dtypes.UInt128):  # pragma: no cover
         msg = "UInt128 not supported by Ibis"
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.UInt64):
