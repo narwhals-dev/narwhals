@@ -15,7 +15,6 @@ from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
-from narwhals.utils import Version
 from narwhals.utils import _remap_full_join_keys
 from narwhals.utils import check_column_exists
 from narwhals.utils import check_column_names_are_unique
@@ -41,6 +40,7 @@ if TYPE_CHECKING:
     from narwhals.typing import AsofJoinStrategy
     from narwhals.typing import JoinStrategy
     from narwhals.typing import LazyUniqueKeepStrategy
+    from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
 

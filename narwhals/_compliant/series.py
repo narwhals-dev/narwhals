@@ -22,7 +22,6 @@ from narwhals._translate import FromIterable
 from narwhals._translate import FromNative
 from narwhals._translate import NumpyConvertible
 from narwhals._translate import ToNarwhals
-from narwhals.utils import Version
 from narwhals.utils import _StoresCompliant
 from narwhals.utils import _StoresNative
 from narwhals.utils import is_compliant_series
@@ -57,6 +56,7 @@ if TYPE_CHECKING:
     from narwhals.typing import _1DArray
     from narwhals.typing import _SliceIndex
     from narwhals.utils import Implementation
+    from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
 __all__ = ["CompliantSeries", "EagerSeries"]

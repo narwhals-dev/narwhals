@@ -18,7 +18,6 @@ from narwhals._spark_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
-from narwhals.utils import Version
 from narwhals.utils import check_column_exists
 from narwhals.utils import find_stacklevel
 from narwhals.utils import generate_temporary_column_name
@@ -46,6 +45,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import JoinStrategy
     from narwhals.typing import LazyUniqueKeepStrategy
+    from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
     SQLFrameDataFrame = BaseDataFrame[Any, Any, Any, Any, Any]

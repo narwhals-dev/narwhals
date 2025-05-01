@@ -20,7 +20,6 @@ from narwhals._polars.utils import native_to_narwhals_dtype
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
-from narwhals.utils import Version
 from narwhals.utils import _into_arrow_table
 from narwhals.utils import convert_str_slice_to_int_slice
 from narwhals.utils import is_compliant_series
@@ -61,6 +60,7 @@ if TYPE_CHECKING:
     from narwhals.typing import PivotAgg
     from narwhals.typing import SingleIndexSelector
     from narwhals.typing import _2DArray
+    from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
     T = TypeVar("T")

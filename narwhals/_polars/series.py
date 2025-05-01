@@ -18,7 +18,6 @@ from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals._polars.utils import native_to_narwhals_dtype
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.utils import Implementation
-from narwhals.utils import Version
 from narwhals.utils import requires
 from narwhals.utils import validate_backend_version
 
@@ -40,6 +39,7 @@ if TYPE_CHECKING:
     from narwhals.typing import Into1DArray
     from narwhals.typing import MultiIndexSelector
     from narwhals.typing import _1DArray
+    from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
     T = TypeVar("T")
