@@ -535,12 +535,11 @@ def _from_native_impl(  # noqa: PLR0915
                 msg = "Cannot only use `series_only=True` or `eager_only=False` with DuckDBPyRelation"
                 raise TypeError(msg)
             return native_object
-        duckdb_compliant = version.namespace.from_native_object(
-            native_object
-        ).compliant.from_native(native_object)
-        if version is Version.V1:
-            return DataFrame(duckdb_compliant, level="interchange")
-        return LazyFrame(duckdb_compliant, level="lazy")
+        return (
+            version.namespace.from_native_object(native_object)
+            .compliant.from_native(native_object)
+            .to_narwhals()
+        )
 
     # Ibis
     elif is_ibis_table(native_object):  # pragma: no cover
