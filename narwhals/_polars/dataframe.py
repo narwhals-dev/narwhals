@@ -45,6 +45,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
+    from narwhals._compliant.typing import CompliantDataFrameAny
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.group_by import PolarsGroupBy
     from narwhals._polars.group_by import PolarsLazyGroupBy
@@ -53,7 +54,6 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
-    from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import JoinStrategy
     from narwhals.typing import MultiColSelector
@@ -105,7 +105,7 @@ INHERITED_METHODS = frozenset(
 
 class PolarsDataFrame:
     clone: Method[Self]
-    collect: Method[CompliantDataFrame[Any, Any, Any]]
+    collect: Method[CompliantDataFrameAny]
     drop_nulls: Method[Self]
     estimated_size: Method[int | float]
     explode: Method[Self]
@@ -669,10 +669,8 @@ class PolarsLazyFrame:
             }
 
     def collect(
-        self,
-        backend: Implementation | None,
-        **kwargs: Any,
-    ) -> CompliantDataFrame[Any, Any, Any]:
+        self, backend: Implementation | None, **kwargs: Any
+    ) -> CompliantDataFrameAny:
         try:
             result = self.native.collect(**kwargs)
         except Exception as e:  # noqa: BLE001

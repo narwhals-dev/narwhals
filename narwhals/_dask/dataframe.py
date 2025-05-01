@@ -13,7 +13,6 @@ from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import evaluate_exprs
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import select_columns_by_name
-from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import _remap_full_join_keys
@@ -32,6 +31,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
     from typing_extensions import TypeIs
 
+    from narwhals._compliant.typing import CompliantDataFrameAny
     from narwhals._dask.expr import DaskExpr
     from narwhals._dask.group_by import DaskLazyGroupBy
     from narwhals._dask.namespace import DaskNamespace
@@ -103,10 +103,8 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
         return self._with_native(self.native.assign(**dict(new_series)))
 
     def collect(
-        self,
-        backend: Implementation | None,
-        **kwargs: Any,
-    ) -> CompliantDataFrame[Any, Any, Any]:
+        self, backend: Implementation | None, **kwargs: Any
+    ) -> CompliantDataFrameAny:
         result = self.native.compute(**kwargs)
 
         if backend is None or backend is Implementation.PANDAS:

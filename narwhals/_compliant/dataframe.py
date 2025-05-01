@@ -12,6 +12,7 @@ from typing import Sized
 from typing import TypeVar
 from typing import overload
 
+from narwhals._compliant.typing import CompliantDataFrameAny
 from narwhals._compliant.typing import CompliantExprT_contra
 from narwhals._compliant.typing import CompliantSeriesT
 from narwhals._compliant.typing import EagerExprT
@@ -23,6 +24,7 @@ from narwhals._translate import DictConvertible
 from narwhals._translate import FromNative
 from narwhals._translate import NumpyConvertible
 from narwhals._translate import ToNarwhals
+from narwhals._translate import ToNarwhalsT_co
 from narwhals.utils import Version
 from narwhals.utils import _StoresNative
 from narwhals.utils import deprecated
@@ -83,9 +85,9 @@ class CompliantDataFrame(
     ArrowConvertible["pa.Table", "IntoArrowTable"],
     _StoresNative[NativeFrameT],
     FromNative[NativeFrameT],
-    ToNarwhals["DataFrame[NativeFrameT]"],
+    ToNarwhals[ToNarwhalsT_co],
     Sized,
-    Protocol[CompliantSeriesT, CompliantExprT_contra, NativeFrameT],
+    Protocol[CompliantSeriesT, CompliantExprT_contra, NativeFrameT, ToNarwhalsT_co],
 ):
     _native_frame: NativeFrameT
     _implementation: Implementation
@@ -116,14 +118,6 @@ class CompliantDataFrame(
         context: _FullContext,
         schema: Mapping[str, DType] | Schema | Sequence[str] | None,
     ) -> Self: ...
-    def to_narwhals(self, *args: Any, **kwds: Any) -> DataFrame[NativeFrameT]:
-        if self._version is Version.MAIN:
-            from narwhals.dataframe import DataFrame
-
-            return DataFrame(self, level="full")
-        from narwhals.stable.v1 import DataFrame as DataFrameV1
-
-        return DataFrameV1(self, level="full")  # type: ignore[no-any-return]
 
     def __array__(self, dtype: Any, *, copy: bool | None) -> _2DArray: ...
     def __getitem__(
@@ -160,7 +154,7 @@ class CompliantDataFrame(
     def clone(self) -> Self: ...
     def collect(
         self, backend: Implementation | None, **kwargs: Any
-    ) -> CompliantDataFrame[Any, Any, Any]: ...
+    ) -> CompliantDataFrameAny: ...
     def collect_schema(self) -> Mapping[str, DType]: ...
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self: ...
     def drop_nulls(self, subset: Sequence[str] | None) -> Self: ...
@@ -309,7 +303,7 @@ class CompliantLazyFrame(
     def _iter_columns(self) -> Iterator[Any]: ...
     def collect(
         self, backend: Implementation | None, **kwargs: Any
-    ) -> CompliantDataFrame[Any, Any, Any]: ...
+    ) -> CompliantDataFrameAny: ...
     def collect_schema(self) -> Mapping[str, DType]: ...
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self: ...
     def drop_nulls(self, subset: Sequence[str] | None) -> Self: ...
@@ -376,13 +370,22 @@ class CompliantLazyFrame(
 
 
 class EagerDataFrame(
-    CompliantDataFrame[EagerSeriesT, EagerExprT, NativeFrameT],
+    CompliantDataFrame[EagerSeriesT, EagerExprT, NativeFrameT, "DataFrame[NativeFrameT]"],
     CompliantLazyFrame[EagerExprT, NativeFrameT],
     Protocol[EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
 ):
     def __narwhals_namespace__(
         self,
     ) -> EagerNamespace[Self, EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT]: ...
+
+    def to_narwhals(self, *args: Any, **kwds: Any) -> DataFrame[NativeFrameT]:
+        if self._version is Version.MAIN:
+            from narwhals.dataframe import DataFrame
+
+            return DataFrame(self, level="full")
+        from narwhals.stable.v1 import DataFrame as DataFrameV1
+
+        return DataFrameV1(self, level="full")  # type: ignore[no-any-return]
 
     def _evaluate_expr(self, expr: EagerExprT, /) -> EagerSeriesT:
         """Evaluate `expr` and ensure it has a **single** output."""

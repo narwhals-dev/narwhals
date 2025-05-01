@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
+    from narwhals._compliant.typing import CompliantDataFrameAny
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
@@ -57,7 +58,6 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import AsofJoinStrategy
-    from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import DTypeBackend
     from narwhals.typing import JoinStrategy
@@ -518,10 +518,8 @@ class PandasLikeDataFrame(
 
     # --- convert ---
     def collect(
-        self,
-        backend: Implementation | None,
-        **kwargs: Any,
-    ) -> CompliantDataFrame[Any, Any, Any]:
+        self, backend: Implementation | None, **kwargs: Any
+    ) -> CompliantDataFrameAny:
         if backend is None:
             return PandasLikeDataFrame(
                 self.native,

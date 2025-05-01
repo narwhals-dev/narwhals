@@ -21,7 +21,6 @@ from narwhals._duckdb.utils import native_to_narwhals_dtype
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import Version
@@ -39,6 +38,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
     from typing_extensions import TypeIs
 
+    from narwhals._compliant.typing import CompliantDataFrameAny
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals._duckdb.group_by import DuckDBGroupBy
     from narwhals._duckdb.namespace import DuckDBNamespace
@@ -112,10 +112,8 @@ class DuckDBLazyFrame(CompliantLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"
             yield col(name)
 
     def collect(
-        self,
-        backend: ModuleType | Implementation | str | None,
-        **kwargs: Any,
-    ) -> CompliantDataFrame[Any, Any, Any]:
+        self, backend: ModuleType | Implementation | str | None, **kwargs: Any
+    ) -> CompliantDataFrameAny:
         if backend is None or backend is Implementation.PYARROW:
             import pyarrow as pa  # ignore-banned-import
 

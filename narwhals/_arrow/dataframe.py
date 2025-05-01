@@ -51,10 +51,10 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._arrow.typing import Mask  # type: ignore[attr-defined]
     from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
+    from narwhals._compliant.typing import CompliantDataFrameAny
     from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
-    from narwhals.typing import CompliantDataFrame
     from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import JoinStrategy
     from narwhals.typing import SizedMultiIndexSelector
@@ -579,10 +579,8 @@ class ArrowDataFrame(
         raise AssertionError  # pragma: no cover
 
     def collect(
-        self,
-        backend: Implementation | None,
-        **kwargs: Any,
-    ) -> CompliantDataFrame[Any, Any, Any]:
+        self, backend: Implementation | None, **kwargs: Any
+    ) -> CompliantDataFrameAny:
         if backend is Implementation.PYARROW or backend is None:
             from narwhals._arrow.dataframe import ArrowDataFrame
 
