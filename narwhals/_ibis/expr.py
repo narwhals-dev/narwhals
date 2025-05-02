@@ -623,6 +623,8 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         )
 
     def fill_null(self, value: Self | Any, strategy: Any, limit: int | None) -> Self:
+        # Ibis doesn't yet allow ignoring nulls in first/last with window functions, which makes forward/backward
+        # strategies inconsistent when there are nulls present: https://github.com/ibis-project/ibis/issues/9539
         if strategy is not None:
             msg = "`strategy` is not supported for the Ibis backend"
             raise NotImplementedError(msg)
