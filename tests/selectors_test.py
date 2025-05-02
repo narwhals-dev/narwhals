@@ -229,10 +229,10 @@ def test_set_ops(
     request: pytest.FixtureRequest,
 ) -> None:
     if (
-        "duckdb" in str(constructor)
-        or "sqlframe" in str(constructor)
-        or "ibis" in str(constructor)
-    ) and not expected:
+        any(x in str(constructor) for x in ("duckdb", "sqlframe", "ibis"))
+        and not expected
+    ):
+        # https://github.com/narwhals-dev/narwhals/issues/2469
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(selector).collect_schema().names()
