@@ -14,7 +14,9 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Container
+from typing import Generic
 from typing import Iterable
+from typing import Iterator
 from typing import Literal
 from typing import Protocol
 from typing import Sequence
@@ -78,6 +80,7 @@ if TYPE_CHECKING:
     from narwhals._namespace import Namespace
     from narwhals._translate import ArrowStreamExportable
     from narwhals._translate import IntoArrowTable
+    from narwhals._translate import ToNarwhalsT_co
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -102,7 +105,7 @@ if TYPE_CHECKING:
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
     )
-    _T = TypeVar("_T")
+
     _T1 = TypeVar("_T1")
     _T2 = TypeVar("_T2")
     _T3 = TypeVar("_T3")
@@ -150,6 +153,7 @@ if TYPE_CHECKING:
         def columns(self) -> Sequence[str]: ...
 
 
+_T = TypeVar("_T")
 NativeT_co = TypeVar("NativeT_co", covariant=True)
 CompliantT_co = TypeVar("CompliantT_co", covariant=True)
 _ContextT = TypeVar("_ContextT", bound="_FullContext")
@@ -210,6 +214,36 @@ class Version(Enum):
         from narwhals.stable.v1 import dtypes as v1_dtypes
 
         return v1_dtypes
+
+    @property
+    def dataframe(self) -> type[DataFrame[Any]]:
+        if self is Version.MAIN:
+            from narwhals.dataframe import DataFrame
+
+            return DataFrame
+        from narwhals.stable.v1 import DataFrame as DataFrameV1
+
+        return DataFrameV1
+
+    @property
+    def lazyframe(self) -> type[LazyFrame[Any]]:
+        if self is Version.MAIN:
+            from narwhals.dataframe import LazyFrame
+
+            return LazyFrame
+        from narwhals.stable.v1 import LazyFrame as LazyFrameV1
+
+        return LazyFrameV1
+
+    @property
+    def series(self) -> type[Series[Any]]:
+        if self is Version.MAIN:
+            from narwhals.series import Series
+
+            return Series
+        from narwhals.stable.v1 import Series as SeriesV1
+
+        return SeriesV1
 
 
 class Implementation(Enum):
@@ -1511,7 +1545,7 @@ def generate_repr(header: str, native_repr: str) -> str:
         terminal_width = os.get_terminal_size().columns
     except OSError:
         terminal_width = int(os.getenv("COLUMNS", 80))  # noqa: PLW1508
-    native_lines = native_repr.splitlines()
+    native_lines = native_repr.expandtabs().splitlines()
     max_native_width = max(len(line) for line in native_lines)
 
     if max_native_width + 2 <= terminal_width:
@@ -1609,14 +1643,19 @@ def _hasattr_static(obj: Any, attr: str) -> bool:
 
 
 def is_compliant_dataframe(
-    obj: CompliantDataFrame[CompliantSeriesT, CompliantExprT, NativeFrameT_co] | Any,
-) -> TypeIs[CompliantDataFrame[CompliantSeriesT, CompliantExprT, NativeFrameT_co]]:
+    obj: CompliantDataFrame[
+        CompliantSeriesT, CompliantExprT, NativeFrameT_co, ToNarwhalsT_co
+    ]
+    | Any,
+) -> TypeIs[
+    CompliantDataFrame[CompliantSeriesT, CompliantExprT, NativeFrameT_co, ToNarwhalsT_co]
+]:
     return _hasattr_static(obj, "__narwhals_dataframe__")
 
 
 def is_compliant_lazyframe(
-    obj: CompliantLazyFrame[CompliantExprT, NativeFrameT_co] | Any,
-) -> TypeIs[CompliantLazyFrame[CompliantExprT, NativeFrameT_co]]:
+    obj: CompliantLazyFrame[CompliantExprT, NativeFrameT_co, ToNarwhalsT_co] | Any,
+) -> TypeIs[CompliantLazyFrame[CompliantExprT, NativeFrameT_co, ToNarwhalsT_co]]:
     return _hasattr_static(obj, "__narwhals_lazyframe__")
 
 
@@ -1946,3 +1985,18 @@ def inherit_doc(
             raise TypeError(msg)
 
     return decorate
+
+
+class _DeferredIterable(Generic[_T]):
+    """Store a callable producing an iterable to defer collection until we need it."""
+
+    def __init__(self, into_iter: Callable[[], Iterable[_T]], /) -> None:
+        self._into_iter: Callable[[], Iterable[_T]] = into_iter
+
+    def __iter__(self) -> Iterator[_T]:
+        yield from self._into_iter()
+
+    def to_tuple(self) -> tuple[_T, ...]:
+        # Collect and return as a `tuple`.
+        it = self._into_iter()
+        return it if isinstance(it, tuple) else tuple(it)

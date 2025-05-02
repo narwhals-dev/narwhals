@@ -44,14 +44,16 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
+    from narwhals._compliant.typing import CompliantDataFrameAny
+    from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.group_by import PolarsGroupBy
     from narwhals._polars.group_by import PolarsLazyGroupBy
     from narwhals._translate import IntoArrowTable
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
-    from narwhals.typing import CompliantDataFrame
-    from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import JoinStrategy
     from narwhals.typing import MultiColSelector
     from narwhals.typing import MultiIndexSelector
@@ -70,10 +72,40 @@ Method: TypeAlias = "Callable[..., R]"
 Where `R` is the return type.
 """
 
+# DataFrame methods where PolarsDataFrame just defers to Polars.DataFrame directly.
+INHERITED_METHODS = frozenset(
+    [
+        "clone",
+        "drop_nulls",
+        "estimated_size",
+        "explode",
+        "filter",
+        "gather_every",
+        "head",
+        "is_unique",
+        "item",
+        "iter_rows",
+        "join_asof",
+        "rename",
+        "row",
+        "rows",
+        "sample",
+        "select",
+        "sort",
+        "tail",
+        "to_arrow",
+        "to_pandas",
+        "unique",
+        "with_columns",
+        "write_csv",
+        "write_parquet",
+    ]
+)
+
 
 class PolarsDataFrame:
     clone: Method[Self]
-    collect: Method[CompliantDataFrame[Any, Any, Any]]
+    collect: Method[CompliantDataFrameAny]
     drop_nulls: Method[Self]
     estimated_size: Method[int | float]
     explode: Method[Self]
@@ -160,6 +192,9 @@ class PolarsDataFrame:
         )
         return cls.from_native(pl.from_numpy(data, pl_schema), context=context)
 
+    def to_narwhals(self) -> DataFrame[pl.DataFrame]:
+        return self._version.dataframe(self, level="full")
+
     @property
     def native(self) -> pl.DataFrame:
         return self._native_frame
@@ -221,6 +256,10 @@ class PolarsDataFrame:
         return self._with_native(self.native.tail(n))
 
     def __getattr__(self, attr: str) -> Any:
+        if attr not in INHERITED_METHODS:  # pragma: no cover
+            msg = f"{self.__class__.__name__} has not attribute '{attr}'."
+            raise AttributeError(msg)
+
         def func(*args: Any, **kwargs: Any) -> Any:
             pos, kwds = extract_args_kwargs(args, kwargs)
             try:
@@ -356,9 +395,7 @@ class PolarsDataFrame:
             for name, dtype in self.native.schema.items()
         }
 
-    def lazy(
-        self, *, backend: Implementation | None = None
-    ) -> CompliantLazyFrame[Any, Any]:
+    def lazy(self, *, backend: Implementation | None = None) -> CompliantLazyFrameAny:
         if backend is None or backend is Implementation.POLARS:
             return PolarsLazyFrame.from_native(self.native.lazy(), context=self)
         elif backend is Implementation.DUCKDB:
@@ -533,6 +570,9 @@ class PolarsLazyFrame:
             data, backend_version=context._backend_version, version=context._version
         )
 
+    def to_narwhals(self) -> LazyFrame[pl.LazyFrame]:
+        return self._version.lazyframe(self, level="lazy")
+
     def __repr__(self) -> str:  # pragma: no cover
         return "PolarsLazyFrame"
 
@@ -562,6 +602,10 @@ class PolarsLazyFrame:
         )
 
     def __getattr__(self, attr: str) -> Any:
+        if attr not in INHERITED_METHODS:  # pragma: no cover
+            msg = f"{self.__class__.__name__} has not attribute '{attr}'."
+            raise AttributeError(msg)
+
         def func(*args: Any, **kwargs: Any) -> Any:
             pos, kwds = extract_args_kwargs(args, kwargs)
             try:
@@ -611,10 +655,8 @@ class PolarsLazyFrame:
             }
 
     def collect(
-        self,
-        backend: Implementation | None,
-        **kwargs: Any,
-    ) -> CompliantDataFrame[Any, Any, Any]:
+        self, backend: Implementation | None, **kwargs: Any
+    ) -> CompliantDataFrameAny:
         try:
             result = self.native.collect(**kwargs)
         except Exception as e:  # noqa: BLE001

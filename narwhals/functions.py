@@ -19,9 +19,7 @@ from narwhals._expression_parsing import WindowKind
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import check_expressions_preserve_length
 from narwhals._expression_parsing import combine_metadata
-from narwhals._expression_parsing import combine_metadata_horizontal_op
 from narwhals._expression_parsing import extract_compliant
-from narwhals._expression_parsing import infer_kind
 from narwhals._expression_parsing import is_scalar_like
 from narwhals.dependencies import is_narwhals_series
 from narwhals.dependencies import is_numpy_array
@@ -242,7 +240,7 @@ def _new_series_impl(
     if is_eager_allowed(implementation):
         ns = version.namespace.from_backend(implementation).compliant
         series = ns._series.from_iterable(values, name=name, context=ns, dtype=dtype)
-        return from_native(series, series_only=True)
+        return series.to_narwhals()
     elif implementation is Implementation.DASK:  # pragma: no cover
         msg = "Dask support in Narwhals is lazy-only, so `new_series` is not supported"
         raise NotImplementedError(msg)
@@ -327,8 +325,7 @@ def _from_dict_impl(
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
         ns = version.namespace.from_backend(implementation).compliant
-        frame = ns._dataframe.from_dict(data, schema=schema, context=ns)
-        return from_native(frame, eager_only=True)
+        return ns._dataframe.from_dict(data, schema=schema, context=ns).to_narwhals()
     elif implementation is Implementation.UNKNOWN:  # pragma: no cover
         native_namespace = implementation.to_native_namespace()
         try:
@@ -443,8 +440,7 @@ def _from_numpy_impl(
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
         ns = version.namespace.from_backend(implementation).compliant
-        frame = ns.from_numpy(data, schema)
-        return from_native(frame, eager_only=True)
+        return ns.from_numpy(data, schema).to_narwhals()
     else:  # pragma: no cover
         native_namespace = implementation.to_native_namespace()
         try:
@@ -531,8 +527,7 @@ def _from_arrow_impl(
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
         ns = version.namespace.from_backend(implementation).compliant
-        frame = ns._dataframe.from_arrow(data, context=ns)
-        return from_native(frame, eager_only=True)
+        return ns._dataframe.from_arrow(data, context=ns).to_narwhals()
     else:  # pragma: no cover
         native_namespace = implementation.to_native_namespace()
         try:
@@ -1397,7 +1392,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.sum_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata_horizontal_op(*flat_exprs),
+        ExprMetadata.from_horizontal_op(*flat_exprs),
     )
 
 
@@ -1441,7 +1436,7 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.min_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata_horizontal_op(*flat_exprs),
+        ExprMetadata.from_horizontal_op(*flat_exprs),
     )
 
 
@@ -1487,7 +1482,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.max_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata_horizontal_op(*flat_exprs),
+        ExprMetadata.from_horizontal_op(*flat_exprs),
     )
 
 
@@ -1517,7 +1512,7 @@ class When:
 
 class Then(Expr):
     def otherwise(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
-        kind = infer_kind(value, str_as_lit=False)
+        kind = ExprKind.from_into_expr(value, str_as_lit=False)
 
         def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
             compliant_expr = self._to_compliant_expr(plx)
@@ -1623,7 +1618,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.all_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata_horizontal_op(*flat_exprs),
+        ExprMetadata.from_horizontal_op(*flat_exprs),
     )
 
 
@@ -1719,7 +1714,7 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.any_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata_horizontal_op(*flat_exprs),
+        ExprMetadata.from_horizontal_op(*flat_exprs),
     )
 
 
@@ -1765,7 +1760,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         lambda plx: apply_n_ary_operation(
             plx, plx.mean_horizontal, *flat_exprs, str_as_lit=False
         ),
-        combine_metadata_horizontal_op(*flat_exprs),
+        ExprMetadata.from_horizontal_op(*flat_exprs),
     )
 
 

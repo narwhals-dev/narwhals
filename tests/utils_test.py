@@ -3,8 +3,12 @@ from __future__ import annotations
 import re
 import string
 from dataclasses import dataclass
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
+from typing import Iterable
+from typing import Iterator
 from typing import Protocol
 from typing import cast
 
@@ -22,6 +26,7 @@ import narwhals.stable.v1 as nw_v1
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
+from narwhals.utils import _DeferredIterable
 from narwhals.utils import check_column_exists
 from narwhals.utils import deprecate_native_namespace
 from narwhals.utils import parse_version
@@ -557,3 +562,21 @@ def test_requires() -> None:
     )
     with pytest.raises(NotImplementedError, match=pattern):
         v_05.concat("never")
+
+
+def test_deferred_iterable() -> None:
+    def to_upper(it: Iterable[str]) -> Callable[[], Iterator[str]]:
+        def fn() -> Iterator[str]:
+            for el in it:
+                yield el.capitalize()
+
+        return fn
+
+    iterable = list("hello")
+    deferred_1 = _DeferredIterable(iterable.copy)
+    deferred_2 = _DeferredIterable(to_upper(iterable))
+
+    assert deferred_1.to_tuple() == tuple("hello")
+    assert next(iter(deferred_1)) == "h"
+    assert list(deferred_1) == list("hello")
+    assert "".join(chain(deferred_1, deferred_2)) == "helloHELLO"

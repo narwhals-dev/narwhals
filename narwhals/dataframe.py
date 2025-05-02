@@ -18,7 +18,6 @@ from warnings import warn
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import all_exprs_are_scalar_like
 from narwhals._expression_parsing import check_expressions_preserve_length
-from narwhals._expression_parsing import infer_kind
 from narwhals._expression_parsing import is_scalar_like
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
@@ -111,11 +110,11 @@ class BaseFrame(Generic[_FrameT]):
         for expr in flatten(exprs):
             compliant_expr = self._extract_compliant(expr)
             out_exprs.append(compliant_expr)
-            out_kinds.append(infer_kind(expr, str_as_lit=False))
+            out_kinds.append(ExprKind.from_into_expr(expr, str_as_lit=False))
         for alias, expr in named_exprs.items():
             compliant_expr = self._extract_compliant(expr).alias(alias)
             out_exprs.append(compliant_expr)
-            out_kinds.append(infer_kind(expr, str_as_lit=False))
+            out_kinds.append(ExprKind.from_into_expr(expr, str_as_lit=False))
         return out_exprs, out_kinds
 
     @abstractmethod
@@ -457,7 +456,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         self._level: Literal["full", "lazy", "interchange"] = level
         # NOTE: Interchange support (`DataFrameLike`) is the source of the error
-        self._compliant_frame: CompliantDataFrame[Any, Any, DataFrameT]  # type: ignore[type-var]
+        self._compliant_frame: CompliantDataFrame[Any, Any, DataFrameT, Self]  # type: ignore[type-var]
         if is_compliant_dataframe(df):
             self._compliant_frame = df.__narwhals_dataframe__()
         else:  # pragma: no cover
@@ -1718,7 +1717,8 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         This is similar to a left-join except that we match on nearest key rather than equal keys.
 
-        Both DataFrames must be sorted by the asof_join key.
+        For Polars, both DataFrames must be sorted by the `on` key (within each `by` group
+        if specified).
 
         Arguments:
             other: DataFrame to join with.
@@ -2233,7 +2233,7 @@ class LazyFrame(BaseFrame[FrameT]):
 
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         self._level = level
-        self._compliant_frame: CompliantLazyFrame[Any, FrameT]  # type: ignore[type-var]
+        self._compliant_frame: CompliantLazyFrame[Any, FrameT, Self]  # type: ignore[type-var]
         if is_compliant_lazyframe(df):
             self._compliant_frame = df.__narwhals_lazyframe__()
         else:  # pragma: no cover
@@ -3035,7 +3035,8 @@ class LazyFrame(BaseFrame[FrameT]):
 
         This is similar to a left-join except that we match on nearest key rather than equal keys.
 
-        Both DataFrames must be sorted by the asof_join key.
+        For Polars, both DataFrames must be sorted by the `on` key (within each `by` group
+        if specified).
 
         Arguments:
             other: DataFrame to join with.

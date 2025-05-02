@@ -7,6 +7,7 @@ from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import Literal
 from typing import Sequence
 from typing import Sized
 from typing import TypeVar
@@ -14,12 +15,12 @@ from typing import TypeVar
 import pandas as pd
 
 from narwhals._compliant.series import EagerSeriesNamespace
-from narwhals.dtypes import _DelayedCategories
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
+from narwhals.utils import _DeferredIterable
 from narwhals.utils import isinstance_or_issubclass
 
 T = TypeVar("T", bound=Sized)
@@ -255,9 +256,7 @@ def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> 
     if dtype.startswith("dictionary<"):
         return dtypes.Categorical()
     if dtype == "category":
-        return native_categorical_to_narwhals_dtype(
-            native_dtype, version, lambda: tuple(native_dtype.categories)
-        )
+        return native_categorical_to_narwhals_dtype(native_dtype, version)
     if (match_ := PATTERN_PD_DATETIME.match(dtype)) or (
         match_ := PATTERN_PA_DATETIME.match(dtype)
     ):
@@ -305,20 +304,33 @@ def object_native_to_narwhals_dtype(
 def native_categorical_to_narwhals_dtype(
     native_dtype: pd.CategoricalDtype,
     version: Version,
-    get_categories: Callable[[], tuple[str, ...]],
+    implementation: Literal[Implementation.CUDF] | None = None,
 ) -> DType:
     dtypes = version.dtypes
     if version is Version.V1:
         return dtypes.Categorical()
     if native_dtype.ordered:
-        return dtypes.Enum(_DelayedCategories(get_categories))
+        into_iter = (
+            _cudf_categorical_to_list(native_dtype)
+            if implementation is Implementation.CUDF
+            else native_dtype.categories.to_list
+        )
+        return dtypes.Enum(_DeferredIterable(into_iter))
     return dtypes.Categorical()
 
 
-def native_to_narwhals_dtype(
+def _cudf_categorical_to_list(
     native_dtype: Any,
-    version: Version,
-    implementation: Implementation,
+) -> Callable[[], list[Any]]:  # pragma: no cover
+    # NOTE: https://docs.rapids.ai/api/cudf/stable/user_guide/api_docs/api/cudf.core.dtypes.categoricaldtype/#cudf.core.dtypes.CategoricalDtype
+    def fn() -> list[Any]:
+        return native_dtype.categories.to_arrow().to_pylist()
+
+    return fn
+
+
+def native_to_narwhals_dtype(
+    native_dtype: Any, version: Version, implementation: Implementation
 ) -> DType:
     str_dtype = str(native_dtype)
 
@@ -333,8 +345,9 @@ def native_to_narwhals_dtype(
         return arrow_native_to_narwhals_dtype(native_dtype.pyarrow_dtype, version)
     if str_dtype == "category" and implementation.is_cudf():
         # https://github.com/rapidsai/cudf/issues/18536
+        # https://github.com/rapidsai/cudf/issues/14027
         return native_categorical_to_narwhals_dtype(
-            native_dtype, version, lambda: tuple(native_dtype.categories.to_pandas())
+            native_dtype, version, Implementation.CUDF
         )
     if str_dtype != "object":
         return non_object_native_to_narwhals_dtype(native_dtype, version)

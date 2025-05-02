@@ -15,6 +15,8 @@ if TYPE_CHECKING:
         from typing_extensions import TypeAlias
 
     import pyarrow as pa
+    from pyarrow.__lib_pxi.table import AggregateOptions  # noqa: F401
+    from pyarrow.__lib_pxi.table import Aggregation  # noqa: F401
     from pyarrow._stubs_typing import (  # pyright: ignore[reportMissingModuleSource]
         Indices,  # noqa: F401
     )

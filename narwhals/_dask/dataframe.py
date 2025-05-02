@@ -14,7 +14,6 @@ from narwhals._dask.utils import evaluate_exprs
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import rename_axis
 from narwhals._pandas_like.utils import select_columns_by_name
-from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import _remap_full_join_keys
@@ -33,9 +32,11 @@ if TYPE_CHECKING:
     from typing_extensions import Self
     from typing_extensions import TypeIs
 
+    from narwhals._compliant.typing import CompliantDataFrameAny
     from narwhals._dask.expr import DaskExpr
     from narwhals._dask.group_by import DaskLazyGroupBy
     from narwhals._dask.namespace import DaskNamespace
+    from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import AsofJoinStrategy
     from narwhals.typing import JoinStrategy
@@ -44,7 +45,9 @@ if TYPE_CHECKING:
     from narwhals.utils import _FullContext
 
 
-class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
+class DaskLazyFrame(
+    CompliantLazyFrame["DaskExpr", "dd.DataFrame", "LazyFrame[dd.DataFrame]"]
+):
     def __init__(
         self,
         native_dataframe: dd.DataFrame,
@@ -69,6 +72,9 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
         return cls(
             data, backend_version=context._backend_version, version=context._version
         )
+
+    def to_narwhals(self) -> LazyFrame[dd.DataFrame]:
+        return self._version.lazyframe(self, level="lazy")
 
     def __native_namespace__(self) -> ModuleType:
         if self._implementation is Implementation.DASK:
@@ -104,10 +110,8 @@ class DaskLazyFrame(CompliantLazyFrame["DaskExpr", "dd.DataFrame"]):
         return self._with_native(self.native.assign(**dict(new_series)))
 
     def collect(
-        self,
-        backend: Implementation | None,
-        **kwargs: Any,
-    ) -> CompliantDataFrame[Any, Any, Any]:
+        self, backend: Implementation | None, **kwargs: Any
+    ) -> CompliantDataFrameAny:
         result = self.native.compute(**kwargs)
 
         if backend is None or backend is Implementation.PANDAS:
