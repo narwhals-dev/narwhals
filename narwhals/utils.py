@@ -1965,6 +1965,7 @@ class _DeferredIterable(Generic[_T]):
         it = self._into_iter()
         return it if isinstance(it, tuple) else tuple(it)
 
+
 # You could remove the ones that aren't supported yet/not planned
 _TIME_UNIT = "ns", "us", "ms", "mo", "m", "s", "h", "d", "w", "q", "y"
 _PATTERN_INTERVAL = re.compile(rf"^(?P<number>\d+)(?P<unit>{'|'.join(_TIME_UNIT)})$")
