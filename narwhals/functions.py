@@ -240,7 +240,7 @@ def _new_series_impl(
     if is_eager_allowed(implementation):
         ns = version.namespace.from_backend(implementation).compliant
         series = ns._series.from_iterable(values, name=name, context=ns, dtype=dtype)
-        return from_native(series, series_only=True)
+        return series.to_narwhals()
     elif implementation is Implementation.DASK:  # pragma: no cover
         msg = "Dask support in Narwhals is lazy-only, so `new_series` is not supported"
         raise NotImplementedError(msg)
@@ -325,8 +325,7 @@ def _from_dict_impl(
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
         ns = version.namespace.from_backend(implementation).compliant
-        frame = ns._dataframe.from_dict(data, schema=schema, context=ns)
-        return from_native(frame, eager_only=True)
+        return ns._dataframe.from_dict(data, schema=schema, context=ns).to_narwhals()
     elif implementation is Implementation.UNKNOWN:  # pragma: no cover
         native_namespace = implementation.to_native_namespace()
         try:
@@ -441,8 +440,7 @@ def _from_numpy_impl(
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
         ns = version.namespace.from_backend(implementation).compliant
-        frame = ns.from_numpy(data, schema)
-        return from_native(frame, eager_only=True)
+        return ns.from_numpy(data, schema).to_narwhals()
     else:  # pragma: no cover
         native_namespace = implementation.to_native_namespace()
         try:
@@ -529,8 +527,7 @@ def _from_arrow_impl(
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
         ns = version.namespace.from_backend(implementation).compliant
-        frame = ns._dataframe.from_arrow(data, context=ns)
-        return from_native(frame, eager_only=True)
+        return ns._dataframe.from_arrow(data, context=ns).to_narwhals()
     else:  # pragma: no cover
         native_namespace = implementation.to_native_namespace()
         try:

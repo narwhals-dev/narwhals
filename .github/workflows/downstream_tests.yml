@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
@@ -69,7 +69,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
@@ -132,7 +132,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
@@ -169,7 +169,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
@@ -211,36 +211,40 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
       - name: clone-tea-tasting
         run: |
           git clone https://github.com/e10v/tea-tasting.git --depth=1
           cd tea-tasting
           git log
-      - name: install-pdm
-        uses: pdm-project/setup-pdm@v4
+      - name: install-uv
+        uses: astral-sh/setup-uv@v6
         with:
+          enable-cache: true
+          cache-suffix: ${{ matrix.python-version }}
+          cache-dependency-glob: "pyproject.toml"
           python-version: ${{ matrix.python-version }}
-          cache: true
-          cache-dependency-path: tea-tasting/pdm.lock
       - name: install-tea-tasting-test
         run: |
           cd tea-tasting
-          pdm sync -G test
+          uv sync --group test
       - name: install-narwhals-dev
         run: |
           cd tea-tasting
-          pdm remove narwhals
-          pdm add ./..
+          uv pip uninstall narwhals
+          uv pip install -e ./..
       - name: show-deps
         run: |
           cd tea-tasting
-          pdm list
+          uv pip freeze
       - name: run-pytest
         run: |
           cd tea-tasting
           # empty pytest.ini to avoid pytest using narwhals configs
           touch pytest.ini
-          pdm run test
+          uv run --no-sync pytest tests
 
   tubular:
     strategy:
@@ -295,7 +299,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
@@ -336,7 +340,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
@@ -378,7 +382,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
@@ -420,7 +424,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
@@ -460,7 +464,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
@@ -507,7 +511,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
