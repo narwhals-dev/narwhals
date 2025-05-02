@@ -1965,6 +1965,10 @@ class _DeferredIterable(Generic[_T]):
         it = self._into_iter()
         return it if isinstance(it, tuple) else tuple(it)
 
+# You could remove the ones that aren't supported yet/not planned
+_TIME_UNIT = "ns", "us", "ms", "mo", "m", "s", "h", "d", "w", "q", "y"
+_PATTERN_INTERVAL = re.compile(rf"^(?P<number>\d+)(?P<unit>{'|'.join(_TIME_UNIT)})$")
+
 
 def parse_interval_string(every: str) -> tuple[str, str]:
     """Parse a string like "1d", "2h", "3m" into a tuple of (number, unit).
@@ -1972,14 +1976,10 @@ def parse_interval_string(every: str) -> tuple[str, str]:
     Returns:
         A tuple of number and unit parsed from the interval string.
     """
-    format = r"(\d+)([a-zA-Z]+)"
-    interval = re.match(format, every)
-    if interval is None:
-        msg = f"Invalid frequency string: {every}."
-        raise ValueError(msg)
-    number = interval.group(1)
-    unit = interval.group(2)
-    return number, unit
+    if match := _PATTERN_INTERVAL.match(every):
+        return match["number"], match["unit"]
+    msg = f"Invalid frequency string: {every}."
+    raise ValueError(msg)
 
 
 def unit_to_str() -> dict[str, str]:
