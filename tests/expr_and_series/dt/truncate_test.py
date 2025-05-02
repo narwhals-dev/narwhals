@@ -7,6 +7,7 @@ import pytest
 
 import narwhals as nw
 from tests.utils import Constructor
+from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 data = {
@@ -237,3 +238,17 @@ def test_truncate_polars_ns(every: str, expected: list[datetime]) -> None:
     df = nw.from_native(df_pl)
     result = df.select(nw.col("a").dt.truncate(every))
     assert_equal_data(result, {"a": expected})
+
+
+def test_truncate_series(
+    constructor_eager: ConstructorEager,
+) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = df.select(df["a"].dt.truncate("1h"))
+    expected = {
+        "a": [
+            datetime(2021, 3, 1, 12, 0, 0, 0),
+            datetime(2020, 1, 2, 2, 0, 0, 0),
+        ]
+    }
+    assert_equal_data(result, expected)
