@@ -25,6 +25,7 @@ from narwhals._compliant.typing import DepthTrackingExprAny
 from narwhals._compliant.typing import DepthTrackingExprT_contra
 from narwhals._compliant.typing import EagerExprT_contra
 from narwhals._compliant.typing import LazyExprT_contra
+from narwhals._compliant.typing import NativeExprT
 from narwhals._compliant.typing import NativeExprT_co
 from narwhals.utils import is_sequence_of
 
@@ -226,7 +227,7 @@ class LazyGroupBy(
             for native_expr, alias in zip(native_exprs, aliases):
                 yield self._alias_native_expr(native_expr, alias)
 
-    def _alias_native_expr(self, native_expr: Any, alias: str) -> Any:
+    def _alias_native_expr(self, native_expr: NativeExprT, alias: str) -> NativeExprT:
         return native_expr.alias(alias)
 
     def _evaluate_exprs(
