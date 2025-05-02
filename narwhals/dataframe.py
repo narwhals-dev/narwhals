@@ -456,7 +456,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         self._level: Literal["full", "lazy", "interchange"] = level
         # NOTE: Interchange support (`DataFrameLike`) is the source of the error
-        self._compliant_frame: CompliantDataFrame[Any, Any, DataFrameT]  # type: ignore[type-var]
+        self._compliant_frame: CompliantDataFrame[Any, Any, DataFrameT, Self]  # type: ignore[type-var]
         if is_compliant_dataframe(df):
             self._compliant_frame = df.__narwhals_dataframe__()
         else:  # pragma: no cover
@@ -2233,7 +2233,7 @@ class LazyFrame(BaseFrame[FrameT]):
 
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         self._level = level
-        self._compliant_frame: CompliantLazyFrame[Any, FrameT]  # type: ignore[type-var]
+        self._compliant_frame: CompliantLazyFrame[Any, FrameT, Self]  # type: ignore[type-var]
         if is_compliant_lazyframe(df):
             self._compliant_frame = df.__narwhals_lazyframe__()
         else:  # pragma: no cover
