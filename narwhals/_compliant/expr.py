@@ -83,7 +83,6 @@ class NativeExpr(Protocol):
     are common to all currently supported packages.
     """
 
-    def alias(self, *args: Any, **kwds: Any) -> Self: ...
     def between(self, *args: Any, **kwds: Any) -> Any: ...
     def isin(self, *args: Any, **kwds: Any) -> Any: ...
 
@@ -877,7 +876,7 @@ class EagerExpr(
         return EagerExprStructNamespace(self)
 
 
-class LazyExpr(  # type: ignore[misc]
+class LazyExpr(
     CompliantExpr[CompliantLazyFrameT, NativeExprT],
     Protocol38[CompliantLazyFrameT, NativeExprT],
 ):
@@ -901,6 +900,9 @@ class LazyExpr(  # type: ignore[misc]
 
     def _with_callable(self, call: Callable[..., Any], /) -> Self: ...
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
+
+    @classmethod
+    def _alias_native(cls, expr: NativeExprT, name: str, /) -> NativeExprT: ...
 
     @property
     def name(self) -> LazyExprNameNamespace[Self]:

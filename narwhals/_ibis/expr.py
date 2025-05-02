@@ -262,6 +262,10 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         result._window_function = window_function
         return result
 
+    @classmethod
+    def _alias_native(cls, expr: ir.Column, name: str, /) -> ir.Value:
+        return expr.name(name)
+
     def __and__(self, other: IbisExpr) -> Self:
         return self._with_callable(lambda _input, other: _input & other, other=other)
 
