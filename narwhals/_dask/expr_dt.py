@@ -161,6 +161,9 @@ class DaskExprDateTimeNamespace:
 
     def truncate(self, every: str) -> DaskExpr:
         _, unit = parse_interval_string(every)
+        if unit in {"mo", "q", "y"}:
+            msg = f"Truncating to {unit} is not supported yet for dask."
+            raise NotImplementedError(msg)
         if unit == "m":  # replace "m" unit with "min"
             every += "in"
         return self._compliant_expr._with_callable(
