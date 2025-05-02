@@ -78,7 +78,9 @@ def test_truncate(
     expected: list[datetime],
 ) -> None:
     if any(x in str(constructor) for x in ("pyspark",)):
-        request.applymarker(pytest.mark.xfail(reason="Bug"))
+        request.applymarker(
+            pytest.mark.xfail(reason="https://github.com/eakmanrq/sqlframe/issues/383")
+        )
     if every.endswith("ns") and any(x in str(constructor) for x in ("polars", "duckdb")):
         request.applymarker(pytest.mark.xfail())
     df = nw.from_native(constructor(data))
@@ -147,7 +149,9 @@ def test_truncate_custom(
     expected: list[datetime],
 ) -> None:
     if any(x in str(constructor) for x in ("pyspark",)):
-        request.applymarker(pytest.mark.xfail(reason="Bug"))
+        request.applymarker(
+            pytest.mark.xfail(reason="https://github.com/eakmanrq/sqlframe/issues/383")
+        )
     if every.endswith("ns") and any(x in str(constructor) for x in ("polars", "duckdb")):
         request.applymarker(pytest.mark.xfail())
     df = nw.from_native(constructor(data))
