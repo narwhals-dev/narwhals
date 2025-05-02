@@ -105,7 +105,7 @@ def test_truncate(
     if every.endswith("ns") and any(x in str(constructor) for x in ("polars", "duckdb")):
         request.applymarker(pytest.mark.xfail())
     if any(every.endswith(x) for x in ("mo", "q", "y")) and any(
-        x in str(constructor) for x in ("pandas", "dask")
+        x in str(constructor) for x in ("pandas", "dask", "modin")
     ):
         request.applymarker(pytest.mark.xfail(reason="Not implemented"))
     df = nw.from_native(constructor(data))
@@ -201,7 +201,7 @@ def test_truncate_custom(
     if every.endswith("ns") and any(x in str(constructor) for x in ("polars", "duckdb")):
         request.applymarker(pytest.mark.xfail())
     if any(every.endswith(x) for x in ("mo", "q", "y")) and any(
-        x in str(constructor) for x in ("pandas", "dask")
+        x in str(constructor) for x in ("pandas", "dask", "modin")
     ):
         request.applymarker(pytest.mark.xfail(reason="Not implemented"))
     if any(every.endswith(x) for x in ("q", "y")) and "duckdb" in str(constructor):
