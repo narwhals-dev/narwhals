@@ -159,6 +159,9 @@ _ContextT = TypeVar("_ContextT", bound="_FullContext")
 _Method: TypeAlias = "Callable[Concatenate[_ContextT, P], R]"
 _Constructor: TypeAlias = "Callable[Concatenate[_T, P], R2]"
 
+_TIME_UNITS = "ns|us|ms|mo|m|s|h|d|w|q|y"
+_PATTERN_INTERVAL = re.compile(rf"^(?P<number>\d+)(?P<unit>{_TIME_UNITS})$")
+
 
 class _StoresNative(Protocol[NativeT_co]):  # noqa: PYI046
     """Provides access to a native object.
@@ -1964,11 +1967,6 @@ class _DeferredIterable(Generic[_T]):
         # Collect and return as a `tuple`.
         it = self._into_iter()
         return it if isinstance(it, tuple) else tuple(it)
-
-
-# You could remove the ones that aren't supported yet/not planned
-_TIME_UNIT = "ns", "us", "ms", "mo", "m", "s", "h", "d", "w", "q", "y"
-_PATTERN_INTERVAL = re.compile(rf"^(?P<number>\d+)(?P<unit>{'|'.join(_TIME_UNIT)})$")
 
 
 def parse_interval_string(every: str) -> tuple[str, str]:
