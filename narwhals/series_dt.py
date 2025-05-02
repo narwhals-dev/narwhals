@@ -5,8 +5,6 @@ from typing import Any
 from typing import Generic
 from typing import TypeVar
 
-from narwhals.utils import parse_interval_string
-
 if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import TimeUnit
@@ -664,7 +662,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
                 Every interval start and period length.
 
         Returns:
-            Expression of data type `Date` or `Datetime`.
+            Series of data type `Date` or `Datetime`.
 
         Examples:
             >>> from datetime import datetime
@@ -676,11 +674,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             0   2021-03-01 12:00:00
             dtype: datetime64[ns]
         """
-        units = {"ns", "us", "ms", "s", "m", "h", "d"}
-        _, unit = parse_interval_string(every)
-        if unit not in units:
-            msg = f"Invalid interval unit: {unit}.\nExpected one of {units}."
-            raise ValueError(msg)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.truncate(every)
         )

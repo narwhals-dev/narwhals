@@ -4,8 +4,6 @@ from typing import TYPE_CHECKING
 from typing import Generic
 from typing import TypeVar
 
-from narwhals.utils import parse_interval_string
-
 if TYPE_CHECKING:
     from narwhals.expr import Expr
     from narwhals.typing import TimeUnit
@@ -796,11 +794,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |└─────────────────────┴─────────────────────┘|
             └─────────────────────────────────────────────┘
         """
-        units = {"ns", "us", "ms", "s", "m", "h", "d"}
-        _, unit = parse_interval_string(every)
-        if unit not in units:
-            msg = f"Invalid interval unit: {unit}.\nExpected one of {units}."
-            raise ValueError(msg)
         return self._expr.__class__(
             lambda plx: self._expr._to_compliant_expr(plx).dt.truncate(every),
             self._expr._metadata,
