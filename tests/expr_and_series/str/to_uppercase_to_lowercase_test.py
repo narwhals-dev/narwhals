@@ -33,7 +33,10 @@ def test_str_to_uppercase(
         pytest.skip()
 
     if (
-        any(x in str(constructor) for x in ("pandas_constructor", "polars"))
+        any(
+            x in str(constructor)
+            for x in ("pandas_constructor", "pandas_nullable", "polars")
+        )
         and "ẞ" in expected["a"][0]
     ):
         expected = {"a": ["SPECIAL CASE SS", "ΣPECIAL CAΣE"]}
@@ -67,7 +70,10 @@ def test_str_to_uppercase_series(
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
     if (
-        any(x in str(constructor_eager) for x in ("pandas_constructor", "polars"))
+        any(
+            x in str(constructor_eager)
+            for x in ("pandas_constructor", "pandas_nullable", "polars")
+        )
         and "ẞ" in expected["a"][0]
     ):
         expected = {"a": ["SPECIAL CASE SS", "ΣPECIAL CAΣE"]}
