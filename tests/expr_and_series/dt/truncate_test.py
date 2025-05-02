@@ -69,6 +69,27 @@ data = {
                 datetime(2020, 1, 2),
             ],
         ),
+        (
+            "1mo",
+            [
+                datetime(2021, 3, 1),
+                datetime(2020, 1, 1),
+            ],
+        ),
+        (
+            "1q",
+            [
+                datetime(2021, 1, 1),
+                datetime(2020, 1, 1),
+            ],
+        ),
+        (
+            "1y",
+            [
+                datetime(2021, 1, 1),
+                datetime(2020, 1, 1),
+            ],
+        ),
     ],
 )
 def test_truncate(
@@ -83,6 +104,8 @@ def test_truncate(
         )
     if every.endswith("ns") and any(x in str(constructor) for x in ("polars", "duckdb")):
         request.applymarker(pytest.mark.xfail())
+    if any(every.endswith(x) for x in ("mo", "q", "y")) and "pandas" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="Not implemented"))
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").dt.truncate(every))
     assert_equal_data(result, {"a": expected})
@@ -140,6 +163,27 @@ def test_truncate(
                 datetime(2019, 12, 22),
             ],
         ),
+        (
+            "3mo",
+            [
+                datetime(2021, 1, 1),
+                datetime(2020, 1, 1),
+            ],
+        ),
+        (
+            "9q",
+            [
+                datetime(2020, 7, 1),
+                datetime(2018, 4, 1),
+            ],
+        ),
+        (
+            "19y",
+            [
+                datetime(2014, 1, 1),
+                datetime(2014, 1, 1),
+            ],
+        ),
     ],
 )
 def test_truncate_custom(
@@ -154,6 +198,12 @@ def test_truncate_custom(
         )
     if every.endswith("ns") and any(x in str(constructor) for x in ("polars", "duckdb")):
         request.applymarker(pytest.mark.xfail())
+    if any(every.endswith(x) for x in ("mo", "q", "y")) and "pandas" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="Not implemented"))
+    if any(every.endswith(x) for x in ("q", "y")) and "duckdb" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="Not implemented"))
+    if every.endswith("q") and "pyarrow" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="Not implemented"))
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").dt.truncate(every))
     assert_equal_data(result, {"a": expected})

@@ -119,6 +119,9 @@ class DuckDBExprDateTimeNamespace:
         if unit == "ns":
             msg = "Truncating to nanoseconds is not yet supported for DuckDB."
             raise NotImplementedError(msg)
+        if unit in {"q", "y"} and number != "1":
+            msg = f"Only 1{unit} is currently supported for DuckDB."
+            raise NotImplementedError(msg)
         every = f"{number} {unit_dict[unit]}"
         return self._compliant_expr._with_callable(
             lambda _input: FunctionExpression(

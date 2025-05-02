@@ -1990,6 +1990,9 @@ def unit_to_str() -> dict[str, str]:
         A dictionary mapping time unit to strings used by DuckDB and PyArrow.
     """
     return {
+        "y": "year",
+        "q": "quarter",
+        "mo": "month",
         "d": "day",
         "h": "hour",
         "m": "minute",

@@ -195,6 +195,9 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
     def truncate(self, every: str) -> ArrowSeries:
         number, unit = parse_interval_string(every)
         unit_dict = unit_to_str()
+        if unit == "q" and number != "1":
+            msg = f"Only 1{unit} is currently supported for PyArrow."
+            raise NotImplementedError(msg)
         return self.with_native(
             pc.floor_temporal(self.native, multiple=int(number), unit=unit_dict[unit])  # type: ignore[call-overload]
         )
