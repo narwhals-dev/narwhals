@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING
 from duckdb import ConstantExpression
 from duckdb import FunctionExpression
 
+from narwhals._duckdb.utils import UNITS_DICT
 from narwhals._duckdb.utils import lit
 from narwhals.utils import parse_interval_string
-from narwhals.utils import unit_to_str
 
 if TYPE_CHECKING:
     from narwhals._duckdb.expr import DuckDBExpr
@@ -115,14 +115,13 @@ class DuckDBExprDateTimeNamespace:
 
     def truncate(self, every: str) -> DuckDBExpr:
         number, unit = parse_interval_string(every)
-        unit_dict = unit_to_str()
         if unit == "ns":
             msg = "Truncating to nanoseconds is not yet supported for DuckDB."
             raise NotImplementedError(msg)
         if unit in {"q", "y"} and number != "1":
             msg = f"Only 1{unit} is currently supported for DuckDB."
             raise NotImplementedError(msg)
-        every = f"{number} {unit_dict[unit]}"
+        every = f"{number} {UNITS_DICT[unit]}"
         return self._compliant_expr._with_callable(
             lambda _input: FunctionExpression(
                 "time_bucket",

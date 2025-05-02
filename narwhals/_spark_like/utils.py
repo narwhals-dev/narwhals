@@ -24,6 +24,19 @@ if TYPE_CHECKING:
 
     _NativeDType: TypeAlias = sqlframe_types.DataType
 
+UNITS_DICT = {
+    "y": "year",
+    "q": "quarter",
+    "mo": "month",
+    "d": "day",
+    "h": "hour",
+    "m": "minute",
+    "s": "second",
+    "ms": "millisecond",
+    "us": "microsecond",
+    "ns": "nanosecond",
+}
+
 
 class WindowInputs:
     __slots__ = ("expr", "order_by", "partition_by")

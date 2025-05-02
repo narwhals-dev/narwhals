@@ -59,6 +59,19 @@ else:
     from pyarrow.types import is_list
     from pyarrow.types import is_timestamp
 
+UNITS_DICT = {
+    "y": "year",
+    "q": "quarter",
+    "mo": "month",
+    "d": "day",
+    "h": "hour",
+    "m": "minute",
+    "s": "second",
+    "ms": "millisecond",
+    "us": "microsecond",
+    "ns": "nanosecond",
+}
+
 lit = pa.scalar
 """Alias for `pyarrow.scalar`."""
 

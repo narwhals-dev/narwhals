@@ -2015,23 +2015,3 @@ def parse_interval_string(every: str) -> tuple[str, str]:
         return match["number"], match["unit"]
     msg = f"Invalid frequency string: {every}."
     raise ValueError(msg)
-
-
-def unit_to_str() -> dict[str, str]:
-    """Convert time unit to string.
-
-    Returns:
-        A dictionary mapping time unit to strings used by DuckDB and PyArrow.
-    """
-    return {
-        "y": "year",
-        "q": "quarter",
-        "mo": "month",
-        "d": "day",
-        "h": "hour",
-        "m": "minute",
-        "s": "second",
-        "ms": "millisecond",
-        "us": "microsecond",
-        "ns": "nanosecond",
-    }
