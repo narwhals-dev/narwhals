@@ -186,7 +186,8 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
         return pa.dictionary(pa.uint32(), pa.string())
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        return pa.timestamp(dtype.time_unit, tz=dtype.time_zone)  # pyright: ignore[reportArgumentType]
+        unit = dtype.time_unit
+        return pa.timestamp(unit, tz) if (tz := dtype.time_zone) else pa.timestamp(unit)
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         return pa.duration(dtype.time_unit)
     if isinstance_or_issubclass(dtype, dtypes.Date):
@@ -278,15 +279,18 @@ def floordiv_compat(left: ArrayOrScalar, right: ArrayOrScalar) -> Any:
 
     if pa.types.is_integer(left.type) and pa.types.is_integer(right.type):
         divided = pc.divide_checked(left, right)
+        # TODO @dangotbanned: Use a `TypeVar` in guards
+        # Narrowing to a `Union` isn't interacting well with the rest of the stubs
+        # https://github.com/zen-xu/pyarrow-stubs/pull/215
         if pa.types.is_signed_integer(divided.type):
-            # GH 56676
+            div_type = cast("pa._lib.Int64Type", divided.type)
             has_remainder = pc.not_equal(pc.multiply(divided, right), left)
             has_one_negative_operand = pc.less(
-                pc.bit_wise_xor(left, right), lit(0, type=divided.type)
+                pc.bit_wise_xor(left, right), lit(0, div_type)
             )
             result = pc.if_else(
                 pc.and_(has_remainder, has_one_negative_operand),
-                pc.subtract(divided, lit(1, type=divided.type)),
+                pc.subtract(divided, lit(1, div_type)),
                 divided,
             )
         else:

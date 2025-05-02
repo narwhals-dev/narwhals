@@ -16,7 +16,6 @@ from narwhals._spark_like.utils import import_native_dtypes
 from narwhals._spark_like.utils import import_window
 from narwhals._spark_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantDataFrame
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
@@ -38,9 +37,11 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
+    from narwhals._compliant.typing import CompliantDataFrameAny
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
     from narwhals._spark_like.namespace import SparkLikeNamespace
+    from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import JoinStrategy
     from narwhals.typing import LazyUniqueKeepStrategy
@@ -53,7 +54,11 @@ Incomplete: TypeAlias = Any  # pragma: no cover
 """Marker for working code that fails type checking."""
 
 
-class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"]):
+class SparkLikeLazyFrame(
+    CompliantLazyFrame[
+        "SparkLikeExpr", "SQLFrameDataFrame", "LazyFrame[SQLFrameDataFrame]"
+    ]
+):
     def __init__(
         self,
         native_dataframe: SQLFrameDataFrame,
@@ -109,6 +114,9 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
             version=context._version,
             implementation=context._implementation,
         )
+
+    def to_narwhals(self) -> LazyFrame[SQLFrameDataFrame]:
+        return self._version.lazyframe(self, level="lazy")
 
     def __native_namespace__(self) -> ModuleType:  # pragma: no cover
         return self._implementation.to_native_namespace()
@@ -206,10 +214,8 @@ class SparkLikeLazyFrame(CompliantLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"
         return self._cached_columns
 
     def collect(
-        self,
-        backend: ModuleType | Implementation | str | None,
-        **kwargs: Any,
-    ) -> CompliantDataFrame[Any, Any, Any]:
+        self, backend: ModuleType | Implementation | str | None, **kwargs: Any
+    ) -> CompliantDataFrameAny:
         if backend is Implementation.PANDAS:
             import pandas as pd  # ignore-banned-import
 

@@ -44,14 +44,16 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
+    from narwhals._compliant.typing import CompliantDataFrameAny
+    from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.group_by import PolarsGroupBy
     from narwhals._polars.group_by import PolarsLazyGroupBy
     from narwhals._translate import IntoArrowTable
+    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
-    from narwhals.typing import CompliantDataFrame
-    from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import JoinStrategy
     from narwhals.typing import MultiColSelector
     from narwhals.typing import MultiIndexSelector
@@ -103,7 +105,7 @@ INHERITED_METHODS = frozenset(
 
 class PolarsDataFrame:
     clone: Method[Self]
-    collect: Method[CompliantDataFrame[Any, Any, Any]]
+    collect: Method[CompliantDataFrameAny]
     drop_nulls: Method[Self]
     estimated_size: Method[int | float]
     explode: Method[Self]
@@ -189,6 +191,9 @@ class PolarsDataFrame:
             else schema
         )
         return cls.from_native(pl.from_numpy(data, pl_schema), context=context)
+
+    def to_narwhals(self) -> DataFrame[pl.DataFrame]:
+        return self._version.dataframe(self, level="full")
 
     @property
     def native(self) -> pl.DataFrame:
@@ -390,9 +395,7 @@ class PolarsDataFrame:
             for name, dtype in self.native.schema.items()
         }
 
-    def lazy(
-        self, *, backend: Implementation | None = None
-    ) -> CompliantLazyFrame[Any, Any]:
+    def lazy(self, *, backend: Implementation | None = None) -> CompliantLazyFrameAny:
         if backend is None or backend is Implementation.POLARS:
             return PolarsLazyFrame.from_native(self.native.lazy(), context=self)
         elif backend is Implementation.DUCKDB:
@@ -567,6 +570,9 @@ class PolarsLazyFrame:
             data, backend_version=context._backend_version, version=context._version
         )
 
+    def to_narwhals(self) -> LazyFrame[pl.LazyFrame]:
+        return self._version.lazyframe(self, level="lazy")
+
     def __repr__(self) -> str:  # pragma: no cover
         return "PolarsLazyFrame"
 
@@ -649,10 +655,8 @@ class PolarsLazyFrame:
             }
 
     def collect(
-        self,
-        backend: Implementation | None,
-        **kwargs: Any,
-    ) -> CompliantDataFrame[Any, Any, Any]:
+        self, backend: Implementation | None, **kwargs: Any
+    ) -> CompliantDataFrameAny:
         try:
             result = self.native.collect(**kwargs)
         except Exception as e:  # noqa: BLE001

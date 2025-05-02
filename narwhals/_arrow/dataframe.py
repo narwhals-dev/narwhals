@@ -51,11 +51,11 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._arrow.typing import Mask  # type: ignore[attr-defined]
     from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
+    from narwhals._compliant.typing import CompliantDataFrameAny
+    from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
-    from narwhals.typing import CompliantDataFrame
-    from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import JoinStrategy
     from narwhals.typing import SizedMultiIndexSelector
     from narwhals.typing import SizedMultiNameSelector
@@ -255,7 +255,7 @@ class ArrowDataFrame(
             return self._with_native(self.native.slice(0, 0))
         if self._backend_version < (18,) and isinstance(rows, tuple):
             rows = list(rows)
-        return self._with_native(self.native.take(rows))  # pyright: ignore[reportArgumentType]
+        return self._with_native(self.native.take(rows))
 
     def _gather_slice(self, rows: _SliceIndex | range) -> Self:
         start = rows.start or 0
@@ -302,8 +302,7 @@ class ArrowDataFrame(
             selector = cast("Sequence[str]", columns.to_pylist())
         else:
             selector = columns
-        # TODO @dangotbanned: Fix upstream `pa.Table.select` https://github.com/zen-xu/pyarrow-stubs/blob/f899bb35e10b36f7906a728e9f8acf3e0a1f9f64/pyarrow-stubs/__lib_pxi/table.pyi#L597
-        # NOTE: Investigate what `cython` actually checks
+        # NOTE: Fixed in https://github.com/zen-xu/pyarrow-stubs/pull/221
         return self._with_native(self.native.select(selector))  # pyright: ignore[reportArgumentType]
 
     @property
@@ -370,13 +369,9 @@ class ArrowDataFrame(
             col_name = col_value.name
             column = self._extract_comparand(col_value)
             native_frame = (
-                native_frame.set_column(
-                    columns.index(col_name),
-                    field_=col_name,
-                    column=column,  # type: ignore[arg-type]
-                )
+                native_frame.set_column(columns.index(col_name), col_name, column=column)
                 if col_name in columns
-                else native_frame.append_column(field_=col_name, column=column)
+                else native_frame.append_column(col_name, column=column)
             )
 
         return self._with_native(native_frame, validate_column_names=False)
@@ -544,9 +539,7 @@ class ArrowDataFrame(
         else:
             return self._with_native(df.slice(abs(n)), validate_column_names=False)
 
-    def lazy(
-        self, *, backend: Implementation | None = None
-    ) -> CompliantLazyFrame[Any, Any]:
+    def lazy(self, *, backend: Implementation | None = None) -> CompliantLazyFrameAny:
         if backend is None:
             return self
         elif backend is Implementation.DUCKDB:
@@ -584,10 +577,8 @@ class ArrowDataFrame(
         raise AssertionError  # pragma: no cover
 
     def collect(
-        self,
-        backend: Implementation | None,
-        **kwargs: Any,
-    ) -> CompliantDataFrame[Any, Any, Any]:
+        self, backend: Implementation | None, **kwargs: Any
+    ) -> CompliantDataFrameAny:
         if backend is Implementation.PYARROW or backend is None:
             from narwhals._arrow.dataframe import ArrowDataFrame
 
@@ -708,9 +699,9 @@ class ArrowDataFrame(
         subset = list(subset or self.columns)
 
         if keep in {"any", "first", "last"}:
-            agg_func_map = {"any": "min", "first": "min", "last": "max"}
+            from narwhals._arrow.group_by import ArrowGroupBy
 
-            agg_func = agg_func_map[keep]
+            agg_func = ArrowGroupBy._REMAP_UNIQUE[keep]
             col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
             keep_idx_native = (
                 self.native.append_column(col_token, pa.array(np.arange(len(self))))

@@ -203,11 +203,10 @@ class ArrowNamespace(
             context=self,
         )
 
-    # NOTE: Stub issue fixed in https://github.com/zen-xu/pyarrow-stubs/pull/203
     def _concat_diagonal(self, dfs: Sequence[pa.Table], /) -> pa.Table:
         if self._backend_version >= (14,):
-            return pa.concat_tables(dfs, promote_options="default")  # type: ignore[arg-type]
-        return pa.concat_tables(dfs, promote=True)  # type: ignore[arg-type] # pragma: no cover
+            return pa.concat_tables(dfs, promote_options="default")
+        return pa.concat_tables(dfs, promote=True)  # pragma: no cover
 
     def _concat_horizontal(self, dfs: Sequence[pa.Table], /) -> pa.Table:
         names = list(chain.from_iterable(df.column_names for df in dfs))
@@ -225,7 +224,7 @@ class ArrowNamespace(
                     f"   - dataframe {i}: {cols_current}\n"
                 )
                 raise TypeError(msg)
-        return pa.concat_tables(dfs)  # type: ignore[arg-type]
+        return pa.concat_tables(dfs)
 
     @property
     def selectors(self) -> ArrowSelectorNamespace:

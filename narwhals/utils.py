@@ -80,6 +80,7 @@ if TYPE_CHECKING:
     from narwhals._namespace import Namespace
     from narwhals._translate import ArrowStreamExportable
     from narwhals._translate import IntoArrowTable
+    from narwhals._translate import ToNarwhalsT_co
     from narwhals.dataframe import DataFrame
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -216,6 +217,36 @@ class Version(Enum):
         from narwhals.stable.v1 import dtypes as v1_dtypes
 
         return v1_dtypes
+
+    @property
+    def dataframe(self) -> type[DataFrame[Any]]:
+        if self is Version.MAIN:
+            from narwhals.dataframe import DataFrame
+
+            return DataFrame
+        from narwhals.stable.v1 import DataFrame as DataFrameV1
+
+        return DataFrameV1
+
+    @property
+    def lazyframe(self) -> type[LazyFrame[Any]]:
+        if self is Version.MAIN:
+            from narwhals.dataframe import LazyFrame
+
+            return LazyFrame
+        from narwhals.stable.v1 import LazyFrame as LazyFrameV1
+
+        return LazyFrameV1
+
+    @property
+    def series(self) -> type[Series[Any]]:
+        if self is Version.MAIN:
+            from narwhals.series import Series
+
+            return Series
+        from narwhals.stable.v1 import Series as SeriesV1
+
+        return SeriesV1
 
 
 class Implementation(Enum):
@@ -1615,14 +1646,19 @@ def _hasattr_static(obj: Any, attr: str) -> bool:
 
 
 def is_compliant_dataframe(
-    obj: CompliantDataFrame[CompliantSeriesT, CompliantExprT, NativeFrameT_co] | Any,
-) -> TypeIs[CompliantDataFrame[CompliantSeriesT, CompliantExprT, NativeFrameT_co]]:
+    obj: CompliantDataFrame[
+        CompliantSeriesT, CompliantExprT, NativeFrameT_co, ToNarwhalsT_co
+    ]
+    | Any,
+) -> TypeIs[
+    CompliantDataFrame[CompliantSeriesT, CompliantExprT, NativeFrameT_co, ToNarwhalsT_co]
+]:
     return _hasattr_static(obj, "__narwhals_dataframe__")
 
 
 def is_compliant_lazyframe(
-    obj: CompliantLazyFrame[CompliantExprT, NativeFrameT_co] | Any,
-) -> TypeIs[CompliantLazyFrame[CompliantExprT, NativeFrameT_co]]:
+    obj: CompliantLazyFrame[CompliantExprT, NativeFrameT_co, ToNarwhalsT_co] | Any,
+) -> TypeIs[CompliantLazyFrame[CompliantExprT, NativeFrameT_co, ToNarwhalsT_co]]:
     return _hasattr_static(obj, "__narwhals_lazyframe__")
 
 
