@@ -195,7 +195,7 @@ class PandasLikeSeriesDateTimeNamespace(
     def truncate(self, every: str) -> PandasLikeSeries:
         _, unit = parse_interval_string(every)
         if unit in {"mo", "q", "y"}:
-            msg = f"Truncating to {unit} is not supported yet for pandas."
+            msg = f"Truncating to {unit} is not supported yet for pandas-like."
             raise NotImplementedError(msg)
         if unit == "m":  # replace "m" unit with "min"
             every += "in"

@@ -193,10 +193,13 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
         return self.with_native(pc.multiply(self.native, factor).cast(pa.int64()))
 
     def truncate(self, every: str) -> ArrowSeries:
-        number, unit = parse_interval_string(every)
-        if unit == "q" and number != "1":
-            msg = f"Only 1{unit} is currently supported for PyArrow."
+        multiple, unit = parse_interval_string(every)
+        if unit == "q" and multiple != 1:
+            msg = (
+                "For 'q' unit only multiple 1 is currently supported for PyArrow.\n"
+                f"Got multiple {multiple!s}."
+            )
             raise NotImplementedError(msg)
         return self.with_native(
-            pc.floor_temporal(self.native, multiple=int(number), unit=UNITS_DICT[unit])  # type: ignore[call-overload]
+            pc.floor_temporal(self.native, multiple=multiple, unit=UNITS_DICT[unit])  # type: ignore[call-overload]
         )

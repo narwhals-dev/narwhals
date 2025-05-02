@@ -114,14 +114,17 @@ class DuckDBExprDateTimeNamespace:
         raise NotImplementedError(msg)
 
     def truncate(self, every: str) -> DuckDBExpr:
-        number, unit = parse_interval_string(every)
+        multiple, unit = parse_interval_string(every)
         if unit == "ns":
             msg = "Truncating to nanoseconds is not yet supported for DuckDB."
             raise NotImplementedError(msg)
-        if unit in {"q", "y"} and number != "1":
-            msg = f"Only 1{unit} is currently supported for DuckDB."
+        if unit in {"q", "y"} and multiple != 1:
+            msg = (
+                f"For '{unit}' unit only multiple 1 is currently supported for DuckDB.\n"
+                f"Got multiple {multiple!s}."
+            )
             raise NotImplementedError(msg)
-        every = f"{number} {UNITS_DICT[unit]}"
+        every = f"{multiple!s} {UNITS_DICT[unit]}"
         return self._compliant_expr._with_callable(
             lambda _input: FunctionExpression(
                 "time_bucket",

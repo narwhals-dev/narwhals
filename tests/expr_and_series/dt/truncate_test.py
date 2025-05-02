@@ -99,7 +99,7 @@ def test_truncate(
     every: str,
     expected: list[datetime],
 ) -> None:
-    if any(x in str(constructor) for x in ("pyspark",)):
+    if any(x in str(constructor) for x in ("sqlframe",)):
         request.applymarker(
             pytest.mark.xfail(reason="https://github.com/eakmanrq/sqlframe/issues/383")
         )
@@ -195,7 +195,7 @@ def test_truncate_custom(
     every: str,
     expected: list[datetime],
 ) -> None:
-    if any(x in str(constructor) for x in ("pyspark",)):
+    if any(x in str(constructor) for x in ("sqlframe",)):
         request.applymarker(
             pytest.mark.xfail(reason="https://github.com/eakmanrq/sqlframe/issues/383")
         )
@@ -260,6 +260,6 @@ def test_truncate_invalid_interval(
     if "polars" in str(constructor):
         request.applymarker(pytest.mark.xfail())
     df = nw.from_native(constructor(data))
-    msg = "Invalid frequency string"
+    msg = "Invalid `every` string"
     with pytest.raises(ValueError, match=msg):
         df.select(nw.col("a").dt.truncate("1r"))

@@ -160,8 +160,7 @@ _ContextT = TypeVar("_ContextT", bound="_FullContext")
 _Method: TypeAlias = "Callable[Concatenate[_ContextT, P], R]"
 _Constructor: TypeAlias = "Callable[Concatenate[_T, P], R2]"
 
-_TIME_UNITS = "ns|us|ms|mo|m|s|h|d|w|q|y"
-_PATTERN_INTERVAL = re.compile(rf"^(?P<number>\d+)(?P<unit>{_TIME_UNITS})$")
+_PATTERN_INTERVAL = re.compile(r"^(?P<multiple>\d+)(?P<unit>ns|us|ms|mo|m|s|h|d|w|q|y)$")
 
 
 class _StoresNative(Protocol[NativeT_co]):  # noqa: PYI046
@@ -2005,13 +2004,13 @@ class _DeferredIterable(Generic[_T]):
         return it if isinstance(it, tuple) else tuple(it)
 
 
-def parse_interval_string(every: str) -> tuple[str, str]:
+def parse_interval_string(every: str) -> tuple[int, str]:
     """Parse a string like "1d", "2h", "3m" into a tuple of (number, unit).
 
     Returns:
-        A tuple of number and unit parsed from the interval string.
+        A tuple of multiple and unit parsed from the interval string.
     """
     if match := _PATTERN_INTERVAL.match(every):
-        return match["number"], match["unit"]
-    msg = f"Invalid frequency string: {every}."
+        return int(match["multiple"]), match["unit"]
+    msg = f"Invalid `every` string: {every}."
     raise ValueError(msg)

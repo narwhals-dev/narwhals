@@ -67,9 +67,9 @@ class SparkLikeExprDateTimeNamespace:
         return self._compliant_expr._with_callable(_weekday)
 
     def truncate(self, every: str) -> SparkLikeExpr:
-        number, unit = parse_interval_string(every)
-        if number != "1":
-            msg = "Only unit of 1 is currently implemented for Spark-like.\nGot {number}."
+        multiple, unit = parse_interval_string(every)
+        if multiple != 1:
+            msg = f"Only multiple 1 is currently supported for Spark-like.\nGot {multiple!s}."
             raise ValueError(msg)
 
         def _truncate(_input: Column) -> Column:
