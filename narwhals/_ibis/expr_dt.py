@@ -52,11 +52,6 @@ class IbisExprDateTimeNamespace:
             lambda _input: _input.microsecond(),
         )
 
-    def nanosecond(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(
-            lambda _input: _input.microsecond() * 1000,
-        )
-
     def to_string(self, format: str) -> IbisExpr:
         return self._compliant_expr._with_callable(
             lambda _input: _input.strftime(format),
@@ -78,6 +73,7 @@ class IbisExprDateTimeNamespace:
             lambda _input: _input.date(),
         )
 
+    nanosecond = not_implemented()
     total_minutes = not_implemented()
     total_seconds = not_implemented()
     total_milliseconds = not_implemented()

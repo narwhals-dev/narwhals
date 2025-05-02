@@ -92,7 +92,6 @@ def test_missing_columns(
         or "ibis" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
-        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
     selected_columns = ["a", "e", "f"]

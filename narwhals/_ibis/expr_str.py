@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals.utils import not_implemented
+
 if TYPE_CHECKING:
     import ibis.expr.types as ir
-    from typing_extensions import Never
 
     from narwhals._ibis.expr import IbisExpr
 
@@ -72,10 +73,6 @@ class IbisExprStringNamespace:
             lambda _input: _input.replace(pattern, value),
         )
 
-    def replace(self, pattern: str, value: str, *, literal: bool, n: int) -> Never:
-        msg = "`replace` is currently not supported for Ibis"
-        raise NotImplementedError(msg)
-
     def to_datetime(self, format: str | None) -> IbisExpr:
         from ibis.expr.datatypes import Timestamp
 
@@ -91,6 +88,8 @@ class IbisExprStringNamespace:
             return self._compliant_expr._with_callable(
                 lambda _input: _input.as_timestamp(format),
             )
+
+    replace = not_implemented()
 
 
 def _is_naive_format(format_: str) -> bool:
