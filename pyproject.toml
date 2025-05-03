@@ -236,6 +236,8 @@ filterwarnings = [
   "ignore:.*__array__ implementation doesn't accept a copy keyword, so passing copy=False failed:DeprecationWarning:modin",
   # raised internally by pandas
   "ignore:.*np.find_common_type is deprecated:DeprecationWarning:pandas",
+  # Warning raised when calling PandasLikeNamespace.from_arrow with old pyarrow
+  "ignore:.*is_sparse is deprecated and will be removed in a future version.*:DeprecationWarning:pyarrow",
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
