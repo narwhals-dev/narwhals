@@ -244,22 +244,14 @@ def test_truncate_series(
     assert_equal_data(result, expected)
 
 
-def test_truncate_invalid_interval(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
-    if "polars" in str(constructor):
-        request.applymarker(pytest.mark.xfail())
+def test_truncate_invalid_interval(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     msg = "Invalid `every` string"
     with pytest.raises(ValueError, match=msg):
         df.select(nw.col("a").dt.truncate("1r"))
 
 
-def test_truncate_invalid_multiple(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
-    if "polars" in str(constructor):
-        request.applymarker(pytest.mark.xfail())
+def test_truncate_invalid_multiple(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     msg = "Only the following multiples are supported"
     msg_year = "Only multiple 1 is currently supported for 'y' unit"

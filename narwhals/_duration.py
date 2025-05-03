@@ -6,18 +6,17 @@ import re
 from typing import TYPE_CHECKING
 from typing import Literal
 from typing import cast
+from typing import get_args
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
 __all__ = ["IntervalUnit", "parse_interval_string"]
 
-IntervalUnit: TypeAlias = Literal[
-    "ns", "us", "ms", "mo", "m", "s", "h", "d", "w", "q", "y"
-]
+IntervalUnit: TypeAlias = Literal["ns", "us", "ms", "mo", "m", "s", "h", "d", "q", "y"]
 
 PATTERN_INTERVAL: re.Pattern[str] = re.compile(
-    r"^(?P<multiple>\d+)(?P<unit>ns|us|ms|mo|m|s|h|d|w|q|y)$"
+    r"^(?P<multiple>\d+)(?P<unit>ns|us|ms|mo|m|s|h|d|q|y)$"
 )
 MONTH_MULTIPLES = frozenset([1, 2, 3, 4, 6, 12])
 QUARTER_MULTIPLES = frozenset([1, 2, 4])
@@ -44,5 +43,8 @@ def parse_interval_string(every: str) -> tuple[int, IntervalUnit]:
             )
             raise ValueError(msg)
         return multiple, unit
-    msg = f"Invalid `every` string: {every}."
+    msg = (
+        f"Invalid `every` string: {every}. Expected string of kind <number><unit>, "
+        f"where 'unit' is one of: {get_args(IntervalUnit)}."
+    )
     raise ValueError(msg)

@@ -9,6 +9,7 @@ from typing import Sequence
 
 import polars as pl
 
+from narwhals._duration import parse_interval_string
 from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
 from narwhals._polars.utils import narwhals_to_native_dtype
@@ -313,6 +314,12 @@ class PolarsExpr:
 class PolarsExprDateTimeNamespace:
     def __init__(self, expr: PolarsExpr) -> None:
         self._compliant_expr = expr
+
+    def truncate(self, every: str) -> PolarsExpr:
+        parse_interval_string(every)  # Ensure consistent error message is raised.
+        return self._compliant_expr._with_native(
+            self._compliant_expr.native.dt.truncate(every)
+        )
 
     def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:
         def func(*args: Any, **kwargs: Any) -> PolarsExpr:

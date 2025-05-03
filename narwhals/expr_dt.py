@@ -794,7 +794,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |└─────────────────────┴─────────────────────┘|
             └─────────────────────────────────────────────┘
         """
-        return self._expr.__class__(
+        return self._expr._with_callable(
             lambda plx: self._expr._to_compliant_expr(plx).dt.truncate(every),
-            self._expr._metadata,
         )
