@@ -10,6 +10,8 @@ from typing import cast
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
+__all__ = ["IntervalUnit", "parse_interval_string"]
+
 IntervalUnit: TypeAlias = Literal[
     "ns", "us", "ms", "mo", "m", "s", "h", "d", "w", "q", "y"
 ]
