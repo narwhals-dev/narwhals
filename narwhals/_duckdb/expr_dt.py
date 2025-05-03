@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from duckdb import ConstantExpression
 from duckdb import FunctionExpression
 
 from narwhals._duckdb.utils import UNITS_DICT
@@ -127,9 +126,6 @@ class DuckDBExprDateTimeNamespace:
         every = f"{multiple!s} {UNITS_DICT[unit]}"
         return self._compliant_expr._with_callable(
             lambda _input: FunctionExpression(
-                "time_bucket",
-                ConstantExpression(every),
-                _input,
-                ConstantExpression(datetime(1970, 1, 1)),
+                "time_bucket", lit(every), _input, lit(datetime(1970, 1, 1))
             )
         )
