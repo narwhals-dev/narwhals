@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+import pandas as pd
 import polars as pl
 import pytest
 
@@ -106,7 +107,7 @@ def test_truncate(
     if every.endswith("ns") and any(x in str(constructor) for x in ("polars", "duckdb")):
         request.applymarker(pytest.mark.xfail())
     if any(every.endswith(x) for x in ("mo", "q", "y")) and any(
-        x in str(constructor) for x in ("pandas", "dask", "modin")
+        x in str(constructor) for x in ("dask", "cudf")
     ):
         request.applymarker(pytest.mark.xfail(reason="Not implemented"))
     df = nw.from_native(constructor(data))
@@ -195,7 +196,7 @@ def test_truncate_custom(
     if every.endswith("ns") and any(x in str(constructor) for x in ("polars", "duckdb")):
         request.applymarker(pytest.mark.xfail())
     if any(every.endswith(x) for x in ("mo", "q", "y")) and any(
-        x in str(constructor) for x in ("pandas", "dask", "modin")
+        x in str(constructor) for x in ("dask", "cudf")
     ):
         request.applymarker(pytest.mark.xfail(reason="Not implemented"))
     df = nw.from_native(constructor(data))
@@ -268,3 +269,14 @@ def test_truncate_invalid_multiple(
         df.select(nw.col("a").dt.truncate("5q"))
     with pytest.raises(ValueError, match=msg_year):
         df.select(nw.col("a").dt.truncate("5y"))
+
+
+def test_pandas_numpy_nat() -> None:
+    # The pandas implementation goes via NumPy, so check NaT are preserved.
+    df = nw.from_native(
+        pd.DataFrame({"a": [datetime(2020, 1, 1), None, datetime(2020, 1, 2)]})
+    )
+    result: nw.DataFrame[pd.DataFrame] = df.select(nw.col("a").dt.truncate("1mo"))
+    expected = {"a": [datetime(2020, 1, 1), None, datetime(2020, 1, 1)]}
+    assert_equal_data(result, expected)
+    assert result[1] is pd.NaT

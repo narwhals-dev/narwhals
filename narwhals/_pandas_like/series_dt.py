@@ -8,6 +8,7 @@ from narwhals._duration import parse_interval_string
 from narwhals._pandas_like.utils import PandasLikeSeriesNamespace
 from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
+from narwhals._pandas_like.utils import get_dtype_backend
 from narwhals._pandas_like.utils import int_dtype_mapper
 from narwhals._pandas_like.utils import is_pyarrow_dtype_backend
 
@@ -193,10 +194,39 @@ class PandasLikeSeriesDateTimeNamespace(
         return self.with_native(result)
 
     def truncate(self, every: str) -> PandasLikeSeries:
-        _, unit = parse_interval_string(every)
+        multiple, unit = parse_interval_string(every)
+        native = self.native
+        dtype_backend = get_dtype_backend(native.dtype, self.compliant._implementation)
         if unit in {"mo", "q", "y"}:
-            msg = f"Truncating to {unit} is not supported yet for pandas-like."
-            raise NotImplementedError(msg)
+            if self.implementation.is_cudf():
+                msg = f"Truncating to {unit} is not supported yet for cuDF."
+                raise NotImplementedError(msg)
+            if dtype_backend == "pyarrow":
+                import pyarrow.compute as pc  # ignore-banned-import
+
+                from narwhals._arrow.utils import UNITS_DICT
+
+                ca = native.array._pa_array
+                result = pc.floor_temporal(ca, multiple, UNITS_DICT[unit])
+                return self.with_native(
+                    native.__class__(
+                        result, dtype=native.dtype, index=native.index, name=native.name
+                    )
+                )
+            else:
+                if unit == "q":
+                    multiple *= 3
+                    unit = "mo"
+                mapping = {"mo": "M", "y": "Y"}
+                arr = native.values
+                arr = arr.astype(f"datetime64[{multiple}{mapping[unit]}]").astype(
+                    arr.dtype
+                )
+                return self.with_native(
+                    native.__class__(
+                        arr, dtype=native.dtype, index=native.index, name=native.name
+                    )
+                )
         if unit == "m":  # replace "m" unit with "min"
             every += "in"
         return self.with_native(self.native.dt.floor(every))
