@@ -207,11 +207,7 @@ class PandasLikeSeriesDateTimeNamespace(
                 from narwhals._arrow.utils import UNITS_DICT
 
                 ca = native.array._pa_array
-                result_pa = pc.floor_temporal(ca, multiple, UNITS_DICT[unit])
-                result_native = native.__class__(
-                    result_pa, dtype=native.dtype, index=native.index, name=native.name
-                )
-                return self.with_native(result_native)
+                result_arr = pc.floor_temporal(ca, multiple, UNITS_DICT[unit])
             else:
                 if unit == "q":
                     multiple *= 3
@@ -222,11 +218,13 @@ class PandasLikeSeriesDateTimeNamespace(
                     np_unit = "Y"
                 arr = native.values
                 arr_dtype = arr.dtype
-                arr = arr.astype(f"datetime64[{multiple}{np_unit}]").astype(arr_dtype)
-                result_native = native.__class__(
-                    arr, dtype=native.dtype, index=native.index, name=native.name
+                result_arr = arr.astype(f"datetime64[{multiple}{np_unit}]").astype(
+                    arr_dtype
                 )
-                return self.with_native(result_native)
+            result_native = native.__class__(
+                result_arr, dtype=native.dtype, index=native.index, name=native.name
+            )
+            return self.with_native(result_native)
         if unit == "m":  # replace "m" unit with "min"
             every += "in"
         return self.with_native(self.native.dt.floor(every))

@@ -279,4 +279,4 @@ def test_pandas_numpy_nat() -> None:
     result: nw.DataFrame[pd.DataFrame] = df.select(nw.col("a").dt.truncate("1mo"))
     expected = {"a": [datetime(2020, 1, 1), None, datetime(2020, 1, 1)]}
     assert_equal_data(result, expected)
-    assert result[1] is pd.NaT
+    assert result.item(1, 0) is pd.NaT
