@@ -33,6 +33,19 @@ if TYPE_CHECKING:
     IntoArrowExpr: TypeAlias = "ArrowExpr | ArrowSeries"
     TieBreaker: TypeAlias = Literal["min", "max", "first", "dense"]
     NullPlacement: TypeAlias = Literal["at_start", "at_end"]
+    NativeIntervalUnit: TypeAlias = Literal[
+        "year",
+        "quarter",
+        "month",
+        "week",
+        "day",
+        "hour",
+        "minute",
+        "second",
+        "millisecond",
+        "microsecond",
+        "nanosecond",
+    ]
 
     ChunkedArrayAny: TypeAlias = pa.ChunkedArray[Any]
     ArrayAny: TypeAlias = pa.Array[Any]

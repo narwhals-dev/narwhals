@@ -201,5 +201,5 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
             )
             raise NotImplementedError(msg)
         return self.with_native(
-            pc.floor_temporal(self.native, multiple=multiple, unit=UNITS_DICT[unit])  # type: ignore[call-overload]
+            pc.floor_temporal(self.native, multiple=multiple, unit=UNITS_DICT[unit])
         )

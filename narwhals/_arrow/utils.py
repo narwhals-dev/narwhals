@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Iterator
+from typing import Mapping
 from typing import Sequence
 from typing import cast
 
@@ -25,7 +26,9 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import ArrayOrScalarT1
     from narwhals._arrow.typing import ArrayOrScalarT2
     from narwhals._arrow.typing import ChunkedArrayAny
+    from narwhals._arrow.typing import NativeIntervalUnit
     from narwhals._arrow.typing import ScalarAny
+    from narwhals._duration import IntervalUnit
     from narwhals.dtypes import DType
     from narwhals.typing import PythonLiteral
     from narwhals.utils import Version
@@ -59,7 +62,7 @@ else:
     from pyarrow.types import is_list
     from pyarrow.types import is_timestamp
 
-UNITS_DICT = {
+UNITS_DICT: Mapping[IntervalUnit, NativeIntervalUnit] = {
     "y": "year",
     "q": "quarter",
     "mo": "month",
