@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 __all__ = ["IntervalUnit", "parse_interval_string"]
 
-IntervalUnit: TypeAlias = Literal["ns", "us", "ms", "mo", "m", "s", "h", "d", "q", "y"]
+IntervalUnit: TypeAlias = Literal["ns", "us", "ms", "s", "m", "h", "d", "mo", "q", "y"]
 
 PATTERN_INTERVAL: re.Pattern[str] = re.compile(
     r"^(?P<multiple>\d+)(?P<unit>ns|us|ms|mo|m|s|h|d|q|y)$"

@@ -767,7 +767,20 @@ class ExprDateTimeNamespace(Generic[ExprT]):
 
         Arguments:
             every: str
-                Every interval start and period length.
+                Length of bucket. Must be of form
+                `<multiple><unit>`, where `multiple` is a positive integer
+                and `unit` is one of:
+
+                - 'ns': nanosecond.
+                - 'us': microsecond.
+                - 'ms': millisecond.
+                - 's': second.
+                - 'm': minute.
+                - 'h': hour.
+                - 'd': day.
+                - 'mo': month.
+                - 'q': quarter.
+                - 'y': year.
 
         Returns:
             Expression of data type `Date` or `Datetime`.
