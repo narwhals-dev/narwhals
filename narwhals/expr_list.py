@@ -44,7 +44,6 @@ class ExprListNamespace(Generic[ExprT]):
             |└──────────────┴───────┘|
             └────────────────────────┘
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).list.len(),
-            self._expr._metadata,
+        return self._expr._with_callable(
+            lambda plx: self._expr._to_compliant_expr(plx).list.len()
         )

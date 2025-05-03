@@ -41,9 +41,8 @@ class ExprStringNamespace(Generic[ExprT]):
             |└───────┴───────────┘|
             └─────────────────────┘
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).str.len_chars(),
-            self._expr._metadata,
+        return self._expr._with_callable(
+            lambda plx: self._expr._to_compliant_expr(plx).str.len_chars()
         )
 
     def replace(
@@ -74,11 +73,10 @@ class ExprStringNamespace(Generic[ExprT]):
             |1  abc abc123   abc123|
             └──────────────────────┘
         """
-        return self._expr.__class__(
+        return self._expr._with_callable(
             lambda plx: self._expr._to_compliant_expr(plx).str.replace(
                 pattern, value, literal=literal, n=n
-            ),
-            self._expr._metadata,
+            )
         )
 
     def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> ExprT:
@@ -106,11 +104,10 @@ class ExprStringNamespace(Generic[ExprT]):
             |1  abc abc123      123|
             └──────────────────────┘
         """
-        return self._expr.__class__(
+        return self._expr._with_callable(
             lambda plx: self._expr._to_compliant_expr(plx).str.replace_all(
                 pattern, value, literal=literal
-            ),
-            self._expr._metadata,
+            )
         )
 
     def strip_chars(self, characters: str | None = None) -> ExprT:
@@ -135,9 +132,8 @@ class ExprStringNamespace(Generic[ExprT]):
             ... )
             {'fruits': ['apple', '\nmango'], 'stripped': ['apple', 'mango']}
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).str.strip_chars(characters),
-            self._expr._metadata,
+        return self._expr._with_callable(
+            lambda plx: self._expr._to_compliant_expr(plx).str.strip_chars(characters)
         )
 
     def starts_with(self, prefix: str) -> ExprT:
@@ -164,9 +160,8 @@ class ExprStringNamespace(Generic[ExprT]):
             |2   None       None|
             └───────────────────┘
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).str.starts_with(prefix),
-            self._expr._metadata,
+        return self._expr._with_callable(
+            lambda plx: self._expr._to_compliant_expr(plx).str.starts_with(prefix)
         )
 
     def ends_with(self, suffix: str) -> ExprT:
@@ -193,9 +188,8 @@ class ExprStringNamespace(Generic[ExprT]):
             |2   None       None|
             └───────────────────┘
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).str.ends_with(suffix),
-            self._expr._metadata,
+        return self._expr._with_callable(
+            lambda plx: self._expr._to_compliant_expr(plx).str.ends_with(suffix)
         )
 
     def contains(self, pattern: str, *, literal: bool = False) -> ExprT:
@@ -227,11 +221,10 @@ class ExprStringNamespace(Generic[ExprT]):
             default_match: [[true,false,true]]
             case_insensitive_match: [[true,false,true]]
         """
-        return self._expr.__class__(
+        return self._expr._with_callable(
             lambda plx: self._expr._to_compliant_expr(plx).str.contains(
                 pattern, literal=literal
-            ),
-            self._expr._metadata,
+            )
         )
 
     def slice(self, offset: int, length: int | None = None) -> ExprT:
@@ -260,11 +253,10 @@ class ExprStringNamespace(Generic[ExprT]):
             |2  papaya       ya|
             └──────────────────┘
         """
-        return self._expr.__class__(
+        return self._expr._with_callable(
             lambda plx: self._expr._to_compliant_expr(plx).str.slice(
                 offset=offset, length=length
-            ),
-            self._expr._metadata,
+            )
         )
 
     def split(self, by: str) -> ExprT:
@@ -296,9 +288,8 @@ class ExprStringNamespace(Generic[ExprT]):
             |└─────────┴────────────────┘|
             └────────────────────────────┘
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).str.split(by=by),
-            self._expr._metadata,
+        return self._expr._with_callable(
+            lambda plx: self._expr._to_compliant_expr(plx).str.split(by=by)
         )
 
     def head(self, n: int = 5) -> ExprT:
@@ -326,9 +317,8 @@ class ExprStringNamespace(Generic[ExprT]):
             lyrics: [["taata","taatatata","zukkyun"]]
             lyrics_head: [["taata","taata","zukky"]]
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).str.slice(0, n),
-            self._expr._metadata,
+        return self._expr._with_callable(
+            lambda plx: self._expr._to_compliant_expr(plx).str.slice(0, n)
         )
 
     def tail(self, n: int = 5) -> ExprT:
@@ -356,11 +346,10 @@ class ExprStringNamespace(Generic[ExprT]):
             lyrics: [["taata","taatatata","zukkyun"]]
             lyrics_tail: [["taata","atata","kkyun"]]
         """
-        return self._expr.__class__(
+        return self._expr._with_callable(
             lambda plx: self._expr._to_compliant_expr(plx).str.slice(
                 offset=-n, length=None
-            ),
-            self._expr._metadata,
+            )
         )
 
     def to_datetime(self, format: str | None = None) -> ExprT:
@@ -404,9 +393,8 @@ class ExprStringNamespace(Generic[ExprT]):
             |└─────────────────────┘|
             └───────────────────────┘
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).str.to_datetime(format=format),
-            self._expr._metadata,
+        return self._expr._with_callable(
+            lambda plx: self._expr._to_compliant_expr(plx).str.to_datetime(format=format)
         )
 
     def to_uppercase(self) -> ExprT:
@@ -434,9 +422,8 @@ class ExprStringNamespace(Generic[ExprT]):
             |1   None      None|
             └──────────────────┘
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).str.to_uppercase(),
-            self._expr._metadata,
+        return self._expr._with_callable(
+            lambda plx: self._expr._to_compliant_expr(plx).str.to_uppercase()
         )
 
     def to_lowercase(self) -> ExprT:
@@ -459,7 +446,6 @@ class ExprStringNamespace(Generic[ExprT]):
             |1   None      None|
             └──────────────────┘
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).str.to_lowercase(),
-            self._expr._metadata,
+        return self._expr._with_callable(
+            lambda plx: self._expr._to_compliant_expr(plx).str.to_lowercase()
         )

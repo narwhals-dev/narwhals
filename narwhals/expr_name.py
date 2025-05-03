@@ -34,9 +34,8 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo").alias("alias_for_foo").name.keep()).columns
             ['foo']
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).name.keep(),
-            self._expr._metadata,
+        return self._expr._with_callable(
+            lambda plx: self._expr._to_compliant_expr(plx).name.keep()
         )
 
     def map(self, function: Callable[[str], str]) -> ExprT:
@@ -62,9 +61,8 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.map(renaming_func)).columns
             ['oof', 'RAB']
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).name.map(function),
-            self._expr._metadata,
+        return self._expr._with_callable(
+            lambda plx: self._expr._to_compliant_expr(plx).name.map(function)
         )
 
     def prefix(self, prefix: str) -> ExprT:
@@ -89,9 +87,8 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.prefix("with_prefix")).columns
             ['with_prefixfoo', 'with_prefixBAR']
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).name.prefix(prefix),
-            self._expr._metadata,
+        return self._expr._with_callable(
+            lambda plx: self._expr._to_compliant_expr(plx).name.prefix(prefix)
         )
 
     def suffix(self, suffix: str) -> ExprT:
@@ -116,9 +113,8 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.suffix("_with_suffix")).columns
             ['foo_with_suffix', 'BAR_with_suffix']
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).name.suffix(suffix),
-            self._expr._metadata,
+        return self._expr._with_callable(
+            lambda plx: self._expr._to_compliant_expr(plx).name.suffix(suffix)
         )
 
     def to_lowercase(self) -> ExprT:
@@ -140,9 +136,8 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.to_lowercase()).columns
             ['foo', 'bar']
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).name.to_lowercase(),
-            self._expr._metadata,
+        return self._expr._with_callable(
+            lambda plx: self._expr._to_compliant_expr(plx).name.to_lowercase()
         )
 
     def to_uppercase(self) -> ExprT:
@@ -164,7 +159,6 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.to_uppercase()).columns
             ['FOO', 'BAR']
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).name.to_uppercase(),
-            self._expr._metadata,
+        return self._expr._with_callable(
+            lambda plx: self._expr._to_compliant_expr(plx).name.to_uppercase()
         )
