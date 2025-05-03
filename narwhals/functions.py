@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import platform
 import sys
+import warnings
 from importlib.metadata import version
 from typing import TYPE_CHECKING
 from typing import Any
@@ -527,7 +528,15 @@ def _from_arrow_impl(
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
         ns = version.namespace.from_backend(implementation).compliant
-        return ns._dataframe.from_arrow(data, context=ns).to_narwhals()
+        with warnings.catch_warnings():
+            # Old pyarrow with data being pandas
+            warnings.filterwarnings(
+                "ignore",
+                message=".*is_sparse is deprecated and will be removed in a future version",
+                category=DeprecationWarning,
+                module="pyarrow",
+            )
+            return ns._dataframe.from_arrow(data, context=ns).to_narwhals()
     else:  # pragma: no cover
         native_namespace = implementation.to_native_namespace()
         try:
