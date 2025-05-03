@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._duration import parse_interval_string
 from narwhals._spark_like.utils import UNITS_DICT
-from narwhals.utils import parse_interval_string
 
 if TYPE_CHECKING:
     from sqlframe.base.column import Column

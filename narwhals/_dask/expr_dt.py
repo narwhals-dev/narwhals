@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._duration import parse_interval_string
 from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.utils import Implementation
-from narwhals.utils import parse_interval_string
 
 if TYPE_CHECKING:
     import dask.dataframe.dask_expr as dx

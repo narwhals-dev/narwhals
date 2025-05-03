@@ -8,7 +8,7 @@ from duckdb import FunctionExpression
 
 from narwhals._duckdb.utils import UNITS_DICT
 from narwhals._duckdb.utils import lit
-from narwhals.utils import parse_interval_string
+from narwhals._duration import parse_interval_string
 
 if TYPE_CHECKING:
     from narwhals._duckdb.expr import DuckDBExpr

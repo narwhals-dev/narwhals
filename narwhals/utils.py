@@ -160,8 +160,6 @@ _ContextT = TypeVar("_ContextT", bound="_FullContext")
 _Method: TypeAlias = "Callable[Concatenate[_ContextT, P], R]"
 _Constructor: TypeAlias = "Callable[Concatenate[_T, P], R2]"
 
-_PATTERN_INTERVAL = re.compile(r"^(?P<multiple>\d+)(?P<unit>ns|us|ms|mo|m|s|h|d|w|q|y)$")
-
 
 class _StoresNative(Protocol[NativeT_co]):  # noqa: PYI046
     """Provides access to a native object.
@@ -2002,15 +2000,3 @@ class _DeferredIterable(Generic[_T]):
         # Collect and return as a `tuple`.
         it = self._into_iter()
         return it if isinstance(it, tuple) else tuple(it)
-
-
-def parse_interval_string(every: str) -> tuple[int, str]:
-    """Parse a string like "1d", "2h", "3m" into a tuple of (number, unit).
-
-    Returns:
-        A tuple of multiple and unit parsed from the interval string.
-    """
-    if match := _PATTERN_INTERVAL.match(every):
-        return int(match["multiple"]), match["unit"]
-    msg = f"Invalid `every` string: {every}."
-    raise ValueError(msg)

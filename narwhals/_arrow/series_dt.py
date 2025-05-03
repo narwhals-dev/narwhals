@@ -11,7 +11,7 @@ from narwhals._arrow.utils import UNITS_DICT
 from narwhals._arrow.utils import ArrowSeriesNamespace
 from narwhals._arrow.utils import floordiv_compat
 from narwhals._arrow.utils import lit
-from narwhals.utils import parse_interval_string
+from narwhals._duration import parse_interval_string
 
 if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
