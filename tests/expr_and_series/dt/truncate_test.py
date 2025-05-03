@@ -174,17 +174,10 @@ def test_truncate(
             ],
         ),
         (
-            "9q",
+            "2q",
             [
-                datetime(2020, 7, 1),
-                datetime(2018, 4, 1),
-            ],
-        ),
-        (
-            "19y",
-            [
-                datetime(2014, 1, 1),
-                datetime(2014, 1, 1),
+                datetime(2021, 1, 1),
+                datetime(2020, 1, 1),
             ],
         ),
     ],
@@ -204,10 +197,6 @@ def test_truncate_custom(
     if any(every.endswith(x) for x in ("mo", "q", "y")) and any(
         x in str(constructor) for x in ("pandas", "dask", "modin")
     ):
-        request.applymarker(pytest.mark.xfail(reason="Not implemented"))
-    if any(every.endswith(x) for x in ("q", "y")) and "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail(reason="Not implemented"))
-    if every.endswith("q") and "pyarrow" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="Not implemented"))
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").dt.truncate(every))
@@ -263,3 +252,19 @@ def test_truncate_invalid_interval(
     msg = "Invalid `every` string"
     with pytest.raises(ValueError, match=msg):
         df.select(nw.col("a").dt.truncate("1r"))
+
+
+def test_truncate_invalid_multiple(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    if "polars" in str(constructor):
+        request.applymarker(pytest.mark.xfail())
+    df = nw.from_native(constructor(data))
+    msg = "Only the following multiples are supported"
+    msg_year = "Only multiple 1 is currently supported for 'y' unit"
+    with pytest.raises(ValueError, match=msg):
+        df.select(nw.col("a").dt.truncate("5mo"))
+    with pytest.raises(ValueError, match=msg):
+        df.select(nw.col("a").dt.truncate("5q"))
+    with pytest.raises(ValueError, match=msg_year):
+        df.select(nw.col("a").dt.truncate("5y"))

@@ -19,6 +19,8 @@ IntervalUnit: TypeAlias = Literal[
 PATTERN_INTERVAL: re.Pattern[str] = re.compile(
     r"^(?P<multiple>\d+)(?P<unit>ns|us|ms|mo|m|s|h|d|w|q|y)$"
 )
+MONTH_MULTIPLES = frozenset([1, 2, 3, 4, 6, 12])
+QUARTER_MULTIPLES = frozenset([1, 2, 4])
 
 
 def parse_interval_string(every: str) -> tuple[int, IntervalUnit]:
@@ -28,6 +30,19 @@ def parse_interval_string(every: str) -> tuple[int, IntervalUnit]:
         A tuple of multiple and unit parsed from the interval string.
     """
     if match := PATTERN_INTERVAL.match(every):
-        return int(match["multiple"]), cast("IntervalUnit", match["unit"])
+        multiple = int(match["multiple"])
+        unit = cast("IntervalUnit", match["unit"])
+        if unit == "mo" and multiple not in MONTH_MULTIPLES:
+            msg = f"Only the following multiples are supported for 'mo' unit: {MONTH_MULTIPLES}.\nGot: {multiple}."
+            raise ValueError(msg)
+        if unit == "q" and multiple not in QUARTER_MULTIPLES:
+            msg = f"Only the following multiples are supported for 'q' unit: {QUARTER_MULTIPLES}.\nGot: {multiple}."
+            raise ValueError(msg)
+        if unit == "y" and multiple != 1:
+            msg = (
+                f"Only multiple 1 is currently supported for 'y' unit.\nGot: {multiple}."
+            )
+            raise ValueError(msg)
+        return multiple, unit
     msg = f"Invalid `every` string: {every}."
     raise ValueError(msg)
