@@ -895,7 +895,7 @@ def scan_parquet(
     For the libraries that do not support lazy dataframes, the function reads
     a parquet file eagerly and then converts the resulting dataframe to a lazyframe.
 
-    !!! note
+    Note:
         Spark like backends require a session object to be passed in `kwargs`.
 
         For instance:
@@ -1541,7 +1541,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     `.otherwise(<value if condition is false>)` can be appended at the end. If not
     appended, and the condition is not `True`, `None` will be returned.
 
-    !!! info
+    Info:
 
         Chaining multiple `.when(<condition>).then(<value>)` statements is currently
         not supported.
