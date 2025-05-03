@@ -6,8 +6,7 @@ from typing import Any
 from typing import Sequence
 
 import ibis
-import ibis.expr
-import ibis.expr.datatypes
+import ibis.expr.datatypes as ibis_dtypes
 
 from narwhals.utils import isinstance_or_issubclass
 
@@ -114,15 +113,15 @@ def native_to_narwhals_dtype(ibis_dtype: IbisDataType, version: Version) -> DTyp
     return dtypes.Unknown()  # pragma: no cover
 
 
-def is_interval(obj: IbisDataType) -> TypeIs[ibis.expr.datatypes.Interval]:
+def is_interval(obj: IbisDataType) -> TypeIs[ibis_dtypes.Interval]:
     return obj.is_interval()
 
 
-def is_array(obj: IbisDataType) -> TypeIs[ibis.expr.datatypes.Array[Any]]:
+def is_array(obj: IbisDataType) -> TypeIs[ibis_dtypes.Array[Any]]:
     return obj.is_array()
 
 
-def is_struct(obj: IbisDataType) -> TypeIs[ibis.expr.datatypes.Struct]:
+def is_struct(obj: IbisDataType) -> TypeIs[ibis_dtypes.Struct]:
     return obj.is_struct()
 
 
@@ -130,7 +129,6 @@ def narwhals_to_native_dtype(
     dtype: DType | type[DType], version: Version
 ) -> IbisDataType:
     dtypes = version.dtypes
-    ibis_dtypes = ibis.expr.datatypes
 
     if isinstance_or_issubclass(dtype, dtypes.Decimal):  # pragma: no cover
         return ibis_dtypes.Decimal()
