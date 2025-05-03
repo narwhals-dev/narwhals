@@ -1,3 +1,65 @@
+"""[Protocols] defining conversion methods between representations.
+
+These come in 3 flavors and are [generic] to promote reuse.
+
+The following examples use the placeholder types `Narwhal` and `Other`:
+- `Narwhal`: some class written in `narwhals`.
+- `Other`: any other class, could be native, compliant, or a builtin.
+
+## `To<Other>`
+When we want to convert or unwrap a `Narwhal` into an `Other`,
+we provide an **instance** method:
+
+    ToOtherT_co = TypeVar("ToOtherT_co", covariant=True)
+
+    class ToOther(Protocol[ToOtherT_co]):
+        def to_other(self, *args: Any, **kwds: Any) -> ToOtherT_co: ...
+
+- `*args`, `**kwds` are defined to be *permissive* and allow a wider set of signatures when implementing.
+  - In most cases, they are unused.
+  - But come in handy when adapting an [upstream signature].
+- We use a  **covariant** `TypeVar`.
+
+## `From<Other>`
+But what if we have `Other` and want to do the reverse?
+
+Our `Narwhal` will need to provide a `@classmethod`:
+
+    FromOtherT_contra = TypeVar("FromOtherT_contra", contravariant=True)
+
+    class FromOther(Protocol[FromOtherT_contra]):
+        @classmethod
+        def from_other(cls, data: FromOtherT_contra, *args: Any, **kwds: Any) -> Self: ...
+
+- `*args`, `**kwds` serve a similar purpose as before, but are much more frequently used.
+- We've added a **required** [positional-only] parameter `data` which will always be passed `Other`.
+  - This removes the name from the contract of the protocol.
+  - Implementations are free to use something more descriptive for documentation purposes.
+- We use a  **contravariant** `TypeVar`.
+
+## `<Other>Convertible`
+Combining our `to_` and `from_` methods allows us to convert in both directions `Narwhal` <-> `Other`:
+
+    class OtherConvertible(
+        ToOther[ToOtherT_co],
+        FromOther[FromOtherT_contra],
+        Protocol[ToOtherT_co, FromOtherT_contra],
+    ): ...
+
+## See Also
+Variance of `TypeVar`(s) can be tricky to wrap your head around.
+
+To learn more see [moist], [dry], or [even drier] - depending on how deep you wanna go.
+
+[Protocols]: https://typing.python.org/en/latest/spec/protocol.html
+[generic]: https://typing.python.org/en/latest/spec/generics.html
+[upstream signature]: https://numpy.org/doc/stable/user/basics.interoperability.html#the-array-method
+[positional-only]: https://peps.python.org/pep-0570/
+[moist]: https://mypy.readthedocs.io/en/stable/generics.html#variance-of-generic-types
+[dry]: https://typing.python.org/en/latest/spec/generics.html#variance
+[even drier]: https://en.wikipedia.org/wiki/Covariance_and_contravariance_%28computer_science%29
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -156,7 +218,9 @@ class FromNative(Protocol[FromNativeT]):
     @classmethod
     def from_native(cls, data: FromNativeT, *args: Any, **kwds: Any) -> Self: ...
     @staticmethod
-    def _is_native(obj: FromNativeT | Any, /) -> TypeIs[FromNativeT]: ...
+    def _is_native(obj: FromNativeT | Any, /) -> TypeIs[FromNativeT]:
+        """Return `True` if `obj` can be passed to `from_native`."""
+        ...
 
 
 ToNarwhalsT_co = TypeVar("ToNarwhalsT_co", covariant=True)

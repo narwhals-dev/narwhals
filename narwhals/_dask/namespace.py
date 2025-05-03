@@ -5,6 +5,7 @@ from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Iterable
 from typing import Sequence
+from typing import cast
 
 import dask.dataframe as dd
 import pandas as pd
@@ -17,8 +18,6 @@ from narwhals._dask.dataframe import DaskLazyFrame
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
 from narwhals._dask.utils import align_series_full_broadcast
-from narwhals._dask.utils import name_preserving_div
-from narwhals._dask.utils import name_preserving_sum
 from narwhals._dask.utils import narwhals_to_native_dtype
 from narwhals._dask.utils import validate_comparand
 from narwhals._expression_parsing import combine_alias_output_names
@@ -184,12 +183,9 @@ class DaskNamespace(
             non_na = align_series_full_broadcast(
                 df, *(1 - s.isna() for s in expr_results)
             )
-            return [
-                name_preserving_div(
-                    reduce(name_preserving_sum, series),
-                    reduce(name_preserving_sum, non_na),
-                )
-            ]
+            num = reduce(lambda x, y: x + y, series)  # pyright: ignore[reportOperatorIssue]
+            den = reduce(lambda x, y: x + y, non_na)  # pyright: ignore[reportOperatorIssue]
+            return [cast("dx.Series", num / den)]  # pyright: ignore[reportOperatorIssue]
 
         return self._expr(
             call=func,
