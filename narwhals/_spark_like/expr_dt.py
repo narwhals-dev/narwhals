@@ -71,8 +71,9 @@ class SparkLikeExprDateTimeNamespace:
         if multiple != 1:
             msg = f"Only multiple 1 is currently supported for Spark-like.\nGot {multiple!s}."
             raise ValueError(msg)
+        format = UNITS_DICT[unit]
 
         def _truncate(_input: Column) -> Column:
-            return self._compliant_expr._F.date_trunc(UNITS_DICT[unit], _input)
+            return self._compliant_expr._F.date_trunc(format, _input)
 
         return self._compliant_expr._with_callable(_truncate)
