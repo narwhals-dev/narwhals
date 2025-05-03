@@ -273,7 +273,7 @@ def align_series_full_broadcast(*series: ArrowSeries) -> Sequence[ArrowSeries]:
     return reshaped
 
 
-def floordiv_compat(left: ArrayOrScalar, right: ArrayOrScalar) -> Any:
+def floordiv_compat(left: ArrayOrScalar, right: ArrayOrScalar, /) -> Any:
     # The following lines are adapted from pandas' pyarrow implementation.
     # Ref: https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L124-L154
 
