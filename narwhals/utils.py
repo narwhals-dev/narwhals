@@ -26,6 +26,7 @@ from typing import cast
 from typing import overload
 from warnings import warn
 
+from narwhals._enum import NoAutoEnum
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_dask_dataframe
@@ -246,34 +247,36 @@ class Version(Enum):
         return SeriesV1
 
 
-class Implementation(Enum):
+class Implementation(NoAutoEnum):
     """Implementation of native object (pandas, Polars, PyArrow, ...)."""
 
-    PANDAS = auto()
-    """Pandas implementation."""
-    MODIN = auto()
+    PANDAS = "pandas"
+    """pandas implementation."""
+    MODIN = "modin"
     """Modin implementation."""
-    CUDF = auto()
+    CUDF = "cudf"
     """cuDF implementation."""
-    PYARROW = auto()
+    PYARROW = "pyarrow"
     """PyArrow implementation."""
-    PYSPARK = auto()
+    PYSPARK = "pyspark"
     """PySpark implementation."""
-    POLARS = auto()
+    POLARS = "polars"
     """Polars implementation."""
-    DASK = auto()
+    DASK = "dask"
     """Dask implementation."""
-    DUCKDB = auto()
+    DUCKDB = "duckdb"
     """DuckDB implementation."""
-    IBIS = auto()
+    IBIS = "ibis"
     """Ibis implementation."""
-    SQLFRAME = auto()
+    SQLFRAME = "sqlframe"
     """SQLFrame implementation."""
-    PYSPARK_CONNECT = auto()
+    PYSPARK_CONNECT = "pyspark[connect]"
     """PySpark Connect implementation."""
-
-    UNKNOWN = auto()
+    UNKNOWN = "unknown"
     """Unknown implementation."""
+
+    def __str__(self) -> str:
+        return str(self.value)
 
     @classmethod
     def from_native_namespace(
@@ -314,20 +317,10 @@ class Implementation(Enum):
         Returns:
             Implementation.
         """
-        mapping = {
-            "pandas": Implementation.PANDAS,
-            "modin": Implementation.MODIN,
-            "cudf": Implementation.CUDF,
-            "pyarrow": Implementation.PYARROW,
-            "pyspark": Implementation.PYSPARK,
-            "polars": Implementation.POLARS,
-            "dask": Implementation.DASK,
-            "duckdb": Implementation.DUCKDB,
-            "ibis": Implementation.IBIS,
-            "sqlframe": Implementation.SQLFRAME,
-            "pyspark_connect": Implementation.PYSPARK_CONNECT,
-        }
-        return mapping.get(backend_name, Implementation.UNKNOWN)
+        try:
+            return cls(backend_name)
+        except ValueError:
+            return Implementation.UNKNOWN
 
     @classmethod
     def from_backend(
@@ -395,9 +388,9 @@ class Implementation(Enum):
             return sqlframe
 
         if self is Implementation.PYSPARK_CONNECT:  # pragma: no cover
-            import pyspark.sql  # ignore-banned-import
+            import pyspark.sql.connect  # ignore-banned-import
 
-            return pyspark.sql
+            return pyspark.sql.connect
 
         msg = "Not supported Implementation"  # pragma: no cover
         raise AssertionError(msg)
@@ -617,28 +610,6 @@ class Implementation(Enum):
             False
         """
         return self is Implementation.SQLFRAME  # pragma: no cover
-
-    @property
-    def _alias(self) -> LiteralString:
-        """Friendly name for errors.
-
-        Returns:
-            String.
-        """
-        mapping: dict[Implementation, LiteralString] = {
-            Implementation.PANDAS: "Pandas",
-            Implementation.POLARS: "Polars",
-            Implementation.DASK: "Dask",
-            Implementation.IBIS: "Ibis",
-            Implementation.MODIN: "Modin",
-            Implementation.CUDF: "cuDF",
-            Implementation.PYARROW: "PyArrow",
-            Implementation.PYSPARK: "PySpark",
-            Implementation.DUCKDB: "DuckDB",
-            Implementation.SQLFRAME: "SQLFrame",
-            Implementation.PYSPARK_CONNECT: "PySpark Connect",
-        }
-        return mapping[self]
 
     def _backend_version(self) -> tuple[int, ...]:
         native = self.to_native_namespace()
@@ -1740,7 +1711,7 @@ def _into_arrow_table(data: IntoArrowTable, context: _FullContext, /) -> pa.Tabl
         ns = ArrowNamespace(backend_version=parse_version(pa), version=version)
         return ns._dataframe.from_arrow(data, context=ns).native
     else:  # pragma: no cover
-        msg = f"PyArrow>=14.0.0 is required for `from_arrow` for object of type {type(data).__name__!r}."
+        msg = f"'pyarrow>=14.0.0' is required for `from_arrow` for object of type {type(data).__name__!r}."
         raise ModuleNotFoundError(msg)
 
 
@@ -1900,7 +1871,7 @@ class requires:  # noqa: N801
         >>> backend.really_complex_feature()
         Traceback (most recent call last):
             ...
-        NotImplementedError: `really_complex_feature` is only available in PyArrow>='9000.0.0', found version '20.0.0'.
+        NotImplementedError: `really_complex_feature` is only available in 'pyarrow>=9000.0.0', found version '20.0.0'.
     """
 
     _min_version: tuple[int, ...]
@@ -1930,10 +1901,10 @@ class requires:  # noqa: N801
         if instance._backend_version >= self._min_version:
             return
         method = self._wrapped_name
-        backend = instance._implementation._alias
+        backend = instance._implementation
         minimum = self._unparse_version(self._min_version)
         found = self._unparse_version(instance._backend_version)
-        msg = f"`{method}` is only available in {backend}>={minimum!r}, found version {found!r}."
+        msg = f"`{method}` is only available in '{backend}>={minimum}', found version {found!r}."
         if self._hint:
             msg = f"{msg}\n{self._hint}"
         raise NotImplementedError(msg)

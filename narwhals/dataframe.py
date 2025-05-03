@@ -479,7 +479,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
             >>> df = nw.from_native(df_native)
             >>> df.implementation
-            <Implementation.PANDAS: 1>
+            <Implementation.PANDAS: 'pandas'>
             >>> df.implementation.is_pandas()
             True
             >>> df.implementation.is_pandas_like()
@@ -513,10 +513,10 @@ class DataFrame(BaseFrame[DataFrameT]):
         try:
             import pyarrow as pa  # ignore-banned-import
         except ModuleNotFoundError as exc:  # pragma: no cover
-            msg = f"PyArrow>=14.0.0 is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
+            msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
             raise ModuleNotFoundError(msg) from exc
         if parse_version(pa) < (14, 0):  # pragma: no cover
-            msg = f"PyArrow>=14.0.0 is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
+            msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
             raise ModuleNotFoundError(msg) from None
         pa_table = self.to_arrow()
         return pa_table.__arrow_c_stream__(requested_schema=requested_schema)  # type: ignore[no-untyped-call]
@@ -2258,7 +2258,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import dask.dataframe as dd
             >>> lf_native = dd.from_dict({"a": [1, 2]}, npartitions=1)
             >>> nw.from_native(lf_native).implementation
-            <Implementation.DASK: 7>
+            <Implementation.DASK: 'dask'>
         """
         return self._compliant_frame._implementation
 
