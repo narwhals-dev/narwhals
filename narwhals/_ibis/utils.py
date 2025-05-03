@@ -6,12 +6,15 @@ from typing import Any
 from typing import Sequence
 
 import ibis
+import ibis.expr
+import ibis.expr.datatypes
 
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     import ibis.expr.types as ir
     from ibis.expr.datatypes import DataType as IbisDataType
+    from typing_extensions import TypeIs
 
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.expr import IbisExpr
@@ -39,7 +42,7 @@ class WindowInputs:
 def evaluate_exprs(df: IbisLazyFrame, /, *exprs: IbisExpr) -> list[tuple[str, ir.Value]]:
     native_results: list[tuple[str, ir.Value]] = []
     for expr in exprs:
-        native_series_list = expr._call(df)
+        native_series_list = expr(df)
         output_names = expr._evaluate_output_names(df)
         if expr._alias_output_names is not None:
             output_names = expr._alias_output_names(output_names)
@@ -51,7 +54,7 @@ def evaluate_exprs(df: IbisLazyFrame, /, *exprs: IbisExpr) -> list[tuple[str, ir
 
 
 @lru_cache(maxsize=16)
-def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
+def native_to_narwhals_dtype(ibis_dtype: IbisDataType, version: Version) -> DType:
     dtypes = version.dtypes
     if ibis_dtype.is_int64():
         return dtypes.Int64()
@@ -81,13 +84,13 @@ def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
         return dtypes.Date()
     if ibis_dtype.is_timestamp():
         return dtypes.Datetime()
-    if ibis_dtype.is_interval():
+    if is_interval(ibis_dtype):
         _time_unit = ibis_dtype.unit.value
         if _time_unit not in {"ns", "us", "ms", "s"}:  # pragma: no cover
             msg = f"Unsupported interval unit: {_time_unit}"
             raise NotImplementedError(msg)
         return dtypes.Duration(_time_unit)
-    if ibis_dtype.is_array():
+    if is_array(ibis_dtype):
         if ibis_dtype.length:
             return dtypes.Array(
                 native_to_narwhals_dtype(ibis_dtype.value_type, version),
@@ -95,14 +98,11 @@ def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
             )
         else:
             return dtypes.List(native_to_narwhals_dtype(ibis_dtype.value_type, version))
-    if ibis_dtype.is_struct():
+    if is_struct(ibis_dtype):
         return dtypes.Struct(
             [
-                dtypes.Field(
-                    ibis_dtype_name,
-                    native_to_narwhals_dtype(ibis_dtype_field, version),
-                )
-                for ibis_dtype_name, ibis_dtype_field in ibis_dtype.items()
+                dtypes.Field(name, native_to_narwhals_dtype(dtype, version))
+                for name, dtype in ibis_dtype.items()
             ]
         )
     if ibis_dtype.is_decimal():  # pragma: no cover
@@ -112,6 +112,18 @@ def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
     if ibis_dtype.is_binary():
         return dtypes.Binary()
     return dtypes.Unknown()  # pragma: no cover
+
+
+def is_interval(obj: IbisDataType) -> TypeIs[ibis.expr.datatypes.Interval]:
+    return obj.is_interval()
+
+
+def is_array(obj: IbisDataType) -> TypeIs[ibis.expr.datatypes.Array[Any]]:
+    return obj.is_array()
+
+
+def is_struct(obj: IbisDataType) -> TypeIs[ibis.expr.datatypes.Struct]:
+    return obj.is_struct()
 
 
 def narwhals_to_native_dtype(
