@@ -148,6 +148,14 @@ class EagerNamespace(
     def from_native(self, data: NativeFrameT, /) -> EagerDataFrameT: ...
     @overload
     def from_native(self, data: NativeSeriesT, /) -> EagerSeriesT: ...
+    # TODO @dangotbanned: Align `PandasLike` typing with `_namespace`, then drop this `@overload`
+    # - Using the guards there introduces `_NativeModin`, `_NativeCuDF`
+    # - These types haven't been integrated into the backend
+    # - Most of the `pandas` stuff is still untyped
+    @overload
+    def from_native(
+        self, data: NativeFrameT | NativeSeriesT | Any, /
+    ) -> EagerDataFrameT | EagerSeriesT: ...
     def from_native(
         self, data: NativeFrameT | NativeSeriesT | Any, /
     ) -> EagerDataFrameT | EagerSeriesT:
