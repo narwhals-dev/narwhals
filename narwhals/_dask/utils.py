@@ -159,11 +159,3 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> An
 
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
-
-
-def name_preserving_sum(s1: dx.Series, s2: dx.Series) -> dx.Series:
-    return (s1 + s2).rename(s1.name)  # pyright: ignore[reportOperatorIssue]
-
-
-def name_preserving_div(s1: dx.Series, s2: dx.Series) -> dx.Series:
-    return (s1 / s2).rename(s1.name)  # pyright: ignore[reportOperatorIssue]

@@ -247,7 +247,7 @@ class DuckDBLazyFrame(
         if parse_version(pd) >= (1, 0, 0):
             return self.native.df()
         else:  # pragma: no cover
-            msg = f"Conversion to pandas requires pandas>=1.0.0, found {pd.__version__}"
+            msg = f"Conversion to pandas requires 'pandas>=1.0.0', found {pd.__version__}"
             raise NotImplementedError(msg)
 
     def to_arrow(self) -> pa.Table:
@@ -292,7 +292,7 @@ class DuckDBLazyFrame(
 
         if native_how == "cross":
             if self._backend_version < (1, 1, 4):
-                msg = f"DuckDB>=1.1.4 is required for cross-join, found version: {self._backend_version}"
+                msg = f"'duckdb>=1.1.4' is required for cross-join, found version: {self._backend_version}"
                 raise NotImplementedError(msg)
             rel = self.native.set_alias("lhs").cross(other.native.set_alias("rhs"))
         else:

@@ -678,7 +678,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     ) -> Self:
         if strategy is not None:
             if self._backend_version < (1, 3):  # pragma: no cover
-                msg = f"`fill_null` with `strategy={strategy}` is only available in DuckDB>=1.3.0."
+                msg = f"`fill_null` with `strategy={strategy}` is only available in 'duckdb>=1.3.0'."
                 raise NotImplementedError(msg)
 
             def _fill_with_strategy(window_inputs: WindowInputs) -> duckdb.Expression:
