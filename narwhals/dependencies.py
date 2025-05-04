@@ -389,8 +389,8 @@ def is_narwhals_dataframe(
     """Check whether `df` is a Narwhals DataFrame.
 
     This is useful if you expect a user to pass in a Narwhals
-    DataFrame directly, and you want to catch both ``narwhals.DataFrame``
-    and ``narwhals.stable.v1.DataFrame`.
+    DataFrame directly, and you want to catch both `narwhals.DataFrame`
+    and `narwhals.stable.v1.DataFrame`.
     """
     from narwhals.dataframe import DataFrame
 
@@ -401,8 +401,8 @@ def is_narwhals_lazyframe(lf: Any | LazyFrame[FrameT]) -> TypeIs[LazyFrame[Frame
     """Check whether `lf` is a Narwhals LazyFrame.
 
     This is useful if you expect a user to pass in a Narwhals
-    LazyFrame directly, and you want to catch both ``narwhals.LazyFrame``
-    and ``narwhals.stable.v1.LazyFrame`.
+    LazyFrame directly, and you want to catch both `narwhals.LazyFrame`
+    and `narwhals.stable.v1.LazyFrame`.
     """
     from narwhals.dataframe import LazyFrame
 
@@ -413,8 +413,8 @@ def is_narwhals_series(ser: Any | Series[IntoSeriesT]) -> TypeIs[Series[IntoSeri
     """Check whether `ser` is a Narwhals Series.
 
     This is useful if you expect a user to pass in a Narwhals
-    Series directly, and you want to catch both ``narwhals.Series``
-    and ``narwhals.stable.v1.Series`.
+    Series directly, and you want to catch both `narwhals.Series`
+    and `narwhals.stable.v1.Series`.
     """
     from narwhals.series import Series
 
