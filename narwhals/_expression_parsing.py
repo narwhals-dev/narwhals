@@ -142,11 +142,14 @@ class ExpansionKind(Enum):
 
 
 class ScalarKind(Enum):
-    """Describe what kind of window the expression contains."""
+    """Describe what kind of scalar the expression is."""
 
     NONE = 0
+    "Not a scalar."
     LITERAL = 1
+    "nw.lit(1)"
     AGGREGATION = 2
+    "nw.col('a').mean()"
 
     def is_scalar_like(self) -> bool:
         return self is not ScalarKind.NONE
@@ -169,6 +172,8 @@ class ScalarKind(Enum):
             return ScalarKind.NONE
         return ScalarKind.LITERAL
 
+def is_scalar_like(obj: ScalarKind) -> TypeIs[Literal[ScalarKind.LITERAL, ScalarKind.AGGREGATION]]:
+    return obj.is_scalar_like()
 
 class ExprMetadata:
     __slots__ = (
@@ -198,6 +203,8 @@ class ExprMetadata:
         is_scalar_like: bool = False,
         is_literal: bool = False,
     ) -> None:
+        if is_literal:
+            assert is_scalar_like
         self.expansion_kind = expansion_kind
         self.last_node_is_orderable_window = last_node_is_orderable_window
         self.last_node_is_unorderable_window = last_node_is_unorderable_window
@@ -235,6 +242,20 @@ class ExprMetadata:
             preserves_length=False,
             is_scalar_like=True,
             is_literal=False,
+        )
+
+    def with_literal(self) -> ExprMetadata:
+        return ExprMetadata(
+            expansion_kind=self.expansion_kind,
+            last_node_is_orderable_window=False,
+            last_node_is_unorderable_window=False,
+            is_partitionable=True,
+            is_partitioned=self.is_partitioned,
+            is_orderable=False,
+            n_physical_order_dependent_ops=self.n_physical_order_dependent_ops,
+            preserves_length=False,
+            is_scalar_like=True,
+            is_literal=True,
         )
 
     def with_order_dependent_aggregation(self) -> ExprMetadata:
@@ -521,7 +542,7 @@ def apply_n_ary_operation(
     broadcast = any(not kind.is_scalar_like() for kind in kinds)
     compliant_exprs = (
         compliant_expr.broadcast(kind)
-        if broadcast and is_compliant_expr(compliant_expr) and kind.is_scalar_like()
+        if broadcast and is_compliant_expr(compliant_expr) and is_scalar_like(kind)
         else compliant_expr
         for compliant_expr, kind in zip(compliant_exprs, kinds)
     )

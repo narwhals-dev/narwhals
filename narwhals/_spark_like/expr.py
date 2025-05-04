@@ -9,7 +9,7 @@ from typing import Sequence
 from typing import cast
 
 from narwhals._compliant import LazyExpr
-from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import ScalarKind
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
@@ -69,8 +69,8 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def __call__(self, df: SparkLikeLazyFrame) -> Sequence[Column]:
         return self._call(df)
 
-    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
-        if kind is ExprKind.LITERAL:
+    def broadcast(self, kind: Literal[ScalarKind.AGGREGATION, ScalarKind.LITERAL]) -> Self:
+        if kind is ScalarKind.LITERAL:
             return self
 
         def func(df: SparkLikeLazyFrame) -> Sequence[Column]:

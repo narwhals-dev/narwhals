@@ -27,7 +27,7 @@ from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._arrow.utils import nulls_like
 from narwhals._arrow.utils import pad_series
 from narwhals._compliant import EagerSeries
-from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import ScalarKind
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
@@ -860,7 +860,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         )
         return counts.filter(
             plx.col(col_token)
-            == plx.col(col_token).max().broadcast(kind=ExprKind.AGGREGATION)
+            == plx.col(col_token).max().broadcast(kind=ScalarKind.AGGREGATION)
         ).get_column(self.name)
 
     def is_finite(self) -> Self:

@@ -143,7 +143,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
 
     def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
         assert self._metadata is not None  # noqa: S101
-        if partition_by and not is_scalar_like(self._metadata.kind):
+        if partition_by and not self._metadata.is_scalar_like:
             msg = "Only aggregation or literal operations are supported in grouped `over` context for PyArrow."
             raise NotImplementedError(msg)
 

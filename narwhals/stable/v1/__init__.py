@@ -15,7 +15,7 @@ import narwhals as nw
 from narwhals import dependencies
 from narwhals import exceptions
 from narwhals import selectors
-from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import ScalarKind
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
 from narwhals.dependencies import get_polars
@@ -352,7 +352,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).head(n),
-            self._metadata.with_kind_and_closeable_window(ExprKind.FILTRATION),
+            self._metadata.with_order_dependent_filtration(),
         )
 
     def tail(self, n: int = 10) -> Self:
@@ -366,7 +366,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).tail(n),
-            self._metadata.with_kind_and_closeable_window(ExprKind.FILTRATION),
+            self._metadata.with_order_dependent_filtration(),
         )
 
     def gather_every(self, n: int, offset: int = 0) -> Self:
@@ -381,7 +381,7 @@ class Expr(NwExpr):
         """
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
-            self._metadata.with_kind_and_closeable_window(ExprKind.FILTRATION),
+            self._metadata.with_order_dependent_filtration(),
         )
 
     def unique(self, *, maintain_order: bool | None = None) -> Self:
@@ -401,9 +401,8 @@ class Expr(NwExpr):
                 "You can safely remove this argument."
             )
             warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).unique(),
-            self._metadata.with_kind(ExprKind.FILTRATION),
+        return self._with_filtration(
+            lambda plx: self._to_compliant_expr(plx).unique()
         )
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
@@ -420,7 +419,7 @@ class Expr(NwExpr):
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             ),
-            self._metadata.with_uncloseable_window(),
+            self._metadata.with_unorderable_window()
         )
 
     def arg_true(self) -> Self:
@@ -429,9 +428,8 @@ class Expr(NwExpr):
         Returns:
             A new expression.
         """
-        return self.__class__(
+        return self._with_order_dependent_aggregation(
             lambda plx: self._to_compliant_expr(plx).arg_true(),
-            self._metadata.with_kind_and_closeable_window(ExprKind.FILTRATION),
         )
 
     def sample(
@@ -454,11 +452,10 @@ class Expr(NwExpr):
         Returns:
             A new expression.
         """
-        return self.__class__(
+        return self._with_filtration(
             lambda plx: self._to_compliant_expr(plx).sample(
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
-            ),
-            self._metadata.with_kind(ExprKind.FILTRATION),
+            )
         )
 
 

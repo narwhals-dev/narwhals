@@ -18,7 +18,7 @@ from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import align_series_full_broadcast
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._compliant import EagerDataFrame
-from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import ScalarKind
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
@@ -408,11 +408,11 @@ class ArrowDataFrame(
 
             return self._with_native(
                 self.with_columns(
-                    plx.lit(0, None).alias(key_token).broadcast(ExprKind.LITERAL)
+                    plx.lit(0, None).alias(key_token).broadcast(ScalarKind.LITERAL)
                 )
                 .native.join(
                     other.with_columns(
-                        plx.lit(0, None).alias(key_token).broadcast(ExprKind.LITERAL)
+                        plx.lit(0, None).alias(key_token).broadcast(ScalarKind.LITERAL)
                     ).native,
                     keys=key_token,
                     right_keys=key_token,

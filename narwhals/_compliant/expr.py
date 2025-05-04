@@ -59,7 +59,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import AliasNames
     from narwhals._compliant.typing import EvalNames
     from narwhals._compliant.typing import EvalSeries
-    from narwhals._expression_parsing import ExprKind
+    from narwhals._expression_parsing import ScalarKind
     from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
     from narwhals.typing import FillNullStrategy
@@ -257,7 +257,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def __le__(self, other: Any) -> Self: ...
     def __invert__(self) -> Self: ...
     def broadcast(
-        self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]
+        self, kind: Literal[ScalarKind.AGGREGATION, ScalarKind.LITERAL]
     ) -> Self: ...
     def _is_multi_output_unnamed(self) -> bool:
         """Return `True` for multi-output aggregations without names.
@@ -511,7 +511,7 @@ class EagerExpr(
             context=self,
         )
 
-    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
+    def broadcast(self, kind: Literal[ScalarKind.AGGREGATION, ScalarKind.LITERAL]) -> Self:
         # Mark the resulting Series with `_broadcast = True`.
         # Then, when extracting native objects, `extract_native` will
         # know what to do.
