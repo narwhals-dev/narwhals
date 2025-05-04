@@ -19,7 +19,7 @@ from narwhals.utils import requires
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._expression_parsing import ScalarKind
+    from narwhals._expression_parsing import ExprKind
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._polars.dataframe import Method
     from narwhals._polars.namespace import PolarsNamespace
@@ -51,7 +51,7 @@ class PolarsExpr:
     def _from_series(cls, series: Any) -> Self:
         return cls(series.native, series._version, series._backend_version)
 
-    def broadcast(self, kind: Literal[ScalarKind.AGGREGATION, ScalarKind.LITERAL]) -> Self:
+    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         # Let Polars do its thing.
         return self
 

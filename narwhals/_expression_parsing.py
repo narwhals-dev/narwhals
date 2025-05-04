@@ -15,7 +15,8 @@ from typing import cast
 
 from narwhals.dependencies import is_narwhals_series
 from narwhals.dependencies import is_numpy_array
-from narwhals.exceptions import InvalidOperationError, LengthChangingExprError
+from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import LengthChangingExprError
 from narwhals.exceptions import MultiOutputExpressionError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import is_compliant_expr
@@ -141,39 +142,55 @@ class ExpansionKind(Enum):
         raise AssertionError(msg)  # pragma: no cover
 
 
-class ScalarKind(Enum):
-    """Describe what kind of scalar the expression is."""
+class ExprKind(Enum):
+    """Describe which kind of expression we are dealing with."""
 
-    NONE = 0
-    "Not a scalar."
-    LITERAL = 1
-    "nw.lit(1)"
-    AGGREGATION = 2
-    "nw.col('a').mean()"
+    LITERAL = auto()
+    """e.g. `nw.lit(1)`"""
+
+    AGGREGATION = auto()
+    """e.g. `nw.col('a').mean()`"""
+
+    ELEMENTWISE = auto()
+    """preserves length, operates on each row independently"""
+
+    OTHER = auto()
+    """e.g. window functions."""
 
     def is_scalar_like(self) -> bool:
-        return self is not ScalarKind.NONE
+        return self in {ExprKind.LITERAL, ExprKind.AGGREGATION}
 
     @classmethod
     def from_into_expr(
         cls, obj: IntoExpr | NonNestedLiteral | _1DArray, *, str_as_lit: bool
-    ) -> ScalarKind:
+    ) -> ExprKind:
         if is_expr(obj):
-            if obj._metadata.is_literal:
-                return ScalarKind.LITERAL
-            if obj._metadata.is_scalar_like:
-                return ScalarKind.AGGREGATION
-            return ScalarKind.NONE
+            meta = obj._metadata
+            if meta.is_literal:
+                return ExprKind.LITERAL
+            if meta.is_scalar_like:
+                return ExprKind.AGGREGATION
+            if (
+                not meta.n_physical_order_dependent_ops
+                and meta.preserves_length
+                and not meta.is_partitioned
+            ):
+                return ExprKind.ELEMENTWISE
+            return ExprKind.OTHER
         if (
             is_narwhals_series(obj)
             or is_numpy_array(obj)
             or (isinstance(obj, str) and not str_as_lit)
         ):
-            return ScalarKind.NONE
-        return ScalarKind.LITERAL
+            return ExprKind.ELEMENTWISE
+        return ExprKind.LITERAL
 
-def is_scalar_like(obj: ScalarKind) -> TypeIs[Literal[ScalarKind.LITERAL, ScalarKind.AGGREGATION]]:
+
+def is_scalar_like(
+    obj: ExprKind,
+) -> TypeIs[Literal[ExprKind.LITERAL, ExprKind.AGGREGATION]]:
     return obj.is_scalar_like()
+
 
 class ExprMetadata:
     __slots__ = (
@@ -204,7 +221,7 @@ class ExprMetadata:
         is_literal: bool = False,
     ) -> None:
         if is_literal:
-            assert is_scalar_like
+            assert is_scalar_like  # noqa: S101  # debug assertion
         self.expansion_kind = expansion_kind
         self.last_node_is_orderable_window = last_node_is_orderable_window
         self.last_node_is_unorderable_window = last_node_is_unorderable_window
@@ -486,14 +503,13 @@ def combine_metadata(
                 result_is_not_literal = True
             if metadata.is_filtration:
                 n_filtrations += 1
-        
+
     if n_filtrations > 1:
         msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
         raise LengthChangingExprError(msg)
     if result_preserves_length and n_filtrations:
         msg = "Cannot combine length-changing expressions with length-preserving ones or aggregations"
         raise ShapeError(msg)
-
 
     return ExprMetadata(
         result_expansion_kind,
@@ -542,7 +558,7 @@ def apply_n_ary_operation(
         for comparand in comparands
     )
     kinds = [
-        ScalarKind.from_into_expr(comparand, str_as_lit=str_as_lit)
+        ExprKind.from_into_expr(comparand, str_as_lit=str_as_lit)
         for comparand in comparands
     ]
 

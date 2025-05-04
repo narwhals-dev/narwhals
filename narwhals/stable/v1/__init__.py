@@ -15,7 +15,6 @@ import narwhals as nw
 from narwhals import dependencies
 from narwhals import exceptions
 from narwhals import selectors
-from narwhals._expression_parsing import ScalarKind
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
 from narwhals.dependencies import get_polars
@@ -401,9 +400,7 @@ class Expr(NwExpr):
                 "You can safely remove this argument."
             )
             warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
-        return self._with_filtration(
-            lambda plx: self._to_compliant_expr(plx).unique()
-        )
+        return self._with_filtration(lambda plx: self._to_compliant_expr(plx).unique())
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """Sort this column. Place null values first.
@@ -419,7 +416,7 @@ class Expr(NwExpr):
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             ),
-            self._metadata.with_unorderable_window()
+            self._metadata.with_unorderable_window(),
         )
 
     def arg_true(self) -> Self:

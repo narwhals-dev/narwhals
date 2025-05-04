@@ -27,7 +27,7 @@ from narwhals._duckdb.utils import generate_partition_by_sql
 from narwhals._duckdb.utils import lit
 from narwhals._duckdb.utils import narwhals_to_native_dtype
 from narwhals._duckdb.utils import when
-from narwhals._expression_parsing import ScalarKind
+from narwhals._expression_parsing import ExprKind
 from narwhals.utils import Implementation
 from narwhals.utils import not_implemented
 from narwhals.utils import requires
@@ -157,8 +157,8 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
         return func
 
-    def broadcast(self, kind: Literal[ScalarKind.AGGREGATION, ScalarKind.LITERAL]) -> Self:
-        if kind is ScalarKind.LITERAL:
+    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
+        if kind is ExprKind.LITERAL:
             return self
         if self._backend_version < (1, 3):
             msg = "At least version 1.3 of DuckDB is required for binary operations between aggregates and columns."

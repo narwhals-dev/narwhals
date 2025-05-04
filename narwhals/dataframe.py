@@ -15,7 +15,7 @@ from typing import TypeVar
 from typing import overload
 from warnings import warn
 
-from narwhals._expression_parsing import ScalarKind
+from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import all_exprs_are_scalar_like
 from narwhals._expression_parsing import check_expressions_preserve_length
 from narwhals._expression_parsing import is_scalar_like
@@ -103,18 +103,18 @@ class BaseFrame(Generic[_FrameT]):
 
     def _flatten_and_extract(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> tuple[list[CompliantExprAny], list[ScalarKind]]:
+    ) -> tuple[list[CompliantExprAny], list[ExprKind]]:
         """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
         out_exprs = []
         out_kinds = []
         for expr in flatten(exprs):
             compliant_expr = self._extract_compliant(expr)
             out_exprs.append(compliant_expr)
-            out_kinds.append(ScalarKind.from_into_expr(expr, str_as_lit=False))
+            out_kinds.append(ExprKind.from_into_expr(expr, str_as_lit=False))
         for alias, expr in named_exprs.items():
             compliant_expr = self._extract_compliant(expr).alias(alias)
             out_exprs.append(compliant_expr)
-            out_kinds.append(ScalarKind.from_into_expr(expr, str_as_lit=False))
+            out_kinds.append(ExprKind.from_into_expr(expr, str_as_lit=False))
         return out_exprs, out_kinds
 
     @abstractmethod
@@ -1602,10 +1602,12 @@ class DataFrame(BaseFrame[DataFrameT]):
         ]
         expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
 
-        if not all(kind is ScalarKind.NONE for kind in kinds):
+        if not all(kind is ExprKind.ELEMENTWISE for kind in kinds):
             from narwhals.exceptions import ComputeError
 
-            msg = "Group by is not supported with keys that are not transformation expressions"
+            msg = (
+                "Group by is not supported with keys that are not elementwise expressions"
+            )
             raise ComputeError(msg)
 
         return GroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)
@@ -2904,10 +2906,12 @@ class LazyFrame(BaseFrame[FrameT]):
         _keys = [k if is_expr else col(k) for k, is_expr in zip(flat_keys, key_is_expr)]
         expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
 
-        if not all(kind is ScalarKind.NONE for kind in kinds):
+        if not all(kind is ExprKind.ELEMENTWISE for kind in kinds):
             from narwhals.exceptions import ComputeError
 
-            msg = "Group by is not supported with keys that are not transformation expressions"
+            msg = (
+                "Group by is not supported with keys that are not elementwise expressions"
+            )
             raise ComputeError(msg)
 
         return LazyGroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)

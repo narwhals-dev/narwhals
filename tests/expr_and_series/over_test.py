@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from narwhals.exceptions import InvalidOperationError
 import re
 from contextlib import nullcontext as does_not_raise
 
@@ -9,6 +8,7 @@ import pyarrow as pa
 import pytest
 
 import narwhals as nw
+from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import LengthChangingExprError
 from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION

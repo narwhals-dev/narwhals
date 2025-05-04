@@ -14,7 +14,7 @@ from narwhals._dask.expr_str import DaskExprStringNamespace
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import maybe_evaluate_expr
 from narwhals._dask.utils import narwhals_to_native_dtype
-from narwhals._expression_parsing import ScalarKind
+from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import EvalSeries
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.namespace import DaskNamespace
-    from narwhals._expression_parsing import ScalarKind
+    from narwhals._expression_parsing import ExprKind
     from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
     from narwhals.typing import FillNullStrategy
@@ -85,7 +85,7 @@ class DaskExpr(
 
         return DaskNamespace(backend_version=self._backend_version, version=self._version)
 
-    def broadcast(self, kind: Literal[ScalarKind.AGGREGATION, ScalarKind.LITERAL]) -> Self:
+    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             return [result[0] for result in self(df)]
 

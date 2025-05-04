@@ -121,8 +121,7 @@ class Expr:
             └──────────────────┘
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).alias(name),
-            self._metadata
+            lambda plx: self._to_compliant_expr(plx).alias(name), self._metadata
         )
 
     def pipe(

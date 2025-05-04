@@ -13,7 +13,7 @@ from typing import TypeVar
 from typing import cast
 
 from narwhals._expression_parsing import ExpansionKind
-from narwhals._expression_parsing import ScalarKind
+from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import check_expressions_preserve_length
@@ -1183,10 +1183,7 @@ def len_() -> Expr:
     def func(plx: Any) -> Any:
         return plx.len()
 
-    return Expr(
-        func,
-        ExprMetadata(ExpansionKind.SINGLE).with_aggregation()
-    )
+    return Expr(func, ExprMetadata(ExpansionKind.SINGLE).with_aggregation())
 
 
 def sum(*columns: str) -> Expr:
@@ -1507,7 +1504,7 @@ class When:
 
 class Then(Expr):
     def otherwise(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
-        kind = ScalarKind.from_into_expr(value, str_as_lit=False)
+        kind = ExprKind.from_into_expr(value, str_as_lit=False)
 
         def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
             compliant_expr = self._to_compliant_expr(plx)
@@ -1655,7 +1652,7 @@ def lit(value: NonNestedLiteral, dtype: DType | type[DType] | None = None) -> Ex
 
     return Expr(
         lambda plx: plx.lit(value, dtype),
-        ExprMetadata(ExpansionKind.SINGLE).with_literal()
+        ExprMetadata(ExpansionKind.SINGLE).with_literal(),
     )
 
 

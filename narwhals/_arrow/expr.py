@@ -9,7 +9,6 @@ import pyarrow.compute as pc
 from narwhals._arrow.series import ArrowSeries
 from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._expression_parsing import is_scalar_like
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
