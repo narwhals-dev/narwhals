@@ -1564,7 +1564,7 @@ class Expr:
             |2  4  y                    4|
             └────────────────────────────┘
         """
-        if not self._metadata.preserves_length and not self._metadata.is_scalar_like:
+        if self._metadata.is_filtration:
             msg = "`.over()` can not be used for expressions which change length."
             raise LengthChangingExprError(msg)
 
@@ -1575,26 +1575,10 @@ class Expr:
             raise ValueError(msg)
 
         current_meta = self._metadata
-        if (
-            current_meta.is_partitioned
-            and not current_meta.last_node_is_unorderable_window
-        ):
-            msg = "Nested `over` statements are not allowed."
-            raise InvalidOperationError(msg)
-        if flat_order_by and not current_meta.is_orderable:
-            msg = "Cannot use `order_by` in `over` on expression which isn't orderable."
-            raise InvalidOperationError(msg)
-        if not flat_partition_by and not current_meta.is_partitionable:
-            msg = "Cannot use `partition_by` in `over` on expression which isn't partitionable."
-            raise InvalidOperationError(msg)
-
         if flat_order_by:
             next_meta = current_meta.with_ordered_over_op()
         elif not flat_partition_by:  # pragma: no cover
             msg = "At least one of `partition_by` or `order_by` must be specified."
-            raise InvalidOperationError(msg)
-        elif not current_meta.is_partitionable:
-            msg = "Cannot use `partition_by` in `over` on expression which isn't partitionable."
             raise InvalidOperationError(msg)
         else:
             next_meta = current_meta.with_partitioned_over_op()

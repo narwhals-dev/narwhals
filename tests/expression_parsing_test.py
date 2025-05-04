@@ -72,3 +72,18 @@ def test_double_agg() -> None:
 def test_filter_aggregation() -> None:
     with pytest.raises(InvalidOperationError):
         nw.col("a").mean().drop_nulls()
+
+
+def test_rank_aggregation() -> None:
+    with pytest.raises(InvalidOperationError):
+        nw.col("a").mean().rank()
+
+
+def test_diff_aggregation() -> None:
+    with pytest.raises(InvalidOperationError):
+        nw.col("a").mean().diff()
+
+
+def test_invalid_over() -> None:
+    with pytest.raises(InvalidOperationError):
+        nw.col("a").fill_null(3).over("b")

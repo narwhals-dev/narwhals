@@ -342,9 +342,6 @@ class ExprMetadata:
         )
 
     def with_ordered_over_op(self) -> ExprMetadata:
-        if not self.preserves_length:
-            msg = "Can't apply `over(order_by=...)` window to expression which doesn't preserve length."
-            raise InvalidOperationError(msg)
         if not self.is_orderable:
             msg = "Cannot use `order_by` in `over` on expression which isn't orderable."
             raise InvalidOperationError(msg)
@@ -367,6 +364,9 @@ class ExprMetadata:
     def with_partitioned_over_op(self) -> ExprMetadata:
         if not self.is_partitionable:
             msg = "Cannot use `partition_by` in `over` on expression which isn't partitionable."
+            raise InvalidOperationError(msg)
+        if self.is_partitioned and not self.last_node_is_unorderable_window:
+            msg = "Cannot nest `over` statements."
             raise InvalidOperationError(msg)
         return ExprMetadata(
             expansion_kind=self.expansion_kind,
