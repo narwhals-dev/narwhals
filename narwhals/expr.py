@@ -7,9 +7,7 @@ from typing import Iterable
 from typing import Mapping
 from typing import Sequence
 
-from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
-from narwhals._expression_parsing import WindowKind
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import extract_compliant
