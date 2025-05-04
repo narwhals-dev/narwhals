@@ -10,9 +10,11 @@ from typing import cast
 import pyarrow as pa
 import pyarrow.compute as pc
 
+from narwhals._arrow.utils import UNITS_DICT
 from narwhals._arrow.utils import ArrowSeriesNamespace
 from narwhals._arrow.utils import floordiv_compat
 from narwhals._arrow.utils import lit
+from narwhals._duration import parse_interval_string
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -193,3 +195,9 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
         }
         factor = lit(unit_to_nano_factor[self.unit], type=pa.int64())
         return self.with_native(pc.multiply(self.native, factor).cast(pa.int64()))
+
+    def truncate(self, every: str) -> ArrowSeries:
+        multiple, unit = parse_interval_string(every)
+        return self.with_native(
+            pc.floor_temporal(self.native, multiple=multiple, unit=UNITS_DICT[unit])
+        )

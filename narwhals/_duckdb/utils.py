@@ -17,6 +17,18 @@ if TYPE_CHECKING:
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals.dtypes import DType
 
+UNITS_DICT = {
+    "y": "year",
+    "q": "quarter",
+    "mo": "month",
+    "d": "day",
+    "h": "hour",
+    "m": "minute",
+    "s": "second",
+    "ms": "millisecond",
+    "us": "microsecond",
+    "ns": "nanosecond",
+}
 
 col = duckdb.ColumnExpression
 """Alias for `duckdb.ColumnExpression`."""
