@@ -708,8 +708,10 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         """Return a timestamp in the given time unit.
 
         Arguments:
-            time_unit: {'ns', 'us', 'ms'}
-                Time unit.
+            time_unit: One of
+                - 'ns': nanosecond.
+                - 'us': microsecond.
+                - 'ms': millisecond.
 
         Returns:
             A new expression.
@@ -750,7 +752,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
 
         Arguments:
             every: Length of bucket. Must be of form `<multiple><unit>`,
-                where `multiple` is a positive integer and `unit` is one of:
+                where `multiple` is a positive integer and `unit` is one of
 
                 - 'ns': nanosecond.
                 - 'us': microsecond.
