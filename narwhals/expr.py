@@ -120,8 +120,9 @@ class Expr:
             |      1  15       |
             └──────────────────┘
         """
-        return self._with_elementwise_op(
-            lambda plx: self._to_compliant_expr(plx).alias(name)
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).alias(name),
+            self._metadata
         )
 
     def pipe(
