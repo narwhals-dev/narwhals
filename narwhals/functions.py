@@ -619,7 +619,7 @@ def get_level(
         obj: Dataframe or Series.
 
     Returns:
-        This can be one of:
+        This can be one of
 
             - 'full': full Narwhals API support
             - 'lazy': only lazy operations are supported. This excludes anything
