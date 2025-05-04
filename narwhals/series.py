@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 class Series(Generic[IntoSeriesT]):
     """Narwhals Series, backed by a native series.
 
-    !!! warning
+    Warning:
         This class is not meant to be instantiated directly - instead:
 
         - If the native object is a series from one of the supported backend (e.g.
@@ -2553,7 +2553,7 @@ class Series(Generic[IntoSeriesT]):
     ) -> DataFrame[Any]:
         """Bin values into buckets and count their occurrences.
 
-        !!! warning
+        Warning:
             This functionality is considered **unstable**. It may be changed at any point
             without it being considered a breaking change.
 
