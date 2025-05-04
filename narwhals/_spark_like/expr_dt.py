@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._duration import parse_interval_string
+from narwhals._spark_like.utils import UNITS_DICT
+
 if TYPE_CHECKING:
     from sqlframe.base.column import Column
 
@@ -62,3 +65,15 @@ class SparkLikeExprDateTimeNamespace:
             return (self._compliant_expr._F.dayofweek(_input) + 6) % 7
 
         return self._compliant_expr._with_callable(_weekday)
+
+    def truncate(self, every: str) -> SparkLikeExpr:
+        multiple, unit = parse_interval_string(every)
+        if multiple != 1:
+            msg = f"Only multiple 1 is currently supported for Spark-like.\nGot {multiple!s}."
+            raise ValueError(msg)
+        format = UNITS_DICT[unit]
+
+        def _truncate(_input: Column) -> Column:
+            return self._compliant_expr._F.date_trunc(format, _input)
+
+        return self._compliant_expr._with_callable(_truncate)

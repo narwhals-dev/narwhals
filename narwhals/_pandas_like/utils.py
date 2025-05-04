@@ -213,7 +213,7 @@ def rename(
 
 
 @functools.lru_cache(maxsize=16)
-def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> DType:
+def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> DType:  # noqa: C901, PLR0912
     dtype = str(native_dtype)
 
     dtypes = version.dtypes
@@ -385,7 +385,7 @@ def is_pyarrow_dtype_backend(dtype: Any, implementation: Implementation) -> bool
     return get_dtype_backend(dtype, implementation) == "pyarrow"
 
 
-def narwhals_to_native_dtype(  # noqa: PLR0915
+def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
     dtype: DType | type[DType],
     dtype_backend: DTypeBackend,
     implementation: Implementation,
@@ -596,7 +596,7 @@ def int_dtype_mapper(dtype: Any) -> str:
     return "int64"
 
 
-def calculate_timestamp_datetime(
+def calculate_timestamp_datetime(  # noqa: C901, PLR0912
     s: pd.Series[int], original_time_unit: str, time_unit: str
 ) -> pd.Series[int]:
     if original_time_unit == "ns":

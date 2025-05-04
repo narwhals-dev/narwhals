@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Iterator
+from typing import Mapping
 from typing import Sequence
 from typing import cast
 
@@ -25,7 +26,9 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import ArrayOrScalarT1
     from narwhals._arrow.typing import ArrayOrScalarT2
     from narwhals._arrow.typing import ChunkedArrayAny
+    from narwhals._arrow.typing import NativeIntervalUnit
     from narwhals._arrow.typing import ScalarAny
+    from narwhals._duration import IntervalUnit
     from narwhals.dtypes import DType
     from narwhals.typing import PythonLiteral
     from narwhals.utils import Version
@@ -59,6 +62,19 @@ else:
     from pyarrow.types import is_list
     from pyarrow.types import is_timestamp
 
+UNITS_DICT: Mapping[IntervalUnit, NativeIntervalUnit] = {
+    "y": "year",
+    "q": "quarter",
+    "mo": "month",
+    "d": "day",
+    "h": "hour",
+    "m": "minute",
+    "s": "second",
+    "ms": "millisecond",
+    "us": "microsecond",
+    "ns": "nanosecond",
+}
+
 lit = pa.scalar
 """Alias for `pyarrow.scalar`."""
 
@@ -89,7 +105,7 @@ def nulls_like(n: int, series: ArrowSeries) -> ArrayAny:
 
 
 @lru_cache(maxsize=16)
-def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
+def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:  # noqa: C901, PLR0912
     dtypes = version.dtypes
     if pa.types.is_int64(dtype):
         return dtypes.Int64()
@@ -154,7 +170,7 @@ def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
     return dtypes.Unknown()  # pragma: no cover
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa.DataType:
+def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa.DataType:  # noqa: C901, PLR0912
     dtypes = version.dtypes
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         msg = "Casting to Decimal is not supported yet."
@@ -273,7 +289,7 @@ def align_series_full_broadcast(*series: ArrowSeries) -> Sequence[ArrowSeries]:
     return reshaped
 
 
-def floordiv_compat(left: ArrayOrScalar, right: ArrayOrScalar) -> Any:
+def floordiv_compat(left: ArrayOrScalar, right: ArrayOrScalar, /) -> Any:
     # The following lines are adapted from pandas' pyarrow implementation.
     # Ref: https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L124-L154
 
