@@ -182,6 +182,7 @@ class ExprMetadata:
         "n_physical_order_dependent_ops",
         "preserves_length",
         "is_scalar_like",
+        "is_literal",
     )
 
     def __init__(
@@ -196,6 +197,7 @@ class ExprMetadata:
         n_physical_order_dependent_ops: int = 0,
         preserves_length: bool = True,
         is_scalar_like: bool = False,
+        is_literal: bool = False,
     ) -> None:
         self.expansion_kind = expansion_kind
         self.last_node_is_orderable_window = last_node_is_orderable_window
@@ -206,6 +208,7 @@ class ExprMetadata:
         self.n_physical_order_dependent_ops = n_physical_order_dependent_ops
         self.preserves_length = preserves_length
         self.is_scalar_like = is_scalar_like
+        self.is_literal = is_literal
 
     def __init_subclass__(cls, /, *args: Any, **kwds: Any) -> Never:  # pragma: no cover
         msg = f"Cannot subclass {cls.__name__!r}"
@@ -215,6 +218,9 @@ class ExprMetadata:
     #     return f"ExprMetadata(kind: {self._kind}, window_kind: {self._window_kind}, expansion_kind: {self._expansion_kind})"
 
     def with_aggregation(self) -> ExprMetadata:
+        if self.is_scalar_like:
+            msg = "Can't apply aggregations to scalar-like expressions."
+            raise InvalidOperationError(msg)
         return ExprMetadata(
             expansion_kind=self.expansion_kind,
             last_node_is_orderable_window=False,
@@ -225,6 +231,7 @@ class ExprMetadata:
             n_physical_order_dependent_ops=self.n_physical_order_dependent_ops,
             preserves_length=False,
             is_scalar_like=True,
+            is_literal=False,
         )
 
     def with_order_dependent_aggregation(self) -> ExprMetadata:
@@ -238,6 +245,7 @@ class ExprMetadata:
             n_physical_order_dependent_ops=self.n_physical_order_dependent_ops + 1,
             preserves_length=False,
             is_scalar_like=True,
+            is_literal=False,
         )
 
     def with_elementwise_op(self) -> ExprMetadata:
@@ -251,6 +259,7 @@ class ExprMetadata:
             n_physical_order_dependent_ops=self.n_physical_order_dependent_ops,
             preserves_length=self.preserves_length,
             is_scalar_like=self.is_scalar_like,
+            is_literal=False,
         )
 
     def with_unorderable_window(self) -> ExprMetadata:
@@ -267,6 +276,7 @@ class ExprMetadata:
             n_physical_order_dependent_ops=self.n_physical_order_dependent_ops,
             preserves_length=self.preserves_length,
             is_scalar_like=False,
+            is_literal=False,
         )
 
     def with_orderable_window(self) -> ExprMetadata:
@@ -284,6 +294,7 @@ class ExprMetadata:
             n_physical_order_dependent_ops=self.n_physical_order_dependent_ops + 1,
             preserves_length=self.preserves_length,
             is_scalar_like=False,
+            is_literal=False,
         )
 
     def with_ordered_over_op(self) -> ExprMetadata:
@@ -303,6 +314,7 @@ class ExprMetadata:
             n_physical_order_dependent_ops=self.n_physical_order_dependent_ops - 1,
             preserves_length=True,
             is_scalar_like=False,
+            is_literal=False,
         )
 
     def with_partitioned_over_op(self) -> ExprMetadata:
@@ -322,6 +334,7 @@ class ExprMetadata:
             n_physical_order_dependent_ops=self.n_physical_order_dependent_ops - 1,
             preserves_length=True,
             is_scalar_like=False,
+            is_literal=False,
         )
 
     def with_filtration(self) -> ExprMetadata:
@@ -338,6 +351,7 @@ class ExprMetadata:
             n_physical_order_dependent_ops=self.n_physical_order_dependent_ops,
             preserves_length=False,
             is_scalar_like=False,
+            is_literal=False,
         )
 
     def with_order_dependent_filtration(self) -> ExprMetadata:
@@ -354,52 +368,8 @@ class ExprMetadata:
             n_physical_order_dependent_ops=True,
             preserves_length=False,
             is_scalar_like=False,
+            is_literal=False,
         )
-
-    # def with_kind(self, kind: ExprKind, /) -> ExprMetadata:
-    #     """Change metadata kind, leaving all other attributes the same."""
-    #     return ExprMetadata(
-    #         kind,
-    #         window_kind=self._window_kind,
-    #         expansion_kind=self._expansion_kind,
-    #     )
-
-    # def with_uncloseable_window(self) -> ExprMetadata:
-    #     """Add uncloseable window, leaving other attributes the same."""
-    #     if self._window_kind is WindowKind.CLOSED:  # pragma: no cover
-    #         msg = "Unreachable code, please report a bug."
-    #         raise AssertionError(msg)
-    #     return ExprMetadata(
-    #         self.kind,
-    #         window_kind=WindowKind.UNCLOSEABLE,
-    #         expansion_kind=self._expansion_kind,
-    #     )
-
-    # def with_kind_and_closeable_window(self, kind: ExprKind, /) -> ExprMetadata:
-    #     """Change metadata kind and add closeable window.
-
-    #     If we already have an uncloseable window, the window stays uncloseable.
-    #     """
-    #     if self._window_kind is WindowKind.NONE:
-    #         window_kind = WindowKind.CLOSEABLE
-    #     elif self._window_kind is WindowKind.CLOSED:  # pragma: no cover
-    #         msg = "Unreachable code, please report a bug."
-    #         raise AssertionError(msg)
-    #     else:
-    #         window_kind = WindowKind.UNCLOSEABLE
-    #     return ExprMetadata(
-    #         kind,
-    #         window_kind=window_kind,
-    #         expansion_kind=self._expansion_kind,
-    #     )
-
-    # def with_kind_and_uncloseable_window(self, kind: ExprKind, /) -> ExprMetadata:
-    #     """Change metadata kind and set window kind to uncloseable."""
-    #     return ExprMetadata(
-    #         kind,
-    #         window_kind=WindowKind.UNCLOSEABLE,
-    #         expansion_kind=self._expansion_kind,
-    #     )
 
     @staticmethod
     def selector_single() -> ExprMetadata:
@@ -474,8 +444,7 @@ def combine_metadata(  # noqa: PLR0915
                         result_expansion_kind = expansion_kind
                     else:
                         result_expansion_kind = result_expansion_kind & expansion_kind
-            kind = metadata.kind
-            if kind is ExprKind.AGGREGATION:
+            if metadata.
                 has_aggregations = True
             elif kind is ExprKind.LITERAL:
                 has_literals = True
