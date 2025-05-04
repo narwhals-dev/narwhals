@@ -14,6 +14,19 @@ if TYPE_CHECKING:
 __all__ = ["IntervalUnit", "parse_interval_string"]
 
 IntervalUnit: TypeAlias = Literal["ns", "us", "ms", "s", "m", "h", "d", "mo", "q", "y"]
+"""A Polars duration string interval unit.
+
+- 'ns': nanosecond.
+- 'us': microsecond.
+- 'ms': millisecond.
+- 's': second.
+- 'm': minute.
+- 'h': hour.
+- 'd': day.
+- 'mo': month.
+- 'q': quarter.
+- 'y': year.
+"""
 
 PATTERN_INTERVAL: re.Pattern[str] = re.compile(
     r"^(?P<multiple>\d+)(?P<unit>ns|us|ms|mo|m|s|h|d|q|y)$"
