@@ -66,19 +66,11 @@ class Expr:
         self._metadata = metadata
 
     def _with_callable(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
-        # Instantiate new Expr keeping metadata unchanged, unless
-        # it's a WINDOW, in which case make it a TRANSFORM.
-        if self._metadata.kind.is_window():
-            # We had a window function, but it wasn't immediately followed by
-            # `over(order_by=...)` - it missed its chance, it's now forever uncloseable.
-            return self.__class__(
-                to_compliant_expr,
-                self._metadata.with_kind_and_uncloseable_window(ExprKind.TRANSFORM),
-            )
+        # Instantiate new Expr keeping metadata unchanged.
         return self.__class__(to_compliant_expr, self._metadata)
 
     def _with_aggregation(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
-        if self._metadata.kind.is_scalar_like():
+        if self._metadata.is_scalar_like:
             msg = "Aggregations can't be applied to scalar-like expressions."
             raise InvalidOperationError(msg)
         return self.__class__(

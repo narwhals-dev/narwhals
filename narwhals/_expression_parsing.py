@@ -240,110 +240,134 @@ class WindowKind(Enum):
 
 
 class ExprMetadata:
-    __slots__ = ("_expansion_kind", "_kind", "_window_kind")
+    __slots__ = (
+        "expansion_kind",
+        "last_node_is_window",
+        "last_node_is_partitionable_window",
+        "is_partitionable",
+        "is_partitioned",
+        "is_orderable",
+        "is_physically_ordered",
+        "preserves_length",
+        "is_scalar_like",
+    )
 
     def __init__(
         self,
-        kind: ExprKind,
-        /,
-        *,
-        window_kind: WindowKind,
         expansion_kind: ExpansionKind,
+        *,
+        last_node_is_window: bool=False,
+        last_node_is_partitionable_window: bool=False,
+        is_partitionable: bool=False,
+        is_partitioned: bool=False,
+        is_orderable: bool=False,
+        is_physically_ordered: bool=False,
+        preserves_length: bool=True,
+        is_scalar_like: bool=False,
     ) -> None:
-        self._kind: ExprKind = kind
-        self._window_kind = window_kind
-        self._expansion_kind = expansion_kind
+        self.expansion_kind = expansion_kind
+        self.last_node_is_window = last_node_is_window
+        self.last_node_is_partitionable_window = last_node_is_partitionable_window
+        self.is_partitionable = is_partitionable
+        self.is_partitioned = is_partitioned
+        self.is_orderable = is_orderable
+        self.is_physically_ordered = is_physically_ordered
+        self.preserves_length = preserves_length
+        self.is_scalar_like = is_scalar_like
 
     def __init_subclass__(cls, /, *args: Any, **kwds: Any) -> Never:  # pragma: no cover
         msg = f"Cannot subclass {cls.__name__!r}"
         raise TypeError(msg)
 
-    def __repr__(self) -> str:
-        return f"ExprMetadata(kind: {self._kind}, window_kind: {self._window_kind}, expansion_kind: {self._expansion_kind})"
+    # def __repr__(self) -> str:
+    #     return f"ExprMetadata(kind: {self._kind}, window_kind: {self._window_kind}, expansion_kind: {self._expansion_kind})"
 
-    @property
-    def kind(self) -> ExprKind:
-        return self._kind
-
-    @property
-    def window_kind(self) -> WindowKind:
-        return self._window_kind
-
-    @property
-    def expansion_kind(self) -> ExpansionKind:
-        return self._expansion_kind
-
-    def with_kind(self, kind: ExprKind, /) -> ExprMetadata:
-        """Change metadata kind, leaving all other attributes the same."""
+    def with_aggregation(self) -> ExprMetadata:
         return ExprMetadata(
-            kind,
-            window_kind=self._window_kind,
-            expansion_kind=self._expansion_kind,
+            expansion_kind = self.expansion_kind,
+            last_node_is_window = False,
+            last_node_is_partitionable_window = False,
+            is_partitionable = True,
+            is_partitioned = self.is_partitioned,
+            is_orderable = False,
+            is_physically_ordered = self.is_physically_ordered,
+            preserves_length = False,
+            is_scalar_like = True,
         )
 
-    def with_uncloseable_window(self) -> ExprMetadata:
-        """Add uncloseable window, leaving other attributes the same."""
-        if self._window_kind is WindowKind.CLOSED:  # pragma: no cover
-            msg = "Unreachable code, please report a bug."
-            raise AssertionError(msg)
+    def with_elementwise(self) -> ExprMetadata:
         return ExprMetadata(
-            self.kind,
-            window_kind=WindowKind.UNCLOSEABLE,
-            expansion_kind=self._expansion_kind,
+            expansion_kind = self.expansion_kind,
+            last_node_is_window = False,
+            last_node_is_partitionable_window = False,
+            is_partitionable = self.is_partitionable,
+            is_partitioned = self.is_partitioned,
+            is_orderable = self.is_orderable,
+            is_physically_ordered = self.is_physically_ordered,
+            preserves_length = self.preserves_length,
+            is_scalar_like = self.is_scalar_like,
         )
 
-    def with_kind_and_closeable_window(self, kind: ExprKind, /) -> ExprMetadata:
-        """Change metadata kind and add closeable window.
 
-        If we already have an uncloseable window, the window stays uncloseable.
-        """
-        if self._window_kind is WindowKind.NONE:
-            window_kind = WindowKind.CLOSEABLE
-        elif self._window_kind is WindowKind.CLOSED:  # pragma: no cover
-            msg = "Unreachable code, please report a bug."
-            raise AssertionError(msg)
-        else:
-            window_kind = WindowKind.UNCLOSEABLE
-        return ExprMetadata(
-            kind,
-            window_kind=window_kind,
-            expansion_kind=self._expansion_kind,
-        )
+    # def with_kind(self, kind: ExprKind, /) -> ExprMetadata:
+    #     """Change metadata kind, leaving all other attributes the same."""
+    #     return ExprMetadata(
+    #         kind,
+    #         window_kind=self._window_kind,
+    #         expansion_kind=self._expansion_kind,
+    #     )
 
-    def with_kind_and_uncloseable_window(self, kind: ExprKind, /) -> ExprMetadata:
-        """Change metadata kind and set window kind to uncloseable."""
-        return ExprMetadata(
-            kind,
-            window_kind=WindowKind.UNCLOSEABLE,
-            expansion_kind=self._expansion_kind,
-        )
+    # def with_uncloseable_window(self) -> ExprMetadata:
+    #     """Add uncloseable window, leaving other attributes the same."""
+    #     if self._window_kind is WindowKind.CLOSED:  # pragma: no cover
+    #         msg = "Unreachable code, please report a bug."
+    #         raise AssertionError(msg)
+    #     return ExprMetadata(
+    #         self.kind,
+    #         window_kind=WindowKind.UNCLOSEABLE,
+    #         expansion_kind=self._expansion_kind,
+    #     )
+
+    # def with_kind_and_closeable_window(self, kind: ExprKind, /) -> ExprMetadata:
+    #     """Change metadata kind and add closeable window.
+
+    #     If we already have an uncloseable window, the window stays uncloseable.
+    #     """
+    #     if self._window_kind is WindowKind.NONE:
+    #         window_kind = WindowKind.CLOSEABLE
+    #     elif self._window_kind is WindowKind.CLOSED:  # pragma: no cover
+    #         msg = "Unreachable code, please report a bug."
+    #         raise AssertionError(msg)
+    #     else:
+    #         window_kind = WindowKind.UNCLOSEABLE
+    #     return ExprMetadata(
+    #         kind,
+    #         window_kind=window_kind,
+    #         expansion_kind=self._expansion_kind,
+    #     )
+
+    # def with_kind_and_uncloseable_window(self, kind: ExprKind, /) -> ExprMetadata:
+    #     """Change metadata kind and set window kind to uncloseable."""
+    #     return ExprMetadata(
+    #         kind,
+    #         window_kind=WindowKind.UNCLOSEABLE,
+    #         expansion_kind=self._expansion_kind,
+    #     )
 
     @staticmethod
     def selector_single() -> ExprMetadata:
         # e.g. `nw.col('a')`, `nw.nth(0)`
-        return ExprMetadata(
-            ExprKind.TRANSFORM,
-            window_kind=WindowKind.NONE,
-            expansion_kind=ExpansionKind.SINGLE,
-        )
+        return ExprMetadata(ExpansionKind.SINGLE)
 
     @staticmethod
     def selector_multi_named() -> ExprMetadata:
         # e.g. `nw.col('a', 'b')`
-        return ExprMetadata(
-            ExprKind.TRANSFORM,
-            window_kind=WindowKind.NONE,
-            expansion_kind=ExpansionKind.MULTI_NAMED,
-        )
+        return ExprMetadata(ExpansionKind.MULTI_NAMED)
 
     @staticmethod
     def selector_multi_unnamed() -> ExprMetadata:
         # e.g. `nw.all()`
-        return ExprMetadata(
-            ExprKind.TRANSFORM,
-            window_kind=WindowKind.NONE,
-            expansion_kind=ExpansionKind.MULTI_UNNAMED,
-        )
+        return ExprMetadata(ExpansionKind.MULTI_UNNAMED)
 
     @classmethod
     def from_binary_op(cls, lhs: Expr, rhs: IntoExpr, /) -> ExprMetadata:
@@ -358,6 +382,7 @@ class ExprMetadata:
         return combine_metadata(
             *exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
         )
+    
 
 
 def combine_metadata(  # noqa: PLR0915
