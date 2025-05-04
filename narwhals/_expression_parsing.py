@@ -242,7 +242,7 @@ class ExprMetadata:
         return not self.preserves_length and not self.is_scalar_like
 
     def __repr__(self) -> str:
-        return "ExprMetadata"
+        return f"ExprMetadata(n_physical_order_dependent_ops: {self.n_physical_order_dependent_ops}, last_node_is_orderable: {self.last_node_is_orderable_window})"
 
     def with_aggregation(self) -> ExprMetadata:
         if self.is_scalar_like:
@@ -276,6 +276,9 @@ class ExprMetadata:
         )
 
     def with_order_dependent_aggregation(self) -> ExprMetadata:
+        if self.is_scalar_like:
+            msg = "Can't apply aggregations to scalar-like expressions."
+            raise InvalidOperationError(msg)
         return ExprMetadata(
             expansion_kind=self.expansion_kind,
             last_node_is_orderable_window=True,
@@ -345,6 +348,9 @@ class ExprMetadata:
         if not self.is_orderable:
             msg = "Cannot use `order_by` in `over` on expression which isn't orderable."
             raise InvalidOperationError(msg)
+        n_physical_order_dependent_ops = self.n_physical_order_dependent_ops
+        if self.last_node_is_orderable_window:
+            n_physical_order_dependent_ops -= 1
         return ExprMetadata(
             expansion_kind=self.expansion_kind,
             last_node_is_orderable_window=False,
@@ -352,7 +358,7 @@ class ExprMetadata:
             is_partitionable=False,
             is_partitioned=True,
             is_orderable=False,
-            n_physical_order_dependent_ops=self.n_physical_order_dependent_ops - 1,
+            n_physical_order_dependent_ops=n_physical_order_dependent_ops,
             preserves_length=True,
             is_scalar_like=False,
             is_literal=False,
