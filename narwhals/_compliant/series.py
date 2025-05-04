@@ -21,8 +21,11 @@ from narwhals._compliant.typing import NativeSeriesT_co
 from narwhals._translate import FromIterable
 from narwhals._translate import FromNative
 from narwhals._translate import NumpyConvertible
+from narwhals._translate import ToNarwhals
 from narwhals.utils import _StoresCompliant
 from narwhals.utils import _StoresNative
+from narwhals.utils import is_compliant_series
+from narwhals.utils import is_sized_multi_index_selector
 from narwhals.utils import unstable
 
 if TYPE_CHECKING:
@@ -30,24 +33,28 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
+    import pyarrow as pa
     from typing_extensions import Self
 
-    from narwhals._arrow.typing import ArrowArray
     from narwhals._compliant.dataframe import CompliantDataFrame
     from narwhals._compliant.expr import CompliantExpr
     from narwhals._compliant.expr import EagerExpr
     from narwhals._compliant.namespace import CompliantNamespace
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals.dtypes import DType
+    from narwhals.series import Series
     from narwhals.typing import ClosedInterval
     from narwhals.typing import FillNullStrategy
     from narwhals.typing import Into1DArray
+    from narwhals.typing import MultiIndexSelector
     from narwhals.typing import NonNestedLiteral
     from narwhals.typing import NumericLiteral
     from narwhals.typing import RankMethod
     from narwhals.typing import RollingInterpolationMethod
+    from narwhals.typing import SizedMultiIndexSelector
     from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
+    from narwhals.typing import _SliceIndex
     from narwhals.utils import Implementation
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -59,6 +66,7 @@ class CompliantSeries(
     NumpyConvertible["_1DArray", "Into1DArray"],
     FromIterable,
     FromNative[NativeSeriesT],
+    ToNarwhals["Series[NativeSeriesT]"],
     Protocol[NativeSeriesT],
 ):
     _implementation: Implementation
@@ -78,7 +86,7 @@ class CompliantSeries(
     def __native_namespace__(self) -> ModuleType: ...
     def __array__(self, dtype: Any, *, copy: bool | None) -> _1DArray: ...
     def __contains__(self, other: Any) -> bool: ...
-    def __getitem__(self, item: Any) -> Any: ...
+    def __getitem__(self, item: MultiIndexSelector[Self]) -> Any: ...
     def __iter__(self) -> Iterator[Any]: ...
     def __len__(self) -> int:
         return len(self.native)
@@ -100,6 +108,8 @@ class CompliantSeries(
         name: str = "",
         dtype: DType | type[DType] | None = None,
     ) -> Self: ...
+    def to_narwhals(self) -> Series[NativeSeriesT]:
+        return self._version.series(self, level="full")
 
     # Operators
     def __add__(self, other: Any) -> Self: ...
@@ -170,12 +180,12 @@ class CompliantSeries(
     def gather_every(self, n: int, offset: int) -> Self: ...
     @unstable
     def hist(
-        self: Self,
+        self,
         bins: list[float | int] | None,
         *,
         bin_count: int | None,
         include_breakpoint: bool,
-    ) -> CompliantDataFrame[Self, Any, Any]: ...
+    ) -> CompliantDataFrame[Self, Any, Any, Any]: ...
     def head(self, n: int) -> Self: ...
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: ClosedInterval
@@ -186,7 +196,7 @@ class CompliantSeries(
     def is_last_distinct(self) -> Self: ...
     def is_nan(self) -> Self: ...
     def is_null(self) -> Self: ...
-    def is_sorted(self: Self, *, descending: bool) -> bool: ...
+    def is_sorted(self, *, descending: bool) -> bool: ...
     def is_unique(self) -> Self: ...
     def item(self, index: int | None) -> Any: ...
     def len(self) -> int: ...
@@ -254,11 +264,11 @@ class CompliantSeries(
     def std(self, *, ddof: int) -> float: ...
     def sum(self) -> float: ...
     def tail(self, n: int) -> Self: ...
-    def to_arrow(self) -> ArrowArray: ...
+    def to_arrow(self) -> pa.Array[Any]: ...
     def to_dummies(
         self, *, separator: str, drop_first: bool
-    ) -> CompliantDataFrame[Self, Any, Any]: ...
-    def to_frame(self) -> CompliantDataFrame[Self, Any, Any]: ...
+    ) -> CompliantDataFrame[Self, Any, Any, Any]: ...
+    def to_frame(self) -> CompliantDataFrame[Self, Any, Any, Any]: ...
     def to_list(self) -> list[Any]: ...
     def to_pandas(self) -> pd.Series[Any]: ...
     def to_polars(self) -> pl.Series: ...
@@ -270,7 +280,7 @@ class CompliantSeries(
         parallel: bool,
         name: str | None,
         normalize: bool,
-    ) -> CompliantDataFrame[Self, Any, Any]: ...
+    ) -> CompliantDataFrame[Self, Any, Any, Any]: ...
     def var(self, *, ddof: int) -> float: ...
     def zip_with(self, mask: Any, other: Any) -> Self: ...
 
@@ -302,7 +312,7 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
         """Return a new `CompliantSeries`, wrapping the native `series`.
 
         In cases when operations are known to not affect whether a result should
-        be broadcast, we can pass `preverse_broadcast=True`.
+        be broadcast, we can pass `preserve_broadcast=True`.
         Set this with care - it should only be set for unary expressions which don't
         change length or order, such as `.alias` or `.fill_null`. If in doubt, don't
         set it, you probably don't need it.
@@ -315,6 +325,19 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
 
     def _to_expr(self) -> EagerExpr[Any, Any]:
         return self.__narwhals_namespace__()._expr._from_series(self)  # type: ignore[no-any-return]
+
+    def _gather(self, rows: SizedMultiIndexSelector[NativeSeriesT]) -> Self: ...
+    def _gather_slice(self, rows: _SliceIndex | range) -> Self: ...
+    def __getitem__(self, item: MultiIndexSelector[Self]) -> Self:
+        if isinstance(item, (slice, range)):
+            return self._gather_slice(item)
+        elif is_compliant_series(item):
+            return self._gather(item.native)
+        elif is_sized_multi_index_selector(item):
+            return self._gather(item)
+        else:  # pragma: no cover
+            msg = f"Unreachable code, got unexpected type: {type(item)}"
+            raise AssertionError(msg)
 
     @property
     def str(self) -> EagerSeriesStringNamespace[Self, NativeSeriesT]: ...

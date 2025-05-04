@@ -22,13 +22,10 @@ from narwhals._compliant import EagerWhen
 from narwhals._expression_parsing import combine_alias_output_names
 from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.utils import Implementation
-from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
-    from narwhals._arrow.typing import ArrayOrScalarAny
-    from narwhals._arrow.typing import ArrowChunkedArray
+    from narwhals._arrow.typing import ArrayOrScalar
+    from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._arrow.typing import Incomplete
     from narwhals.dtypes import DType
     from narwhals.typing import NonNestedLiteral
@@ -36,9 +33,7 @@ if TYPE_CHECKING:
 
 
 class ArrowNamespace(
-    EagerNamespace[
-        ArrowDataFrame, ArrowSeries, ArrowExpr, "pa.Table", "ArrowChunkedArray"
-    ]
+    EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, "pa.Table", "ChunkedArrayAny"]
 ):
     @property
     def _dataframe(self) -> type[ArrowDataFrame]:
@@ -53,14 +48,12 @@ class ArrowNamespace(
         return ArrowSeries
 
     # --- not in spec ---
-    def __init__(
-        self: Self, *, backend_version: tuple[int, ...], version: Version
-    ) -> None:
+    def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
         self._backend_version = backend_version
         self._implementation = Implementation.PYARROW
         self._version = version
 
-    def len(self: Self) -> ArrowExpr:
+    def len(self) -> ArrowExpr:
         # coverage bug? this is definitely hit
         return self._expr(  # pragma: no cover
             lambda df: [
@@ -95,7 +88,7 @@ class ArrowNamespace(
             version=self._version,
         )
 
-    def all_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
+    def all_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = chain.from_iterable(expr(df) for expr in exprs)
             return [reduce(operator.and_, align_series_full_broadcast(*series))]
@@ -109,7 +102,7 @@ class ArrowNamespace(
             context=self,
         )
 
-    def any_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
+    def any_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = chain.from_iterable(expr(df) for expr in exprs)
             return [reduce(operator.or_, align_series_full_broadcast(*series))]
@@ -123,7 +116,7 @@ class ArrowNamespace(
             context=self,
         )
 
-    def sum_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
+    def sum_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             it = chain.from_iterable(expr(df) for expr in exprs)
             series = (s.fill_null(0, strategy=None, limit=None) for s in it)
@@ -138,8 +131,8 @@ class ArrowNamespace(
             context=self,
         )
 
-    def mean_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
-        dtypes = import_dtypes_module(self._version)
+    def mean_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
+        int_64 = self._version.dtypes.Int64()
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             expr_results = list(chain.from_iterable(expr(df) for expr in exprs))
@@ -147,7 +140,7 @@ class ArrowNamespace(
                 *(s.fill_null(0, strategy=None, limit=None) for s in expr_results)
             )
             non_na = align_series_full_broadcast(
-                *(1 - s.is_null().cast(dtypes.Int64()) for s in expr_results)
+                *(1 - s.is_null().cast(int_64) for s in expr_results)
             )
             return [reduce(operator.add, series) / reduce(operator.add, non_na)]
 
@@ -160,7 +153,7 @@ class ArrowNamespace(
             context=self,
         )
 
-    def min_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
+    def min_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             init_series, *series = list(chain.from_iterable(expr(df) for expr in exprs))
             init_series, *series = align_series_full_broadcast(init_series, *series)
@@ -185,7 +178,7 @@ class ArrowNamespace(
             context=self,
         )
 
-    def max_horizontal(self: Self, *exprs: ArrowExpr) -> ArrowExpr:
+    def max_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             init_series, *series = list(chain.from_iterable(expr(df) for expr in exprs))
             init_series, *series = align_series_full_broadcast(init_series, *series)
@@ -210,11 +203,10 @@ class ArrowNamespace(
             context=self,
         )
 
-    # NOTE: Stub issue fixed in https://github.com/zen-xu/pyarrow-stubs/pull/203
     def _concat_diagonal(self, dfs: Sequence[pa.Table], /) -> pa.Table:
         if self._backend_version >= (14,):
-            return pa.concat_tables(dfs, promote_options="default")  # type: ignore[arg-type]
-        return pa.concat_tables(dfs, promote=True)  # type: ignore[arg-type] # pragma: no cover
+            return pa.concat_tables(dfs, promote_options="default")
+        return pa.concat_tables(dfs, promote=True)  # pragma: no cover
 
     def _concat_horizontal(self, dfs: Sequence[pa.Table], /) -> pa.Table:
         names = list(chain.from_iterable(df.column_names for df in dfs))
@@ -232,17 +224,17 @@ class ArrowNamespace(
                     f"   - dataframe {i}: {cols_current}\n"
                 )
                 raise TypeError(msg)
-        return pa.concat_tables(dfs)  # type: ignore[arg-type]
+        return pa.concat_tables(dfs)
 
     @property
-    def selectors(self: Self) -> ArrowSelectorNamespace:
+    def selectors(self) -> ArrowSelectorNamespace:
         return ArrowSelectorNamespace.from_namespace(self)
 
-    def when(self: Self, predicate: ArrowExpr) -> ArrowWhen:
+    def when(self, predicate: ArrowExpr) -> ArrowWhen:
         return ArrowWhen.from_expr(predicate, context=self)
 
     def concat_str(
-        self: Self,
+        self,
         *exprs: ArrowExpr,
         separator: str,
         ignore_nulls: bool,
@@ -279,18 +271,18 @@ class ArrowNamespace(
         )
 
 
-class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ArrowChunkedArray"]):
+class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ChunkedArrayAny"]):
     @property
     def _then(self) -> type[ArrowThen]:
         return ArrowThen
 
     def _if_then_else(
         self,
-        when: ArrowChunkedArray,
-        then: ArrowChunkedArray,
-        otherwise: ArrayOrScalarAny | NonNestedLiteral,
+        when: ChunkedArrayAny,
+        then: ChunkedArrayAny,
+        otherwise: ArrayOrScalar | NonNestedLiteral,
         /,
-    ) -> ArrowChunkedArray:
+    ) -> ChunkedArrayAny:
         otherwise = pa.nulls(len(when), then.type) if otherwise is None else otherwise
         return pc.if_else(when, then, otherwise)
 

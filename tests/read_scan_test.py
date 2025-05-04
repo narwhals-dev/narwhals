@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
 from typing import Mapping
+from typing import cast
 
 import pandas as pd
 import pytest
@@ -73,21 +75,27 @@ def test_scan_csv(
             "header": True,
         }
     elif "pyspark" in str(constructor):
-        from pyspark.sql import SparkSession
+        if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
+            from pyspark.sql.connect.session import SparkSession
+        else:
+            from pyspark.sql import SparkSession
 
-        kwargs = {
-            "session": (
-                SparkSession.builder.appName("unit-tests")  # pyright: ignore[reportAttributeAccessIssue]
-                .master("local[1]")
-                .config("spark.ui.enabled", "false")
-                .config("spark.default.parallelism", "1")
-                .config("spark.sql.shuffle.partitions", "2")
-                .config("spark.sql.session.timeZone", "UTC")
-                .getOrCreate()
-            ),
-            "inferSchema": True,
-            "header": True,
-        }
+        builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
+        session = (
+            (
+                builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
+                if is_spark_connect
+                else builder.master("local[1]").config("spark.ui.enabled", "false")
+            )
+            .config("spark.default.parallelism", "1")
+            .config("spark.sql.shuffle.partitions", "2")
+            # common timezone for all tests environments
+            .config("spark.sql.session.timeZone", "UTC")
+            .getOrCreate()
+        )
+
+        kwargs = {"session": session, "inferSchema": True, "header": True}
+
     else:
         kwargs = {}
 
@@ -148,21 +156,28 @@ def test_scan_parquet(
         from sqlframe.duckdb import DuckDBSession
 
         kwargs = {"session": DuckDBSession(), "inferSchema": True}
-    elif "pyspark" in str(constructor):
-        from pyspark.sql import SparkSession
 
-        kwargs = {
-            "session": (
-                SparkSession.builder.appName("unit-tests")  # pyright: ignore[reportAttributeAccessIssue]
-                .master("local[1]")
-                .config("spark.ui.enabled", "false")
-                .config("spark.default.parallelism", "1")
-                .config("spark.sql.shuffle.partitions", "2")
-                .config("spark.sql.session.timeZone", "UTC")
-                .getOrCreate()
-            ),
-            "inferSchema": True,
-        }
+    elif "pyspark" in str(constructor):
+        if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
+            from pyspark.sql.connect.session import SparkSession
+        else:
+            from pyspark.sql import SparkSession
+
+        builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
+        session = (
+            (
+                builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
+                if is_spark_connect
+                else builder.master("local[1]").config("spark.ui.enabled", "false")
+            )
+            .config("spark.default.parallelism", "1")
+            .config("spark.sql.shuffle.partitions", "2")
+            # common timezone for all tests environments
+            .config("spark.sql.session.timeZone", "UTC")
+            .getOrCreate()
+        )
+
+        kwargs = {"session": session, "inferSchema": True, "header": True}
     else:
         kwargs = {}
     df_pl = pl.DataFrame(data)

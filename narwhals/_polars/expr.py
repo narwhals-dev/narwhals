@@ -13,6 +13,7 @@ from narwhals._polars.utils import extract_args_kwargs
 from narwhals._polars.utils import extract_native
 from narwhals._polars.utils import narwhals_to_native_dtype
 from narwhals.utils import Implementation
+from narwhals.utils import requires
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -27,7 +28,7 @@ if TYPE_CHECKING:
 
 class PolarsExpr:
     def __init__(
-        self: Self, expr: pl.Expr, version: Version, backend_version: tuple[int, ...]
+        self, expr: pl.Expr, version: Version, backend_version: tuple[int, ...]
     ) -> None:
         self._native_expr = expr
         self._implementation = Implementation.POLARS
@@ -39,10 +40,10 @@ class PolarsExpr:
     def native(self) -> pl.Expr:
         return self._native_expr
 
-    def __repr__(self: Self) -> str:  # pragma: no cover
+    def __repr__(self) -> str:  # pragma: no cover
         return "PolarsExpr"
 
-    def _with_native(self: Self, expr: pl.Expr) -> Self:
+    def _with_native(self, expr: pl.Expr) -> Self:
         return self.__class__(expr, self._version, self._backend_version)
 
     @classmethod
@@ -53,7 +54,7 @@ class PolarsExpr:
         # Let Polars do its thing.
         return self
 
-    def __getattr__(self: Self, attr: str) -> Any:
+    def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
             pos, kwds = extract_args_kwargs(args, kwargs)
             return self._with_native(getattr(self.native, attr)(*pos, **kwds))
@@ -69,7 +70,7 @@ class PolarsExpr:
         return self._with_native(self.native.cast(dtype_pl))
 
     def ewm_mean(
-        self: Self,
+        self,
         *,
         com: float | None,
         span: float | None,
@@ -92,7 +93,7 @@ class PolarsExpr:
             native = pl.when(~self.native.is_null()).then(native).otherwise(None)
         return self._with_native(native)
 
-    def is_nan(self: Self) -> Self:
+    def is_nan(self) -> Self:
         if self._backend_version >= (1, 18):
             native = self.native.is_nan()
         else:  # pragma: no cover
@@ -109,40 +110,32 @@ class PolarsExpr:
             native = self.native.over(partition_by or pl.lit(1), order_by=order_by)
         return self._with_native(native)
 
+    @requires.backend_version((1,))
     def rolling_var(
-        self: Self, window_size: int, *, min_samples: int, center: bool, ddof: int
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
-        if self._backend_version < (1,):  # pragma: no cover
-            msg = "`rolling_var` not implemented for polars older than 1.0"
-            raise NotImplementedError(msg)
         kwds = self._renamed_min_periods(min_samples)
         native = self.native.rolling_var(
             window_size=window_size, center=center, ddof=ddof, **kwds
         )
         return self._with_native(native)
 
+    @requires.backend_version((1,))
     def rolling_std(
-        self: Self, window_size: int, *, min_samples: int, center: bool, ddof: int
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
-        if self._backend_version < (1,):  # pragma: no cover
-            msg = "`rolling_std` not implemented for polars older than 1.0"
-            raise NotImplementedError(msg)
         kwds = self._renamed_min_periods(min_samples)
         native = self.native.rolling_std(
             window_size=window_size, center=center, ddof=ddof, **kwds
         )
         return self._with_native(native)
 
-    def rolling_sum(
-        self: Self, window_size: int, *, min_samples: int, center: bool
-    ) -> Self:
+    def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         kwds = self._renamed_min_periods(min_samples)
         native = self.native.rolling_sum(window_size=window_size, center=center, **kwds)
         return self._with_native(native)
 
-    def rolling_mean(
-        self: Self, window_size: int, *, min_samples: int, center: bool
-    ) -> Self:
+    def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         kwds = self._renamed_min_periods(min_samples)
         native = self.native.rolling_mean(window_size=window_size, center=center, **kwds)
         return self._with_native(native)
@@ -158,6 +151,7 @@ class PolarsExpr:
         native = self.native.map_batches(function, return_dtype_pl)
         return self._with_native(native)
 
+    @requires.backend_version((1,))
     def replace_strict(
         self,
         old: Sequence[Any] | Mapping[Any, Any],
@@ -165,9 +159,6 @@ class PolarsExpr:
         *,
         return_dtype: DType | type[DType] | None,
     ) -> Self:
-        if self._backend_version < (1,):
-            msg = f"`replace_strict` is only available in Polars>=1.0, found version {self._backend_version}"
-            raise NotImplementedError(msg)
         return_dtype_pl = (
             narwhals_to_native_dtype(return_dtype, self._version, self._backend_version)
             if return_dtype
@@ -176,55 +167,55 @@ class PolarsExpr:
         native = self.native.replace_strict(old, new, return_dtype=return_dtype_pl)
         return self._with_native(native)
 
-    def __eq__(self: Self, other: object) -> Self:  # type: ignore[override]
+    def __eq__(self, other: object) -> Self:  # type: ignore[override]
         return self._with_native(self.native.__eq__(extract_native(other)))  # type: ignore[operator]
 
-    def __ne__(self: Self, other: object) -> Self:  # type: ignore[override]
+    def __ne__(self, other: object) -> Self:  # type: ignore[override]
         return self._with_native(self.native.__ne__(extract_native(other)))  # type: ignore[operator]
 
-    def __ge__(self: Self, other: Any) -> Self:
+    def __ge__(self, other: Any) -> Self:
         return self._with_native(self.native.__ge__(extract_native(other)))
 
-    def __gt__(self: Self, other: Any) -> Self:
+    def __gt__(self, other: Any) -> Self:
         return self._with_native(self.native.__gt__(extract_native(other)))
 
-    def __le__(self: Self, other: Any) -> Self:
+    def __le__(self, other: Any) -> Self:
         return self._with_native(self.native.__le__(extract_native(other)))
 
-    def __lt__(self: Self, other: Any) -> Self:
+    def __lt__(self, other: Any) -> Self:
         return self._with_native(self.native.__lt__(extract_native(other)))
 
-    def __and__(self: Self, other: PolarsExpr | bool | Any) -> Self:
+    def __and__(self, other: PolarsExpr | bool | Any) -> Self:
         return self._with_native(self.native.__and__(extract_native(other)))  # type: ignore[operator]
 
-    def __or__(self: Self, other: PolarsExpr | bool | Any) -> Self:
+    def __or__(self, other: PolarsExpr | bool | Any) -> Self:
         return self._with_native(self.native.__or__(extract_native(other)))  # type: ignore[operator]
 
-    def __add__(self: Self, other: Any) -> Self:
+    def __add__(self, other: Any) -> Self:
         return self._with_native(self.native.__add__(extract_native(other)))
 
-    def __sub__(self: Self, other: Any) -> Self:
+    def __sub__(self, other: Any) -> Self:
         return self._with_native(self.native.__sub__(extract_native(other)))
 
-    def __mul__(self: Self, other: Any) -> Self:
+    def __mul__(self, other: Any) -> Self:
         return self._with_native(self.native.__mul__(extract_native(other)))
 
-    def __pow__(self: Self, other: Any) -> Self:
+    def __pow__(self, other: Any) -> Self:
         return self._with_native(self.native.__pow__(extract_native(other)))
 
-    def __truediv__(self: Self, other: Any) -> Self:
+    def __truediv__(self, other: Any) -> Self:
         return self._with_native(self.native.__truediv__(extract_native(other)))
 
-    def __floordiv__(self: Self, other: Any) -> Self:
+    def __floordiv__(self, other: Any) -> Self:
         return self._with_native(self.native.__floordiv__(extract_native(other)))
 
-    def __mod__(self: Self, other: Any) -> Self:
+    def __mod__(self, other: Any) -> Self:
         return self._with_native(self.native.__mod__(extract_native(other)))
 
-    def __invert__(self: Self) -> Self:
+    def __invert__(self) -> Self:
         return self._with_native(self.native.__invert__())
 
-    def cum_count(self: Self, *, reverse: bool) -> Self:
+    def cum_count(self, *, reverse: bool) -> Self:
         if self._backend_version < (0, 20, 4):
             result = (~self.native.is_null()).cum_sum(reverse=reverse)
         else:
@@ -240,31 +231,32 @@ class PolarsExpr:
         )
 
     @property
-    def dt(self: Self) -> PolarsExprDateTimeNamespace:
+    def dt(self) -> PolarsExprDateTimeNamespace:
         return PolarsExprDateTimeNamespace(self)
 
     @property
-    def str(self: Self) -> PolarsExprStringNamespace:
+    def str(self) -> PolarsExprStringNamespace:
         return PolarsExprStringNamespace(self)
 
     @property
-    def cat(self: Self) -> PolarsExprCatNamespace:
+    def cat(self) -> PolarsExprCatNamespace:
         return PolarsExprCatNamespace(self)
 
     @property
-    def name(self: Self) -> PolarsExprNameNamespace:
+    def name(self) -> PolarsExprNameNamespace:
         return PolarsExprNameNamespace(self)
 
     @property
-    def list(self: Self) -> PolarsExprListNamespace:
+    def list(self) -> PolarsExprListNamespace:
         return PolarsExprListNamespace(self)
 
     @property
-    def struct(self: Self) -> PolarsExprStructNamespace:
+    def struct(self) -> PolarsExprStructNamespace:
         return PolarsExprStructNamespace(self)
 
     # CompliantExpr
     _alias_output_names: Any
+    _evaluate_aliases: Any
     _evaluate_output_names: Any
     _is_multi_output_unnamed: Any
     __call__: Any
@@ -319,10 +311,10 @@ class PolarsExpr:
 
 
 class PolarsExprDateTimeNamespace:
-    def __init__(self: Self, expr: PolarsExpr) -> None:
+    def __init__(self, expr: PolarsExpr) -> None:
         self._compliant_expr = expr
 
-    def __getattr__(self: Self, attr: str) -> Callable[[Any], PolarsExpr]:
+    def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:
         def func(*args: Any, **kwargs: Any) -> PolarsExpr:
             pos, kwds = extract_args_kwargs(args, kwargs)
             return self._compliant_expr._with_native(
@@ -333,10 +325,10 @@ class PolarsExprDateTimeNamespace:
 
 
 class PolarsExprStringNamespace:
-    def __init__(self: Self, expr: PolarsExpr) -> None:
+    def __init__(self, expr: PolarsExpr) -> None:
         self._compliant_expr = expr
 
-    def __getattr__(self: Self, attr: str) -> Callable[[Any], PolarsExpr]:
+    def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:
         def func(*args: Any, **kwargs: Any) -> PolarsExpr:
             pos, kwds = extract_args_kwargs(args, kwargs)
             return self._compliant_expr._with_native(
@@ -347,10 +339,10 @@ class PolarsExprStringNamespace:
 
 
 class PolarsExprCatNamespace:
-    def __init__(self: Self, expr: PolarsExpr) -> None:
+    def __init__(self, expr: PolarsExpr) -> None:
         self._compliant_expr = expr
 
-    def __getattr__(self: Self, attr: str) -> Callable[[Any], PolarsExpr]:
+    def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:
         def func(*args: Any, **kwargs: Any) -> PolarsExpr:
             pos, kwds = extract_args_kwargs(args, kwargs)
             return self._compliant_expr._with_native(
@@ -361,10 +353,10 @@ class PolarsExprCatNamespace:
 
 
 class PolarsExprNameNamespace:
-    def __init__(self: Self, expr: PolarsExpr) -> None:
+    def __init__(self, expr: PolarsExpr) -> None:
         self._compliant_expr = expr
 
-    def __getattr__(self: Self, attr: str) -> Callable[[Any], PolarsExpr]:
+    def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:
         def func(*args: Any, **kwargs: Any) -> PolarsExpr:
             pos, kwds = extract_args_kwargs(args, kwargs)
             return self._compliant_expr._with_native(
@@ -375,10 +367,10 @@ class PolarsExprNameNamespace:
 
 
 class PolarsExprListNamespace:
-    def __init__(self: Self, expr: PolarsExpr) -> None:
+    def __init__(self, expr: PolarsExpr) -> None:
         self._expr = expr
 
-    def len(self: Self) -> PolarsExpr:
+    def len(self) -> PolarsExpr:
         native_expr = self._expr._native_expr
         native_result = native_expr.list.len()
 
@@ -392,9 +384,7 @@ class PolarsExprListNamespace:
         return self._expr._with_native(native_result)
 
     # TODO(FBruzzesi): Remove `pragma: no cover` once other namespace methods are added
-    def __getattr__(
-        self: Self, attr: str
-    ) -> Callable[[Any], PolarsExpr]:  # pragma: no cover
+    def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:  # pragma: no cover
         def func(*args: Any, **kwargs: Any) -> PolarsExpr:
             pos, kwds = extract_args_kwargs(args, kwargs)
             return self._expr._with_native(
@@ -405,12 +395,10 @@ class PolarsExprListNamespace:
 
 
 class PolarsExprStructNamespace:
-    def __init__(self: Self, expr: PolarsExpr) -> None:
+    def __init__(self, expr: PolarsExpr) -> None:
         self._expr = expr
 
-    def __getattr__(
-        self: Self, attr: str
-    ) -> Callable[[Any], PolarsExpr]:  # pragma: no cover
+    def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:  # pragma: no cover
         def func(*args: Any, **kwargs: Any) -> PolarsExpr:
             pos, kwds = extract_args_kwargs(args, kwargs)
             return self._expr._with_native(

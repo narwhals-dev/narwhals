@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from narwhals.typing import FrameT
+    from tpch._typing import FrameT
 
 
 def query(
@@ -46,7 +46,7 @@ def query(
         result_q2.group_by("p_partkey")
         .agg(nw.col("ps_supplycost").min().alias("ps_supplycost"))
         .join(
-            result_q2,
+            result_q2,  # pyright: ignore[reportArgumentType]
             left_on=["p_partkey", "ps_supplycost"],
             right_on=["p_partkey", "ps_supplycost"],
         )

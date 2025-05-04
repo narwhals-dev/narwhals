@@ -127,8 +127,9 @@ class LazyNamespace(
     def from_native(self, data: NativeFrameT_co | Any, /) -> CompliantLazyFrameT:
         if self._lazyframe._is_native(data):
             return self._lazyframe.from_native(data, context=self)
-        msg = f"Unsupported type: {type(data).__name__!r}"
-        raise TypeError(msg)
+        else:  # pragma: no cover
+            msg = f"Unsupported type: {type(data).__name__!r}"
+            raise TypeError(msg)
 
 
 class EagerNamespace(
@@ -147,6 +148,14 @@ class EagerNamespace(
     def from_native(self, data: NativeFrameT, /) -> EagerDataFrameT: ...
     @overload
     def from_native(self, data: NativeSeriesT, /) -> EagerSeriesT: ...
+    # TODO @dangotbanned: Align `PandasLike` typing with `_namespace`, then drop this `@overload`
+    # - Using the guards there introduces `_NativeModin`, `_NativeCuDF`
+    # - These types haven't been integrated into the backend
+    # - Most of the `pandas` stuff is still untyped
+    @overload
+    def from_native(
+        self, data: NativeFrameT | NativeSeriesT | Any, /
+    ) -> EagerDataFrameT | EagerSeriesT: ...
     def from_native(
         self, data: NativeFrameT | NativeSeriesT | Any, /
     ) -> EagerDataFrameT | EagerSeriesT:
@@ -198,6 +207,6 @@ class EagerNamespace(
             native = self._concat_vertical(dfs)
         elif how == "diagonal":
             native = self._concat_diagonal(dfs)
-        else:
+        else:  # pragma: no cover
             raise NotImplementedError
         return self._dataframe.from_native(native, context=self)

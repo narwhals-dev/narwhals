@@ -20,6 +20,8 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals.typing import FillNullStrategy
+    from narwhals.typing import NonNestedLiteral
     from narwhals.typing import RankMethod
     from narwhals.utils import Implementation
     from narwhals.utils import Version
@@ -41,6 +43,7 @@ WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
     "shift": "shift",
     "rank": "rank",
     "diff": "diff",
+    "fill_null": "fillna",
 }
 
 
@@ -72,7 +75,7 @@ def window_kwargs_to_pandas_equivalent(
 
 class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
     def __init__(
-        self: Self,
+        self,
         call: EvalSeries[PandasLikeDataFrame, PandasLikeSeries],
         *,
         depth: int,
@@ -95,7 +98,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         self._call_kwargs = call_kwargs or {}
         self._metadata: ExprMetadata | None = None
 
-    def __narwhals_namespace__(self: Self) -> PandasLikeNamespace:
+    def __narwhals_namespace__(self) -> PandasLikeNamespace:
         from narwhals._pandas_like.namespace import PandasLikeNamespace
 
         return PandasLikeNamespace(
@@ -171,7 +174,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         )
 
     def ewm_mean(
-        self: Self,
+        self,
         *,
         com: float | None,
         span: float | None,
@@ -192,14 +195,14 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             ignore_nulls=ignore_nulls,
         )
 
-    def cum_sum(self: Self, *, reverse: bool) -> Self:
+    def cum_sum(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_sum", call_kwargs={"reverse": reverse})
 
-    def shift(self: Self, n: int) -> Self:
+    def shift(self, n: int) -> Self:
         return self._reuse_series("shift", call_kwargs={"n": n})
 
     def over(  # noqa: PLR0915
-        self: Self,
+        self,
         partition_by: Sequence[str],
         order_by: Sequence[str] | None,
     ) -> Self:
@@ -264,7 +267,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     sorting_indices = df.get_column(token)
                 elif reverse:
                     columns = list(set(partition_by).union(output_names))
-                    df = df.simple_select(*columns)[::-1]
+                    df = df.simple_select(*columns)._gather_slice(slice(None, None, -1))
                 grouped = df._native_frame.groupby(partition_by)
                 if function_name.startswith("rolling"):
                     rolling = grouped[list(output_names)].rolling(**pandas_kwargs)
@@ -275,6 +278,17 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         )
                     else:
                         res_native = getattr(rolling, pandas_function_name)()
+                elif function_name == "fill_null":
+                    df_grouped = grouped[list(output_names)]
+                    if self._call_kwargs["strategy"] == "forward":
+                        res_native = df_grouped.ffill(limit=self._call_kwargs["limit"])
+                    elif self._call_kwargs["strategy"] == "backward":
+                        res_native = df_grouped.bfill(limit=self._call_kwargs["limit"])
+                    else:  # pragma: no cover
+                        # This is deprecated in pandas. Indeed, `nw.col('a').fill_null(3).over('b')`
+                        # does not seem very useful, and DuckDB doesn't support it either.
+                        msg = "`fill_null` with `over` without `strategy` specified is not supported."
+                        raise NotImplementedError(msg)
                 elif function_name == "len":
                     if len(output_names) != 1:  # pragma: no cover
                         msg = "Safety check failed, please report a bug."
@@ -293,7 +307,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         s._scatter_in_place(sorting_indices, s)
                     return results
                 if reverse:
-                    return [s[::-1] for s in results]
+                    return [s._gather_slice(slice(None, None, -1)) for s in results]
                 return results
 
         return self.__class__(
@@ -307,21 +321,29 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             version=self._version,
         )
 
-    def cum_count(self: Self, *, reverse: bool) -> Self:
+    def cum_count(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_count", call_kwargs={"reverse": reverse})
 
-    def cum_min(self: Self, *, reverse: bool) -> Self:
+    def cum_min(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_min", call_kwargs={"reverse": reverse})
 
-    def cum_max(self: Self, *, reverse: bool) -> Self:
+    def cum_max(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_max", call_kwargs={"reverse": reverse})
 
-    def cum_prod(self: Self, *, reverse: bool) -> Self:
+    def cum_prod(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_prod", call_kwargs={"reverse": reverse})
 
-    def rolling_sum(
-        self: Self, window_size: int, *, min_samples: int, center: bool
+    def fill_null(
+        self,
+        value: Self | NonNestedLiteral,
+        strategy: FillNullStrategy | None,
+        limit: int | None,
     ) -> Self:
+        return self._reuse_series(
+            "fill_null", call_kwargs={"strategy": strategy, "limit": limit}, value=value
+        )
+
+    def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._reuse_series(
             "rolling_sum",
             call_kwargs={
@@ -331,9 +353,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             },
         )
 
-    def rolling_mean(
-        self: Self, window_size: int, *, min_samples: int, center: bool
-    ) -> Self:
+    def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._reuse_series(
             "rolling_mean",
             call_kwargs={
@@ -344,7 +364,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         )
 
     def rolling_std(
-        self: Self, window_size: int, *, min_samples: int, center: bool, ddof: int
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
         return self._reuse_series(
             "rolling_std",
@@ -357,7 +377,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         )
 
     def rolling_var(
-        self: Self, window_size: int, *, min_samples: int, center: bool, ddof: int
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
         return self._reuse_series(
             "rolling_var",

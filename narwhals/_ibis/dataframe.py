@@ -9,7 +9,6 @@ import ibis.selectors as s
 from narwhals.dependencies import get_ibis
 from narwhals.utils import Implementation
 from narwhals.utils import Version
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import validate_backend_version
 
 if TYPE_CHECKING:
@@ -25,7 +24,7 @@ if TYPE_CHECKING:
 
 @lru_cache(maxsize=16)
 def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if ibis_dtype.is_int64():
         return dtypes.Int64()
     if ibis_dtype.is_int32():
@@ -97,28 +96,28 @@ class IbisLazyFrame:
     def __narwhals_lazyframe__(self) -> Any:
         return self
 
-    def __native_namespace__(self: Self) -> ModuleType:
+    def __native_namespace__(self) -> ModuleType:
         return get_ibis()
 
-    def __getitem__(self, item: str) -> IbisInterchangeSeries:
+    def get_column(self, name: str) -> IbisInterchangeSeries:
         from narwhals._ibis.series import IbisInterchangeSeries
 
-        return IbisInterchangeSeries(self._native_frame[item], version=self._version)
+        return IbisInterchangeSeries(self._native_frame[name], version=self._version)
 
-    def to_pandas(self: Self) -> pd.DataFrame:
+    def to_pandas(self) -> pd.DataFrame:
         return self._native_frame.to_pandas()
 
-    def to_arrow(self: Self) -> pa.Table:
+    def to_arrow(self) -> pa.Table:
         return self._native_frame.to_pyarrow()
 
     def simple_select(self, *column_names: str) -> Self:
         return self._with_native(self._native_frame.select(s.cols(*column_names)))
 
-    def aggregate(self: Self, *exprs: Any) -> Self:
+    def aggregate(self, *exprs: Any) -> Self:
         raise NotImplementedError
 
     def select(
-        self: Self,
+        self,
         *exprs: Any,
     ) -> Self:
         msg = (
@@ -145,12 +144,12 @@ class IbisLazyFrame:
         )
         raise NotImplementedError(msg)
 
-    def _with_version(self: Self, version: Version) -> Self:
+    def _with_version(self, version: Version) -> Self:
         return self.__class__(
             self._native_frame, version=version, backend_version=self._backend_version
         )
 
-    def _with_native(self: Self, df: Any) -> Self:
+    def _with_native(self, df: Any) -> Self:
         return self.__class__(
             df, version=self._version, backend_version=self._backend_version
         )

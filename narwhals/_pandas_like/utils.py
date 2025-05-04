@@ -3,12 +3,14 @@ from __future__ import annotations
 import functools
 import re
 from contextlib import suppress
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
+from typing import Literal
 from typing import Sequence
 from typing import Sized
 from typing import TypeVar
-from typing import cast
 
 import pandas as pd
 
@@ -18,7 +20,7 @@ from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
-from narwhals.utils import import_dtypes_module
+from narwhals.utils import _DeferredIterable
 from narwhals.utils import isinstance_or_issubclass
 
 T = TypeVar("T", bound=Sized)
@@ -211,8 +213,10 @@ def rename(
 
 
 @functools.lru_cache(maxsize=16)
-def non_object_native_to_narwhals_dtype(dtype: str, version: Version) -> DType:
-    dtypes = import_dtypes_module(version)
+def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> DType:
+    dtype = str(native_dtype)
+
+    dtypes = version.dtypes
     if dtype in {"int64", "Int64", "Int64[pyarrow]", "int64[pyarrow]"}:
         return dtypes.Int64()
     if dtype in {"int32", "Int32", "Int32[pyarrow]", "int32[pyarrow]"}:
@@ -249,8 +253,10 @@ def non_object_native_to_narwhals_dtype(dtype: str, version: Version) -> DType:
         return dtypes.String()
     if dtype in {"bool", "boolean", "boolean[pyarrow]", "bool[pyarrow]"}:
         return dtypes.Boolean()
-    if dtype == "category" or dtype.startswith("dictionary<"):
+    if dtype.startswith("dictionary<"):
         return dtypes.Categorical()
+    if dtype == "category":
+        return native_categorical_to_narwhals_dtype(native_dtype, version)
     if (match_ := PATTERN_PD_DATETIME.match(dtype)) or (
         match_ := PATTERN_PA_DATETIME.match(dtype)
     ):
@@ -276,7 +282,7 @@ def non_object_native_to_narwhals_dtype(dtype: str, version: Version) -> DType:
 def object_native_to_narwhals_dtype(
     series: PandasLikeSeries, version: Version, implementation: Implementation
 ) -> DType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if implementation is Implementation.CUDF:  # pragma: no cover
         # Per conversations with their maintainers, they don't support arbitrary
         # objects, so we can just return String.
@@ -295,6 +301,34 @@ def object_native_to_narwhals_dtype(
     return dtypes.Object()
 
 
+def native_categorical_to_narwhals_dtype(
+    native_dtype: pd.CategoricalDtype,
+    version: Version,
+    implementation: Literal[Implementation.CUDF] | None = None,
+) -> DType:
+    dtypes = version.dtypes
+    if version is Version.V1:
+        return dtypes.Categorical()
+    if native_dtype.ordered:
+        into_iter = (
+            _cudf_categorical_to_list(native_dtype)
+            if implementation is Implementation.CUDF
+            else native_dtype.categories.to_list
+        )
+        return dtypes.Enum(_DeferredIterable(into_iter))
+    return dtypes.Categorical()
+
+
+def _cudf_categorical_to_list(
+    native_dtype: Any,
+) -> Callable[[], list[Any]]:  # pragma: no cover
+    # NOTE: https://docs.rapids.ai/api/cudf/stable/user_guide/api_docs/api/cudf.core.dtypes.categoricaldtype/#cudf.core.dtypes.CategoricalDtype
+    def fn() -> list[Any]:
+        return native_dtype.categories.to_arrow().to_pylist()
+
+    return fn
+
+
 def native_to_narwhals_dtype(
     native_dtype: Any, version: Version, implementation: Implementation
 ) -> DType:
@@ -309,13 +343,18 @@ def native_to_narwhals_dtype(
             # cudf, cudf.pandas
             return arrow_native_to_narwhals_dtype(native_dtype.to_arrow(), version)
         return arrow_native_to_narwhals_dtype(native_dtype.pyarrow_dtype, version)
+    if str_dtype == "category" and implementation.is_cudf():
+        # https://github.com/rapidsai/cudf/issues/18536
+        # https://github.com/rapidsai/cudf/issues/14027
+        return native_categorical_to_narwhals_dtype(
+            native_dtype, version, Implementation.CUDF
+        )
     if str_dtype != "object":
-        return non_object_native_to_narwhals_dtype(str_dtype, version)
+        return non_object_native_to_narwhals_dtype(native_dtype, version)
     elif implementation is Implementation.DASK:
         # Per conversations with their maintainers, they don't support arbitrary
         # objects, so we can just return String.
-        dtypes = import_dtypes_module(version)
-        return dtypes.String()
+        return version.dtypes.String()
     msg = (
         "Unreachable code, object dtype should be handled separately"  # pragma: no cover
     )
@@ -356,7 +395,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     if dtype_backend is not None and dtype_backend not in {"pyarrow", "numpy_nullable"}:
         msg = f"Expected one of {{None, 'pyarrow', 'numpy_nullable'}}, got: '{dtype_backend}'"
         raise ValueError(msg)
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         msg = "Casting to Decimal is not supported yet."
         raise NotImplementedError(msg)
@@ -468,11 +507,18 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
         try:
             import pyarrow as pa  # ignore-banned-import
         except ModuleNotFoundError:  # pragma: no cover
-            msg = "PyArrow>=11.0.0 is required for `Date` dtype."
+            msg = "'pyarrow>=11.0.0' is required for `Date` dtype."
         return "date32[pyarrow]"
     if isinstance_or_issubclass(dtype, dtypes.Enum):
-        msg = "Converting to Enum is not (yet) supported"
-        raise NotImplementedError(msg)
+        if version is Version.V1:
+            msg = "Converting to Enum is not supported in narwhals.stable.v1"
+            raise NotImplementedError(msg)
+        if isinstance(dtype, dtypes.Enum):
+            ns = implementation.to_native_namespace()
+            return ns.CategoricalDtype(dtype.categories, ordered=True)
+        msg = "Can not cast / initialize Enum without categories present"
+        raise ValueError(msg)
+
     if isinstance_or_issubclass(
         dtype, (dtypes.Struct, dtypes.Array, dtypes.List, dtypes.Time, dtypes.Binary)
     ):
@@ -548,24 +594,6 @@ def int_dtype_mapper(dtype: Any) -> str:
     if str(dtype).lower() != str(dtype):  # pragma: no cover
         return "Int64"
     return "int64"
-
-
-def convert_str_slice_to_int_slice(
-    str_slice: slice, columns: pd.Index[str]
-) -> tuple[int | None, int | None, int | None]:
-    # We can safely cast to int because we know that `columns` doesn't contain duplicates.
-    start = (
-        cast("int", columns.get_loc(str_slice.start))
-        if str_slice.start is not None
-        else None
-    )
-    stop = (
-        cast("int", columns.get_loc(str_slice.stop)) + 1
-        if str_slice.stop is not None
-        else None
-    )
-    step = str_slice.step
-    return (start, stop, step)
 
 
 def calculate_timestamp_datetime(
@@ -658,32 +686,23 @@ def pivot_table(
     columns: Sequence[str],
     aggregate_function: str | None,
 ) -> Any:
-    dtypes = import_dtypes_module(df._version)
+    categorical = df._version.dtypes.Categorical
+    kwds: dict[Any, Any] = {"observed": True}
     if df._implementation is Implementation.CUDF:
-        if any(
-            x == dtypes.Categorical
-            for x in df.simple_select(*[*values, *index, *columns]).schema.values()
-        ):
+        kwds.pop("observed")
+        cols = set(chain(values, index, columns))
+        schema = df.schema.items()
+        if any(tp for name, tp in schema if name in cols and isinstance(tp, categorical)):
             msg = "`pivot` with Categoricals is not implemented for cuDF backend"
             raise NotImplementedError(msg)
-        # cuDF doesn't support `observed` argument
-        result = df._native_frame.pivot_table(
-            values=values,
-            index=index,
-            columns=columns,
-            aggfunc=aggregate_function,
-            margins=False,
-        )
-    else:
-        result = df._native_frame.pivot_table(
-            values=values,
-            index=index,
-            columns=columns,
-            aggfunc=aggregate_function,
-            margins=False,
-            observed=True,
-        )
-    return result
+    return df.native.pivot_table(
+        values=values,
+        index=index,
+        columns=columns,
+        aggfunc=aggregate_function,
+        margins=False,
+        **kwds,
+    )
 
 
 def check_column_names_are_unique(columns: pd.Index[str]) -> None:

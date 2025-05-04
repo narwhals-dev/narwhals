@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.35.0"
+version = "1.37.1"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
@@ -39,6 +39,7 @@ modin = ["modin"]
 cudf = ["cudf>=24.10.0"]
 pyarrow = ["pyarrow>=11.0.0"]
 pyspark = ["pyspark>=3.5.0"]
+pyspark-connect = ["pyspark[connect]>=3.5.0"]
 polars = ["polars>=0.20.3"]
 dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.0"]
@@ -67,7 +68,7 @@ typing = [
   "typing_extensions",
   "mypy~=1.15.0",
   "pyright",
-  "pyarrow-stubs==19.1",
+  "pyarrow-stubs==19.2",
   "sqlframe",
   "polars==1.25.2",
   "uv",
@@ -224,6 +225,8 @@ filterwarnings = [
   "ignore:.*__array__ implementation doesn't accept a copy keyword, so passing copy=False failed:DeprecationWarning:modin",
   # raised internally by pandas
   "ignore:.*np.find_common_type is deprecated:DeprecationWarning:pandas",
+  # Warning raised when calling PandasLikeNamespace.from_arrow with old pyarrow
+  "ignore:.*is_sparse is deprecated and will be removed in a future version.*:DeprecationWarning:pyarrow",
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
@@ -247,24 +250,27 @@ omit = [
   'narwhals/_spark_like/typing.py',
   # we can't run this in every environment that we measure coverage on due to upper-bound constraits
   'narwhals/_ibis/*',
-  # we don't run these in every environment
+  # we don't (yet) run these in every environment
   'tests/ibis_test.py',
   # Remove after finishing eager sub-protocols
-  'narwhals/_compliant/*',
+  'narwhals/_compliant/namespace.py',
 ]
 exclude_also = [
   "if sys.version_info() <",
   "if .*implementation is Implementation.CUDF",
   "if .*implementation is Implementation.MODIN",
   "if .*implementation is Implementation.PYSPARK",
+  "if .*implementation is Implementation.PYSPARK_CONNECT",
   "if .*implementation.is_cudf",
   "if .*implementation.is_modin",
   "if .*implementation.is_pyspark",
+  "if .*implementation.is_pyspark_connect",
   'request.applymarker\(pytest.mark.xfail',
   'backend_version <',
   'if "cudf" in str\(constructor',
   'if "modin" in str\(constructor',
   'if "pyspark" in str\(constructor',
+  'if "pyspark_connect" in str\(constructor',
   'pytest.skip\('
 ]
 
@@ -280,10 +286,11 @@ module = [
   "dask_expr.*",
   "duckdb.*",
   "ibis.*",
+  "joblib.*",
   "modin.*",
   "numpy.*",
-  "sklearn.*",
   "pyspark.*",
+  "sklearn.*",
 ]
 # TODO: remove follow_imports
 follow_imports = "skip"

@@ -7,6 +7,7 @@ from typing import Iterable
 from typing import Iterator
 from typing import Mapping
 from typing import TypeVar
+from typing import cast
 from typing import overload
 
 import polars as pl
@@ -17,51 +18,39 @@ from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import NarwhalsError
 from narwhals.exceptions import ShapeError
-from narwhals.utils import import_dtypes_module
+from narwhals.utils import Version
+from narwhals.utils import _DeferredIterable
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    from narwhals._polars.dataframe import PolarsDataFrame
-    from narwhals._polars.dataframe import PolarsLazyFrame
-    from narwhals._polars.expr import PolarsExpr
-    from narwhals._polars.series import PolarsSeries
+    from typing_extensions import TypeIs
+
     from narwhals.dtypes import DType
-    from narwhals.utils import Version
+    from narwhals.utils import _StoresNative
 
     T = TypeVar("T")
+    NativeT = TypeVar(
+        "NativeT", bound="pl.DataFrame | pl.LazyFrame | pl.Series | pl.Expr"
+    )
 
 
 @overload
-def extract_native(obj: PolarsDataFrame) -> pl.DataFrame: ...
-
-
-@overload
-def extract_native(obj: PolarsLazyFrame) -> pl.LazyFrame: ...
-
-
-@overload
-def extract_native(obj: PolarsSeries) -> pl.Series: ...
-
-
-@overload
-def extract_native(obj: PolarsExpr) -> pl.Expr: ...
-
-
+def extract_native(obj: _StoresNative[NativeT]) -> NativeT: ...
 @overload
 def extract_native(obj: T) -> T: ...
+def extract_native(obj: _StoresNative[NativeT] | T) -> NativeT | T:
+    return obj.native if _is_compliant_polars(obj) else obj
 
 
-def extract_native(
-    obj: PolarsDataFrame | PolarsLazyFrame | PolarsSeries | PolarsExpr | T,
-) -> pl.DataFrame | pl.LazyFrame | pl.Series | pl.Expr | T:
+def _is_compliant_polars(
+    obj: _StoresNative[NativeT] | Any,
+) -> TypeIs[_StoresNative[NativeT]]:
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.dataframe import PolarsLazyFrame
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.series import PolarsSeries
 
-    if isinstance(obj, (PolarsDataFrame, PolarsLazyFrame, PolarsSeries, PolarsExpr)):
-        return obj.native
-    return obj
+    return isinstance(obj, (PolarsDataFrame, PolarsLazyFrame, PolarsSeries, PolarsExpr))
 
 
 def extract_args_kwargs(
@@ -75,7 +64,7 @@ def extract_args_kwargs(
 def native_to_narwhals_dtype(
     dtype: pl.DataType, version: Version, backend_version: tuple[int, ...]
 ) -> DType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if dtype == pl.Float64:
         return dtypes.Float64()
     if dtype == pl.Float32:
@@ -110,8 +99,15 @@ def native_to_narwhals_dtype(
         return dtypes.Object()
     if dtype == pl.Categorical:
         return dtypes.Categorical()
-    if dtype == pl.Enum:
-        return dtypes.Enum()
+    if isinstance_or_issubclass(dtype, pl.Enum):
+        if version is Version.V1:
+            return dtypes.Enum()  # type: ignore[call-arg]
+        categories = _DeferredIterable(
+            dtype.categories.to_list
+            if backend_version >= (0, 20, 4)
+            else lambda: cast("list[str]", dtype.categories)
+        )
+        return dtypes.Enum(categories)
     if dtype == pl.Date:
         return dtypes.Date()
     if isinstance_or_issubclass(dtype, pl.Datetime):
@@ -153,7 +149,7 @@ def native_to_narwhals_dtype(
 def narwhals_to_native_dtype(
     dtype: DType | type[DType], version: Version, backend_version: tuple[int, ...]
 ) -> pl.DataType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if dtype == dtypes.Float64:
         return pl.Float64()
     if dtype == dtypes.Float32:
@@ -185,9 +181,14 @@ def narwhals_to_native_dtype(
         return pl.Object()
     if dtype == dtypes.Categorical:
         return pl.Categorical()
-    if dtype == dtypes.Enum:
-        msg = "Converting to Enum is not (yet) supported"
-        raise NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Enum):
+        if version is Version.V1:
+            msg = "Converting to Enum is not supported in narwhals.stable.v1"
+            raise NotImplementedError(msg)
+        if isinstance(dtype, dtypes.Enum):
+            return pl.Enum(dtype.categories)
+        msg = "Can not cast / initialize Enum without categories present"
+        raise ValueError(msg)
     if dtype == dtypes.Date:
         return pl.Date()
     if dtype == dtypes.Time:
@@ -219,15 +220,6 @@ def narwhals_to_native_dtype(
             narwhals_to_native_dtype(dtype.inner, version, backend_version), **kwargs
         )
     return pl.Unknown()  # pragma: no cover
-
-
-def convert_str_slice_to_int_slice(
-    str_slice: slice, columns: list[str]
-) -> tuple[int | None, int | None, int | None]:  # pragma: no cover
-    start = columns.index(str_slice.start) if str_slice.start is not None else None
-    stop = columns.index(str_slice.stop) + 1 if str_slice.stop is not None else None
-    step = str_slice.step
-    return (start, stop, step)
 
 
 def catch_polars_exception(

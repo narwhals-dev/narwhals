@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import enum
 from collections import OrderedDict
 from datetime import timezone
 from itertools import starmap
 from typing import TYPE_CHECKING
+from typing import Iterable
 from typing import Mapping
 
+from narwhals.utils import _DeferredIterable
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -27,7 +30,7 @@ def _validate_dtype(dtype: DType | type[DType]) -> None:
 
 
 class DType:
-    def __repr__(self: Self) -> str:  # pragma: no cover
+    def __repr__(self) -> str:  # pragma: no cover
         return self.__class__.__qualname__
 
     @classmethod
@@ -62,12 +65,12 @@ class DType:
     def is_nested(cls: type[Self]) -> bool:
         return issubclass(cls, NestedType)
 
-    def __eq__(self: Self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
         from narwhals.utils import isinstance_or_issubclass
 
         return isinstance_or_issubclass(other, type(self))
 
-    def __hash__(self: Self) -> int:
+    def __hash__(self) -> int:
         return hash(self.__class__)
 
 
@@ -112,7 +115,23 @@ class Decimal(NumericType):
 
 
 class Int128(SignedIntegerType):
-    """128-bit signed integer type."""
+    """128-bit signed integer type.
+
+    Examples:
+        >>> import polars as pl
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> import duckdb
+        >>> s_native = pl.Series([2, 1, 3, 7])
+        >>> s = nw.from_native(s_native, series_only=True)
+        >>> df_native = pa.table({"a": [2, 1, 3, 7]})
+        >>> rel = duckdb.sql(" SELECT CAST (a AS INT128) AS a FROM df_native ")
+
+        >>> s.cast(nw.Int128).dtype
+        Int128
+        >>> nw.from_native(rel).schema["a"]
+        Int128
+    """
 
 
 class Int64(SignedIntegerType):
@@ -168,7 +187,17 @@ class Int8(SignedIntegerType):
 
 
 class UInt128(UnsignedIntegerType):
-    """128-bit unsigned integer type."""
+    """128-bit unsigned integer type.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import narwhals as nw
+        >>> import duckdb
+        >>> df_native = pd.DataFrame({"a": [2, 1, 3, 7]})
+        >>> rel = duckdb.sql(" SELECT CAST (a AS UINT128) AS a FROM df_native ")
+        >>> nw.from_native(rel).schema["a"]
+        UInt128
+    """
 
 
 class UInt64(UnsignedIntegerType):
@@ -333,7 +362,7 @@ class Datetime(TemporalType, metaclass=_DatetimeMeta):
     """
 
     def __init__(
-        self: Self,
+        self,
         time_unit: TimeUnit = "us",
         time_zone: str | timezone | None = None,
     ) -> None:
@@ -350,7 +379,7 @@ class Datetime(TemporalType, metaclass=_DatetimeMeta):
         self.time_unit: TimeUnit = time_unit
         self.time_zone: str | None = time_zone
 
-    def __eq__(self: Self, other: object) -> bool:
+    def __eq__(self, other: object) -> bool:
         # allow comparing object instances to class
         if type(other) is _DatetimeMeta:
             return True
@@ -359,10 +388,10 @@ class Datetime(TemporalType, metaclass=_DatetimeMeta):
         else:  # pragma: no cover
             return False
 
-    def __hash__(self: Self) -> int:  # pragma: no cover
+    def __hash__(self) -> int:  # pragma: no cover
         return hash((self.__class__, self.time_unit, self.time_zone))
 
-    def __repr__(self: Self) -> str:  # pragma: no cover
+    def __repr__(self) -> str:  # pragma: no cover
         class_name = self.__class__.__name__
         return f"{class_name}(time_unit={self.time_unit!r}, time_zone={self.time_zone!r})"
 
@@ -393,7 +422,7 @@ class Duration(TemporalType, metaclass=_DurationMeta):
         Duration(time_unit='ms')
     """
 
-    def __init__(self: Self, time_unit: TimeUnit = "us") -> None:
+    def __init__(self, time_unit: TimeUnit = "us") -> None:
         if time_unit not in {"s", "ms", "us", "ns"}:
             msg = (
                 "invalid `time_unit`"
@@ -403,7 +432,7 @@ class Duration(TemporalType, metaclass=_DurationMeta):
 
         self.time_unit: TimeUnit = time_unit
 
-    def __eq__(self: Self, other: object) -> bool:
+    def __eq__(self, other: object) -> bool:
         # allow comparing object instances to class
         if type(other) is _DurationMeta:
             return True
@@ -412,10 +441,10 @@ class Duration(TemporalType, metaclass=_DurationMeta):
         else:  # pragma: no cover
             return False
 
-    def __hash__(self: Self) -> int:  # pragma: no cover
+    def __hash__(self) -> int:  # pragma: no cover
         return hash((self.__class__, self.time_unit))
 
-    def __repr__(self: Self) -> str:  # pragma: no cover
+    def __repr__(self) -> str:  # pragma: no cover
         class_name = self.__class__.__name__
         return f"{class_name}(time_unit={self.time_unit!r})"
 
@@ -435,16 +464,48 @@ class Categorical(DType):
 class Enum(DType):
     """A fixed categorical encoding of a unique set of strings.
 
-    Polars has an Enum data type, while pandas and PyArrow do not.
+    Polars has an Enum data type. In pandas, ordered categories get mapped
+    to Enum. PyArrow has no Enum equivalent.
 
     Examples:
-       >>> import polars as pl
        >>> import narwhals as nw
-       >>> data = ["beluga", "narwhal", "orca"]
-       >>> s_native = pl.Series(data, dtype=pl.Enum(data))
-       >>> nw.from_native(s_native, series_only=True).dtype
-       Enum
+       >>> nw.Enum(["beluga", "narwhal", "orca"])
+       Enum(categories=['beluga', 'narwhal', 'orca'])
     """
+
+    def __init__(self, categories: Iterable[str] | type[enum.Enum]) -> None:
+        self._delayed_categories: _DeferredIterable[str] | None = None
+        self._cached_categories: tuple[str, ...] | None = None
+
+        if isinstance(categories, _DeferredIterable):
+            self._delayed_categories = categories
+        elif isinstance(categories, type) and issubclass(categories, enum.Enum):
+            self._cached_categories = tuple(member.value for member in categories)
+        else:
+            self._cached_categories = tuple(categories)
+
+    @property
+    def categories(self) -> tuple[str, ...]:
+        if cached := self._cached_categories:
+            return cached
+        elif delayed := self._delayed_categories:
+            self._cached_categories = delayed.to_tuple()
+            return self._cached_categories
+        else:  # pragma: no cover
+            msg = f"Internal structure of {type(self).__name__!r} is invalid."
+            raise TypeError(msg)
+
+    def __eq__(self, other: object) -> bool:
+        # allow comparing object instances to class
+        if type(other) is type:
+            return other is Enum
+        return isinstance(other, type(self)) and self.categories == other.categories
+
+    def __hash__(self) -> int:
+        return hash((self.__class__, tuple(self.categories)))
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(categories={list(self.categories)!r})"
 
 
 class Field:
@@ -466,17 +527,17 @@ class Field:
     name: str
     dtype: type[DType] | DType
 
-    def __init__(self: Self, name: str, dtype: type[DType] | DType) -> None:
+    def __init__(self, name: str, dtype: type[DType] | DType) -> None:
         self.name = name
         self.dtype = dtype
 
-    def __eq__(self: Self, other: Field) -> bool:  # type: ignore[override]
+    def __eq__(self, other: Field) -> bool:  # type: ignore[override]
         return (self.name == other.name) & (self.dtype == other.dtype)
 
-    def __hash__(self: Self) -> int:
+    def __hash__(self) -> int:
         return hash((self.name, self.dtype))
 
-    def __repr__(self: Self) -> str:
+    def __repr__(self) -> str:
         class_name = self.__class__.__name__
         return f"{class_name}({self.name!r}, {self.dtype})"
 
@@ -501,14 +562,14 @@ class Struct(NestedType):
     fields: list[Field]
 
     def __init__(
-        self: Self, fields: Sequence[Field] | Mapping[str, DType | type[DType]]
+        self, fields: Sequence[Field] | Mapping[str, DType | type[DType]]
     ) -> None:
         if isinstance(fields, Mapping):
             self.fields = list(starmap(Field, fields.items()))
         else:
             self.fields = list(fields)
 
-    def __eq__(self: Self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
         # The comparison allows comparing objects to classes, and specific
         # inner types to those without (eg: inner=None). if one of the
         # arguments is not specific about its inner type we infer it
@@ -520,22 +581,22 @@ class Struct(NestedType):
         else:
             return False
 
-    def __hash__(self: Self) -> int:
+    def __hash__(self) -> int:
         return hash((self.__class__, tuple(self.fields)))
 
-    def __iter__(self: Self) -> Iterator[tuple[str, DType | type[DType]]]:
+    def __iter__(self) -> Iterator[tuple[str, DType | type[DType]]]:  # pragma: no cover
         for fld in self.fields:
             yield fld.name, fld.dtype
 
-    def __reversed__(self: Self) -> Iterator[tuple[str, DType | type[DType]]]:
+    def __reversed__(self) -> Iterator[tuple[str, DType | type[DType]]]:
         for fld in reversed(self.fields):
             yield fld.name, fld.dtype
 
-    def __repr__(self: Self) -> str:
+    def __repr__(self) -> str:
         class_name = self.__class__.__name__
         return f"{class_name}({dict(self)})"
 
-    def to_schema(self: Self) -> OrderedDict[str, DType | type[DType]]:
+    def to_schema(self) -> OrderedDict[str, DType | type[DType]]:
         """Return Struct dtype as a schema dict.
 
         Returns:
@@ -561,10 +622,10 @@ class List(NestedType):
 
     inner: DType | type[DType]
 
-    def __init__(self: Self, inner: DType | type[DType]) -> None:
+    def __init__(self, inner: DType | type[DType]) -> None:
         self.inner = inner
 
-    def __eq__(self: Self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
         # This equality check allows comparison of type classes and type instances.
         # If a parent type is not specific about its inner type, we infer it as equal:
         # > list[i64] == list[i64] -> True
@@ -579,10 +640,10 @@ class List(NestedType):
         else:
             return False
 
-    def __hash__(self: Self) -> int:
+    def __hash__(self) -> int:
         return hash((self.__class__, self.inner))
 
-    def __repr__(self: Self) -> str:
+    def __repr__(self) -> str:
         class_name = self.__class__.__name__
         return f"{class_name}({self.inner!r})"
 
@@ -606,9 +667,7 @@ class Array(NestedType):
     size: int
     shape: tuple[int, ...]
 
-    def __init__(
-        self: Self, inner: DType | type[DType], shape: int | tuple[int, ...]
-    ) -> None:
+    def __init__(self, inner: DType | type[DType], shape: int | tuple[int, ...]) -> None:
         inner_shape: tuple[int, ...] = inner.shape if isinstance(inner, Array) else ()
         if isinstance(shape, int):
             self.inner = inner
@@ -627,7 +686,7 @@ class Array(NestedType):
             msg = f"invalid input for shape: {shape!r}"
             raise TypeError(msg)
 
-    def __eq__(self: Self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
         # This equality check allows comparison of type classes and type instances.
         # If a parent type is not specific about its inner type, we infer it as equal:
         # > array[i64] == array[i64] -> True
@@ -645,7 +704,7 @@ class Array(NestedType):
         else:
             return False
 
-    def __hash__(self: Self) -> int:
+    def __hash__(self) -> int:
         return hash((self.__class__, self.inner, self.shape))
 
     def __repr__(self) -> str:

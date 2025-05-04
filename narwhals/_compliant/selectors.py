@@ -18,7 +18,6 @@ from narwhals._compliant.expr import CompliantExpr
 from narwhals.utils import _parse_time_unit_and_time_zone
 from narwhals.utils import dtype_matches_time_unit_and_time_zone
 from narwhals.utils import get_column_names
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import is_compliant_dataframe
 
 if not TYPE_CHECKING:  # pragma: no cover
@@ -150,13 +149,13 @@ class CompliantSelectorNamespace(Protocol[FrameT, SeriesOrExprT]):
         return self._selector.from_callables(series, names, context=self)
 
     def categorical(self) -> CompliantSelector[FrameT, SeriesOrExprT]:
-        return self._is_dtype(import_dtypes_module(self._version).Categorical)
+        return self._is_dtype(self._version.dtypes.Categorical)
 
     def string(self) -> CompliantSelector[FrameT, SeriesOrExprT]:
-        return self._is_dtype(import_dtypes_module(self._version).String)
+        return self._is_dtype(self._version.dtypes.String)
 
     def boolean(self) -> CompliantSelector[FrameT, SeriesOrExprT]:
-        return self._is_dtype(import_dtypes_module(self._version).Boolean)
+        return self._is_dtype(self._version.dtypes.Boolean)
 
     def all(self) -> CompliantSelector[FrameT, SeriesOrExprT]:
         def series(df: FrameT) -> Sequence[SeriesOrExprT]:
@@ -172,7 +171,7 @@ class CompliantSelectorNamespace(Protocol[FrameT, SeriesOrExprT]):
         time_units, time_zones = _parse_time_unit_and_time_zone(time_unit, time_zone)
         matches = partial(
             dtype_matches_time_unit_and_time_zone,
-            dtypes=import_dtypes_module(version=self._version),
+            dtypes=self._version.dtypes,
             time_units=time_units,
             time_zones=time_zones,
         )

@@ -30,7 +30,7 @@ for t in tables:
     tbl_arrow = tbl.to_arrow_table()
     new_schema = []
     for field in tbl_arrow.schema:
-        if isinstance(field.type, type(pa.decimal128(1))):
+        if isinstance(field.type, type(pa.decimal64(1))):
             new_schema.append(pa.field(field.name, pa.float64()))
         elif field.type == pa.date32():
             new_schema.append(pa.field(field.name, pa.timestamp("ns")))

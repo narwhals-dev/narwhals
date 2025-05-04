@@ -75,6 +75,7 @@ from narwhals.utils import Version
 from narwhals.utils import deprecate_native_namespace
 from narwhals.utils import find_stacklevel
 from narwhals.utils import generate_temporary_column_name
+from narwhals.utils import inherit_doc
 from narwhals.utils import is_ordered_categorical
 from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
@@ -87,10 +88,13 @@ if TYPE_CHECKING:
     from types import ModuleType
     from typing import Mapping
 
+    from typing_extensions import ParamSpec
     from typing_extensions import Self
     from typing_extensions import TypeVar
 
     from narwhals._translate import IntoArrowTable
+    from narwhals.dataframe import MultiColSelector
+    from narwhals.dataframe import MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import ConcatMethod
     from narwhals.typing import IntoExpr
@@ -98,6 +102,8 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoLazyFrameT
     from narwhals.typing import IntoSeries
     from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import SingleColSelector
+    from narwhals.typing import SingleIndexSelector
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
 
@@ -107,6 +113,8 @@ if TYPE_CHECKING:
     SeriesT = TypeVar("SeriesT", bound="Series[Any]")
     IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
     T = TypeVar("T", default=Any)
+    P = ParamSpec("P")
+    R = TypeVar("R")
 else:
     from typing import TypeVar
 
@@ -115,139 +123,83 @@ else:
 
 
 class DataFrame(NwDataFrame[IntoDataFrameT]):
-    """Narwhals DataFrame, backed by a native eager dataframe.
-
-    !!! warning
-        This class is not meant to be instantiated directly - instead:
-
-        - If the native object is a eager dataframe from one of the supported
-            backend (e.g. pandas.DataFrame, polars.DataFrame, pyarrow.Table),
-            you can use [`narwhals.from_native`][]:
-            ```py
-            narwhals.from_native(native_dataframe)
-            narwhals.from_native(native_dataframe, eager_only=True)
-            ```
-
-        - If the object is a dictionary of column names and generic sequences mapping
-            (e.g. `dict[str, list]`), you can create a DataFrame via
-            [`narwhals.from_dict`][]:
-            ```py
-            narwhals.from_dict(
-                data={"a": [1, 2, 3]},
-                backend=narwhals.get_native_namespace(another_object),
-            )
-            ```
-    """
+    @inherit_doc(NwDataFrame)
+    def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
+        super().__init__(df, level=level)
 
     # We need to override any method which don't return Self so that type
     # annotations are correct.
 
     @property
-    def _series(self: Self) -> type[Series[Any]]:
-        return Series
+    def _series(self) -> type[Series[Any]]:
+        return cast("type[Series[Any]]", Series)
 
     @property
-    def _lazyframe(self: Self) -> type[LazyFrame[Any]]:
-        return LazyFrame
+    def _lazyframe(self) -> type[LazyFrame[Any]]:
+        return cast("type[LazyFrame[Any]]", LazyFrame)
+
+    @overload
+    def __getitem__(self, item: tuple[SingleIndexSelector, SingleColSelector]) -> Any: ...
 
     @overload
     def __getitem__(  # type: ignore[overload-overlap]
-        self: Self,
-        item: str | tuple[slice | Sequence[int] | _1DArray, int | str],
+        self, item: str | tuple[MultiIndexSelector, SingleColSelector]
     ) -> Series[Any]: ...
+
     @overload
     def __getitem__(
-        self: Self,
+        self,
         item: (
-            int
-            | slice
-            | _1DArray
-            | Sequence[int]
-            | Sequence[str]
-            | tuple[
-                slice | Sequence[int] | _1DArray, slice | Sequence[int] | Sequence[str]
-            ]
+            SingleIndexSelector
+            | MultiIndexSelector
+            | MultiColSelector
+            | tuple[SingleIndexSelector, MultiColSelector]
+            | tuple[MultiIndexSelector, MultiColSelector]
         ),
     ) -> Self: ...
-
-    def __getitem__(self: Self, item: Any) -> Any:
+    def __getitem__(
+        self,
+        item: (
+            SingleIndexSelector
+            | SingleColSelector
+            | MultiColSelector
+            | MultiIndexSelector
+            | tuple[SingleIndexSelector, SingleColSelector]
+            | tuple[SingleIndexSelector, MultiColSelector]
+            | tuple[MultiIndexSelector, SingleColSelector]
+            | tuple[MultiIndexSelector, MultiColSelector]
+        ),
+    ) -> Series[Any] | Self | Any:
         return super().__getitem__(item)
 
     def lazy(
-        self: Self,
+        self,
         backend: ModuleType | Implementation | str | None = None,
     ) -> LazyFrame[Any]:
-        """Restrict available API methods to lazy-only ones.
-
-        If `backend` is specified, then a conversion between different backends
-        might be triggered.
-
-        If a library does not support lazy execution and `backend` is not specified,
-        then this is will only restrict the API to lazy-only operations. This is useful
-        if you want to ensure that you write dataframe-agnostic code which all has
-        the possibility of running entirely lazily.
-
-        Arguments:
-            backend: Which lazy backend collect to. This will be the underlying
-                backend for the resulting Narwhals LazyFrame. If not specified, and the
-                given library does not support lazy execution, then this will restrict
-                the API to lazy-only operations.
-
-                `backend` can be specified in various ways:
-
-                - As `Implementation.<BACKEND>` with `BACKEND` being `DASK`, `DUCKDB`
-                    or `POLARS`.
-                - As a string: `"dask"`, `"duckdb"` or `"polars"`
-                - Directly as a module `dask.dataframe`, `duckdb` or `polars`.
-
-        Returns:
-            A new LazyFrame.
-        """
         return super().lazy(backend=backend)  # type: ignore[return-value]
 
     # Not sure what mypy is complaining about, probably some fancy
     # thing that I need to understand category theory for
     @overload  # type: ignore[override]
-    def to_dict(
-        self: Self, *, as_series: Literal[True] = ...
-    ) -> dict[str, Series[Any]]: ...
+    def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series[Any]]: ...
     @overload
-    def to_dict(self: Self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
+    def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
     def to_dict(
-        self: Self, *, as_series: bool
+        self, *, as_series: bool
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]: ...
     def to_dict(
-        self: Self, *, as_series: bool = True
+        self, *, as_series: bool = True
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]:
-        """Convert DataFrame to a dictionary mapping column name to values.
-
-        Arguments:
-            as_series: If set to true ``True``, then the values are Narwhals Series,
-                    otherwise the values are Any.
-
-        Returns:
-            A mapping from column name to values / Series.
-        """
         return super().to_dict(as_series=as_series)  # type: ignore[return-value]
 
-    def is_duplicated(self: Self) -> Series[Any]:
-        r"""Get a mask of all duplicated rows in this DataFrame.
-
-        Returns:
-            A new Series.
-        """
+    def is_duplicated(self) -> Series[Any]:
         return super().is_duplicated()  # type: ignore[return-value]
 
-    def is_unique(self: Self) -> Series[Any]:
-        r"""Get a mask of all unique rows in this DataFrame.
-
-        Returns:
-            A new Series.
-        """
+    def is_unique(self) -> Series[Any]:
         return super().is_unique()  # type: ignore[return-value]
 
-    def _l1_norm(self: Self) -> Self:
+    def _l1_norm(self) -> Self:
         """Private, just used to test the stable API.
 
         Returns:
@@ -257,23 +209,15 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
 
 class LazyFrame(NwLazyFrame[IntoFrameT]):
-    """Narwhals LazyFrame, backed by a native lazyframe.
-
-    !!! warning
-        This class is not meant to be instantiated directly - instead use
-        [`narwhals.from_native`][] with a native
-        object that is a lazy dataframe from one of the supported
-        backend (e.g. polars.LazyFrame, dask_expr._collection.DataFrame):
-        ```py
-        narwhals.from_native(native_lazyframe)
-        ```
-    """
+    @inherit_doc(NwLazyFrame)
+    def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
+        super().__init__(df, level=level)
 
     @property
-    def _dataframe(self: Self) -> type[DataFrame[Any]]:
+    def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame
 
-    def _extract_compliant(self: Self, arg: Any) -> Any:
+    def _extract_compliant(self, arg: Any) -> Any:
         # After v1, we raise when passing order-dependent or length-changing
         # expressions to LazyFrame
         from narwhals.dataframe import BaseFrame
@@ -302,44 +246,13 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     def collect(
-        self: Self,
+        self,
         backend: ModuleType | Implementation | str | None = None,
         **kwargs: Any,
     ) -> DataFrame[Any]:
-        r"""Materialize this LazyFrame into a DataFrame.
-
-        As each underlying lazyframe has different arguments to set when materializing
-        the lazyframe into a dataframe, we allow to pass them as kwargs (see examples
-        below for how to generalize the specification).
-
-        Arguments:
-            backend: specifies which eager backend collect to. This will be the underlying
-                backend for the resulting Narwhals DataFrame. If None, then the following
-                default conversions will be applied:
-
-                - `polars.LazyFrame` -> `polars.DataFrame`
-                - `dask.DataFrame` -> `pandas.DataFrame`
-                - `duckdb.PyRelation` -> `pyarrow.Table`
-                - `pyspark.DataFrame` -> `pyarrow.Table`
-
-                `backend` can be specified in various ways:
-
-                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`
-                    or `POLARS`.
-                - As a string: `"pandas"`, `"pyarrow"` or `"polars"`
-                - Directly as a module `pandas`, `pyarrow` or `polars`.
-            kwargs: backend specific kwargs to pass along. To know more please check the
-                backend specific documentation:
-
-                - [polars.LazyFrame.collect](https://docs.pola.rs/api/python/dev/reference/lazyframe/api/polars.LazyFrame.collect.html)
-                - [dask.dataframe.DataFrame.compute](https://docs.dask.org/en/stable/generated/dask.dataframe.DataFrame.compute.html)
-
-        Returns:
-            DataFrame
-        """
         return super().collect(backend=backend, **kwargs)  # type: ignore[return-value]
 
-    def _l1_norm(self: Self) -> Self:
+    def _l1_norm(self) -> Self:
         """Private, just used to test the stable API.
 
         Returns:
@@ -358,7 +271,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         """
         return super().tail(n)
 
-    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+    def gather_every(self, n: int, offset: int = 0) -> Self:
         r"""Take every nth row in the DataFrame and return as a new DataFrame.
 
         Arguments:
@@ -374,93 +287,41 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
 
 
 class Series(NwSeries[IntoSeriesT]):
-    """Narwhals Series, backed by a native series.
-
-    !!! warning
-        This class is not meant to be instantiated directly - instead:
-
-        - If the native object is a series from one of the supported backend (e.g.
-            pandas.Series, polars.Series, pyarrow.ChunkedArray), you can use
-            [`narwhals.from_native`][]:
-            ```py
-            narwhals.from_native(native_series, allow_series=True)
-            narwhals.from_native(native_series, series_only=True)
-            ```
-
-        - If the object is a generic sequence (e.g. a list or a tuple of values), you can
-            create a series via [`narwhals.new_series`][]:
-            ```py
-            narwhals.new_series(
-                name=name,
-                values=values,
-                backend=narwhals.get_native_namespace(another_object),
-            )
-            ```
-    """
+    @inherit_doc(NwSeries)
+    def __init__(
+        self, series: Any, *, level: Literal["full", "lazy", "interchange"]
+    ) -> None:
+        super().__init__(series, level=level)
 
     # We need to override any method which don't return Self so that type
     # annotations are correct.
 
     @property
-    def _dataframe(self: Self) -> type[DataFrame[Any]]:
+    def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame
 
-    def to_frame(self: Self) -> DataFrame[Any]:
-        """Convert to dataframe.
-
-        Returns:
-            A DataFrame containing this Series as a single column.
-        """
+    def to_frame(self) -> DataFrame[Any]:
         return super().to_frame()  # type: ignore[return-value]
 
     def value_counts(
-        self: Self,
+        self,
         *,
         sort: bool = False,
         parallel: bool = False,
         name: str | None = None,
         normalize: bool = False,
     ) -> DataFrame[Any]:
-        r"""Count the occurrences of unique values.
-
-        Arguments:
-            sort: Sort the output by count in descending order. If set to False (default),
-                the order of the output is random.
-            parallel: Execute the computation in parallel. Used for Polars only.
-            name: Give the resulting count column a specific name; if `normalize` is True
-                defaults to "proportion", otherwise defaults to "count".
-            normalize: If true gives relative frequencies of the unique values
-
-        Returns:
-            A DataFrame with two columns:
-            - The original values as first column
-            - Either count or proportion as second column, depending on normalize parameter.
-        """
         return super().value_counts(  # type: ignore[return-value]
             sort=sort, parallel=parallel, name=name, normalize=normalize
         )
 
     def hist(
-        self: Self,
+        self,
         bins: list[float | int] | None = None,
         *,
         bin_count: int | None = None,
         include_breakpoint: bool = True,
     ) -> DataFrame[Any]:
-        """Bin values into buckets and count their occurrences.
-
-        !!! warning
-            This functionality is considered **unstable**. It may be changed at any point
-            without it being considered a breaking change.
-
-        Arguments:
-            bins: A monotonically increasing sequence of values.
-            bin_count: If no bins provided, this will be used to determine the distance of the bins.
-            include_breakpoint: Include a column that shows the intervals as categories.
-
-        Returns:
-            A new DataFrame containing the counts of values that occur within each passed bin.
-        """
         from narwhals.exceptions import NarwhalsUnstableWarning
         from narwhals.utils import find_stacklevel
 
@@ -477,10 +338,10 @@ class Series(NwSeries[IntoSeriesT]):
 
 
 class Expr(NwExpr):
-    def _l1_norm(self: Self) -> Self:
+    def _l1_norm(self) -> Self:
         return super()._taxicab_norm()
 
-    def head(self: Self, n: int = 10) -> Self:
+    def head(self, n: int = 10) -> Self:
         r"""Get the first `n` rows.
 
         Arguments:
@@ -494,7 +355,7 @@ class Expr(NwExpr):
             self._metadata.with_kind_and_closeable_window(ExprKind.FILTRATION),
         )
 
-    def tail(self: Self, n: int = 10) -> Self:
+    def tail(self, n: int = 10) -> Self:
         r"""Get the last `n` rows.
 
         Arguments:
@@ -508,7 +369,7 @@ class Expr(NwExpr):
             self._metadata.with_kind_and_closeable_window(ExprKind.FILTRATION),
         )
 
-    def gather_every(self: Self, n: int, offset: int = 0) -> Self:
+    def gather_every(self, n: int, offset: int = 0) -> Self:
         r"""Take every nth value in the Series and return as new Series.
 
         Arguments:
@@ -523,7 +384,7 @@ class Expr(NwExpr):
             self._metadata.with_kind_and_closeable_window(ExprKind.FILTRATION),
         )
 
-    def unique(self: Self, *, maintain_order: bool | None = None) -> Self:
+    def unique(self, *, maintain_order: bool | None = None) -> Self:
         """Return unique values of this expression.
 
         Arguments:
@@ -545,7 +406,7 @@ class Expr(NwExpr):
             self._metadata.with_kind(ExprKind.FILTRATION),
         )
 
-    def sort(self: Self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """Sort this column. Place null values first.
 
         Arguments:
@@ -562,7 +423,7 @@ class Expr(NwExpr):
             self._metadata.with_uncloseable_window(),
         )
 
-    def arg_true(self: Self) -> Self:
+    def arg_true(self) -> Self:
         """Find elements where boolean expression is True.
 
         Returns:
@@ -574,7 +435,7 @@ class Expr(NwExpr):
         )
 
     def sample(
-        self: Self,
+        self,
         n: int | None = None,
         *,
         fraction: float | None = None,
@@ -582,13 +443,6 @@ class Expr(NwExpr):
         seed: int | None = None,
     ) -> Self:
         """Sample randomly from this expression.
-
-        !!! warning
-            `Expr.sample` is deprecated and will be removed in a future version.
-            Hint: instead of `df.select(nw.col('a').sample())`, use
-            `df.select(nw.col('a')).sample()` instead.
-            Note: this will remain available in `narwhals.stable.v1`.
-            See [stable api](../backcompat.md/) for more information.
 
         Arguments:
             n: Number of items to return. Cannot be used with fraction.
@@ -609,15 +463,13 @@ class Expr(NwExpr):
 
 
 class Schema(NwSchema):
-    """Ordered mapping of column names to their data type.
-
-    Arguments:
-        schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None
-            The schema definition given by column names and their associated.
-            *instantiated* Narwhals data type. Accepts a mapping or an iterable of tuples.
-    """
-
     _version = Version.V1
+
+    @inherit_doc(NwSchema)
+    def __init__(
+        self, schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None = None
+    ) -> None:
+        super().__init__(schema)
 
 
 @overload
@@ -1623,7 +1475,7 @@ class When(NwWhen):
     def from_when(cls, when: NwWhen) -> When:
         return cls(when._predicate)
 
-    def then(self: Self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
+    def then(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
         return Then.from_then(super().then(value))
 
 
@@ -1632,7 +1484,7 @@ class Then(NwThen, Expr):
     def from_then(cls, then: NwThen) -> Then:
         return cls(then._to_compliant_expr, then._metadata)
 
-    def otherwise(self: Self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
+    def otherwise(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
         return _stableify(super().otherwise(value))
 
 

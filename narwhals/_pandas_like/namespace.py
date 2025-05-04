@@ -18,11 +18,9 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_series_full_broadcast
-from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
     import pandas as pd
-    from typing_extensions import Self
 
     from narwhals._pandas_like.typing import NDFrameT
     from narwhals.dtypes import DType
@@ -56,12 +54,12 @@ class PandasLikeNamespace(
         return PandasLikeSeries
 
     @property
-    def selectors(self: Self) -> PandasSelectorNamespace:
+    def selectors(self) -> PandasSelectorNamespace:
         return PandasSelectorNamespace.from_namespace(self)
 
     # --- not in spec ---
     def __init__(
-        self: Self,
+        self,
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
@@ -95,7 +93,7 @@ class PandasLikeNamespace(
             version=self._version,
         )
 
-    def len(self: Self) -> PandasLikeExpr:
+    def len(self) -> PandasLikeExpr:
         return PandasLikeExpr(
             lambda df: [
                 self._series.from_iterable(
@@ -112,7 +110,7 @@ class PandasLikeNamespace(
         )
 
     # --- horizontal ---
-    def sum_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+    def sum_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = [s for _expr in exprs for s in _expr(df)]
             series = align_series_full_broadcast(*series)
@@ -128,7 +126,7 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def all_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+    def all_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = align_series_full_broadcast(
                 *(s for _expr in exprs for s in _expr(df))
@@ -144,7 +142,7 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def any_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+    def any_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = align_series_full_broadcast(
                 *(s for _expr in exprs for s in _expr(df))
@@ -160,7 +158,7 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def mean_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+    def mean_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
             series = align_series_full_broadcast(
@@ -178,7 +176,7 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def min_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+    def min_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = [s for _expr in exprs for s in _expr(df)]
             series = align_series_full_broadcast(*series)
@@ -203,7 +201,7 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def max_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+    def max_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = [s for _expr in exprs for s in _expr(df)]
             series = align_series_full_broadcast(*series)
@@ -275,22 +273,20 @@ class PandasLikeNamespace(
             return self._concat(dfs, axis=VERTICAL, copy=False)
         return self._concat(dfs, axis=VERTICAL)
 
-    def when(self: Self, predicate: PandasLikeExpr) -> PandasWhen:
+    def when(self, predicate: PandasLikeExpr) -> PandasWhen:
         return PandasWhen.from_expr(predicate, context=self)
 
     def concat_str(
-        self: Self,
+        self,
         *exprs: PandasLikeExpr,
         separator: str,
         ignore_nulls: bool,
     ) -> PandasLikeExpr:
-        dtypes = import_dtypes_module(self._version)
+        string = self._version.dtypes.String()
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
-            series = align_series_full_broadcast(
-                *(s.cast(dtypes.String()) for s in expr_results)
-            )
+            series = align_series_full_broadcast(*(s.cast(string) for s in expr_results))
             null_mask = align_series_full_broadcast(*(s.is_null() for s in expr_results))
 
             if not ignore_nulls:

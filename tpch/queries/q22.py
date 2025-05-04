@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from narwhals.typing import FrameT
+    from tpch._typing import FrameT
 
 
 def query(customer_ds: FrameT, orders_ds: FrameT) -> FrameT:
@@ -26,9 +26,9 @@ def query(customer_ds: FrameT, orders_ds: FrameT) -> FrameT:
     )
 
     return (
-        q1.join(q3, left_on="c_custkey", right_on="c_custkey", how="left")
+        q1.join(q3, left_on="c_custkey", right_on="c_custkey", how="left")  # pyright: ignore[reportArgumentType]
         .filter(nw.col("o_custkey").is_null())
-        .join(q2, how="cross")
+        .join(q2, how="cross")  # pyright: ignore[reportArgumentType]
         .filter(nw.col("c_acctbal") > nw.col("avg_acctbal"))
         .group_by("cntrycode")
         .agg(
