@@ -15,6 +15,7 @@ from narwhals._spark_like.utils import import_functions
 from narwhals._spark_like.utils import import_native_dtypes
 from narwhals._spark_like.utils import import_window
 from narwhals._spark_like.utils import native_to_narwhals_dtype
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
@@ -257,6 +258,13 @@ class SparkLikeLazyFrame(
         raise ValueError(msg)  # pragma: no cover
 
     def simple_select(self, *column_names: str) -> Self:
+        df_columns = self.columns
+        missing_columns = [c for c in column_names if c not in df_columns]
+        if missing_columns:
+            raise ColumnNotFoundError.from_missing_and_available_column_names(
+                missing_columns=missing_columns,
+                available_columns=df_columns,
+            )
         return self._with_native(self.native.select(*column_names))
 
     def aggregate(

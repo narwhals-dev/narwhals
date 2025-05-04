@@ -9,6 +9,7 @@ from typing import Literal
 from typing import Sequence
 from typing import cast
 
+import duckdb
 from duckdb import CoalesceOperator
 from duckdb import FunctionExpression
 from duckdb import StarExpression
@@ -28,12 +29,12 @@ from narwhals._duckdb.utils import lit
 from narwhals._duckdb.utils import narwhals_to_native_dtype
 from narwhals._duckdb.utils import when
 from narwhals._expression_parsing import ExprKind
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import not_implemented
 from narwhals.utils import requires
 
 if TYPE_CHECKING:
-    import duckdb
     from typing_extensions import Self
 
     from narwhals._compliant.typing import AliasNames
@@ -186,7 +187,14 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         context: _FullContext,
     ) -> Self:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            return [col(name) for name in evaluate_column_names(df)]
+            col_names = evaluate_column_names(df)
+            missing_columns = [c for c in col_names if c not in df.columns]
+            if missing_columns:
+                raise ColumnNotFoundError.from_missing_and_available_column_names(
+                    missing_columns=missing_columns,
+                    available_columns=df.columns,
+                )
+            return [col(name) for name in col_names]
 
         return cls(
             func,
