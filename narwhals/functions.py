@@ -1542,7 +1542,6 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     appended, and the condition is not `True`, `None` will be returned.
 
     Info:
-
         Chaining multiple `.when(<condition>).then(<value>)` statements is currently
         not supported.
         See [Narwhals#668](https://github.com/narwhals-dev/narwhals/issues/668).
