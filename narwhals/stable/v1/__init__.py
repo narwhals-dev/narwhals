@@ -349,9 +349,8 @@ class Expr(NwExpr):
         Returns:
             A new expression.
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).head(n),
-            self._metadata.with_order_dependent_filtration(),
+        return self._with_orderable_filtration(
+            lambda plx: self._to_compliant_expr(plx).head(n)
         )
 
     def tail(self, n: int = 10) -> Self:
@@ -363,9 +362,8 @@ class Expr(NwExpr):
         Returns:
             A new expression.
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).tail(n),
-            self._metadata.with_order_dependent_filtration(),
+        return self._with_orderable_filtration(
+            lambda plx: self._to_compliant_expr(plx).tail(n)
         )
 
     def gather_every(self, n: int, offset: int = 0) -> Self:
@@ -378,9 +376,8 @@ class Expr(NwExpr):
         Returns:
             A new expression.
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset),
-            self._metadata.with_order_dependent_filtration(),
+        return self._with_orderable_filtration(
+            lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset)
         )
 
     def unique(self, *, maintain_order: bool | None = None) -> Self:
@@ -412,11 +409,10 @@ class Expr(NwExpr):
         Returns:
             A new expression.
         """
-        return self.__class__(
+        return self._with_unorderable_window(
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
-            ),
-            self._metadata.with_unorderable_window(),
+            )
         )
 
     def arg_true(self) -> Self:
@@ -425,7 +421,7 @@ class Expr(NwExpr):
         Returns:
             A new expression.
         """
-        return self._with_order_dependent_aggregation(
+        return self._with_orderable_aggregation(
             lambda plx: self._to_compliant_expr(plx).arg_true(),
         )
 

@@ -171,7 +171,7 @@ class ExprKind(Enum):
             if meta.is_scalar_like:
                 return ExprKind.AGGREGATION
             if (
-                not meta.n_physical_order_dependent_ops
+                not meta.n_order_dependent_ops
                 and meta.preserves_length
                 and not meta.is_partitioned
             ):
@@ -202,7 +202,7 @@ class ExprMetadata:
         "is_scalar_like",
         "last_node_is_orderable_window",
         "last_node_is_unorderable_window",
-        "n_physical_order_dependent_ops",
+        "n_order_dependent_ops",
         "preserves_length",
     )
 
@@ -215,7 +215,7 @@ class ExprMetadata:
         is_partitionable: bool = False,
         is_partitioned: bool = False,
         is_orderable: bool = False,
-        n_physical_order_dependent_ops: int = 0,
+        n_order_dependent_ops: int = 0,
         preserves_length: bool = True,
         is_scalar_like: bool = False,
         is_literal: bool = False,
@@ -228,7 +228,7 @@ class ExprMetadata:
         self.is_partitionable = is_partitionable
         self.is_partitioned = is_partitioned
         self.is_orderable = is_orderable
-        self.n_physical_order_dependent_ops = n_physical_order_dependent_ops
+        self.n_order_dependent_ops = n_order_dependent_ops
         self.preserves_length = preserves_length
         self.is_scalar_like = is_scalar_like
         self.is_literal = is_literal
@@ -241,8 +241,21 @@ class ExprMetadata:
     def is_filtration(self) -> bool:
         return not self.preserves_length and not self.is_scalar_like
 
-    def __repr__(self) -> str:
-        return f"ExprMetadata(n_physical_order_dependent_ops: {self.n_physical_order_dependent_ops}, last_node_is_orderable: {self.last_node_is_orderable_window})"
+    def __repr__(self) -> str:  # pragma: no cover
+        return (
+            f"ExprMetadata(\n"
+            f"  expansion_kind: {self.expansion_kind},\n"
+            f"  last_node_is_orderable_window: {self.last_node_is_orderable_window},\n"
+            f"  last_node_is_unorderable_window: {self.last_node_is_unorderable_window},\n"
+            f"  is_partitionable: {self.is_partitionable},\n"
+            f"  is_partitioned: {self.is_partitioned},\n"
+            f"  is_orderable: {self.is_orderable},\n"
+            f"  n_order_dependent_ops: {self.n_order_dependent_ops},\n"
+            f"  preserves_length: {self.preserves_length},\n"
+            f"  is_scalar_like: {self.is_scalar_like},\n"
+            f"  is_literal: {self.is_literal},\n"
+            ")"
+        )
 
     def with_aggregation(self) -> ExprMetadata:
         if self.is_scalar_like:
@@ -255,7 +268,7 @@ class ExprMetadata:
             is_partitionable=True,
             is_partitioned=self.is_partitioned,
             is_orderable=False,
-            n_physical_order_dependent_ops=self.n_physical_order_dependent_ops,
+            n_order_dependent_ops=self.n_order_dependent_ops,
             preserves_length=False,
             is_scalar_like=True,
             is_literal=False,
@@ -269,13 +282,13 @@ class ExprMetadata:
             is_partitionable=True,
             is_partitioned=self.is_partitioned,
             is_orderable=False,
-            n_physical_order_dependent_ops=self.n_physical_order_dependent_ops,
+            n_order_dependent_ops=self.n_order_dependent_ops,
             preserves_length=False,
             is_scalar_like=True,
             is_literal=True,
         )
 
-    def with_order_dependent_aggregation(self) -> ExprMetadata:
+    def with_orderable_aggregation(self) -> ExprMetadata:
         if self.is_scalar_like:
             msg = "Can't apply aggregations to scalar-like expressions."
             raise InvalidOperationError(msg)
@@ -286,7 +299,7 @@ class ExprMetadata:
             is_partitionable=True,
             is_partitioned=self.is_partitioned,
             is_orderable=True,
-            n_physical_order_dependent_ops=self.n_physical_order_dependent_ops + 1,
+            n_order_dependent_ops=self.n_order_dependent_ops + 1,
             preserves_length=False,
             is_scalar_like=True,
             is_literal=False,
@@ -300,7 +313,7 @@ class ExprMetadata:
             is_partitionable=self.is_partitionable,
             is_partitioned=self.is_partitioned,
             is_orderable=self.is_orderable,
-            n_physical_order_dependent_ops=self.n_physical_order_dependent_ops,
+            n_order_dependent_ops=self.n_order_dependent_ops,
             preserves_length=self.preserves_length,
             is_scalar_like=self.is_scalar_like,
             is_literal=False,
@@ -317,7 +330,7 @@ class ExprMetadata:
             is_partitionable=True,
             is_partitioned=True,
             is_orderable=False,
-            n_physical_order_dependent_ops=self.n_physical_order_dependent_ops,
+            n_order_dependent_ops=self.n_order_dependent_ops,
             preserves_length=self.preserves_length,
             is_scalar_like=False,
             is_literal=False,
@@ -335,19 +348,19 @@ class ExprMetadata:
             is_partitioned=False,
             is_orderable=True,
             # The only way that this can become `False` is if it's followed by `over(order_by=...)`
-            n_physical_order_dependent_ops=self.n_physical_order_dependent_ops + 1,
+            n_order_dependent_ops=self.n_order_dependent_ops + 1,
             preserves_length=self.preserves_length,
             is_scalar_like=False,
             is_literal=False,
         )
 
-    def with_ordered_over_op(self) -> ExprMetadata:
+    def with_ordered_over(self) -> ExprMetadata:
         if not self.is_orderable:
             msg = "Cannot use `order_by` in `over` on expression which isn't orderable."
             raise InvalidOperationError(msg)
-        n_physical_order_dependent_ops = self.n_physical_order_dependent_ops
+        n_order_dependent_ops = self.n_order_dependent_ops
         if self.last_node_is_orderable_window:
-            n_physical_order_dependent_ops -= 1
+            n_order_dependent_ops -= 1
         return ExprMetadata(
             expansion_kind=self.expansion_kind,
             last_node_is_orderable_window=False,
@@ -355,13 +368,13 @@ class ExprMetadata:
             is_partitionable=False,
             is_partitioned=True,
             is_orderable=False,
-            n_physical_order_dependent_ops=n_physical_order_dependent_ops,
+            n_order_dependent_ops=n_order_dependent_ops,
             preserves_length=True,
             is_scalar_like=False,
             is_literal=False,
         )
 
-    def with_partitioned_over_op(self) -> ExprMetadata:
+    def with_partitioned_over(self) -> ExprMetadata:
         if not self.is_partitionable:
             msg = "Cannot use `partition_by` in `over` on expression which isn't partitionable."
             raise InvalidOperationError(msg)
@@ -375,7 +388,7 @@ class ExprMetadata:
             is_partitionable=False,
             is_partitioned=True,
             is_orderable=False,
-            n_physical_order_dependent_ops=self.n_physical_order_dependent_ops,
+            n_order_dependent_ops=self.n_order_dependent_ops,
             preserves_length=True,
             is_scalar_like=False,
             is_literal=False,
@@ -392,13 +405,13 @@ class ExprMetadata:
             is_partitionable=False,
             is_partitioned=self.is_partitioned,
             is_orderable=False,
-            n_physical_order_dependent_ops=self.n_physical_order_dependent_ops,
+            n_order_dependent_ops=self.n_order_dependent_ops,
             preserves_length=False,
             is_scalar_like=False,
             is_literal=False,
         )
 
-    def with_order_dependent_filtration(self) -> ExprMetadata:
+    def with_orderable_filtration(self) -> ExprMetadata:
         if self.is_scalar_like:
             msg = "Can't apply filtration (e.g. `drop_nulls`) to scalar-like expression."
             raise InvalidOperationError(msg)
@@ -409,7 +422,7 @@ class ExprMetadata:
             is_partitionable=False,
             is_partitioned=self.is_partitioned,
             is_orderable=True,
-            n_physical_order_dependent_ops=True,
+            n_order_dependent_ops=True,
             preserves_length=False,
             is_scalar_like=False,
             is_literal=False,
@@ -465,7 +478,7 @@ def combine_metadata(
     result_is_partitionable = False
     result_is_partitioned = False
     result_is_orderable = False
-    result_n_physical_order_dependent_ops = 0
+    result_n_order_dependent_ops = 0
     result_preserves_length = False
     result_is_not_scalar_like = False
     result_is_not_literal = False
@@ -498,9 +511,7 @@ def combine_metadata(
                 result_is_partitioned = True
             if metadata.is_orderable:
                 result_is_orderable = True
-            result_n_physical_order_dependent_ops += (
-                metadata.n_physical_order_dependent_ops
-            )
+            result_n_order_dependent_ops += metadata.n_order_dependent_ops
             if metadata.preserves_length:
                 result_preserves_length = True
             if not metadata.is_scalar_like:
@@ -524,7 +535,7 @@ def combine_metadata(
         is_partitionable=result_is_partitionable,
         is_partitioned=result_is_partitioned,
         is_orderable=result_is_orderable,
-        n_physical_order_dependent_ops=result_n_physical_order_dependent_ops,
+        n_order_dependent_ops=result_n_order_dependent_ops,
         preserves_length=result_preserves_length,
         is_scalar_like=not result_is_not_scalar_like,
         is_literal=not result_is_not_literal,

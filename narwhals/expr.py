@@ -70,21 +70,26 @@ class Expr:
     def _with_aggregation(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
         return self.__class__(to_compliant_expr, self._metadata.with_aggregation())
 
+    def _with_orderable_aggregation(
+        self, to_compliant_expr: Callable[[Any], Any]
+    ) -> Self:
+        return self.__class__(
+            to_compliant_expr, self._metadata.with_orderable_aggregation()
+        )
+
     def _with_orderable_window(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
         return self.__class__(to_compliant_expr, self._metadata.with_orderable_window())
 
     def _with_unorderable_window(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
         return self.__class__(to_compliant_expr, self._metadata.with_unorderable_window())
 
-    def _with_order_dependent_aggregation(
-        self, to_compliant_expr: Callable[[Any], Any]
-    ) -> Self:
-        return self.__class__(
-            to_compliant_expr, self._metadata.with_order_dependent_aggregation()
-        )
-
     def _with_filtration(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
         return self.__class__(to_compliant_expr, self._metadata.with_filtration())
+
+    def _with_orderable_filtration(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
+        return self.__class__(
+            to_compliant_expr, self._metadata.with_orderable_filtration()
+        )
 
     def __repr__(self) -> str:
         return f"Narwhals Expr\nmetadata: {self._metadata}\n"
@@ -664,12 +669,11 @@ class Expr:
             |2  3  6       4.0       7.0|
             └───────────────────────────┘
         """
-        return self.__class__(
+        # safest assumptions
+        return self._with_orderable_filtration(
             lambda plx: self._to_compliant_expr(plx).map_batches(
                 function=function, return_dtype=return_dtype
-            ),
-            # safest assumptions
-            self._metadata.with_order_dependent_filtration(),
+            )
         )
 
     def skew(self) -> Self:
@@ -779,7 +783,7 @@ class Expr:
             |0          0          1|
             └───────────────────────┘
         """
-        return self._with_order_dependent_aggregation(
+        return self._with_orderable_aggregation(
             lambda plx: self._to_compliant_expr(plx).arg_min()
         )
 
@@ -802,7 +806,7 @@ class Expr:
             |0          1          0|
             └───────────────────────┘
         """
-        return self._with_order_dependent_aggregation(
+        return self._with_orderable_aggregation(
             lambda plx: self._to_compliant_expr(plx).arg_max()
         )
 
@@ -1576,12 +1580,12 @@ class Expr:
 
         current_meta = self._metadata
         if flat_order_by:
-            next_meta = current_meta.with_ordered_over_op()
+            next_meta = current_meta.with_ordered_over()
         elif not flat_partition_by:  # pragma: no cover
             msg = "At least one of `partition_by` or `order_by` must be specified."
             raise InvalidOperationError(msg)
         else:
-            next_meta = current_meta.with_partitioned_over_op()
+            next_meta = current_meta.with_partitioned_over()
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).over(
