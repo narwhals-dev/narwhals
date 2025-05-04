@@ -15,7 +15,7 @@ from typing import cast
 
 from narwhals.dependencies import is_narwhals_series
 from narwhals.dependencies import is_numpy_array
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import InvalidOperationError, LengthChangingExprError
 from narwhals.exceptions import MultiOutputExpressionError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import is_compliant_expr
@@ -342,9 +342,6 @@ class ExprMetadata:
         )
 
     def with_partitioned_over_op(self) -> ExprMetadata:
-        if not self.is_scalar_like:
-            msg = "Can't apply `over(order_by=...)` window to expression which doesn't preserve length."
-            raise InvalidOperationError(msg)
         if not self.is_partitionable:
             msg = "Cannot use `partition_by` in `over` on expression which isn't partitionable."
             raise InvalidOperationError(msg)
@@ -489,6 +486,14 @@ def combine_metadata(
                 result_is_not_literal = True
             if metadata.is_filtration:
                 n_filtrations += 1
+        
+    if n_filtrations > 1:
+        msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
+        raise LengthChangingExprError(msg)
+    if result_preserves_length and n_filtrations:
+        msg = "Cannot combine length-changing expressions with length-preserving ones or aggregations"
+        raise ShapeError(msg)
+
 
     return ExprMetadata(
         result_expansion_kind,

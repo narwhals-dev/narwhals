@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from narwhals.exceptions import InvalidOperationError
 import re
 from contextlib import nullcontext as does_not_raise
 
@@ -298,7 +299,7 @@ def test_over_anonymous_reduction(
 
 def test_over_unsupported() -> None:
     dfpd = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(InvalidOperationError):
         nw.from_native(dfpd).select(nw.col("a").round().over("a"))
 
 
@@ -307,7 +308,7 @@ def test_over_unsupported_dask() -> None:
     import dask.dataframe as dd
 
     df = dd.from_pandas(pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]}))
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(InvalidOperationError):
         nw.from_native(df).select(nw.col("a").round().over("a"))
 
 
