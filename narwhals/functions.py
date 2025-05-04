@@ -200,10 +200,11 @@ def new_series(
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
 
-            **Deprecated** (v1.31.0):
-                Please use `backend` instead. Note that `native_namespace` is still available
-                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-                see [perfect backwards compatibility policy](../backcompat.md/).
+            *Deprecated* (v1.31.0)
+
+            Please use `backend` instead. Note that `native_namespace` is still available
+            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+            see [perfect backwards compatibility policy](../backcompat.md/).
 
     Returns:
         A new Series
