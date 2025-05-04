@@ -375,11 +375,11 @@ class ExprMetadata:
         )
 
     def with_partitioned_over(self) -> ExprMetadata:
-        if not self.is_partitionable:
-            msg = "Cannot use `partition_by` in `over` on expression which isn't partitionable."
-            raise InvalidOperationError(msg)
         if self.is_partitioned and not self.last_node_is_unorderable_window:
             msg = "Cannot nest `over` statements."
+            raise InvalidOperationError(msg)
+        if not self.is_partitionable:
+            msg = "Cannot use `partition_by` in `over` on expression which isn't partitionable (e.g. `fill_null`)."
             raise InvalidOperationError(msg)
         return ExprMetadata(
             expansion_kind=self.expansion_kind,

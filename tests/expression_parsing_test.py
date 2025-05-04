@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
+import narwhals.stable.v1 as nw_v1
 from narwhals.exceptions import InvalidOperationError
 
 
@@ -74,6 +75,11 @@ def test_filter_aggregation() -> None:
         nw.col("a").mean().drop_nulls()
 
 
+def test_head_aggregation() -> None:
+    with pytest.raises(InvalidOperationError):
+        nw_v1.col("a").mean().head()
+
+
 def test_rank_aggregation() -> None:
     with pytest.raises(InvalidOperationError):
         nw.col("a").mean().rank()
@@ -87,3 +93,8 @@ def test_diff_aggregation() -> None:
 def test_invalid_over() -> None:
     with pytest.raises(InvalidOperationError):
         nw.col("a").fill_null(3).over("b")
+
+
+def test_nested_over() -> None:
+    with pytest.raises(InvalidOperationError):
+        nw.col("a").mean().over("b").over("c")

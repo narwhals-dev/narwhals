@@ -1799,7 +1799,9 @@ class Expr:
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
         issue_deprecation_warning(msg, _version="1.23.0")
-        return self._with_filtration(lambda plx: self._to_compliant_expr(plx).head(n))
+        return self._with_orderable_filtration(
+            lambda plx: self._to_compliant_expr(plx).head(n)
+        )
 
     def tail(self, n: int = 10) -> Self:
         r"""Get the last `n` rows.
