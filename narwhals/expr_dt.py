@@ -766,10 +766,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         """Divide the date/datetime range into buckets.
 
         Arguments:
-            every: str
-                Length of bucket. Must be of form
-                `<multiple><unit>`, where `multiple` is a positive integer
-                and `unit` is one of:
+            every: Length of bucket. Must be of form `<multiple><unit>`,
+                where `multiple` is a positive integer and `unit` is one of:
 
                 - 'ns': nanosecond.
                 - 'us': microsecond.
