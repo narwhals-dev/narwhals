@@ -1599,10 +1599,12 @@ class Expr:
         else:
             next_meta = current_meta.with_partitioned_over_op()
 
-        to_compliant_expr = lambda plx: self._to_compliant_expr(plx).over(
-            flat_partition_by, flat_order_by
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).over(
+                flat_partition_by, flat_order_by
+            ),
+            next_meta,
         )
-        return self.__class__(to_compliant_expr, next_meta)
 
     def is_duplicated(self) -> Self:
         r"""Return a boolean mask indicating duplicated values.

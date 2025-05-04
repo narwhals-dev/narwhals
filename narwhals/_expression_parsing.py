@@ -15,7 +15,7 @@ from typing import cast
 
 from narwhals.dependencies import is_narwhals_series
 from narwhals.dependencies import is_numpy_array
-from narwhals.exceptions import LengthChangingExprError, InvalidOperationError
+from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import MultiOutputExpressionError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import is_compliant_expr
@@ -114,7 +114,6 @@ def evaluate_output_names_and_aliases(
     return output_names, aliases
 
 
-
 class ExpansionKind(Enum):
     """Describe what kind of expansion the expression performs."""
 
@@ -144,6 +143,7 @@ class ExpansionKind(Enum):
 
 class ScalarKind(Enum):
     """Describe what kind of window the expression contains."""
+
     NONE = 0
     LITERAL = 1
     AGGREGATION = 2
@@ -152,7 +152,9 @@ class ScalarKind(Enum):
         return self is not ScalarKind.NONE
 
     @classmethod
-    def from_into_expr(cls, obj: IntoExpr | NonNestedLiteral | _1DArray, *, str_as_lit: bool) -> ScalarKind:
+    def from_into_expr(
+        cls, obj: IntoExpr | NonNestedLiteral | _1DArray, *, str_as_lit: bool
+    ) -> ScalarKind:
         if is_expr(obj):
             if obj._metadata.is_literal:
                 return ScalarKind.LITERAL
@@ -171,15 +173,15 @@ class ScalarKind(Enum):
 class ExprMetadata:
     __slots__ = (
         "expansion_kind",
-        "last_node_is_orderable_window",
-        "last_node_is_unorderable_window",
+        "is_literal",
+        "is_orderable",
         "is_partitionable",
         "is_partitioned",
-        "is_orderable",
+        "is_scalar_like",
+        "last_node_is_orderable_window",
+        "last_node_is_unorderable_window",
         "n_physical_order_dependent_ops",
         "preserves_length",
-        "is_scalar_like",
-        "is_literal",
     )
 
     def __init__(
@@ -211,12 +213,12 @@ class ExprMetadata:
         msg = f"Cannot subclass {cls.__name__!r}"
         raise TypeError(msg)
 
-    @property    
+    @property
     def is_filtration(self) -> bool:
         return not self.preserves_length and not self.is_scalar_like
 
-    # def __repr__(self) -> str:
-    #     return f"ExprMetadata(kind: {self._kind}, window_kind: {self._window_kind}, expansion_kind: {self._expansion_kind})"
+    def __repr__(self) -> str:
+        return "ExprMetadata"
 
     def with_aggregation(self) -> ExprMetadata:
         if self.is_scalar_like:
@@ -402,7 +404,7 @@ class ExprMetadata:
         )
 
 
-def combine_metadata(  # noqa: PLR0915
+def combine_metadata(
     *args: IntoExpr | object | None,
     str_as_lit: bool,
     allow_multi_output: bool,
@@ -453,7 +455,9 @@ def combine_metadata(  # noqa: PLR0915
                 result_is_partitioned = True
             if metadata.is_orderable:
                 result_is_orderable = True
-            n_physical_order_dependent_ops += metadata.n_physical_order_dependent_ops
+            result_n_physical_order_dependent_ops += (
+                metadata.n_physical_order_dependent_ops
+            )
             if metadata.preserves_length:
                 result_preserves_length = True
             if not metadata.is_scalar_like:
@@ -467,14 +471,13 @@ def combine_metadata(  # noqa: PLR0915
         result_expansion_kind,
         last_node_is_orderable_window=False,
         last_node_is_unorderable_window=False,
-        is_partitionable = result_is_partitionable,
-        is_partitioned = result_is_partitioned,
-        is_orderable = result_is_orderable,
-        n_physical_order_dependent_ops = result_n_physical_order_dependent_ops,
-        preserves_length = result_preserves_length,
-        is_scalar_like = not result_is_not_scalar_like,
-        is_literal = not result_is_not_literal,
-
+        is_partitionable=result_is_partitionable,
+        is_partitioned=result_is_partitioned,
+        is_orderable=result_is_orderable,
+        n_physical_order_dependent_ops=result_n_physical_order_dependent_ops,
+        preserves_length=result_preserves_length,
+        is_scalar_like=not result_is_not_scalar_like,
+        is_literal=not result_is_not_literal,
     )
 
 
@@ -485,8 +488,7 @@ def check_expressions_preserve_length(*args: IntoExpr, function_name: str) -> No
     from narwhals.series import Series
 
     if not all(
-        (is_expr(x) and x._metadata.preserves_length)
-        or isinstance(x, (str, Series))
+        (is_expr(x) and x._metadata.preserves_length) or isinstance(x, (str, Series))
         for x in args
     ):
         msg = f"Expressions which aggregate or change length cannot be passed to '{function_name}'."
