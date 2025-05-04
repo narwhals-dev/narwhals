@@ -142,33 +142,30 @@ class ExpansionKind(Enum):
         raise AssertionError(msg)  # pragma: no cover
 
 
-class WindowKind(Enum):
+class ScalarKind(Enum):
     """Describe what kind of window the expression contains."""
+    NONE = 0
+    LITERAL = 1
+    AGGREGATION = 2
 
-    NONE = auto()
-    """e.g. `nw.col('a').abs()`, no windows."""
+    def is_scalar_like(self) -> bool:
+        return self is not ScalarKind.NONE
 
-    CLOSEABLE = auto()
-    """e.g. `nw.col('a').cum_sum()` - can be closed if immediately followed by `over(order_by=...)`."""
-
-    UNCLOSEABLE = auto()
-    """e.g. `nw.col('a').cum_sum().abs()` - the window function (`cum_sum`) wasn't immediately followed by
-    `over(order_by=...)`, and so the window is uncloseable.
-
-    Uncloseable windows can be used freely in `nw.DataFrame`, but not in `nw.LazyFrame` where
-    row-order is undefined."""
-
-    CLOSED = auto()
-    """e.g. `nw.col('a').cum_sum().over(order_by='i')`."""
-
-    def is_open(self) -> bool:
-        return self in {WindowKind.UNCLOSEABLE, WindowKind.CLOSEABLE}
-
-    def is_closed(self) -> bool:
-        return self is WindowKind.CLOSED
-
-    def is_uncloseable(self) -> bool:
-        return self is WindowKind.UNCLOSEABLE
+    @classmethod
+    def from_into_expr(cls, obj: IntoExpr | NonNestedLiteral | _1DArray, *, str_as_lit: bool) -> ScalarKind:
+        if is_expr(obj):
+            if obj._metadata.is_literal:
+                return ScalarKind.LITERAL
+            if obj._metadata.is_scalar_like:
+                return ScalarKind.AGGREGATION
+            return ScalarKind.NONE
+        if (
+            is_narwhals_series(obj)
+            or is_numpy_array(obj)
+            or (isinstance(obj, str) and not str_as_lit)
+        ):
+            return ScalarKind.NONE
+        return ScalarKind.LITERAL
 
 
 class ExprMetadata:
@@ -514,15 +511,15 @@ def apply_n_ary_operation(
         extract_compliant(plx, comparand, str_as_lit=str_as_lit)
         for comparand in comparands
     )
-    metadatas = [
-        ExprKind.from_into_expr(comparand, str_as_lit=str_as_lit)
+    kinds = [
+        ScalarKind.from_into_expr(comparand, str_as_lit=str_as_lit)
         for comparand in comparands
     ]
 
     broadcast = any(not kind.is_scalar_like() for kind in kinds)
     compliant_exprs = (
         compliant_expr.broadcast(kind)
-        if broadcast and is_compliant_expr(compliant_expr) and is_scalar_like(kind)
+        if broadcast and is_compliant_expr(compliant_expr) and kind.is_scalar_like()
         else compliant_expr
         for compliant_expr, kind in zip(compliant_exprs, kinds)
     )
