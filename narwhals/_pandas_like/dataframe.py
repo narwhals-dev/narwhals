@@ -928,7 +928,7 @@ class PandasLikeDataFrame(
     def gather_every(self, n: int, offset: int) -> Self:
         return self._with_native(self.native.iloc[offset::n], validate_column_names=False)
 
-    def pivot(  # noqa: C901, PLR0912
+    def pivot(
         self,
         on: Sequence[str],
         *,
@@ -960,9 +960,8 @@ class PandasLikeDataFrame(
             result = frame.pivot(columns=on, index=index, values=values)
         elif aggregate_function == "len":
             result = (
-                frame.groupby([*on, *index])
+                frame.groupby([*on, *index], as_index=False)
                 .agg(dict.fromkeys(values, "size"))
-                .reset_index()
                 .pivot(columns=on, index=index, values=values)
             )
         else:
@@ -975,22 +974,18 @@ class PandasLikeDataFrame(
             )
 
         # Put columns in the right order
-        if sort_columns and self._implementation is Implementation.CUDF:
-            uniques = {
-                col: sorted(self.native[col].unique().to_arrow().to_pylist())
-                for col in on
-            }
-        elif sort_columns:
-            uniques = {col: sorted(self.native[col].unique().tolist()) for col in on}
-        elif self._implementation is Implementation.CUDF:
-            uniques = {
-                col: self.native[col].unique().to_arrow().to_pylist() for col in on
-            }
-        else:
-            uniques = {col: self.native[col].unique().tolist() for col in on}
+        uniques = (
+            {col: self.native[col].unique().to_arrow().to_pylist() for col in on}
+            if self._implementation.is_cudf()
+            else {col: self.native[col].unique().tolist() for col in on}
+        )
+
+        if sort_columns:
+            uniques = {k: sorted(v) for k, v in uniques.items()}
+
         ordered_cols = list(product(values, *uniques.values()))
         result = result.loc[:, ordered_cols]
-        columns = result.columns.tolist()
+        columns = result.columns
 
         n_on = len(on)
         if n_on == 1:
