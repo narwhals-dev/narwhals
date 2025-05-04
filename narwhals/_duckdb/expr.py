@@ -9,7 +9,6 @@ from typing import Literal
 from typing import Sequence
 from typing import cast
 
-import duckdb
 from duckdb import CoalesceOperator
 from duckdb import FunctionExpression
 from duckdb import StarExpression
@@ -35,6 +34,7 @@ from narwhals.utils import not_implemented
 from narwhals.utils import requires
 
 if TYPE_CHECKING:
+    import duckdb
     from typing_extensions import Self
 
     from narwhals._compliant.typing import AliasNames
