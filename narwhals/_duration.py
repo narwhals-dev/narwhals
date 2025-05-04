@@ -29,7 +29,7 @@ IntervalUnit: TypeAlias = Literal["ns", "us", "ms", "s", "m", "h", "d", "mo", "q
 """
 
 PATTERN_INTERVAL: re.Pattern[str] = re.compile(
-    r"^(?P<multiple>\d+)(?P<unit>ns|us|ms|mo|m|s|h|d|q|y)$"
+    r"^(?P<multiple>\d+)(?P<unit>ns|us|ms|mo|m|s|h|d|q|y)\Z"
 )
 MONTH_MULTIPLES = frozenset([1, 2, 3, 4, 6, 12])
 QUARTER_MULTIPLES = frozenset([1, 2, 4])
