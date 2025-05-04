@@ -355,7 +355,7 @@ class ExprMetadata:
             is_partitionable=False,
             is_partitioned=True,
             is_orderable=False,
-            n_physical_order_dependent_ops=self.n_physical_order_dependent_ops - 1,
+            n_physical_order_dependent_ops=self.n_physical_order_dependent_ops,
             preserves_length=True,
             is_scalar_like=False,
             is_literal=False,

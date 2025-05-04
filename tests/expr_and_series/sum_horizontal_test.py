@@ -25,11 +25,11 @@ def test_sumh(constructor: Constructor, col_expr: Any) -> None:
 
 
 def test_sumh_nullable(constructor: Constructor) -> None:
-    data = {"a": [1, 8, 3], "b": [4, 5, None]}
-    expected = {"hsum": [5, 13, 3]}
+    data = {"a": [1, 8, 3], "b": [4, 5, None], 'i': [0,1,2]}
+    expected = {"hsum": [5, 13, 3], 'i': [0,1,2]}
 
     df = nw.from_native(constructor(data))
-    result = df.select(hsum=nw.sum_horizontal("a", "b"))
+    result = df.select(hsum=nw.sum_horizontal("a", "b"), i='i').sort('i')
     assert_equal_data(result, expected)
 
 
