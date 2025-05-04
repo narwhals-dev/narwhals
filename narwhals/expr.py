@@ -72,18 +72,21 @@ class Expr:
     def _with_aggregation(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
         return self.__class__(to_compliant_expr, self._metadata.with_aggregation())
 
+    def _with_orderable_window(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
+        return self.__class__(to_compliant_expr, self._metadata.with_orderable_window())
+
+    def _with_unorderable_window(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
+        return self.__class__(to_compliant_expr, self._metadata.with_unorderable_window())
+
     def _with_order_dependent_aggregation(
         self, to_compliant_expr: Callable[[Any], Any]
     ) -> Self:
         return self.__class__(
-            to_compliant_expr,
-            self._metadata.with_order_dependent_aggregation()
+            to_compliant_expr, self._metadata.with_order_dependent_aggregation()
         )
 
     def _with_filtration(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
-        return self.__class__(
-            to_compliant_expr, self._metadata.with_filtration()
-        )
+        return self.__class__(to_compliant_expr, self._metadata.with_filtration())
 
     def __repr__(self) -> str:
         return f"Narwhals Expr\nmetadata: {self._metadata}\n"
@@ -119,7 +122,9 @@ class Expr:
             |      1  15       |
             └──────────────────┘
         """
-        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).alias(name))
+        return self._with_elementwise_op(
+            lambda plx: self._to_compliant_expr(plx).alias(name)
+        )
 
     def pipe(
         self,
@@ -180,7 +185,9 @@ class Expr:
             └──────────────────┘
         """
         _validate_dtype(dtype)
-        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).cast(dtype))
+        return self._with_elementwise_op(
+            lambda plx: self._to_compliant_expr(plx).cast(dtype)
+        )
 
     # --- binary ---
     def __eq__(self, other: Self | Any) -> Self:  # type: ignore[override]
@@ -377,7 +384,9 @@ class Expr:
 
     # --- unary ---
     def __invert__(self) -> Self:
-        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).__invert__())
+        return self._with_elementwise_op(
+            lambda plx: self._to_compliant_expr(plx).__invert__()
+        )
 
     def any(self) -> Self:
         """Return whether any of the values in the column are `True`.
@@ -662,7 +671,7 @@ class Expr:
                 function=function, return_dtype=return_dtype
             ),
             # safest assumptions
-            self._metadata.with_kind_and_closeable_window(ExprKind.FILTRATION),
+            self._metadata.with_order_dependent_filtration(),
         )
 
     def skew(self) -> Self:
@@ -914,9 +923,8 @@ class Expr:
             |4  5  6         15|
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).cum_sum(reverse=reverse),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+        return self._with_orderable_window(
+            lambda plx: self._to_compliant_expr(plx).cum_sum(reverse=reverse)
         )
 
     def diff(self) -> Self:
@@ -961,9 +969,8 @@ class Expr:
             | └─────┴────────┘ |
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).diff(),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+        return self._with_orderable_window(
+            lambda plx: self._to_compliant_expr(plx).diff()
         )
 
     def shift(self, n: int) -> Self:
@@ -1011,9 +1018,8 @@ class Expr:
             |└─────┴─────────┘ |
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).shift(n),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+        return self._with_orderable_window(
+            lambda plx: self._to_compliant_expr(plx).shift(n)
         )
 
     def replace_strict(
@@ -1099,11 +1105,10 @@ class Expr:
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
         issue_deprecation_warning(msg, _version="1.23.0")
-        return self.__class__(
+        return self._with_orderable_window(
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
-            ),
-            self._metadata.with_uncloseable_window(),
+            )
         )
 
     # --- transform ---
@@ -1239,7 +1244,7 @@ class Expr:
             str_as_lit=False,
             allow_multi_output=True,
             to_single_output=False,
-        ).with_kind(ExprKind.FILTRATION)
+        ).with_filtration()
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx,
@@ -1284,7 +1289,9 @@ class Expr:
             |└───────┴────────┴───────────┴───────────┘|
             └──────────────────────────────────────────┘
         """
-        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).is_null())
+        return self._with_elementwise_op(
+            lambda plx: self._to_compliant_expr(plx).is_null()
+        )
 
     def is_nan(self) -> Self:
         """Indicate which values are NaN.
@@ -1319,7 +1326,9 @@ class Expr:
             |└───────┴────────┴──────────┴──────────┘|
             └────────────────────────────────────────┘
         """
-        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).is_nan())
+        return self._with_elementwise_op(
+            lambda plx: self._to_compliant_expr(plx).is_nan()
+        )
 
     def arg_true(self) -> Self:
         """Find elements where boolean expression is True.
@@ -1427,7 +1436,7 @@ class Expr:
                 strategy=strategy,
                 limit=limit,
             ),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW)
+            self._metadata.with_orderable_window()
             if strategy is not None
             else self._metadata,
         )
@@ -1557,7 +1566,7 @@ class Expr:
             |2  4  y                    4|
             └────────────────────────────┘
         """
-        if self._metadata.kind.is_filtration():
+        if not self._metadata.preserves_length and not self._metadata.is_scalar_like:
             msg = "`.over()` can not be used for expressions which change length."
             raise LengthChangingExprError(msg)
 
@@ -1567,35 +1576,35 @@ class Expr:
             msg = "At least one of `partition_by` or `order_by` must be specified."
             raise ValueError(msg)
 
-        kind = ExprKind.TRANSFORM
-        window_kind = self._metadata.window_kind
-        if window_kind.is_closed():
+        current_meta = self._metadata
+        if (
+            current_meta.is_partitioned
+            and not current_meta.last_node_is_unorderable_window
+        ):
             msg = "Nested `over` statements are not allowed."
             raise InvalidOperationError(msg)
-        if flat_order_by is not None and self._metadata.kind.is_window():
-            # debug assertion, an open window should already have been set
-            # by the window function. If it's immediately followed by `over`, then the
-            # window gets closed.
-            assert window_kind.is_open()  # noqa: S101
-        elif flat_order_by is not None and not window_kind.is_open():
-            msg = "Cannot use `order_by` in `over` on expression which isn't order-dependent."
+        if flat_order_by and not current_meta.is_orderable:
+            msg = "Cannot use `order_by` in `over` on expression which isn't orderable."
             raise InvalidOperationError(msg)
-        current_meta = self._metadata
-        next_window_kind = (
-            WindowKind.UNCLOSEABLE if window_kind.is_uncloseable() else WindowKind.CLOSED
-        )
-        next_meta = ExprMetadata(
-            kind,
-            window_kind=next_window_kind,
-            expansion_kind=current_meta.expansion_kind,
-        )
+        if not flat_partition_by and not current_meta.is_partitionable:
+            msg = "Cannot use `partition_by` in `over` on expression which isn't partitionable."
+            raise InvalidOperationError(msg)
 
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).over(
-                flat_partition_by, flat_order_by
-            ),
-            next_meta,
+        if flat_order_by:
+            next_meta = current_meta.with_ordered_over_op()
+        elif not flat_partition_by:  # pragma: no cover
+            msg = "At least one of `partition_by` or `order_by` must be specified."
+            raise InvalidOperationError(msg)
+        elif not current_meta.is_partitionable:
+            msg = "Cannot use `partition_by` in `over` on expression which isn't partitionable."
+            raise InvalidOperationError(msg)
+        else:
+            next_meta = current_meta.with_partitioned_over_op()
+
+        to_compliant_expr = lambda plx: self._to_compliant_expr(plx).over(
+            flat_partition_by, flat_order_by
         )
+        return self.__class__(to_compliant_expr, next_meta)
 
     def is_duplicated(self) -> Self:
         r"""Return a boolean mask indicating duplicated values.
@@ -1643,7 +1652,9 @@ class Expr:
             |3  1  c        False         True|
             └─────────────────────────────────┘
         """
-        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).is_unique())
+        return self._with_elementwise_op(
+            lambda plx: self._to_compliant_expr(plx).is_unique()
+        )
 
     def null_count(self) -> Self:
         r"""Count null values.
@@ -1703,9 +1714,8 @@ class Expr:
             |3  1  c                False                 True|
             └─────────────────────────────────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).is_first_distinct(),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+        return self._with_orderable_window(
+            lambda plx: self._to_compliant_expr(plx).is_first_distinct()
         )
 
     def is_last_distinct(self) -> Self:
@@ -1736,9 +1746,8 @@ class Expr:
             |3  1  c                True                True|
             └───────────────────────────────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).is_last_distinct(),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+        return self._with_orderable_window(
+            lambda plx: self._to_compliant_expr(plx).is_last_distinct()
         )
 
     def quantile(
@@ -2030,7 +2039,9 @@ class Expr:
             |└──────┴─────────────┘|
             └──────────────────────┘
         """
-        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).is_finite())
+        return self._with_elementwise_op(
+            lambda plx: self._to_compliant_expr(plx).is_finite()
+        )
 
     def cum_count(self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative count of the non-null values in the column.
