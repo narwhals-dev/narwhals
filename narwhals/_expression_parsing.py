@@ -514,7 +514,7 @@ def apply_n_ary_operation(
         extract_compliant(plx, comparand, str_as_lit=str_as_lit)
         for comparand in comparands
     )
-    kinds = [
+    metadatas = [
         ExprKind.from_into_expr(comparand, str_as_lit=str_as_lit)
         for comparand in comparands
     ]
