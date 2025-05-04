@@ -214,6 +214,10 @@ class ExprMetadata:
         msg = f"Cannot subclass {cls.__name__!r}"
         raise TypeError(msg)
 
+    @property    
+    def is_filtration(self) -> bool:
+        return not self.preserves_length and not self.is_scalar_like
+
     # def __repr__(self) -> str:
     #     return f"ExprMetadata(kind: {self._kind}, window_kind: {self._window_kind}, expansion_kind: {self._expansion_kind})"
 
@@ -417,17 +421,18 @@ def combine_metadata(  # noqa: PLR0915
             of the inputs (e.g. `nw.sum_horizontal`).
     """
     n_filtrations = 0
-    has_transforms_or_windows = False
-    has_aggregations = False
-    has_literals = False
     result_expansion_kind = ExpansionKind.SINGLE
-    has_closeable_windows = False
-    has_uncloseable_windows = False
-    has_closed_windows = False
+    result_is_partitionable = False
+    result_is_partitioned = False
+    result_is_orderable = False
+    result_n_physical_order_dependent_ops = 0
+    result_preserves_length = False
+    result_is_not_scalar_like = False
+    result_is_not_literal = False
 
     for i, arg in enumerate(args):
         if isinstance(arg, str) and not str_as_lit:
-            has_transforms_or_windows = True
+            result_preserves_length = True
         elif is_expr(arg):
             metadata = arg._metadata
             if metadata.expansion_kind.is_multi_output():
@@ -444,55 +449,35 @@ def combine_metadata(  # noqa: PLR0915
                         result_expansion_kind = expansion_kind
                     else:
                         result_expansion_kind = result_expansion_kind & expansion_kind
-            if metadata.
-                has_aggregations = True
-            elif kind is ExprKind.LITERAL:
-                has_literals = True
-            elif kind is ExprKind.FILTRATION:
+
+            if metadata.is_partitionable:
+                result_is_partitionable = True
+            if metadata.is_partitioned:
+                result_is_partitioned = True
+            if metadata.is_orderable:
+                result_is_orderable = True
+            n_physical_order_dependent_ops += metadata.n_physical_order_dependent_ops
+            if metadata.preserves_length:
+                result_preserves_length = True
+            if not metadata.is_scalar_like:
+                result_is_not_scalar_like = True
+            if not metadata.is_literal:
+                result_is_not_literal = True
+            if metadata.is_filtration:
                 n_filtrations += 1
-            elif kind.preserves_length():
-                has_transforms_or_windows = True
-            else:  # pragma: no cover
-                msg = "unreachable code"
-                raise AssertionError(msg)
-
-            window_kind = metadata.window_kind
-            if window_kind is WindowKind.UNCLOSEABLE:
-                has_uncloseable_windows = True
-            elif window_kind is WindowKind.CLOSEABLE:
-                has_closeable_windows = True
-            elif window_kind is WindowKind.CLOSED:
-                has_closed_windows = True
-
-    if (
-        has_literals
-        and not has_aggregations
-        and not has_transforms_or_windows
-        and not n_filtrations
-    ):
-        result_kind = ExprKind.LITERAL
-    elif n_filtrations > 1:
-        msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
-        raise LengthChangingExprError(msg)
-    elif n_filtrations and has_transforms_or_windows:
-        msg = "Cannot combine length-changing expressions with length-preserving ones or aggregations"
-        raise ShapeError(msg)
-    elif n_filtrations:
-        result_kind = ExprKind.FILTRATION
-    elif has_transforms_or_windows:
-        result_kind = ExprKind.TRANSFORM
-    else:
-        result_kind = ExprKind.AGGREGATION
-
-    if has_uncloseable_windows or has_closeable_windows:
-        result_window_kind = WindowKind.UNCLOSEABLE
-    elif has_closed_windows:
-        result_window_kind = WindowKind.CLOSED
-    else:
-        result_window_kind = WindowKind.NONE
 
     return ExprMetadata(
-        result_kind, window_kind=result_window_kind, expansion_kind=result_expansion_kind
+        result_expansion_kind,
+        last_node_is_orderable_window=False,
+        last_node_is_unorderable_window=False,
+        is_partitionable = result_is_partitionable,
+        is_partitioned = result_is_partitioned,
+        is_orderable = result_is_orderable,
+        n_physical_order_dependent_ops = result_n_physical_order_dependent_ops,
+        preserves_length = result_preserves_length,
+        is_scalar_like = not result_is_not_scalar_like,
+        is_literal = not result_is_not_literal,
+
     )
 
 
@@ -503,7 +488,7 @@ def check_expressions_preserve_length(*args: IntoExpr, function_name: str) -> No
     from narwhals.series import Series
 
     if not all(
-        (is_expr(x) and x._metadata.kind.preserves_length())
+        (is_expr(x) and x._metadata.preserves_length)
         or isinstance(x, (str, Series))
         for x in args
     ):
@@ -516,7 +501,7 @@ def all_exprs_are_scalar_like(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
     # For Series input, we don't raise (yet), we let such checks happen later,
     # as this function works lazily and so can't evaluate lengths.
     exprs = chain(args, kwargs.values())
-    return all(is_expr(x) and x._metadata.kind.is_scalar_like() for x in exprs)
+    return all(is_expr(x) and x._metadata.is_scalar_like for x in exprs)
 
 
 def apply_n_ary_operation(
