@@ -65,35 +65,24 @@ class Expr:
         self._to_compliant_expr: _ToCompliant = func
         self._metadata = metadata
 
-    def _with_callable(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
+    def _with_elementwise_op(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
         # Instantiate new Expr keeping metadata unchanged.
-        return self.__class__(to_compliant_expr, self._metadata)
+        return self.__class__(to_compliant_expr, self._metadata.with_elementwise_op())
 
     def _with_aggregation(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
-        if self._metadata.is_scalar_like:
-            msg = "Aggregations can't be applied to scalar-like expressions."
-            raise InvalidOperationError(msg)
-        return self.__class__(
-            to_compliant_expr, self._metadata.with_kind(ExprKind.AGGREGATION)
-        )
+        return self.__class__(to_compliant_expr, self._metadata.with_aggregation())
 
     def _with_order_dependent_aggregation(
         self, to_compliant_expr: Callable[[Any], Any]
     ) -> Self:
-        if self._metadata.kind.is_scalar_like():
-            msg = "Aggregations can't be applied to scalar-like expressions."
-            raise InvalidOperationError(msg)
         return self.__class__(
             to_compliant_expr,
-            self._metadata.with_kind_and_closeable_window(ExprKind.AGGREGATION),
+            self._metadata.with_order_dependent_aggregation()
         )
 
     def _with_filtration(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
-        if self._metadata.kind.is_scalar_like():
-            msg = "Length-changing can't be applied to scalar-like expressions."
-            raise InvalidOperationError(msg)
         return self.__class__(
-            to_compliant_expr, self._metadata.with_kind(ExprKind.FILTRATION)
+            to_compliant_expr, self._metadata.with_filtration()
         )
 
     def __repr__(self) -> str:
@@ -130,7 +119,7 @@ class Expr:
             |      1  15       |
             └──────────────────┘
         """
-        return self._with_callable(lambda plx: self._to_compliant_expr(plx).alias(name))
+        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).alias(name))
 
     def pipe(
         self,
@@ -191,7 +180,7 @@ class Expr:
             └──────────────────┘
         """
         _validate_dtype(dtype)
-        return self._with_callable(lambda plx: self._to_compliant_expr(plx).cast(dtype))
+        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).cast(dtype))
 
     # --- binary ---
     def __eq__(self, other: Self | Any) -> Self:  # type: ignore[override]
@@ -388,7 +377,7 @@ class Expr:
 
     # --- unary ---
     def __invert__(self) -> Self:
-        return self._with_callable(lambda plx: self._to_compliant_expr(plx).__invert__())
+        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).__invert__())
 
     def any(self) -> Self:
         """Return whether any of the values in the column are `True`.
@@ -518,7 +507,7 @@ class Expr:
             │ 2.428571 │
             └──────────┘
         """
-        return self._with_callable(
+        return self._with_elementwise_op(
             lambda plx: self._to_compliant_expr(plx).ewm_mean(
                 com=com,
                 span=span,
@@ -893,7 +882,7 @@ class Expr:
             |1 -2  4      2      4|
             └─────────────────────┘
         """
-        return self._with_callable(lambda plx: self._to_compliant_expr(plx).abs())
+        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).abs())
 
     def cum_sum(self, *, reverse: bool = False) -> Self:
         """Return cumulative sum.
@@ -1080,7 +1069,7 @@ class Expr:
             new = list(old.values())
             old = list(old.keys())
 
-        return self._with_callable(
+        return self._with_elementwise_op(
             lambda plx: self._to_compliant_expr(plx).replace_strict(
                 old, new, return_dtype=return_dtype
             )
@@ -1205,7 +1194,7 @@ class Expr:
             └──────────────────┘
         """
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
-            return self._with_callable(
+            return self._with_elementwise_op(
                 lambda plx: self._to_compliant_expr(plx).is_in(
                     to_native(other, pass_through=True)
                 ),
@@ -1295,7 +1284,7 @@ class Expr:
             |└───────┴────────┴───────────┴───────────┘|
             └──────────────────────────────────────────┘
         """
-        return self._with_callable(lambda plx: self._to_compliant_expr(plx).is_null())
+        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).is_null())
 
     def is_nan(self) -> Self:
         """Indicate which values are NaN.
@@ -1330,7 +1319,7 @@ class Expr:
             |└───────┴────────┴──────────┴──────────┘|
             └────────────────────────────────────────┘
         """
-        return self._with_callable(lambda plx: self._to_compliant_expr(plx).is_nan())
+        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).is_nan())
 
     def arg_true(self) -> Self:
         """Find elements where boolean expression is True.
@@ -1654,7 +1643,7 @@ class Expr:
             |3  1  c        False         True|
             └─────────────────────────────────┘
         """
-        return self._with_callable(lambda plx: self._to_compliant_expr(plx).is_unique())
+        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).is_unique())
 
     def null_count(self) -> Self:
         r"""Count null values.
@@ -1873,7 +1862,7 @@ class Expr:
             |2  3.901234        3.9|
             └──────────────────────┘
         """
-        return self._with_callable(
+        return self._with_elementwise_op(
             lambda plx: self._to_compliant_expr(plx).round(decimals)
         )
 
@@ -2041,7 +2030,7 @@ class Expr:
             |└──────┴─────────────┘|
             └──────────────────────┘
         """
-        return self._with_callable(lambda plx: self._to_compliant_expr(plx).is_finite())
+        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).is_finite())
 
     def cum_count(self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative count of the non-null values in the column.
@@ -2500,7 +2489,7 @@ class Expr:
             )
             raise ValueError(msg)
 
-        return self._with_callable(
+        return self._with_elementwise_op(
             lambda plx: self._to_compliant_expr(plx).rank(
                 method=method, descending=descending
             )
