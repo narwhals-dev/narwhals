@@ -4,8 +4,6 @@ from typing import TYPE_CHECKING
 from typing import Generic
 from typing import TypeVar
 
-from narwhals._expression_parsing import ExprKind
-
 if TYPE_CHECKING:
     from narwhals.expr import Expr
 
@@ -41,7 +39,6 @@ class ExprCatNamespace(Generic[ExprT]):
             │ mango  │
             └────────┘
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).cat.get_categories(),
-            self._expr._metadata.with_kind(ExprKind.FILTRATION),
+        return self._expr._with_callable(
+            lambda plx: self._expr._to_compliant_expr(plx).cat.get_categories()
         )
