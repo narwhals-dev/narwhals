@@ -541,7 +541,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                 given library does not support lazy execution, then this will restrict
                 the API to lazy-only operations.
 
-                `backend` can be specified in various ways:
+                `backend` can be specified in various ways
 
                 - As `Implementation.<BACKEND>` with `BACKEND` being `DASK`, `DUCKDB`
                     or `POLARS`.
@@ -2287,7 +2287,7 @@ class LazyFrame(BaseFrame[FrameT]):
                 - `duckdb.PyRelation` -> `pyarrow.Table`
                 - `pyspark.DataFrame` -> `pyarrow.Table`
 
-                `backend` can be specified in various ways:
+                `backend` can be specified in various ways
 
                 - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`
                     or `POLARS`.
