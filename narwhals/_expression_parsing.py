@@ -453,6 +453,8 @@ def combine_metadata(
     for i, arg in enumerate(args):
         if isinstance(arg, str) and not str_as_lit:
             result_preserves_length = True
+            result_is_not_scalar_like = True
+            result_is_not_literal = True
         elif is_expr(arg):
             metadata = arg._metadata
             if metadata.expansion_kind.is_multi_output():
