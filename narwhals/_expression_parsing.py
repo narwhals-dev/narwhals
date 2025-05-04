@@ -360,7 +360,7 @@ class ExprMetadata:
         )
 
 
-def combine_metadata(  # noqa: PLR0915
+def combine_metadata(  # noqa: C901, PLR0912, PLR0915
     *args: IntoExpr | object | None,
     str_as_lit: bool,
     allow_multi_output: bool,
@@ -384,7 +384,7 @@ def combine_metadata(  # noqa: PLR0915
     has_uncloseable_windows = False
     has_closed_windows = False
 
-    for i, arg in enumerate(args):
+    for i, arg in enumerate(args):  # noqa: PLR1702
         if isinstance(arg, str) and not str_as_lit:
             has_transforms_or_windows = True
         elif is_expr(arg):
