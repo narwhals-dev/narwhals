@@ -2075,9 +2075,8 @@ class Expr:
             |3     d            3                    1|
             └─────────────────────────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).cum_count(reverse=reverse),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+        return self._with_orderable_window(
+            lambda plx: self._to_compliant_expr(plx).cum_count(reverse=reverse)
         )
 
     def cum_min(self, *, reverse: bool = False) -> Self:
@@ -2112,9 +2111,8 @@ class Expr:
             |3  2.0        1.0                2.0|
             └────────────────────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).cum_min(reverse=reverse),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+        return self._with_orderable_window(
+            lambda plx: self._to_compliant_expr(plx).cum_min(reverse=reverse)
         )
 
     def cum_max(self, *, reverse: bool = False) -> Self:
@@ -2149,9 +2147,8 @@ class Expr:
             |3  2.0        3.0                2.0|
             └────────────────────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).cum_max(reverse=reverse),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+        return self._with_orderable_window(
+            lambda plx: self._to_compliant_expr(plx).cum_max(reverse=reverse)
         )
 
     def cum_prod(self, *, reverse: bool = False) -> Self:
@@ -2186,9 +2183,8 @@ class Expr:
             |3  2.0         6.0                 2.0|
             └──────────────────────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).cum_prod(reverse=reverse),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+        return self._with_orderable_window(
+            lambda plx: self._to_compliant_expr(plx).cum_prod(reverse=reverse)
         )
 
     def rolling_sum(
@@ -2244,13 +2240,12 @@ class Expr:
             window_size=window_size, min_samples=min_samples
         )
 
-        return self.__class__(
+        return self._with_orderable_window(
             lambda plx: self._to_compliant_expr(plx).rolling_sum(
                 window_size=window_size,
                 min_samples=min_samples_int,
                 center=center,
-            ),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+            )
         )
 
     def rolling_mean(
@@ -2306,13 +2301,12 @@ class Expr:
             window_size=window_size, min_samples=min_samples
         )
 
-        return self.__class__(
+        return self._with_orderable_window(
             lambda plx: self._to_compliant_expr(plx).rolling_mean(
                 window_size=window_size,
                 min_samples=min_samples,
                 center=center,
-            ),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+            )
         )
 
     def rolling_var(
@@ -2370,11 +2364,10 @@ class Expr:
             window_size=window_size, min_samples=min_samples
         )
 
-        return self.__class__(
+        return self._with_orderable_window(
             lambda plx: self._to_compliant_expr(plx).rolling_var(
                 window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
-            ),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+            )
         )
 
     def rolling_std(
@@ -2432,14 +2425,13 @@ class Expr:
             window_size=window_size, min_samples=min_samples
         )
 
-        return self.__class__(
+        return self._with_orderable_window(
             lambda plx: self._to_compliant_expr(plx).rolling_std(
                 window_size=window_size,
                 min_samples=min_samples,
                 center=center,
                 ddof=ddof,
-            ),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+            )
         )
 
     def rank(self, method: RankMethod = "average", *, descending: bool = False) -> Self:
@@ -2500,7 +2492,7 @@ class Expr:
             )
             raise ValueError(msg)
 
-        return self._with_elementwise_op(
+        return self._with_unorderable_window(
             lambda plx: self._to_compliant_expr(plx).rank(
                 method=method, descending=descending
             )
