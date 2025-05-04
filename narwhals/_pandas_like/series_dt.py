@@ -226,5 +226,5 @@ class PandasLikeSeriesDateTimeNamespace(
             )
             return self.with_native(result_native)
         if unit == "m":
-            every = every.replace("m", "min", count=1)
+            every = every.replace("m", "min", 1)
         return self.with_native(self.native.dt.floor(every))
