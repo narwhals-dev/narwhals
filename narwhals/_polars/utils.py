@@ -61,7 +61,7 @@ def extract_args_kwargs(
 
 
 @lru_cache(maxsize=16)
-def native_to_narwhals_dtype(
+def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     dtype: pl.DataType, version: Version, backend_version: tuple[int, ...]
 ) -> DType:
     dtypes = version.dtypes
@@ -146,7 +146,7 @@ def native_to_narwhals_dtype(
     return dtypes.Unknown()
 
 
-def narwhals_to_native_dtype(
+def narwhals_to_native_dtype(  # noqa: C901, PLR0912
     dtype: DType | type[DType], version: Version, backend_version: tuple[int, ...]
 ) -> pl.DataType:
     dtypes = version.dtypes
