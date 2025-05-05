@@ -962,23 +962,23 @@ class PandasLikeDataFrame(
         from itertools import product
 
         frame = self.native
-        index_, values_ = self._pivot_into_index_values(on, index, values)
+        index, values = self._pivot_into_index_values(on, index, values)
 
         # Pivot: based on aggregate function we perform different operations to match
         # polars result
         if aggregate_function is None:
-            result = frame.pivot(columns=on, index=index_, values=values_)
+            result = frame.pivot(columns=on, index=index, values=values)
         elif aggregate_function == "len":
             result = (
-                frame.groupby([*on, *index_], as_index=False)
-                .agg(dict.fromkeys(values_, "size"))
-                .pivot(columns=on, index=index_, values=values_)
+                frame.groupby([*on, *index], as_index=False)
+                .agg(dict.fromkeys(values, "size"))
+                .pivot(columns=on, index=index, values=values)
             )
         else:
             result = pivot_table(
                 df=self,
-                values=values_,
-                index=index_,
+                values=values,
+                index=index,
                 columns=on,
                 aggregate_function=aggregate_function,
             )
@@ -993,7 +993,7 @@ class PandasLikeDataFrame(
         if sort_columns:
             uniques = {k: sorted(v) for k, v in uniques.items()}
 
-        ordered_cols = list(product(values_, *uniques.values()))
+        ordered_cols = list(product(values, *uniques.values()))
         result = result.loc[:, ordered_cols]
         columns = result.columns
 
@@ -1007,7 +1007,7 @@ class PandasLikeDataFrame(
             # If `n_on == 1` and `len(values_) > 1`, then we flatten and join all the native
             # multi-index output column names, separating them using the `separator` provided.
             new_columns = [
-                separator.join(col).strip() if len(values_) > 1 else col[-1]
+                separator.join(col).strip() if len(values) > 1 else col[-1]
                 for col in columns
             ]
         else:
@@ -1022,7 +1022,7 @@ class PandasLikeDataFrame(
             # where `"_"` is an example for the separator value.
             new_columns = [
                 separator.join([col[0], '{"' + '","'.join(col[-n_on:]) + '"}'])
-                if len(values_) > 1
+                if len(values) > 1
                 else '{"' + '","'.join(col[-n_on:]) + '"}'
                 for col in columns
             ]
