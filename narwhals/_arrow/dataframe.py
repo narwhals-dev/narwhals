@@ -23,8 +23,8 @@ from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
-from narwhals.utils import check_column_exists
 from narwhals.utils import check_column_names_are_unique
+from narwhals.utils import check_columns_exists
 from narwhals.utils import convert_str_slice_to_int_slice
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import not_implemented
@@ -696,7 +696,7 @@ class ArrowDataFrame(
         import numpy as np  # ignore-banned-import
 
         if subset:
-            check_column_exists(subset, available_columns=self.columns)
+            check_columns_exists(subset, available_columns=self.columns)
         subset = list(subset or self.columns)
 
         if keep in {"any", "first", "last"}:

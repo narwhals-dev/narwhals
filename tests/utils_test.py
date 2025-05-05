@@ -27,7 +27,7 @@ from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import _DeferredIterable
-from narwhals.utils import check_column_exists
+from narwhals.utils import check_columns_exists
 from narwhals.utils import deprecate_native_namespace
 from narwhals.utils import parse_version
 from narwhals.utils import requires
@@ -337,18 +337,18 @@ def test_parse_version(
     assert parse_version(version) == expected
 
 
-def test_check_column_exists() -> None:
+def test_check_columns_exists() -> None:
     columns = ["a", "b", "c"]
     subset = ["d", "f"]
     with pytest.raises(ColumnNotFoundError) as excinfo:
-        check_column_exists(subset, available_columns=columns)
+        check_columns_exists(subset, available_columns=columns)
     assert str(excinfo.value) == (
         "The following columns were not found: ['d', 'f']\n\nHint: Did you mean one of these columns: ['a', 'b', 'c']?"
     )
 
     # Check that the error is not raised
     subset = ["a", "b"]
-    check_column_exists(subset, available_columns=columns)
+    check_columns_exists(subset, available_columns=columns)
 
 
 def test_not_implemented() -> None:

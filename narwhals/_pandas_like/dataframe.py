@@ -32,7 +32,7 @@ from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import _into_arrow_table
 from narwhals.utils import _remap_full_join_keys
-from narwhals.utils import check_column_exists
+from narwhals.utils import check_columns_exists
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -765,7 +765,7 @@ class PandasLikeDataFrame(
         # and has no effect on the output.
         mapped_keep = {"none": False, "any": "first"}.get(keep, keep)
         if subset:
-            check_column_exists(subset, available_columns=self.columns)
+            check_columns_exists(subset, available_columns=self.columns)
         return self._with_native(
             self.native.drop_duplicates(subset=subset, keep=mapped_keep),
             validate_column_names=False,

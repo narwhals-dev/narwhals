@@ -19,7 +19,7 @@ from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
-from narwhals.utils import check_column_exists
+from narwhals.utils import check_columns_exists
 from narwhals.utils import find_stacklevel
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import not_implemented
@@ -367,7 +367,7 @@ class SparkLikeLazyFrame(
         self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self:
         if subset:
-            check_column_exists(subset, available_columns=self.columns)
+            check_columns_exists(subset, available_columns=self.columns)
         subset = list(subset) if subset else None
         if keep == "none":
             tmp = generate_temporary_column_name(8, self.columns)

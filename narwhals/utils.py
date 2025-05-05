@@ -1541,7 +1541,7 @@ def generate_repr(header: str, native_repr: str) -> str:
     )
 
 
-def check_column_exists(
+def check_columns_exists(
     columns: Sequence[str], *, available_columns: Sequence[str]
 ) -> None:
     if missing := set(columns).difference(available_columns):
