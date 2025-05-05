@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._duration import parse_interval_string
+from narwhals._pandas_like.utils import UNIT_DICT
 from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
@@ -160,13 +161,11 @@ class DaskExprDateTimeNamespace:
         )
 
     def truncate(self, every: str) -> DaskExpr:
-        _, unit = parse_interval_string(every)
+        multiple, unit = parse_interval_string(every)
         if unit in {"mo", "q", "y"}:
             msg = f"Truncating to {unit} is not supported yet for dask."
             raise NotImplementedError(msg)
-        if unit == "m":
-            every = every.replace("m", "min", 1)
+        freq = f"{multiple}{UNIT_DICT.get(unit, unit)}"
         return self._compliant_expr._with_callable(
-            lambda _input: _input.dt.floor(every),
-            "truncate",
+            lambda _input: _input.dt.floor(freq), "truncate"
         )
