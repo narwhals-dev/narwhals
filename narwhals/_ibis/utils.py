@@ -194,7 +194,7 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         return ibis_dtypes.Timestamp()
     if isinstance_or_issubclass(dtype, dtypes.Duration):
-        return ibis_dtypes.Interval(unit=dtype.time_unit)  # type: ignore[arg-type,unused-ignore]
+        return ibis_dtypes.Interval(unit=dtype.time_unit)  # pyright: ignore[reportArgumentType]
     if isinstance_or_issubclass(dtype, dtypes.Date):
         return ibis_dtypes.Date()
     if isinstance_or_issubclass(dtype, dtypes.Time):
