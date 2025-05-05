@@ -1065,7 +1065,13 @@ class PandasLikeDataFrame(
 
         # Select the columns in the right order
         uniques = (
-            (self.get_column(col).unique().sort().to_list() for col in on)
+            (
+                self.get_column(col)
+                .unique()
+                .sort(descending=False, nulls_last=False)
+                .to_list()
+                for col in on
+            )
             if sort_columns
             else (self.get_column(col).unique().to_list() for col in on)
         )

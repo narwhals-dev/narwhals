@@ -651,9 +651,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             raise ValueError(msg)
         return result
 
-    def sort(
-        self, *, descending: bool = False, nulls_last: bool = False
-    ) -> PandasLikeSeries:
+    def sort(self, *, descending: bool, nulls_last: bool) -> PandasLikeSeries:
         na_position = "last" if nulls_last else "first"
         return self._with_native(
             self.native.sort_values(ascending=not descending, na_position=na_position)
