@@ -5,6 +5,7 @@ from typing import Any
 
 from narwhals._compliant.any_namespace import DateTimeNamespace
 from narwhals._duration import parse_interval_string
+from narwhals._pandas_like.utils import UNIT_DICT
 from narwhals._pandas_like.utils import PandasLikeSeriesNamespace
 from narwhals._pandas_like.utils import calculate_timestamp_date
 from narwhals._pandas_like.utils import calculate_timestamp_datetime
@@ -196,6 +197,11 @@ class PandasLikeSeriesDateTimeNamespace(
     def truncate(self, every: str) -> PandasLikeSeries:
         multiple, unit = parse_interval_string(every)
         native = self.native
+        if self.implementation.is_cudf():
+            if multiple != 1:
+                msg = f"Only multiple `1` is supported for cuDF, got: {multiple}."
+                raise NotImplementedError(msg)
+            return self.with_native(self.native.dt.floor(UNIT_DICT.get(unit, unit)))
         dtype_backend = get_dtype_backend(native.dtype, self.compliant._implementation)
         if unit in {"mo", "q", "y"}:
             if self.implementation.is_cudf():
@@ -225,6 +231,6 @@ class PandasLikeSeriesDateTimeNamespace(
                 result_arr, dtype=native.dtype, index=native.index, name=native.name
             )
             return self.with_native(result_native)
-        if unit == "m":
-            every = every.replace("m", "min", 1)
-        return self.with_native(self.native.dt.floor(every))
+        return self.with_native(
+            self.native.dt.floor(f"{multiple}{UNIT_DICT.get(unit, unit)}")
+        )
