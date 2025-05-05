@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._duration import parse_interval_string
+from narwhals._ibis.utils import UNITS_DICT_BUCKET
+from narwhals._ibis.utils import UNITS_DICT_TRUNCATE
 from narwhals.utils import not_implemented
 
 if TYPE_CHECKING:
@@ -72,6 +75,20 @@ class IbisExprDateTimeNamespace:
         return self._compliant_expr._with_callable(
             lambda _input: _input.date(),
         )
+
+    def truncate(self, every: str) -> IbisExpr:
+        multiple, unit = parse_interval_string(every)
+
+        if multiple != 1:
+            bucket_kwargs = {UNITS_DICT_BUCKET[unit]: multiple}
+            return self._compliant_expr._with_callable(
+                lambda _input: _input.bucket(**bucket_kwargs),
+            )
+        else:
+            formatted_unit = UNITS_DICT_TRUNCATE[unit]
+            return self._compliant_expr._with_callable(
+                lambda _input: _input.truncate(formatted_unit)
+            )
 
     nanosecond = not_implemented()
     total_minutes = not_implemented()

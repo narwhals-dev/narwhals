@@ -23,6 +23,32 @@ if TYPE_CHECKING:
 lit = ibis.literal
 """Alias for `ibis.literal`."""
 
+UNITS_DICT_BUCKET = {
+    "y": "years",
+    "q": "quarters",
+    "mo": "months",
+    "d": "days",
+    "h": "hours",
+    "m": "minutes",
+    "s": "seconds",
+    "ms": "milliseconds",
+    "us": "microseconds",
+    "ns": "nanoseconds",
+}
+
+UNITS_DICT_TRUNCATE = {
+    "y": "Y",
+    "q": "Q",
+    "mo": "M",
+    "d": "D",
+    "h": "h",
+    "m": "m",
+    "s": "s",
+    "ms": "ms",
+    "us": "us",
+    "ns": "ns",
+}
+
 
 class WindowInputs:
     __slots__ = ("expr", "order_by", "partition_by")

@@ -104,7 +104,9 @@ def test_truncate(
         request.applymarker(
             pytest.mark.xfail(reason="https://github.com/eakmanrq/sqlframe/issues/383")
         )
-    if every.endswith("ns") and any(x in str(constructor) for x in ("polars", "duckdb")):
+    if every.endswith("ns") and any(
+        x in str(constructor) for x in ("polars", "duckdb", "ibis")
+    ):
         request.applymarker(pytest.mark.xfail())
     if any(every.endswith(x) for x in ("mo", "q", "y")) and any(
         x in str(constructor) for x in ("dask", "cudf")
@@ -193,13 +195,19 @@ def test_truncate_custom(
         request.applymarker(
             pytest.mark.xfail(reason="https://github.com/eakmanrq/sqlframe/issues/383")
         )
-    if every.endswith("ns") and any(x in str(constructor) for x in ("polars", "duckdb")):
+    if every.endswith("ns") and any(
+        x in str(constructor) for x in ("polars", "duckdb", "ibis")
+    ):
         request.applymarker(pytest.mark.xfail())
     if "cudf" in str(constructor):
         # https://github.com/rapidsai/cudf/issues/18654
         request.applymarker(pytest.mark.xfail(reason="Not implemented"))
     if any(every.endswith(x) for x in ("mo", "q", "y")) and any(
         x in str(constructor) for x in ("dask",)
+    ):
+        request.applymarker(pytest.mark.xfail(reason="Not implemented"))
+    if any(every.endswith(x) for x in ("q",)) and any(
+        x in str(constructor) for x in ("ibis",)
     ):
         request.applymarker(pytest.mark.xfail(reason="Not implemented"))
     df = nw.from_native(constructor(data))
