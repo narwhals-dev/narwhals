@@ -400,10 +400,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
 
     def n_unique(self) -> Self:
         return self._with_callable(
-            lambda _input: _input.cast("string")
-            .fill_null("__NULL__")
-            .nunique()
-            .name(_input.get_name())
+            lambda _input: _input.nunique() + _input.isnull().any().cast("int8")
         )
 
     def count(self) -> Self:
@@ -411,7 +408,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
 
     def len(self) -> Self:
         return self._with_callable(
-            lambda _input: _input.cast("string").fill_null("__NULL__").count()
+            lambda _input: _input.count() + _input.isnull().cast("int8").sum()
         )
 
     def std(self, ddof: int) -> Self:
