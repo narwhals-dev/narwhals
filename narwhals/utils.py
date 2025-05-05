@@ -1542,12 +1542,18 @@ def generate_repr(header: str, native_repr: str) -> str:
 
 
 def check_columns_exists(
-    columns: Sequence[str], *, available_columns: Sequence[str]
+    columns: Sequence[str],
+    *,
+    available_columns: Sequence[str],
+    from_error: Exception | None = None,
 ) -> None:
     if missing := set(columns).difference(available_columns):
-        raise ColumnNotFoundError.from_missing_and_available_column_names(
+        error = ColumnNotFoundError.from_missing_and_available_column_names(
             missing_columns=sorted(missing), available_columns=list(available_columns)
         )
+        if from_error is not None:
+            raise error from from_error
+        raise error
 
 
 def check_column_names_are_unique(columns: Sequence[str]) -> None:
