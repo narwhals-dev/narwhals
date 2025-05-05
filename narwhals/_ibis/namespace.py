@@ -72,32 +72,20 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
         def func(df: IbisLazyFrame) -> list[ir.Value]:
             cols = list(chain.from_iterable(expr(df) for expr in exprs))
             cols_casted = [s.cast("string") for s in cols]
-            null_mask = [s.isnull() for s in cols]
 
             if not ignore_nulls:
-                null_mask_result = reduce(operator.or_, null_mask)
+                null_mask = reduce(operator.or_, (s.isnull() for s in cols))
                 result = ibis.cases(
-                    (
-                        ~null_mask_result,
-                        reduce(lambda x, y: x + separator + y, cols_casted),
-                    ),
+                    (~null_mask, reduce(lambda x, y: x + separator + y, cols_casted)),
                     else_=None,
                 )
             else:
-                init_value, *values = [
-                    cast("ir.StringValue", ibis.cases((~nm, col), else_=""))
-                    for col, nm in zip(cols_casted, null_mask)
-                ]
-
-                separators = (
-                    cast("ir.StringValue", ibis.cases((nm, ""), else_=separator))
-                    for nm in null_mask[:-1]
-                )
-                result = reduce(
-                    lambda x, y: x + y,
-                    (s + v for s, v in zip(separators, values)),
-                    init_value,
-                )
+                result = cols_casted[0]
+                for col in cols_casted[1:]:
+                    result = result + cast(
+                        "ir.StringValue",
+                        ibis.cases((col.isnull(), ""), else_=separator + col),
+                    )
 
             return [result]
 
