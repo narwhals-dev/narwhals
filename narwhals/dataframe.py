@@ -396,7 +396,7 @@ class BaseFrame(Generic[_FrameT]):
 class DataFrame(BaseFrame[DataFrameT]):
     """Narwhals DataFrame, backed by a native eager dataframe.
 
-    !!! warning
+    Warning:
         This class is not meant to be instantiated directly - instead:
 
         - If the native object is a eager dataframe from one of the supported
@@ -479,7 +479,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
             >>> df = nw.from_native(df_native)
             >>> df.implementation
-            <Implementation.PANDAS: 1>
+            <Implementation.PANDAS: 'pandas'>
             >>> df.implementation.is_pandas()
             True
             >>> df.implementation.is_pandas_like()
@@ -513,10 +513,10 @@ class DataFrame(BaseFrame[DataFrameT]):
         try:
             import pyarrow as pa  # ignore-banned-import
         except ModuleNotFoundError as exc:  # pragma: no cover
-            msg = f"PyArrow>=14.0.0 is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
+            msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
             raise ModuleNotFoundError(msg) from exc
         if parse_version(pa) < (14, 0):  # pragma: no cover
-            msg = f"PyArrow>=14.0.0 is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
+            msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
             raise ModuleNotFoundError(msg) from None
         pa_table = self.to_arrow()
         return pa_table.__arrow_c_stream__(requested_schema=requested_schema)  # type: ignore[no-untyped-call]
@@ -823,7 +823,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             | tuple[MultiIndexSelector, MultiColSelector]
         ),
     ) -> Self: ...
-    def __getitem__(
+    def __getitem__(  # noqa: C901, PLR0912
         self,
         item: (
             SingleIndexSelector
@@ -979,7 +979,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def row(self, index: int) -> tuple[Any, ...]:
         """Get values at given row.
 
-        !!! warning
+        Warning:
             You should NEVER use this method to iterate over a DataFrame;
             if you require row-iteration you should strongly prefer use of iter_rows()
             instead.
@@ -2173,7 +2173,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 class LazyFrame(BaseFrame[FrameT]):
     """Narwhals LazyFrame, backed by a native lazyframe.
 
-    !!! warning
+    Warning:
         This class is not meant to be instantiated directly - instead use
         [`narwhals.from_native`][] with a native
         object that is a lazy dataframe from one of the supported
@@ -2258,7 +2258,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import dask.dataframe as dd
             >>> lf_native = dd.from_dict({"a": [1, 2]}, npartitions=1)
             >>> nw.from_native(lf_native).implementation
-            <Implementation.DASK: 7>
+            <Implementation.DASK: 'dask'>
         """
         return self._compliant_frame._implementation
 
@@ -2649,7 +2649,7 @@ class LazyFrame(BaseFrame[FrameT]):
     def tail(self, n: int = 5) -> Self:  # pragma: no cover
         r"""Get the last `n` rows.
 
-        !!! warning
+        Warning:
             `LazyFrame.tail` is deprecated and will be removed in a future version.
             Note: this will remain available in `narwhals.stable.v1`.
             See [stable api](../backcompat.md/) for more information.
@@ -3120,7 +3120,7 @@ class LazyFrame(BaseFrame[FrameT]):
     def gather_every(self, n: int, offset: int = 0) -> Self:
         r"""Take every nth row in the DataFrame and return as a new DataFrame.
 
-        !!! warning
+        Warning:
             `LazyFrame.gather_every` is deprecated and will be removed in a future version.
             Note: this will remain available in `narwhals.stable.v1`.
             See [stable api](../backcompat.md/) for more information.

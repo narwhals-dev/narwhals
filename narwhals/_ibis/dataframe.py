@@ -305,7 +305,7 @@ class IbisLazyFrame(
 
         return self._with_native(joined)
 
-    def join_asof(
+    def join_asof(  # noqa: PLR0912
         self,
         other: Self,
         *,

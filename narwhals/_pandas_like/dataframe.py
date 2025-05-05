@@ -574,7 +574,7 @@ class PandasLikeDataFrame(
 
         return PandasLikeGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
-    def join(
+    def join(  # noqa: C901, PLR0911, PLR0912
         self,
         other: Self,
         *,
@@ -928,7 +928,7 @@ class PandasLikeDataFrame(
     def gather_every(self, n: int, offset: int) -> Self:
         return self._with_native(self.native.iloc[offset::n], validate_column_names=False)
 
-    def pivot(
+    def pivot(  # noqa: C901, PLR0912
         self,
         on: Sequence[str],
         *,
@@ -941,7 +941,7 @@ class PandasLikeDataFrame(
         if self._implementation is Implementation.PANDAS and (
             self._backend_version < (1, 1)
         ):  # pragma: no cover
-            msg = "pivot is only supported for pandas>=1.1"
+            msg = "pivot is only supported for 'pandas>=1.1'"
             raise NotImplementedError(msg)
         if self._implementation is Implementation.MODIN:
             msg = "pivot is not supported for Modin backend due to https://github.com/modin-project/modin/issues/7409."

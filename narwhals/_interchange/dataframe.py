@@ -29,7 +29,7 @@ class DtypeKind(enum.IntEnum):
     CATEGORICAL = 23
 
 
-def map_interchange_dtype_to_narwhals_dtype(
+def map_interchange_dtype_to_narwhals_dtype(  # noqa: C901, PLR0911, PLR0912
     interchange_dtype: tuple[DtypeKind, int, Any, Any], version: Version
 ) -> DType:
     dtypes = version.dtypes
@@ -119,7 +119,7 @@ class InterchangeFrame:
         else:  # pragma: no cover
             msg = (
                 "Conversion to pandas is achieved via interchange protocol which requires"
-                f" pandas>=1.5.0 to be installed, found {pd.__version__}"
+                f" 'pandas>=1.5.0' to be installed, found {pd.__version__}"
             )
             raise NotImplementedError(msg)
 

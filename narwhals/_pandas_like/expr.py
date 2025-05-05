@@ -201,7 +201,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
     def shift(self, n: int) -> Self:
         return self._reuse_series("shift", call_kwargs={"n": n})
 
-    def over(  # noqa: PLR0915
+    def over(  # noqa: C901, PLR0915
         self,
         partition_by: Sequence[str],
         order_by: Sequence[str] | None,
@@ -244,7 +244,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 function_name, self._call_kwargs
             )
 
-            def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
+            def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:  # noqa: C901, PLR0912
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
                 if function_name == "cum_count":
                     plx = self.__narwhals_namespace__()

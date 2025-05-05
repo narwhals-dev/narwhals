@@ -520,7 +520,7 @@ class PolarsSeries:
         except Exception as e:  # noqa: BLE001
             raise catch_polars_exception(e, self._backend_version) from None
 
-    def hist(
+    def hist(  # noqa: C901, PLR0912
         self,
         bins: list[float | int] | None,
         *,

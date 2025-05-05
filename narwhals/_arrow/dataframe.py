@@ -108,7 +108,7 @@ class ArrowDataFrame(
         elif backend_version >= (14,) or isinstance(data, Collection):
             native = pa.table(data)
         elif supports_arrow_c_stream(data):  # pragma: no cover
-            msg = f"PyArrow>=14.0.0 is required for `from_arrow` for object of type {type(data).__name__!r}."
+            msg = f"'pyarrow>=14.0.0' is required for `from_arrow` for object of type {type(data).__name__!r}."
             raise ModuleNotFoundError(msg)
         else:  # pragma: no cover
             msg = f"`from_arrow` is not supported for object of type {type(data).__name__!r}."

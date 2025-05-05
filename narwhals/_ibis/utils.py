@@ -53,7 +53,7 @@ def evaluate_exprs(df: IbisLazyFrame, /, *exprs: IbisExpr) -> list[tuple[str, ir
 
 
 @lru_cache(maxsize=16)
-def native_to_narwhals_dtype(ibis_dtype: IbisDataType, version: Version) -> DType:
+def native_to_narwhals_dtype(ibis_dtype: IbisDataType, version: Version) -> DType:  # noqa: C901, PLR0912
     dtypes = version.dtypes
     if ibis_dtype.is_int64():
         return dtypes.Int64()
@@ -125,7 +125,7 @@ def is_struct(obj: IbisDataType) -> TypeIs[ibis_dtypes.Struct]:
     return obj.is_struct()
 
 
-def narwhals_to_native_dtype(
+def narwhals_to_native_dtype(  # noqa: C901, PLR0912
     dtype: DType | type[DType], version: Version
 ) -> IbisDataType:
     dtypes = version.dtypes

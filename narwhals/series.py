@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 class Series(Generic[IntoSeriesT]):
     """Narwhals Series, backed by a native series.
 
-    !!! warning
+    Warning:
         This class is not meant to be instantiated directly - instead:
 
         - If the native object is a series from one of the supported backend (e.g.
@@ -115,7 +115,7 @@ class Series(Generic[IntoSeriesT]):
             >>> s = nw.from_native(s_native, series_only=True)
 
             >>> s.implementation
-            <Implementation.PANDAS: 1>
+            <Implementation.PANDAS: 'pandas'>
 
             >>> s.implementation.is_pandas()
             True
@@ -212,10 +212,10 @@ class Series(Generic[IntoSeriesT]):
         try:
             import pyarrow as pa  # ignore-banned-import
         except ModuleNotFoundError as exc:  # pragma: no cover
-            msg = f"PyArrow>=16.0.0 is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
+            msg = f"'pyarrow>=16.0.0' is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
             raise ModuleNotFoundError(msg) from exc
         if parse_version(pa) < (16, 0):  # pragma: no cover
-            msg = f"PyArrow>=16.0.0 is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
+            msg = f"'pyarrow>=16.0.0' is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
             raise ModuleNotFoundError(msg)
         from narwhals._arrow.utils import chunked_array
 
@@ -2553,7 +2553,7 @@ class Series(Generic[IntoSeriesT]):
     ) -> DataFrame[Any]:
         """Bin values into buckets and count their occurrences.
 
-        !!! warning
+        Warning:
             This functionality is considered **unstable**. It may be changed at any point
             without it being considered a breaking change.
 

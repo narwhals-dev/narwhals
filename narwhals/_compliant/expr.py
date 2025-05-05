@@ -1008,6 +1008,9 @@ class EagerExprDateTimeNamespace(
     def total_nanoseconds(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("dt", "total_nanoseconds")
 
+    def truncate(self, every: str) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("dt", "truncate", every=every)
+
 
 class EagerExprListNamespace(
     EagerExprNamespace[EagerExprT], ListNamespace[EagerExprT], Generic[EagerExprT]
