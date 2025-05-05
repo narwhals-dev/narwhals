@@ -574,7 +574,7 @@ class PandasLikeDataFrame(
 
         return PandasLikeGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
-    def join(
+    def join(  # noqa: C901, PLR0911, PLR0912
         self,
         other: Self,
         *,
@@ -929,7 +929,7 @@ class PandasLikeDataFrame(
     def gather_every(self, n: int, offset: int) -> Self:
         return self._with_native(self.native.iloc[offset::n], validate_column_names=False)
 
-    def pivot(
+    def pivot(  # noqa: C901, PLR0912
         self,
         on: Sequence[str],
         *,

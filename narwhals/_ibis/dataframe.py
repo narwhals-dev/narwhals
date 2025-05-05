@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 
 @lru_cache(maxsize=16)
-def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:
+def native_to_narwhals_dtype(ibis_dtype: Any, version: Version) -> DType:  # noqa: C901, PLR0911, PLR0912
     dtypes = version.dtypes
     if ibis_dtype.is_int64():
         return dtypes.Int64()

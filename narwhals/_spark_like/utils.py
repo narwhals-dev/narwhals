@@ -24,6 +24,19 @@ if TYPE_CHECKING:
 
     _NativeDType: TypeAlias = sqlframe_types.DataType
 
+UNITS_DICT = {
+    "y": "year",
+    "q": "quarter",
+    "mo": "month",
+    "d": "day",
+    "h": "hour",
+    "m": "minute",
+    "s": "second",
+    "ms": "millisecond",
+    "us": "microsecond",
+    "ns": "nanosecond",
+}
+
 
 class WindowInputs:
     __slots__ = ("expr", "order_by", "partition_by")
@@ -40,7 +53,7 @@ class WindowInputs:
 
 
 # NOTE: don't lru_cache this as `ModuleType` isn't hashable
-def native_to_narwhals_dtype(
+def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     dtype: _NativeDType, version: Version, spark_types: ModuleType
 ) -> DType:
     dtypes = version.dtypes
@@ -100,7 +113,7 @@ def native_to_narwhals_dtype(
     return dtypes.Unknown()  # pragma: no cover
 
 
-def narwhals_to_native_dtype(
+def narwhals_to_native_dtype(  # noqa: C901, PLR0912
     dtype: DType | type[DType], version: Version, spark_types: ModuleType
 ) -> _NativeDType:
     dtypes = version.dtypes

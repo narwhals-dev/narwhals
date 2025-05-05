@@ -14,7 +14,7 @@ def extract_docstring_examples(files: list[str]) -> list[tuple[Path, str, str]]:
     """Extract examples from docstrings in Python files."""
     examples: list[tuple[Path, str, str]] = []
 
-    for file in files:
+    for file in files:  # noqa: PLR1702
         fp = Path(file)
         tree = ast.parse(fp.read_text("utf-8"))
 

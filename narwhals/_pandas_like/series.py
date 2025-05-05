@@ -937,7 +937,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             )
         return self._with_native(ranked_series)
 
-    def hist(
+    def hist(  # noqa: C901, PLR0912
         self,
         bins: list[float | int] | None,
         *,

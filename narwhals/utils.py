@@ -342,7 +342,7 @@ class Implementation(NoAutoEnum):
             else cls.from_native_namespace(backend)
         )
 
-    def to_native_namespace(self) -> ModuleType:
+    def to_native_namespace(self) -> ModuleType:  # noqa: C901, PLR0911
         """Return the native namespace module corresponding to Implementation.
 
         Returns:
@@ -1145,7 +1145,7 @@ def scale_bytes(sz: int, unit: SizeUnit) -> int | float:
         raise ValueError(msg)
 
 
-def is_ordered_categorical(series: Series[Any]) -> bool:
+def is_ordered_categorical(series: Series[Any]) -> bool:  # noqa: PLR0911
     """Return whether indices of categories are semantically meaningful.
 
     This is a convenience function to accessing what would otherwise be

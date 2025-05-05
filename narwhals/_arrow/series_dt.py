@@ -2,22 +2,56 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
+from typing import ClassVar
+from typing import Mapping
 from typing import cast
 
 import pyarrow as pa
 import pyarrow.compute as pc
 
+from narwhals._arrow.utils import UNITS_DICT
 from narwhals._arrow.utils import ArrowSeriesNamespace
 from narwhals._arrow.utils import floordiv_compat
 from narwhals._arrow.utils import lit
+from narwhals._duration import parse_interval_string
 
 if TYPE_CHECKING:
+    from typing_extensions import TypeAlias
+
     from narwhals._arrow.series import ArrowSeries
+    from narwhals._arrow.typing import ChunkedArrayAny
+    from narwhals._arrow.typing import ScalarAny
     from narwhals.dtypes import Datetime
     from narwhals.typing import TimeUnit
 
+    UnitCurrent: TypeAlias = TimeUnit
+    UnitTarget: TypeAlias = TimeUnit
+    BinOpBroadcast: TypeAlias = Callable[[ChunkedArrayAny, ScalarAny], ChunkedArrayAny]
+    IntoRhs: TypeAlias = int
+
 
 class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
+    _TIMESTAMP_DATE_FACTOR: ClassVar[Mapping[TimeUnit, int]] = {
+        "ns": 1_000_000_000,
+        "us": 1_000_000,
+        "ms": 1_000,
+        "s": 1,
+    }
+    _TIMESTAMP_DATETIME_OP_FACTOR: ClassVar[
+        Mapping[tuple[UnitCurrent, UnitTarget], tuple[BinOpBroadcast, IntoRhs]]
+    ] = {
+        ("ns", "us"): (floordiv_compat, 1_000),
+        ("ns", "ms"): (floordiv_compat, 1_000_000),
+        ("us", "ns"): (pc.multiply, 1_000),
+        ("us", "ms"): (floordiv_compat, 1_000),
+        ("ms", "ns"): (pc.multiply, 1_000_000),
+        ("ms", "us"): (pc.multiply, 1_000),
+        ("s", "ns"): (pc.multiply, 1_000_000_000),
+        ("s", "us"): (pc.multiply, 1_000_000),
+        ("s", "ms"): (pc.multiply, 1_000),
+    }
+
     @property
     def unit(self) -> TimeUnit:  # NOTE: Unsafe (native).
         return cast("pa.TimestampType[TimeUnit, Any]", self.native.type).unit
@@ -48,49 +82,21 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
         ser = self.compliant
         dtypes = ser._version.dtypes
         if isinstance(ser.dtype, dtypes.Datetime):
-            unit = ser.dtype.time_unit
+            current = ser.dtype.time_unit
             s_cast = self.native.cast(pa.int64())
-            if unit == "ns":
-                if time_unit == "ns":
-                    result_64 = s_cast
-                elif time_unit == "us":
-                    result_64 = floordiv_compat(s_cast, lit(1_000))
-                else:
-                    result_64 = floordiv_compat(s_cast, lit(1_000_000))
-            elif unit == "us":
-                if time_unit == "ns":
-                    result_64 = pc.multiply(s_cast, lit(1_000))
-                elif time_unit == "us":
-                    result_64 = s_cast
-                else:
-                    result_64 = floordiv_compat(s_cast, lit(1_000))
-            elif unit == "ms":
-                if time_unit == "ns":
-                    result_64 = pc.multiply(s_cast, lit(1_000_000))
-                elif time_unit == "us":
-                    result_64 = pc.multiply(s_cast, lit(1_000))
-                else:
-                    result_64 = s_cast
-            elif unit == "s":
-                if time_unit == "ns":
-                    result_64 = pc.multiply(s_cast, lit(1_000_000_000))
-                elif time_unit == "us":
-                    result_64 = pc.multiply(s_cast, lit(1_000_000))
-                else:
-                    result_64 = pc.multiply(s_cast, lit(1_000))
+            if current == time_unit:
+                result = s_cast
+            elif item := self._TIMESTAMP_DATETIME_OP_FACTOR.get((current, time_unit)):
+                fn, factor = item
+                result = fn(s_cast, lit(factor))
             else:  # pragma: no cover
-                msg = f"unexpected time unit {unit}, please report an issue at https://github.com/narwhals-dev/narwhals"
+                msg = f"unexpected time unit {current}, please report an issue at https://github.com/narwhals-dev/narwhals"
                 raise AssertionError(msg)
-            return self.with_native(result_64)
+            return self.with_native(result)
         elif isinstance(ser.dtype, dtypes.Date):
             time_s = pc.multiply(self.native.cast(pa.int32()), lit(86_400))
-            if time_unit == "ns":
-                result_32 = pc.multiply(time_s, lit(1_000_000_000))
-            elif time_unit == "us":
-                result_32 = pc.multiply(time_s, lit(1_000_000))
-            else:
-                result_32 = pc.multiply(time_s, lit(1_000))
-            return self.with_native(result_32)
+            factor = self._TIMESTAMP_DATE_FACTOR[time_unit]
+            return self.with_native(pc.multiply(time_s, lit(factor)))
         else:
             msg = "Input should be either of Date or Datetime type"
             raise TypeError(msg)
@@ -189,3 +195,9 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
         }
         factor = lit(unit_to_nano_factor[self.unit], type=pa.int64())
         return self.with_native(pc.multiply(self.native, factor).cast(pa.int64()))
+
+    def truncate(self, every: str) -> ArrowSeries:
+        multiple, unit = parse_interval_string(every)
+        return self.with_native(
+            pc.floor_temporal(self.native, multiple=multiple, unit=UNITS_DICT[unit])
+        )
