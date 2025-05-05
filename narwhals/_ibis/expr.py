@@ -367,10 +367,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
             lambda _input: _input.mean(),
         )
 
-    def skew(self) -> Self:
-        msg = "`skew` is not supported for the Ibis backend"
-        raise NotImplementedError(msg)
-
     def median(self) -> Self:
         return self._with_callable(lambda _input: _input.median())
 
@@ -714,4 +710,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
     # NOTE: https://github.com/ibis-project/ibis/issues/10542
     cum_prod = not_implemented()
     drop_nulls = not_implemented()
+
+    # NOTE: https://github.com/ibis-project/ibis/issues/11176
+    skew = not_implemented()
     unique = not_implemented()
