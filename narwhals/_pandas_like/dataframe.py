@@ -574,7 +574,184 @@ class PandasLikeDataFrame(
 
         return PandasLikeGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
-    def join(  # noqa: C901, PLR0911, PLR0912
+    def _inner_join(
+        self,
+        other: Self,
+        *,
+        left_on: Sequence[str] | None,
+        right_on: Sequence[str] | None,
+        suffix: str,
+    ) -> Self:
+        return self._with_native(
+            self.native.merge(
+                other.native,
+                left_on=left_on,
+                right_on=right_on,
+                how="inner",
+                suffixes=("", suffix),
+            )
+        )
+
+    def _left_join(
+        self,
+        other: Self,
+        *,
+        left_on: Sequence[str] | None,
+        right_on: Sequence[str] | None,
+        suffix: str,
+    ) -> Self:
+        result_native = self.native.merge(
+            other.native,
+            how="left",
+            left_on=left_on,
+            right_on=right_on,
+            suffixes=("", suffix),
+        )
+        extra = []
+        for left_key, right_key in zip(left_on, right_on):  # type: ignore[arg-type]
+            if right_key != left_key and right_key not in self.columns:
+                extra.append(right_key)
+            elif right_key != left_key:
+                extra.append(f"{right_key}{suffix}")
+        return self._with_native(result_native.drop(columns=extra))
+
+    def _full_join(
+        self,
+        other: Self,
+        *,
+        left_on: Sequence[str],
+        right_on: Sequence[str],
+        suffix: str,
+    ) -> Self:
+        # Pandas coalesces keys in full joins unless there's no collision
+        right_on_mapper = _remap_full_join_keys(left_on, right_on, suffix)
+        other_native = other.native.rename(columns=right_on_mapper)
+        check_column_names_are_unique(other_native.columns)
+        right_on = list(right_on_mapper.values())  # we now have the suffixed keys
+        return self._with_native(
+            self.native.merge(
+                other_native,
+                left_on=left_on,
+                right_on=right_on,
+                how="outer",
+                suffixes=("", suffix),
+            ),
+        )
+
+    def _cross_join(
+        self,
+        other: Self,
+        *,
+        suffix: str,
+    ) -> Self:
+        implementation = self._implementation
+        backend_version = self._backend_version
+        if (implementation.is_modin() or implementation.is_cudf()) or (
+            implementation.is_pandas() and backend_version < (1, 4)
+        ):
+            key_token = generate_temporary_column_name(
+                n_bytes=8, columns=[*self.columns, *other.columns]
+            )
+
+            return self._with_native(
+                self.native.assign(**{key_token: 0})
+                .merge(
+                    other.native.assign(**{key_token: 0}),
+                    how="inner",
+                    left_on=key_token,
+                    right_on=key_token,
+                    suffixes=("", suffix),
+                )
+                .drop(columns=key_token)
+            )
+        else:
+            return self._with_native(
+                self.native.merge(other.native, how="cross", suffixes=("", suffix))
+            )
+
+    def _semi_join(
+        self,
+        other: Self,
+        *,
+        left_on: Sequence[str] | None,
+        right_on: Sequence[str] | None,
+    ) -> Self:
+        implementation = self._implementation
+        backend_version = self._backend_version
+        if right_on is None:  # pragma: no cover
+            msg = "`right_on` cannot be `None` in semi-join"
+            raise TypeError(msg)
+
+        # rename to avoid creating extra columns in join
+        other_native = (
+            rename(
+                select_columns_by_name(
+                    other.native,
+                    column_names=list(right_on),
+                    backend_version=backend_version,
+                    implementation=implementation,
+                ),
+                columns=dict(zip(right_on, left_on)),  # type: ignore[arg-type]
+                implementation=implementation,
+                backend_version=backend_version,
+            ).drop_duplicates()  # avoids potential rows duplication from inner join
+        )
+        return self._with_native(
+            self.native.merge(
+                other_native, how="inner", left_on=left_on, right_on=left_on
+            )
+        )
+
+    def _anti_join(
+        self,
+        other: Self,
+        *,
+        left_on: Sequence[str] | None,
+        right_on: Sequence[str] | None,
+    ) -> Self:
+        implementation = self._implementation
+        backend_version = self._backend_version
+
+        if implementation.is_cudf():
+            return self._with_native(
+                self.native.merge(
+                    other.native, how="leftanti", left_on=left_on, right_on=right_on
+                )
+            )
+
+        indicator_token = generate_temporary_column_name(
+            n_bytes=8, columns=[*self.columns, *other.columns]
+        )
+        if right_on is None:  # pragma: no cover
+            msg = "`right_on` cannot be `None` in anti-join"
+            raise TypeError(msg)
+
+        # rename to avoid creating extra columns in join
+        other_native = rename(
+            select_columns_by_name(
+                other.native,
+                column_names=list(right_on),
+                backend_version=backend_version,
+                implementation=implementation,
+            ),
+            columns=dict(zip(right_on, left_on)),  # type: ignore[arg-type]
+            implementation=implementation,
+            backend_version=backend_version,
+        ).drop_duplicates()
+
+        return self._with_native(
+            self.native.merge(
+                other_native,
+                how="outer",
+                indicator=indicator_token,
+                left_on=left_on,
+                right_on=left_on,
+            )
+            .loc[lambda t: t[indicator_token] == "left_only"]
+            .drop(columns=indicator_token)
+        )
+
+    def join(
         self,
         other: Self,
         *,
@@ -583,143 +760,36 @@ class PandasLikeDataFrame(
         right_on: Sequence[str] | None,
         suffix: str,
     ) -> Self:
-        if how == "cross":
-            if (
-                self._implementation is Implementation.MODIN
-                or self._implementation is Implementation.CUDF
-            ) or (
-                self._implementation is Implementation.PANDAS
-                and self._backend_version < (1, 4)
-            ):
-                key_token = generate_temporary_column_name(
-                    n_bytes=8, columns=[*self.columns, *other.columns]
-                )
-
-                return self._with_native(
-                    self.native.assign(**{key_token: 0})
-                    .merge(
-                        other.native.assign(**{key_token: 0}),
-                        how="inner",
-                        left_on=key_token,
-                        right_on=key_token,
-                        suffixes=("", suffix),
-                    )
-                    .drop(columns=key_token)
-                )
-            else:
-                return self._with_native(
-                    self.native.merge(other.native, how="cross", suffixes=("", suffix))
-                )
-
-        if how == "anti":
-            if self._implementation is Implementation.CUDF:
-                return self._with_native(
-                    self.native.merge(
-                        other.native, how="leftanti", left_on=left_on, right_on=right_on
-                    )
-                )
-            else:
-                indicator_token = generate_temporary_column_name(
-                    n_bytes=8, columns=[*self.columns, *other.columns]
-                )
-                if right_on is None:  # pragma: no cover
-                    msg = "`right_on` cannot be `None` in anti-join"
-                    raise TypeError(msg)
-
-                # rename to avoid creating extra columns in join
-                other_native = rename(
-                    select_columns_by_name(
-                        other.native,
-                        list(right_on),
-                        self._backend_version,
-                        self._implementation,
-                    ),
-                    columns=dict(zip(right_on, left_on)),  # type: ignore[arg-type]
-                    implementation=self._implementation,
-                    backend_version=self._backend_version,
-                ).drop_duplicates()
-                return self._with_native(
-                    self.native.merge(
-                        other_native,
-                        how="outer",
-                        indicator=indicator_token,
-                        left_on=left_on,
-                        right_on=left_on,
-                    )
-                    .loc[lambda t: t[indicator_token] == "left_only"]
-                    .drop(columns=indicator_token)
-                )
-
-        if how == "semi":
-            if right_on is None:  # pragma: no cover
-                msg = "`right_on` cannot be `None` in semi-join"
-                raise TypeError(msg)
-            # rename to avoid creating extra columns in join
-            other_native = (
-                rename(
-                    select_columns_by_name(
-                        other.native,
-                        list(right_on),
-                        self._backend_version,
-                        self._implementation,
-                    ),
-                    columns=dict(zip(right_on, left_on)),  # type: ignore[arg-type]
-                    implementation=self._implementation,
-                    backend_version=self._backend_version,
-                ).drop_duplicates()  # avoids potential rows duplication from inner join
-            )
-            return self._with_native(
-                self.native.merge(
-                    other_native, how="inner", left_on=left_on, right_on=left_on
-                )
+        if how == "inner":
+            return self._inner_join(
+                other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
 
-        if how == "left":
-            result_native = self.native.merge(
-                other.native,
-                how="left",
-                left_on=left_on,
-                right_on=right_on,
-                suffixes=("", suffix),
+        elif how == "cross":
+            return self._cross_join(other=other, suffix=suffix)
+
+        elif how == "anti":
+            return self._anti_join(other=other, left_on=left_on, right_on=right_on)
+
+        elif how == "semi":
+            return self._semi_join(other=other, left_on=left_on, right_on=right_on)
+
+        elif how == "left":
+            return self._left_join(
+                other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
-            extra = []
-            for left_key, right_key in zip(left_on, right_on):  # type: ignore[arg-type]
-                if right_key != left_key and right_key not in self.columns:
-                    extra.append(right_key)
-                elif right_key != left_key:
-                    extra.append(f"{right_key}{suffix}")
-            return self._with_native(result_native.drop(columns=extra))
 
-        if how == "full":
-            # Pandas coalesces keys in full joins unless there's no collision
-
+        elif how == "full":
             # help mypy
             assert left_on is not None  # noqa: S101
             assert right_on is not None  # noqa: S101
 
-            right_on_mapper = _remap_full_join_keys(left_on, right_on, suffix)
-            other_native = other.native.rename(columns=right_on_mapper)
-            check_column_names_are_unique(other_native.columns)
-            right_on = list(right_on_mapper.values())  # we now have the suffixed keys
-            return self._with_native(
-                self.native.merge(
-                    other_native,
-                    left_on=left_on,
-                    right_on=right_on,
-                    how="outer",
-                    suffixes=("", suffix),
-                ),
+            return self._full_join(
+                other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
-
-        return self._with_native(
-            self.native.merge(
-                other.native,
-                left_on=left_on,
-                right_on=right_on,
-                how=how,
-                suffixes=("", suffix),
-            )
-        )
+        else:  # pragma: no cover
+            msg = f"Unreachable code, got unexpected join method: {how}"
+            raise AssertionError(msg)
 
     def join_asof(
         self,
