@@ -407,8 +407,15 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         return self._with_callable(lambda _input: _input.count())
 
     def len(self) -> Self:
-        return self._with_callable(
-            lambda _input: _input.count() + _input.isnull().cast("int8").sum()
+        def func(df: IbisLazyFrame) -> list[ibis.Expression]:
+            return [df.native.count()]
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
         )
 
     def std(self, ddof: int) -> Self:
