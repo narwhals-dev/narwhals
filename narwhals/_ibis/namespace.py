@@ -82,8 +82,9 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             else:
                 result = cols_casted[0]
                 for col in cols_casted[1:]:
-                    result = result + ibis.cases(
-                        (col.isnull(), ""), else_=separator + col
+                    result = result + cast(
+                        "ir.StringValue",
+                        ibis.cases((col.isnull(), ""), else_=separator + col),
                     )
 
             return [result]
