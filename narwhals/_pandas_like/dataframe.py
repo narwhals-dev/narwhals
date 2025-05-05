@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from itertools import chain
+from itertools import product
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -22,7 +24,6 @@ from narwhals._pandas_like.utils import check_column_names_are_unique
 from narwhals._pandas_like.utils import get_dtype_backend
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
-from narwhals._pandas_like.utils import pivot_table
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_index
@@ -941,6 +942,36 @@ class PandasLikeDataFrame(
         values = values or exclude_column_names(self, {*on, *index})
         return index, values
 
+    def _pivot_table(
+        self,
+        on: Sequence[str],
+        index: Sequence[str],
+        values: Sequence[str],
+        aggregate_function: Literal[
+            "min", "max", "first", "last", "sum", "mean", "median"
+        ],
+        /,
+    ) -> Any:
+        categorical = self._version.dtypes.Categorical
+        kwds: dict[Any, Any] = {"observed": True}
+        if self._implementation is Implementation.CUDF:
+            kwds.pop("observed")
+            cols = set(chain(values, index, on))
+            schema = self.schema.items()
+            if any(
+                tp for name, tp in schema if name in cols and isinstance(tp, categorical)
+            ):
+                msg = "`pivot` with Categoricals is not implemented for cuDF backend"
+                raise NotImplementedError(msg)
+        return self.native.pivot_table(
+            values=values,
+            index=index,
+            columns=on,
+            aggfunc=aggregate_function,
+            margins=False,
+            **kwds,
+        )
+
     def pivot(
         self,
         on: Sequence[str],
@@ -959,7 +990,6 @@ class PandasLikeDataFrame(
         if implementation.is_modin():
             msg = "pivot is not supported for Modin backend due to https://github.com/modin-project/modin/issues/7409."
             raise NotImplementedError(msg)
-        from itertools import product
 
         frame = self.native
         index, values = self._pivot_into_index_values(on, index, values)
@@ -975,13 +1005,7 @@ class PandasLikeDataFrame(
                 .pivot(columns=on, index=index, values=values)
             )
         else:
-            result = pivot_table(
-                df=self,
-                values=values,
-                index=index,
-                columns=on,
-                aggregate_function=aggregate_function,
-            )
+            result = self._pivot_table(on, index, values, aggregate_function)
 
         # Select the columns in the right order
         uniques = (
