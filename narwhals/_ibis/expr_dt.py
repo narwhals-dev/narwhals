@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import Any
+from typing import Callable
 
 from narwhals._duration import parse_interval_string
 from narwhals._ibis.utils import UNITS_DICT_BUCKET
@@ -8,7 +10,11 @@ from narwhals._ibis.utils import UNITS_DICT_TRUNCATE
 from narwhals.utils import not_implemented
 
 if TYPE_CHECKING:
+    import ibis.expr.types as ir
+
     from narwhals._ibis.expr import IbisExpr
+    from narwhals._ibis.utils import BucketUnit
+    from narwhals._ibis.utils import TruncateUnit
 
 
 class IbisExprDateTimeNamespace:
@@ -61,9 +67,9 @@ class IbisExprDateTimeNamespace:
         )
 
     def weekday(self) -> IbisExpr:
+        # Ibis uses 0-6 for Monday-Sunday. Add 1 to match polars.
         return self._compliant_expr._with_callable(
-            lambda _input: _input.day_of_week.index()
-            + 1,  # Ibis uses 0-6 for Monday-Sunday. Add 1 to match polars.
+            lambda _input: _input.day_of_week.index() + 1
         )
 
     def ordinal_day(self) -> IbisExpr:
@@ -76,19 +82,25 @@ class IbisExprDateTimeNamespace:
             lambda _input: _input.date(),
         )
 
+    def _bucket(self, kwds: dict[BucketUnit, Any], /) -> Callable[..., ir.TimestampValue]:
+        def fn(_input: ir.TimestampValue) -> ir.TimestampValue:
+            return _input.bucket(**kwds)
+
+        return fn
+
+    def _truncate(self, unit: TruncateUnit, /) -> Callable[..., ir.TimestampValue]:
+        def fn(_input: ir.TimestampValue) -> ir.TimestampValue:
+            return _input.truncate(unit)
+
+        return fn
+
     def truncate(self, every: str) -> IbisExpr:
         multiple, unit = parse_interval_string(every)
-
         if multiple != 1:
-            bucket_kwargs = {UNITS_DICT_BUCKET[unit]: multiple}
-            return self._compliant_expr._with_callable(
-                lambda _input: _input.bucket(**bucket_kwargs),
-            )
+            fn = self._bucket({UNITS_DICT_BUCKET[unit]: multiple})
         else:
-            formatted_unit = UNITS_DICT_TRUNCATE[unit]
-            return self._compliant_expr._with_callable(
-                lambda _input: _input.truncate(formatted_unit)
-            )
+            fn = self._truncate(UNITS_DICT_TRUNCATE[unit])
+        return self._compliant_expr._with_callable(fn)
 
     nanosecond = not_implemented()
     total_minutes = not_implemented()

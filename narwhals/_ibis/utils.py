@@ -3,6 +3,8 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Literal
+from typing import Mapping
 from typing import Sequence
 
 import ibis
@@ -13,8 +15,10 @@ from narwhals.utils import isinstance_or_issubclass
 if TYPE_CHECKING:
     import ibis.expr.types as ir
     from ibis.expr.datatypes import DataType as IbisDataType
+    from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
+    from narwhals._duration import IntervalUnit
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.expr import IbisExpr
     from narwhals.dtypes import DType
@@ -23,7 +27,23 @@ if TYPE_CHECKING:
 lit = ibis.literal
 """Alias for `ibis.literal`."""
 
-UNITS_DICT_BUCKET = {
+BucketUnit: TypeAlias = Literal[
+    "years",
+    "quarters",
+    "months",
+    "days",
+    "hours",
+    "minutes",
+    "seconds",
+    "milliseconds",
+    "microseconds",
+    "nanoseconds",
+]
+TruncateUnit: TypeAlias = Literal[
+    "Y", "Q", "M", "W", "D", "h", "m", "s", "ms", "us", "ns"
+]
+
+UNITS_DICT_BUCKET: Mapping[IntervalUnit, BucketUnit] = {
     "y": "years",
     "q": "quarters",
     "mo": "months",
@@ -36,7 +56,7 @@ UNITS_DICT_BUCKET = {
     "ns": "nanoseconds",
 }
 
-UNITS_DICT_TRUNCATE = {
+UNITS_DICT_TRUNCATE: Mapping[IntervalUnit, TruncateUnit] = {
     "y": "Y",
     "q": "Q",
     "mo": "M",
