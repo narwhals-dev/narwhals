@@ -1272,7 +1272,7 @@ def parse_columns_to_drop(
     cols = compliant_frame.columns
     to_drop = list(columns)
     if strict:
-        check_columns_exists(to_drop, available_columns=cols)
+        check_columns_exist(to_drop, available_columns=cols)
     else:
         to_drop = list(set(cols).intersection(set(to_drop)))
     return to_drop
@@ -1537,7 +1537,7 @@ def generate_repr(header: str, native_repr: str) -> str:
     )
 
 
-def check_columns_exists(
+def check_columns_exist(
     columns: Sequence[str],
     *,
     available_columns: Sequence[str],

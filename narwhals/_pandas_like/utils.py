@@ -20,7 +20,7 @@ from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import _DeferredIterable
-from narwhals.utils import check_columns_exists
+from narwhals.utils import check_columns_exist
 from narwhals.utils import isinstance_or_issubclass
 
 T = TypeVar("T", bound=Sized)
@@ -662,7 +662,7 @@ def select_columns_by_name(
     ):
         # See https://github.com/narwhals-dev/narwhals/issues/1349#issuecomment-2470118122
         # for why we need this
-        check_columns_exists(
+        check_columns_exist(
             column_names,  # type: ignore[arg-type]
             available_columns=df.columns.tolist(),  # type: ignore[attr-defined]
         )
@@ -670,7 +670,7 @@ def select_columns_by_name(
     try:
         return df[column_names]  # type: ignore[index]
     except KeyError as e:
-        check_columns_exists(
+        check_columns_exist(
             column_names,  # type: ignore[arg-type]
             available_columns=df.columns.tolist(),  # type: ignore[attr-defined]
             from_error=e,

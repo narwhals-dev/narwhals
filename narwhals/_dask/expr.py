@@ -19,7 +19,7 @@ from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
-from narwhals.utils import check_columns_exists
+from narwhals.utils import check_columns_exist
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import not_implemented
 
@@ -116,7 +116,7 @@ class DaskExpr(
                     for column_name in evaluate_column_names(df)
                 ]
             except KeyError as e:
-                check_columns_exists(
+                check_columns_exist(
                     evaluate_column_names(df), available_columns=df.columns, from_error=e
                 )
                 msg = "Unreachable code, please report a bug."

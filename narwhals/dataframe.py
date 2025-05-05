@@ -27,7 +27,7 @@ from narwhals.exceptions import OrderDependentExprError
 from narwhals.schema import Schema
 from narwhals.translate import to_native
 from narwhals.utils import Implementation
-from narwhals.utils import check_columns_exists
+from narwhals.utils import check_columns_exist
 from narwhals.utils import find_stacklevel
 from narwhals.utils import flatten
 from narwhals.utils import generate_repr
@@ -173,7 +173,7 @@ class BaseFrame(Generic[_FrameT]):
                 )
             except Exception as e:
                 # Column not found is the only thing that can realistically be raised here.
-                check_columns_exists(
+                check_columns_exist(
                     flat_exprs, available_columns=self.columns, from_error=e
                 )
                 msg = "Unreachable code, please report a bug."
