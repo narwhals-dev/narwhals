@@ -939,18 +939,19 @@ class PandasLikeDataFrame(
         sort_columns: bool,
         separator: str,
     ) -> Self:
-        if self._implementation is Implementation.PANDAS and (
-            self._backend_version < (1, 1)
-        ):  # pragma: no cover
+        implementation = self._implementation
+        backend_version = self._backend_version
+        if implementation.is_pandas() and backend_version < (1, 1):  # pragma: no cover
             msg = "pivot is only supported for 'pandas>=1.1'"
             raise NotImplementedError(msg)
-        if self._implementation is Implementation.MODIN:
+        if implementation.is_modin():
             msg = "pivot is not supported for Modin backend due to https://github.com/modin-project/modin/issues/7409."
             raise NotImplementedError(msg)
         from itertools import product
 
         frame = self.native
 
+        # Parse `index` and `values` into `index_` and `values_`
         if index is None:
             index_ = (
                 exclude_column_names(frame=self, names={*on, *values})
@@ -965,13 +966,15 @@ class PandasLikeDataFrame(
         else:
             values_ = values
 
+        # Pivot: based on aggregate function we perform different operations to match
+        # polars result
         if aggregate_function is None:
-            result = frame.pivot(columns=on, index=index, values=values)
+            result = frame.pivot(columns=on, index=index_, values=values_)
         elif aggregate_function == "len":
             result = (
                 frame.groupby([*on, *index_], as_index=False)
                 .agg(dict.fromkeys(values_, "size"))
-                .pivot(columns=on, index=index, values=values_)
+                .pivot(columns=on, index=index_, values=values_)
             )
         else:
             result = pivot_table(
@@ -982,10 +985,10 @@ class PandasLikeDataFrame(
                 aggregate_function=aggregate_function,
             )
 
-        # Put columns in the right order
+        # Select the columns in the right order
         uniques = (
             {col: self.native[col].unique().to_arrow().to_pylist() for col in on}
-            if self._implementation.is_cudf()
+            if implementation.is_cudf()
             else {col: self.native[col].unique().tolist() for col in on}
         )
 
@@ -996,19 +999,36 @@ class PandasLikeDataFrame(
         result = result.loc[:, ordered_cols]
         columns = result.columns
 
+        # Reformat output column names to match polars ones
+        # pandas-like native output columns are multi-index object that we are going to
+        # manipulate and re-map to match polars.
         n_on = len(on)
         if n_on == 1:
+            # If `n_on == 1` and `len(values_) == 1`, then we simply get the unique values
+            # of such `values_` column
+            # If `n_on == 1` and `len(values_) > 1`, then we flatten and join all the native
+            # multi-index output column names, separating them using the `separator` provided.
             new_columns = [
                 separator.join(col).strip() if len(values_) > 1 else col[-1]
                 for col in columns
             ]
         else:
+            # If `n_on > 1`, then the values of each `on` column is represented as
+            # '{"v11", "v21"}', '{"v11", "v22"}', '{"v12", "v21"}', '{"v12", "v22"}' where
+            # v11, v12 are the unique values of `on[0]` column and v21, v22 are the unique
+            # values of the `on[1]` column.
+            # Now, if len(values)==1 then no other column identifier is required; if
+            # len(values)>1, then those are prefixed with the values column names. E.g.
+            # `values = ["x", "y"]` would lead to the following output columns
+            # 'x_{"v11", "v21"}', 'x_{"v11", "v22"}', ..., 'y_{"v12", "v21"}', 'y_{"v12", "v22"}'  # noqa: ERA001
+            # where `"_"` is an example for the separator value.
             new_columns = [
                 separator.join([col[0], '{"' + '","'.join(col[-n_on:]) + '"}'])
                 if len(values_) > 1
                 else '{"' + '","'.join(col[-n_on:]) + '"}'
                 for col in columns
             ]
+
         result.columns = new_columns
         result.columns.names = [""]  # type: ignore[attr-defined]
         return self._with_native(result.reset_index())
