@@ -15,12 +15,12 @@ from typing import TypeVar
 import pandas as pd
 
 from narwhals._compliant.series import EagerSeriesNamespace
-from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import _DeferredIterable
+from narwhals.utils import check_columns_exists
 from narwhals.utils import isinstance_or_issubclass
 
 T = TypeVar("T", bound=Sized)
@@ -662,21 +662,21 @@ def select_columns_by_name(
     ):
         # See https://github.com/narwhals-dev/narwhals/issues/1349#issuecomment-2470118122
         # for why we need this
-        available_columns = df.columns.tolist()  # type: ignore[attr-defined]
-        missing_columns = [x for x in column_names if x not in available_columns]
-        if missing_columns:  # pragma: no cover
-            raise ColumnNotFoundError.from_missing_and_available_column_names(
-                missing_columns, available_columns
-            )
+        check_columns_exists(
+            column_names,  # type: ignore[arg-type]
+            available_columns=df.columns.tolist(),  # type: ignore[attr-defined]
+        )
         return df.loc[:, column_names]  # type: ignore[attr-defined]
     try:
         return df[column_names]  # type: ignore[index]
     except KeyError as e:
-        available_columns = df.columns.tolist()  # type: ignore[attr-defined]
-        missing_columns = [x for x in column_names if x not in available_columns]
-        raise ColumnNotFoundError.from_missing_and_available_column_names(
-            missing_columns, available_columns
-        ) from e
+        check_columns_exists(
+            column_names,  # type: ignore[arg-type]
+            available_columns=df.columns.tolist(),  # type: ignore[attr-defined]
+            from_error=e,
+        )
+        msg = "Unreachable code, please report a bug."
+        raise AssertionError(msg) from e
 
 
 def pivot_table(

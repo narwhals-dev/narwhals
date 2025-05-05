@@ -8,7 +8,7 @@ from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.group_by import PandasLikeGroupBy
 from narwhals._pandas_like.series import PandasLikeSeries
-from narwhals.exceptions import ColumnNotFoundError
+from narwhals.utils import check_columns_exists
 from narwhals.utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
@@ -128,13 +128,11 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     for column_name in evaluate_column_names(df)
                 ]
             except KeyError as e:
-                missing_columns = [
-                    x for x in evaluate_column_names(df) if x not in df.columns
-                ]
-                raise ColumnNotFoundError.from_missing_and_available_column_names(
-                    missing_columns=missing_columns,
-                    available_columns=df.columns,
-                ) from e
+                check_columns_exists(
+                    evaluate_column_names(df), available_columns=df.columns, from_error=e
+                )
+                msg = "Unreachable code, please report a bug."
+                raise AssertionError(msg) from e
 
         return cls(
             func,

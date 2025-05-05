@@ -1272,11 +1272,7 @@ def parse_columns_to_drop(
     cols = compliant_frame.columns
     to_drop = list(columns)
     if strict:
-        missing_columns = [x for x in to_drop if x not in cols]
-        if missing_columns:
-            raise ColumnNotFoundError.from_missing_and_available_column_names(
-                missing_columns=missing_columns, available_columns=cols
-            )
+        check_columns_exists(to_drop, available_columns=cols)
     else:
         to_drop = list(set(cols).intersection(set(to_drop)))
     return to_drop
