@@ -17,6 +17,7 @@ from narwhals._ibis.expr_list import IbisExprListNamespace
 from narwhals._ibis.expr_str import IbisExprStringNamespace
 from narwhals._ibis.expr_struct import IbisExprStructNamespace
 from narwhals._ibis.utils import WindowInputs
+from narwhals._ibis.utils import is_floating
 from narwhals._ibis.utils import lit
 from narwhals._ibis.utils import narwhals_to_native_dtype
 from narwhals.utils import Implementation
@@ -32,6 +33,7 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.namespace import IbisNamespace
+    from narwhals._ibis.typing import ExprT
     from narwhals._ibis.typing import WindowFunction
     from narwhals.dtypes import DType
     from narwhals.typing import RankMethod
@@ -184,7 +186,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         *,
         context: _FullContext,
     ) -> Self:
-        def func(df: IbisLazyFrame) -> list[ir.Value]:
+        def func(df: IbisLazyFrame) -> list[ir.Column]:
             return [df.native[name] for name in evaluate_column_names(df)]
 
         return cls(
@@ -199,9 +201,8 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
     def from_column_indices(
         cls: type[Self], *column_indices: int, context: _FullContext
     ) -> Self:
-        def func(df: IbisLazyFrame) -> list[ir.Value]:
-            columns = df.columns
-            return [df.native[columns[i]] for i in column_indices]
+        def func(df: IbisLazyFrame) -> list[ir.Column]:
+            return [df.native[i] for i in column_indices]
 
         return cls(
             func,
@@ -263,8 +264,8 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         return result
 
     @classmethod
-    def _alias_native(cls, expr: ir.Column, name: str, /) -> ir.Value:
-        return expr.name(name)
+    def _alias_native(cls, expr: ExprT, name: str, /) -> ExprT:
+        return cast("ExprT", expr.name(name))
 
     def __and__(self, other: IbisExpr) -> Self:
         return self._with_callable(lambda _input, other: _input & other, other=other)
@@ -379,14 +380,12 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
     def quantile(
         self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> Self:
-        def func(_input: ir.Column) -> ir.Column:
-            if interpolation == "linear":
-                return cast(
-                    "ir.Column", _input.quantile(quantile).name(_input.get_name())
-                )
+        def func(_input: ir.Column) -> ir.Scalar:
+            return self._alias_native(_input.quantile(quantile), _input.get_name())
+
+        if interpolation != "linear":
             msg = "Only linear interpolation methods are supported for Ibis quantile."
             raise NotImplementedError(msg)
-
         return self._with_callable(func)
 
     def clip(self, lower_bound: Any, upper_bound: Any) -> Self:
@@ -407,7 +406,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         return self._with_callable(lambda _input: _input.count())
 
     def len(self) -> Self:
-        def func(df: IbisLazyFrame) -> list[ibis.Expression]:
+        def func(df: IbisLazyFrame) -> list[ir.IntegerScalar]:
             return [df.native.count()]
 
         return self.__class__(
@@ -427,11 +426,8 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
             else:
                 n_samples = _input.count()
                 std_pop = _input.std(how="pop")
-                return (
-                    std_pop
-                    * n_samples.sqrt()
-                    / (n_samples - cast("ir.IntegerScalar", ibis.literal(ddof))).sqrt()
-                )
+                ddof_lit = cast("ir.IntegerScalar", ibis.literal(ddof))
+                return std_pop * n_samples.sqrt() / (n_samples - ddof_lit).sqrt()
 
         return self._with_callable(lambda _input: _std(_input, ddof))
 
@@ -444,11 +440,8 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
             else:
                 n_samples = _input.count()
                 var_pop = _input.var(how="pop")
-                return (
-                    var_pop
-                    * n_samples
-                    / (n_samples - cast("ir.IntegerScalar", ibis.literal(ddof)))
-                )
+                ddof_lit = cast("ir.IntegerScalar", ibis.literal(ddof))
+                return var_pop * n_samples / (n_samples - ddof_lit)
 
         return self._with_callable(lambda _input: _var(_input, ddof))
 
@@ -464,21 +457,17 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         )
 
     def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
-        if (window_function := self._window_function) is not None:
+        if (fn := self._window_function) is not None:
             assert order_by is not None  # noqa: S101
 
             def func(df: IbisLazyFrame) -> list[ir.Value]:
                 return [
-                    cast(
-                        "ir.Value",
-                        window_function(WindowInputs(expr, partition_by, order_by)),
-                    )
-                    for expr in self._call(df)
+                    fn(WindowInputs(expr, partition_by, order_by)) for expr in self(df)
                 ]
         else:
 
             def func(df: IbisLazyFrame) -> list[ir.Value]:
-                return [expr.over(group_by=partition_by) for expr in self._call(df)]
+                return [expr.over(group_by=partition_by) for expr in self(df)]
 
         return self.__class__(
             func,
@@ -492,14 +481,8 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         return self._with_callable(lambda _input: _input.isnull())
 
     def is_nan(self) -> Self:
-        def func(_input: ir.Value) -> ir.Value:
-            dtype = _input.type()
-
-            if dtype.is_float64() or dtype.is_float32():
-                otherwise = cast("ir.FloatingValue", _input).isnan()
-            else:
-                otherwise = False
-
+        def func(_input: ir.FloatingValue | Any) -> ir.Value:
+            otherwise = _input.isnan() if is_floating(_input.type()) else False
             return ibis.ifelse(_input.isnull(), None, otherwise)
 
         return self._with_callable(func)

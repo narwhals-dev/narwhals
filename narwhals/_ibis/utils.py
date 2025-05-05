@@ -171,6 +171,10 @@ def is_struct(obj: IbisDataType) -> TypeIs[ibis_dtypes.Struct]:
     return obj.is_struct()
 
 
+def is_floating(obj: IbisDataType) -> TypeIs[ibis_dtypes.Floating]:
+    return obj.is_floating()
+
+
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912
     dtype: DType | type[DType], version: Version
 ) -> IbisDataType:
