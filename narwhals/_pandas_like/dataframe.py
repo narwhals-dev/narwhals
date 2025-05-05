@@ -931,9 +931,12 @@ class PandasLikeDataFrame(
         return self._with_native(self.native.iloc[offset::n], validate_column_names=False)
 
     def _pivot_into_index_values(
-        self, on: Sequence[str], index: Sequence[str] | None, values: Sequence[str] | None
+        self,
+        on: Sequence[str],
+        index: Sequence[str] | None,
+        values: Sequence[str] | None,
+        /,
     ) -> tuple[Sequence[str], Sequence[str]]:
-        """Parse `index` and `values` into `index_` and `values_`."""
         index = index or (
             exclude_column_names(self, {*on, *values})
             if values
@@ -943,54 +946,52 @@ class PandasLikeDataFrame(
         return index, values
 
     @staticmethod
-    def _pivot_format_single_col(col_values: tuple[str, ...]) -> str:
-        """Format single column values to match polars output in case of multiple `on` values."""
-        return '{"' + '","'.join(col_values) + '"}'
+    def _pivot_multi_on_name(unique_values: tuple[str, ...], /) -> str:
+        LB, RB, Q = "{", "}", '"'  # noqa: N806
+        body = '","'.join(unique_values)
+        return f"{LB}{Q}{body}{Q}{RB}"
 
-    def _pivot_format_output_column_names(
+    @staticmethod
+    def _pivot_single_on_names(
+        column_names: Iterable[str], n_values: int, separator: str, /
+    ) -> list[str]:
+        if n_values > 1:
+            return [separator.join(col).strip() for col in column_names]
+        return [col[-1] for col in column_names]
+
+    def _pivot_multi_on_names(
         self,
-        native_columns: pd.Index[str] | pd.MultiIndex,
+        column_names: Iterable[tuple[str, ...]],
+        n_on: int,
+        n_values: int,
+        separator: str,
+        /,
+    ) -> Iterator[str]:
+        if n_values > 1:
+            for col in column_names:
+                names = col[-n_on:]
+                prefix = col[0]
+                yield separator.join((prefix, self._pivot_multi_on_name(names)))
+        else:
+            for col in column_names:
+                yield self._pivot_multi_on_name(col[-n_on:])
+
+    def _pivot_remap_column_names(
+        self,
+        column_names: Iterable[Any],
         *,
-        on: Sequence[str],
-        values: Sequence[str],
+        n_on: int,
+        n_values: int,
         separator: str,
     ) -> list[str]:
-        """Reformat output column names from a native pandas-like pivot operation.
+        """Reformat output column names from a native pivot operation, to match `polars`.
 
-        Such ops columns are a multi-index object that we are going to manipulate and re-map
-        to match polars pivot column names.
-
-        - If `len(on) == 1` and `len(values) == 1`, then we get the unique values of the
-            columns in `values`.
-        - If `len(on) == 1` and `len(values_) > 1`, then we flatten and join all the native
-            multi-index output column names, separating them using the `separator` provided.
-        - If `len(on) > 1`, then the values of each `on` column is represented as
-            '{"v11", "v21"}', '{"v11", "v22"}', '{"v12", "v21"}', '{"v12", "v22"}' where
-            v11, v12 are the unique values of `on[0]` column and v21, v22 are the unique
-            values of the `on[1]` column (and so on..).
-            - Now, if `len(values) == 1` then no other column identifier is required
-            - if `len(values) > 1`, then those should be prefixed with the values column
-                names. E.g. `values = ["x", "y"]` would lead to the following output columns
-                'x_{"v11", "v21"}', 'x_{"v11", "v22"}', ..., 'y_{"v12", "v21"}', 'y_{"v12", "v22"}'
-                where `"_"` is the separator value.
+        Note:
+            `column_names` is a `pd.MultiIndex`, but not in the stubs.
         """
-        n_on = len(on)
-        n_values = len(values)
-
         if n_on == 1:
-            new_columns = [
-                separator.join(col).strip() if n_values > 1 else col[-1]
-                for col in native_columns
-            ]
-        else:
-            new_columns = [
-                separator.join([col[0], self._pivot_format_single_col(col[-n_on:])])  # type: ignore[arg-type]
-                if len(values) > 1
-                else self._pivot_format_single_col(col[-n_on:])  # type: ignore[arg-type]
-                for col in native_columns
-            ]
-
-        return new_columns
+            return self._pivot_single_on_names(column_names, n_values, separator)
+        return list(self._pivot_multi_on_names(column_names, n_on, n_values, separator))
 
     def _pivot_table(
         self,
@@ -1029,7 +1030,7 @@ class PandasLikeDataFrame(
         values: Sequence[str],
         aggregate_function: PivotAgg | None,
         /,
-    ) -> Any:
+    ) -> pd.DataFrame:
         if aggregate_function is None:
             return self.native.pivot(columns=on, index=index, values=values)
         elif aggregate_function == "len":
@@ -1071,10 +1072,11 @@ class PandasLikeDataFrame(
         ordered_cols = list(product(values, *chain(uniques)))
         result = result.loc[:, ordered_cols]
         columns = result.columns
-        result.columns = self._pivot_format_output_column_names(
-            native_columns=columns, on=on, values=values, separator=separator
+        remapped = self._pivot_remap_column_names(
+            columns, n_on=len(on), n_values=len(values), separator=separator
         )
-        result.columns.names = [""]  # type: ignore[attr-defined]
+        result.columns = remapped  # type: ignore[assignment]
+        result.columns.names = [""]
         return self._with_native(result.reset_index())
 
     def to_arrow(self) -> Any:
