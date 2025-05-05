@@ -1014,15 +1014,11 @@ class PandasLikeDataFrame(
 
         # Select the columns in the right order
         uniques = (
-            {col: self.native[col].unique().to_arrow().to_pylist() for col in on}
-            if implementation.is_cudf()
-            else {col: self.native[col].unique().tolist() for col in on}
+            (self.get_column(col).unique().sort().to_list() for col in on)
+            if sort_columns
+            else (self.get_column(col).unique().to_list() for col in on)
         )
-
-        if sort_columns:
-            uniques = {k: sorted(v) for k, v in uniques.items()}
-
-        ordered_cols = list(product(values, *uniques.values()))
+        ordered_cols = list(product(values, *chain(uniques)))
         result = result.loc[:, ordered_cols]
         columns = result.columns
 
