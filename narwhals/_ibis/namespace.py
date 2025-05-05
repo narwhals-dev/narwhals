@@ -53,8 +53,8 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
     def concat(
         self, items: Iterable[IbisLazyFrame], *, how: ConcatMethod
     ) -> IbisLazyFrame:
-        if how in {"horizontal", "diagonal"}:
-            msg = f"{how!r} concat not supported for Ibis. Please join instead."
+        if how == "diagonal":
+            msg = "diagonal concat not supported for Ibis. Please join instead."
             raise NotImplementedError(msg)
 
         items = list(items)
