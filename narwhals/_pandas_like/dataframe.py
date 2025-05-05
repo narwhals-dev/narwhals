@@ -972,6 +972,24 @@ class PandasLikeDataFrame(
             **kwds,
         )
 
+    def _pivot(
+        self,
+        on: Sequence[str],
+        index: Sequence[str],
+        values: Sequence[str],
+        aggregate_function: PivotAgg | None,
+        /,
+    ) -> Any:
+        if aggregate_function is None:
+            return self.native.pivot(columns=on, index=index, values=values)
+        elif aggregate_function == "len":
+            return (
+                self.native.groupby([*on, *index], as_index=False)
+                .agg(dict.fromkeys(values, "size"))
+                .pivot(columns=on, index=index, values=values)
+            )
+        return self._pivot_table(on, index, values, aggregate_function)
+
     def pivot(
         self,
         on: Sequence[str],
@@ -991,21 +1009,8 @@ class PandasLikeDataFrame(
             msg = "pivot is not supported for Modin backend due to https://github.com/modin-project/modin/issues/7409."
             raise NotImplementedError(msg)
 
-        frame = self.native
         index, values = self._pivot_into_index_values(on, index, values)
-
-        # Pivot: based on aggregate function we perform different operations to match
-        # polars result
-        if aggregate_function is None:
-            result = frame.pivot(columns=on, index=index, values=values)
-        elif aggregate_function == "len":
-            result = (
-                frame.groupby([*on, *index], as_index=False)
-                .agg(dict.fromkeys(values, "size"))
-                .pivot(columns=on, index=index, values=values)
-            )
-        else:
-            result = self._pivot_table(on, index, values, aggregate_function)
+        result = self._pivot(on, index, values, aggregate_function)
 
         # Select the columns in the right order
         uniques = (
