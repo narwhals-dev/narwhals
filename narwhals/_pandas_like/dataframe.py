@@ -929,6 +929,18 @@ class PandasLikeDataFrame(
     def gather_every(self, n: int, offset: int) -> Self:
         return self._with_native(self.native.iloc[offset::n], validate_column_names=False)
 
+    def _pivot_into_index_values(
+        self, on: Sequence[str], index: Sequence[str] | None, values: Sequence[str] | None
+    ) -> tuple[Sequence[str], Sequence[str]]:
+        """Parse `index` and `values` into `index_` and `values_`."""
+        index = index or (
+            exclude_column_names(self, {*on, *values})
+            if values
+            else exclude_column_names(self, on)
+        )
+        values = values or exclude_column_names(self, {*on, *index})
+        return index, values
+
     def pivot(
         self,
         on: Sequence[str],
@@ -950,21 +962,7 @@ class PandasLikeDataFrame(
         from itertools import product
 
         frame = self.native
-
-        # Parse `index` and `values` into `index_` and `values_`
-        if index is None:
-            index_ = (
-                exclude_column_names(frame=self, names={*on, *values})
-                if values is not None
-                else exclude_column_names(frame=self, names=on)
-            )
-        else:
-            index_ = index
-
-        if values is None:
-            values_ = exclude_column_names(frame=self, names={*on, *index_})
-        else:
-            values_ = values
+        index_, values_ = self._pivot_into_index_values(on, index, values)
 
         # Pivot: based on aggregate function we perform different operations to match
         # polars result
