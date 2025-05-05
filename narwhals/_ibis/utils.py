@@ -154,36 +154,35 @@ def narwhals_to_native_dtype(
         return ibis_dtypes.UInt64()
     if isinstance_or_issubclass(dtype, dtypes.UInt32):
         return ibis_dtypes.UInt32()
-    if isinstance_or_issubclass(dtype, dtypes.UInt16):  # pragma: no cover
+    if isinstance_or_issubclass(dtype, dtypes.UInt16):
         return ibis_dtypes.UInt16()
-    if isinstance_or_issubclass(dtype, dtypes.UInt8):  # pragma: no cover
+    if isinstance_or_issubclass(dtype, dtypes.UInt8):
         return ibis_dtypes.UInt8()
     if isinstance_or_issubclass(dtype, dtypes.String):
         return ibis_dtypes.String()
-    if isinstance_or_issubclass(dtype, dtypes.Boolean):  # pragma: no cover
+    if isinstance_or_issubclass(dtype, dtypes.Boolean):
         return ibis_dtypes.Boolean()
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
         msg = "Categorical not supported by Ibis"
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         return ibis_dtypes.Timestamp()
-    if isinstance_or_issubclass(dtype, dtypes.Duration):  # pragma: no cover
-        _time_unit = getattr(dtype, "time_unit", "us")
-        return ibis_dtypes.Interval(_time_unit)
-    if isinstance_or_issubclass(dtype, dtypes.Date):  # pragma: no cover
+    if isinstance_or_issubclass(dtype, dtypes.Duration):
+        return ibis_dtypes.Interval(unit=dtype.time_unit)  # type: ignore[arg-type,unused-ignore]
+    if isinstance_or_issubclass(dtype, dtypes.Date):
         return ibis_dtypes.Date()
     if isinstance_or_issubclass(dtype, dtypes.Time):
         return ibis_dtypes.Time()
     if isinstance_or_issubclass(dtype, dtypes.List):
         inner = narwhals_to_native_dtype(dtype.inner, version)
         return ibis_dtypes.Array(value_type=inner)
-    if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
+    if isinstance_or_issubclass(dtype, dtypes.Struct):
         fields = [
             (field.name, narwhals_to_native_dtype(field.dtype, version))
             for field in dtype.fields
         ]
         return ibis_dtypes.Struct.from_tuples(fields)
-    if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
+    if isinstance_or_issubclass(dtype, dtypes.Array):
         inner = narwhals_to_native_dtype(dtype.inner, version)
         return ibis_dtypes.Array(value_type=inner, length=dtype.size)
     if isinstance_or_issubclass(dtype, dtypes.Binary):
