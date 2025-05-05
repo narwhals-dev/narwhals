@@ -942,6 +942,56 @@ class PandasLikeDataFrame(
         values = values or exclude_column_names(self, {*on, *index})
         return index, values
 
+    @staticmethod
+    def _pivot_format_single_col(col_values: tuple[str, ...]) -> str:
+        """Format single column values to match polars output in case of multiple `on` values."""
+        return '{"' + '","'.join(col_values) + '"}'
+
+    def _pivot_format_output_column_names(
+        self,
+        native_columns: pd.Index[str] | pd.MultiIndex,
+        *,
+        on: Sequence[str],
+        values: Sequence[str],
+        separator: str,
+    ) -> list[str]:
+        """Reformat output column names from a native pandas-like pivot operation.
+
+        Such ops columns are a multi-index object that we are going to manipulate and re-map
+        to match polars pivot column names.
+
+        - If `len(on) == 1` and `len(values) == 1`, then we get the unique values of the
+            columns in `values`.
+        - If `len(on) == 1` and `len(values_) > 1`, then we flatten and join all the native
+            multi-index output column names, separating them using the `separator` provided.
+        - If `len(on) > 1`, then the values of each `on` column is represented as
+            '{"v11", "v21"}', '{"v11", "v22"}', '{"v12", "v21"}', '{"v12", "v22"}' where
+            v11, v12 are the unique values of `on[0]` column and v21, v22 are the unique
+            values of the `on[1]` column (and so on..).
+            - Now, if `len(values) == 1` then no other column identifier is required
+            - if `len(values) > 1`, then those should be prefixed with the values column
+                names. E.g. `values = ["x", "y"]` would lead to the following output columns
+                'x_{"v11", "v21"}', 'x_{"v11", "v22"}', ..., 'y_{"v12", "v21"}', 'y_{"v12", "v22"}'
+                where `"_"` is the separator value.
+        """
+        n_on = len(on)
+        n_values = len(values)
+
+        if n_on == 1:
+            new_columns = [
+                separator.join(col).strip() if n_values > 1 else col[-1]
+                for col in native_columns
+            ]
+        else:
+            new_columns = [
+                separator.join([col[0], self._pivot_format_single_col(col[-n_on:])])  # type: ignore[arg-type]
+                if len(values) > 1
+                else self._pivot_format_single_col(col[-n_on:])  # type: ignore[arg-type]
+                for col in native_columns
+            ]
+
+        return new_columns
+
     def _pivot_table(
         self,
         on: Sequence[str],
@@ -1021,38 +1071,9 @@ class PandasLikeDataFrame(
         ordered_cols = list(product(values, *chain(uniques)))
         result = result.loc[:, ordered_cols]
         columns = result.columns
-
-        # Reformat output column names to match polars ones
-        # pandas-like native output columns are multi-index object that we are going to
-        # manipulate and re-map to match polars.
-        n_on = len(on)
-        if n_on == 1:
-            # If `n_on == 1` and `len(values_) == 1`, then we simply get the unique values
-            # of such `values_` column
-            # If `n_on == 1` and `len(values_) > 1`, then we flatten and join all the native
-            # multi-index output column names, separating them using the `separator` provided.
-            new_columns = [
-                separator.join(col).strip() if len(values) > 1 else col[-1]
-                for col in columns
-            ]
-        else:
-            # If `n_on > 1`, then the values of each `on` column is represented as
-            # '{"v11", "v21"}', '{"v11", "v22"}', '{"v12", "v21"}', '{"v12", "v22"}' where
-            # v11, v12 are the unique values of `on[0]` column and v21, v22 are the unique
-            # values of the `on[1]` column.
-            # Now, if len(values)==1 then no other column identifier is required; if
-            # len(values)>1, then those are prefixed with the values column names. E.g.
-            # `values = ["x", "y"]` would lead to the following output columns
-            # 'x_{"v11", "v21"}', 'x_{"v11", "v22"}', ..., 'y_{"v12", "v21"}', 'y_{"v12", "v22"}'  # noqa: ERA001
-            # where `"_"` is an example for the separator value.
-            new_columns = [
-                separator.join([col[0], '{"' + '","'.join(col[-n_on:]) + '"}'])
-                if len(values) > 1
-                else '{"' + '","'.join(col[-n_on:]) + '"}'
-                for col in columns
-            ]
-
-        result.columns = new_columns
+        result.columns = self._pivot_format_output_column_names(
+            native_columns=columns, on=on, values=values, separator=separator
+        )
         result.columns.names = [""]  # type: ignore[attr-defined]
         return self._with_native(result.reset_index())
 
