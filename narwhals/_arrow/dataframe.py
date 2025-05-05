@@ -695,7 +695,8 @@ class ArrowDataFrame(
         # and has no effect on the output.
         import numpy as np  # ignore-banned-import
 
-        check_column_exists(self.columns, subset)
+        if subset:
+            check_column_exists(subset, available_columns=self.columns)
         subset = list(subset or self.columns)
 
         if keep in {"any", "first", "last"}:

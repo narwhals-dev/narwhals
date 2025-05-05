@@ -366,7 +366,8 @@ class SparkLikeLazyFrame(
     def unique(
         self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self:
-        check_column_exists(self.columns, subset)
+        if subset:
+            check_column_exists(subset, available_columns=self.columns)
         subset = list(subset) if subset else None
         if keep == "none":
             tmp = generate_temporary_column_name(8, self.columns)

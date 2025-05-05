@@ -340,11 +340,15 @@ def test_parse_version(
 def test_check_column_exists() -> None:
     columns = ["a", "b", "c"]
     subset = ["d", "f"]
-    with pytest.raises(
-        ColumnNotFoundError,
-        match=re.escape("Column(s) ['d', 'f'] not found in ['a', 'b', 'c']"),
-    ):
-        check_column_exists(columns, subset)
+    with pytest.raises(ColumnNotFoundError) as excinfo:
+        check_column_exists(subset, available_columns=columns)
+    assert str(excinfo.value) == (
+        "The following columns were not found: ['d', 'f']\n\nHint: Did you mean one of these columns: ['a', 'b', 'c']?"
+    )
+
+    # Check that the error is not raised
+    subset = ["a", "b"]
+    check_column_exists(subset, available_columns=columns)
 
 
 def test_not_implemented() -> None:
