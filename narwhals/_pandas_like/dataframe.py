@@ -616,12 +616,7 @@ class PandasLikeDataFrame(
         return self._with_native(result_native.drop(columns=extra))
 
     def _full_join(
-        self,
-        other: Self,
-        *,
-        left_on: Sequence[str],
-        right_on: Sequence[str],
-        suffix: str,
+        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> Self:
         # Pandas coalesces keys in full joins unless there's no collision
         right_on_mapper = _remap_full_join_keys(left_on, right_on, suffix)
@@ -638,12 +633,7 @@ class PandasLikeDataFrame(
             ),
         )
 
-    def _cross_join(
-        self,
-        other: Self,
-        *,
-        suffix: str,
-    ) -> Self:
+    def _cross_join(self, other: Self, *, suffix: str) -> Self:
         implementation = self._implementation
         backend_version = self._backend_version
         if (implementation.is_modin() or implementation.is_cudf()) or (
@@ -664,10 +654,10 @@ class PandasLikeDataFrame(
                 )
                 .drop(columns=key_token)
             )
-        else:
-            return self._with_native(
-                self.native.merge(other.native, how="cross", suffixes=("", suffix))
-            )
+
+        return self._with_native(
+            self.native.merge(other.native, how="cross", suffixes=("", suffix))
+        )
 
     def _semi_join(
         self,
@@ -719,12 +709,13 @@ class PandasLikeDataFrame(
                 )
             )
 
-        indicator_token = generate_temporary_column_name(
-            n_bytes=8, columns=[*self.columns, *other.columns]
-        )
         if right_on is None:  # pragma: no cover
             msg = "`right_on` cannot be `None` in anti-join"
             raise TypeError(msg)
+
+        indicator_token = generate_temporary_column_name(
+            n_bytes=8, columns=[*self.columns, *other.columns]
+        )
 
         # rename to avoid creating extra columns in join
         other_native = rename(
@@ -764,21 +755,16 @@ class PandasLikeDataFrame(
             return self._inner_join(
                 other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
-
         elif how == "cross":
             return self._cross_join(other=other, suffix=suffix)
-
         elif how == "anti":
             return self._anti_join(other=other, left_on=left_on, right_on=right_on)
-
         elif how == "semi":
             return self._semi_join(other=other, left_on=left_on, right_on=right_on)
-
         elif how == "left":
             return self._left_join(
                 other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
-
         elif how == "full":
             # help mypy
             assert left_on is not None  # noqa: S101

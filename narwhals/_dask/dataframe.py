@@ -300,12 +300,7 @@ class DaskLazyFrame(
         return self._with_native(result_native.drop(columns=extra))
 
     def _full_join(
-        self,
-        other: Self,
-        *,
-        left_on: Sequence[str],
-        right_on: Sequence[str],
-        suffix: str,
+        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> Self:
         # dask does not retain keys post-join
         # we must append the suffix to each key before-hand
@@ -324,12 +319,7 @@ class DaskLazyFrame(
             )
         )
 
-    def _cross_join(
-        self,
-        other: Self,
-        *,
-        suffix: str,
-    ) -> Self:
+    def _cross_join(self, other: Self, *, suffix: str) -> Self:
         key_token = generate_temporary_column_name(
             n_bytes=8, columns=[*self.columns, *other.columns]
         )
@@ -425,21 +415,16 @@ class DaskLazyFrame(
             return self._inner_join(
                 other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
-
         elif how == "cross":
             return self._cross_join(other=other, suffix=suffix)
-
         elif how == "anti":
             return self._anti_join(other=other, left_on=left_on, right_on=right_on)
-
         elif how == "semi":
             return self._semi_join(other=other, left_on=left_on, right_on=right_on)
-
         elif how == "left":
             return self._left_join(
                 other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
-
         elif how == "full":
             # help mypy
             assert left_on is not None  # noqa: S101
