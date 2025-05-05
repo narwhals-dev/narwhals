@@ -192,15 +192,10 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             )
             first_expr_name = exprs[0](df)[0].get_name()
 
-            def _name_preserving_sum(
-                e1: ir.NumericColumn, e2: ir.NumericColumn
-            ) -> ir.NumericColumn:
-                return cast("ir.NumericColumn", (e1 + e2).name(e1.get_name()))
-
             return [
                 (
-                    reduce(_name_preserving_sum, expr)
-                    / reduce(_name_preserving_sum, non_null)
+                    reduce(lambda x, y: x + y, expr)
+                    / reduce(lambda x, y: x + y, non_null)
                 ).name(first_expr_name)
             ]
 
