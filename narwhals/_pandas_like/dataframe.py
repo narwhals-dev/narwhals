@@ -33,6 +33,7 @@ from narwhals.utils import Implementation
 from narwhals.utils import _into_arrow_table
 from narwhals.utils import _remap_full_join_keys
 from narwhals.utils import check_column_exists
+from narwhals.utils import exclude_column_names
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -951,24 +952,32 @@ class PandasLikeDataFrame(
         frame = self.native
 
         if index is None:
-            index = [c for c in self.columns if c not in {*on, *values}]  # type: ignore[misc]
+            index_ = (
+                exclude_column_names(frame=self, names={*on, *values})
+                if values is not None
+                else exclude_column_names(frame=self, names=on)
+            )
+        else:
+            index_ = index
 
         if values is None:
-            values = [c for c in self.columns if c not in {*on, *index}]
+            values_ = exclude_column_names(frame=self, names={*on, *index_})
+        else:
+            values_ = values
 
         if aggregate_function is None:
             result = frame.pivot(columns=on, index=index, values=values)
         elif aggregate_function == "len":
             result = (
-                frame.groupby([*on, *index], as_index=False)
-                .agg(dict.fromkeys(values, "size"))
-                .pivot(columns=on, index=index, values=values)
+                frame.groupby([*on, *index_], as_index=False)
+                .agg(dict.fromkeys(values_, "size"))
+                .pivot(columns=on, index=index, values=values_)
             )
         else:
             result = pivot_table(
                 df=self,
-                values=values,
-                index=index,
+                values=values_,
+                index=index_,
                 columns=on,
                 aggregate_function=aggregate_function,
             )
@@ -983,20 +992,20 @@ class PandasLikeDataFrame(
         if sort_columns:
             uniques = {k: sorted(v) for k, v in uniques.items()}
 
-        ordered_cols = list(product(values, *uniques.values()))
+        ordered_cols = list(product(values_, *uniques.values()))
         result = result.loc[:, ordered_cols]
         columns = result.columns
 
         n_on = len(on)
         if n_on == 1:
             new_columns = [
-                separator.join(col).strip() if len(values) > 1 else col[-1]
+                separator.join(col).strip() if len(values_) > 1 else col[-1]
                 for col in columns
             ]
         else:
             new_columns = [
                 separator.join([col[0], '{"' + '","'.join(col[-n_on:]) + '"}'])
-                if len(values) > 1
+                if len(values_) > 1
                 else '{"' + '","'.join(col[-n_on:]) + '"}'
                 for col in columns
             ]
