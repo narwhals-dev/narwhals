@@ -775,7 +775,7 @@ def narwhalify(
         return decorator(func)
 
 
-def to_py_scalar(scalar_like: Any) -> Any:  # noqa: C901
+def to_py_scalar(scalar_like: Any) -> Any:
     """If a scalar is not Python native, converts it to Python native.
 
     Arguments:
@@ -821,22 +821,22 @@ def to_py_scalar(scalar_like: Any) -> Any:  # noqa: C901
     # so we need to check this separately
     elif isinstance(scalar_like, (datetime, timedelta)):
         scalar = scalar_like
-    elif pd and pd.api.types.is_scalar(scalar_like):
-        # Not sure why this was added in https://github.com/narwhals-dev/narwhals/pull/1276
-        if pd.isna(scalar_like):
-            scalar = None
-
+    elif _is_pandas_na(scalar_like):
+        scalar = None
     elif is_pyarrow_scalar(scalar_like):
         scalar = scalar_like.as_py()
 
     if scalar is not sentintel:
         return scalar
-
     msg = (
         f"Expected object convertible to a scalar, found {type(scalar_like)}.\n"
         f"{scalar_like!r}"
     )
     raise ValueError(msg)
+
+
+def _is_pandas_na(obj: Any) -> bool:
+    return bool((pd := get_pandas()) and pd.api.types.is_scalar(obj) and pd.isna(obj))
 
 
 __all__ = [
