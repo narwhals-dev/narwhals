@@ -231,10 +231,6 @@ class ExprMetadata:
         msg = f"Cannot subclass {cls.__name__!r}"
         raise TypeError(msg)
 
-    @property
-    def is_filtration(self) -> bool:
-        return not self.preserves_length and not self.is_scalar_like
-
     def __repr__(self) -> str:  # pragma: no cover
         return (
             f"ExprMetadata(\n"
@@ -248,6 +244,10 @@ class ExprMetadata:
             f"  is_literal: {self.is_literal},\n"
             ")"
         )
+
+    @property
+    def is_filtration(self) -> bool:
+        return not self.preserves_length and not self.is_scalar_like
 
     def with_aggregation(self) -> ExprMetadata:
         if self.is_scalar_like:
@@ -360,7 +360,7 @@ class ExprMetadata:
             or self.n_orderable_ops
             or self.last_node_is_unorderable_window
         ):
-            msg = "Cannot use `partition_by` in `over` on expression which isn't partitionable (e.g. `fill_null`)."
+            msg = "Cannot use `partition_by` in `over` on expression which isn't partitionable (e.g. `.abs`)."
             raise InvalidOperationError(msg)
         return ExprMetadata(
             expansion_kind=self.expansion_kind,
