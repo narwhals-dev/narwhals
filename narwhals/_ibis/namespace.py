@@ -194,10 +194,8 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
 
     def lit(self, value: Any, dtype: DType | type[DType] | None) -> IbisExpr:
         def func(_df: IbisLazyFrame) -> list[ir.Value]:
-            if dtype is not None:
-                ibis_dtype = narwhals_to_native_dtype(dtype, version=self._version)
-                return [lit(value, ibis_dtype)]
-            return [lit(value)]
+            ibis_dtype = narwhals_to_native_dtype(dtype, self._version) if dtype else None
+            return [lit(value, ibis_dtype)]
 
         return self._expr(
             func,
