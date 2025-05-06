@@ -370,21 +370,18 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         return self._with_callable(lambda _input: _input.median())
 
     def all(self) -> Self:
-        return self._with_callable(lambda _input: _input.all().name(_input.get_name()))
+        return self._with_callable(lambda _input: _input.all())
 
     def any(self) -> Self:
-        return self._with_callable(lambda _input: _input.any().name(_input.get_name()))
+        return self._with_callable(lambda _input: _input.any())
 
     def quantile(
         self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> Self:
-        def func(_input: ir.Column) -> ir.Scalar:
-            return self._alias_native(_input.quantile(quantile), _input.get_name())
-
         if interpolation != "linear":
             msg = "Only linear interpolation methods are supported for Ibis quantile."
             raise NotImplementedError(msg)
-        return self._with_callable(func)
+        return self._with_callable(lambda _input: _input.quantile(quantile))
 
     def clip(self, lower_bound: Any, upper_bound: Any) -> Self:
         def _clip(_input: ir.NumericValue, lower: Any, upper: Any) -> ir.NumericValue:
@@ -450,9 +447,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         return self._with_callable(lambda _input: _input.min())
 
     def null_count(self) -> Self:
-        return self._with_callable(
-            lambda _input: _input.isnull().sum().name(_input.get_name())
-        )
+        return self._with_callable(lambda _input: _input.isnull().sum())
 
     def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
         if (fn := self._window_function) is not None:
