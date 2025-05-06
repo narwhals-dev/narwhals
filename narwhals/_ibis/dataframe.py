@@ -394,14 +394,11 @@ class IbisLazyFrame(
         if isinstance(descending, bool):
             descending = [descending for _ in range(len(by))]
 
-        nulls_first = not nulls_last
         sort_cols = []
 
         for i in range(len(by)):
-            if descending[i]:
-                col = ibis.desc(by[i], nulls_first=nulls_first)
-            else:
-                col = ibis.asc(by[i], nulls_first=nulls_first)
+            direction_fn = ibis.desc if descending[i] else ibis.asc
+            col = direction_fn(by[i], nulls_first=not nulls_last)
             sort_cols.append(cast("ir.Column", col))
 
         return self._with_native(self.native.order_by(*sort_cols))
