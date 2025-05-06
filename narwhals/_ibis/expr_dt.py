@@ -22,49 +22,31 @@ class IbisExprDateTimeNamespace:
         self._compliant_expr = expr
 
     def year(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(
-            lambda _input: _input.year(),
-        )
+        return self._compliant_expr._with_callable(lambda _input: _input.year())
 
     def month(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(
-            lambda _input: _input.month(),
-        )
+        return self._compliant_expr._with_callable(lambda _input: _input.month())
 
     def day(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(
-            lambda _input: _input.day(),
-        )
+        return self._compliant_expr._with_callable(lambda _input: _input.day())
 
     def hour(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(
-            lambda _input: _input.hour(),
-        )
+        return self._compliant_expr._with_callable(lambda _input: _input.hour())
 
     def minute(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(
-            lambda _input: _input.minute(),
-        )
+        return self._compliant_expr._with_callable(lambda _input: _input.minute())
 
     def second(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(
-            lambda _input: _input.second(),
-        )
+        return self._compliant_expr._with_callable(lambda _input: _input.second())
 
     def millisecond(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(
-            lambda _input: _input.millisecond(),
-        )
+        return self._compliant_expr._with_callable(lambda _input: _input.millisecond())
 
     def microsecond(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(
-            lambda _input: _input.microsecond(),
-        )
+        return self._compliant_expr._with_callable(lambda _input: _input.microsecond())
 
     def to_string(self, format: str) -> IbisExpr:
-        return self._compliant_expr._with_callable(
-            lambda _input: _input.strftime(format),
-        )
+        return self._compliant_expr._with_callable(lambda _input: _input.strftime(format))
 
     def weekday(self) -> IbisExpr:
         # Ibis uses 0-6 for Monday-Sunday. Add 1 to match polars.
@@ -73,14 +55,10 @@ class IbisExprDateTimeNamespace:
         )
 
     def ordinal_day(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(
-            lambda _input: _input.day_of_year(),
-        )
+        return self._compliant_expr._with_callable(lambda _input: _input.day_of_year())
 
     def date(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(
-            lambda _input: _input.date(),
-        )
+        return self._compliant_expr._with_callable(lambda _input: _input.date())
 
     def _bucket(self, kwds: dict[BucketUnit, Any], /) -> Callable[..., ir.TimestampValue]:
         def fn(_input: ir.TimestampValue) -> ir.TimestampValue:

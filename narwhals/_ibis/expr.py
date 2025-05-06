@@ -364,9 +364,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         return self._with_callable(lambda _input: _input.abs())
 
     def mean(self) -> Self:
-        return self._with_callable(
-            lambda _input: _input.mean(),
-        )
+        return self._with_callable(lambda _input: _input.mean())
 
     def median(self) -> Self:
         return self._with_callable(lambda _input: _input.median())

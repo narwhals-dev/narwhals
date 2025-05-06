@@ -228,16 +228,12 @@ class IbisLazyFrame(
 
     def _with_version(self, version: Version) -> Self:
         return self.__class__(
-            self.native,
-            version=version,
-            backend_version=self._backend_version,
+            self.native, version=version, backend_version=self._backend_version
         )
 
     def _with_native(self, df: ir.Table) -> Self:
         return self.__class__(
-            df,
-            backend_version=self._backend_version,
-            version=self._version,
+            df, backend_version=self._backend_version, version=self._version
         )
 
     def group_by(
@@ -463,9 +459,7 @@ class IbisLazyFrame(
         final_columns = list(dict.fromkeys([*index_, variable_name, value_name]))
 
         unpivoted = self.native.pivot_longer(
-            s.cols(*on_),
-            names_to=variable_name,
-            values_to=value_name,
+            s.cols(*on_), names_to=variable_name, values_to=value_name
         )
         return self._with_native(unpivoted.select(*final_columns))
 
