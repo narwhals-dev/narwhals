@@ -74,18 +74,12 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             cols_casted = [s.cast("string") for s in cols]
 
             if not ignore_nulls:
-                null_mask = reduce(operator.or_, (s.isnull() for s in cols))
-                result = ibis.cases(
-                    (~null_mask, reduce(lambda x, y: x + separator + y, cols_casted)),
-                    else_=None,
-                )
-            else:
                 result = cols_casted[0]
                 for col in cols_casted[1:]:
-                    result = result + cast(
-                        "ir.StringValue",
-                        ibis.cases((col.isnull(), ""), else_=separator + col),
-                    )
+                    result = result + separator + col
+            else:
+                sep = cast("ir.StringValue", lit(separator))
+                result = sep.join(cols_casted)
 
             return [result]
 
