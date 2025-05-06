@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
-from datetime import timedelta
+import datetime as dt
 from decimal import Decimal
 from functools import wraps
 from typing import TYPE_CHECKING
@@ -68,6 +67,7 @@ NON_TEMPORAL_SCALAR_TYPES = (
     complex,
     Decimal,
 )
+TEMPORAL_SCALAR_TYPES = (dt.date, dt.timedelta, dt.time)
 
 
 @overload
@@ -809,7 +809,8 @@ def to_py_scalar(scalar_like: Any) -> Any:
         and isinstance(scalar_like, np.datetime64)
         and scalar_like.dtype == "datetime64[ns]"
     ):
-        scalar = datetime(1970, 1, 1) + timedelta(microseconds=scalar_like.item() // 1000)
+        ms = scalar_like.item() // 1000
+        scalar = dt.datetime(1970, 1, 1) + dt.timedelta(microseconds=ms)
     elif is_numpy_scalar(scalar_like) or is_cupy_scalar(scalar_like):
         scalar = scalar_like.item()
     elif pd and isinstance(scalar_like, pd.Timestamp):
@@ -818,7 +819,7 @@ def to_py_scalar(scalar_like: Any) -> Any:
         scalar = scalar_like.to_pytimedelta()
     # pd.Timestamp and pd.Timedelta subclass datetime and timedelta,
     # so we need to check this separately
-    elif isinstance(scalar_like, (datetime, timedelta)):
+    elif isinstance(scalar_like, TEMPORAL_SCALAR_TYPES):
         scalar = scalar_like
     elif _is_pandas_na(scalar_like):
         scalar = None
