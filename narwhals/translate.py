@@ -775,7 +775,7 @@ def narwhalify(
         return decorator(func)
 
 
-def to_py_scalar(scalar_like: Any) -> Any:  # noqa: C901, PLR0911
+def to_py_scalar(scalar_like: Any) -> Any:  # noqa: C901
     """If a scalar is not Python native, converts it to Python native.
 
     Arguments:
@@ -800,44 +800,46 @@ def to_py_scalar(scalar_like: Any) -> Any:  # noqa: C901, PLR0911
         >>> nw.to_py_scalar(1)
         1
     """
+    sentintel = object()
+    scalar: Any = sentintel
+    pd = get_pandas()
     if scalar_like is None or isinstance(scalar_like, NON_TEMPORAL_SCALAR_TYPES):
-        return scalar_like
-
-    if (
+        scalar = scalar_like
+    elif (
         (np := get_numpy())
         and isinstance(scalar_like, np.datetime64)
         and scalar_like.dtype == "datetime64[ns]"
     ):
-        return datetime(1970, 1, 1) + timedelta(microseconds=scalar_like.item() // 1000)
-
-    if is_numpy_scalar(scalar_like) or is_cupy_scalar(scalar_like):
-        return scalar_like.item()
-
-    if pd := get_pandas():
-        if isinstance(scalar_like, pd.Timestamp):
-            return scalar_like.to_pydatetime()
-        elif isinstance(scalar_like, pd.Timedelta):
-            return scalar_like.to_pytimedelta()
-        elif pd.api.types.is_scalar(scalar_like):
-            try:
-                is_na = pd.isna(scalar_like)
-            except Exception:  # pragma: no cover  # noqa: BLE001, S110
-                pass
-            else:
-                if is_na:
-                    return None
-
+        scalar = datetime(1970, 1, 1) + timedelta(microseconds=scalar_like.item() // 1000)
+    elif is_numpy_scalar(scalar_like) or is_cupy_scalar(scalar_like):
+        scalar = scalar_like.item()
+    elif pd and isinstance(scalar_like, pd.Timestamp):
+        scalar = scalar_like.to_pydatetime()
+    elif pd and isinstance(scalar_like, pd.Timedelta):
+        scalar = scalar_like.to_pytimedelta()
     # pd.Timestamp and pd.Timedelta subclass datetime and timedelta,
     # so we need to check this separately
-    if isinstance(scalar_like, (datetime, timedelta)):
-        return scalar_like
+    elif isinstance(scalar_like, (datetime, timedelta)):
+        scalar = scalar_like
+    elif pd and pd.api.types.is_scalar(scalar_like):
+        # Not sure why this was added in https://github.com/narwhals-dev/narwhals/pull/1276
+        try:
+            is_na = pd.isna(scalar_like)
+        except Exception:  # pragma: no cover  # noqa: BLE001, S110
+            pass
+        else:
+            if is_na:
+                scalar = None
 
-    if is_pyarrow_scalar(scalar_like):
-        return scalar_like.as_py()
+    elif is_pyarrow_scalar(scalar_like):
+        scalar = scalar_like.as_py()
+
+    if scalar is not sentintel:
+        return scalar
 
     msg = (
-        f"Expected object convertible to a scalar, found {type(scalar_like)}. "
-        "Please report a bug to https://github.com/narwhals-dev/narwhals/issues"
+        f"Expected object convertible to a scalar, found {type(scalar_like)}.\n"
+        f"{scalar_like!r}"
     )
     raise ValueError(msg)
 
