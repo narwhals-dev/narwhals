@@ -275,13 +275,15 @@ class SparkLikeLazyFrame(
     ) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
         new_columns_list = [col.alias(col_name) for (col_name, col) in new_columns]
-        if self._implementation.is_sqlframe():
-            return self._with_native(self.native.select(*new_columns_list))
-        try:
-            return self._with_native(self.native.select(*new_columns_list))
-        except Exception as e:
-            msg = f"Selected columns not found in the DataFrame.\n\nHint: Did you mean one of these columns: {self.columns}?"
-            raise ColumnNotFoundError(msg) from e
+        if not self._implementation.is_sqlframe():
+            from pyspark.errors import AnalysisException
+
+            try:
+                return self._with_native(self.native.select(*new_columns_list))
+            except AnalysisException as e:
+                msg = f"Selected columns not found in the DataFrame.\n\nHint: Did you mean one of these columns: {self.columns}?"
+                raise ColumnNotFoundError(msg) from e
+        return self._with_native(self.native.select(*new_columns_list))
 
     def with_columns(self, *exprs: SparkLikeExpr) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
