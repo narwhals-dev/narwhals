@@ -359,10 +359,6 @@ class IbisLazyFrame(
     def _convert_predicates(
         self, other: Self, left_on: Sequence[str], right_on: Sequence[str]
     ) -> list[ir.BooleanColumn] | Sequence[str]:
-        if len(left_on) != len(right_on):  # pragma: no cover
-            msg = "'left_on' and 'right_on' must have the same number of columns."
-            raise ValueError(msg)
-
         if left_on == right_on:
             return left_on
 
