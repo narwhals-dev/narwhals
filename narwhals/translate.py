@@ -800,8 +800,7 @@ def to_py_scalar(scalar_like: Any) -> Any:
         >>> nw.to_py_scalar(1)
         1
     """
-    sentintel = object()
-    scalar: Any = sentintel
+    scalar: Any
     pd = get_pandas()
     if scalar_like is None or isinstance(scalar_like, NON_TEMPORAL_SCALAR_TYPES):
         scalar = scalar_like
@@ -825,14 +824,13 @@ def to_py_scalar(scalar_like: Any) -> Any:
         scalar = None
     elif is_pyarrow_scalar(scalar_like):
         scalar = scalar_like.as_py()
-
-    if scalar is not sentintel:
-        return scalar
-    msg = (
-        f"Expected object convertible to a scalar, found {type(scalar_like)}.\n"
-        f"{scalar_like!r}"
-    )
-    raise ValueError(msg)
+    else:
+        msg = (
+            f"Expected object convertible to a scalar, found {type(scalar_like)}.\n"
+            f"{scalar_like!r}"
+        )
+        raise ValueError(msg)
+    return scalar
 
 
 def _is_pandas_na(obj: Any) -> bool:
