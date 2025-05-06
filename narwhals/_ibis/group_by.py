@@ -25,7 +25,7 @@ class IbisGroupBy(LazyGroupBy["IbisLazyFrame", "IbisExpr", "ir.Value"]):
         self._compliant_frame = frame.drop_nulls(self._keys) if drop_null_keys else frame
 
     def agg(self, *exprs: IbisExpr) -> IbisLazyFrame:
-        agg_columns = list(self._evaluate_exprs(exprs))
+        native = self.compliant.native
         return self.compliant._with_native(
-            self.compliant.native.group_by(self._keys).aggregate(*agg_columns)
+            native.group_by(self._keys).aggregate(*self._evaluate_exprs(exprs))
         ).rename(dict(zip(self._keys, self._output_key_names)))
