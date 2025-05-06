@@ -898,7 +898,7 @@ class Expr:
     def cum_sum(self, *, reverse: bool = False) -> Self:
         """Return cumulative sum.
 
-        !!! info
+        Info:
             For lazy backends, this operation must be followed by `Expr.over` with
             `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
@@ -932,7 +932,7 @@ class Expr:
     def diff(self) -> Self:
         """Returns the difference between each element and the previous one.
 
-        !!! info
+        Info:
             For lazy backends, this operation must be followed by `Expr.over` with
             `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
@@ -978,7 +978,7 @@ class Expr:
     def shift(self, n: int) -> Self:
         """Shift values by `n` positions.
 
-        !!! info
+        Info:
             For lazy backends, this operation must be followed by `Expr.over` with
             `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
@@ -1086,7 +1086,7 @@ class Expr:
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         """Sort this column. Place null values first.
 
-        !!! warning
+        Warning:
             `Expr.sort` is deprecated and will be removed in a future version.
             Hint: instead of `df.select(nw.col('a').sort())`, use
             `df.select(nw.col('a')).sort()` instead.
@@ -1492,7 +1492,7 @@ class Expr:
     ) -> Self:
         """Sample randomly from this expression.
 
-        !!! warning
+        Warning:
             `Expr.sample` is deprecated and will be removed in a future version.
             Hint: instead of `df.select(nw.col('a').sample())`, use
             `df.select(nw.col('a')).sample()` instead.
@@ -1677,7 +1677,7 @@ class Expr:
     def is_first_distinct(self) -> Self:
         r"""Return a boolean mask indicating the first occurrence of each distinct value.
 
-        !!! info
+        Info:
             For lazy backends, this operation must be followed by `Expr.over` with
             `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
@@ -1709,7 +1709,7 @@ class Expr:
     def is_last_distinct(self) -> Self:
         r"""Return a boolean mask indicating the last occurrence of each distinct value.
 
-        !!! info
+        Info:
             For lazy backends, this operation must be followed by `Expr.over` with
             `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
@@ -1779,7 +1779,7 @@ class Expr:
     def head(self, n: int = 10) -> Self:
         r"""Get the first `n` rows.
 
-        !!! warning
+        Warning:
             `Expr.head` is deprecated and will be removed in a future version.
             Hint: instead of `df.select(nw.col('a').head())`, use
             `df.select(nw.col('a')).head()` instead.
@@ -1806,7 +1806,7 @@ class Expr:
     def tail(self, n: int = 10) -> Self:
         r"""Get the last `n` rows.
 
-        !!! warning
+        Warning:
             `Expr.tail` is deprecated and will be removed in a future version.
             Hint: instead of `df.select(nw.col('a').tail())`, use
             `df.select(nw.col('a')).tail()` instead.
@@ -1894,7 +1894,7 @@ class Expr:
     def gather_every(self, n: int, offset: int = 0) -> Self:
         r"""Take every nth value in the Series and return as new Series.
 
-        !!! warning
+        Warning:
             `Expr.gather_every` is deprecated and will be removed in a future version.
             Hint: instead of `df.select(nw.col('a').gather_every())`, use
             `df.select(nw.col('a')).gather_every()` instead.
@@ -2036,7 +2036,7 @@ class Expr:
     def cum_count(self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative count of the non-null values in the column.
 
-        !!! info
+        Info:
             For lazy backends, this operation must be followed by `Expr.over` with
             `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
@@ -2072,7 +2072,7 @@ class Expr:
     def cum_min(self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative min of the non-null values in the column.
 
-        !!! info
+        Info:
             For lazy backends, this operation must be followed by `Expr.over` with
             `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
@@ -2108,7 +2108,7 @@ class Expr:
     def cum_max(self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative max of the non-null values in the column.
 
-        !!! info
+        Info:
             For lazy backends, this operation must be followed by `Expr.over` with
             `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
@@ -2144,7 +2144,7 @@ class Expr:
     def cum_prod(self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative product of the non-null values in the column.
 
-        !!! info
+        Info:
             For lazy backends, this operation must be followed by `Expr.over` with
             `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
@@ -2192,7 +2192,7 @@ class Expr:
         The window at a given row will include the row itself and the `window_size - 1`
         elements before it.
 
-        !!! info
+        Info:
             For lazy backends, this operation must be followed by `Expr.over` with
             `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
@@ -2253,7 +2253,7 @@ class Expr:
         The window at a given row will include the row itself and the `window_size - 1`
         elements before it.
 
-        !!! info
+        Info:
             For lazy backends, this operation must be followed by `Expr.over` with
             `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
@@ -2315,7 +2315,7 @@ class Expr:
         The window at a given row will include the row itself and the `window_size - 1`
         elements before it.
 
-        !!! info
+        Info:
             For lazy backends, this operation must be followed by `Expr.over` with
             `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
@@ -2376,7 +2376,7 @@ class Expr:
         The window at a given row will include the row itself and the `window_size - 1`
         elements before it.
 
-        !!! info
+        Info:
             For lazy backends, this operation must be followed by `Expr.over` with
             `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 
@@ -2430,7 +2430,7 @@ class Expr:
         Notes:
             The resulting dtype may differ between backends.
 
-        !!! info
+        Info:
             For lazy backends, this operation must be followed by `Expr.over` with
             `order_by` specified, see [order-dependence](../basics/order_dependence.md).
 

@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime
 
 import pandas as pd
-import polars as pl
 import pytest
 
 import narwhals as nw
@@ -195,8 +194,11 @@ def test_truncate_custom(
         )
     if every.endswith("ns") and any(x in str(constructor) for x in ("polars", "duckdb")):
         request.applymarker(pytest.mark.xfail())
+    if "cudf" in str(constructor):
+        # https://github.com/rapidsai/cudf/issues/18654
+        request.applymarker(pytest.mark.xfail(reason="Not implemented"))
     if any(every.endswith(x) for x in ("mo", "q", "y")) and any(
-        x in str(constructor) for x in ("dask", "cudf")
+        x in str(constructor) for x in ("dask",)
     ):
         request.applymarker(pytest.mark.xfail(reason="Not implemented"))
     df = nw.from_native(constructor(data))
@@ -224,6 +226,10 @@ def test_truncate_custom(
     ],
 )
 def test_truncate_polars_ns(every: str, expected: list[datetime]) -> None:
+    pytest.importorskip("polars")
+
+    import polars as pl
+
     df_pl = pl.DataFrame(data, schema={"a": pl.Datetime(time_unit="ns")})
     df = nw.from_native(df_pl)
     result = df.select(nw.col("a").dt.truncate(every))

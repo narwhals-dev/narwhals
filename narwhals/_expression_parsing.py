@@ -458,7 +458,7 @@ class ExprMetadata:
         )
 
 
-def combine_metadata(
+def combine_metadata(  # noqa: C901, PLR0912
     *args: IntoExpr | object | None,
     str_as_lit: bool,
     allow_multi_output: bool,
@@ -483,7 +483,7 @@ def combine_metadata(
     result_is_not_scalar_like = False
     result_is_not_literal = False
 
-    for i, arg in enumerate(args):
+    for i, arg in enumerate(args):  # noqa: PLR1702
         if isinstance(arg, str) and not str_as_lit:
             result_preserves_length = True
             result_is_not_scalar_like = True
