@@ -467,6 +467,12 @@ def test_join_keys_exceptions(constructor: Constructor, how: str) -> None:
     ):
         df.join(df, how=how, on="antananarivo", right_on="antananarivo")  # type: ignore[arg-type]
 
+    with pytest.raises(
+        ValueError,
+        match="`left_on` and `right_on` must have the same length.",
+    ):
+        df.join(df, how=how, left_on=["antananarivo", "bob"], right_on="antananarivo")  # type: ignore[arg-type]
+
 
 @pytest.mark.parametrize(
     ("strategy", "expected"),
@@ -780,6 +786,17 @@ def test_joinasof_by_exceptions(constructor: Constructor) -> None:
         match="If `by` is specified, `by_left` and `by_right` should be None.",
     ):
         df.join_asof(df, on="antananarivo", by_right="bob", by="bob")
+
+    with pytest.raises(
+        ValueError,
+        match="`by_left` and `by_right` must have the same length.",
+    ):
+        df.join_asof(
+            df,
+            on="antananarivo",
+            by_left=["antananarivo", "bob"],
+            by_right=["antananarivo"],
+        )
 
 
 def test_join_duplicate_column_names(
