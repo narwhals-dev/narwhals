@@ -101,7 +101,7 @@ jobs:
         run: pytest narwhals/*.py --doctest-modules
 
   # Test against smaller dependency set, used e.g. on Gentoo.
-  pytest-narrower-deps:
+  pytest-narrower-dependencies:
     strategy:
       matrix:
         python-version: ["3.13"]
