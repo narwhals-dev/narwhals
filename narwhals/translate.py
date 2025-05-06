@@ -823,13 +823,8 @@ def to_py_scalar(scalar_like: Any) -> Any:  # noqa: C901
         scalar = scalar_like
     elif pd and pd.api.types.is_scalar(scalar_like):
         # Not sure why this was added in https://github.com/narwhals-dev/narwhals/pull/1276
-        try:
-            is_na = pd.isna(scalar_like)
-        except Exception:  # pragma: no cover  # noqa: BLE001, S110
-            pass
-        else:
-            if is_na:
-                scalar = None
+        if pd.isna(scalar_like):
+            scalar = None
 
     elif is_pyarrow_scalar(scalar_like):
         scalar = scalar_like.as_py()
