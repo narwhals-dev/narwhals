@@ -18,7 +18,7 @@ from narwhals._spark_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
-from narwhals.utils import check_column_exists
+from narwhals.utils import check_columns_exist
 from narwhals.utils import find_stacklevel
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import not_implemented
@@ -257,6 +257,7 @@ class SparkLikeLazyFrame(
         raise ValueError(msg)  # pragma: no cover
 
     def simple_select(self, *column_names: str) -> Self:
+        check_columns_exist(column_names, available_columns=self.columns)
         return self._with_native(self.native.select(*column_names))
 
     def aggregate(
@@ -358,7 +359,8 @@ class SparkLikeLazyFrame(
     def unique(
         self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self:
-        check_column_exists(self.columns, subset)
+        if subset:
+            check_columns_exist(subset, available_columns=self.columns)
         subset = list(subset) if subset else None
         if keep == "none":
             tmp = generate_temporary_column_name(8, self.columns)

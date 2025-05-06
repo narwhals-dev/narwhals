@@ -29,6 +29,7 @@ from narwhals._duckdb.utils import narwhals_to_native_dtype
 from narwhals._duckdb.utils import when
 from narwhals._expression_parsing import ExprKind
 from narwhals.utils import Implementation
+from narwhals.utils import check_columns_exist
 from narwhals.utils import not_implemented
 from narwhals.utils import requires
 
@@ -186,7 +187,9 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         context: _FullContext,
     ) -> Self:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            return [col(name) for name in evaluate_column_names(df)]
+            col_names = evaluate_column_names(df)
+            check_columns_exist(col_names, available_columns=df.columns)
+            return [col(name) for name in col_names]
 
         return cls(
             func,

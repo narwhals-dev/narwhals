@@ -1272,11 +1272,7 @@ def parse_columns_to_drop(
     cols = compliant_frame.columns
     to_drop = list(columns)
     if strict:
-        missing_columns = [x for x in to_drop if x not in cols]
-        if missing_columns:
-            raise ColumnNotFoundError.from_missing_and_available_column_names(
-                missing_columns=missing_columns, available_columns=cols
-            )
+        check_columns_exist(to_drop, available_columns=cols)
     else:
         to_drop = list(set(cols).intersection(set(to_drop)))
     return to_drop
@@ -1541,10 +1537,19 @@ def generate_repr(header: str, native_repr: str) -> str:
     )
 
 
-def check_column_exists(columns: Sequence[str], subset: Sequence[str] | None) -> None:
-    if subset is not None and (missing := set(subset).difference(columns)):
-        msg = f"Column(s) {sorted(missing)} not found in {columns}"
-        raise ColumnNotFoundError(msg)
+def check_columns_exist(
+    columns: Sequence[str],
+    *,
+    available_columns: Sequence[str],
+    from_error: Exception | None = None,
+) -> None:
+    if missing := set(columns).difference(available_columns):
+        error = ColumnNotFoundError.from_missing_and_available_column_names(
+            missing_columns=sorted(missing), available_columns=list(available_columns)
+        )
+        if from_error is not None:
+            raise error from from_error
+        raise error
 
 
 def check_column_names_are_unique(columns: Sequence[str]) -> None:

@@ -21,6 +21,7 @@ from narwhals._spark_like.utils import import_window
 from narwhals._spark_like.utils import narwhals_to_native_dtype
 from narwhals.dependencies import get_pyspark
 from narwhals.utils import Implementation
+from narwhals.utils import check_columns_exist
 from narwhals.utils import not_implemented
 from narwhals.utils import parse_version
 
@@ -224,7 +225,9 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         context: _FullContext,
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            return [df._F.col(col_name) for col_name in evaluate_column_names(df)]
+            col_names = evaluate_column_names(df)
+            check_columns_exist(col_names, available_columns=df.columns)
+            return [df._F.col(col_name) for col_name in col_names]
 
         return cls(
             func,
