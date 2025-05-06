@@ -65,7 +65,6 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             raise TypeError(msg)
         return self._lazyframe.from_native(ibis.union(*native_items), context=self)
 
-    @requires.backend_version((10, 0))
     def concat_str(
         self, *exprs: IbisExpr, separator: str, ignore_nulls: bool
     ) -> IbisExpr:
