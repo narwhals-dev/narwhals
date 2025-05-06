@@ -35,7 +35,7 @@ def test_str_to_uppercase(
     if (
         any(
             x in str(constructor)
-            for x in ("pandas_constructor", "pandas_nullable", "polars")
+            for x in ("pandas_constructor", "pandas_nullable", "polars", "cudf")
         )
         and "ẞ" in expected["a"][0]
     ):
@@ -72,7 +72,7 @@ def test_str_to_uppercase_series(
     if (
         any(
             x in str(constructor_eager)
-            for x in ("pandas_constructor", "pandas_nullable", "polars")
+            for x in ("pandas_constructor", "pandas_nullable", "polars", "cudf")
         )
         and "ẞ" in expected["a"][0]
     ):

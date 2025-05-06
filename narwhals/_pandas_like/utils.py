@@ -90,6 +90,8 @@ PA_DURATION_RGX = r"""^
 $"""
 PATTERN_PA_DURATION = re.compile(PA_DURATION_RGX, re.VERBOSE)
 
+UNIT_DICT = {"d": "D", "m": "min"}
+
 
 def align_and_extract_native(
     lhs: PandasLikeSeries, rhs: PandasLikeSeries | object

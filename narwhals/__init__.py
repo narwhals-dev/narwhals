@@ -4,7 +4,6 @@ from narwhals import dependencies
 from narwhals import dtypes
 from narwhals import exceptions
 from narwhals import selectors
-from narwhals import stable
 from narwhals.dataframe import DataFrame
 from narwhals.dataframe import LazyFrame
 from narwhals.dtypes import Array
@@ -82,7 +81,7 @@ from narwhals.utils import maybe_get_index
 from narwhals.utils import maybe_reset_index
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.37.1"
+__version__ = "1.38.0"
 
 __all__ = [
     "Array",
@@ -160,7 +159,6 @@ __all__ = [
     "scan_parquet",
     "selectors",
     "show_versions",
-    "stable",
     "sum",
     "sum_horizontal",
     "to_native",

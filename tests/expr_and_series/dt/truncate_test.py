@@ -195,8 +195,11 @@ def test_truncate_custom(
         )
     if every.endswith("ns") and any(x in str(constructor) for x in ("polars", "duckdb")):
         request.applymarker(pytest.mark.xfail())
+    if "cudf" in str(constructor):
+        # https://github.com/rapidsai/cudf/issues/18654
+        request.applymarker(pytest.mark.xfail(reason="Not implemented"))
     if any(every.endswith(x) for x in ("mo", "q", "y")) and any(
-        x in str(constructor) for x in ("dask", "cudf")
+        x in str(constructor) for x in ("dask",)
     ):
         request.applymarker(pytest.mark.xfail(reason="Not implemented"))
     df = nw.from_native(constructor(data))
