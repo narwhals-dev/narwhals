@@ -83,14 +83,22 @@ def test_comparison_with_list_error_message() -> None:
         nw.from_native(pd.Series([[1, 2, 3]]), series_only=True) == [1, 2, 3]  # noqa: B015
 
 
-def test_missing_columns(constructor: Constructor) -> None:
+def test_missing_columns(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "sqlframe" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="sqlframe doesn't raise this error"))
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
     selected_columns = ["a", "e", "f"]
-    msg = (
-        r"The following columns were not found: \[.*\]"
-        r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
-    )
+    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
+        msg = r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
+    else:
+        msg = (
+            r"The following columns were not found: \[.*\]"
+            r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
+        )
+
     if "polars" in str(constructor):
         # In the lazy case, Polars only errors when we call `collect`,
         # and we have no way to recover exactly which columns the user

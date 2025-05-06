@@ -258,13 +258,6 @@ class SparkLikeLazyFrame(
         raise ValueError(msg)  # pragma: no cover
 
     def simple_select(self, *column_names: str) -> Self:
-        df_columns = self.columns
-        missing_columns = [c for c in column_names if c not in df_columns]
-        if missing_columns:
-            raise ColumnNotFoundError.from_missing_and_available_column_names(
-                missing_columns=missing_columns,
-                available_columns=df_columns,
-            )
         return self._with_native(self.native.select(*column_names))
 
     def aggregate(
@@ -282,7 +275,13 @@ class SparkLikeLazyFrame(
     ) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
         new_columns_list = [col.alias(col_name) for (col_name, col) in new_columns]
-        return self._with_native(self.native.select(*new_columns_list))
+        if self._implementation.is_sqlframe():
+            return self._with_native(self.native.select(*new_columns_list))
+        try:
+            return self._with_native(self.native.select(*new_columns_list))
+        except Exception as e:
+            msg = f"Selected columns not found in the DataFrame.\n\nHint: Did you mean one of these columns: {self.columns}?"
+            raise ColumnNotFoundError(msg) from e
 
     def with_columns(self, *exprs: SparkLikeExpr) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
