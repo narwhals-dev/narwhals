@@ -3,12 +3,10 @@ from __future__ import annotations
 import functools
 import re
 from contextlib import suppress
-from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Literal
-from typing import Sequence
 from typing import Sized
 from typing import TypeVar
 
@@ -28,7 +26,6 @@ T = TypeVar("T", bound=Sized)
 if TYPE_CHECKING:
     from pandas._typing import Dtype as PandasDtype
 
-    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
@@ -679,32 +676,6 @@ def select_columns_by_name(
         raise ColumnNotFoundError.from_missing_and_available_column_names(
             missing_columns, available_columns
         ) from e
-
-
-def pivot_table(
-    df: PandasLikeDataFrame,
-    values: Sequence[str],
-    index: Sequence[str],
-    columns: Sequence[str],
-    aggregate_function: str | None,
-) -> Any:
-    categorical = df._version.dtypes.Categorical
-    kwds: dict[Any, Any] = {"observed": True}
-    if df._implementation is Implementation.CUDF:
-        kwds.pop("observed")
-        cols = set(chain(values, index, columns))
-        schema = df.schema.items()
-        if any(tp for name, tp in schema if name in cols and isinstance(tp, categorical)):
-            msg = "`pivot` with Categoricals is not implemented for cuDF backend"
-            raise NotImplementedError(msg)
-    return df.native.pivot_table(
-        values=values,
-        index=index,
-        columns=columns,
-        aggfunc=aggregate_function,
-        margins=False,
-        **kwds,
-    )
 
 
 def check_column_names_are_unique(columns: pd.Index[str]) -> None:
