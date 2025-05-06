@@ -118,8 +118,8 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
 
     def max_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
         def func(df: IbisLazyFrame) -> list[ir.Value]:
-            cols = list(chain.from_iterable(expr(df) for expr in exprs))
-            return [ibis.greatest(*cols).name(cols[0].get_name())]
+            cols = chain.from_iterable(expr(df) for expr in exprs)
+            return [ibis.greatest(*cols)]
 
         return self._expr(
             call=func,
@@ -131,8 +131,8 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
 
     def min_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
         def func(df: IbisLazyFrame) -> list[ir.Value]:
-            cols = list(chain.from_iterable(expr(df) for expr in exprs))
-            return [ibis.least(*cols).name(cols[0].get_name())]
+            cols = chain.from_iterable(expr(df) for expr in exprs)
+            return [ibis.least(*cols)]
 
         return self._expr(
             call=func,
@@ -144,11 +144,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
 
     def sum_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
         def func(df: IbisLazyFrame) -> list[ir.Value]:
-            cols = [
-                e.fill_null(lit(0)).name(e.get_name())
-                for _expr in exprs
-                for e in _expr(df)
-            ]
+            cols = [e.fill_null(lit(0)) for _expr in exprs for e in _expr(df)]
             return [reduce(operator.add, cols)]
 
         return self._expr(
@@ -171,13 +167,9 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
                 for _expr in exprs
                 for e in _expr(df)
             )
-            first_expr_name = exprs[0](df)[0].get_name()
 
             return [
-                (
-                    reduce(lambda x, y: x + y, expr)
-                    / reduce(lambda x, y: x + y, non_null)
-                ).name(first_expr_name)
+                (reduce(lambda x, y: x + y, expr) / reduce(lambda x, y: x + y, non_null))
             ]
 
         return self._expr(
