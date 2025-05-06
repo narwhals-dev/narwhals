@@ -298,7 +298,7 @@ def datetime(
     Arguments:
         time_unit: One (or more) of the allowed timeunit precision strings, "ms", "us",
             "ns" and "s". Omit to select columns with any valid timeunit.
-        time_zone: Specify which timezone(s) to select:
+        time_zone: Specify which timezone(s) to select
 
             * One or more timezone strings, as defined in zoneinfo (to see valid options
                 run `import zoneinfo; zoneinfo.available_timezones()` for a full list).
