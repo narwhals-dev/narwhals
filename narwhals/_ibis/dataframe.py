@@ -118,7 +118,7 @@ class IbisLazyFrame(
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
-                native_dataframe=self.native.to_pyarrow(),
+                self.native.to_pyarrow(),
                 backend_version=parse_version(pa),
                 version=self._version,
                 validate_column_names=True,
@@ -130,7 +130,7 @@ class IbisLazyFrame(
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
             return PandasLikeDataFrame(
-                native_dataframe=self.native.to_pandas(),
+                self.native.to_pandas(),
                 implementation=Implementation.PANDAS,
                 backend_version=parse_version(pd),
                 version=self._version,
@@ -143,7 +143,7 @@ class IbisLazyFrame(
             from narwhals._polars.dataframe import PolarsDataFrame
 
             return PolarsDataFrame(
-                df=self.native.to_polars(),
+                self.native.to_polars(),
                 backend_version=parse_version(pl),
                 version=self._version,
             )
@@ -203,7 +203,7 @@ class IbisLazyFrame(
             # Note: prefer `self._cached_schema` over `functools.cached_property`
             # due to Python3.13 failures.
             self._cached_schema = {
-                name: native_to_narwhals_dtype(ibis_dtype=dtype, version=self._version)
+                name: native_to_narwhals_dtype(dtype, self._version)
                 for name, dtype in self.native.schema().fields.items()
             }
         return self._cached_schema
@@ -373,7 +373,7 @@ class IbisLazyFrame(
 
     def collect_schema(self) -> dict[str, DType]:
         return {
-            name: native_to_narwhals_dtype(ibis_dtype=dtype, version=self._version)
+            name: native_to_narwhals_dtype(dtype, self._version)
             for name, dtype in self.native.schema().fields.items()
         }
 
