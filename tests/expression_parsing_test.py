@@ -48,7 +48,7 @@ from narwhals.exceptions import InvalidOperationError
     ],
 )
 def test_window_kind(expr: nw.Expr, expected: int) -> None:
-    assert expr._metadata.n_order_dependent_ops == expected
+    assert expr._metadata.n_orderable_ops == expected
 
 
 def test_misleading_order_by() -> None:

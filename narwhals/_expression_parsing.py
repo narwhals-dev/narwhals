@@ -171,7 +171,7 @@ class ExprKind(Enum):
             if meta.is_scalar_like:
                 return ExprKind.AGGREGATION
             if (
-                not meta.n_order_dependent_ops
+                not meta.n_orderable_ops
                 and meta.preserves_length
                 and not meta.is_partitioned
             ):
@@ -200,7 +200,7 @@ class ExprMetadata:
         "is_scalar_like",
         "last_node_is_orderable_window",
         "last_node_is_unorderable_window",
-        "n_order_dependent_ops",
+        "n_orderable_ops",
         "preserves_length",
     )
 
@@ -211,7 +211,7 @@ class ExprMetadata:
         last_node_is_orderable_window: bool = False,
         last_node_is_unorderable_window: bool = False,
         is_partitioned: bool = False,
-        n_order_dependent_ops: int = 0,
+        n_orderable_ops: int = 0,
         preserves_length: bool = True,
         is_scalar_like: bool = False,
         is_literal: bool = False,
@@ -222,7 +222,7 @@ class ExprMetadata:
         self.last_node_is_orderable_window = last_node_is_orderable_window
         self.last_node_is_unorderable_window = last_node_is_unorderable_window
         self.is_partitioned = is_partitioned
-        self.n_order_dependent_ops = n_order_dependent_ops
+        self.n_orderable_ops = n_orderable_ops
         self.preserves_length = preserves_length
         self.is_scalar_like = is_scalar_like
         self.is_literal = is_literal
@@ -242,7 +242,7 @@ class ExprMetadata:
             f"  last_node_is_orderable_window: {self.last_node_is_orderable_window},\n"
             f"  last_node_is_unorderable_window: {self.last_node_is_unorderable_window},\n"
             f"  is_partitioned: {self.is_partitioned},\n"
-            f"  n_order_dependent_ops: {self.n_order_dependent_ops},\n"
+            f"  n_orderable_ops: {self.n_orderable_ops},\n"
             f"  preserves_length: {self.preserves_length},\n"
             f"  is_scalar_like: {self.is_scalar_like},\n"
             f"  is_literal: {self.is_literal},\n"
@@ -258,7 +258,7 @@ class ExprMetadata:
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=False,
             is_partitioned=self.is_partitioned,
-            n_order_dependent_ops=self.n_order_dependent_ops,
+            n_orderable_ops=self.n_orderable_ops,
             preserves_length=False,
             is_scalar_like=True,
             is_literal=False,
@@ -270,7 +270,7 @@ class ExprMetadata:
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=False,
             is_partitioned=self.is_partitioned,
-            n_order_dependent_ops=self.n_order_dependent_ops,
+            n_orderable_ops=self.n_orderable_ops,
             preserves_length=False,
             is_scalar_like=True,
             is_literal=True,
@@ -285,7 +285,7 @@ class ExprMetadata:
             last_node_is_orderable_window=True,
             last_node_is_unorderable_window=False,
             is_partitioned=self.is_partitioned,
-            n_order_dependent_ops=self.n_order_dependent_ops + 1,
+            n_orderable_ops=self.n_orderable_ops + 1,
             preserves_length=False,
             is_scalar_like=True,
             is_literal=False,
@@ -297,7 +297,7 @@ class ExprMetadata:
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=False,
             is_partitioned=self.is_partitioned,
-            n_order_dependent_ops=self.n_order_dependent_ops,
+            n_orderable_ops=self.n_orderable_ops,
             preserves_length=self.preserves_length,
             is_scalar_like=self.is_scalar_like,
             is_literal=False,
@@ -312,7 +312,7 @@ class ExprMetadata:
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=True,
             is_partitioned=True,
-            n_order_dependent_ops=self.n_order_dependent_ops,
+            n_orderable_ops=self.n_orderable_ops,
             preserves_length=self.preserves_length,
             is_scalar_like=False,
             is_literal=False,
@@ -327,25 +327,25 @@ class ExprMetadata:
             last_node_is_orderable_window=True,
             last_node_is_unorderable_window=False,
             is_partitioned=False,
-            n_order_dependent_ops=self.n_order_dependent_ops + 1,
+            n_orderable_ops=self.n_orderable_ops + 1,
             preserves_length=self.preserves_length,
             is_scalar_like=False,
             is_literal=False,
         )
 
     def with_ordered_over(self) -> ExprMetadata:
-        n_order_dependent_ops = self.n_order_dependent_ops
-        if not n_order_dependent_ops:
+        n_orderable_ops = self.n_orderable_ops
+        if not n_orderable_ops:
             msg = "Cannot use `order_by` in `over` on expression which isn't orderable."
             raise InvalidOperationError(msg)
         if self.last_node_is_orderable_window:
-            n_order_dependent_ops -= 1
+            n_orderable_ops -= 1
         return ExprMetadata(
             expansion_kind=self.expansion_kind,
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=False,
             is_partitioned=True,
-            n_order_dependent_ops=n_order_dependent_ops,
+            n_orderable_ops=n_orderable_ops,
             preserves_length=True,
             is_scalar_like=False,
             is_literal=False,
@@ -357,7 +357,7 @@ class ExprMetadata:
             raise InvalidOperationError(msg)
         if not (
             self.is_scalar_like
-            or self.n_order_dependent_ops
+            or self.n_orderable_ops
             or self.last_node_is_unorderable_window
         ):
             msg = "Cannot use `partition_by` in `over` on expression which isn't partitionable (e.g. `fill_null`)."
@@ -367,7 +367,7 @@ class ExprMetadata:
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=False,
             is_partitioned=True,
-            n_order_dependent_ops=self.n_order_dependent_ops,
+            n_orderable_ops=self.n_orderable_ops,
             preserves_length=True,
             is_scalar_like=False,
             is_literal=False,
@@ -382,7 +382,7 @@ class ExprMetadata:
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=False,
             is_partitioned=self.is_partitioned,
-            n_order_dependent_ops=self.n_order_dependent_ops,
+            n_orderable_ops=self.n_orderable_ops,
             preserves_length=False,
             is_scalar_like=False,
             is_literal=False,
@@ -397,7 +397,7 @@ class ExprMetadata:
             last_node_is_orderable_window=True,
             last_node_is_unorderable_window=False,
             is_partitioned=self.is_partitioned,
-            n_order_dependent_ops=True,
+            n_orderable_ops=True,
             preserves_length=False,
             is_scalar_like=False,
             is_literal=False,
@@ -451,7 +451,7 @@ def combine_metadata(  # noqa: C901, PLR0912
     n_filtrations = 0
     result_expansion_kind = ExpansionKind.SINGLE
     result_is_partitioned = False
-    result_n_order_dependent_ops = 0
+    result_n_orderable_ops = 0
     result_preserves_length = False
     result_is_not_scalar_like = False
     result_is_not_literal = False
@@ -480,7 +480,7 @@ def combine_metadata(  # noqa: C901, PLR0912
 
             if metadata.is_partitioned:
                 result_is_partitioned = True
-            result_n_order_dependent_ops += metadata.n_order_dependent_ops
+            result_n_orderable_ops += metadata.n_orderable_ops
             if metadata.preserves_length:
                 result_preserves_length = True
             if not metadata.is_scalar_like:
@@ -502,7 +502,7 @@ def combine_metadata(  # noqa: C901, PLR0912
         last_node_is_orderable_window=False,
         last_node_is_unorderable_window=False,
         is_partitioned=result_is_partitioned,
-        n_order_dependent_ops=result_n_order_dependent_ops,
+        n_orderable_ops=result_n_orderable_ops,
         preserves_length=result_preserves_length,
         is_scalar_like=not result_is_not_scalar_like,
         is_literal=not result_is_not_literal,
