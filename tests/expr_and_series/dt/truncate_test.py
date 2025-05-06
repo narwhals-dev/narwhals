@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime
 
 import pandas as pd
-import polars as pl
 import pytest
 
 import narwhals as nw
@@ -227,6 +226,10 @@ def test_truncate_custom(
     ],
 )
 def test_truncate_polars_ns(every: str, expected: list[datetime]) -> None:
+    pytest.importorskip("polars")
+
+    import polars as pl
+
     df_pl = pl.DataFrame(data, schema={"a": pl.Datetime(time_unit="ns")})
     df = nw.from_native(df_pl)
     result = df.select(nw.col("a").dt.truncate(every))
