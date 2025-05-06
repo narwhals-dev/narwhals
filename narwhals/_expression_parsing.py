@@ -115,33 +115,6 @@ def evaluate_output_names_and_aliases(
     return output_names, aliases
 
 
-class ExpansionKind(Enum):
-    """Describe what kind of expansion the expression performs."""
-
-    SINGLE = auto()
-    """e.g. `nw.col('a'), nw.sum_horizontal(nw.all())`"""
-
-    MULTI_NAMED = auto()
-    """e.g. `nw.col('a', 'b')`"""
-
-    MULTI_UNNAMED = auto()
-    """e.g. `nw.all()`, nw.nth(0, 1)"""
-
-    def is_multi_unnamed(self) -> bool:
-        return self is ExpansionKind.MULTI_UNNAMED
-
-    def is_multi_output(self) -> bool:
-        return self in {ExpansionKind.MULTI_NAMED, ExpansionKind.MULTI_UNNAMED}
-
-    def __and__(self, other: ExpansionKind) -> Literal[ExpansionKind.MULTI_UNNAMED]:
-        if self is ExpansionKind.MULTI_UNNAMED and other is ExpansionKind.MULTI_UNNAMED:
-            # e.g. nw.selectors.all() - nw.selectors.numeric().
-            return ExpansionKind.MULTI_UNNAMED
-        # Don't attempt anything more complex, keep it simple and raise in the face of ambiguity.
-        msg = f"Unsupported ExpansionKind combination, got {self} and {other}, please report a bug."  # pragma: no cover
-        raise AssertionError(msg)  # pragma: no cover
-
-
 class ExprKind(Enum):
     """Describe which kind of expression we are dealing with."""
 
@@ -190,6 +163,33 @@ def is_scalar_like(
     obj: ExprKind,
 ) -> TypeIs[Literal[ExprKind.LITERAL, ExprKind.AGGREGATION]]:
     return obj.is_scalar_like()
+
+
+class ExpansionKind(Enum):
+    """Describe what kind of expansion the expression performs."""
+
+    SINGLE = auto()
+    """e.g. `nw.col('a'), nw.sum_horizontal(nw.all())`"""
+
+    MULTI_NAMED = auto()
+    """e.g. `nw.col('a', 'b')`"""
+
+    MULTI_UNNAMED = auto()
+    """e.g. `nw.all()`, nw.nth(0, 1)"""
+
+    def is_multi_unnamed(self) -> bool:
+        return self is ExpansionKind.MULTI_UNNAMED
+
+    def is_multi_output(self) -> bool:
+        return self in {ExpansionKind.MULTI_NAMED, ExpansionKind.MULTI_UNNAMED}
+
+    def __and__(self, other: ExpansionKind) -> Literal[ExpansionKind.MULTI_UNNAMED]:
+        if self is ExpansionKind.MULTI_UNNAMED and other is ExpansionKind.MULTI_UNNAMED:
+            # e.g. nw.selectors.all() - nw.selectors.numeric().
+            return ExpansionKind.MULTI_UNNAMED
+        # Don't attempt anything more complex, keep it simple and raise in the face of ambiguity.
+        msg = f"Unsupported ExpansionKind combination, got {self} and {other}, please report a bug."  # pragma: no cover
+        raise AssertionError(msg)  # pragma: no cover
 
 
 class ExprMetadata:
