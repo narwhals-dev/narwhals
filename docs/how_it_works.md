@@ -287,38 +287,43 @@ print(nw.col("a").mean().over("b"))
 Note how they tell us something about their metadata. This section is all about
 making sense of what that all means, what the rules are, and what it enables.
 
+Here's a brief description of each piece of metadata:
+
 - `expansion_kind`: How and whether the expression expands to multiple outputs.
   This can be one of:
 
-  - `ExpansionKind.SINGLE`: Only produces a single output. For example, `nw.col('a')`.
-  - `ExpansionKind.MULTI_NAMED`: Produces multiple outputs whose names can be
-    determined statically, for example `nw.col('a', 'b')`.
-  - `ExpansionKind.MULTI_UNNAMED`: Produces multiple outputs whose names depend
-    on the input dataframe. For example, `nw.nth(0, 1)` or `nw.selectors.numeric()`.
+    - `ExpansionKind.SINGLE`: Only produces a single output. For example, `nw.col('a')`.
+    - `ExpansionKind.MULTI_NAMED`: Produces multiple outputs whose names can be
+      determined statically, for example `nw.col('a', 'b')`.
+    - `ExpansionKind.MULTI_UNNAMED`: Produces multiple outputs whose names depend
+      on the input dataframe. For example, `nw.nth(0, 1)` or `nw.selectors.numeric()`.
+
 - `last_node_is_orderable_window`: Whether the last node of the expression is a
   window function which can be ordered (`diff`, `rolling_*`, `cum_*`, `shift`, `is_*_distinct`).
 
-  For example:
+    For example:
 
-  - `nw.col('a').diff()`
-  - `nw.col('a').rolling_mean(2)`
-  - `nw.col('a').cum_sum()`
+    - `nw.col('a').diff()`
+    - `nw.col('a').rolling_mean(2)`
+    - `nw.col('a').cum_sum()`
 
-  Non-examples:
+    Non-examples:
 
-  - `nw.col('a')`
-  - `nw.col('a').rolling_mean(2).abs()`
-  - `nw.col('a').cum_sum() + 1`
+    - `nw.col('a')`
+    - `nw.col('a').rolling_mean(2).abs()`
+    - `nw.col('a').cum_sum() + 1`
+
 - `last_node_is_unorderable_window`: Whether the last node of the expression is a
   window function which cannot be ordered (`rank`, `is_unique`).
 - `is_partitioned`: Whether the expression already contains an `over(...)` statement.
 - `n_orderable_ops`: How many order-dependent operations the expression contains.
   
-  Examples:
+    Examples:
 
-  - `nw.col('a')` contains 0 orderable operations.
-  - `nw.col('a').diff()` contains 1 orderable operation.
-  - `nw.col('a').diff().shift()` contains 2 orderable operation.
+    - `nw.col('a')` contains 0 orderable operations.
+    - `nw.col('a').diff()` contains 1 orderable operation.
+    - `nw.col('a').diff().shift()` contains 2 orderable operation.
+
 - `preserves_length`: Whether the output of the expression is the same length as
   the dataframe it gets evaluated on.
 - `is_scalar_like`: Whether the output of the expression is always length-1.
