@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from itertools import chain
+from itertools import product
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -22,7 +24,6 @@ from narwhals._pandas_like.utils import check_column_names_are_unique
 from narwhals._pandas_like.utils import get_dtype_backend
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
-from narwhals._pandas_like.utils import pivot_table
 from narwhals._pandas_like.utils import rename
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_index
@@ -33,6 +34,7 @@ from narwhals.utils import Implementation
 from narwhals.utils import _into_arrow_table
 from narwhals.utils import _remap_full_join_keys
 from narwhals.utils import check_column_exists
+from narwhals.utils import exclude_column_names
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
@@ -928,7 +930,118 @@ class PandasLikeDataFrame(
     def gather_every(self, n: int, offset: int) -> Self:
         return self._with_native(self.native.iloc[offset::n], validate_column_names=False)
 
-    def pivot(  # noqa: C901, PLR0912
+    def _pivot_into_index_values(
+        self,
+        on: Sequence[str],
+        index: Sequence[str] | None,
+        values: Sequence[str] | None,
+        /,
+    ) -> tuple[Sequence[str], Sequence[str]]:
+        index = index or (
+            exclude_column_names(self, {*on, *values})
+            if values
+            else exclude_column_names(self, on)
+        )
+        values = values or exclude_column_names(self, {*on, *index})
+        return index, values
+
+    @staticmethod
+    def _pivot_multi_on_name(unique_values: tuple[str, ...], /) -> str:
+        LB, RB, Q = "{", "}", '"'  # noqa: N806
+        body = '","'.join(unique_values)
+        return f"{LB}{Q}{body}{Q}{RB}"
+
+    @staticmethod
+    def _pivot_single_on_names(
+        column_names: Iterable[str], n_values: int, separator: str, /
+    ) -> list[str]:
+        if n_values > 1:
+            return [separator.join(col).strip() for col in column_names]
+        return [col[-1] for col in column_names]
+
+    def _pivot_multi_on_names(
+        self,
+        column_names: Iterable[tuple[str, ...]],
+        n_on: int,
+        n_values: int,
+        separator: str,
+        /,
+    ) -> Iterator[str]:
+        if n_values > 1:
+            for col in column_names:
+                names = col[-n_on:]
+                prefix = col[0]
+                yield separator.join((prefix, self._pivot_multi_on_name(names)))
+        else:
+            for col in column_names:
+                yield self._pivot_multi_on_name(col[-n_on:])
+
+    def _pivot_remap_column_names(
+        self,
+        column_names: Iterable[Any],
+        *,
+        n_on: int,
+        n_values: int,
+        separator: str,
+    ) -> list[str]:
+        """Reformat output column names from a native pivot operation, to match `polars`.
+
+        Note:
+            `column_names` is a `pd.MultiIndex`, but not in the stubs.
+        """
+        if n_on == 1:
+            return self._pivot_single_on_names(column_names, n_values, separator)
+        return list(self._pivot_multi_on_names(column_names, n_on, n_values, separator))
+
+    def _pivot_table(
+        self,
+        on: Sequence[str],
+        index: Sequence[str],
+        values: Sequence[str],
+        aggregate_function: Literal[
+            "min", "max", "first", "last", "sum", "mean", "median"
+        ],
+        /,
+    ) -> Any:
+        categorical = self._version.dtypes.Categorical
+        kwds: dict[Any, Any] = {"observed": True}
+        if self._implementation is Implementation.CUDF:
+            kwds.pop("observed")
+            cols = set(chain(values, index, on))
+            schema = self.schema.items()
+            if any(
+                tp for name, tp in schema if name in cols and isinstance(tp, categorical)
+            ):
+                msg = "`pivot` with Categoricals is not implemented for cuDF backend"
+                raise NotImplementedError(msg)
+        return self.native.pivot_table(
+            values=values,
+            index=index,
+            columns=on,
+            aggfunc=aggregate_function,
+            margins=False,
+            **kwds,
+        )
+
+    def _pivot(
+        self,
+        on: Sequence[str],
+        index: Sequence[str],
+        values: Sequence[str],
+        aggregate_function: PivotAgg | None,
+        /,
+    ) -> pd.DataFrame:
+        if aggregate_function is None:
+            return self.native.pivot(columns=on, index=index, values=values)
+        elif aggregate_function == "len":
+            return (
+                self.native.groupby([*on, *index], as_index=False)
+                .agg(dict.fromkeys(values, "size"))
+                .pivot(columns=on, index=index, values=values)
+            )
+        return self._pivot_table(on, index, values, aggregate_function)
+
+    def pivot(
         self,
         on: Sequence[str],
         *,
@@ -938,75 +1051,38 @@ class PandasLikeDataFrame(
         sort_columns: bool,
         separator: str,
     ) -> Self:
-        if self._implementation is Implementation.PANDAS and (
-            self._backend_version < (1, 1)
-        ):  # pragma: no cover
+        implementation = self._implementation
+        backend_version = self._backend_version
+        if implementation.is_pandas() and backend_version < (1, 1):  # pragma: no cover
             msg = "pivot is only supported for 'pandas>=1.1'"
             raise NotImplementedError(msg)
-        if self._implementation is Implementation.MODIN:
+        if implementation.is_modin():
             msg = "pivot is not supported for Modin backend due to https://github.com/modin-project/modin/issues/7409."
             raise NotImplementedError(msg)
-        from itertools import product
 
-        frame = self.native
+        index, values = self._pivot_into_index_values(on, index, values)
+        result = self._pivot(on, index, values, aggregate_function)
 
-        if index is None:
-            index = [c for c in self.columns if c not in {*on, *values}]  # type: ignore[misc]
-
-        if values is None:
-            values = [c for c in self.columns if c not in {*on, *index}]
-
-        if aggregate_function is None:
-            result = frame.pivot(columns=on, index=index, values=values)
-        elif aggregate_function == "len":
-            result = (
-                frame.groupby([*on, *index])
-                .agg(dict.fromkeys(values, "size"))
-                .reset_index()
-                .pivot(columns=on, index=index, values=values)
-            )
-        else:
-            result = pivot_table(
-                df=self,
-                values=values,
-                index=index,
-                columns=on,
-                aggregate_function=aggregate_function,
-            )
-
-        # Put columns in the right order
-        if sort_columns and self._implementation is Implementation.CUDF:
-            uniques = {
-                col: sorted(self.native[col].unique().to_arrow().to_pylist())
+        # Select the columns in the right order
+        uniques = (
+            (
+                self.get_column(col)
+                .unique()
+                .sort(descending=False, nulls_last=False)
+                .to_list()
                 for col in on
-            }
-        elif sort_columns:
-            uniques = {col: sorted(self.native[col].unique().tolist()) for col in on}
-        elif self._implementation is Implementation.CUDF:
-            uniques = {
-                col: self.native[col].unique().to_arrow().to_pylist() for col in on
-            }
-        else:
-            uniques = {col: self.native[col].unique().tolist() for col in on}
-        ordered_cols = list(product(values, *uniques.values()))
+            )
+            if sort_columns
+            else (self.get_column(col).unique().to_list() for col in on)
+        )
+        ordered_cols = list(product(values, *chain(uniques)))
         result = result.loc[:, ordered_cols]
-        columns = result.columns.tolist()
-
-        n_on = len(on)
-        if n_on == 1:
-            new_columns = [
-                separator.join(col).strip() if len(values) > 1 else col[-1]
-                for col in columns
-            ]
-        else:
-            new_columns = [
-                separator.join([col[0], '{"' + '","'.join(col[-n_on:]) + '"}'])
-                if len(values) > 1
-                else '{"' + '","'.join(col[-n_on:]) + '"}'
-                for col in columns
-            ]
-        result.columns = new_columns
-        result.columns.names = [""]  # type: ignore[attr-defined]
+        columns = result.columns
+        remapped = self._pivot_remap_column_names(
+            columns, n_on=len(on), n_values=len(values), separator=separator
+        )
+        result.columns = remapped  # type: ignore[assignment]
+        result.columns.names = [""]
         return self._with_native(result.reset_index())
 
     def to_arrow(self) -> Any:

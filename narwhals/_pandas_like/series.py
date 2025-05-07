@@ -601,9 +601,11 @@ class PandasLikeSeries(EagerSeries[Any]):
         )
         return self._with_native(result)
 
-    def unique(self, *, maintain_order: bool) -> PandasLikeSeries:
-        # pandas always maintains order, as per its docstring:
-        # "Uniques are returned in order of appearance"  # noqa: ERA001
+    def unique(self, *, maintain_order: bool = True) -> PandasLikeSeries:
+        """Pandas always maintains order, as per its docstring.
+
+        > Uniques are returned in order of appearance.
+        """
         return self._with_native(
             self.native.__class__(self.native.unique(), name=self.name)
         )

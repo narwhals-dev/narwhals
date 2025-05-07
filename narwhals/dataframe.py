@@ -273,6 +273,12 @@ class BaseFrame(Generic[_FrameT]):
         if on is not None:
             left_on = right_on = on
 
+        if (isinstance(left_on, list) and isinstance(right_on, list)) and (
+            len(left_on) != len(right_on)
+        ):
+            msg = "`left_on` and `right_on` must have the same length."
+            raise ValueError(msg)
+
         return self._with_compliant(
             self._compliant_frame.join(
                 self._extract_compliant(other),
@@ -288,7 +294,7 @@ class BaseFrame(Generic[_FrameT]):
             self._compliant_frame.gather_every(n=n, offset=offset)
         )
 
-    def join_asof(
+    def join_asof(  # noqa: C901
         self,
         other: Self,
         *,
@@ -332,6 +338,13 @@ class BaseFrame(Generic[_FrameT]):
             by_left = [by_left]
         if isinstance(by_right, str):
             by_right = [by_right]
+
+        if (isinstance(by_left, list) and isinstance(by_right, list)) and (
+            len(by_left) != len(by_right)
+        ):
+            msg = "`by_left` and `by_right` must have the same length."
+            raise ValueError(msg)
+
         return self._with_compliant(
             self._compliant_frame.join_asof(
                 self._extract_compliant(other),
