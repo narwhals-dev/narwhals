@@ -155,7 +155,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
                     self._F.col(x).asc_nulls_first() for x in window_inputs.order_by
                 ]
             window = (
-                self._Window.partitionBy(list(window_inputs.partition_by))
+                self._Window.partitionBy(window_inputs.partition_by)
                 .orderBy(order_by_cols)
                 .rowsBetween(self._Window.unboundedPreceding, 0)
             )
@@ -184,7 +184,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         def func(window_inputs: WindowInputs) -> Column:
             window = (
-                self._Window.partitionBy(list(window_inputs.partition_by))
+                self._Window.partitionBy(window_inputs.partition_by)
                 .orderBy(
                     [self._F.col(x).asc_nulls_first() for x in window_inputs.order_by]
                 )
@@ -621,7 +621,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             order_by_cols = [
                 self._F.col(x).asc_nulls_first() for x in window_inputs.order_by
             ]
-            window = self._Window.partitionBy(list(window_inputs.partition_by)).orderBy(
+            window = self._Window.partitionBy(window_inputs.partition_by).orderBy(
                 order_by_cols
             )
             return self._F.lag(window_inputs.expr, n).over(window)
@@ -657,7 +657,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             order_by_cols = [
                 self._F.col(x).asc_nulls_first() for x in window_inputs.order_by
             ]
-            window = self._Window.partitionBy(list(window_inputs.partition_by)).orderBy(
+            window = self._Window.partitionBy(window_inputs.partition_by).orderBy(
                 order_by_cols
             )
             return window_inputs.expr - self._F.lag(window_inputs.expr).over(window)
@@ -712,9 +712,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
                     end = limit if limit is not None else self._Window.unboundedFollowing
 
                 window = (
-                    self._Window.partitionBy(
-                        list(window_inputs.partition_by) or self._F.lit(1)
-                    )
+                    self._Window.partitionBy(window_inputs.partition_by or self._F.lit(1))
                     .orderBy(
                         [self._F.col(x).asc_nulls_first() for x in window_inputs.order_by]
                     )
