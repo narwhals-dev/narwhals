@@ -931,10 +931,11 @@ def from_native(  # noqa: D417
             - `True` or `None` (default): raise an error
             - `False`: pass object through as-is
 
-            **Deprecated** (v1.13.0):
-                Please use `pass_through` instead. Note that `strict` is still available
-                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-                see [perfect backwards compatibility policy](../backcompat.md/).
+            *Deprecated* (v1.13.0)
+
+            Please use `pass_through` instead. Note that `strict` is still available
+            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+            see [perfect backwards compatibility policy](../backcompat.md/).
         pass_through: Determine what happens if the object can't be converted to Narwhals
 
             - `False` or `None` (default): raise an error
@@ -1038,10 +1039,11 @@ def to_native(
             - `True` (default): raise an error
             - `False`: pass object through as-is
 
-            **Deprecated** (v1.13.0):
-                Please use `pass_through` instead. Note that `strict` is still available
-                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-                see [perfect backwards compatibility policy](../backcompat.md/).
+            *Deprecated* (v1.13.0)
+
+            Please use `pass_through` instead. Note that `strict` is still available
+            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+            see [perfect backwards compatibility policy](../backcompat.md/).
         pass_through: Determine what happens if `narwhals_object` isn't a Narwhals class
 
             - `False` (default): raise an error
@@ -1091,12 +1093,13 @@ def narwhalify(
 
     Arguments:
         func: Function to wrap in a `from_native`-`to_native` block.
-        strict: **Deprecated** (v1.13.0):
+        strict: Determine what happens if the object can't be converted to Narwhals
+
+            *Deprecated* (v1.13.0)
+
             Please use `pass_through` instead. Note that `strict` is still available
             (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
             see [perfect backwards compatibility policy](../backcompat.md/).
-
-            Determine what happens if the object can't be converted to Narwhals
 
             - `True` or `None` (default): raise an error
             - `False`: pass object through as-is
@@ -1574,10 +1577,11 @@ def from_arrow(
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
 
-            **Deprecated** (v1.31.0):
-                Please use `backend` instead. Note that `native_namespace` is still available
-                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-                see [perfect backwards compatibility policy](../backcompat.md/).
+            *Deprecated* (v1.31.0)
+
+            Please use `backend` instead. Note that `native_namespace` is still available
+            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+            see [perfect backwards compatibility policy](../backcompat.md/).
 
     Returns:
         A new DataFrame.
@@ -1620,10 +1624,11 @@ def from_dict(
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
 
-            **Deprecated** (v1.26.0):
-                Please use `backend` instead. Note that `native_namespace` is still available
-                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-                see [perfect backwards compatibility policy](../backcompat.md/).
+            *Deprecated* (v1.26.0)
+
+            Please use `backend` instead. Note that `native_namespace` is still available
+            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+            see [perfect backwards compatibility policy](../backcompat.md/).
 
     Returns:
         A new DataFrame.
@@ -1662,10 +1667,11 @@ def from_numpy(
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
 
-            **Deprecated** (v1.31.0):
-                Please use `backend` instead. Note that `native_namespace` is still available
-                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-                see [perfect backwards compatibility policy](../backcompat.md/).
+            *Deprecated* (v1.31.0)
+
+            Please use `backend` instead. Note that `native_namespace` is still available
+            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+            see [perfect backwards compatibility policy](../backcompat.md/).
 
     Returns:
         A new DataFrame.
@@ -1695,10 +1701,11 @@ def read_csv(
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
 
-            **Deprecated** (v1.27.2):
-                Please use `backend` instead. Note that `native_namespace` is still available
-                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-                see [perfect backwards compatibility policy](../backcompat.md/).
+            *Deprecated* (v1.27.2)
+
+            Please use `backend` instead. Note that `native_namespace` is still available
+            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+            see [perfect backwards compatibility policy](../backcompat.md/).
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
             `nw.read_csv('file.csv', backend='pandas', engine='pyarrow')`.
@@ -1736,10 +1743,11 @@ def scan_csv(
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
 
-            **Deprecated** (v1.31.0):
-                Please use `backend` instead. Note that `native_namespace` is still available
-                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-                see [perfect backwards compatibility policy](../backcompat.md/).
+            *Deprecated* (v1.31.0)
+
+            Please use `backend` instead. Note that `native_namespace` is still available
+            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+            see [perfect backwards compatibility policy](../backcompat.md/).
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
             `nw.scan_csv('file.csv', backend=pd, engine='pyarrow')`.
@@ -1774,10 +1782,11 @@ def read_parquet(
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: The native library to use for DataFrame creation.
 
-            **Deprecated** (v1.31.0):
-                Please use `backend` instead. Note that `native_namespace` is still available
-                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-                see [perfect backwards compatibility policy](../backcompat.md/).
+            *Deprecated* (v1.31.0)
+
+            Please use `backend` instead. Note that `native_namespace` is still available
+            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+            see [perfect backwards compatibility policy](../backcompat.md/).
         kwargs: Extra keyword arguments which are passed to the native parquet reader.
             For example, you could use
             `nw.read_parquet('file.parquet', backend=pd, engine='pyarrow')`.
@@ -1829,10 +1838,11 @@ def scan_parquet(
                 `pyspark.sql` or `sqlframe`.
         native_namespace: The native library to use for DataFrame creation.
 
-            **Deprecated** (v1.31.0):
-                Please use `backend` instead. Note that `native_namespace` is still available
-                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-                see [perfect backwards compatibility policy](../backcompat.md/).
+            *Deprecated* (v1.31.0)
+
+            Please use `backend` instead. Note that `native_namespace` is still available
+            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+            see [perfect backwards compatibility policy](../backcompat.md/).
         kwargs: Extra keyword arguments which are passed to the native parquet reader.
             For example, you could use
             `nw.scan_parquet('file.parquet', backend=pd, engine='pyarrow')`.

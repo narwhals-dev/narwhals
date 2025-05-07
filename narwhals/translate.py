@@ -101,10 +101,11 @@ def to_native(
             - `True` (default): raise an error
             - `False`: pass object through as-is
 
-            **Deprecated** (v1.13.0):
-                Please use `pass_through` instead. Note that `strict` is still available
-                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-                see [perfect backwards compatibility policy](../backcompat.md/).
+            *Deprecated* (v1.13.0)
+
+            Please use `pass_through` instead. Note that `strict` is still available
+            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+            see [perfect backwards compatibility policy](../backcompat.md/).
         pass_through: Determine what happens if `narwhals_object` isn't a Narwhals class
 
             - `False` (default): raise an error
@@ -315,10 +316,11 @@ def from_native(  # noqa: D417
             - `True` or `None` (default): raise an error
             - `False`: pass object through as-is
 
-            **Deprecated** (v1.13.0):
-                Please use `pass_through` instead. Note that `strict` is still available
-                (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-                see [perfect backwards compatibility policy](../backcompat.md/).
+            *Deprecated* (v1.13.0)
+
+            Please use `pass_through` instead. Note that `strict` is still available
+            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+            see [perfect backwards compatibility policy](../backcompat.md/).
         pass_through: Determine what happens if the object can't be converted to Narwhals
 
             - `False` or `None` (default): raise an error
@@ -675,12 +677,13 @@ def narwhalify(
 
     Arguments:
         func: Function to wrap in a `from_native`-`to_native` block.
-        strict: **Deprecated** (v1.13.0):
+        strict: Determine what happens if the object can't be converted to Narwhals
+
+            *Deprecated* (v1.13.0)
+
             Please use `pass_through` instead. Note that `strict` is still available
             (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
             see [perfect backwards compatibility policy](../backcompat.md/).
-
-            Determine what happens if the object can't be converted to Narwhals
 
             - `True` or `None` (default): raise an error
             - `False`: pass object through as-is
