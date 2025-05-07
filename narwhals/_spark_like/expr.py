@@ -572,7 +572,15 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
     def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
         if (fn := self._window_function) is not None:
-            assert order_by is not None  # noqa: S101
+            if order_by is None:  # pragma: no cover
+
+                class MarcoDidntGiveAReasonError(ValueError): ...
+
+                msg = (
+                    "Help me out plz dude 😉\n"
+                    "https://github.com/narwhals-dev/narwhals/pull/2132"
+                )
+                raise MarcoDidntGiveAReasonError(msg)
             partition = partition_by or [self._F.lit(1)]
 
             def func(df: SparkLikeLazyFrame) -> list[Column]:
