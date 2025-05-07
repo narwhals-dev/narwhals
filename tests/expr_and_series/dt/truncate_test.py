@@ -109,6 +109,13 @@ def test_truncate(
         x in str(constructor) for x in ("dask", "cudf")
     ):
         request.applymarker(pytest.mark.xfail(reason="Not implemented"))
+    request.applymarker(
+        pytest.mark.xfail(
+            ("pyspark" in str(constructor) and every.endswith("ns")),
+            raises=NotImplementedError,
+            reason="Truncating to nanoseconds is not yet supported",
+        )
+    )
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").dt.truncate(every))
     assert_equal_data(result, {"a": expected})
