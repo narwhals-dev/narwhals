@@ -577,12 +577,12 @@ class ExprDateTimeNamespace(Generic[ExprT]):
               whereas pandas and Python stdlib use `".%f"`.
             - PyArrow interprets `"%S"` as "seconds, including fractional seconds"
               whereas most other tools interpret it as "just seconds, as 2 digits".
-
-            Therefore, we make the following adjustments:
+            ---
+            Therefore, we make the following adjustments.
 
             - for pandas-like libraries, we replace `"%S.%f"` with `"%S%.f"`.
             - for PyArrow, we replace `"%S.%f"` with `"%S"`.
-
+            ---
             Workarounds like these don't make us happy, and we try to avoid them as
             much as possible, but here we feel like it's the best compromise.
 
@@ -592,8 +592,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
 
             - `"%Y-%m-%dT%H:%M:%S%.f"` for datetimes
             - `"%Y-%m-%d"` for dates
-
-            though note that, even then, different tools may return a different number
+            ---
+            Though note that, even then, different tools may return a different number
             of trailing zeros. Nonetheless, this is probably consistent enough for
             most applications.
 
@@ -708,8 +708,10 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         """Return a timestamp in the given time unit.
 
         Arguments:
-            time_unit: {'ns', 'us', 'ms'}
-                Time unit.
+            time_unit: One of
+                - 'ns': nanosecond.
+                - 'us': microsecond.
+                - 'ms': millisecond.
 
         Returns:
             A new expression.
@@ -750,7 +752,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
 
         Arguments:
             every: Length of bucket. Must be of form `<multiple><unit>`,
-                where `multiple` is a positive integer and `unit` is one of:
+                where `multiple` is a positive integer and `unit` is one of
 
                 - 'ns': nanosecond.
                 - 'us': microsecond.
