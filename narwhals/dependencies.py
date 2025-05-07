@@ -185,6 +185,14 @@ def is_cudf_index(index: Any) -> TypeIs[cudf.Index]:
     )  # pragma: no cover
 
 
+def is_cupy_scalar(obj: Any) -> bool:
+    return (
+        (cupy := get_cupy()) is not None
+        and isinstance(obj, cupy.ndarray)
+        and obj.size == 1
+    )  # pragma: no cover
+
+
 def is_dask_dataframe(df: Any) -> TypeIs[dd.DataFrame]:
     """Check whether `df` is a Dask DataFrame without importing Dask."""
     return (dd := get_dask_dataframe()) is not None and isinstance(df, dd.DataFrame)
@@ -225,6 +233,10 @@ def is_pyarrow_chunked_array(ser: Any) -> TypeIs[pa.ChunkedArray[Any]]:
 def is_pyarrow_table(df: Any) -> TypeIs[pa.Table]:
     """Check whether `df` is a PyArrow Table without importing PyArrow."""
     return (pa := get_pyarrow()) is not None and isinstance(df, pa.Table)
+
+
+def is_pyarrow_scalar(obj: Any) -> TypeIs[pa.Scalar[Any]]:
+    return (pa := get_pyarrow()) is not None and isinstance(obj, pa.Scalar)
 
 
 def is_pyspark_dataframe(df: Any) -> TypeIs[pyspark_sql.DataFrame]:
