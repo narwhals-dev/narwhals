@@ -259,12 +259,7 @@ class DaskLazyFrame(
         )
 
     def _inner_join(
-        self,
-        other: Self,
-        *,
-        left_on: Sequence[str] | None,
-        right_on: Sequence[str] | None,
-        suffix: str,
+        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> Self:
         return self._with_native(
             self.native.merge(
@@ -277,12 +272,7 @@ class DaskLazyFrame(
         )
 
     def _left_join(
-        self,
-        other: Self,
-        *,
-        left_on: Sequence[str] | None,
-        right_on: Sequence[str] | None,
-        suffix: str,
+        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> Self:
         result_native = self.native.merge(
             other.native,
@@ -292,7 +282,7 @@ class DaskLazyFrame(
             suffixes=("", suffix),
         )
         extra = []
-        for left_key, right_key in zip(left_on, right_on):  # type: ignore[arg-type]
+        for left_key, right_key in zip(left_on, right_on):
             if right_key != left_key and right_key not in self.columns:
                 extra.append(right_key)
             elif right_key != left_key:
@@ -337,15 +327,8 @@ class DaskLazyFrame(
         )
 
     def _semi_join(
-        self,
-        other: Self,
-        *,
-        left_on: Sequence[str] | None,
-        right_on: Sequence[str] | None,
+        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
     ) -> Self:
-        if right_on is None:  # pragma: no cover
-            msg = "`right_on` cannot be `None` in semi-join"
-            raise TypeError(msg)
         other_native = (
             select_columns_by_name(
                 other.native,
@@ -354,7 +337,7 @@ class DaskLazyFrame(
                 self._implementation,
             )
             .rename(  # rename to avoid creating extra columns in join
-                columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
+                columns=dict(zip(right_on, left_on))
             )
             .drop_duplicates()  # avoids potential rows duplication from inner join
         )
@@ -365,16 +348,8 @@ class DaskLazyFrame(
         )
 
     def _anti_join(
-        self,
-        other: Self,
-        *,
-        left_on: Sequence[str] | None,
-        right_on: Sequence[str] | None,
+        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
     ) -> Self:
-        if right_on is None:  # pragma: no cover
-            msg = "`right_on` cannot be `None` in anti-join"
-            raise TypeError(msg)
-
         indicator_token = generate_temporary_column_name(
             n_bytes=8, columns=[*self.columns, *other.columns]
         )
@@ -386,9 +361,8 @@ class DaskLazyFrame(
                 backend_version=self._backend_version,
                 implementation=self._implementation,
             )
-            .rename(  # rename to avoid creating extra columns in join
-                columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
-            )
+            # rename to avoid creating extra columns in join
+            .rename(columns=dict(zip(right_on, left_on)))
             .drop_duplicates()
         )
         df = self.native.merge(
@@ -411,31 +385,32 @@ class DaskLazyFrame(
         right_on: Sequence[str] | None,
         suffix: str,
     ) -> Self:
+        if how == "cross":
+            return self._cross_join(other=other, suffix=suffix)
+
+        # help mypy
+        assert left_on is not None  # noqa: S101
+        assert right_on is not None  # noqa: S101
+
         if how == "inner":
             return self._inner_join(
                 other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
-        elif how == "cross":
-            return self._cross_join(other=other, suffix=suffix)
-        elif how == "anti":
+        if how == "anti":
             return self._anti_join(other=other, left_on=left_on, right_on=right_on)
-        elif how == "semi":
+        if how == "semi":
             return self._semi_join(other=other, left_on=left_on, right_on=right_on)
-        elif how == "left":
+        if how == "left":
             return self._left_join(
                 other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
-        elif how == "full":
-            # help mypy
-            assert left_on is not None  # noqa: S101
-            assert right_on is not None  # noqa: S101
-
+        if how == "full":
             return self._full_join(
                 other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
-        else:  # pragma: no cover
-            msg = f"Unreachable code, got unexpected join method: {how}"
-            raise AssertionError(msg)
+
+        msg = f"Unreachable code, got unexpected join method: {how}"
+        raise AssertionError(msg)  # pragma: no cover
 
     def join_asof(
         self,

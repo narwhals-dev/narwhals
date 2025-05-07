@@ -237,11 +237,11 @@ class BaseFrame(Generic[_FrameT]):
     def join(
         self,
         other: Self,
-        on: str | list[str] | None = None,
+        on: str | list[str] | None,
         how: JoinStrategy = "inner",
         *,
-        left_on: str | list[str] | None = None,
-        right_on: str | list[str] | None = None,
+        left_on: str | list[str] | None,
+        right_on: str | list[str] | None,
         suffix: str = "_right",
     ) -> Self:
         on = [on] if isinstance(on, str) else on
