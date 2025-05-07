@@ -182,7 +182,7 @@ def test_truncate(
         ),
     ],
 )
-def test_truncate_custom(
+def test_truncate_multiples(
     request: pytest.FixtureRequest,
     constructor: Constructor,
     every: str,
@@ -201,6 +201,13 @@ def test_truncate_custom(
         x in str(constructor) for x in ("dask",)
     ):
         request.applymarker(pytest.mark.xfail(reason="Not implemented"))
+    request.applymarker(
+        pytest.mark.xfail(
+            "pyspark" in str(constructor),
+            raises=ValueError,
+            reason="Only multiple 1 is currently supported",
+        )
+    )
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").dt.truncate(every))
     assert_equal_data(result, {"a": expected})
