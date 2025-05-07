@@ -161,15 +161,15 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         reverse: bool,
         func_name: Literal["sum", "max", "min", "count", "product"],
     ) -> WindowFunction:
-        def func(window_inputs: WindowInputs) -> Column:
+        def func(inputs: WindowInputs) -> Column:
             sort = self._desc_nulls_last if reverse else self._asc_nulls_first
-            order_by = (sort(x) for x in window_inputs.order_by)
+            order_by = (sort(x) for x in inputs.order_by)
             window = (
-                self._partition_by(window_inputs.partition_by)
+                self._partition_by(inputs.partition_by)
                 .orderBy(*order_by)
                 .rowsBetween(self._Window.unboundedPreceding, 0)
             )
-            return getattr(self._F, func_name)(window_inputs.expr).over(window)
+            return getattr(self._F, func_name)(inputs.expr).over(window)
 
         return func
 
@@ -192,10 +192,10 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             start = self._Window.currentRow - window_size + 1
             end = self._Window.currentRow
 
-        def func(window_inputs: WindowInputs) -> Column:
-            order_by = (self._asc_nulls_first(x) for x in window_inputs.order_by)
+        def func(inputs: WindowInputs) -> Column:
+            order_by = (self._asc_nulls_first(x) for x in inputs.order_by)
             window = (
-                self._partition_by(window_inputs.partition_by)
+                self._partition_by(inputs.partition_by)
                 .orderBy(*order_by)
                 .rowsBetween(start, end)
             )
@@ -215,10 +215,9 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             else:  # pragma: no cover
                 msg = f"Only the following functions are supported: {supported_funcs}.\nGot: {func_name}."
                 raise ValueError(msg)
-            expr = window_inputs.expr
             return self._F.when(
-                self._F.count(expr).over(window) >= min_samples,
-                getattr(self._F, func_)(expr).over(window),
+                self._F.count(inputs.expr).over(window) >= min_samples,
+                getattr(self._F, func_)(inputs.expr).over(window),
             )
 
         return func
@@ -604,42 +603,37 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_callable(_is_nan)
 
     def shift(self, n: int) -> Self:
-        def func(window_inputs: WindowInputs) -> Column:
-            order_by = (self._asc_nulls_first(x) for x in window_inputs.order_by)
-            partition_by = window_inputs.partition_by
-            expr = window_inputs.expr
-            window = self._partition_by(partition_by).orderBy(*order_by)
-            return self._F.lag(expr, n).over(window)
+        def func(inputs: WindowInputs) -> Column:
+            order_by = (self._asc_nulls_first(x) for x in inputs.order_by)
+            window = self._partition_by(inputs.partition_by).orderBy(*order_by)
+            return self._F.lag(inputs.expr, n).over(window)
 
         return self._with_window_function(func)
 
     def is_first_distinct(self) -> Self:
-        def func(window_inputs: WindowInputs) -> Column:
-            order_by = (self._asc_nulls_first(x) for x in window_inputs.order_by)
-            partition_by = window_inputs.partition_by
-            expr = window_inputs.expr
-            window = self._partition_by(*partition_by, expr).orderBy(*order_by)
+        def func(inputs: WindowInputs) -> Column:
+            order_by = (self._asc_nulls_first(x) for x in inputs.order_by)
+            partition_by = inputs.partition_by
+            window = self._partition_by(*partition_by, inputs.expr).orderBy(*order_by)
             return self._F.row_number().over(window) == 1
 
         return self._with_window_function(func)
 
     def is_last_distinct(self) -> Self:
-        def func(window_inputs: WindowInputs) -> Column:
-            order_by = (self._desc_nulls_last(x) for x in window_inputs.order_by)
-            partition_by = window_inputs.partition_by
-            expr = window_inputs.expr
-            window = self._partition_by(*partition_by, expr).orderBy(*order_by)
+        def func(inputs: WindowInputs) -> Column:
+            order_by = (self._desc_nulls_last(x) for x in inputs.order_by)
+            partition_by = inputs.partition_by
+            window = self._partition_by(*partition_by, inputs.expr).orderBy(*order_by)
             return self._F.row_number().over(window) == 1
 
         return self._with_window_function(func)
 
     def diff(self) -> Self:
-        def func(window_inputs: WindowInputs) -> Column:
-            order_by = (self._asc_nulls_first(x) for x in window_inputs.order_by)
-            partition_by = window_inputs.partition_by
-            expr = window_inputs.expr
+        def func(inputs: WindowInputs) -> Column:
+            order_by = (self._asc_nulls_first(x) for x in inputs.order_by)
+            partition_by = inputs.partition_by
             window = self._partition_by(*partition_by).orderBy(*order_by)
-            return expr - self._F.lag(expr).over(window)
+            return inputs.expr - self._F.lag(inputs.expr).over(window)
 
         return self._with_window_function(func)
 
@@ -676,7 +670,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     ) -> Self:
         if strategy is not None:
 
-            def _fill_with_strategy(window_inputs: WindowInputs) -> Column:
+            def _fill_with_strategy(inputs: WindowInputs) -> Column:
                 fill_func = (
                     self._F.last_value if strategy == "forward" else self._F.first_value
                 )
@@ -690,14 +684,14 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
                     start = self._Window.currentRow
                     end = limit if limit is not None else self._Window.unboundedFollowing
 
-                order_by = (self._asc_nulls_first(x) for x in window_inputs.order_by)
-                partition_by = window_inputs.partition_by
+                order_by = (self._asc_nulls_first(x) for x in inputs.order_by)
+                partition_by = inputs.partition_by
                 window = (
                     self._partition_by(partition_by or self._F.lit(1))
                     .orderBy(*order_by)
                     .rowsBetween(start, end)
                 )
-                return fill_func(window_inputs.expr, ignoreNulls=True).over(window)
+                return fill_func(inputs.expr, ignoreNulls=True).over(window)
 
             return self._with_window_function(_fill_with_strategy)
 
