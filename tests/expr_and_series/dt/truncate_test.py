@@ -99,12 +99,13 @@ def test_truncate(
     every: str,
     expected: list[datetime],
 ) -> None:
-    if any(x in str(constructor) for x in ("sqlframe",)):
+    if any(x in str(constructor) for x in ("sqlframe", "pyspark")):
+        # TODO(marco): investigate pyspark, it also localizes to UTC here.
         request.applymarker(
             pytest.mark.xfail(reason="https://github.com/eakmanrq/sqlframe/issues/383")
         )
     if every.endswith("ns") and any(
-        x in str(constructor) for x in ("polars", "duckdb", "ibis")
+        x in str(constructor) for x in ("polars", "duckdb", "pyspark", "ibis")
     ):
         request.applymarker(pytest.mark.xfail())
     if any(every.endswith(x) for x in ("mo", "q", "y")) and any(
@@ -184,7 +185,7 @@ def test_truncate(
         ),
     ],
 )
-def test_truncate_custom(
+def test_truncate_multiples(
     request: pytest.FixtureRequest,
     constructor: Constructor,
     every: str,
@@ -209,6 +210,13 @@ def test_truncate_custom(
         x in str(constructor) for x in ("ibis",)
     ):
         request.applymarker(pytest.mark.xfail(reason="Not implemented"))
+    request.applymarker(
+        pytest.mark.xfail(
+            "pyspark" in str(constructor),
+            raises=ValueError,
+            reason="Only multiple 1 is currently supported",
+        )
+    )
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").dt.truncate(every))
     assert_equal_data(result, {"a": expected})
