@@ -74,6 +74,7 @@ def test_lit_out_name(constructor: Constructor) -> None:
     [
         ("left_lit", nw.lit(1) + nw.col("a"), [2, 4, 3]),
         ("right_lit", nw.col("a") + nw.lit(1), [2, 4, 3]),
+        ("right_lit", nw.col("a") + nw.lit(-1).abs(), [2, 4, 3]),
         ("left_lit_with_agg", nw.lit(1) + nw.col("a").mean(), [3]),
         ("right_lit_with_agg", nw.col("a").mean() - nw.lit(1), [1]),
         ("left_scalar", 1 + nw.col("a"), [2, 4, 3]),

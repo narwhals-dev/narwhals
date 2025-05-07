@@ -300,7 +300,7 @@ class ExprMetadata:
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=self.preserves_length,
             is_scalar_like=self.is_scalar_like,
-            is_literal=False,
+            is_literal=self.is_literal,
         )
 
     def with_unorderable_window(self) -> ExprMetadata:
