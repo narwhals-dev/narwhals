@@ -313,6 +313,11 @@ class ExprMetadata:
             expansion_kind=self.expansion_kind,
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=True,
+            # `rank` and `is_unique` already require computing
+            # a window function, so we set `is_partitioned` to
+            # True. If `rank` is followed by `over(partition_by)`,
+            # then that `partition_by` is combined with the current
+            # partition.
             is_partitioned=True,
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=self.preserves_length,
@@ -328,7 +333,7 @@ class ExprMetadata:
             expansion_kind=self.expansion_kind,
             last_node_is_orderable_window=True,
             last_node_is_unorderable_window=False,
-            is_partitioned=False,
+            is_partitioned=self.is_partitioned,
             n_orderable_ops=self.n_orderable_ops + 1,
             preserves_length=self.preserves_length,
             is_scalar_like=False,
@@ -339,6 +344,12 @@ class ExprMetadata:
         n_orderable_ops = self.n_orderable_ops
         if not n_orderable_ops:
             msg = "Cannot use `order_by` in `over` on expression which isn't orderable."
+            raise InvalidOperationError(msg)
+        if self.is_elementwise or self.is_filtration:
+            msg = (
+                "Cannot use `over` on expressions which are elementwise\n"
+                "(e.g. `abs`) or which change length (e.g. `drop_nulls`)."
+            )
             raise InvalidOperationError(msg)
         if self.last_node_is_orderable_window:
             n_orderable_ops -= 1
@@ -355,14 +366,19 @@ class ExprMetadata:
 
     def with_partitioned_over(self) -> ExprMetadata:
         if self.is_partitioned and not self.last_node_is_unorderable_window:
-            msg = "Cannot nest `over` statements."
+            # We make an exception for `last_node_is_unorderable_window`
+            # because even though it's already partitioned, if it's followed
+            # by `over(partition_by)`, then we combine the partitions.
+            msg = (
+                "Cannot nest `over` statements. If you used `rank` and `over`, make "
+                "sure that the `over` comes immediately after the `rank`."
+            )
             raise InvalidOperationError(msg)
-        if not (
-            self.is_scalar_like
-            or self.n_orderable_ops
-            or self.last_node_is_unorderable_window
-        ):
-            msg = "Cannot use `partition_by` in `over` on expression which isn't partitionable (e.g. `.abs`)."
+        if self.is_elementwise or self.is_filtration:
+            msg = (
+                "Cannot `over` on expressions which are elementwise\n"
+                "(e.g. `abs`) or which change length (e.g. `drop_nulls`)."
+            )
             raise InvalidOperationError(msg)
         return ExprMetadata(
             expansion_kind=self.expansion_kind,
@@ -396,7 +412,7 @@ class ExprMetadata:
             raise InvalidOperationError(msg)
         return ExprMetadata(
             expansion_kind=self.expansion_kind,
-            last_node_is_orderable_window=True,
+            last_node_is_orderable_window=False,
             last_node_is_unorderable_window=False,
             is_partitioned=self.is_partitioned,
             n_orderable_ops=self.n_orderable_ops + 1,

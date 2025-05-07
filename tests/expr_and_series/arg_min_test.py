@@ -38,3 +38,15 @@ def test_expr_arg_min_series(
     series = nw.maybe_set_index(series, index=[1, 0, 9])  # type: ignore[arg-type]
     result = series.arg_min()
     assert_equal_data({col: [result]}, {col: [expected]})
+
+
+def test_expr_arg_min_over() -> None:
+    # This is tricky. But, we may be able to support it for
+    # other backends too one day.
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = nw.from_native(pl.LazyFrame({"a": [9, 8, 7], "i": [0, 2, 1]}))
+    result = df.select(nw.col("a").arg_min().over(order_by="i"))
+    expected = {"a": [1, 1, 1]}
+    assert_equal_data(result, expected)

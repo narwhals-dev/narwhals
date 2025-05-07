@@ -421,7 +421,7 @@ class Expr(NwExpr):
         Returns:
             A new expression.
         """
-        return self._with_orderable_aggregation(
+        return self._with_orderable_filtration(
             lambda plx: self._to_compliant_expr(plx).arg_true(),
         )
 
