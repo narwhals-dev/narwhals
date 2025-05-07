@@ -11,6 +11,7 @@ from typing import cast
 import ibis
 import ibis.expr.types as ir
 
+from narwhals._ibis.utils import drop_duplicate_join_columns
 from narwhals._ibis.utils import evaluate_exprs
 from narwhals._ibis.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
@@ -281,9 +282,7 @@ class IbisLazyFrame(
 
             # Drop duplicate columns from the right table. Ibis keeps them.
             for right in right_on if not isinstance(right_on, str) else [right_on]:
-                to_drop = right + suffix
-                if to_drop in joined.columns:
-                    joined = joined.drop(right + suffix)
+                joined = drop_duplicate_join_columns(joined, right, suffix)
 
             for pred in predicates:
                 if isinstance(pred, str):
@@ -338,14 +337,11 @@ class IbisLazyFrame(
 
         assert right_on is not None  # noqa: S101
 
-        # Drop duplicate columns from the right table. Ibis keeps them.
-        to_drop = right_on + suffix
-        joined = joined.drop(to_drop) if to_drop in joined.columns else joined
+        joined = drop_duplicate_join_columns(joined, right_on, suffix)
 
         if by_right is not None:
             for right in by_right if not isinstance(by_right, str) else [by_right]:
-                to_drop = right + suffix
-                joined = joined.drop(to_drop) if to_drop in joined.columns else joined
+                joined = drop_duplicate_join_columns(joined, right, suffix)
 
         return self._with_native(joined)
 
