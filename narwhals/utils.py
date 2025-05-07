@@ -930,7 +930,7 @@ def maybe_set_index(
         Same type as input.
 
     Raises:
-        ValueError: If one of the following condition happens:
+        ValueError: If one of the following conditions happens
 
             - none of `column_names` and `index` are provided
             - both `column_names` and `index` are provided

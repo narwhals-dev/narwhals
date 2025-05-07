@@ -1798,9 +1798,10 @@ class Series(Generic[IntoSeriesT]):
             normalize: If true gives relative frequencies of the unique values
 
         Returns:
-            A DataFrame with two columns:
-            - The original values as first column
-            - Either count or proportion as second column, depending on normalize parameter.
+            A DataFrame with two columns
+
+                - The original values as first column
+                - Either count or proportion as second column, depending on normalize parameter.
 
         Examples:
             >>> import pandas as pd
@@ -2493,19 +2494,18 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             method: The method used to assign ranks to tied elements.
-                The following methods are available (default is 'average'):
+                The following methods are available (default is 'average')
 
-                - 'average' : The average of the ranks that would have been assigned to
-                  all the tied values is assigned to each value.
-                - 'min' : The minimum of the ranks that would have been assigned to all
+                - *"average"*: The average of the ranks that would have been assigned to
+                    all the tied values is assigned to each value.
+                - *"min"*: The minimum of the ranks that would have been assigned to all
                     the tied values is assigned to each value. (This is also referred to
                     as "competition" ranking.)
-                - 'max' : The maximum of the ranks that would have been assigned to all
+                - *"max"*: The maximum of the ranks that would have been assigned to all
                     the tied values is assigned to each value.
-                - 'dense' : Like 'min', but the rank of the next highest element is
-                   assigned the rank immediately after those assigned to the tied
-                   elements.
-                - 'ordinal' : All values are given a distinct rank, corresponding to the
+                - *"dense"*: Like "min", but the rank of the next highest element is
+                    assigned the rank immediately after those assigned to the tied elements.
+                - *"ordinal"*: All values are given a distinct rank, corresponding to the
                     order that the values occur in the Series.
 
             descending: Rank in descending order.
