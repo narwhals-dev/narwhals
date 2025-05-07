@@ -90,14 +90,13 @@ def test_lit_operation_in_select(
     col_name: str,
     expr: nw.Expr,
     expected_result: list[int],
-    request: pytest.FixtureRequest,
 ) -> None:
     if (
         "dask" in str(constructor)
         and col_name == "right_lit_with_abs"
-        and DASK_VERSION <= (2024, 10)
+        and DASK_VERSION < (2025,)
     ):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     data = {"a": [1, 3, 2]}
     df_raw = constructor(data)
