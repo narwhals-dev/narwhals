@@ -301,7 +301,7 @@ class IbisLazyFrame(
 
         return self._with_native(joined)
 
-    def join_asof(  # noqa: PLR0912
+    def join_asof(
         self,
         other: Self,
         *,
@@ -321,7 +321,7 @@ class IbisLazyFrame(
         elif strategy == "forward":
             on_condition = self.native[left_on] <= other.native[right_on]
         else:
-            msg = "Only 'backward' and 'forward' strategies are currently supported for Ibis"
+            msg = "Only `backward` and `forward` strategies are currently supported for Ibis"
             raise NotImplementedError(msg)
 
         if by_left is not None and by_right is not None:
@@ -339,20 +339,13 @@ class IbisLazyFrame(
         assert right_on is not None  # noqa: S101
 
         # Drop duplicate columns from the right table. Ibis keeps them.
-        for right in right_on if isinstance(right_on, list) else [right_on]:
-            to_drop = right + suffix
-            if to_drop in joined.columns:
-                joined = joined.drop(right + suffix)
-            else:  # pragma: no cover
-                continue
+        to_drop = right_on + suffix
+        joined = joined.drop(to_drop) if to_drop in joined.columns else joined
 
         if by_right is not None:
             for right in by_right if not isinstance(by_right, str) else [by_right]:
                 to_drop = right + suffix
-                if to_drop in joined.columns:
-                    joined = joined.drop(right + suffix)
-                else:  # pragma: no cover
-                    continue
+                joined = joined.drop(to_drop) if to_drop in joined.columns else joined
 
         return self._with_native(joined)
 
