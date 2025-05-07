@@ -63,7 +63,6 @@ class Expr:
         self._metadata = metadata
 
     def _with_elementwise_op(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
-        # Instantiate new Expr keeping metadata unchanged.
         return self.__class__(to_compliant_expr, self._metadata.with_elementwise_op())
 
     def _with_aggregation(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
