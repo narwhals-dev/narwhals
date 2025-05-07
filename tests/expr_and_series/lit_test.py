@@ -95,7 +95,7 @@ def test_lit_operation_in_select(
     if (
         "dask" in str(constructor)
         and col_name == "right_lit_with_abs"
-        and DASK_VERSION < (2024, 10)
+        and DASK_VERSION <= (2024, 10)
     ):
         request.applymarker(pytest.mark.xfail)
 
