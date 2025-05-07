@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
+from tests.utils import POLARS_VERSION
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
@@ -45,6 +46,9 @@ def test_expr_arg_min_over() -> None:
     # other backends too one day.
     pytest.importorskip("polars")
     import polars as pl
+
+    if POLARS_VERSION < (1, 10):
+        pytest.skip()
 
     df = nw.from_native(pl.LazyFrame({"a": [9, 8, 7], "i": [0, 2, 1]}))
     result = df.select(nw.col("a").arg_min().over(order_by="i"))
