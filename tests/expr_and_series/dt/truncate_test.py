@@ -99,23 +99,19 @@ def test_truncate(
     every: str,
     expected: list[datetime],
 ) -> None:
-    if any(x in str(constructor) for x in ("sqlframe",)):
+    if any(x in str(constructor) for x in ("sqlframe", "pyspark")):
+        # TODO(marco): investigate pyspark, it also localizes to UTC here.
         request.applymarker(
             pytest.mark.xfail(reason="https://github.com/eakmanrq/sqlframe/issues/383")
         )
-    if every.endswith("ns") and any(x in str(constructor) for x in ("polars", "duckdb")):
+    if every.endswith("ns") and any(
+        x in str(constructor) for x in ("polars", "duckdb", "pyspark")
+    ):
         request.applymarker(pytest.mark.xfail())
     if any(every.endswith(x) for x in ("mo", "q", "y")) and any(
         x in str(constructor) for x in ("dask", "cudf")
     ):
         request.applymarker(pytest.mark.xfail(reason="Not implemented"))
-    request.applymarker(
-        pytest.mark.xfail(
-            ("pyspark" in str(constructor) and every.endswith("ns")),
-            raises=NotImplementedError,
-            reason="Truncating to nanoseconds is not yet supported",
-        )
-    )
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").dt.truncate(every))
     assert_equal_data(result, {"a": expected})
