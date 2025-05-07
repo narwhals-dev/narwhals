@@ -134,18 +134,22 @@ class ExprKind(Enum):
         return self in {ExprKind.LITERAL, ExprKind.AGGREGATION}
 
     @classmethod
+    def from_expr(cls, obj: Expr) -> ExprKind:
+        meta = obj._metadata
+        if meta.is_literal:
+            return ExprKind.LITERAL
+        if meta.is_scalar_like:
+            return ExprKind.AGGREGATION
+        if meta.is_elementwise:
+            return ExprKind.ELEMENTWISE
+        return ExprKind.OTHER
+
+    @classmethod
     def from_into_expr(
         cls, obj: IntoExpr | NonNestedLiteral | _1DArray, *, str_as_lit: bool
     ) -> ExprKind:
         if is_expr(obj):
-            meta = obj._metadata
-            if meta.is_literal:
-                return ExprKind.LITERAL
-            if meta.is_scalar_like:
-                return ExprKind.AGGREGATION
-            if meta.is_elementwise:
-                return ExprKind.ELEMENTWISE
-            return ExprKind.OTHER
+            return cls.from_expr(obj)
         if (
             is_narwhals_series(obj)
             or is_numpy_array(obj)

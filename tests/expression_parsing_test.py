@@ -105,3 +105,5 @@ def test_filtration_over() -> None:
         nw.col("a").drop_nulls().over("b")
     with pytest.raises(InvalidOperationError):
         nw.col("a").drop_nulls().over("b", order_by="i")
+    with pytest.raises(InvalidOperationError):
+        nw.col("a").diff().drop_nulls().over("b", order_by="i")
