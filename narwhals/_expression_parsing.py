@@ -397,7 +397,7 @@ class ExprMetadata:
             last_node_is_orderable_window=True,
             last_node_is_unorderable_window=False,
             is_partitioned=self.is_partitioned,
-            n_orderable_ops=True,
+            n_orderable_ops=self.n_orderable_ops + 1,
             preserves_length=False,
             is_scalar_like=False,
             is_literal=False,
