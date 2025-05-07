@@ -23,10 +23,12 @@ from __future__ import annotations
 import sys
 from contextlib import nullcontext as does_not_raise
 from importlib.util import find_spec
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterable
+from typing import Iterator
 from typing import Literal
 from typing import cast
 
@@ -38,6 +40,7 @@ import narwhals.stable.v1 as nw_v1
 from tests.utils import maybe_get_modin_df
 
 if TYPE_CHECKING:
+    from _pytest.mark import ParameterSet
     from typing_extensions import assert_type
 
     from narwhals.utils import Version
@@ -532,3 +535,30 @@ def test_from_native_invalid_keywords(from_native: Callable[..., Any]) -> None:
 
     with pytest.raises(TypeError, match=pattern):
         from_native(data, bad_1="invalid", bad_2="also invalid")
+
+
+def _iter_roundtrip_cases(iterable: Iterable[Any], **kwds: Any) -> Iterator[ParameterSet]:
+    for element in iterable:
+        tp = type(element)
+        if not tp.__name__.startswith("Mock"):
+            yield pytest.param(element, kwds, id=f"{tp.__module__}.{tp.__qualname__}")
+
+
+@pytest.mark.parametrize(
+    "from_native", [nw.from_native, nw_v1.from_native], ids=["MAIN", "V1"]
+)
+@pytest.mark.parametrize(
+    ("native", "kwds"),
+    list(
+        chain(
+            _iter_roundtrip_cases(all_frames),
+            _iter_roundtrip_cases(all_series, allow_series=True),
+        )
+    ),
+)
+def test_from_native_roundtrip_identity(
+    from_native: Callable[..., Any], native: Any, kwds: dict[str, Any]
+) -> None:
+    nw_wrapped = from_native(native, **kwds)
+    roundtrip = nw_wrapped.to_native()
+    assert roundtrip is native
