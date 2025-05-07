@@ -13,7 +13,6 @@ from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import extract_compliant
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import InvalidOperationError
-from narwhals.exceptions import LengthChangingExprError
 from narwhals.expr_cat import ExprCatNamespace
 from narwhals.expr_dt import ExprDateTimeNamespace
 from narwhals.expr_list import ExprListNamespace
@@ -1568,10 +1567,6 @@ class Expr:
             |2  4  y                    4|
             └────────────────────────────┘
         """
-        if self._metadata.is_filtration:
-            msg = "`.over()` can not be used for expressions which change length."
-            raise LengthChangingExprError(msg)
-
         flat_partition_by = flatten(partition_by)
         flat_order_by = [order_by] if isinstance(order_by, str) else order_by
         if not flat_partition_by and not flat_order_by:  # pragma: no cover

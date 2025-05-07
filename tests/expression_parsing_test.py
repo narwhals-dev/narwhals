@@ -98,3 +98,10 @@ def test_invalid_over() -> None:
 def test_nested_over() -> None:
     with pytest.raises(InvalidOperationError):
         nw.col("a").mean().over("b").over("c")
+
+
+def test_filtration_over() -> None:
+    with pytest.raises(InvalidOperationError):
+        nw.col("a").drop_nulls().over("b")
+    with pytest.raises(InvalidOperationError):
+        nw.col("a").drop_nulls().over("b", order_by="i")
