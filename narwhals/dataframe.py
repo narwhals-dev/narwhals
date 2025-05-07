@@ -554,7 +554,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                 given library does not support lazy execution, then this will restrict
                 the API to lazy-only operations.
 
-                `backend` can be specified in various ways:
+                `backend` can be specified in various ways
 
                 - As `Implementation.<BACKEND>` with `BACKEND` being `DASK`, `DUCKDB`
                     or `POLARS`.
@@ -853,7 +853,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Arguments:
             item: How to slice dataframe. What happens depends on what is passed. It's easiest
-                to explain by example. Suppose we have a Dataframe `df`:
+                to explain by example. Suppose we have a Dataframe `df`
 
                 - `df['a']` extracts column `'a'` and returns a `Series`.
                 - `df[0:2]` extracts the first two rows and returns a `DataFrame`.
@@ -1969,7 +1969,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             values: One or multiple keys to group by. If None, all remaining columns not
                 specified on `on` and `index` will be used. At least one of `index` and
                 `values` must be specified.
-            aggregate_function: Choose from:
+            aggregate_function: Choose from
 
                 - None: no aggregation takes place, will raise error if multiple values
                     are in group.
@@ -2293,21 +2293,21 @@ class LazyFrame(BaseFrame[FrameT]):
         Arguments:
             backend: specifies which eager backend collect to. This will be the underlying
                 backend for the resulting Narwhals DataFrame. If None, then the following
-                default conversions will be applied:
+                default conversions will be applied
 
                 - `polars.LazyFrame` -> `polars.DataFrame`
                 - `dask.DataFrame` -> `pandas.DataFrame`
                 - `duckdb.PyRelation` -> `pyarrow.Table`
                 - `pyspark.DataFrame` -> `pyarrow.Table`
 
-                `backend` can be specified in various ways:
+                `backend` can be specified in various ways
 
                 - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`
                     or `POLARS`.
                 - As a string: `"pandas"`, `"pyarrow"` or `"polars"`
                 - Directly as a module `pandas`, `pyarrow` or `polars`.
             kwargs: backend specific kwargs to pass along. To know more please check the
-                backend specific documentation:
+                backend specific documentation
 
                 - [polars.LazyFrame.collect](https://docs.pola.rs/api/python/dev/reference/lazyframe/api/polars.LazyFrame.collect.html)
                 - [dask.dataframe.DataFrame.compute](https://docs.dask.org/en/stable/generated/dask.dataframe.DataFrame.compute.html)
