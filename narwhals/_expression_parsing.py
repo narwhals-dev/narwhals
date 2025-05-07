@@ -143,11 +143,7 @@ class ExprKind(Enum):
                 return ExprKind.LITERAL
             if meta.is_scalar_like:
                 return ExprKind.AGGREGATION
-            if (
-                not meta.n_orderable_ops
-                and meta.preserves_length
-                and not meta.is_partitioned
-            ):
+            if meta.is_elementwise:
                 return ExprKind.ELEMENTWISE
             return ExprKind.OTHER
         if (
@@ -248,6 +244,12 @@ class ExprMetadata:
     @property
     def is_filtration(self) -> bool:
         return not self.preserves_length and not self.is_scalar_like
+
+    @property
+    def is_elementwise(self) -> bool:
+        return (
+            not self.n_orderable_ops and self.preserves_length and not self.is_partitioned
+        )
 
     def with_aggregation(self) -> ExprMetadata:
         if self.is_scalar_like:
