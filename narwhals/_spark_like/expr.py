@@ -21,6 +21,7 @@ from narwhals._spark_like.utils import import_native_dtypes
 from narwhals._spark_like.utils import import_window
 from narwhals._spark_like.utils import narwhals_to_native_dtype
 from narwhals.dependencies import get_pyspark
+from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
 from narwhals.utils import not_implemented
 from narwhals.utils import parse_version
@@ -606,14 +607,12 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
         if (fn := self._window_function) is not None:
             if order_by is None:  # pragma: no cover
-
-                class MarcoDidntGiveAReasonError(ValueError): ...
-
                 msg = (
-                    "Help me out plz dude 😉\n"
-                    "https://github.com/narwhals-dev/narwhals/pull/2132"
+                    f"Order-dependent expressions must be immediately followed by `over(order_by=...)`"
+                    f" for {self._implementation!r}.\n\n"
+                    f"_window_function={fn!r}\npartition_by={partition_by!r}\norder_by={order_by!r}"
                 )
-                raise MarcoDidntGiveAReasonError(msg)
+                raise InvalidOperationError(msg)
             partition = partition_by or [self._F.lit(1)]
 
             def func(df: SparkLikeLazyFrame) -> list[Column]:
