@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import operator
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
 from typing import Iterator
 from typing import Literal
 from typing import Mapping
@@ -11,7 +13,6 @@ from typing import cast
 import ibis
 import ibis.expr.types as ir
 
-from narwhals._ibis.utils import drop_duplicate_join_columns
 from narwhals._ibis.utils import evaluate_exprs
 from narwhals._ibis.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
@@ -31,6 +32,7 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from ibis.expr.operations import Binary
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
@@ -45,6 +47,8 @@ if TYPE_CHECKING:
     from narwhals.typing import JoinStrategy
     from narwhals.typing import LazyUniqueKeepStrategy
     from narwhals.utils import _FullContext
+
+    JoinPredicates: TypeAlias = "Sequence[ir.BooleanColumn] | Sequence[str]"
 
 
 class IbisLazyFrame(
@@ -248,6 +252,12 @@ class IbisLazyFrame(
 
         return self._with_native(self.native.rename(_rename))
 
+    @staticmethod
+    def _join_drop_duplicate_columns(df: ir.Table, columns: Iterable[str], /) -> ir.Table:
+        """Ibis adds a suffix to the right table col, even when it matches the left during a join."""
+        duplicates = set(df.columns).intersection(columns)
+        return df.drop(*duplicates) if duplicates else df
+
     def join(
         self,
         other: Self,
@@ -257,45 +267,28 @@ class IbisLazyFrame(
         right_on: Sequence[str] | None,
         suffix: str,
     ) -> Self:
-        native_how = "outer" if how == "full" else how
-
+        how_native = "outer" if how == "full" else how
+        rname = "{name}" + suffix
         if other == self:
             # Ibis does not support self-references unless created as a view
             other = self._with_native(other.native.view())
-
-        if native_how != "cross":
-            if left_on is None or right_on is None:  # pragma: no cover
-                msg = f"For '{native_how}' joins, both 'left_on' and 'right_on' must be provided."
-                raise ValueError(msg)  # pragma: no cover (caught upstream)
-            predicates = self._convert_predicates(other, left_on, right_on)
-        else:
-            # For cross joins, no predicates are needed
-            predicates = []
-
-        joined = self.native.join(
-            other.native, predicates=predicates, how=native_how, rname="{name}" + suffix
-        )
-        if native_how == "left":
-            assert right_on is not None  # noqa: S101
-
-            # Drop duplicate columns from the right table. Ibis keeps them.
-            for right in right_on if not isinstance(right_on, str) else [right_on]:
-                joined = drop_duplicate_join_columns(joined, right, suffix)
-
-            for pred in predicates:
-                if isinstance(pred, str):
-                    continue
-
-                pred_op = cast("Binary", pred.op())
-
-                left = pred_op.left.name
-                right = pred_op.right.name
-
-                # If right column is not in the left table, drop it as it will be present in the left column
+        if how_native == "cross":
+            joined = self.native.join(other.native, how=how_native, rname=rname)
+            return self._with_native(joined)
+        if left_on is None or right_on is None:  # pragma: no cover
+            msg = f"For '{how_native}' joins, both 'left_on' and 'right_on' must be provided."
+            raise ValueError(msg)
+        predicates = self._convert_predicates(other, left_on, right_on)
+        joined = self.native.join(other.native, predicates, how=how_native, rname=rname)
+        if how_native == "left":
+            right_names = (n + suffix for n in right_on)
+            joined = self._join_drop_duplicate_columns(joined, right_names)
+            it = (cast("Binary", p.op()) for p in predicates if not isinstance(p, str))
+            for pred in it:
+                right = pred.right.name
                 # Mirrors how polars works.
-                if left != right and right not in self.columns:
+                if right not in self.columns and pred.left.name != right:
                     joined = joined.drop(right)
-
         return self._with_native(joined)
 
     def join_asof(
@@ -309,46 +302,31 @@ class IbisLazyFrame(
         strategy: AsofJoinStrategy,
         suffix: str,
     ) -> Self:
+        rname = "{name}" + suffix
+        strategy_op = {"backward": operator.ge, "forward": operator.le}
+        predicates: JoinPredicates = []
         if left_on is None or right_on is None:  # pragma: no cover
             msg = "Both 'left_on' and 'right_on' must be provided for asof joins."
             raise ValueError(msg)
-
-        if strategy == "backward":
-            on_condition = self.native[left_on] >= other.native[right_on]
-        elif strategy == "forward":
-            on_condition = self.native[left_on] <= other.native[right_on]
+        if op := strategy_op.get(strategy):
+            on: ir.BooleanColumn = op(self.native[left_on], other.native[right_on])
         else:
             msg = "Only `backward` and `forward` strategies are currently supported for Ibis"
             raise NotImplementedError(msg)
-
         if by_left is not None and by_right is not None:
             predicates = self._convert_predicates(other, by_left, by_right)
-        else:
-            predicates = []
-
-        joined = self.native.asof_join(
-            other.native,
-            on=cast("ir.BooleanColumn", on_condition),
-            predicates=predicates,
-            rname="{name}" + suffix,
-        )
-
-        assert right_on is not None  # noqa: S101
-
-        joined = drop_duplicate_join_columns(joined, right_on, suffix)
-
+        joined = self.native.asof_join(other.native, on, predicates, rname=rname)
+        joined = self._join_drop_duplicate_columns(joined, [right_on + suffix])
         if by_right is not None:
-            for right in by_right if not isinstance(by_right, str) else [by_right]:
-                joined = drop_duplicate_join_columns(joined, right, suffix)
-
+            by_right = by_right if not isinstance(by_right, str) else [by_right]
+            self._join_drop_duplicate_columns(joined, (n + suffix for n in by_right))
         return self._with_native(joined)
 
     def _convert_predicates(
         self, other: Self, left_on: Sequence[str], right_on: Sequence[str]
-    ) -> list[ir.BooleanColumn] | Sequence[str]:
+    ) -> JoinPredicates:
         if left_on == right_on:
             return left_on
-
         return [
             cast("ir.BooleanColumn", (self.native[left] == other.native[right]))
             for left, right in zip(left_on, right_on)

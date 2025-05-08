@@ -175,11 +175,6 @@ def is_floating(obj: IbisDataType) -> TypeIs[ibis_dtypes.Floating]:
     return obj.is_floating()
 
 
-def drop_duplicate_join_columns(tbl: ir.Table, col_name: str, suffix: str) -> ir.Table:
-    """Ibis adds a suffix to the right table col, even when it matches the left during a join. This removes it."""
-    return tbl.drop(col_name + suffix) if col_name + suffix in tbl.columns else tbl
-
-
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912
     dtype: DType | type[DType], version: Version
 ) -> IbisDataType:
