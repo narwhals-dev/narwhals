@@ -238,11 +238,11 @@ class BaseFrame(Generic[_FrameT]):
         self,
         other: Self,
         on: str | list[str] | None,
-        how: JoinStrategy = "inner",
+        how: JoinStrategy,
         *,
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
-        suffix: str = "_right",
+        suffix: str,
     ) -> Self:
         on = [on] if isinstance(on, str) else on
         left_on = [left_on] if isinstance(left_on, str) else left_on
@@ -294,18 +294,18 @@ class BaseFrame(Generic[_FrameT]):
             self._compliant_frame.gather_every(n=n, offset=offset)
         )
 
-    def join_asof(  # noqa: C901
+    def join_asof(
         self,
         other: Self,
         *,
-        left_on: str | None = None,
-        right_on: str | None = None,
-        on: str | None = None,
-        by_left: str | list[str] | None = None,
-        by_right: str | list[str] | None = None,
-        by: str | list[str] | None = None,
-        strategy: AsofJoinStrategy = "backward",
-        suffix: str = "_right",
+        left_on: str | None,
+        right_on: str | None,
+        on: str | None,
+        by_left: str | list[str] | None,
+        by_right: str | list[str] | None,
+        by: str | list[str] | None,
+        strategy: AsofJoinStrategy,
+        suffix: str,
     ) -> Self:
         _supported_strategies = ("backward", "forward", "nearest")
 
@@ -334,10 +334,9 @@ class BaseFrame(Generic[_FrameT]):
             left_on = right_on = on
         if by is not None:
             by_left = by_right = by
-        if isinstance(by_left, str):
-            by_left = [by_left]
-        if isinstance(by_right, str):
-            by_right = [by_right]
+
+        by_left = [by_left] if isinstance(by_left, str) else by_left
+        by_right = [by_right] if isinstance(by_right, str) else by_right
 
         if (isinstance(by_left, list) and isinstance(by_right, list)) and (
             len(by_left) != len(by_right)
