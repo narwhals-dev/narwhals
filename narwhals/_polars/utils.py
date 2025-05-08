@@ -3,7 +3,11 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
+from typing import Iterator
+from typing import Mapping
 from typing import TypeVar
+from typing import cast
 from typing import overload
 
 import polars as pl
@@ -14,76 +18,58 @@ from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import NarwhalsError
 from narwhals.exceptions import ShapeError
-from narwhals.utils import import_dtypes_module
+from narwhals.utils import Version
+from narwhals.utils import _DeferredIterable
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    from narwhals._polars.dataframe import PolarsDataFrame
-    from narwhals._polars.dataframe import PolarsLazyFrame
-    from narwhals._polars.expr import PolarsExpr
-    from narwhals._polars.series import PolarsSeries
+    from typing_extensions import TypeIs
+
     from narwhals.dtypes import DType
-    from narwhals.typing import TimeUnit
-    from narwhals.utils import Version
+    from narwhals.utils import _StoresNative
 
     T = TypeVar("T")
+    NativeT = TypeVar(
+        "NativeT", bound="pl.DataFrame | pl.LazyFrame | pl.Series | pl.Expr"
+    )
 
 
 @overload
-def extract_native(obj: PolarsDataFrame) -> pl.DataFrame: ...
-
-
-@overload
-def extract_native(obj: PolarsLazyFrame) -> pl.LazyFrame: ...
-
-
-@overload
-def extract_native(obj: PolarsSeries) -> pl.Series: ...
-
-
-@overload
-def extract_native(obj: PolarsExpr) -> pl.Expr: ...
-
-
+def extract_native(obj: _StoresNative[NativeT]) -> NativeT: ...
 @overload
 def extract_native(obj: T) -> T: ...
+def extract_native(obj: _StoresNative[NativeT] | T) -> NativeT | T:
+    return obj.native if _is_compliant_polars(obj) else obj
 
 
-def extract_native(
-    obj: PolarsDataFrame | PolarsLazyFrame | PolarsSeries | PolarsExpr | T,
-) -> pl.DataFrame | pl.LazyFrame | pl.Series | pl.Expr | T:
+def _is_compliant_polars(
+    obj: _StoresNative[NativeT] | Any,
+) -> TypeIs[_StoresNative[NativeT]]:
     from narwhals._polars.dataframe import PolarsDataFrame
     from narwhals._polars.dataframe import PolarsLazyFrame
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.series import PolarsSeries
 
-    if isinstance(obj, (PolarsDataFrame, PolarsLazyFrame)):
-        return obj._native_frame
-    if isinstance(obj, PolarsSeries):
-        return obj._native_series
-    if isinstance(obj, PolarsExpr):
-        return obj._native_expr
-    return obj
+    return isinstance(obj, (PolarsDataFrame, PolarsLazyFrame, PolarsSeries, PolarsExpr))
 
 
-def extract_args_kwargs(args: Any, kwargs: Any) -> tuple[list[Any], dict[str, Any]]:
-    return [extract_native(arg) for arg in args], {
-        k: extract_native(v) for k, v in kwargs.items()
-    }
+def extract_args_kwargs(
+    args: Iterable[Any], kwds: Mapping[str, Any], /
+) -> tuple[Iterator[Any], dict[str, Any]]:
+    it_args = (extract_native(arg) for arg in args)
+    return it_args, {k: extract_native(v) for k, v in kwds.items()}
 
 
 @lru_cache(maxsize=16)
-def native_to_narwhals_dtype(
-    dtype: pl.DataType,
-    version: Version,
-    backend_version: tuple[int, ...],
+def native_to_narwhals_dtype(  # noqa: C901, PLR0912
+    dtype: pl.DataType, version: Version, backend_version: tuple[int, ...]
 ) -> DType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if dtype == pl.Float64:
         return dtypes.Float64()
     if dtype == pl.Float32:
         return dtypes.Float32()
-    if dtype == getattr(pl, "Int128", None):  # type: ignore[operator]  # pragma: no cover
+    if hasattr(pl, "Int128") and dtype == pl.Int128:  # pragma: no cover
         # Not available for Polars pre 1.8.0
         return dtypes.Int128()
     if dtype == pl.Int64:
@@ -94,7 +80,7 @@ def native_to_narwhals_dtype(
         return dtypes.Int16()
     if dtype == pl.Int8:
         return dtypes.Int8()
-    if dtype == getattr(pl, "UInt128", None):  # type: ignore[operator]  # pragma: no cover
+    if hasattr(pl, "UInt128") and dtype == pl.UInt128:  # pragma: no cover
         # Not available for Polars pre 1.8.0
         return dtypes.UInt128()
     if dtype == pl.UInt64:
@@ -113,36 +99,43 @@ def native_to_narwhals_dtype(
         return dtypes.Object()
     if dtype == pl.Categorical:
         return dtypes.Categorical()
-    if dtype == pl.Enum:
-        return dtypes.Enum()
+    if isinstance_or_issubclass(dtype, pl.Enum):
+        if version is Version.V1:
+            return dtypes.Enum()  # type: ignore[call-arg]
+        categories = _DeferredIterable(
+            dtype.categories.to_list
+            if backend_version >= (0, 20, 4)
+            else lambda: cast("list[str]", dtype.categories)
+        )
+        return dtypes.Enum(categories)
     if dtype == pl.Date:
         return dtypes.Date()
-    if dtype == pl.Datetime:
-        dt_time_unit: TimeUnit = getattr(dtype, "time_unit", "us")
-        dt_time_zone = getattr(dtype, "time_zone", None)
-        return dtypes.Datetime(time_unit=dt_time_unit, time_zone=dt_time_zone)
-    if dtype == pl.Duration:
-        du_time_unit: TimeUnit = getattr(dtype, "time_unit", "us")
-        return dtypes.Duration(time_unit=du_time_unit)
-    if dtype == pl.Struct:
-        return dtypes.Struct(
-            [
-                dtypes.Field(
-                    field_name,
-                    native_to_narwhals_dtype(field_type, version, backend_version),
-                )
-                for field_name, field_type in dtype  # type: ignore[attr-defined]
-            ]
+    if isinstance_or_issubclass(dtype, pl.Datetime):
+        return (
+            dtypes.Datetime()
+            if dtype is pl.Datetime
+            else dtypes.Datetime(dtype.time_unit, dtype.time_zone)
         )
-    if dtype == pl.List:
+    if isinstance_or_issubclass(dtype, pl.Duration):
+        return (
+            dtypes.Duration()
+            if dtype is pl.Duration
+            else dtypes.Duration(dtype.time_unit)
+        )
+    if isinstance_or_issubclass(dtype, pl.Struct):
+        fields = [
+            dtypes.Field(name, native_to_narwhals_dtype(tp, version, backend_version))
+            for name, tp in dtype
+        ]
+        return dtypes.Struct(fields)
+    if isinstance_or_issubclass(dtype, pl.List):
         return dtypes.List(
-            native_to_narwhals_dtype(dtype.inner, version, backend_version)  # type: ignore[attr-defined]
+            native_to_narwhals_dtype(dtype.inner, version, backend_version)
         )
-    if dtype == pl.Array:
-        outer_shape = dtype.width if backend_version < (0, 20, 30) else dtype.size  # type: ignore[attr-defined]
+    if isinstance_or_issubclass(dtype, pl.Array):
+        outer_shape = dtype.width if backend_version < (0, 20, 30) else dtype.size
         return dtypes.Array(
-            inner=native_to_narwhals_dtype(dtype.inner, version, backend_version),  # type: ignore[attr-defined]
-            shape=outer_shape,
+            native_to_narwhals_dtype(dtype.inner, version, backend_version), outer_shape
         )
     if dtype == pl.Decimal:
         return dtypes.Decimal()
@@ -153,15 +146,15 @@ def native_to_narwhals_dtype(
     return dtypes.Unknown()
 
 
-def narwhals_to_native_dtype(
+def narwhals_to_native_dtype(  # noqa: C901, PLR0912
     dtype: DType | type[DType], version: Version, backend_version: tuple[int, ...]
 ) -> pl.DataType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if dtype == dtypes.Float64:
         return pl.Float64()
     if dtype == dtypes.Float32:
         return pl.Float32()
-    if dtype == dtypes.Int128 and getattr(pl, "Int128", None) is not None:
+    if dtype == dtypes.Int128 and hasattr(pl, "Int128"):
         # Not available for Polars pre 1.8.0
         return pl.Int128()
     if dtype == dtypes.Int64:
@@ -188,9 +181,14 @@ def narwhals_to_native_dtype(
         return pl.Object()
     if dtype == dtypes.Categorical:
         return pl.Categorical()
-    if dtype == dtypes.Enum:
-        msg = "Converting to Enum is not (yet) supported"
-        raise NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Enum):
+        if version is Version.V1:
+            msg = "Converting to Enum is not supported in narwhals.stable.v1"
+            raise NotImplementedError(msg)
+        if isinstance(dtype, dtypes.Enum):
+            return pl.Enum(dtype.categories)
+        msg = "Can not cast / initialize Enum without categories present"
+        raise ValueError(msg)
     if dtype == dtypes.Date:
         return pl.Date()
     if dtype == dtypes.Time:
@@ -204,35 +202,24 @@ def narwhals_to_native_dtype(
         return pl.Datetime(dtype.time_unit, dtype.time_zone)  # type: ignore[arg-type]
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         return pl.Duration(dtype.time_unit)  # type: ignore[arg-type]
-    if dtype == dtypes.List:
-        return pl.List(narwhals_to_native_dtype(dtype.inner, version, backend_version))  # type: ignore[union-attr]
-    if dtype == dtypes.Struct:
-        return pl.Struct(
-            fields=[
-                pl.Field(
-                    name=field.name,
-                    dtype=narwhals_to_native_dtype(field.dtype, version, backend_version),
-                )
-                for field in dtype.fields  # type: ignore[union-attr]
-            ]
-        )
-    if dtype == dtypes.Array:  # pragma: no cover
-        size = dtype.size  # type: ignore[union-attr]
+    if isinstance_or_issubclass(dtype, dtypes.List):
+        return pl.List(narwhals_to_native_dtype(dtype.inner, version, backend_version))
+    if isinstance_or_issubclass(dtype, dtypes.Struct):
+        fields = [
+            pl.Field(
+                field.name,
+                narwhals_to_native_dtype(field.dtype, version, backend_version),
+            )
+            for field in dtype.fields
+        ]
+        return pl.Struct(fields)
+    if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
+        size = dtype.size
         kwargs = {"width": size} if backend_version < (0, 20, 30) else {"shape": size}
         return pl.Array(
-            inner=narwhals_to_native_dtype(dtype.inner, version, backend_version),  # type: ignore[union-attr]
-            **kwargs,
+            narwhals_to_native_dtype(dtype.inner, version, backend_version), **kwargs
         )
     return pl.Unknown()  # pragma: no cover
-
-
-def convert_str_slice_to_int_slice(
-    str_slice: slice, columns: list[str]
-) -> tuple[int | None, int | None, int | None]:  # pragma: no cover
-    start = columns.index(str_slice.start) if str_slice.start is not None else None
-    stop = columns.index(str_slice.stop) + 1 if str_slice.stop is not None else None
-    step = str_slice.step
-    return (start, stop, step)
 
 
 def catch_polars_exception(

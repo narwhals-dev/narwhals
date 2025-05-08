@@ -1,20 +1,29 @@
+# TODO(unassigned): cudf has too many spurious failures. Report and revisit?
+# Modin is too slow so is excluded.
 from __future__ import annotations
 
+from random import Random
 from typing import Any
 
 import hypothesis.strategies as st
+import pandas as pd
 import pytest
 from hypothesis import given
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import ComputeError
 from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-data = {
+rnd = Random(0)  # noqa: S311
+
+data: dict[str, list[int | float]] = {
     "int": [0, 1, 2, 3, 4, 5, 6],
+    "float": [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+    "int_shuffled": [1, 0, 2, 3, 6, 5, 4],
+    "float_shuffled": [1.0, 0.0, 2.0, 3.0, 6.0, 5.0, 4.0],
 }
 
 bins_and_expected = [
@@ -24,11 +33,11 @@ bins_and_expected = [
     },
     {
         "bins": [1.0, 2.5, 5.5, float("inf")],
-        "expected": [1, 3, 1],
+        "expected": [2, 3, 1],
     },
     {
         "bins": [1.0, 2.5, 5.5],
-        "expected": [1, 3],
+        "expected": [2, 3],
     },
     {
         "bins": [-10.0, -1.0, 2.5, 5.5],
@@ -36,23 +45,27 @@ bins_and_expected = [
     },
     {
         "bins": [1.0, 2.0625],
-        "expected": [1],
+        "expected": [2],
     },
     {
         "bins": [1],
         "expected": [],
     },
+    {
+        "bins": [0, 10],
+        "expected": [7],
+    },
 ]
 counts_and_expected = [
     {
         "bin_count": 4,
-        "expected_bins": [-0.006, 1.5, 3.0, 4.5, 6.0],
+        "expected_bins": [0, 1.5, 3.0, 4.5, 6.0],
         "expected_count": [2, 2, 1, 2],
     },
     {
         "bin_count": 12,
         "expected_bins": [
-            -0.006,
+            0,
             0.5,
             1.0,
             1.5,
@@ -69,6 +82,11 @@ counts_and_expected = [
         "expected_count": [1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
     },
     {
+        "bin_count": 1,
+        "expected_bins": [0, 6],
+        "expected_count": [7],
+    },
+    {
         "bin_count": 0,
         "expected_bins": [],
         "expected_count": [],
@@ -78,22 +96,24 @@ counts_and_expected = [
 
 @pytest.mark.parametrize("params", bins_and_expected)
 @pytest.mark.parametrize("include_breakpoint", [True, False])
-@pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
-)
+@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
 def test_hist_bin(
-    constructor_eager: ConstructorEager,
+    library: str,
     *,
     params: dict[str, Any],
     include_breakpoint: bool,
-    request: pytest.FixtureRequest,
 ) -> None:
-    if "cudf" in str(constructor_eager):
-        # TODO(unassigned): too many spurious failures, report and revisit
-        return
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
-        request.applymarker(pytest.mark.xfail)
+    if library == "pandas":
+        constructor_eager: Any = pd.DataFrame
+    elif library == "polars":
+        pl = pytest.importorskip("polars")
+        constructor_eager = pl.DataFrame
+    else:
+        pa = pytest.importorskip("pyarrow")
+        constructor_eager = pa.table
 
+    if library == "pyarrow" and PYARROW_VERSION < (13,):
+        pytest.skip()
     df = nw.from_native(constructor_eager(data)).with_columns(
         float=nw.col("int").cast(nw.Float64),
     )
@@ -115,8 +135,7 @@ def test_hist_bin(
         assert_equal_data(result, expected)
 
         # result size property
-        if len(bins) < 2:
-            assert len(result) == 0
+        assert len(result) == max(len(bins) - 1, 0)
 
     # shift bins property
     shift_by = 10
@@ -163,21 +182,23 @@ def test_hist_bin(
 
 @pytest.mark.parametrize("params", counts_and_expected)
 @pytest.mark.parametrize("include_breakpoint", [True, False])
-@pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
-)
+@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
 def test_hist_count(
-    constructor_eager: ConstructorEager,
+    library: str,
     *,
     params: dict[str, Any],
     include_breakpoint: bool,
-    request: pytest.FixtureRequest,
 ) -> None:
-    if "cudf" in str(constructor_eager):
-        # TODO(unassigned): too many spurious failures, report and revisit
-        return
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
-        request.applymarker(pytest.mark.xfail)
+    if library == "pandas":
+        constructor_eager: Any = pd.DataFrame
+    elif library == "polars":
+        pl = pytest.importorskip("polars")
+        constructor_eager = pl.DataFrame
+    else:
+        pa = pytest.importorskip("pyarrow")
+        constructor_eager = pa.table
+    if library == "pyarrow" and PYARROW_VERSION < (13,):
+        pytest.skip()
 
     df = nw.from_native(constructor_eager(data)).with_columns(
         float=nw.col("int").cast(nw.Float64),
@@ -201,9 +222,9 @@ def test_hist_count(
         assert_equal_data(result, expected)
 
         # result size property
-        if bin_count < 2:
-            assert len(result) == 0
-        else:
+
+        assert len(result) == bin_count
+        if bin_count > 0:
             assert result["count"].sum() == df[col].count()
 
     # missing/nan results
@@ -224,27 +245,25 @@ def test_hist_count(
         assert_equal_data(result, expected)
 
         # result size property
-        if bin_count < 2:
-            assert len(result) == 0
-        else:
+        assert len(result) == bin_count
+        if bin_count > 0:
             assert (
                 result["count"].sum() == (~(df[col].is_nan() | df[col].is_null())).sum()
             )
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
-)
-def test_hist_count_no_spread(
-    constructor_eager: ConstructorEager,
-    *,
-    request: pytest.FixtureRequest,
-) -> None:
-    if "cudf" in str(constructor_eager):
-        # TODO(unassigned): too many spurious failures, report and revisit
-        return
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
-        request.applymarker(pytest.mark.xfail)
+@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
+def test_hist_count_no_spread(library: str) -> None:
+    if library == "pandas":
+        constructor_eager: Any = pd.DataFrame
+    elif library == "polars":
+        pl = pytest.importorskip("polars")
+        constructor_eager = pl.DataFrame
+    else:
+        pa = pytest.importorskip("pyarrow")
+        constructor_eager = pa.table
+    if library == "pyarrow" and PYARROW_VERSION < (13,):
+        pytest.skip()
 
     data = {
         "all_zero": [0, 0, 0],
@@ -268,9 +287,6 @@ def test_hist_count_no_spread(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
-)
 def test_hist_bin_and_bin_count() -> None:
     pytest.importorskip("polars")
     import polars as pl
@@ -283,46 +299,54 @@ def test_hist_bin_and_bin_count() -> None:
         s.hist(bins=[1, 3], bin_count=4)
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
-)
+@pytest.mark.parametrize("include_breakpoint", [True, False])
+@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
 def test_hist_no_data(
-    constructor_eager: ConstructorEager,
+    library: str,
     *,
-    request: pytest.FixtureRequest,
+    include_breakpoint: bool,
 ) -> None:
-    if "cudf" in str(constructor_eager):
-        # TODO(unassigned): too many spurious failures, report and revisit
-        return
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
-        request.applymarker(pytest.mark.xfail)
+    if library == "pandas":
+        constructor_eager: Any = pd.DataFrame
+    elif library == "polars":
+        pl = pytest.importorskip("polars")
+        constructor_eager = pl.DataFrame
+    else:
+        pa = pytest.importorskip("pyarrow")
+        constructor_eager = pa.table
+    if library == "pyarrow" and PYARROW_VERSION < (13,):
+        pytest.skip()
     s = nw.from_native(constructor_eager({"values": []})).select(
         nw.col("values").cast(nw.Float64)
     )["values"]
-    for include_breakpoint in [True, False]:
-        result = s.hist(bin_count=10, include_breakpoint=include_breakpoint)
-        assert len(result) == 10
+    for bin_count in [1, 10]:
+        result = s.hist(bin_count=bin_count, include_breakpoint=include_breakpoint)
+        assert len(result) == bin_count
         assert result["count"].sum() == 0
 
-    for include_breakpoint in [True, False]:
-        result = s.hist(bins=[1, 5, 10], include_breakpoint=include_breakpoint)
-        assert len(result) == 2
-        assert result["count"].sum() == 0
+        if include_breakpoint:
+            bps = result["breakpoint"].to_list()
+            assert bps[0] == (1 / bin_count)
+            if bin_count > 1:
+                assert bps[-1] == 1
+
+    result = s.hist(bins=[1, 5, 10], include_breakpoint=include_breakpoint)
+    assert len(result) == 2
+    assert result["count"].sum() == 0
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
-)
-def test_hist_small_bins(
-    constructor_eager: ConstructorEager,
-    *,
-    request: pytest.FixtureRequest,
-) -> None:
-    if "cudf" in str(constructor_eager):
-        # TODO(unassigned): too many spurious failures, report and revisit
-        return
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
-        request.applymarker(pytest.mark.xfail)
+@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
+def test_hist_small_bins(library: str) -> None:
+    if library == "pandas":
+        constructor_eager: Any = pd.DataFrame
+    elif library == "polars":
+        pl = pytest.importorskip("polars")
+        constructor_eager = pl.DataFrame
+    else:
+        pa = pytest.importorskip("pyarrow")
+        constructor_eager = pa.table
+    if library == "pyarrow" and PYARROW_VERSION < (13,):
+        pytest.skip()
     s = nw.from_native(constructor_eager({"values": [1, 2, 3]}))
     result = s["values"].hist(bins=None, bin_count=None)
     assert len(result) == 10
@@ -331,9 +355,6 @@ def test_hist_small_bins(
         s["values"].hist(bins=[1, 3], bin_count=4)
 
 
-@pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
-)
 def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
     if "cudf" in str(constructor_eager):
         # TODO(unassigned): too many spurious failures, report and revisit
@@ -351,12 +372,16 @@ def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
     data=st.lists(
         # Bug in Polars <= 1.21; computing histograms with NaN data and passed bins can be unreliable
         #   this leads to flaky hypothesis testing https://github.com/pola-rs/polars/issues/21082
-        # min_value/max_value from PyArrows min/max boundaries
-        st.floats(
-            min_value=-9007199254740992,
-            max_value=9007199254740992,
-            allow_nan=False,
-            allow_infinity=False,
+        # min_value/max_value; avoid issues with floating point value imprecision
+        # small floats around 0 are incorrectly binned by Polars
+        st.one_of(
+            st.just(0.0),
+            st.floats(
+                min_value=-1e10, max_value=-1e-4, allow_nan=False, allow_subnormal=False
+            ),
+            st.floats(
+                min_value=1e-4, max_value=1e10, allow_nan=False, allow_subnormal=False
+            ),
         ),
         min_size=0,
         max_size=100,
@@ -365,35 +390,37 @@ def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
         st.floats(min_value=0.001, max_value=1_000, allow_nan=False), max_size=50
     ),
 )
-@pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature.",
-    "ignore:invalid value encountered in cast:RuntimeWarning",
-)
 @pytest.mark.skipif(
-    POLARS_VERSION < (1, 15),
-    reason="hist(bins=...) cannot be used for compatibility checks since narwhals aims to mimic polars>=1.2.0 behavior",
+    POLARS_VERSION < (1, 27),
+    reason="polars cannot be used for compatibility checks since narwhals aims to mimic polars>=1.27 behavior",
 )
+@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
+@pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
 @pytest.mark.slow
 def test_hist_bin_hypotheis(
-    constructor_eager: ConstructorEager,
-    data: list[float],
-    bin_deltas: list[float],
+    library: str, data: list[float], bin_deltas: list[float]
 ) -> None:
+    if library == "pandas":
+        constructor_eager: Any = pd.DataFrame
+    elif library == "polars":
+        pl = pytest.importorskip("polars")
+        constructor_eager = pl.DataFrame
+    else:
+        pa = pytest.importorskip("pyarrow")
+        constructor_eager = pa.table
+    pytest.importorskip("polars")
     import polars as pl
-
-    if "cudf" in str(constructor_eager):
-        # TODO(unassigned): too many spurious failures, report and revisit
-        return
 
     df = nw.from_native(constructor_eager({"values": data})).select(
         nw.col("values").cast(nw.Float64)
     )
+    df_bins_native = constructor_eager({"bins": bin_deltas})
     bins = (
-        nw.from_native(constructor_eager({"bins": bin_deltas})["bins"], series_only=True)  # type:ignore[index]
+        nw.from_native(df_bins_native, eager_only=True)
+        .get_column("bins")
         .cast(nw.Float64)
         .cum_sum()
     )
-
     result = df["values"].hist(
         bins=bins.to_list(),
         include_breakpoint=True,
@@ -404,44 +431,45 @@ def test_hist_bin_hypotheis(
         include_breakpoint=True,
         include_category=False,
     )
-
     assert_equal_data(result, expected.to_dict(as_series=False))
 
 
 @given(
     data=st.lists(
-        # min_value/max_value from PyArrows min/max boundaries
-        st.floats(
-            min_value=-9007199254740992,
-            max_value=9007199254740992,
-            allow_nan=False,
-            allow_infinity=False,
-        ),
-        min_size=0,
+        st.integers(
+            min_value=-int(1e9), max_value=int(1e9)
+        ),  # dynamic bin creation & small floating point value distances creates lots of noise
         max_size=100,
     ),
-    bin_count=st.integers(min_value=0, max_value=1_000),
+    bin_count=st.integers(min_value=1, max_value=20),
 )
 @pytest.mark.skipif(
-    POLARS_VERSION < (1, 15),
-    reason="hist(bin_count=...) behavior significantly changed after this version",
+    POLARS_VERSION < (1, 27),
+    reason="polars cannot be used for compatibility checks since narwhals aims to mimic polars>=1.27 behavior",
 )
 @pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature.",
     "ignore:invalid value encountered in cast:RuntimeWarning",
 )
+@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
 @pytest.mark.slow
 def test_hist_count_hypothesis(
-    constructor_eager: ConstructorEager,
+    library: str,
     data: list[float],
     bin_count: int,
     request: pytest.FixtureRequest,
 ) -> None:
+    pytest.importorskip("polars")
     import polars as pl
 
-    if "cudf" in str(constructor_eager):
-        # TODO(unassigned): too many spurious failures, report and revisit
-        return
+    if library == "pandas":
+        constructor_eager: Any = pd.DataFrame
+    elif library == "polars":
+        constructor_eager = pl.DataFrame
+    else:
+        pa = pytest.importorskip("pyarrow")
+        constructor_eager = pa.table
+    if library == "pyarrow" and PYARROW_VERSION < (13,):
+        pytest.skip()
 
     df = nw.from_native(constructor_eager({"values": data})).select(
         nw.col("values").cast(nw.Float64)
@@ -468,7 +496,10 @@ def test_hist_count_hypothesis(
     # Bug in Polars <= 1.21; hist becomes unreliable when passing bin_counts
     #   for data with a wide range and a large number of passed bins
     #   https://github.com/pola-rs/polars/issues/20879
-    if expected["count"].sum() != expected_data.count() and "polars" not in str(
+
+    if expected[
+        "count"
+    ].sum() != expected_data.is_not_nan().sum() and "polars" not in str(
         constructor_eager
     ):
         request.applymarker(pytest.mark.xfail)

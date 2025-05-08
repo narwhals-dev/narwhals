@@ -8,7 +8,6 @@ from enum import auto
 from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Callable
 from typing import Literal
 from typing import Sequence
 from typing import TypeVar
@@ -26,14 +25,16 @@ if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
     from narwhals._compliant import CompliantExpr
-    from narwhals._compliant import CompliantExprT
     from narwhals._compliant import CompliantFrameT
-    from narwhals._compliant import CompliantNamespace
+    from narwhals._compliant.typing import AliasNames
+    from narwhals._compliant.typing import CompliantExprAny
+    from narwhals._compliant.typing import CompliantFrameAny
+    from narwhals._compliant.typing import CompliantNamespaceAny
     from narwhals._compliant.typing import EagerNamespaceAny
+    from narwhals._compliant.typing import EvalNames
     from narwhals.expr import Expr
-    from narwhals.typing import CompliantDataFrame
-    from narwhals.typing import CompliantLazyFrame
     from narwhals.typing import IntoExpr
+    from narwhals.typing import NonNestedLiteral
     from narwhals.typing import _1DArray
 
     T = TypeVar("T")
@@ -48,7 +49,7 @@ def is_expr(obj: Any) -> TypeIs[Expr]:
 
 def combine_evaluate_output_names(
     *exprs: CompliantExpr[CompliantFrameT, Any],
-) -> Callable[[CompliantFrameT], Sequence[str]]:
+) -> EvalNames[CompliantFrameT]:
     # Follow left-hand-rule for naming. E.g. `nw.sum_horizontal(expr1, expr2)` takes the
     # first name of `expr1`.
     if not is_compliant_expr(exprs[0]):  # pragma: no cover
@@ -61,9 +62,7 @@ def combine_evaluate_output_names(
     return evaluate_output_names
 
 
-def combine_alias_output_names(
-    *exprs: CompliantExpr[Any, Any],
-) -> Callable[[Sequence[str]], Sequence[str]] | None:
+def combine_alias_output_names(*exprs: CompliantExprAny) -> AliasNames | None:
     # Follow left-hand-rule for naming. E.g. `nw.sum_horizontal(expr1.alias(alias), expr2)` takes the
     # aliasing function of `expr1` and apply it to the first output name of `expr1`.
     if exprs[0]._alias_output_names is None:
@@ -76,8 +75,11 @@ def combine_alias_output_names(
 
 
 def extract_compliant(
-    plx: CompliantNamespace[Any, CompliantExprT], other: Any, *, str_as_lit: bool
-) -> CompliantExprT | object:
+    plx: CompliantNamespaceAny,
+    other: IntoExpr | NonNestedLiteral | _1DArray,
+    *,
+    str_as_lit: bool,
+) -> CompliantExprAny | NonNestedLiteral:
     if is_expr(other):
         return other._to_compliant_expr(plx)
     if isinstance(other, str) and not str_as_lit:
@@ -91,13 +93,9 @@ def extract_compliant(
 
 
 def evaluate_output_names_and_aliases(
-    expr: CompliantExpr[Any, Any],
-    df: CompliantDataFrame[Any, Any, Any] | CompliantLazyFrame[Any, Any],
-    exclude: Sequence[str],
+    expr: CompliantExprAny, df: CompliantFrameAny, exclude: Sequence[str]
 ) -> tuple[Sequence[str], Sequence[str]]:
     output_names = expr._evaluate_output_names(df)
-    if not output_names:
-        return [], []
     aliases = (
         output_names
         if expr._alias_output_names is None
@@ -123,7 +121,7 @@ class ExprKind(Enum):
     - LITERAL vs LITERAL -> LITERAL
     - FILTRATION vs (LITERAL | AGGREGATION) -> FILTRATION
     - FILTRATION vs (FILTRATION | TRANSFORM | WINDOW) -> raise
-    - (TRANSFORM | WINDOW) vs (LITERAL | AGGREGATION) -> TRANSFORM
+    - (TRANSFORM | WINDOW) vs (...) -> TRANSFORM
     - AGGREGATION vs (LITERAL | AGGREGATION) -> AGGREGATION
     """
 
@@ -163,6 +161,20 @@ class ExprKind(Enum):
     def is_scalar_like(self) -> bool:
         return is_scalar_like(self)
 
+    @classmethod
+    def from_into_expr(
+        cls, obj: IntoExpr | NonNestedLiteral | _1DArray, *, str_as_lit: bool
+    ) -> ExprKind:
+        if is_expr(obj):
+            return obj._metadata.kind
+        if (
+            is_narwhals_series(obj)
+            or is_numpy_array(obj)
+            or (isinstance(obj, str) and not str_as_lit)
+        ):
+            return ExprKind.TRANSFORM
+        return ExprKind.LITERAL
+
 
 def is_scalar_like(
     kind: ExprKind,
@@ -186,21 +198,60 @@ class ExpansionKind(Enum):
     def is_multi_unnamed(self) -> bool:
         return self is ExpansionKind.MULTI_UNNAMED
 
+    def is_multi_output(self) -> bool:
+        return self in {ExpansionKind.MULTI_NAMED, ExpansionKind.MULTI_UNNAMED}
 
-def is_multi_output(
-    expansion_kind: ExpansionKind,
-) -> TypeIs[Literal[ExpansionKind.MULTI_NAMED, ExpansionKind.MULTI_UNNAMED]]:
-    return expansion_kind in {ExpansionKind.MULTI_NAMED, ExpansionKind.MULTI_UNNAMED}
+    def __and__(self, other: ExpansionKind) -> Literal[ExpansionKind.MULTI_UNNAMED]:
+        if self is ExpansionKind.MULTI_UNNAMED and other is ExpansionKind.MULTI_UNNAMED:
+            # e.g. nw.selectors.all() - nw.selectors.numeric().
+            return ExpansionKind.MULTI_UNNAMED
+        # Don't attempt anything more complex, keep it simple and raise in the face of ambiguity.
+        msg = f"Unsupported ExpansionKind combination, got {self} and {other}, please report a bug."  # pragma: no cover
+        raise AssertionError(msg)  # pragma: no cover
+
+
+class WindowKind(Enum):
+    """Describe what kind of window the expression contains."""
+
+    NONE = auto()
+    """e.g. `nw.col('a').abs()`, no windows."""
+
+    CLOSEABLE = auto()
+    """e.g. `nw.col('a').cum_sum()` - can be closed if immediately followed by `over(order_by=...)`."""
+
+    UNCLOSEABLE = auto()
+    """e.g. `nw.col('a').cum_sum().abs()` - the window function (`cum_sum`) wasn't immediately followed by
+    `over(order_by=...)`, and so the window is uncloseable.
+
+    Uncloseable windows can be used freely in `nw.DataFrame`, but not in `nw.LazyFrame` where
+    row-order is undefined."""
+
+    CLOSED = auto()
+    """e.g. `nw.col('a').cum_sum().over(order_by='i')`."""
+
+    def is_open(self) -> bool:
+        return self in {WindowKind.UNCLOSEABLE, WindowKind.CLOSEABLE}
+
+    def is_closed(self) -> bool:
+        return self is WindowKind.CLOSED
+
+    def is_uncloseable(self) -> bool:
+        return self is WindowKind.UNCLOSEABLE
 
 
 class ExprMetadata:
-    __slots__ = ("_expansion_kind", "_kind", "_n_open_windows")
+    __slots__ = ("_expansion_kind", "_kind", "_window_kind")
 
     def __init__(
-        self, kind: ExprKind, /, *, n_open_windows: int, expansion_kind: ExpansionKind
+        self,
+        kind: ExprKind,
+        /,
+        *,
+        window_kind: WindowKind,
+        expansion_kind: ExpansionKind,
     ) -> None:
         self._kind: ExprKind = kind
-        self._n_open_windows = n_open_windows
+        self._window_kind = window_kind
         self._expansion_kind = expansion_kind
 
     def __init_subclass__(cls, /, *args: Any, **kwds: Any) -> Never:  # pragma: no cover
@@ -208,15 +259,15 @@ class ExprMetadata:
         raise TypeError(msg)
 
     def __repr__(self) -> str:
-        return f"ExprMetadata(kind: {self._kind}, n_open_windows: {self._n_open_windows}, expansion_kind: {self._expansion_kind})"
+        return f"ExprMetadata(kind: {self._kind}, window_kind: {self._window_kind}, expansion_kind: {self._expansion_kind})"
 
     @property
     def kind(self) -> ExprKind:
         return self._kind
 
     @property
-    def n_open_windows(self) -> int:
-        return self._n_open_windows
+    def window_kind(self) -> WindowKind:
+        return self._window_kind
 
     @property
     def expansion_kind(self) -> ExpansionKind:
@@ -225,50 +276,91 @@ class ExprMetadata:
     def with_kind(self, kind: ExprKind, /) -> ExprMetadata:
         """Change metadata kind, leaving all other attributes the same."""
         return ExprMetadata(
-            kind, n_open_windows=self._n_open_windows, expansion_kind=self._expansion_kind
+            kind,
+            window_kind=self._window_kind,
+            expansion_kind=self._expansion_kind,
         )
 
-    def with_extra_open_window(self) -> ExprMetadata:
-        """Increment `n_open_windows` leaving other attributes the same."""
+    def with_uncloseable_window(self) -> ExprMetadata:
+        """Add uncloseable window, leaving other attributes the same."""
+        if self._window_kind is WindowKind.CLOSED:  # pragma: no cover
+            msg = "Unreachable code, please report a bug."
+            raise AssertionError(msg)
         return ExprMetadata(
             self.kind,
-            n_open_windows=self._n_open_windows + 1,
+            window_kind=WindowKind.UNCLOSEABLE,
             expansion_kind=self._expansion_kind,
         )
 
-    def with_kind_and_extra_open_window(self, kind: ExprKind, /) -> ExprMetadata:
-        """Change metadata kind and increment `n_open_windows`."""
+    def with_kind_and_closeable_window(self, kind: ExprKind, /) -> ExprMetadata:
+        """Change metadata kind and add closeable window.
+
+        If we already have an uncloseable window, the window stays uncloseable.
+        """
+        if self._window_kind is WindowKind.NONE:
+            window_kind = WindowKind.CLOSEABLE
+        elif self._window_kind is WindowKind.CLOSED:  # pragma: no cover
+            msg = "Unreachable code, please report a bug."
+            raise AssertionError(msg)
+        else:
+            window_kind = WindowKind.UNCLOSEABLE
         return ExprMetadata(
             kind,
-            n_open_windows=self._n_open_windows + 1,
+            window_kind=window_kind,
+            expansion_kind=self._expansion_kind,
+        )
+
+    def with_kind_and_uncloseable_window(self, kind: ExprKind, /) -> ExprMetadata:
+        """Change metadata kind and set window kind to uncloseable."""
+        return ExprMetadata(
+            kind,
+            window_kind=WindowKind.UNCLOSEABLE,
             expansion_kind=self._expansion_kind,
         )
 
     @staticmethod
-    def simple_selector() -> ExprMetadata:
+    def selector_single() -> ExprMetadata:
         # e.g. `nw.col('a')`, `nw.nth(0)`
         return ExprMetadata(
-            ExprKind.TRANSFORM, n_open_windows=0, expansion_kind=ExpansionKind.SINGLE
+            ExprKind.TRANSFORM,
+            window_kind=WindowKind.NONE,
+            expansion_kind=ExpansionKind.SINGLE,
         )
 
     @staticmethod
-    def multi_output_selector_named() -> ExprMetadata:
+    def selector_multi_named() -> ExprMetadata:
         # e.g. `nw.col('a', 'b')`
         return ExprMetadata(
-            ExprKind.TRANSFORM, n_open_windows=0, expansion_kind=ExpansionKind.MULTI_NAMED
+            ExprKind.TRANSFORM,
+            window_kind=WindowKind.NONE,
+            expansion_kind=ExpansionKind.MULTI_NAMED,
         )
 
     @staticmethod
-    def multi_output_selector_unnamed() -> ExprMetadata:
+    def selector_multi_unnamed() -> ExprMetadata:
         # e.g. `nw.all()`
         return ExprMetadata(
             ExprKind.TRANSFORM,
-            n_open_windows=0,
+            window_kind=WindowKind.NONE,
             expansion_kind=ExpansionKind.MULTI_UNNAMED,
         )
 
+    @classmethod
+    def from_binary_op(cls, lhs: Expr, rhs: IntoExpr, /) -> ExprMetadata:
+        # We may be able to allow multi-output rhs in the future:
+        # https://github.com/narwhals-dev/narwhals/issues/2244.
+        return combine_metadata(
+            lhs, rhs, str_as_lit=True, allow_multi_output=False, to_single_output=False
+        )
 
-def combine_metadata(
+    @classmethod
+    def from_horizontal_op(cls, *exprs: IntoExpr) -> ExprMetadata:
+        return combine_metadata(
+            *exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
+        )
+
+
+def combine_metadata(  # noqa: C901, PLR0912, PLR0915
     *args: IntoExpr | object | None,
     str_as_lit: bool,
     allow_multi_output: bool,
@@ -287,14 +379,18 @@ def combine_metadata(
     has_transforms_or_windows = False
     has_aggregations = False
     has_literals = False
-    result_n_open_windows = 0
     result_expansion_kind = ExpansionKind.SINGLE
+    has_closeable_windows = False
+    has_uncloseable_windows = False
+    has_closed_windows = False
 
-    for i, arg in enumerate(args):
+    for i, arg in enumerate(args):  # noqa: PLR1702
         if isinstance(arg, str) and not str_as_lit:
             has_transforms_or_windows = True
         elif is_expr(arg):
-            if is_multi_output(arg._metadata.expansion_kind):
+            metadata = arg._metadata
+            if metadata.expansion_kind.is_multi_output():
+                expansion_kind = metadata.expansion_kind
                 if i > 0 and not allow_multi_output:
                     # Left-most argument is always allowed to be multi-output.
                     msg = (
@@ -304,14 +400,10 @@ def combine_metadata(
                     raise MultiOutputExpressionError(msg)
                 if not to_single_output:
                     if i == 0:
-                        result_expansion_kind = arg._metadata.expansion_kind
+                        result_expansion_kind = expansion_kind
                     else:
-                        result_expansion_kind = resolve_expansion_kind(
-                            result_expansion_kind, arg._metadata.expansion_kind
-                        )
-            if arg._metadata.n_open_windows:
-                result_n_open_windows += 1
-            kind = arg._metadata.kind
+                        result_expansion_kind = result_expansion_kind & expansion_kind
+            kind = metadata.kind
             if kind is ExprKind.AGGREGATION:
                 has_aggregations = True
             elif kind is ExprKind.LITERAL:
@@ -323,6 +415,14 @@ def combine_metadata(
             else:  # pragma: no cover
                 msg = "unreachable code"
                 raise AssertionError(msg)
+
+            window_kind = metadata.window_kind
+            if window_kind is WindowKind.UNCLOSEABLE:
+                has_uncloseable_windows = True
+            elif window_kind is WindowKind.CLOSEABLE:
+                has_closeable_windows = True
+            elif window_kind is WindowKind.CLOSED:
+                has_closed_windows = True
 
     if (
         has_literals
@@ -344,33 +444,15 @@ def combine_metadata(
     else:
         result_kind = ExprKind.AGGREGATION
 
+    if has_uncloseable_windows or has_closeable_windows:
+        result_window_kind = WindowKind.UNCLOSEABLE
+    elif has_closed_windows:
+        result_window_kind = WindowKind.CLOSED
+    else:
+        result_window_kind = WindowKind.NONE
+
     return ExprMetadata(
-        result_kind,
-        n_open_windows=result_n_open_windows,
-        expansion_kind=result_expansion_kind,
-    )
-
-
-def resolve_expansion_kind(lhs: ExpansionKind, rhs: ExpansionKind) -> ExpansionKind:
-    if lhs is ExpansionKind.MULTI_UNNAMED and rhs is ExpansionKind.MULTI_UNNAMED:
-        # e.g. nw.selectors.all() - nw.selectors.numeric().
-        return ExpansionKind.MULTI_UNNAMED
-    # Don't attempt anything more complex, keep it simple and raise in the face of ambiguity.
-    msg = f"Unsupported ExpansionKind combination, got {lhs} and {rhs}, please report a bug."  # pragma: no cover
-    raise AssertionError(msg)  # pragma: no cover
-
-
-def combine_metadata_binary_op(lhs: Expr, rhs: IntoExpr) -> ExprMetadata:
-    # We may be able to allow multi-output rhs in the future:
-    # https://github.com/narwhals-dev/narwhals/issues/2244.
-    return combine_metadata(
-        lhs, rhs, str_as_lit=True, allow_multi_output=False, to_single_output=False
-    )
-
-
-def combine_metadata_horizontal_op(*exprs: IntoExpr) -> ExprMetadata:
-    return combine_metadata(
-        *exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
+        result_kind, window_kind=result_window_kind, expansion_kind=result_expansion_kind
     )
 
 
@@ -397,31 +479,22 @@ def all_exprs_are_scalar_like(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
     return all(is_expr(x) and x._metadata.kind.is_scalar_like() for x in exprs)
 
 
-def infer_kind(obj: IntoExpr | _1DArray | object, *, str_as_lit: bool) -> ExprKind:
-    if is_expr(obj):
-        return obj._metadata.kind
-    if (
-        is_narwhals_series(obj)
-        or is_numpy_array(obj)
-        or (isinstance(obj, str) and not str_as_lit)
-    ):
-        return ExprKind.TRANSFORM
-    return ExprKind.LITERAL
-
-
 def apply_n_ary_operation(
-    plx: CompliantNamespace[Any, Any],
+    plx: CompliantNamespaceAny,
     function: Any,
-    *comparands: IntoExpr,
+    *comparands: IntoExpr | NonNestedLiteral | _1DArray,
     str_as_lit: bool,
-) -> CompliantExpr[Any, Any]:
+) -> CompliantExprAny:
     compliant_exprs = (
         extract_compliant(plx, comparand, str_as_lit=str_as_lit)
         for comparand in comparands
     )
-    kinds = [infer_kind(comparand, str_as_lit=str_as_lit) for comparand in comparands]
+    kinds = [
+        ExprKind.from_into_expr(comparand, str_as_lit=str_as_lit)
+        for comparand in comparands
+    ]
 
-    broadcast = any(kind.preserves_length() for kind in kinds)
+    broadcast = any(not kind.is_scalar_like() for kind in kinds)
     compliant_exprs = (
         compliant_expr.broadcast(kind)
         if broadcast and is_compliant_expr(compliant_expr) and is_scalar_like(kind)

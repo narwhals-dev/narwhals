@@ -11,8 +11,7 @@ from typing import Any
 import pandas as pd
 import pytest
 
-import narwhals as nw_main
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
@@ -177,6 +176,19 @@ def test_dtypes() -> None:
     assert df_from_pd.schema == df_from_pd.collect_schema() == expected
     assert {name: df_from_pd[name].dtype for name in df_from_pd.columns} == expected
 
+    df_from_pd = nw.from_native(df_pl.to_pandas(), eager_only=True)
+
+    pure_pd_expected = {
+        **expected,
+        "n": nw.Datetime,
+        "s": nw.Object,
+        "u": nw.Object,
+    }
+    assert df_from_pd.schema == df_from_pd.collect_schema() == pure_pd_expected
+    assert {
+        name: df_from_pd[name].dtype for name in df_from_pd.columns
+    } == pure_pd_expected
+
     df_from_pa = nw.from_native(df_pl.to_arrow(), eager_only=True)
 
     assert df_from_pa.schema == df_from_pa.collect_schema() == expected
@@ -302,7 +314,10 @@ def test_nested_dtypes_ibis(request: pytest.FixtureRequest) -> None:  # pragma: 
     )
     tbl = ibis.memtable(df[["a", "c"]])
     nwdf = nw.from_native(tbl)
-    assert nwdf.schema == {"a": nw.List(nw.Int64), "c": nw.Struct({"a": nw.Int64})}
+    assert nwdf.schema == {
+        "a": nw.List(nw.Int64),
+        "c": nw.Struct({"a": nw.Int64}),
+    }
 
 
 @pytest.mark.skipif(
@@ -332,12 +347,8 @@ def test_nested_dtypes_dask() -> None:
 
 def test_all_nulls_pandas() -> None:
     assert (
-        nw_main.from_native(pd.Series([None] * 3, dtype="object"), series_only=True).dtype
-        == nw_main.String
-    )
-    assert (
         nw.from_native(pd.Series([None] * 3, dtype="object"), series_only=True).dtype
-        == nw.Object
+        == nw.String
     )
 
 

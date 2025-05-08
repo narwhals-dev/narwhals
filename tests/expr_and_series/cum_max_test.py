@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
+from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import PYARROW_VERSION
@@ -53,9 +54,6 @@ def test_lazy_cum_max_grouped(
     reverse: bool,
     expected_a: list[int],
 ) -> None:
-    if "duckdb" in str(constructor):
-        # no window function support yet in duckdb
-        request.applymarker(pytest.mark.xfail)
     if "pyarrow_table" in str(constructor):
         # grouped window functions not yet supported
         request.applymarker(pytest.mark.xfail)
@@ -64,7 +62,9 @@ def test_lazy_cum_max_grouped(
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    ):
         pytest.skip(reason="too old version")
     if "cudf" in str(constructor):
         # https://github.com/rapidsai/cudf/issues/18159
@@ -83,7 +83,7 @@ def test_lazy_cum_max_grouped(
     result = df.with_columns(
         nw.col("a").cum_max(reverse=reverse).over("g", order_by="b")
     ).sort("i")
-    expected = {"a": expected_a, "b": [1, 0, 2], "i": [0, 1, 2]}
+    expected = {"a": expected_a, "b": [1, 0, 2], "i": [0, 1, 2], "g": [1, 1, 1]}
     assert_equal_data(result, expected)
 
 
@@ -101,9 +101,6 @@ def test_lazy_cum_max_ordered_by_nulls(
     reverse: bool,
     expected_a: list[int],
 ) -> None:
-    if "duckdb" in str(constructor):
-        # no window function support yet in duckdb
-        request.applymarker(pytest.mark.xfail)
     if "pyarrow_table" in str(constructor):
         # grouped window functions not yet supported
         request.applymarker(pytest.mark.xfail)
@@ -112,7 +109,9 @@ def test_lazy_cum_max_ordered_by_nulls(
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    ):
         pytest.skip(reason="too old version")
     if "cudf" in str(constructor):
         # https://github.com/rapidsai/cudf/issues/18159
@@ -135,6 +134,7 @@ def test_lazy_cum_max_ordered_by_nulls(
         "a": expected_a,
         "b": [1, -1, 3, 2, 5, 0, None],
         "i": [0, 1, 2, 3, 4, 5, 6],
+        "g": [1, 1, 1, 1, 1, 1, 1],
     }
     assert_equal_data(result, expected)
 
@@ -153,15 +153,14 @@ def test_lazy_cum_max_ungrouped(
     reverse: bool,
     expected_a: list[int],
 ) -> None:
-    if "duckdb" in str(constructor):
-        # no window function support yet in duckdb
-        request.applymarker(pytest.mark.xfail)
     if "dask" in str(constructor) and reverse:
         # https://github.com/dask/dask/issues/11802
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         pytest.skip(reason="probably bugged")
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    ):
         pytest.skip(reason="too old version")
     if PYARROW_VERSION < (13, 0, 0) and "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -196,15 +195,14 @@ def test_lazy_cum_max_ungrouped_ordered_by_nulls(
     reverse: bool,
     expected_a: list[int],
 ) -> None:
-    if "duckdb" in str(constructor):
-        # no window function support yet in duckdb
-        request.applymarker(pytest.mark.xfail)
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         pytest.skip(reason="probably bugged")
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    ):
         pytest.skip(reason="too old version")
     if PYARROW_VERSION < (13, 0, 0) and "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail)

@@ -11,21 +11,17 @@ from typing import Sequence
 
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._pandas_like.utils import horizontal_concat
-from narwhals._pandas_like.utils import native_series_from_iterable
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_columns
 from narwhals.utils import find_stacklevel
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals._compliant.group_by import NarwhalsAggregation
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
 
 
-class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
+class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", str]):
     _REMAP_AGGS: ClassVar[Mapping[NarwhalsAggregation, Any]] = {
         "sum": "sum",
         "mean": "mean",
@@ -40,21 +36,24 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
     }
 
     def __init__(
-        self: Self,
+        self,
         df: PandasLikeDataFrame,
-        keys: Sequence[str],
+        keys: Sequence[PandasLikeExpr] | Sequence[str],
         /,
         *,
         drop_null_keys: bool,
     ) -> None:
-        self._compliant_frame = df
-        self._keys: list[str] = list(keys)
+        self._df = df
+        self._drop_null_keys = drop_null_keys
+        self._compliant_frame, self._keys, self._output_key_names = self._parse_keys(
+            df, keys=keys
+        )
         # Drop index to avoid potential collisions:
         # https://github.com/narwhals-dev/narwhals/issues/1907.
-        if set(df.native.index.names).intersection(df.columns):
-            native_frame = df.native.reset_index(drop=True)
+        if set(self.compliant.native.index.names).intersection(self.compliant.columns):
+            native_frame = self.compliant.native.reset_index(drop=True)
         else:
-            native_frame = df.native
+            native_frame = self.compliant.native
         if (
             self.compliant._implementation.is_pandas()
             and self.compliant._backend_version < (1, 1)
@@ -80,16 +79,15 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
                 observed=True,
             )
 
-    def agg(self: Self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:  # noqa: PLR0915
+    def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:  # noqa: C901, PLR0912, PLR0914, PLR0915
         implementation = self.compliant._implementation
         backend_version = self.compliant._backend_version
         new_names: list[str] = self._keys.copy()
 
         all_aggs_are_simple = True
+        exclude = (*self._keys, *self._output_key_names)
         for expr in exprs:
-            _, aliases = evaluate_output_names_and_aliases(
-                expr, self.compliant, self._keys
-            )
+            _, aliases = evaluate_output_names_and_aliases(expr, self.compliant, exclude)
             new_names.extend(aliases)
             if not self._is_simple(expr):
                 all_aggs_are_simple = False
@@ -112,10 +110,10 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
         expected_old_names: list[str] = []
         simple_agg_new_names: list[str] = []
 
-        if all_aggs_are_simple:
+        if all_aggs_are_simple:  # noqa: PLR1702
             for expr in exprs:
                 output_names, aliases = evaluate_output_names_and_aliases(
-                    expr, self.compliant, self._keys
+                    expr, self.compliant, exclude
                 )
                 if expr._depth == 0:
                     # e.g. `agg(nw.len())`
@@ -234,11 +232,8 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
                             pass
                     msg = f"Expected unique output names, got:{msg}"
                     raise ValueError(msg)
-                result = horizontal_concat(
-                    dfs=result_aggs,
-                    implementation=implementation,
-                    backend_version=backend_version,
-                )
+                namespace = self.compliant.__narwhals_namespace__()
+                result = namespace._concat_horizontal(result_aggs)
             else:
                 # No aggregation provided
                 result = self.compliant.__native_namespace__().DataFrame(
@@ -247,9 +242,9 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
             # Keep inplace=True to avoid making a redundant copy.
             # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
             result.reset_index(inplace=True)  # noqa: PD002
-            return self.compliant._from_native_frame(
+            return self.compliant._with_native(
                 select_columns_by_name(result, new_names, backend_version, implementation)
-            )
+            ).rename(dict(zip(self._keys, self._output_key_names)))
 
         if self.compliant.native.empty:
             # Don't even attempt this, it's way too inconsistent across pandas versions.
@@ -279,16 +274,12 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
             out_group = []
             out_names = []
             for expr in exprs:
-                results_keys = expr(self.compliant._from_native_frame(df))
+                results_keys = expr(self.compliant._with_native(df))
                 for result_keys in results_keys:
                     out_group.append(result_keys.native.iloc[0])
                     out_names.append(result_keys.name)
-            return native_series_from_iterable(
-                out_group,
-                index=out_names,
-                name="",
-                implementation=implementation,
-            )
+            ns = self.compliant.__narwhals_namespace__()
+            return ns._series.from_iterable(out_group, index=out_names, context=ns).native
 
         if implementation.is_pandas() and backend_version >= (2, 2):
             result_complex = self._grouped.apply(func, include_groups=False)
@@ -298,19 +289,22 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr"]):
         # Keep inplace=True to avoid making a redundant copy.
         # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
         result_complex.reset_index(inplace=True)  # noqa: PD002
-
-        return self.compliant._from_native_frame(
+        return self.compliant._with_native(
             select_columns_by_name(
                 result_complex, new_names, backend_version, implementation
             )
-        )
+        ).rename(dict(zip(self._keys, self._output_key_names)))
 
-    def __iter__(self: Self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
+    def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore",
                 message=".*a length 1 tuple will be returned",
                 category=FutureWarning,
             )
+
             for key, group in self._grouped:
-                yield (key, self.compliant._from_native_frame(group))
+                yield (
+                    key,
+                    self.compliant._with_native(group).simple_select(*self._df.columns),
+                )

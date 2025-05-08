@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -21,6 +21,7 @@ def test_is_finite_expr(constructor: Constructor) -> None:
     ):
         expected = {"a": [False, False, True, False]}
     else:  # pandas_nullable_constructor, pandas_pyarrow_constructor, modin_pyarrrow_constructor
+        # Here, the 'nan' and None get mangled upon dataframe construction.
         expected = {"a": [None, False, True, None]}
 
     df = nw.from_native(constructor(data))

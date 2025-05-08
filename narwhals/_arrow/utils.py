@@ -1,41 +1,41 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import Iterator
+from typing import Mapping
 from typing import Sequence
 from typing import cast
-from typing import overload
 
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from narwhals.utils import _SeriesNamespace
-from narwhals.utils import import_dtypes_module
+from narwhals._compliant.series import _SeriesNamespace
+from narwhals.exceptions import ShapeError
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    from typing import TypeVar
-
-    from typing_extensions import Self
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
 
     from narwhals._arrow.series import ArrowSeries
-    from narwhals._arrow.typing import ArrowArray
-    from narwhals._arrow.typing import ArrowChunkedArray
+    from narwhals._arrow.typing import ArrayAny
+    from narwhals._arrow.typing import ArrayOrScalar
+    from narwhals._arrow.typing import ArrayOrScalarT1
+    from narwhals._arrow.typing import ArrayOrScalarT2
+    from narwhals._arrow.typing import ChunkedArrayAny
+    from narwhals._arrow.typing import NativeIntervalUnit
+    from narwhals._arrow.typing import ScalarAny
+    from narwhals._duration import IntervalUnit
     from narwhals.dtypes import DType
-    from narwhals.typing import _AnyDArray
+    from narwhals.typing import PythonLiteral
     from narwhals.utils import Version
 
     # NOTE: stubs don't allow for `ChunkedArray[StructArray]`
     # Intended to represent the `.chunks` property storing `list[pa.StructArray]`
-    ChunkedArrayStructArray: TypeAlias = ArrowChunkedArray
-
-    _T = TypeVar("_T")
+    ChunkedArrayStructArray: TypeAlias = ChunkedArrayAny
 
     def is_timestamp(t: Any) -> TypeIs[pa.TimestampType[Any, Any]]: ...
     def is_duration(t: Any) -> TypeIs[pa.DurationType[Any]]: ...
@@ -46,7 +46,7 @@ if TYPE_CHECKING:
         t: Any,
     ) -> TypeIs[pa.DictionaryType[Any, Any, Any]]: ...
     def extract_regex(
-        strings: ArrowChunkedArray,
+        strings: ChunkedArrayAny,
         /,
         pattern: str,
         *,
@@ -62,6 +62,19 @@ else:
     from pyarrow.types import is_list
     from pyarrow.types import is_timestamp
 
+UNITS_DICT: Mapping[IntervalUnit, NativeIntervalUnit] = {
+    "y": "year",
+    "q": "quarter",
+    "mo": "month",
+    "d": "day",
+    "h": "hour",
+    "m": "minute",
+    "s": "second",
+    "ms": "millisecond",
+    "us": "microsecond",
+    "ns": "nanosecond",
+}
+
 lit = pa.scalar
 """Alias for `pyarrow.scalar`."""
 
@@ -73,17 +86,17 @@ def extract_py_scalar(value: Any, /) -> Any:
 
 
 def chunked_array(
-    arr: ArrowArray | list[Iterable[pa.Scalar[Any]]] | ArrowChunkedArray,
-) -> ArrowChunkedArray:
+    arr: ArrayOrScalar | list[Iterable[Any]], dtype: pa.DataType | None = None, /
+) -> ChunkedArrayAny:
     if isinstance(arr, pa.ChunkedArray):
         return arr
     if isinstance(arr, list):
-        return pa.chunked_array(cast("Any", arr))
+        return pa.chunked_array(arr, dtype)
     else:
         return pa.chunked_array([arr], arr.type)
 
 
-def nulls_like(n: int, series: ArrowSeries) -> ArrowArray:
+def nulls_like(n: int, series: ArrowSeries) -> ArrayAny:
     """Create a strongly-typed Array instance with all elements null.
 
     Uses the type of `series`, without upseting `mypy`.
@@ -92,8 +105,8 @@ def nulls_like(n: int, series: ArrowSeries) -> ArrowArray:
 
 
 @lru_cache(maxsize=16)
-def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
-    dtypes = import_dtypes_module(version)
+def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:  # noqa: C901, PLR0912
+    dtypes = version.dtypes
     if pa.types.is_int64(dtype):
         return dtypes.Int64()
     if pa.types.is_int32(dtype):
@@ -157,8 +170,8 @@ def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:
     return dtypes.Unknown()  # pragma: no cover
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa.DataType:
-    dtypes = import_dtypes_module(version)
+def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa.DataType:  # noqa: C901, PLR0912
+    dtypes = version.dtypes
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         msg = "Casting to Decimal is not supported yet."
         raise NotImplementedError(msg)
@@ -189,7 +202,8 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
         return pa.dictionary(pa.uint32(), pa.string())
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        return pa.timestamp(dtype.time_unit, tz=dtype.time_zone)  # pyright: ignore[reportArgumentType]
+        unit = dtype.time_unit
+        return pa.timestamp(unit, tz) if (tz := dtype.time_zone) else pa.timestamp(unit)
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         return pa.duration(dtype.time_unit)
     if isinstance_or_issubclass(dtype, dtypes.Date):
@@ -217,10 +231,8 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa
 
 
 def extract_native(
-    lhs: ArrowSeries, rhs: ArrowSeries | object
-) -> tuple[
-    ArrowChunkedArray | pa.Scalar[Any], ArrowChunkedArray | pa.Scalar[Any] | object
-]:
+    lhs: ArrowSeries, rhs: ArrowSeries | PythonLiteral | ScalarAny
+) -> tuple[ChunkedArrayAny | ScalarAny, ChunkedArrayAny | ScalarAny]:
     """Extract native objects in binary  operation.
 
     If the comparison isn't supported, return `NotImplemented` so that the
@@ -232,7 +244,7 @@ def extract_native(
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
 
-    if rhs is None:
+    if rhs is None:  # pragma: no cover
         return lhs.native, lit(None, type=lhs._type)
 
     if isinstance(rhs, ArrowDataFrame):
@@ -248,7 +260,8 @@ def extract_native(
     if isinstance(rhs, list):
         msg = "Expected Series or scalar, got list."
         raise TypeError(msg)
-    return lhs.native, rhs
+
+    return lhs.native, rhs if isinstance(rhs, pa.Scalar) else lit(rhs)
 
 
 def align_series_full_broadcast(*series: ArrowSeries) -> Sequence[ArrowSeries]:
@@ -260,88 +273,40 @@ def align_series_full_broadcast(*series: ArrowSeries) -> Sequence[ArrowSeries]:
     if fast_path:
         return series
 
-    is_max_length_gt_1 = max_length > 1
     reshaped = []
-    for s, length in zip(series, lengths):
-        if is_max_length_gt_1 and length == 1:
+    for s in series:
+        if s._broadcast:
             value = s.native[0]
             if s._backend_version < (13,) and hasattr(value, "as_py"):
                 value = value.as_py()
-            reshaped.append(
-                s._from_native_series(pa.array([value] * max_length, type=s._type))
-            )
+            reshaped.append(s._with_native(pa.array([value] * max_length, type=s._type)))
         else:
+            if (actual_len := len(s)) != max_length:
+                msg = f"Expected object of length {max_length}, got {actual_len}."
+                raise ShapeError(msg)
             reshaped.append(s)
 
     return reshaped
 
 
-def horizontal_concat(dfs: list[pa.Table]) -> pa.Table:
-    """Concatenate (native) DataFrames horizontally.
-
-    Should be in namespace.
-    """
-    names = [name for df in dfs for name in df.column_names]
-
-    if len(set(names)) < len(names):  # pragma: no cover
-        msg = "Expected unique column names"
-        raise ValueError(msg)
-    arrays = list(chain.from_iterable(df.itercolumns() for df in dfs))
-    return pa.Table.from_arrays(arrays, names=names)
-
-
-def vertical_concat(dfs: list[pa.Table]) -> pa.Table:
-    """Concatenate (native) DataFrames vertically.
-
-    Should be in namespace.
-    """
-    cols_0 = dfs[0].column_names
-    for i, df in enumerate(dfs[1:], start=1):
-        cols_current = df.column_names
-        if cols_current != cols_0:
-            msg = (
-                "unable to vstack, column names don't match:\n"
-                f"   - dataframe 0: {cols_0}\n"
-                f"   - dataframe {i}: {cols_current}\n"
-            )
-            raise TypeError(msg)
-
-    return pa.concat_tables(dfs)
-
-
-def diagonal_concat(dfs: list[pa.Table], backend_version: tuple[int, ...]) -> pa.Table:
-    """Concatenate (native) DataFrames diagonally.
-
-    Should be in namespace.
-    """
-    kwargs: dict[str, Any] = (
-        {"promote": True}
-        if backend_version < (14, 0, 0)
-        else {"promote_options": "default"}
-    )
-    return pa.concat_tables(dfs, **kwargs)
-
-
-def floordiv_compat(left: Any, right: Any) -> Any:
+def floordiv_compat(left: ArrayOrScalar, right: ArrayOrScalar, /) -> Any:
     # The following lines are adapted from pandas' pyarrow implementation.
     # Ref: https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L124-L154
-    if isinstance(left, (int, float)):
-        left = lit(left)
-
-    if isinstance(right, (int, float)):
-        right = lit(right)
 
     if pa.types.is_integer(left.type) and pa.types.is_integer(right.type):
         divided = pc.divide_checked(left, right)
+        # TODO @dangotbanned: Use a `TypeVar` in guards
+        # Narrowing to a `Union` isn't interacting well with the rest of the stubs
+        # https://github.com/zen-xu/pyarrow-stubs/pull/215
         if pa.types.is_signed_integer(divided.type):
-            # GH 56676
+            div_type = cast("pa._lib.Int64Type", divided.type)
             has_remainder = pc.not_equal(pc.multiply(divided, right), left)
             has_one_negative_operand = pc.less(
-                pc.bit_wise_xor(left, right), lit(0, type=divided.type)
+                pc.bit_wise_xor(left, right), lit(0, div_type)
             )
             result = pc.if_else(
                 pc.and_(has_remainder, has_one_negative_operand),
-                pc.subtract(divided, lit(1, type=divided.type)),
+                pc.subtract(divided, lit(1, div_type)),
                 divided,
             )
         else:
@@ -354,12 +319,8 @@ def floordiv_compat(left: Any, right: Any) -> Any:
 
 
 def cast_for_truediv(
-    arrow_array: ArrowChunkedArray | pa.Scalar[Any],
-    pa_object: ArrowChunkedArray | ArrowArray | pa.Scalar[Any],
-) -> tuple[
-    ArrowChunkedArray | pa.Scalar[Any],
-    ArrowChunkedArray | ArrowArray | pa.Scalar[Any],
-]:
+    arrow_array: ArrayOrScalarT1, pa_object: ArrayOrScalarT2
+) -> tuple[ArrayOrScalarT1, ArrayOrScalarT2]:
     # Lifted from:
     # https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L108-L122
     # Ensure int / int -> float mirroring Python/Numpy behavior
@@ -367,46 +328,12 @@ def cast_for_truediv(
     if pa.types.is_integer(arrow_array.type) and pa.types.is_integer(pa_object.type):
         # GH: 56645.  # noqa: ERA001
         # https://github.com/apache/arrow/issues/35563
+        # NOTE: `pyarrow==11.*` doesn't allow keywords in `Array.cast`
         return pc.cast(arrow_array, pa.float64(), safe=False), pc.cast(
             pa_object, pa.float64(), safe=False
         )
 
     return arrow_array, pa_object
-
-
-@overload
-def convert_slice_to_nparray(num_rows: int, rows_slice: slice) -> _AnyDArray: ...
-@overload
-def convert_slice_to_nparray(num_rows: int, rows_slice: _T) -> _T: ...
-def convert_slice_to_nparray(num_rows: int, rows_slice: slice | _T) -> _AnyDArray | _T:
-    if isinstance(rows_slice, slice):
-        import numpy as np  # ignore-banned-import
-
-        return np.arange(num_rows)[rows_slice]
-    else:
-        return rows_slice
-
-
-def select_rows(
-    table: pa.Table, rows: slice | int | Sequence[int] | _AnyDArray
-) -> pa.Table:
-    if isinstance(rows, slice) and rows == slice(None):
-        selected_rows = table
-    elif isinstance(rows, Sequence) and not rows:
-        selected_rows = table.slice(0, 0)
-    else:
-        range_ = convert_slice_to_nparray(num_rows=len(table), rows_slice=rows)
-        selected_rows = table.take(cast("list[int]", range_))
-    return selected_rows
-
-
-def convert_str_slice_to_int_slice(
-    str_slice: slice, columns: list[str]
-) -> tuple[int | None, int | None, int | None]:
-    start = columns.index(str_slice.start) if str_slice.start is not None else None
-    stop = columns.index(str_slice.stop) + 1 if str_slice.stop is not None else None
-    step = str_slice.step
-    return (start, stop, step)
 
 
 # Regex for date, time, separator and timezone components
@@ -435,7 +362,7 @@ TIME_FORMATS = ((HMS_RE, "%H:%M:%S"), (HM_RE, "%H:%M"), (HMS_RE_NO_SEP, "%H%M%S"
 
 
 def _extract_regex_concat_arrays(
-    strings: ArrowChunkedArray,
+    strings: ChunkedArrayAny,
     /,
     pattern: str,
     *,
@@ -448,7 +375,7 @@ def _extract_regex_concat_arrays(
     return cast("pa.StructArray", r)
 
 
-def parse_datetime_format(arr: ArrowChunkedArray) -> str:
+def parse_datetime_format(arr: ChunkedArrayAny) -> str:
     """Try to infer datetime format from StringArray."""
     matches = _extract_regex_concat_arrays(arr.drop_null().slice(0, 10), pattern=FULL_RE)
     if not pc.all(matches.is_valid()).as_py():
@@ -528,13 +455,12 @@ def pad_series(
     pad_left = pa.array([None] * offset_left, type=series._type)
     pad_right = pa.array([None] * offset_right, type=series._type)
     concat = pa.concat_arrays([pad_left, *series.native.chunks, pad_right])
-    return series._from_native_series(concat), offset_left + offset_right
+    return series._with_native(concat), offset_left + offset_right
 
 
 def cast_to_comparable_string_types(
-    *chunked_arrays: ArrowChunkedArray,
-    separator: str,
-) -> tuple[Iterator[ArrowChunkedArray], pa.Scalar[Any]]:
+    *chunked_arrays: ChunkedArrayAny, separator: str
+) -> tuple[Iterator[ChunkedArrayAny], ScalarAny]:
     # Ensure `chunked_arrays` are either all `string` or all `large_string`.
     dtype = (
         pa.string()  # (PyArrow default)
@@ -544,6 +470,6 @@ def cast_to_comparable_string_types(
     return (ca.cast(dtype) for ca in chunked_arrays), lit(separator, dtype)
 
 
-class ArrowSeriesNamespace(_SeriesNamespace["ArrowSeries", "ArrowChunkedArray"]):
-    def __init__(self: Self, series: ArrowSeries, /) -> None:
+class ArrowSeriesNamespace(_SeriesNamespace["ArrowSeries", "ChunkedArrayAny"]):
+    def __init__(self, series: ArrowSeries, /) -> None:
         self._compliant_series = series

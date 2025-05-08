@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 
 if TYPE_CHECKING:
     from tests.utils import Constructor

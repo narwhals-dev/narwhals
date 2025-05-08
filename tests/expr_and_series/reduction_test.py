@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import DUCKDB_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -26,7 +26,6 @@ from tests.utils import assert_equal_data
             {"a": [1, 2, 3], "min": [4, 4, 4]},
         ),
     ],
-    ids=range(5),
 )
 def test_scalar_reduction_select(
     constructor: Constructor,
@@ -56,7 +55,6 @@ def test_scalar_reduction_select(
             {"a": [1, 2, 3], "min": [4, 4, 4]},
         ),
     ],
-    ids=range(5),
 )
 def test_scalar_reduction_with_columns(
     constructor: Constructor,

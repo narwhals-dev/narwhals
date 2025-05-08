@@ -24,6 +24,8 @@ if TYPE_CHECKING:
     from typing_extensions import Self
     from typing_extensions import TypeAlias
 
+    from narwhals._compliant.typing import EvalSeries
+    from narwhals.typing import NonNestedLiteral
     from narwhals.utils import Implementation
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -46,9 +48,9 @@ SeriesT = TypeVar("SeriesT", bound=CompliantSeriesOrNativeExprAny)
 FrameT = TypeVar("FrameT", bound=CompliantFrameAny)
 
 Scalar: TypeAlias = Any
-"""A native or python literal value."""
+"""A native literal value."""
 
-IntoExpr: TypeAlias = "SeriesT | ExprT | Scalar"
+IntoExpr: TypeAlias = "SeriesT | ExprT | NonNestedLiteral | Scalar"
 """Anything that is convertible into a `CompliantExpr`."""
 
 
@@ -82,7 +84,7 @@ class CompliantWhen(Protocol38[FrameT, SeriesT, ExprT]):
 
 
 class CompliantThen(CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, ExprT]):
-    _call: Callable[[FrameT], Sequence[SeriesT]]
+    _call: EvalSeries[FrameT, SeriesT]
     _when_value: CompliantWhen[FrameT, SeriesT, ExprT]
     _function_name: str
     _depth: int
@@ -128,7 +130,7 @@ class EagerWhen(
         self,
         when: NativeSeriesT,
         then: NativeSeriesT,
-        otherwise: NativeSeriesT | Scalar | None,
+        otherwise: NativeSeriesT | NonNestedLiteral | Scalar,
         /,
     ) -> NativeSeriesT: ...
 
@@ -146,7 +148,7 @@ class EagerWhen(
         else:
             otherwise = self._otherwise_value
         result = self._if_then_else(when.native, df._extract_comparand(then), otherwise)
-        return [then._from_native_series(result)]
+        return [then._with_native(result)]
 
 
 class LazyWhen(
@@ -156,7 +158,7 @@ class LazyWhen(
     when: Callable[..., NativeExprT]
     lit: Callable[..., NativeExprT]
 
-    def __call__(self: Self, df: CompliantLazyFrameT) -> Sequence[NativeExprT]:
+    def __call__(self, df: CompliantLazyFrameT) -> Sequence[NativeExprT]:
         is_expr = self._condition._is_expr
         when = self.when
         lit = self.lit

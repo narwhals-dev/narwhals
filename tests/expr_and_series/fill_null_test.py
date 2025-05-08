@@ -6,7 +6,9 @@ from typing import Any
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
+from tests.utils import DUCKDB_VERSION
+from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
@@ -64,20 +66,23 @@ def test_fill_null_exceptions(constructor: Constructor) -> None:
         df.with_columns(nw.col("a").fill_null(strategy="invalid"))  # type: ignore  # noqa: PGH003
 
 
-def test_fill_null_strategies_with_limit_as_none(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_fill_null_strategies_with_limit_as_none(constructor: Constructor) -> None:
+    if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)) or (
+        "polars" in str(constructor) and POLARS_VERSION < (1, 10)
+    ):
+        pytest.skip()
+
     data_limits = {
         "a": [1, None, None, None, 5, 6, None, None, None, 10],
         "b": ["a", None, None, None, "b", "c", None, None, None, "d"],
+        "idx": list(range(10)),
     }
     df = nw.from_native(constructor(data_limits))
 
     expected_forward = {
         "a": [1, 1, 1, 1, 5, 6, 6, 6, 6, 10],
         "b": ["a", "a", "a", "a", "b", "c", "c", "c", "c", "d"],
+        "idx": list(range(10)),
     }
     if (
         "pandas_pyarrow_constructor" in str(constructor)
@@ -94,12 +99,16 @@ def test_fill_null_strategies_with_limit_as_none(
                 "ignore", message="Falling back on a non-pyarrow code path which"
             )
             result_forward = df.with_columns(
-                nw.col("a", "b").fill_null(strategy="forward", limit=None)
+                nw.col("a", "b")
+                .fill_null(strategy="forward", limit=None)
+                .over(order_by="idx")
             )
             assert_equal_data(result_forward, expected_forward)
     else:
         result_forward = df.with_columns(
-            nw.col("a", "b").fill_null(strategy="forward", limit=None)
+            nw.col("a", "b")
+            .fill_null(strategy="forward", limit=None)
+            .over(order_by="idx")
         )
 
         assert_equal_data(result_forward, expected_forward)
@@ -107,6 +116,7 @@ def test_fill_null_strategies_with_limit_as_none(
     expected_backward = {
         "a": [1, 5, 5, 5, 5, 6, 10, 10, 10, 10],
         "b": ["a", "b", "b", "b", "b", "c", "d", "d", "d", "d"],
+        "idx": list(range(10)),
     }
     if (
         "pandas_pyarrow_constructor" in str(constructor)
@@ -124,21 +134,26 @@ def test_fill_null_strategies_with_limit_as_none(
                 "ignore", message="Falling back on a non-pyarrow code path which"
             )
             result_backward = df.with_columns(
-                nw.col("a", "b").fill_null(strategy="backward", limit=None)
+                nw.col("a", "b")
+                .fill_null(strategy="backward", limit=None)
+                .over(order_by="idx")
             )
             assert_equal_data(result_backward, expected_backward)
     else:
         result_backward = df.with_columns(
-            nw.col("a", "b").fill_null(strategy="backward", limit=None)
+            nw.col("a", "b")
+            .fill_null(strategy="backward", limit=None)
+            .over(order_by="idx")
         )
         assert_equal_data(result_backward, expected_backward)
 
 
-def test_fill_null_limits(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_fill_null_limits(constructor: Constructor) -> None:
+    if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)) or (
+        "polars" in str(constructor) and POLARS_VERSION < (1, 10)
+    ):
+        pytest.skip()
+
     context: Any = (
         pytest.raises(NotImplementedError, match="The limit keyword is not supported")
         if "cudf" in str(constructor)
@@ -149,6 +164,7 @@ def test_fill_null_limits(
     data_limits = {
         "a": [1, None, None, None, 5, 6, None, None, None, 10],
         "b": ["a", None, None, None, "b", "c", None, None, None, "d"],
+        "idx": list(range(10)),
     }
     df = nw.from_native(constructor(data_limits))
     with context:
@@ -158,21 +174,23 @@ def test_fill_null_limits(
             )
 
         result_forward = df.with_columns(
-            nw.col("a", "b").fill_null(strategy="forward", limit=2)
+            nw.col("a", "b").fill_null(strategy="forward", limit=2).over(order_by="idx")
         )
         expected_forward = {
             "a": [1, 1, 1, None, 5, 6, 6, 6, None, 10],
             "b": ["a", "a", "a", None, "b", "c", "c", "c", None, "d"],
+            "idx": list(range(10)),
         }
         assert_equal_data(result_forward, expected_forward)
 
         result_backward = df.with_columns(
-            nw.col("a", "b").fill_null(strategy="backward", limit=2)
+            nw.col("a", "b").fill_null(strategy="backward", limit=2).over(order_by="idx")
         )
 
         expected_backward = {
             "a": [1, None, 5, 5, 5, 6, None, 10, 10, 10],
             "b": ["a", None, "b", "b", "b", "c", None, "d", "d", "d"],
+            "idx": list(range(10)),
         }
         assert_equal_data(result_backward, expected_backward)
 
@@ -348,3 +366,47 @@ def test_fill_null_series_exceptions(constructor_eager: ConstructorEager) -> Non
         df_float.select(
             a_zero_digit=df_float["a"].fill_null(strategy="invalid"),  # type: ignore  # noqa: PGH003
         )
+
+
+def test_fill_null_strategies_with_partition_by(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("pyarrow_table", "dask")):
+        request.applymarker(pytest.mark.xfail)
+
+    if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)) or (
+        "polars" in str(constructor) and POLARS_VERSION < (1, 10)
+    ):
+        pytest.skip()
+    if "modin" in str(constructor):
+        # unreliable
+        pytest.skip()
+
+    data = {
+        "partition": ["A", "B", "C", "B", "A", "B", "A", "C", "C"],
+        "values": [1, None, None, 2, None, 3, None, None, 4],
+        "idx": list(range(9)),
+    }
+    df = nw.from_native(constructor(data))
+
+    # Forward fill within each group
+    result_forward = df.with_columns(
+        nw.col("values").fill_null(strategy="forward").over("partition", order_by="idx")
+    ).sort("idx")
+    expected_forward = {
+        "partition": ["A", "B", "C", "B", "A", "B", "A", "C", "C"],
+        "values": [1, None, None, 2, 1, 3, 1, None, 4],
+        "idx": list(range(9)),
+    }
+    assert_equal_data(result_forward, expected_forward)
+
+    # Backward fill within each group
+    result_backward = df.with_columns(
+        nw.col("values").fill_null(strategy="backward").over("partition", order_by="idx")
+    ).sort("idx")
+    expected_backward = {
+        "partition": ["A", "B", "C", "B", "A", "B", "A", "C", "C"],
+        "values": [1, 2, 4, 2, None, 3, None, 4, 4],
+        "idx": list(range(9)),
+    }
+    assert_equal_data(result_backward, expected_backward)

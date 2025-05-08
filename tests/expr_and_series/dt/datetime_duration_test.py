@@ -8,7 +8,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -46,7 +46,7 @@ def test_duration_attributes(
     expected_c: list[int],
 ) -> None:
     if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     if "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor) and attribute == "total_nanoseconds":

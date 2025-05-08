@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import DUCKDB_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
@@ -62,16 +62,21 @@ def test_lazy_cum_sum_grouped(
         constructor(
             {
                 "arg entina": [1, 2, 3],
-                "ban gkock": [1, 0, 2],
+                "ban gkok": [1, 0, 2],
                 "i ran": [0, 1, 2],
                 "g": [1, 1, 1],
             }
         )
     )
     result = df.with_columns(
-        nw.col("arg entina").cum_sum(reverse=reverse).over("g", order_by="ban gkock")
+        nw.col("arg entina").cum_sum(reverse=reverse).over("g", order_by="ban gkok")
     ).sort("i ran")
-    expected = {"arg entina": expected_a, "ban gkock": [1, 0, 2], "i ran": [0, 1, 2]}
+    expected = {
+        "arg entina": expected_a,
+        "ban gkok": [1, 0, 2],
+        "i ran": [0, 1, 2],
+        "g": [1, 1, 1],
+    }
     assert_equal_data(result, expected)
 
 
@@ -110,19 +115,20 @@ def test_lazy_cum_sum_ordered_by_nulls(
         constructor(
             {
                 "arg entina": [1, 2, 3, 1, 2, 3, 4],
-                "ban gkock": [1, -1, 3, 2, 5, 0, None],
+                "ban gkok": [1, -1, 3, 2, 5, 0, None],
                 "i ran": [0, 1, 2, 3, 4, 5, 6],
                 "g": [1, 1, 1, 1, 1, 1, 1],
             }
         )
     )
     result = df.with_columns(
-        nw.col("arg entina").cum_sum(reverse=reverse).over("g", order_by="ban gkock")
+        nw.col("arg entina").cum_sum(reverse=reverse).over("g", order_by="ban gkok")
     ).sort("i ran")
     expected = {
         "arg entina": expected_a,
-        "ban gkock": [1, -1, 3, 2, 5, 0, None],
+        "ban gkok": [1, -1, 3, 2, 5, 0, None],
         "i ran": [0, 1, 2, 3, 4, 5, 6],
+        "g": [1, 1, 1, 1, 1, 1, 1],
     }
     assert_equal_data(result, expected)
 
@@ -156,15 +162,15 @@ def test_lazy_cum_sum_ungrouped(
         constructor(
             {
                 "arg entina": [2, 3, 1],
-                "ban gkock": [0, 2, 1],
+                "ban gkok": [0, 2, 1],
                 "i ran": [1, 2, 0],
             }
         )
     ).sort("i ran")
     result = df.with_columns(
-        nw.col("arg entina").cum_sum(reverse=reverse).over(order_by="ban gkock")
+        nw.col("arg entina").cum_sum(reverse=reverse).over(order_by="ban gkok")
     ).sort("i ran")
-    expected = {"arg entina": expected_a, "ban gkock": [1, 0, 2], "i ran": [0, 1, 2]}
+    expected = {"arg entina": expected_a, "ban gkok": [1, 0, 2], "i ran": [0, 1, 2]}
     assert_equal_data(result, expected)
 
 
@@ -197,17 +203,17 @@ def test_lazy_cum_sum_ungrouped_ordered_by_nulls(
         constructor(
             {
                 "arg entina": [1, 2, 3, 1, 2, 3, 4],
-                "ban gkock": [1, -1, 3, 2, 5, 0, None],
+                "ban gkok": [1, -1, 3, 2, 5, 0, None],
                 "i ran": [0, 1, 2, 3, 4, 5, 6],
             }
         )
     ).sort("i ran")
     result = df.with_columns(
-        nw.col("arg entina").cum_sum(reverse=reverse).over(order_by="ban gkock")
+        nw.col("arg entina").cum_sum(reverse=reverse).over(order_by="ban gkok")
     ).sort("i ran")
     expected = {
         "arg entina": expected_a,
-        "ban gkock": [1, -1, 3, 2, 5, 0, None],
+        "ban gkok": [1, -1, 3, 2, 5, 0, None],
         "i ran": [0, 1, 2, 3, 4, 5, 6],
     }
     assert_equal_data(result, expected)
@@ -219,4 +225,27 @@ def test_cum_sum_series(constructor_eager: ConstructorEager) -> None:
         cum_sum=df["arg entina"].cum_sum(),
         reverse_cum_sum=df["arg entina"].cum_sum(reverse=True),
     )
+    assert_equal_data(result, expected)
+
+
+def test_shift_cum_sum(constructor_eager: ConstructorEager) -> None:
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+        pytest.skip()
+    data = {"arg entina": [1, 2, 3, 4, 5], "i": list(range(5))}
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = df.with_columns(kalimantan=nw.col("arg entina").shift(1).cum_sum())
+    expected = {
+        "arg entina": [1, 2, 3, 4, 5],
+        "i": list(range(5)),
+        "kalimantan": [None, 1, 3, 6, 10],
+    }
+    assert_equal_data(result, expected)
+    result = df.with_columns(
+        kalimantan=nw.col("arg entina").shift(1).cum_sum().over(order_by="i")
+    )
+    expected = {
+        "arg entina": [1, 2, 3, 4, 5],
+        "i": list(range(5)),
+        "kalimantan": [None, 1, 3, 6, 10],
+    }
     assert_equal_data(result, expected)

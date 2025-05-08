@@ -7,7 +7,6 @@ from typing import Sequence
 
 from narwhals.exceptions import UnsupportedDTypeError
 from narwhals.utils import Implementation
-from narwhals.utils import import_dtypes_module
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -25,6 +24,19 @@ if TYPE_CHECKING:
 
     _NativeDType: TypeAlias = sqlframe_types.DataType
 
+UNITS_DICT = {
+    "y": "year",
+    "q": "quarter",
+    "mo": "month",
+    "d": "day",
+    "h": "hour",
+    "m": "minute",
+    "s": "second",
+    "ms": "millisecond",
+    "us": "microsecond",
+    "ns": "nanosecond",
+}
+
 
 class WindowInputs:
     __slots__ = ("expr", "order_by", "partition_by")
@@ -32,7 +44,7 @@ class WindowInputs:
     def __init__(
         self,
         expr: Column,
-        partition_by: Sequence[str],
+        partition_by: Sequence[str] | Sequence[Column],
         order_by: Sequence[str],
     ) -> None:
         self.expr = expr
@@ -41,10 +53,10 @@ class WindowInputs:
 
 
 # NOTE: don't lru_cache this as `ModuleType` isn't hashable
-def native_to_narwhals_dtype(
+def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     dtype: _NativeDType, version: Version, spark_types: ModuleType
-) -> DType:  # pragma: no cover
-    dtypes = import_dtypes_module(version=version)
+) -> DType:
+    dtypes = version.dtypes
     if TYPE_CHECKING:
         native = sqlframe_types
     else:
@@ -69,13 +81,15 @@ def native_to_narwhals_dtype(
     if isinstance(dtype, native.DateType):
         return dtypes.Date()
     if isinstance(dtype, native.TimestampNTZType):
-        return dtypes.Datetime()
+        # TODO(marco): cover this
+        return dtypes.Datetime()  # pragma: no cover
     if isinstance(dtype, native.TimestampType):
         # TODO(marco): is UTC correct, or should we be getting the connection timezone?
         # https://github.com/narwhals-dev/narwhals/issues/2165
         return dtypes.Datetime(time_zone="UTC")
     if isinstance(dtype, native.DecimalType):
-        return dtypes.Decimal()
+        # TODO(marco): cover this
+        return dtypes.Decimal()  # pragma: no cover
     if isinstance(dtype, native.ArrayType):
         return dtypes.List(
             inner=native_to_narwhals_dtype(
@@ -96,13 +110,13 @@ def native_to_narwhals_dtype(
         )
     if isinstance(dtype, native.BinaryType):
         return dtypes.Binary()
-    return dtypes.Unknown()
+    return dtypes.Unknown()  # pragma: no cover
 
 
-def narwhals_to_native_dtype(
+def narwhals_to_native_dtype(  # noqa: C901, PLR0912
     dtype: DType | type[DType], version: Version, spark_types: ModuleType
 ) -> _NativeDType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if TYPE_CHECKING:
         native = sqlframe_types
     else:
@@ -244,6 +258,10 @@ def import_functions(implementation: Implementation, /) -> ModuleType:
         from pyspark.sql import functions
 
         return functions
+    if implementation is Implementation.PYSPARK_CONNECT:
+        from pyspark.sql.connect import functions
+
+        return functions
     from sqlframe.base.session import _BaseSession
 
     return import_module(f"sqlframe.{_BaseSession().execution_dialect_name}.functions")
@@ -254,6 +272,10 @@ def import_native_dtypes(implementation: Implementation, /) -> ModuleType:
         from pyspark.sql import types
 
         return types
+    if implementation is Implementation.PYSPARK_CONNECT:
+        from pyspark.sql.connect import types
+
+        return types
     from sqlframe.base.session import _BaseSession
 
     return import_module(f"sqlframe.{_BaseSession().execution_dialect_name}.types")
@@ -262,6 +284,11 @@ def import_native_dtypes(implementation: Implementation, /) -> ModuleType:
 def import_window(implementation: Implementation, /) -> type[Any]:
     if implementation is Implementation.PYSPARK:
         from pyspark.sql import Window
+
+        return Window
+
+    if implementation is Implementation.PYSPARK_CONNECT:
+        from pyspark.sql.connect.window import Window
 
         return Window
     from sqlframe.base.session import _BaseSession

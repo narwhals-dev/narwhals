@@ -155,71 +155,15 @@ def test_getitem(
         )
     )
 
-    # IndexError: Offset must be non-negative (pyarrow does not support negative indexing)
-    assume(
-        not (
-            pandas_or_pyarrow_constructor is pyarrow_table_constructor
-            and isinstance(selector, slice)
-            and isinstance(selector.start, int)
-            and selector.start < 0
-        )
-    )
-    assume(
-        not (
-            pandas_or_pyarrow_constructor is pyarrow_table_constructor
-            and isinstance(selector, slice)
-            and isinstance(selector.stop, int)
-            and selector.stop < 0
-        )
-    )
-
-    # Pairs of slices are not supported
-    # NB a few trivial cases are supported, eg df[0:1, :]
-    # TypeError: Got unexpected argument type <class 'slice'> for compute function
+    # NotImplementedError: Slicing with step is not supported on PyArrow tables
     assume(
         not (
             pandas_or_pyarrow_constructor is pyarrow_table_constructor
             and isinstance(selector, tuple)
-            and isinstance(selector[0], slice)
-            and isinstance(selector[1], slice)
             and (
-                selector[0] != slice(None, None, None)
-                or selector[1] != slice(None, None, None)
+                (isinstance(selector[0], slice) and selector[0].step is not None)
+                or (isinstance(selector[1], slice) and selector[1].step is not None)
             )
-        )
-    )
-
-    # df[[], "a":], df[[], :] etc fail in pyarrow:
-    # ArrowNotImplementedError: Function 'array_take' has no kernel matching input types (int64, null)
-    assume(
-        not (
-            pandas_or_pyarrow_constructor is pyarrow_table_constructor
-            and isinstance(selector, tuple)
-            and isinstance(selector[0], list)
-            and len(selector[0]) == 0
-            and isinstance(selector[1], slice)
-        )
-    )
-
-    # df[[], "a":], df[[], :] etc return different results between pandas/polars:
-    assume(
-        not (
-            pandas_or_pyarrow_constructor is pandas_constructor
-            and isinstance(selector, tuple)
-            and isinstance(selector[0], list)
-            and len(selector[0]) == 0
-            and isinstance(selector[1], slice)
-        )
-    )
-
-    # df[..., ::step] is not fine:
-    # TypeError: Expected slice of integers or strings, got: <class 'slice'>
-    assume(
-        not (
-            isinstance(selector, tuple)
-            and isinstance(selector[1], slice)
-            and selector[1].start is None
-            and selector[1].stop is None
         )
     )
     # End TODO ================================================================
@@ -227,7 +171,7 @@ def test_getitem(
     df_polars = nw.from_native(pl.DataFrame(TEST_DATA))
     try:
         result_polars = df_polars[selector]
-    except TypeError:
+    except TypeError:  # pragma: no cover
         # If the selector fails on polars, then skip the test.
         # e.g. df[0, 'a'] fails, suggesting to use DataFrame.item to extract a single
         # element.
@@ -240,6 +184,8 @@ def test_getitem(
 
     if isinstance(result_polars, nw.Series):
         assert_equal_data({"a": result_other}, {"a": result_polars.to_list()})
+    elif isinstance(result_polars, (str, int)):  # pragma: no cover
+        assert result_polars == result_other
     else:
         assert_equal_data(
             result_other,

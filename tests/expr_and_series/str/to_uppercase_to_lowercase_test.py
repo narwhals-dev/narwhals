@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
@@ -20,7 +20,7 @@ from tests.utils import assert_equal_data
                     "ςpecial caσe",  # noqa: RUF001
                 ]
             },
-            {"a": ["SPECIAL CASE SS", "ΣPECIAL CAΣE"]},
+            {"a": ["SPECIAL CASE ẞ", "ΣPECIAL CAΣE"]},
         ),
     ],
 )
@@ -28,23 +28,26 @@ def test_str_to_uppercase(
     constructor: Constructor,
     data: dict[str, list[str]],
     expected: dict[str, list[str]],
-    request: pytest.FixtureRequest,
 ) -> None:
-    if any("ß" in s for value in data.values() for s in value) & (
-        constructor.__name__
-        in {
-            "pandas_pyarrow_constructor",
-            "pyarrow_table_constructor",
-            "modin_pyarrow_constructor",
-            "duckdb_lazy_constructor",
-            "sqlframe_pyspark_lazy_constructor",
-        }
-        or ("dask" in str(constructor) and PYARROW_VERSION >= (12,))
+    if "dask" in str(constructor) and PYARROW_VERSION < (12,):
+        pytest.skip()
+
+    if (
+        any(
+            x in str(constructor)
+            for x in (
+                "pandas_constructor",
+                "pandas_nullable",
+                "polars",
+                "cudf",
+                "pyspark",
+            )
+        )
+        and "ẞ" in expected["a"][0]
+        and "sqlframe" not in str(constructor)
     ):
-        # We are marking it xfail for these conditions above
-        # since the pyarrow backend will convert
-        # smaller cap 'ß' to upper cap 'ẞ' instead of 'SS'
-        request.applymarker(pytest.mark.xfail)
+        expected = {"a": ["SPECIAL CASE SS", "ΣPECIAL CAΣE"]}
+
     df = nw.from_native(constructor(data))
     result_frame = df.select(nw.col("a").str.to_uppercase())
 
@@ -62,7 +65,7 @@ def test_str_to_uppercase(
                     "ςpecial caσe",  # noqa: RUF001
                 ]
             },
-            {"a": ["SPECIAL CASE SS", "ΣPECIAL CAΣE"]},
+            {"a": ["SPECIAL CASE ẞ", "ΣPECIAL CAΣE"]},
         ),
     ],
 )
@@ -70,25 +73,24 @@ def test_str_to_uppercase_series(
     constructor_eager: ConstructorEager,
     data: dict[str, list[str]],
     expected: dict[str, list[str]],
-    request: pytest.FixtureRequest,
 ) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
-    if any("ß" in s for value in data.values() for s in value) & (
-        constructor_eager.__name__
-        not in {
-            "pandas_constructor",
-            "pandas_nullable_constructor",
-            "polars_eager_constructor",
-            "cudf_constructor",
-            "duckdb_lazy_constructor",
-            "modin_constructor",
-        }
+    if (
+        any(
+            x in str(constructor_eager)
+            for x in (
+                "pandas_constructor",
+                "pandas_nullable",
+                "polars",
+                "cudf",
+                "pyspark",
+            )
+        )
+        and "ẞ" in expected["a"][0]
+        and "sqlframe" not in str(constructor_eager)
     ):
-        # We are marking it xfail for these conditions above
-        # since the pyarrow backend will convert
-        # smaller cap 'ß' to upper cap 'ẞ' instead of 'SS'
-        request.applymarker(pytest.mark.xfail)
+        expected = {"a": ["SPECIAL CASE SS", "ΣPECIAL CAΣE"]}
 
     result_series = df["a"].str.to_uppercase()
     assert_equal_data({"a": result_series}, expected)

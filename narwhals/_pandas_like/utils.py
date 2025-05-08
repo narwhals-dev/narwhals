@@ -2,22 +2,23 @@ from __future__ import annotations
 
 import functools
 import re
-import warnings
 from contextlib import suppress
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Iterable
+from typing import Callable
+from typing import Literal
 from typing import Sized
 from typing import TypeVar
-from typing import cast
 
 import pandas as pd
 
+from narwhals._compliant.series import EagerSeriesNamespace
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import DuplicateError
+from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
-from narwhals.utils import import_dtypes_module
+from narwhals.utils import _DeferredIterable
 from narwhals.utils import isinstance_or_issubclass
 
 T = TypeVar("T", bound=Sized)
@@ -25,7 +26,6 @@ T = TypeVar("T", bound=Sized)
 if TYPE_CHECKING:
     from pandas._typing import Dtype as PandasDtype
 
-    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
@@ -87,6 +87,8 @@ PA_DURATION_RGX = r"""^
 $"""
 PATTERN_PA_DURATION = re.compile(PA_DURATION_RGX, re.VERBOSE)
 
+UNIT_DICT = {"d": "D", "m": "min"}
+
 
 def align_and_extract_native(
     lhs: PandasLikeSeries, rhs: PandasLikeSeries | object
@@ -99,145 +101,34 @@ def align_and_extract_native(
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
 
-    lhs_index = lhs._native_series.index
+    lhs_index = lhs.native.index
 
     if isinstance(rhs, PandasLikeDataFrame):
         return NotImplemented
 
     if lhs._broadcast and isinstance(rhs, PandasLikeSeries) and not rhs._broadcast:
-        return lhs._native_series.iloc[0], rhs._native_series
+        return lhs.native.iloc[0], rhs.native
 
-    lhs_native = lhs._native_series
     if isinstance(rhs, PandasLikeSeries):
         if rhs._broadcast:
-            return (lhs_native, rhs._native_series.iloc[0])
-        rhs_native = rhs._native_series
-        if rhs_native.index is not lhs_index:
+            return (lhs.native, rhs.native.iloc[0])
+        if rhs.native.index is not lhs_index:
             return (
-                lhs_native,
+                lhs.native,
                 set_index(
-                    rhs_native,
+                    rhs.native,
                     lhs_index,
                     implementation=rhs._implementation,
                     backend_version=rhs._backend_version,
                 ),
             )
-        return (lhs_native, rhs_native)
+        return (lhs.native, rhs.native)
 
     if isinstance(rhs, list):
         msg = "Expected Series or scalar, got list."
         raise TypeError(msg)
     # `rhs` must be scalar, so just leave it as-is
-    return lhs_native, rhs
-
-
-def horizontal_concat(
-    dfs: list[Any], *, implementation: Implementation, backend_version: tuple[int, ...]
-) -> Any:
-    """Concatenate (native) DataFrames horizontally.
-
-    Should be in namespace.
-    """
-    if implementation is Implementation.CUDF:
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                message="The behavior of array concatenation with empty entries is deprecated",
-                category=FutureWarning,
-            )
-            return implementation.to_native_namespace().concat(dfs, axis=1)
-
-    if implementation.is_pandas_like():
-        extra_kwargs = (
-            {"copy": False}
-            if implementation is Implementation.PANDAS and backend_version < (3,)
-            else {}
-        )
-        return implementation.to_native_namespace().concat(dfs, axis=1, **extra_kwargs)
-
-    else:  # pragma: no cover
-        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
-        raise TypeError(msg)
-
-
-def vertical_concat(
-    dfs: list[Any], *, implementation: Implementation, backend_version: tuple[int, ...]
-) -> Any:
-    """Concatenate (native) DataFrames vertically.
-
-    Should be in namespace.
-    """
-    if not dfs:
-        msg = "No dataframes to concatenate"  # pragma: no cover
-        raise AssertionError(msg)
-    cols_0 = dfs[0].columns
-    for i, df in enumerate(dfs[1:], start=1):
-        cols_current = df.columns
-        if not ((len(cols_current) == len(cols_0)) and (cols_current == cols_0).all()):
-            msg = (
-                "unable to vstack, column names don't match:\n"
-                f"   - dataframe 0: {cols_0.to_list()}\n"
-                f"   - dataframe {i}: {cols_current.to_list()}\n"
-            )
-            raise TypeError(msg)
-
-    if implementation in PANDAS_LIKE_IMPLEMENTATION:
-        extra_kwargs = (
-            {"copy": False}
-            if implementation is Implementation.PANDAS and backend_version < (3,)
-            else {}
-        )
-        return implementation.to_native_namespace().concat(dfs, axis=0, **extra_kwargs)
-
-    else:  # pragma: no cover
-        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
-        raise TypeError(msg)
-
-
-def diagonal_concat(
-    dfs: list[Any], *, implementation: Implementation, backend_version: tuple[int, ...]
-) -> Any:
-    """Concatenate (native) DataFrames diagonally.
-
-    Should be in namespace.
-    """
-    if not dfs:
-        msg = "No dataframes to concatenate"  # pragma: no cover
-        raise AssertionError(msg)
-
-    if implementation in PANDAS_LIKE_IMPLEMENTATION:
-        extra_kwargs = (
-            {"copy": False, "sort": False}
-            if implementation is Implementation.PANDAS and backend_version < (1,)
-            else {"copy": False}
-            if implementation is Implementation.PANDAS and backend_version < (3,)
-            else {}
-        )
-        return implementation.to_native_namespace().concat(dfs, axis=0, **extra_kwargs)
-
-    else:  # pragma: no cover
-        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
-        raise TypeError(msg)
-
-
-def native_series_from_iterable(
-    data: Iterable[Any],
-    name: str,
-    index: Any,
-    implementation: Implementation,
-) -> Any:
-    """Return native series."""
-    if implementation in PANDAS_LIKE_IMPLEMENTATION:
-        extra_kwargs = {"copy": False} if implementation is Implementation.PANDAS else {}
-        if len(index) == 0:
-            index = None
-        return implementation.to_native_namespace().Series(
-            data, name=name, index=index, **extra_kwargs
-        )
-
-    else:  # pragma: no cover
-        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
-        raise TypeError(msg)
+    return lhs.native, rhs
 
 
 def set_index(
@@ -251,6 +142,11 @@ def set_index(
 
     We can set `copy` / `inplace` based on implementation/version.
     """
+    if isinstance(index, implementation.to_native_namespace().Index) and (
+        expected_len := len(index)
+    ) != (actual_len := len(obj)):
+        msg = f"Expected object of length {expected_len}, got length: {actual_len}"
+        raise ShapeError(msg)
     if implementation is Implementation.CUDF:  # pragma: no cover
         obj = obj.copy(deep=False)  # type: ignore[attr-defined]
         obj.index = index  # type: ignore[attr-defined]
@@ -316,8 +212,10 @@ def rename(
 
 
 @functools.lru_cache(maxsize=16)
-def non_object_native_to_narwhals_dtype(dtype: str, version: Version) -> DType:
-    dtypes = import_dtypes_module(version)
+def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> DType:  # noqa: C901, PLR0912
+    dtype = str(native_dtype)
+
+    dtypes = version.dtypes
     if dtype in {"int64", "Int64", "Int64[pyarrow]", "int64[pyarrow]"}:
         return dtypes.Int64()
     if dtype in {"int32", "Int32", "Int32[pyarrow]", "int32[pyarrow]"}:
@@ -354,8 +252,10 @@ def non_object_native_to_narwhals_dtype(dtype: str, version: Version) -> DType:
         return dtypes.String()
     if dtype in {"bool", "boolean", "boolean[pyarrow]", "bool[pyarrow]"}:
         return dtypes.Boolean()
-    if dtype == "category" or dtype.startswith("dictionary<"):
+    if dtype.startswith("dictionary<"):
         return dtypes.Categorical()
+    if dtype == "category":
+        return native_categorical_to_narwhals_dtype(native_dtype, version)
     if (match_ := PATTERN_PD_DATETIME.match(dtype)) or (
         match_ := PATTERN_PA_DATETIME.match(dtype)
     ):
@@ -381,7 +281,7 @@ def non_object_native_to_narwhals_dtype(dtype: str, version: Version) -> DType:
 def object_native_to_narwhals_dtype(
     series: PandasLikeSeries, version: Version, implementation: Implementation
 ) -> DType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if implementation is Implementation.CUDF:  # pragma: no cover
         # Per conversations with their maintainers, they don't support arbitrary
         # objects, so we can just return String.
@@ -400,6 +300,34 @@ def object_native_to_narwhals_dtype(
     return dtypes.Object()
 
 
+def native_categorical_to_narwhals_dtype(
+    native_dtype: pd.CategoricalDtype,
+    version: Version,
+    implementation: Literal[Implementation.CUDF] | None = None,
+) -> DType:
+    dtypes = version.dtypes
+    if version is Version.V1:
+        return dtypes.Categorical()
+    if native_dtype.ordered:
+        into_iter = (
+            _cudf_categorical_to_list(native_dtype)
+            if implementation is Implementation.CUDF
+            else native_dtype.categories.to_list
+        )
+        return dtypes.Enum(_DeferredIterable(into_iter))
+    return dtypes.Categorical()
+
+
+def _cudf_categorical_to_list(
+    native_dtype: Any,
+) -> Callable[[], list[Any]]:  # pragma: no cover
+    # NOTE: https://docs.rapids.ai/api/cudf/stable/user_guide/api_docs/api/cudf.core.dtypes.categoricaldtype/#cudf.core.dtypes.CategoricalDtype
+    def fn() -> list[Any]:
+        return native_dtype.categories.to_arrow().to_pylist()
+
+    return fn
+
+
 def native_to_narwhals_dtype(
     native_dtype: Any, version: Version, implementation: Implementation
 ) -> DType:
@@ -414,13 +342,18 @@ def native_to_narwhals_dtype(
             # cudf, cudf.pandas
             return arrow_native_to_narwhals_dtype(native_dtype.to_arrow(), version)
         return arrow_native_to_narwhals_dtype(native_dtype.pyarrow_dtype, version)
+    if str_dtype == "category" and implementation.is_cudf():
+        # https://github.com/rapidsai/cudf/issues/18536
+        # https://github.com/rapidsai/cudf/issues/14027
+        return native_categorical_to_narwhals_dtype(
+            native_dtype, version, Implementation.CUDF
+        )
     if str_dtype != "object":
-        return non_object_native_to_narwhals_dtype(str_dtype, version)
+        return non_object_native_to_narwhals_dtype(native_dtype, version)
     elif implementation is Implementation.DASK:
         # Per conversations with their maintainers, they don't support arbitrary
         # objects, so we can just return String.
-        dtypes = import_dtypes_module(version)
-        return dtypes.String()
+        return version.dtypes.String()
     msg = (
         "Unreachable code, object dtype should be handled separately"  # pragma: no cover
     )
@@ -446,7 +379,12 @@ def get_dtype_backend(dtype: Any, implementation: Implementation) -> DTypeBacken
     return None
 
 
-def narwhals_to_native_dtype(  # noqa: PLR0915
+@functools.lru_cache(maxsize=16)
+def is_pyarrow_dtype_backend(dtype: Any, implementation: Implementation) -> bool:
+    return get_dtype_backend(dtype, implementation) == "pyarrow"
+
+
+def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
     dtype: DType | type[DType],
     dtype_backend: DTypeBackend,
     implementation: Implementation,
@@ -456,7 +394,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
     if dtype_backend is not None and dtype_backend not in {"pyarrow", "numpy_nullable"}:
         msg = f"Expected one of {{None, 'pyarrow', 'numpy_nullable'}}, got: '{dtype_backend}'"
         raise ValueError(msg)
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         msg = "Casting to Decimal is not supported yet."
         raise NotImplementedError(msg)
@@ -568,11 +506,18 @@ def narwhals_to_native_dtype(  # noqa: PLR0915
         try:
             import pyarrow as pa  # ignore-banned-import
         except ModuleNotFoundError:  # pragma: no cover
-            msg = "PyArrow>=11.0.0 is required for `Date` dtype."
+            msg = "'pyarrow>=11.0.0' is required for `Date` dtype."
         return "date32[pyarrow]"
     if isinstance_or_issubclass(dtype, dtypes.Enum):
-        msg = "Converting to Enum is not (yet) supported"
-        raise NotImplementedError(msg)
+        if version is Version.V1:
+            msg = "Converting to Enum is not supported in narwhals.stable.v1"
+            raise NotImplementedError(msg)
+        if isinstance(dtype, dtypes.Enum):
+            ns = implementation.to_native_namespace()
+            return ns.CategoricalDtype(dtype.categories, ordered=True)
+        msg = "Can not cast / initialize Enum without categories present"
+        raise ValueError(msg)
+
     if isinstance_or_issubclass(
         dtype, (dtypes.Struct, dtypes.Array, dtypes.List, dtypes.Time, dtypes.Binary)
     ):
@@ -611,28 +556,26 @@ def align_series_full_broadcast(
     lengths = [len(s) for s in series]
     max_length = max(lengths)
 
-    idx = series[lengths.index(max_length)]._native_series.index
+    idx = series[lengths.index(max_length)].native.index
     reindexed = []
-    max_length_gt_1 = max_length > 1
-    for s, length in zip(series, lengths):
-        s_native = s._native_series
-        if max_length_gt_1 and length == 1:
+    for s in series:
+        if s._broadcast:
             reindexed.append(
-                s._from_native_series(
+                s._with_native(
                     native_namespace.Series(
-                        [s_native.iloc[0]] * max_length,
+                        [s.native.iloc[0]] * max_length,
                         index=idx,
-                        name=s_native.name,
-                        dtype=s_native.dtype,
+                        name=s.name,
+                        dtype=s.native.dtype,
                     )
                 )
             )
 
-        elif s_native.index is not idx:
+        elif s.native.index is not idx:
             reindexed.append(
-                s._from_native_series(
+                s._with_native(
                     set_index(
-                        s_native,
+                        s.native,
                         idx,
                         implementation=s._implementation,
                         backend_version=s._backend_version,
@@ -644,17 +587,6 @@ def align_series_full_broadcast(
     return reindexed
 
 
-def to_datetime(implementation: Implementation, *, utc: bool) -> Any:
-    if implementation in PANDAS_LIKE_IMPLEMENTATION:
-        return functools.partial(
-            implementation.to_native_namespace().to_datetime, utc=utc
-        )
-
-    else:  # pragma: no cover
-        msg = f"Expected pandas-like implementation ({PANDAS_LIKE_IMPLEMENTATION}), found {implementation}"
-        raise TypeError(msg)
-
-
 def int_dtype_mapper(dtype: Any) -> str:
     if "pyarrow" in str(dtype):
         return "Int64[pyarrow]"
@@ -663,25 +595,7 @@ def int_dtype_mapper(dtype: Any) -> str:
     return "int64"
 
 
-def convert_str_slice_to_int_slice(
-    str_slice: slice, columns: pd.Index[str]
-) -> tuple[int | None, int | None, int | None]:
-    # We can safely cast to int because we know that `columns` doesn't contain duplicates.
-    start = (
-        cast("int", columns.get_loc(str_slice.start))
-        if str_slice.start is not None
-        else None
-    )
-    stop = (
-        cast("int", columns.get_loc(str_slice.stop)) + 1
-        if str_slice.stop is not None
-        else None
-    )
-    step = str_slice.step
-    return (start, stop, step)
-
-
-def calculate_timestamp_datetime(
+def calculate_timestamp_datetime(  # noqa: C901, PLR0912
     s: pd.Series[int], original_time_unit: str, time_unit: str
 ) -> pd.Series[int]:
     if original_time_unit == "ns":
@@ -764,41 +678,6 @@ def select_columns_by_name(
         ) from e
 
 
-def pivot_table(
-    df: PandasLikeDataFrame,
-    values: list[str],
-    index: list[str],
-    columns: list[str],
-    aggregate_function: str | None,
-) -> Any:
-    dtypes = import_dtypes_module(df._version)
-    if df._implementation is Implementation.CUDF:
-        if any(
-            x == dtypes.Categorical
-            for x in df.simple_select(*[*values, *index, *columns]).schema.values()
-        ):
-            msg = "`pivot` with Categoricals is not implemented for cuDF backend"
-            raise NotImplementedError(msg)
-        # cuDF doesn't support `observed` argument
-        result = df._native_frame.pivot_table(
-            values=values,
-            index=index,
-            columns=columns,
-            aggfunc=aggregate_function,
-            margins=False,
-        )
-    else:
-        result = df._native_frame.pivot_table(
-            values=values,
-            index=index,
-            columns=columns,
-            aggfunc=aggregate_function,
-            margins=False,
-            observed=True,
-        )
-    return result
-
-
 def check_column_names_are_unique(columns: pd.Index[str]) -> None:
     try:
         len_unique_columns = len(columns.drop_duplicates())
@@ -816,3 +695,17 @@ def check_column_names_are_unique(columns: pd.Index[str]) -> None:
                 msg += f"\n- '{key}' {value} times"
         msg = f"Expected unique column names, got:{msg}"
         raise DuplicateError(msg)
+
+
+class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]):
+    @property
+    def implementation(self) -> Implementation:
+        return self.compliant._implementation
+
+    @property
+    def backend_version(self) -> tuple[int, ...]:
+        return self.compliant._backend_version
+
+    @property
+    def version(self) -> Version:
+        return self.compliant._version

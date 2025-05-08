@@ -2,16 +2,30 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Generic
 from typing import Iterable
 from typing import Iterator
-from typing import Literal
 from typing import Mapping
 from typing import Protocol
 from typing import Sequence
 
+from narwhals._compliant.any_namespace import CatNamespace
+from narwhals._compliant.any_namespace import DateTimeNamespace
+from narwhals._compliant.any_namespace import ListNamespace
+from narwhals._compliant.any_namespace import StringNamespace
+from narwhals._compliant.any_namespace import StructNamespace
+from narwhals._compliant.typing import CompliantSeriesT_co
+from narwhals._compliant.typing import EagerSeriesT_co
+from narwhals._compliant.typing import NativeSeriesT
 from narwhals._compliant.typing import NativeSeriesT_co
 from narwhals._translate import FromIterable
+from narwhals._translate import FromNative
 from narwhals._translate import NumpyConvertible
+from narwhals._translate import ToNarwhals
+from narwhals.utils import _StoresCompliant
+from narwhals.utils import _StoresNative
+from narwhals.utils import is_compliant_series
+from narwhals.utils import is_sized_multi_index_selector
 from narwhals.utils import unstable
 
 if TYPE_CHECKING:
@@ -19,17 +33,28 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
+    import pyarrow as pa
     from typing_extensions import Self
 
-    from narwhals._arrow.typing import ArrowArray
     from narwhals._compliant.dataframe import CompliantDataFrame
     from narwhals._compliant.expr import CompliantExpr
     from narwhals._compliant.expr import EagerExpr
     from narwhals._compliant.namespace import CompliantNamespace
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals.dtypes import DType
+    from narwhals.series import Series
+    from narwhals.typing import ClosedInterval
+    from narwhals.typing import FillNullStrategy
     from narwhals.typing import Into1DArray
+    from narwhals.typing import MultiIndexSelector
+    from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import NumericLiteral
+    from narwhals.typing import RankMethod
+    from narwhals.typing import RollingInterpolationMethod
+    from narwhals.typing import SizedMultiIndexSelector
+    from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
+    from narwhals.typing import _SliceIndex
     from narwhals.utils import Implementation
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -40,7 +65,9 @@ __all__ = ["CompliantSeries", "EagerSeries"]
 class CompliantSeries(
     NumpyConvertible["_1DArray", "Into1DArray"],
     FromIterable,
-    Protocol[NativeSeriesT_co],
+    FromNative[NativeSeriesT],
+    ToNarwhals["Series[NativeSeriesT]"],
+    Protocol[NativeSeriesT],
 ):
     _implementation: Implementation
     _backend_version: tuple[int, ...]
@@ -51,7 +78,7 @@ class CompliantSeries(
     @property
     def name(self) -> str: ...
     @property
-    def native(self) -> NativeSeriesT_co: ...
+    def native(self) -> NativeSeriesT: ...
     def __narwhals_series__(self) -> Self:
         return self
 
@@ -59,20 +86,30 @@ class CompliantSeries(
     def __native_namespace__(self) -> ModuleType: ...
     def __array__(self, dtype: Any, *, copy: bool | None) -> _1DArray: ...
     def __contains__(self, other: Any) -> bool: ...
-    def __getitem__(self, item: Any) -> Any: ...
+    def __getitem__(self, item: MultiIndexSelector[Self]) -> Any: ...
     def __iter__(self) -> Iterator[Any]: ...
     def __len__(self) -> int:
         return len(self.native)
 
-    def _from_native_series(self, series: Any) -> Self: ...
+    def _with_native(self, series: Any) -> Self: ...
+    def _with_version(self, version: Version) -> Self: ...
     def _to_expr(self) -> CompliantExpr[Any, Self]: ...
+    @classmethod
+    def from_native(cls, data: NativeSeriesT, /, *, context: _FullContext) -> Self: ...
     @classmethod
     def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self: ...
     @classmethod
     def from_iterable(
-        cls, data: Iterable[Any], /, *, context: _FullContext, name: str = ""
+        cls,
+        data: Iterable[Any],
+        /,
+        *,
+        context: _FullContext,
+        name: str = "",
+        dtype: DType | type[DType] | None = None,
     ) -> Self: ...
-    def _change_version(self, version: Version) -> Self: ...
+    def to_narwhals(self) -> Series[NativeSeriesT]:
+        return self._version.series(self, level="full")
 
     # Operators
     def __add__(self, other: Any) -> Self: ...
@@ -109,7 +146,11 @@ class CompliantSeries(
     def arg_min(self) -> int: ...
     def arg_true(self) -> Self: ...
     def cast(self, dtype: DType | type[DType]) -> Self: ...
-    def clip(self, lower_bound: Any, upper_bound: Any) -> Self: ...
+    def clip(
+        self,
+        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
+        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
+    ) -> Self: ...
     def count(self) -> int: ...
     def cum_count(self, *, reverse: bool) -> Self: ...
     def cum_max(self, *, reverse: bool) -> Self: ...
@@ -118,7 +159,6 @@ class CompliantSeries(
     def cum_sum(self, *, reverse: bool) -> Self: ...
     def diff(self) -> Self: ...
     def drop_nulls(self) -> Self: ...
-    @unstable
     def ewm_mean(
         self,
         *,
@@ -132,26 +172,23 @@ class CompliantSeries(
     ) -> Self: ...
     def fill_null(
         self,
-        value: Any | None,
-        strategy: Literal["forward", "backward"] | None,
+        value: Self | NonNestedLiteral,
+        strategy: FillNullStrategy | None,
         limit: int | None,
     ) -> Self: ...
     def filter(self, predicate: Any) -> Self: ...
     def gather_every(self, n: int, offset: int) -> Self: ...
     @unstable
     def hist(
-        self: Self,
+        self,
         bins: list[float | int] | None,
         *,
         bin_count: int | None,
         include_breakpoint: bool,
-    ) -> CompliantDataFrame[Self, Any, Any]: ...
+    ) -> CompliantDataFrame[Self, Any, Any, Any]: ...
     def head(self, n: int) -> Self: ...
     def is_between(
-        self,
-        lower_bound: Any,
-        upper_bound: Any,
-        closed: Literal["left", "right", "none", "both"],
+        self, lower_bound: Any, upper_bound: Any, closed: ClosedInterval
     ) -> Self: ...
     def is_finite(self) -> Self: ...
     def is_first_distinct(self) -> Self: ...
@@ -159,7 +196,7 @@ class CompliantSeries(
     def is_last_distinct(self) -> Self: ...
     def is_nan(self) -> Self: ...
     def is_null(self) -> Self: ...
-    def is_sorted(self: Self, *, descending: bool) -> bool: ...
+    def is_sorted(self, *, descending: bool) -> bool: ...
     def is_unique(self) -> Self: ...
     def item(self, index: int | None) -> Any: ...
     def len(self) -> int: ...
@@ -171,16 +208,9 @@ class CompliantSeries(
     def n_unique(self) -> int: ...
     def null_count(self) -> int: ...
     def quantile(
-        self,
-        quantile: float,
-        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+        self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> float: ...
-    def rank(
-        self,
-        method: Literal["average", "min", "max", "dense", "ordinal"],
-        *,
-        descending: bool,
-    ) -> Self: ...
+    def rank(self, method: RankMethod, *, descending: bool) -> Self: ...
     def replace_strict(
         self,
         old: Sequence[Any] | Mapping[Any, Any],
@@ -188,7 +218,6 @@ class CompliantSeries(
         *,
         return_dtype: DType | type[DType] | None,
     ) -> Self: ...
-    @unstable
     def rolling_mean(
         self,
         window_size: int,
@@ -196,7 +225,6 @@ class CompliantSeries(
         min_samples: int,
         center: bool,
     ) -> Self: ...
-    @unstable
     def rolling_std(
         self,
         window_size: int,
@@ -205,7 +233,6 @@ class CompliantSeries(
         center: bool,
         ddof: int,
     ) -> Self: ...
-    @unstable
     def rolling_sum(
         self,
         window_size: int,
@@ -213,7 +240,6 @@ class CompliantSeries(
         min_samples: int,
         center: bool,
     ) -> Self: ...
-    @unstable
     def rolling_var(
         self,
         window_size: int,
@@ -238,11 +264,11 @@ class CompliantSeries(
     def std(self, *, ddof: int) -> float: ...
     def sum(self) -> float: ...
     def tail(self, n: int) -> Self: ...
-    def to_arrow(self) -> ArrowArray: ...
+    def to_arrow(self) -> pa.Array[Any]: ...
     def to_dummies(
         self, *, separator: str, drop_first: bool
-    ) -> CompliantDataFrame[Self, Any, Any]: ...
-    def to_frame(self) -> CompliantDataFrame[Self, Any, Any]: ...
+    ) -> CompliantDataFrame[Self, Any, Any, Any]: ...
+    def to_frame(self) -> CompliantDataFrame[Self, Any, Any, Any]: ...
     def to_list(self) -> list[Any]: ...
     def to_pandas(self) -> pd.Series[Any]: ...
     def to_polars(self) -> pl.Series: ...
@@ -254,7 +280,7 @@ class CompliantSeries(
         parallel: bool,
         name: str | None,
         normalize: bool,
-    ) -> CompliantDataFrame[Self, Any, Any]: ...
+    ) -> CompliantDataFrame[Self, Any, Any, Any]: ...
     def var(self, *, ddof: int) -> float: ...
     def zip_with(self, mask: Any, other: Any) -> Self: ...
 
@@ -270,7 +296,7 @@ class CompliantSeries(
     def struct(self) -> Any: ...
 
 
-class EagerSeries(CompliantSeries[NativeSeriesT_co], Protocol[NativeSeriesT_co]):
+class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
     _native_series: Any
     _implementation: Implementation
     _backend_version: tuple[int, ...]
@@ -280,7 +306,110 @@ class EagerSeries(CompliantSeries[NativeSeriesT_co], Protocol[NativeSeriesT_co])
     def _from_scalar(self, value: Any) -> Self:
         return self.from_iterable([value], name=self.name, context=self)
 
-    def __narwhals_namespace__(self) -> EagerNamespace[Any, Self, Any]: ...
+    def _with_native(
+        self, series: NativeSeriesT, *, preserve_broadcast: bool = False
+    ) -> Self:
+        """Return a new `CompliantSeries`, wrapping the native `series`.
+
+        In cases when operations are known to not affect whether a result should
+        be broadcast, we can pass `preserve_broadcast=True`.
+        Set this with care - it should only be set for unary expressions which don't
+        change length or order, such as `.alias` or `.fill_null`. If in doubt, don't
+        set it, you probably don't need it.
+        """
+        ...
+
+    def __narwhals_namespace__(
+        self,
+    ) -> EagerNamespace[Any, Self, Any, Any, NativeSeriesT]: ...
 
     def _to_expr(self) -> EagerExpr[Any, Any]:
         return self.__narwhals_namespace__()._expr._from_series(self)  # type: ignore[no-any-return]
+
+    def _gather(self, rows: SizedMultiIndexSelector[NativeSeriesT]) -> Self: ...
+    def _gather_slice(self, rows: _SliceIndex | range) -> Self: ...
+    def __getitem__(self, item: MultiIndexSelector[Self]) -> Self:
+        if isinstance(item, (slice, range)):
+            return self._gather_slice(item)
+        elif is_compliant_series(item):
+            return self._gather(item.native)
+        elif is_sized_multi_index_selector(item):
+            return self._gather(item)
+        else:  # pragma: no cover
+            msg = f"Unreachable code, got unexpected type: {type(item)}"
+            raise AssertionError(msg)
+
+    @property
+    def str(self) -> EagerSeriesStringNamespace[Self, NativeSeriesT]: ...
+    @property
+    def dt(self) -> EagerSeriesDateTimeNamespace[Self, NativeSeriesT]: ...
+    @property
+    def cat(self) -> EagerSeriesCatNamespace[Self, NativeSeriesT]: ...
+    @property
+    def list(self) -> EagerSeriesListNamespace[Self, NativeSeriesT]: ...
+    @property
+    def struct(self) -> EagerSeriesStructNamespace[Self, NativeSeriesT]: ...
+
+
+class _SeriesNamespace(  # type: ignore[misc]
+    _StoresCompliant[CompliantSeriesT_co],
+    _StoresNative[NativeSeriesT_co],
+    Protocol[CompliantSeriesT_co, NativeSeriesT_co],
+):
+    _compliant_series: CompliantSeriesT_co
+
+    @property
+    def compliant(self) -> CompliantSeriesT_co:
+        return self._compliant_series
+
+    @property
+    def native(self) -> NativeSeriesT_co:
+        return self._compliant_series.native  # type: ignore[no-any-return]
+
+    def with_native(self, series: Any, /) -> CompliantSeriesT_co:
+        return self.compliant._with_native(series)
+
+
+class EagerSeriesNamespace(
+    _SeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
+    Generic[EagerSeriesT_co, NativeSeriesT_co],
+):
+    _compliant_series: EagerSeriesT_co
+
+    def __init__(self, series: EagerSeriesT_co, /) -> None:
+        self._compliant_series = series
+
+
+class EagerSeriesCatNamespace(  # type: ignore[misc]
+    _SeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
+    CatNamespace[EagerSeriesT_co],
+    Protocol[EagerSeriesT_co, NativeSeriesT_co],
+): ...
+
+
+class EagerSeriesDateTimeNamespace(  # type: ignore[misc]
+    _SeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
+    DateTimeNamespace[EagerSeriesT_co],
+    Protocol[EagerSeriesT_co, NativeSeriesT_co],
+): ...
+
+
+class EagerSeriesListNamespace(  # type: ignore[misc]
+    _SeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
+    ListNamespace[EagerSeriesT_co],
+    Protocol[EagerSeriesT_co, NativeSeriesT_co],
+): ...
+
+
+class EagerSeriesStringNamespace(  # type: ignore[misc]
+    _SeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
+    StringNamespace[EagerSeriesT_co],
+    Protocol[EagerSeriesT_co, NativeSeriesT_co],
+): ...
+
+
+class EagerSeriesStructNamespace(  # type: ignore[misc]
+    _SeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
+    StructNamespace[EagerSeriesT_co],
+    Protocol[EagerSeriesT_co, NativeSeriesT_co],
+): ...
