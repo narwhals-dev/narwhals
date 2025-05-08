@@ -573,6 +573,6 @@ def test_pyspark_connect_deps_2517() -> None:
 
     import narwhals as nw
 
-    spark = SparkSession.builder.getOrCreate()
+    spark = SparkSession.builder.getOrCreate()  # pyright: ignore[reportAttributeAccessIssue]
     # Check this doesn't raise
     nw.from_native(spark.createDataFrame([{"a": 1}]))
