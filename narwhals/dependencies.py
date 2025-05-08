@@ -250,8 +250,10 @@ def is_pyspark_dataframe(df: Any) -> TypeIs[pyspark_sql.DataFrame]:
 def is_pyspark_connect_dataframe(df: Any) -> TypeIs[PySparkConnectDataFrame]:
     """Check whether `df` is a PySpark Connect DataFrame without importing PySpark."""
     if get_pyspark_connect() is not None:  # pragma: no cover
-        from pyspark.sql.connect.dataframe import DataFrame
-
+        try:
+            from pyspark.sql.connect.dataframe import DataFrame
+        except ImportError:
+            return False
         return isinstance(df, DataFrame)
     return False
 
