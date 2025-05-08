@@ -562,3 +562,17 @@ def test_from_native_roundtrip_identity(
     nw_wrapped = from_native(native, **kwds)
     roundtrip = nw_wrapped.to_native()
     assert roundtrip is native
+
+
+def test_pyspark_connect_deps_2517() -> None:
+    pytest.importorskip("pyspark")
+    # Don't delete this! It's crucial for the test that
+    # pyspark.sql.connect be imported.
+    import pyspark.sql.connect  # noqa: F401
+    from pyspark.sql import SparkSession
+
+    import narwhals as nw
+
+    spark = SparkSession.builder.getOrCreate()
+    # Check this doesn't raise
+    nw.from_native(spark.createDataFrame([{"a": 1}]))
