@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
+    from ibis.backends.duckdb import Backend as IbisDuckDBBackend
     from pyspark.sql import DataFrame as PySparkDataFrame
     from typing_extensions import TypeAlias
 
@@ -221,16 +222,14 @@ def sqlframe_pyspark_lazy_constructor(obj: Data) -> SQLFrameDataFrame:  # pragma
 
 
 @lru_cache(maxsize=1)
-def _ibis_backend() -> ibis.backends.BaseBackend:  # pragma: no cover
+def _ibis_backend() -> IbisDuckDBBackend:  # pragma: no cover
     """Cached (singleton) in-memory backend to ensure all tables exist within the same in-memory database."""
     import ibis
 
     return ibis.duckdb.connect()
 
 
-def ibis_lazy_constructor(
-    obj: Data,
-) -> ibis.expr.types.Table:  # pragma: no cover
+def ibis_lazy_constructor(obj: Data) -> ibis.Table:  # pragma: no cover
     import polars as pl
 
     ldf = pl.from_dict(obj).lazy()
