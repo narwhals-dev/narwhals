@@ -39,6 +39,8 @@ jobs:
         run: cd tpch && pytest tests/queries_test.py::test_execute_scripts
       - name: tpch-benchmark
         if: ${{ contains(github.event.pull_request.labels.*.name, 'performance')}}
-        run: |
-          uv pip install pytest-codspeed --system
-          cd tpch && pytest tests/queries_test.py::test_benchmark_scripts
+        uses: CodSpeedHQ/action@v3
+        with:
+          run: |
+            uv pip install pytest-codspeed --system
+            cd tpch && pytest tests/queries_test.py::test_benchmark_scripts --codspeed
