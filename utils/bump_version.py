@@ -1,10 +1,10 @@
 # mypy: ignore
-# ruff: noqa
-import re
+from __future__ import annotations
+
 import subprocess
 import sys
 
-out = subprocess.run(["git", "fetch", "upstream", "--tags"])
+out = subprocess.run(["git", "fetch", "upstream", "--tags"], check=False)
 if out.returncode != 0:
     print(
         "Something went wrong with the release process, please check the Narwhals Wiki for "
@@ -12,11 +12,11 @@ if out.returncode != 0:
     )
     print(out)
     sys.exit(1)
-subprocess.run(["git", "reset", "--hard", "upstream/main"])
+subprocess.run(["git", "reset", "--hard", "upstream/main"], check=False)
 
 if (
     subprocess.run(
-        ["git", "branch", "--show-current"], text=True, capture_output=True
+        ["git", "branch", "--show-current"], text=True, capture_output=True, check=False
     ).stdout.strip()
     != "bump-version"
 ):
@@ -38,15 +38,21 @@ try:
 except subprocess.CalledProcessError as e:
     print(f"An error occurred: {e}")
 
-subprocess.run(["git", "fetch", "upstream", "--tags"])
-subprocess.run(["git", "fetch", "upstream", "--prune", "--tags"])
+subprocess.run(["git", "fetch", "upstream", "--tags"], check=False)
+subprocess.run(["git", "fetch", "upstream", "--prune", "--tags"], check=False)
 
 how = sys.argv[1]
 
-subprocess.run(["uv", "version", "--bump", how]) 
-version = subprocess.run(["uv", "version", "--short"], capture_output=True).stdout.decode("utf-8")
+subprocess.run(["uv", "version", "--bump", how], check=False)
+version = subprocess.run(
+    ["uv", "version", "--short"], capture_output=True, text=True, check=False
+).stdout
 
-subprocess.run(["git", "commit", "-a", "-m", f"release: Bump version to {version}"])
-subprocess.run(["git", "tag", "-a", f"v{version}", "-m", f"v{version}"])
-subprocess.run(["git", "push", "upstream", "HEAD", "--follow-tags"])
-subprocess.run(["git", "push", "upstream", "HEAD:stable", "-f", "--follow-tags"])
+subprocess.run(
+    ["git", "commit", "-a", "-m", f"release: Bump version to {version}"], check=False
+)
+subprocess.run(["git", "tag", "-a", f"v{version}", "-m", f"v{version}"], check=False)
+subprocess.run(["git", "push", "upstream", "HEAD", "--follow-tags"], check=False)
+subprocess.run(
+    ["git", "push", "upstream", "HEAD:stable", "-f", "--follow-tags"], check=False
+)
