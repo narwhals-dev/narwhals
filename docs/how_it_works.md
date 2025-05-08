@@ -315,7 +315,7 @@ Here's a brief description of each piece of metadata:
 
 - `last_node_is_unorderable_window`: Whether the last node of the expression is a
   window function which cannot be ordered (`rank`, `is_unique`).
-- `is_partitioned`: Whether the expression already contains an `over(...)` statement.
+- `has_windows`: Whether the expression already contains an `over(...)` statement.
 - `n_orderable_ops`: How many order-dependent operations the expression contains.
   
     Examples:

@@ -154,6 +154,15 @@ class ExprKind(Enum):
     def is_scalar_like(self) -> bool:
         return self in {ExprKind.LITERAL, ExprKind.AGGREGATION}
 
+    def is_window(self) -> bool:
+        return self in {ExprKind.ORDERABLE_WINDOW, ExprKind.UNORDERABLE_WINDOW}
+
+    def is_orderable_window(self) -> bool:
+        return self is ExprKind.ORDERABLE_WINDOW
+
+    def is_unorderable_window(self) -> bool:
+        return self is ExprKind.UNORDERABLE_WINDOW
+
     @classmethod
     def from_expr(cls, obj: Expr) -> ExprKind:
         meta = obj._metadata
@@ -216,8 +225,8 @@ class ExpansionKind(Enum):
 class ExprMetadata:
     __slots__ = (
         "expansion_kind",
+        "has_windows",
         "is_literal",
-        "is_partitioned",
         "is_scalar_like",
         "last_node",
         "last_node_is_orderable_window",
@@ -233,7 +242,7 @@ class ExprMetadata:
         *,
         last_node_is_orderable_window: bool = False,
         last_node_is_unorderable_window: bool = False,
-        is_partitioned: bool = False,
+        has_windows: bool = False,
         n_orderable_ops: int = 0,
         preserves_length: bool = True,
         is_scalar_like: bool = False,
@@ -245,7 +254,7 @@ class ExprMetadata:
         self.last_node = last_node
         self.last_node_is_orderable_window = last_node_is_orderable_window
         self.last_node_is_unorderable_window = last_node_is_unorderable_window
-        self.is_partitioned = is_partitioned
+        self.has_windows = has_windows
         self.n_orderable_ops = n_orderable_ops
         self.preserves_length = preserves_length
         self.is_scalar_like = is_scalar_like
@@ -262,7 +271,7 @@ class ExprMetadata:
             f"  last_node: {self.last_node},\n"
             f"  last_node_is_orderable_window: {self.last_node_is_orderable_window},\n"
             f"  last_node_is_unorderable_window: {self.last_node_is_unorderable_window},\n"
-            f"  is_partitioned: {self.is_partitioned},\n"
+            f"  has_windows: {self.has_windows},\n"
             f"  n_orderable_ops: {self.n_orderable_ops},\n"
             f"  preserves_length: {self.preserves_length},\n"
             f"  is_scalar_like: {self.is_scalar_like},\n"
@@ -276,9 +285,7 @@ class ExprMetadata:
 
     @property
     def is_elementwise(self) -> bool:
-        return (
-            not self.n_orderable_ops and self.preserves_length and not self.is_partitioned
-        )
+        return not self.n_orderable_ops and self.preserves_length and not self.has_windows
 
     def with_aggregation(self) -> ExprMetadata:
         if self.is_scalar_like:
@@ -289,7 +296,7 @@ class ExprMetadata:
             ExprKind.AGGREGATION,
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=False,
-            is_partitioned=self.is_partitioned,
+            has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=False,
             is_scalar_like=True,
@@ -305,7 +312,7 @@ class ExprMetadata:
             ExprKind.ORDERABLE_AGGREGATION,
             last_node_is_orderable_window=True,
             last_node_is_unorderable_window=False,
-            is_partitioned=self.is_partitioned,
+            has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops + 1,
             preserves_length=False,
             is_scalar_like=True,
@@ -318,7 +325,7 @@ class ExprMetadata:
             ExprKind.ELEMENTWISE,
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=False,
-            is_partitioned=self.is_partitioned,
+            has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=self.preserves_length,
             is_scalar_like=self.is_scalar_like,
@@ -334,12 +341,7 @@ class ExprMetadata:
             ExprKind.UNORDERABLE_WINDOW,
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=True,
-            # `rank` and `is_unique` already require computing
-            # a window function, so we set `is_partitioned` to
-            # True. If `rank` is followed by `over(partition_by)`,
-            # then that `partition_by` is combined with the current
-            # partition.
-            is_partitioned=True,
+            has_windows=True,
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=self.preserves_length,
             is_scalar_like=False,
@@ -355,7 +357,7 @@ class ExprMetadata:
             ExprKind.ORDERABLE_WINDOW,
             last_node_is_orderable_window=True,
             last_node_is_unorderable_window=False,
-            is_partitioned=self.is_partitioned,
+            has_windows=True,
             n_orderable_ops=self.n_orderable_ops + 1,
             preserves_length=self.preserves_length,
             is_scalar_like=False,
@@ -373,14 +375,14 @@ class ExprMetadata:
                 "(e.g. `abs`) or which change length (e.g. `drop_nulls`)."
             )
             raise InvalidOperationError(msg)
-        if self.last_node_is_orderable_window:
+        if self.last_node.is_orderable_window:
             n_orderable_ops -= 1
         return ExprMetadata(
             self.expansion_kind,
             ExprKind.OVER,
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=False,
-            is_partitioned=True,
+            has_windows=True,
             n_orderable_ops=n_orderable_ops,
             preserves_length=True,
             is_scalar_like=False,
@@ -388,7 +390,7 @@ class ExprMetadata:
         )
 
     def with_partitioned_over(self) -> ExprMetadata:
-        if self.is_partitioned and not self.last_node_is_unorderable_window:
+        if self.has_windows and not self.last_node_is_unorderable_window:
             # We make an exception for `last_node_is_unorderable_window`
             # because even though it's already partitioned, if it's followed
             # by `over(partition_by)`, then we combine the partitions.
@@ -408,7 +410,7 @@ class ExprMetadata:
             ExprKind.OVER,
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=False,
-            is_partitioned=True,
+            has_windows=True,
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=True,
             is_scalar_like=False,
@@ -424,7 +426,7 @@ class ExprMetadata:
             ExprKind.FILTRATION,
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=False,
-            is_partitioned=self.is_partitioned,
+            has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=False,
             is_scalar_like=False,
@@ -440,7 +442,7 @@ class ExprMetadata:
             ExprKind.ORDERABLE_FILTRATION,
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=False,
-            is_partitioned=self.is_partitioned,
+            has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops + 1,
             preserves_length=False,
             is_scalar_like=False,
@@ -501,7 +503,7 @@ def combine_metadata(  # noqa: C901, PLR0912
     """
     n_filtrations = 0
     result_expansion_kind = ExpansionKind.SINGLE
-    result_is_partitioned = False
+    result_has_windows = False
     result_n_orderable_ops = 0
     result_preserves_length = False
     result_is_not_scalar_like = False
@@ -529,8 +531,8 @@ def combine_metadata(  # noqa: C901, PLR0912
                     else:
                         result_expansion_kind = result_expansion_kind & expansion_kind
 
-            if metadata.is_partitioned:
-                result_is_partitioned = True
+            if metadata.has_windows:
+                result_has_windows = True
             result_n_orderable_ops += metadata.n_orderable_ops
             if metadata.preserves_length:
                 result_preserves_length = True
@@ -553,7 +555,7 @@ def combine_metadata(  # noqa: C901, PLR0912
         ExprKind.NARY,
         last_node_is_orderable_window=False,
         last_node_is_unorderable_window=False,
-        is_partitioned=result_is_partitioned,
+        has_windows=result_has_windows,
         n_orderable_ops=result_n_orderable_ops,
         preserves_length=result_preserves_length,
         is_scalar_like=not result_is_not_scalar_like,
