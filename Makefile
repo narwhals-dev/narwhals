@@ -28,6 +28,7 @@ typing: ## Run typing checks
 
 .PHONY: check-api-reference
 check-api-reference:
+	python -m pip install uv
 	uv venv --allow-existing
 	$(VENV_BIN)/uv pip install -e ".[polars]"
 	$(VENV_BIN)/python utils/check_api_reference.py
