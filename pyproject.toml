@@ -107,16 +107,15 @@ local-dev = [
   {include-group = "docs"}
 ]
 
-[tool.hatch.build]
-exclude = [
-  "/.*",
-  "/docs",
-  "/tpch",
-  "/utils",
-  ".gitignore",
-  "CONTRIBUTING.md",
-  "mkdocs.yml",
-  "noxfile.py",
+[tool.hatch.build.targets.sdist]
+include = [
+  "narwhals/*",
+  "tests/*",
+]
+
+[tool.hatch.build.targets.wheel]
+include = [
+  "narwhals/*",
 ]
 
 [tool.ruff]

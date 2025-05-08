@@ -30,7 +30,7 @@ jobs:
     - name: Build a binary wheel and a source tarball
       run: python3 -m build
     - name: Check wheel content
-      run: python3 utils/check_wheel_content.py
+      run: python3 utils/check_dist_content.py
     - name: Store the distribution packages
       uses: actions/upload-artifact@v4
       with:
