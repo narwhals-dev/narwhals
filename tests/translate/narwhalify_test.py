@@ -66,6 +66,9 @@ def test_narwhalify_method_called() -> None:
     pd.testing.assert_frame_equal(result, pd.DataFrame(data))
 
 
+pytest.mark.filterwarnings("ignore:.*distutils Version classes are deprecated")
+
+
 def test_narwhalify_method_invalid() -> None:
     with pytest.deprecated_call(match="please use `pass_through` instead"):
 
