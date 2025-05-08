@@ -26,13 +26,11 @@ jobs:
       with:
         python-version: "3.x"
     - name: Install pypa/build
-      run: >-
-        python3 -m
-        pip install
-        build
-        --user
+      run: python3 -m pip install build --user
     - name: Build a binary wheel and a source tarball
       run: python3 -m build
+    - name: Check wheel content
+      run: python3 utils/check_wheel_content.py
     - name: Store the distribution packages
       uses: actions/upload-artifact@v4
       with:
