@@ -142,6 +142,12 @@ class ExprKind(Enum):
     ORDERABLE_FILTRATION = auto()
     """Changes length, affected by row order, e.g. `tail`."""
 
+    NARY = auto()
+    """Results from the combination of multiple expressions."""
+
+    OVER = auto()
+    """Results from calling `.over` on expression."""
+
     UNKNOWN = auto()
     """Based on the information we have, we can't determine the ExprKind."""
 
@@ -157,7 +163,7 @@ class ExprKind(Enum):
             return ExprKind.AGGREGATION
         if meta.is_elementwise:
             return ExprKind.ELEMENTWISE
-        return ExprKind.OTHER
+        return ExprKind.UNKNOWN
 
     @classmethod
     def from_into_expr(
@@ -213,6 +219,7 @@ class ExprMetadata:
         "is_literal",
         "is_partitioned",
         "is_scalar_like",
+        "last_node",
         "last_node_is_orderable_window",
         "last_node_is_unorderable_window",
         "n_orderable_ops",
@@ -222,6 +229,7 @@ class ExprMetadata:
     def __init__(
         self,
         expansion_kind: ExpansionKind,
+        last_node: ExprKind,
         *,
         last_node_is_orderable_window: bool = False,
         last_node_is_unorderable_window: bool = False,
@@ -234,6 +242,7 @@ class ExprMetadata:
         if is_literal:
             assert is_scalar_like  # noqa: S101  # debug assertion
         self.expansion_kind = expansion_kind
+        self.last_node = last_node
         self.last_node_is_orderable_window = last_node_is_orderable_window
         self.last_node_is_unorderable_window = last_node_is_unorderable_window
         self.is_partitioned = is_partitioned
@@ -250,6 +259,7 @@ class ExprMetadata:
         return (
             f"ExprMetadata(\n"
             f"  expansion_kind: {self.expansion_kind},\n"
+            f"  last_node: {self.last_node},\n"
             f"  last_node_is_orderable_window: {self.last_node_is_orderable_window},\n"
             f"  last_node_is_unorderable_window: {self.last_node_is_unorderable_window},\n"
             f"  is_partitioned: {self.is_partitioned},\n"
@@ -275,7 +285,8 @@ class ExprMetadata:
             msg = "Can't apply aggregations to scalar-like expressions."
             raise InvalidOperationError(msg)
         return ExprMetadata(
-            expansion_kind=self.expansion_kind,
+            self.expansion_kind,
+            ExprKind.AGGREGATION,
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=False,
             is_partitioned=self.is_partitioned,
@@ -287,7 +298,8 @@ class ExprMetadata:
 
     def with_literal(self) -> ExprMetadata:
         return ExprMetadata(
-            expansion_kind=self.expansion_kind,
+            self.expansion_kind,
+            ExprKind.LITERAL,
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=False,
             is_partitioned=self.is_partitioned,
@@ -302,7 +314,8 @@ class ExprMetadata:
             msg = "Can't apply aggregations to scalar-like expressions."
             raise InvalidOperationError(msg)
         return ExprMetadata(
-            expansion_kind=self.expansion_kind,
+            self.expansion_kind,
+            ExprKind.ORDERABLE_AGGREGATION,
             last_node_is_orderable_window=True,
             last_node_is_unorderable_window=False,
             is_partitioned=self.is_partitioned,
@@ -314,7 +327,8 @@ class ExprMetadata:
 
     def with_elementwise_op(self) -> ExprMetadata:
         return ExprMetadata(
-            expansion_kind=self.expansion_kind,
+            self.expansion_kind,
+            ExprKind.ELEMENTWISE,
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=False,
             is_partitioned=self.is_partitioned,
@@ -329,7 +343,8 @@ class ExprMetadata:
             msg = "Can't apply unorderable window (`rank`, `is_unique`) to scalar-like expression."
             raise InvalidOperationError(msg)
         return ExprMetadata(
-            expansion_kind=self.expansion_kind,
+            self.expansion_kind,
+            ExprKind.UNORDERABLE_WINDOW,
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=True,
             # `rank` and `is_unique` already require computing
@@ -349,7 +364,8 @@ class ExprMetadata:
             msg = "Can't apply orderable window (e.g. `diff`, `shift`) to scalar-like expression."
             raise InvalidOperationError(msg)
         return ExprMetadata(
-            expansion_kind=self.expansion_kind,
+            self.expansion_kind,
+            ExprKind.ORDERABLE_WINDOW,
             last_node_is_orderable_window=True,
             last_node_is_unorderable_window=False,
             is_partitioned=self.is_partitioned,
@@ -373,7 +389,8 @@ class ExprMetadata:
         if self.last_node_is_orderable_window:
             n_orderable_ops -= 1
         return ExprMetadata(
-            expansion_kind=self.expansion_kind,
+            self.expansion_kind,
+            ExprKind.OVER,
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=False,
             is_partitioned=True,
@@ -400,7 +417,8 @@ class ExprMetadata:
             )
             raise InvalidOperationError(msg)
         return ExprMetadata(
-            expansion_kind=self.expansion_kind,
+            self.expansion_kind,
+            ExprKind.OVER,
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=False,
             is_partitioned=True,
@@ -415,7 +433,8 @@ class ExprMetadata:
             msg = "Can't apply filtration (e.g. `drop_nulls`) to scalar-like expression."
             raise InvalidOperationError(msg)
         return ExprMetadata(
-            expansion_kind=self.expansion_kind,
+            self.expansion_kind,
+            ExprKind.FILTRATION,
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=False,
             is_partitioned=self.is_partitioned,
@@ -430,7 +449,8 @@ class ExprMetadata:
             msg = "Can't apply filtration (e.g. `drop_nulls`) to scalar-like expression."
             raise InvalidOperationError(msg)
         return ExprMetadata(
-            expansion_kind=self.expansion_kind,
+            self.expansion_kind,
+            ExprKind.ORDERABLE_FILTRATION,
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=False,
             is_partitioned=self.is_partitioned,
@@ -441,19 +461,26 @@ class ExprMetadata:
         )
 
     @staticmethod
+    def literal() -> ExprMetadata:
+        # e.g. `nw.lit('a')`
+        return ExprMetadata(
+            ExpansionKind.SINGLE, ExprKind.LITERAL, is_literal=True, is_scalar_like=True
+        )
+
+    @staticmethod
     def selector_single() -> ExprMetadata:
         # e.g. `nw.col('a')`, `nw.nth(0)`
-        return ExprMetadata(ExpansionKind.SINGLE)
+        return ExprMetadata(ExpansionKind.SINGLE, ExprKind.ELEMENTWISE)
 
     @staticmethod
     def selector_multi_named() -> ExprMetadata:
         # e.g. `nw.col('a', 'b')`
-        return ExprMetadata(ExpansionKind.MULTI_NAMED)
+        return ExprMetadata(ExpansionKind.MULTI_NAMED, ExprKind.ELEMENTWISE)
 
     @staticmethod
     def selector_multi_unnamed() -> ExprMetadata:
         # e.g. `nw.all()`
-        return ExprMetadata(ExpansionKind.MULTI_UNNAMED)
+        return ExprMetadata(ExpansionKind.MULTI_UNNAMED, ExprKind.ELEMENTWISE)
 
     @classmethod
     def from_binary_op(cls, lhs: Expr, rhs: IntoExpr, /) -> ExprMetadata:
@@ -536,6 +563,7 @@ def combine_metadata(  # noqa: C901, PLR0912
 
     return ExprMetadata(
         result_expansion_kind,
+        ExprKind.NARY,
         last_node_is_orderable_window=False,
         last_node_is_unorderable_window=False,
         is_partitioned=result_is_partitioned,

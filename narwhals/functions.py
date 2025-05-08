@@ -1191,7 +1191,9 @@ def len_() -> Expr:
     def func(plx: Any) -> Any:
         return plx.len()
 
-    return Expr(func, ExprMetadata(ExpansionKind.SINGLE).with_aggregation())
+    return Expr(
+        func, ExprMetadata(ExpansionKind.SINGLE, ExprKind.AGGREGATION).with_aggregation()
+    )
 
 
 def sum(*columns: str) -> Expr:
@@ -1657,10 +1659,7 @@ def lit(value: NonNestedLiteral, dtype: DType | type[DType] | None = None) -> Ex
         msg = f"Nested datatypes are not supported yet. Got {value}"
         raise NotImplementedError(msg)
 
-    return Expr(
-        lambda plx: plx.lit(value, dtype),
-        ExprMetadata(ExpansionKind.SINGLE).with_literal(),
-    )
+    return Expr(lambda plx: plx.lit(value, dtype), ExprMetadata.literal())
 
 
 def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
