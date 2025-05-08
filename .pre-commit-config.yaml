@@ -45,8 +45,9 @@ repos:
     - id: check-api-reference
       name: check-api-reference
       pass_filenames: false
-      language: system
-      entry: make check-api-reference
+      entry: python utils/check_api_reference.py
+      language: python
+      additional_dependencies: [narwhals, polars]
     - id: imports-are-banned
       name: import are banned (use `get_pandas` instead of `import pandas`)
       entry: python utils/import_check.py

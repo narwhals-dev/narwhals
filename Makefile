@@ -21,14 +21,6 @@ help:  ## Display this help screen
 .PHONY: typing
 typing: ## Run typing checks
     # install duckdb nightly so mypy recognises duckdb.SQLExpression
-	uv venv --allow-existing
 	$(VENV_BIN)/uv pip install -U --pre duckdb
 	$(VENV_BIN)/uv pip install -e . --group typing
 	$(VENV_BIN)/mypy
-
-.PHONY: check-api-reference
-check-api-reference:
-	python -m pip install uv
-	uv venv --allow-existing
-	$(VENV_BIN)/uv pip install -e ".[polars]"
-	$(VENV_BIN)/python utils/check_api_reference.py
