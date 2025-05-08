@@ -752,8 +752,8 @@ class PandasLikeDataFrame(
                 other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
 
-        msg = f"Unreachable code, got unexpected join method: {how}"
-        raise AssertionError(msg)  # pragma: no cover
+        msg = f"Unreachable code, got unexpected join method: {how}"  # pragma: no cover
+        raise AssertionError(msg)
 
     def join_asof(
         self,
