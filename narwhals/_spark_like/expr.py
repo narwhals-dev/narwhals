@@ -4,9 +4,11 @@ import operator
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
+from typing import ClassVar
 from typing import Iterable
 from typing import Iterator
 from typing import Literal
+from typing import Mapping
 from typing import Sequence
 from typing import cast
 
@@ -52,6 +54,7 @@ if TYPE_CHECKING:
 
     ColumnOrName: TypeAlias = "Column | str"
     IntoWindow: TypeAlias = "ColumnOrName | WindowInputs"
+    NativeRankMethod: TypeAlias = Literal["rank", "dense_rank", "row_number"]
 
 ASC: Literal[False] = False
 DESC: Literal[True] = True
@@ -65,6 +68,14 @@ DESC_NULLS_LAST: tuple[Literal[True], Literal[True]] = DESC, NULLS_LAST
 
 
 class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
+    _REMAP_RANK_METHOD: ClassVar[Mapping[RankMethod, NativeRankMethod]] = {
+        "min": "rank",
+        "max": "rank",
+        "average": "rank",
+        "dense": "dense_rank",
+        "ordinal": "row_number",
+    }
+
     def __init__(
         self,
         call: EvalSeries[SparkLikeLazyFrame, Column],
@@ -778,12 +789,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         )
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
-        if method in {"min", "max", "average"}:
-            func_name = "rank"
-        elif method == "dense":
-            func_name = "dense_rank"
-        else:  # method == "ordinal"
-            func_name = "row_number"
+        func_name = self._REMAP_RANK_METHOD[method]
 
         def _rank(_input: Column) -> Column:
             order_by = self._sort(_input, descending=descending, nulls_last=True)
