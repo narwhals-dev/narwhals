@@ -55,16 +55,15 @@ if TYPE_CHECKING:
     ColumnOrName: TypeAlias = "Column | str"
     IntoWindow: TypeAlias = "ColumnOrName | WindowInputs"
     NativeRankMethod: TypeAlias = Literal["rank", "dense_rank", "row_number"]
+    Asc: TypeAlias = Literal[False]
+    Desc: TypeAlias = Literal[True]
+    NullsFirst: TypeAlias = Literal[False]
+    NullsLast: TypeAlias = Literal[True]
 
-ASC: Literal[False] = False
-DESC: Literal[True] = True
-NULLS_FIRST: Literal[False] = False
-NULLS_LAST: Literal[True] = True
-
-ASC_NULLS_FIRST: tuple[Literal[False], Literal[False]] = ASC, NULLS_FIRST
-ASC_NULLS_LAST: tuple[Literal[False], Literal[True]] = ASC, NULLS_LAST
-DESC_NULLS_FIRST: tuple[Literal[True], Literal[False]] = DESC, NULLS_FIRST
-DESC_NULLS_LAST: tuple[Literal[True], Literal[True]] = DESC, NULLS_LAST
+ASC_NULLS_FIRST: tuple[Asc, NullsFirst] = False, False
+ASC_NULLS_LAST: tuple[Asc, NullsLast] = False, True
+DESC_NULLS_FIRST: tuple[Desc, NullsFirst] = True, False
+DESC_NULLS_LAST: tuple[Desc, NullsLast] = True, True
 
 
 class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
