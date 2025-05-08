@@ -156,10 +156,6 @@ class ExprKind(Enum):
         return self in {ExprKind.LITERAL, ExprKind.AGGREGATION}
 
     @property
-    def is_window(self) -> bool:
-        return self in {ExprKind.ORDERABLE_WINDOW, ExprKind.UNORDERABLE_WINDOW}
-
-    @property
     def is_orderable_window(self) -> bool:
         return self in {ExprKind.ORDERABLE_WINDOW, ExprKind.ORDERABLE_AGGREGATION}
 
