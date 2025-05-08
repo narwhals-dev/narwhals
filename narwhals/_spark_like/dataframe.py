@@ -362,7 +362,7 @@ class SparkLikeLazyFrame(
         subset = list(subset) if subset else None
         if keep == "none":
             tmp = generate_temporary_column_name(8, self.columns)
-            window = self._Window().partitionBy(subset or self.columns)
+            window = self._Window.partitionBy(subset or self.columns)
             df = (
                 self.native.withColumn(tmp, self._F.count("*").over(window))
                 .filter(self._F.col(tmp) == 1)
