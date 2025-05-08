@@ -296,19 +296,6 @@ class ExprMetadata:
             is_literal=False,
         )
 
-    def with_literal(self) -> ExprMetadata:
-        return ExprMetadata(
-            self.expansion_kind,
-            ExprKind.LITERAL,
-            last_node_is_orderable_window=False,
-            last_node_is_unorderable_window=False,
-            is_partitioned=self.is_partitioned,
-            n_orderable_ops=self.n_orderable_ops,
-            preserves_length=False,
-            is_scalar_like=True,
-            is_literal=True,
-        )
-
     def with_orderable_aggregation(self) -> ExprMetadata:
         if self.is_scalar_like:
             msg = "Can't apply aggregations to scalar-like expressions."
