@@ -396,22 +396,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def abs(self) -> Self:
         return self._with_callable(self._F.abs)
 
-    def alias(self, name: str) -> Self:
-        def alias_output_names(names: Sequence[str]) -> Sequence[str]:
-            if len(names) != 1:
-                msg = f"Expected function with single output, found output names: {names}"
-                raise ValueError(msg)
-            return [name]
-
-        return self.__class__(
-            self._call,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=alias_output_names,
-            backend_version=self._backend_version,
-            version=self._version,
-            implementation=self._implementation,
-        )
-
     def all(self) -> Self:
         return self._with_callable(self._F.bool_and)
 
