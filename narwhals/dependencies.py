@@ -252,7 +252,7 @@ def is_pyspark_connect_dataframe(df: Any) -> TypeIs[PySparkConnectDataFrame]:
     if get_pyspark_connect() is not None:  # pragma: no cover
         try:
             from pyspark.sql.connect.dataframe import DataFrame
-        except ModuleNotFoundError:
+        except (ModuleNotFoundError, ImportError):
             return False
         return isinstance(df, DataFrame)
     return False
