@@ -891,7 +891,6 @@ class LazyExpr(  # type: ignore[misc]
     map_batches: not_implemented = not_implemented()
     ewm_mean: not_implemented = not_implemented()
     gather_every: not_implemented = not_implemented()
-    replace_strict: not_implemented = not_implemented()
     cat: not_implemented = not_implemented()  # pyright: ignore[reportAssignmentType]
 
     @classmethod

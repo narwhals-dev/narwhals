@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -602,6 +603,65 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             return self._F.count("*")
 
         return self._with_callable(_len)
+
+    def replace_strict(
+        self,
+        old: Sequence[Any] | Mapping[Any, Any],
+        new: Sequence[Any],
+        *,
+        return_dtype: DType | type[DType] | None,
+    ) -> Self:
+        mapping = old if isinstance(old, Mapping) else dict(zip(old, new))
+
+        mapping_keys = list(mapping.keys())
+
+        # Create an array of all valid keys for our IN check
+        # Note: None/null handling is special in Spark - we'll handle it separately
+        non_null_keys = [k for k in mapping_keys if k is not None]
+        has_null_key = None in mapping_keys
+
+        mapping_expr = self._F.create_map(
+            [self._F.lit(x) for x in chain(*mapping.items())]
+        )
+
+        def _replace_strict(_input: Column) -> Column:
+            validation_expr = (
+                self._F.when(
+                    _input.isNull() & self._F.lit(has_null_key),
+                    self._F.lit(True),  # noqa: FBT003
+                )
+                .when(_input.isNull() & ~self._F.lit(has_null_key), self._F.lit(False))  # noqa: FBT003
+                .otherwise(
+                    self._F.array_contains(
+                        self._F.array([self._F.lit(k) for k in non_null_keys]), _input
+                    )
+                )
+            )
+
+            mapped_col = (
+                mapping_expr[_input]
+                if self._implementation.is_pyspark()
+                else mapping_expr.getItem(_input)
+            )
+
+            try:
+                result = self._F.when(validation_expr, mapped_col).otherwise(
+                    self._F.assert_true(self._F.lit(False))  # noqa: FBT003
+                )
+            except Exception as exc:
+                msg = "replace_strict did not replace all non-null values."
+                raise ValueError(msg) from exc
+
+            if return_dtype is not None:
+                result = result.cast(
+                    narwhals_to_native_dtype(
+                        return_dtype, self._version, self._native_dtypes
+                    )
+                )
+
+            return result
+
+        return self._with_callable(_replace_strict)
 
     def round(self, decimals: int) -> Self:
         def _round(_input: Column) -> Column:

@@ -768,3 +768,4 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
     drop_nulls = not_implemented()
     unique = not_implemented()
+    replace_strict = not_implemented()
