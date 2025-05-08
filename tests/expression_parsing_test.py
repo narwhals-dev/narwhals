@@ -20,7 +20,7 @@ from narwhals.exceptions import InvalidOperationError
         (nw.col("a").cum_sum().cum_sum(), 2),
         (nw.sum_horizontal(nw.col("a"), nw.col("a").cum_sum()), 1),
         (
-            nw.sum_horizontal(nw.col("a"), nw.col("a").cum_sum()).over("a"),
+            nw.sum_horizontal(nw.col("a"), nw.col("a").cum_sum()).over(order_by="a"),
             1,
         ),
         (
@@ -98,6 +98,8 @@ def test_invalid_over() -> None:
 def test_nested_over() -> None:
     with pytest.raises(InvalidOperationError):
         nw.col("a").mean().over("b").over("c")
+    with pytest.raises(InvalidOperationError):
+        nw.col("a").mean().over("b").over("c", order_by="i")
 
 
 def test_filtration_over() -> None:

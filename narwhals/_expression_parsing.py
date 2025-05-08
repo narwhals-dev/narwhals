@@ -151,15 +151,19 @@ class ExprKind(Enum):
     UNKNOWN = auto()
     """Based on the information we have, we can't determine the ExprKind."""
 
+    @property
     def is_scalar_like(self) -> bool:
         return self in {ExprKind.LITERAL, ExprKind.AGGREGATION}
 
+    @property
     def is_window(self) -> bool:
         return self in {ExprKind.ORDERABLE_WINDOW, ExprKind.UNORDERABLE_WINDOW}
 
+    @property
     def is_orderable_window(self) -> bool:
-        return self is ExprKind.ORDERABLE_WINDOW
+        return self in {ExprKind.ORDERABLE_WINDOW, ExprKind.ORDERABLE_AGGREGATION}
 
+    @property
     def is_unorderable_window(self) -> bool:
         return self is ExprKind.UNORDERABLE_WINDOW
 
@@ -192,7 +196,7 @@ class ExprKind(Enum):
 def is_scalar_like(
     obj: ExprKind,
 ) -> TypeIs[Literal[ExprKind.LITERAL, ExprKind.AGGREGATION]]:
-    return obj.is_scalar_like()
+    return obj.is_scalar_like
 
 
 class ExpansionKind(Enum):
@@ -285,7 +289,7 @@ class ExprMetadata:
 
     @property
     def is_elementwise(self) -> bool:
-        return not self.n_orderable_ops and self.preserves_length and not self.has_windows
+        return not self.n_orderable_ops and self.preserves_length
 
     def with_aggregation(self) -> ExprMetadata:
         if self.is_scalar_like:
@@ -341,7 +345,7 @@ class ExprMetadata:
             ExprKind.UNORDERABLE_WINDOW,
             last_node_is_orderable_window=False,
             last_node_is_unorderable_window=True,
-            has_windows=True,
+            has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=self.preserves_length,
             is_scalar_like=False,
@@ -357,7 +361,7 @@ class ExprMetadata:
             ExprKind.ORDERABLE_WINDOW,
             last_node_is_orderable_window=True,
             last_node_is_unorderable_window=False,
-            has_windows=True,
+            has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops + 1,
             preserves_length=self.preserves_length,
             is_scalar_like=False,
@@ -365,6 +369,14 @@ class ExprMetadata:
         )
 
     def with_ordered_over(self) -> ExprMetadata:
+        if self.has_windows:
+            msg = (
+                "Cannot nest `over` statements. If you used `rank` or `is_unique` "
+                "and then `over`, make sure that the `over` statement comes "
+                "immediately after the window function, e.g. "
+                "`nw.col('a').rank().over('b')`."
+            )
+            raise InvalidOperationError(msg)
         n_orderable_ops = self.n_orderable_ops
         if not n_orderable_ops:
             msg = "Cannot use `order_by` in `over` on expression which isn't orderable."
@@ -390,19 +402,22 @@ class ExprMetadata:
         )
 
     def with_partitioned_over(self) -> ExprMetadata:
-        if self.has_windows and not self.last_node_is_unorderable_window:
-            # We make an exception for `last_node_is_unorderable_window`
-            # because even though it's already partitioned, if it's followed
-            # by `over(partition_by)`, then we combine the partitions.
+        if self.has_windows:
             msg = (
-                "Cannot nest `over` statements. If you used `rank` and `over`, make "
-                "sure that the `over` comes immediately after the `rank`."
+                "Cannot nest `over` statements. If you used `rank` or `is_unique` "
+                "and then `over`, make sure that the `over` statement comes "
+                "immediately after the window function, e.g. "
+                "`nw.col('a').rank().over('b')`."
             )
             raise InvalidOperationError(msg)
-        if self.is_elementwise or self.is_filtration:
+        if (
+            self.is_elementwise or self.is_filtration
+        ) and not self.last_node.is_unorderable_window:
             msg = (
                 "Cannot `over` on expressions which are elementwise\n"
-                "(e.g. `abs`) or which change length (e.g. `drop_nulls`)."
+                "(e.g. `abs`) or which change length (e.g. `drop_nulls`). "
+                "If you wanted to combine `rank` (or `is_unique`) with `over`, "
+                "make sure that `over` comes right after `rank` (or `is_unique`)."
             )
             raise InvalidOperationError(msg)
         return ExprMetadata(
@@ -600,7 +615,7 @@ def apply_n_ary_operation(
         for comparand in comparands
     ]
 
-    broadcast = any(not kind.is_scalar_like() for kind in kinds)
+    broadcast = any(not kind.is_scalar_like for kind in kinds)
     compliant_exprs = (
         compliant_expr.broadcast(kind)
         if broadcast and is_compliant_expr(compliant_expr) and is_scalar_like(kind)
