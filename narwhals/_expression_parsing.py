@@ -122,13 +122,28 @@ class ExprKind(Enum):
     """e.g. `nw.lit(1)`"""
 
     AGGREGATION = auto()
-    """e.g. `nw.col('a').mean()`"""
+    """Reduces to a single value, not affected by row order, e.g. `nw.col('a').mean()`"""
+
+    ORDERABLE_AGGREGATION = auto()
+    """Reduces to a single value, affected by row order, e.g. `nw.col('a').arg_max()`"""
 
     ELEMENTWISE = auto()
-    """preserves length, operates on each row independently"""
+    """Preserves length, operates on each row independently"""
 
-    OTHER = auto()
-    """e.g. window functions."""
+    ORDERABLE_WINDOW = auto()
+    """Depends on the rows around it and on their order, e.g. `diff`."""
+
+    UNORDERABLE_WINDOW = auto()
+    """Depends on the rows around it but not on their order, e.g. `rank`."""
+
+    FILTRATION = auto()
+    """Changes length, not affected by row order, e.g. `drop_nulls`."""
+
+    ORDERABLE_FILTRATION = auto()
+    """Changes length, affected by row order, e.g. `tail`."""
+
+    UNKNOWN = auto()
+    """Based on the information we have, we can't determine the ExprKind."""
 
     def is_scalar_like(self) -> bool:
         return self in {ExprKind.LITERAL, ExprKind.AGGREGATION}
