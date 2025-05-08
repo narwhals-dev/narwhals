@@ -11,7 +11,6 @@ from typing import Callable
 from typing import Sequence
 from typing import cast
 
-import polars as pl
 import pytest
 
 from narwhals.utils import generate_temporary_column_name
@@ -21,6 +20,7 @@ if TYPE_CHECKING:
     import duckdb
     import ibis
     import pandas as pd
+    import polars as pl
     import pyarrow as pa
     from pyspark.sql import DataFrame as PySparkDataFrame
     from typing_extensions import TypeAlias
@@ -231,6 +231,8 @@ def _ibis_backend() -> ibis.backends.BaseBackend:  # pragma: no cover
 def ibis_lazy_constructor(
     obj: Data,
 ) -> ibis.expr.types.Table:  # pragma: no cover
+    import polars as pl
+
     ldf = pl.from_dict(obj).lazy()
     table_name = str(uuid.uuid4())
     return _ibis_backend().create_table(table_name, ldf)
