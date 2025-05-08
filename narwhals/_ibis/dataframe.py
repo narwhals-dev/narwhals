@@ -319,7 +319,8 @@ class IbisLazyFrame(
         joined = self._join_drop_duplicate_columns(joined, [right_on + suffix])
         if by_right is not None:
             by_right = by_right if not isinstance(by_right, str) else [by_right]
-            self._join_drop_duplicate_columns(joined, (n + suffix for n in by_right))
+            right_names = (n + suffix for n in by_right)
+            joined = self._join_drop_duplicate_columns(joined, right_names)
         return self._with_native(joined)
 
     def _convert_predicates(
