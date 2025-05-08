@@ -24,3 +24,8 @@ typing: ## Run typing checks
 	$(VENV_BIN)/uv pip install -U --pre duckdb
 	$(VENV_BIN)/uv pip install -e . --group typing
 	$(VENV_BIN)/mypy
+
+.PHONY: check-api-reference
+check-api-reference:
+	$(VENV_BIN)/uv pip install ".[polars]"
+	$(VENV_BIN)/python utils/check_api_reference.py
