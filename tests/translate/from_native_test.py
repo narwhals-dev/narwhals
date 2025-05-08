@@ -564,7 +564,7 @@ def test_from_native_roundtrip_identity(
     assert roundtrip is native
 
 
-def test_pyspark_connect_deps_2517() -> None:
+def test_pyspark_connect_deps_2517() -> None:  # pragma: no cover
     pytest.importorskip("pyspark")
     # Don't delete this! It's crucial for the test that
     # pyspark.sql.connect be imported.
