@@ -73,9 +73,7 @@ class IbisLazyFrame(
             data, backend_version=context._backend_version, version=context._version
         )
 
-    def to_narwhals(
-        self, *args: Any, **kwds: Any
-    ) -> LazyFrame[ir.Table] | DataFrameV1[ir.Table]:
+    def to_narwhals(self) -> LazyFrame[ir.Table] | DataFrameV1[ir.Table]:
         if self._version is Version.MAIN:
             return self._version.lazyframe(self, level="lazy")
 
