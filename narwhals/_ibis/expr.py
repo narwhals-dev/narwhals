@@ -345,21 +345,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         invert = cast("Callable[..., ir.Value]", operator.invert)
         return self._with_callable(invert)
 
-    def alias(self, name: str) -> Self:
-        def alias_output_names(names: Sequence[str]) -> Sequence[str]:
-            if len(names) != 1:
-                msg = f"Expected function with single output, found output names: {names}"
-                raise ValueError(msg)
-            return [name]
-
-        return self.__class__(
-            self._call,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=alias_output_names,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-
     def abs(self) -> Self:
         return self._with_callable(lambda _input: _input.abs())
 
