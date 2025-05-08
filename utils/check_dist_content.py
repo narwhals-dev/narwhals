@@ -22,7 +22,7 @@ with ZipFile(wheel_path) as wheel_file:
         sys.exit(1)
 
 with TarFile.open(sdist_path, mode="r:gz") as sdist_file:
-    # Allow only 'narwhals' ans 'tests' folders
+    # Allow only 'narwhals' and 'tests' folders, and some extra files
     sdist_dirs = {m.name.split("/")[1] for m in sdist_file.getmembers()}
     allowed_sdist_dirs = {
         "narwhals",
