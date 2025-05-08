@@ -45,7 +45,9 @@ if default_constructors := os.environ.get(
 ):  # pragma: no cover
     DEFAULT_CONSTRUCTORS = default_constructors
 else:
-    DEFAULT_CONSTRUCTORS = "pandas,pandas[pyarrow],polars[eager],pyarrow,duckdb,sqlframe"
+    DEFAULT_CONSTRUCTORS = (
+        "pandas,pandas[pyarrow],polars[eager],pyarrow,duckdb,sqlframe,ibis"
+    )
 
 
 def pytest_addoption(parser: Any) -> None:
