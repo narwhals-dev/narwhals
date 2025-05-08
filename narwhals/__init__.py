@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from importlib import metadata
+
 from narwhals import dependencies
 from narwhals import dtypes
 from narwhals import exceptions
@@ -81,7 +83,7 @@ from narwhals.utils import maybe_get_index
 from narwhals.utils import maybe_reset_index
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.38.1"
+__version__ = metadata.version(__name__)
 
 __all__ = [
     "Array",

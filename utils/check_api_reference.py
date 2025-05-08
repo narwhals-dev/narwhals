@@ -76,7 +76,9 @@ files = {fp.stem for fp in Path("narwhals").iterdir()}
 
 # Top level functions
 top_level_functions = [
-    i for i in dir(nw) if not i[0].isupper() and i[0] != "_" and i not in files
+    i
+    for i in dir(nw)
+    if not i[0].isupper() and i[0] != "_" and i not in files and i != "metadata"
 ]
 with open("docs/api-reference/narwhals.md") as fd:
     content = fd.read()

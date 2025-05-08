@@ -56,24 +56,6 @@ content = content.replace(f'version = "{old_version}"', f'version = "{version}"'
 with open("pyproject.toml", "w", encoding="utf-8") as f:
     f.write(content)
 
-with open("narwhals/__init__.py", encoding="utf-8") as f:
-    content = f.read()
-content = content.replace(
-    f'__version__ = "{old_version}"',
-    f'__version__ = "{version}"',
-)
-with open("narwhals/__init__.py", "w", encoding="utf-8") as f:
-    f.write(content)
-
-with open("docs/installation.md", encoding="utf-8") as f:
-    content = f.read()
-content = content.replace(
-    f"'{old_version}'",
-    f"'{version}'",
-)
-with open("docs/installation.md", "w", encoding="utf-8") as f:
-    f.write(content)
-
 subprocess.run(["git", "commit", "-a", "-m", f"release: Bump version to {version}"])
 subprocess.run(["git", "tag", "-a", f"v{version}", "-m", f"v{version}"])
 subprocess.run(["git", "push", "upstream", "HEAD", "--follow-tags"])
