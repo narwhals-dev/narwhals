@@ -605,6 +605,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_callable(_n_unique)
 
     def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
+        partition = partition_by or [self._F.lit(1)]
         if (fn := self._window_function) is not None:
             if order_by is None:  # pragma: no cover
                 msg = (
@@ -613,14 +614,13 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
                     f"_window_function={fn!r}\npartition_by={partition_by!r}\norder_by={order_by!r}"
                 )
                 raise InvalidOperationError(msg)
-            partition = partition_by or [self._F.lit(1)]
 
             def func(df: SparkLikeLazyFrame) -> list[Column]:
                 return [fn(WindowInputs(expr, partition, order_by)) for expr in self(df)]
         else:
 
             def func(df: SparkLikeLazyFrame) -> list[Column]:
-                return [expr.over(self._partition_by(*partition_by)) for expr in self(df)]
+                return [expr.over(self._partition_by(*partition)) for expr in self(df)]
 
         return self.__class__(
             func,
