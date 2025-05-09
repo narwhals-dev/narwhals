@@ -298,23 +298,8 @@ Here's a brief description of each piece of metadata:
     - `ExpansionKind.MULTI_UNNAMED`: Produces multiple outputs whose names depend
       on the input dataframe. For example, `nw.nth(0, 1)` or `nw.selectors.numeric()`.
 
-- `last_node_is_orderable_window`: Whether the last node of the expression is a
-  window function which can be ordered (`diff`, `rolling_*`, `cum_*`, `shift`, `is_*_distinct`).
-
-    For example:
-
-    - `nw.col('a').diff()`
-    - `nw.col('a').rolling_mean(2)`
-    - `nw.col('a').cum_sum()`
-
-    Non-examples:
-
-    - `nw.col('a')`
-    - `nw.col('a').rolling_mean(2).abs()`
-    - `nw.col('a').cum_sum() + 1`
-
-- `last_node_is_unorderable_window`: Whether the last node of the expression is a
-  window function which cannot be ordered (`rank`, `is_unique`).
+- `last_node`: Kind of the last operation in the expression. See
+  `narwhals._expression_parsing.ExprKind` for the various options.
 - `has_windows`: Whether the expression already contains an `over(...)` statement.
 - `n_orderable_ops`: How many order-dependent operations the expression contains.
   
