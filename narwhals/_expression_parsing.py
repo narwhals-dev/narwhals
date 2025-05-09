@@ -167,10 +167,6 @@ class ExprKind(Enum):
     def is_orderable_window(self) -> bool:
         return self in {ExprKind.ORDERABLE_WINDOW, ExprKind.ORDERABLE_AGGREGATION}
 
-    @property
-    def is_unorderable_window(self) -> bool:
-        return self is ExprKind.UNORDERABLE_WINDOW
-
     @classmethod
     def from_expr(cls, obj: Expr) -> ExprKind:
         meta = obj._metadata

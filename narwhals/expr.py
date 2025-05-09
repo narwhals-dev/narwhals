@@ -123,6 +123,7 @@ class Expr:
             |      1  15       |
             └──────────────────┘
         """
+        # Don't use `_with_elementwise_op` so that `_metadata.last_node` is preserved.
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).alias(name), self._metadata
         )
