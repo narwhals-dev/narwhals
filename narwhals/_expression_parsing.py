@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import EagerNamespaceAny
     from narwhals._compliant.typing import EvalNames
     from narwhals.expr import Expr
+    from narwhals.series import Series
     from narwhals.typing import IntoExpr
     from narwhals.typing import NonNestedLiteral
     from narwhals.typing import _1DArray
@@ -46,6 +47,13 @@ def is_expr(obj: Any) -> TypeIs[Expr]:
     from narwhals.expr import Expr
 
     return isinstance(obj, Expr)
+
+
+def is_series(obj: Any) -> TypeIs[Series[Any]]:
+    """Check whether `obj` is a Narwhals Expr."""
+    from narwhals.series import Series
+
+    return isinstance(obj, Series)
 
 
 def combine_evaluate_output_names(
@@ -128,7 +136,7 @@ class ExprKind(Enum):
     """Reduces to a single value, affected by row order, e.g. `nw.col('a').arg_max()`"""
 
     ELEMENTWISE = auto()
-    """Preserves length, operates on each row independently"""
+    """Preserves length, can operate without context for surrounding rows, e.g. `nw.col('a').abs()`."""
 
     ORDERABLE_WINDOW = auto()
     """Depends on the rows around it and on their order, e.g. `diff`."""
@@ -226,6 +234,7 @@ class ExprMetadata:
     __slots__ = (
         "expansion_kind",
         "has_windows",
+        "is_elementwise",
         "is_literal",
         "is_scalar_like",
         "last_node",
@@ -241,15 +250,19 @@ class ExprMetadata:
         has_windows: bool = False,
         n_orderable_ops: int = 0,
         preserves_length: bool = True,
+        is_elementwise: bool = True,
         is_scalar_like: bool = False,
         is_literal: bool = False,
     ) -> None:
         if is_literal:
             assert is_scalar_like  # noqa: S101  # debug assertion
+        if is_elementwise:
+            assert preserves_length  # noqa: S101  # debug assertion
         self.expansion_kind = expansion_kind
         self.last_node = last_node
         self.has_windows = has_windows
         self.n_orderable_ops = n_orderable_ops
+        self.is_elementwise = is_elementwise
         self.preserves_length = preserves_length
         self.is_scalar_like = is_scalar_like
         self.is_literal = is_literal
@@ -265,6 +278,7 @@ class ExprMetadata:
             f"  last_node: {self.last_node},\n"
             f"  has_windows: {self.has_windows},\n"
             f"  n_orderable_ops: {self.n_orderable_ops},\n"
+            f"  is_elementwise: {self.is_elementwise},\n"
             f"  preserves_length: {self.preserves_length},\n"
             f"  is_scalar_like: {self.is_scalar_like},\n"
             f"  is_literal: {self.is_literal},\n"
@@ -274,10 +288,6 @@ class ExprMetadata:
     @property
     def is_filtration(self) -> bool:
         return not self.preserves_length and not self.is_scalar_like
-
-    @property
-    def is_elementwise(self) -> bool:
-        return not self.n_orderable_ops and self.preserves_length
 
     def with_aggregation(self) -> ExprMetadata:
         if self.is_scalar_like:
@@ -289,6 +299,7 @@ class ExprMetadata:
             has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=False,
+            is_elementwise=False,
             is_scalar_like=True,
             is_literal=False,
         )
@@ -303,6 +314,7 @@ class ExprMetadata:
             has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops + 1,
             preserves_length=False,
+            is_elementwise=False,
             is_scalar_like=True,
             is_literal=False,
         )
@@ -314,6 +326,7 @@ class ExprMetadata:
             has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=self.preserves_length,
+            is_elementwise=self.is_elementwise,
             is_scalar_like=self.is_scalar_like,
             is_literal=self.is_literal,
         )
@@ -328,6 +341,7 @@ class ExprMetadata:
             has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=self.preserves_length,
+            is_elementwise=False,
             is_scalar_like=False,
             is_literal=False,
         )
@@ -342,6 +356,7 @@ class ExprMetadata:
             has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops + 1,
             preserves_length=self.preserves_length,
+            is_elementwise=False,
             is_scalar_like=False,
             is_literal=False,
         )
@@ -373,6 +388,7 @@ class ExprMetadata:
             has_windows=True,
             n_orderable_ops=n_orderable_ops,
             preserves_length=True,
+            is_elementwise=False,
             is_scalar_like=False,
             is_literal=False,
         )
@@ -402,6 +418,7 @@ class ExprMetadata:
             has_windows=True,
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=True,
+            is_elementwise=False,
             is_scalar_like=False,
             is_literal=False,
         )
@@ -416,6 +433,7 @@ class ExprMetadata:
             has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=False,
+            is_elementwise=False,
             is_scalar_like=False,
             is_literal=False,
         )
@@ -430,6 +448,7 @@ class ExprMetadata:
             has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops + 1,
             preserves_length=False,
+            is_elementwise=False,
             is_scalar_like=False,
             is_literal=False,
         )
@@ -439,6 +458,7 @@ class ExprMetadata:
         return ExprMetadata(
             ExpansionKind.SINGLE,
             ExprKind.AGGREGATION,
+            is_elementwise=False,
             preserves_length=False,
             is_scalar_like=True,
         )
@@ -446,7 +466,11 @@ class ExprMetadata:
     @staticmethod
     def literal() -> ExprMetadata:
         return ExprMetadata(
-            ExpansionKind.SINGLE, ExprKind.LITERAL, is_literal=True, is_scalar_like=True
+            ExpansionKind.SINGLE,
+            ExprKind.LITERAL,
+            is_elementwise=False,
+            is_literal=True,
+            is_scalar_like=True,
         )
 
     @staticmethod
@@ -498,12 +522,17 @@ def combine_metadata(  # noqa: C901, PLR0912
     result_expansion_kind = ExpansionKind.SINGLE
     result_has_windows = False
     result_n_orderable_ops = 0
+    # result preserves length if at least one input does
     result_preserves_length = False
+    # result is elementwise if all inputs are elementwise
+    result_is_not_elementwise = False
+    # result is scalar-like if all inputs are scalar-like
     result_is_not_scalar_like = False
+    # result is literal if all inputs are literal
     result_is_not_literal = False
 
     for i, arg in enumerate(args):  # noqa: PLR1702
-        if isinstance(arg, str) and not str_as_lit:
+        if (isinstance(arg, str) and not str_as_lit) or is_series(arg):
             result_preserves_length = True
             result_is_not_scalar_like = True
             result_is_not_literal = True
@@ -529,6 +558,8 @@ def combine_metadata(  # noqa: C901, PLR0912
             result_n_orderable_ops += metadata.n_orderable_ops
             if metadata.preserves_length:
                 result_preserves_length = True
+            if not metadata.is_elementwise:
+                result_is_not_elementwise = True
             if not metadata.is_scalar_like:
                 result_is_not_scalar_like = True
             if not metadata.is_literal:
@@ -549,6 +580,7 @@ def combine_metadata(  # noqa: C901, PLR0912
         has_windows=result_has_windows,
         n_orderable_ops=result_n_orderable_ops,
         preserves_length=result_preserves_length,
+        is_elementwise=not result_is_not_elementwise,
         is_scalar_like=not result_is_not_scalar_like,
         is_literal=not result_is_not_literal,
     )
