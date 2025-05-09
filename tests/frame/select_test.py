@@ -110,8 +110,8 @@ def test_missing_columns_lazy(
     constructor_lazy: ConstructorLazy, request: pytest.FixtureRequest
 ) -> None:
     constructor_id = str(request.node.callspec.id)
-    # if any(id_ == constructor_id for id_ in ("sqlframe", "pyspark[connect]")):
-    if constructor_id == "sqlframe":
+    if any(id_ == constructor_id for id_ in ("sqlframe", "pyspark[connect]")):
+        # These backend raise errors at collect
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor_lazy(data))
