@@ -576,7 +576,7 @@ class PandasLikeDataFrame(
 
         return PandasLikeGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
-    def _inner_join(
+    def _join_inner(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> Self:
         return self._with_native(
@@ -589,7 +589,7 @@ class PandasLikeDataFrame(
             )
         )
 
-    def _left_join(
+    def _join_left(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> Self:
         result_native = self.native.merge(
@@ -607,7 +607,7 @@ class PandasLikeDataFrame(
                 extra.append(f"{right_key}{suffix}")
         return self._with_native(result_native.drop(columns=extra))
 
-    def _full_join(
+    def _join_full(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> Self:
         # Pandas coalesces keys in full joins unless there's no collision
@@ -625,7 +625,7 @@ class PandasLikeDataFrame(
             ),
         )
 
-    def _cross_join(self, other: Self, *, suffix: str) -> Self:
+    def _join_cross(self, other: Self, *, suffix: str) -> Self:
         implementation = self._implementation
         backend_version = self._backend_version
         if (implementation.is_modin() or implementation.is_cudf()) or (
@@ -651,7 +651,7 @@ class PandasLikeDataFrame(
             self.native.merge(other.native, how="cross", suffixes=("", suffix))
         )
 
-    def _semi_join(
+    def _join_semi(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
     ) -> Self:
         implementation = self._implementation
@@ -677,7 +677,7 @@ class PandasLikeDataFrame(
             )
         )
 
-    def _anti_join(
+    def _join_anti(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
     ) -> Self:
         implementation = self._implementation
@@ -729,26 +729,26 @@ class PandasLikeDataFrame(
         suffix: str,
     ) -> Self:
         if how == "cross":
-            return self._cross_join(other=other, suffix=suffix)
+            return self._join_cross(other=other, suffix=suffix)
 
         # help mypy
         assert left_on is not None  # noqa: S101
         assert right_on is not None  # noqa: S101
 
         if how == "inner":
-            return self._inner_join(
+            return self._join_inner(
                 other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
         if how == "anti":
-            return self._anti_join(other=other, left_on=left_on, right_on=right_on)
+            return self._join_anti(other=other, left_on=left_on, right_on=right_on)
         if how == "semi":
-            return self._semi_join(other=other, left_on=left_on, right_on=right_on)
+            return self._join_semi(other=other, left_on=left_on, right_on=right_on)
         if how == "left":
-            return self._left_join(
+            return self._join_left(
                 other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
         if how == "full":
-            return self._full_join(
+            return self._join_full(
                 other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
 

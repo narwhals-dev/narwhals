@@ -258,7 +258,7 @@ class DaskLazyFrame(
             self.native.sort_values(list(by), ascending=ascending, na_position=position)
         )
 
-    def _inner_join(
+    def _join_inner(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> Self:
         return self._with_native(
@@ -271,7 +271,7 @@ class DaskLazyFrame(
             )
         )
 
-    def _left_join(
+    def _join_left(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> Self:
         result_native = self.native.merge(
@@ -289,7 +289,7 @@ class DaskLazyFrame(
                 extra.append(f"{right_key}_right")
         return self._with_native(result_native.drop(columns=extra))
 
-    def _full_join(
+    def _join_full(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> Self:
         # dask does not retain keys post-join
@@ -309,7 +309,7 @@ class DaskLazyFrame(
             )
         )
 
-    def _cross_join(self, other: Self, *, suffix: str) -> Self:
+    def _join_cross(self, other: Self, *, suffix: str) -> Self:
         key_token = generate_temporary_column_name(
             n_bytes=8, columns=[*self.columns, *other.columns]
         )
@@ -326,7 +326,7 @@ class DaskLazyFrame(
             .drop(columns=key_token)
         )
 
-    def _semi_join(
+    def _join_semi(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
     ) -> Self:
         other_native = (
@@ -347,7 +347,7 @@ class DaskLazyFrame(
             )
         )
 
-    def _anti_join(
+    def _join_anti(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
     ) -> Self:
         indicator_token = generate_temporary_column_name(
@@ -386,26 +386,26 @@ class DaskLazyFrame(
         suffix: str,
     ) -> Self:
         if how == "cross":
-            return self._cross_join(other=other, suffix=suffix)
+            return self._join_cross(other=other, suffix=suffix)
 
         # help mypy
         assert left_on is not None  # noqa: S101
         assert right_on is not None  # noqa: S101
 
         if how == "inner":
-            return self._inner_join(
+            return self._join_inner(
                 other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
         if how == "anti":
-            return self._anti_join(other=other, left_on=left_on, right_on=right_on)
+            return self._join_anti(other=other, left_on=left_on, right_on=right_on)
         if how == "semi":
-            return self._semi_join(other=other, left_on=left_on, right_on=right_on)
+            return self._join_semi(other=other, left_on=left_on, right_on=right_on)
         if how == "left":
-            return self._left_join(
+            return self._join_left(
                 other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
         if how == "full":
-            return self._full_join(
+            return self._join_full(
                 other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
 
