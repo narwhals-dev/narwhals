@@ -229,8 +229,6 @@ class ExprMetadata:
         "is_literal",
         "is_scalar_like",
         "last_node",
-        "last_node_is_orderable_window",
-        "last_node_is_unorderable_window",
         "n_orderable_ops",
         "preserves_length",
     )
@@ -240,8 +238,6 @@ class ExprMetadata:
         expansion_kind: ExpansionKind,
         last_node: ExprKind,
         *,
-        last_node_is_orderable_window: bool = False,
-        last_node_is_unorderable_window: bool = False,
         has_windows: bool = False,
         n_orderable_ops: int = 0,
         preserves_length: bool = True,
@@ -252,8 +248,6 @@ class ExprMetadata:
             assert is_scalar_like  # noqa: S101  # debug assertion
         self.expansion_kind = expansion_kind
         self.last_node = last_node
-        self.last_node_is_orderable_window = last_node_is_orderable_window
-        self.last_node_is_unorderable_window = last_node_is_unorderable_window
         self.has_windows = has_windows
         self.n_orderable_ops = n_orderable_ops
         self.preserves_length = preserves_length
@@ -269,8 +263,6 @@ class ExprMetadata:
             f"ExprMetadata(\n"
             f"  expansion_kind: {self.expansion_kind},\n"
             f"  last_node: {self.last_node},\n"
-            f"  last_node_is_orderable_window: {self.last_node_is_orderable_window},\n"
-            f"  last_node_is_unorderable_window: {self.last_node_is_unorderable_window},\n"
             f"  has_windows: {self.has_windows},\n"
             f"  n_orderable_ops: {self.n_orderable_ops},\n"
             f"  preserves_length: {self.preserves_length},\n"
@@ -294,8 +286,6 @@ class ExprMetadata:
         return ExprMetadata(
             self.expansion_kind,
             ExprKind.AGGREGATION,
-            last_node_is_orderable_window=False,
-            last_node_is_unorderable_window=False,
             has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=False,
@@ -310,8 +300,6 @@ class ExprMetadata:
         return ExprMetadata(
             self.expansion_kind,
             ExprKind.ORDERABLE_AGGREGATION,
-            last_node_is_orderable_window=True,
-            last_node_is_unorderable_window=False,
             has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops + 1,
             preserves_length=False,
@@ -323,8 +311,6 @@ class ExprMetadata:
         return ExprMetadata(
             self.expansion_kind,
             ExprKind.ELEMENTWISE,
-            last_node_is_orderable_window=False,
-            last_node_is_unorderable_window=False,
             has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=self.preserves_length,
@@ -339,8 +325,6 @@ class ExprMetadata:
         return ExprMetadata(
             self.expansion_kind,
             ExprKind.UNORDERABLE_WINDOW,
-            last_node_is_orderable_window=False,
-            last_node_is_unorderable_window=True,
             has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=self.preserves_length,
@@ -355,8 +339,6 @@ class ExprMetadata:
         return ExprMetadata(
             self.expansion_kind,
             ExprKind.ORDERABLE_WINDOW,
-            last_node_is_orderable_window=True,
-            last_node_is_unorderable_window=False,
             has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops + 1,
             preserves_length=self.preserves_length,
@@ -388,8 +370,6 @@ class ExprMetadata:
         return ExprMetadata(
             self.expansion_kind,
             ExprKind.OVER,
-            last_node_is_orderable_window=False,
-            last_node_is_unorderable_window=False,
             has_windows=True,
             n_orderable_ops=n_orderable_ops,
             preserves_length=True,
@@ -419,8 +399,6 @@ class ExprMetadata:
         return ExprMetadata(
             self.expansion_kind,
             ExprKind.OVER,
-            last_node_is_orderable_window=False,
-            last_node_is_unorderable_window=False,
             has_windows=True,
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=True,
@@ -435,8 +413,6 @@ class ExprMetadata:
         return ExprMetadata(
             self.expansion_kind,
             ExprKind.FILTRATION,
-            last_node_is_orderable_window=False,
-            last_node_is_unorderable_window=False,
             has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=False,
@@ -451,8 +427,6 @@ class ExprMetadata:
         return ExprMetadata(
             self.expansion_kind,
             ExprKind.ORDERABLE_FILTRATION,
-            last_node_is_orderable_window=False,
-            last_node_is_unorderable_window=False,
             has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops + 1,
             preserves_length=False,
@@ -463,7 +437,10 @@ class ExprMetadata:
     @staticmethod
     def aggregation() -> ExprMetadata:
         return ExprMetadata(
-            ExpansionKind.SINGLE, ExprKind.AGGREGATION, is_scalar_like=True
+            ExpansionKind.SINGLE,
+            ExprKind.AGGREGATION,
+            preserves_length=False,
+            is_scalar_like=True,
         )
 
     @staticmethod
@@ -569,8 +546,6 @@ def combine_metadata(  # noqa: C901, PLR0912
     return ExprMetadata(
         result_expansion_kind,
         ExprKind.NARY,
-        last_node_is_orderable_window=False,
-        last_node_is_unorderable_window=False,
         has_windows=result_has_windows,
         n_orderable_ops=result_n_orderable_ops,
         preserves_length=result_preserves_length,
