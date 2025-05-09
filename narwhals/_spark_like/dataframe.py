@@ -275,7 +275,7 @@ class SparkLikeLazyFrame(
     ) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
         new_columns_list = [col.alias(col_name) for (col_name, col) in new_columns]
-        if not self._implementation.is_sqlframe():  # pragma: no cover
+        if self._implementation.is_pyspark():  # pragma: no cover
             from pyspark.errors import AnalysisException
 
             try:

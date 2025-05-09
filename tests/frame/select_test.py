@@ -15,6 +15,7 @@ from tests.utils import DUCKDB_VERSION
 from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
+from tests.utils import ConstructorLazy
 from tests.utils import assert_equal_data
 
 
@@ -83,52 +84,57 @@ def test_comparison_with_list_error_message() -> None:
         nw.from_native(pd.Series([[1, 2, 3]]), series_only=True) == [1, 2, 3]  # noqa: B015
 
 
-def test_missing_columns(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "sqlframe" in str(constructor):
-        request.applymarker(pytest.mark.xfail(reason="sqlframe doesn't raise this error"))
+def test_missing_columns_eager(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(constructor_eager(data))
     selected_columns = ["a", "e", "f"]
-    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
+    msg = (
+        r"The following columns were not found: \[.*\]"
+        r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
+    )
+    with pytest.raises(ColumnNotFoundError, match=msg):
+        df.select(selected_columns)
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
+        # Old Polars versions wouldn't raise an error at all here
+        pass
+    else:
+        with pytest.raises(ColumnNotFoundError, match=msg):
+            df.drop(selected_columns, strict=True)
+    if "polars" in str(constructor_eager):
+        msg = r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
+    with pytest.raises(ColumnNotFoundError, match=msg):
+        df.select(nw.col("fdfa"))
+
+
+def test_missing_columns_lazy(
+    constructor_lazy: ConstructorLazy, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor_lazy) for x in ("sqlframe", "pyspark[connect]")):
+        request.applymarker(pytest.mark.xfail)
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
+    df = nw.from_native(constructor_lazy(data))
+    selected_columns = ["a", "e", "f"]
+    if "polars" in str(constructor_lazy):
+        msg = r"^e|\"(e|f)\""
+    elif any(x in str(constructor_lazy) for x in ("duckdb", "pyspark")):
         msg = r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
     else:
         msg = (
             r"The following columns were not found: \[.*\]"
             r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
         )
-
-    if "polars" in str(constructor):
-        # In the lazy case, Polars only errors when we call `collect`,
-        # and we have no way to recover exactly which columns the user
-        # tried selecting. So, we just emit their message (which varies
-        # across versions...)
-        msg = "e|f"
-        if isinstance(df, nw.LazyFrame):
-            with pytest.raises(ColumnNotFoundError, match=msg):
-                df.select(selected_columns).collect()
-        else:
-            with pytest.raises(ColumnNotFoundError, match=msg):
-                df.select(selected_columns)
-        if POLARS_VERSION >= (1,):
-            # Old Polars versions wouldn't raise an error
-            # at all here
-            if isinstance(df, nw.LazyFrame):
-                with pytest.raises(ColumnNotFoundError, match=msg):
-                    df.drop(selected_columns, strict=True).collect()
-            else:
-                with pytest.raises(ColumnNotFoundError, match=msg):
-                    df.drop(selected_columns, strict=True)
-        else:  # pragma: no cover
-            pass
+    with pytest.raises(ColumnNotFoundError, match=msg):
+        df.select(selected_columns).collect()
+    if "polars" in str(constructor_lazy) and POLARS_VERSION < (1,):
+        # Old Polars versions wouldn't raise an error at all here
+        pass
     else:
         with pytest.raises(ColumnNotFoundError, match=msg):
-            df.select(selected_columns)
-        with pytest.raises(ColumnNotFoundError, match=msg):
-            df.drop(selected_columns, strict=True)
-        with pytest.raises(ColumnNotFoundError, match=msg):
-            df.select(nw.col("fdfa"))
+            df.drop(selected_columns, strict=True).collect()
+    if "polars" in str(constructor_lazy):
+        msg = r"^fdfa"
+    with pytest.raises(ColumnNotFoundError, match=msg):
+        df.select(nw.col("fdfa")).collect()
 
 
 def test_left_to_right_broadcasting(constructor: Constructor) -> None:
