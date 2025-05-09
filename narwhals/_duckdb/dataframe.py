@@ -187,8 +187,7 @@ class DuckDBLazyFrame(
         try:
             return self._with_native(self.native.select(*selection))
         except duckdb.BinderException as e:
-            msg = f"Selected columns not found in the DataFrame.\n\nHint: Did you mean one of these columns: {self.columns}?"
-            raise ColumnNotFoundError(msg) from e
+            raise ColumnNotFoundError.from_available_column_names(self.columns) from e
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         columns_to_drop = parse_columns_to_drop(self, columns=columns, strict=strict)

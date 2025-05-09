@@ -38,6 +38,16 @@ class ColumnNotFoundError(FormattedKeyError, NarwhalsError):
         )
         return ColumnNotFoundError(message)
 
+    @classmethod
+    def from_available_column_names(
+        cls: type, available_columns: list[str]
+    ) -> ColumnNotFoundError:
+        message = (
+            "The selected columns were not found."
+            f"\n\nHint: Did you mean one of these columns: {available_columns}?"
+        )
+        return ColumnNotFoundError(message)
+
 
 class ComputeError(NarwhalsError):
     """Exception raised when the underlying computation could not be evaluated."""

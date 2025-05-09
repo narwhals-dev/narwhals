@@ -281,8 +281,7 @@ class SparkLikeLazyFrame(
             try:
                 return self._with_native(self.native.select(*new_columns_list))
             except AnalysisException as e:
-                msg = f"Selected columns not found in the DataFrame.\n\nHint: Did you mean one of these columns: {self.columns}?"
-                raise ColumnNotFoundError(msg) from e
+                raise ColumnNotFoundError.from_available_column_names(self.columns) from e
         return self._with_native(self.native.select(*new_columns_list))
 
     def with_columns(self, *exprs: SparkLikeExpr) -> Self:
