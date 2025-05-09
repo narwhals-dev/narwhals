@@ -12,7 +12,6 @@ from typing import Sequence
 from typing import TypeVar
 from typing import cast
 
-from narwhals._expression_parsing import ExpansionKind
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
 from narwhals._expression_parsing import apply_n_ary_operation
@@ -1191,9 +1190,7 @@ def len_() -> Expr:
     def func(plx: Any) -> Any:
         return plx.len()
 
-    return Expr(
-        func, ExprMetadata(ExpansionKind.SINGLE, ExprKind.AGGREGATION).with_aggregation()
-    )
+    return Expr(func, ExprMetadata.aggregation())
 
 
 def sum(*columns: str) -> Expr:

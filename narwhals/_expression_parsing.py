@@ -461,8 +461,13 @@ class ExprMetadata:
         )
 
     @staticmethod
+    def aggregation() -> ExprMetadata:
+        return ExprMetadata(
+            ExpansionKind.SINGLE, ExprKind.AGGREGATION, is_scalar_like=True
+        )
+
+    @staticmethod
     def literal() -> ExprMetadata:
-        # e.g. `nw.lit('a')`
         return ExprMetadata(
             ExpansionKind.SINGLE, ExprKind.LITERAL, is_literal=True, is_scalar_like=True
         )
