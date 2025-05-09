@@ -1,7 +1,6 @@
 # mypy: ignore
 from __future__ import annotations
 
-import re
 import subprocess as sp
 import sys
 
@@ -52,31 +51,9 @@ sp.run([GIT, FETCH, UPSTREAM, "--prune", TAGS], check=False)
 
 how = sys.argv[1]
 
-versions = sp.run(
-    [UV, VERSION, "--bump", how], capture_output=True, text=True, check=False
+new_version = sp.run(
+    [UV, VERSION, "--bump", how, "--short"], capture_output=True, text=True, check=False
 ).stdout
-pattern = r"(?P<old>\d+\.\d+\.\d+)\s*=>\s*(?P<new>\d+\.\d+\.\d+)"
-match = re.search(pattern, versions)
-
-if not match:
-    print(
-        "Something went wrong with the release process while parsing versions.\n"
-        f"`uv version --bump {how}` output is: {versions}"
-    )
-    sys.exit(1)
-
-old_version, new_version = match.group("old"), match.group("new")
-
-with open("pyproject.toml", encoding="utf-8") as f:
-    content = f.read()
-
-content = content.replace(
-    f'__version__ = "{old_version}"',
-    f'__version__ = "{new_version}"',
-)
-
-with open("narwhals/__init__.py", "w", encoding="utf-8") as f:
-    f.write(content)
 
 sp.run([GIT, COMMIT, "-a", "-m", f"release: Bump version to {new_version}"], check=False)
 sp.run([GIT, TAG, "-a", f"v{new_version}", "-m", f"v{new_version}"], check=False)
