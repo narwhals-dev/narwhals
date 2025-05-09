@@ -94,7 +94,7 @@ def test_missing_columns_eager(constructor_eager: ConstructorEager) -> None:
     )
     with pytest.raises(ColumnNotFoundError, match=msg):
         df.select(selected_columns)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):  # pragma: no cover
         # Old Polars versions wouldn't raise an error at all here
         pass
     else:
@@ -125,7 +125,7 @@ def test_missing_columns_lazy(
         )
     with pytest.raises(ColumnNotFoundError, match=msg):
         df.select(selected_columns).collect()
-    if "polars" in str(constructor_lazy) and POLARS_VERSION < (1,):
+    if "polars" in str(constructor_lazy) and POLARS_VERSION < (1,):  # pragma: no cover
         # Old Polars versions wouldn't raise an error at all here
         pass
     else:
