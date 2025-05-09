@@ -127,6 +127,7 @@ Join the party!
 - [tea-tasting](https://github.com/e10v/tea-tasting)
 - [timebasedcv](https://github.com/FBruzzesi/timebasedcv)
 - [tubular](https://github.com/lvgig/tubular)
+- [Validoopsie](https://github.com/akmalsoliev/Validoopsie)
 - [vegafusion](https://github.com/vega/vegafusion)
 - [wimsey](https://github.com/benrutter/wimsey)
 
