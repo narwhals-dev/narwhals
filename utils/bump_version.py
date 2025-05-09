@@ -25,12 +25,11 @@ if out.returncode != 0:
 sp.run([GIT, "reset", "--hard", "upstream/main"], check=False)
 
 if (
-    sp.run(
+    current_branch := sp.run(
         [GIT, "branch", "--show-current"], text=True, capture_output=True, check=False
     ).stdout.strip()
-    != "bump-version"
-):
-    msg = "`bump_version.py` should be run from `bump-version` branch"
+) != "bump-version":
+    msg = f"`bump_version.py` should be run from `bump-version` branch instead of `{current_branch}`"
     raise RuntimeError(msg)
 
 # Delete local tags, if present
@@ -39,9 +38,10 @@ try:
     result = sp.run([GIT, TAG, "-l"], capture_output=True, text=True, check=True)
     tags = result.stdout.splitlines()  # Split the tags into a list by lines
 
-    # Delete each tag using git tag -d
-    for tag in tags:
-        sp.run([GIT, TAG, "-d", tag], check=True)
+    if tags:
+        # Delete each tag using git tag -d
+        sp.run([GIT, TAG, "-d", *tags], check=True)
+
     print("All local tags have been deleted.")
 except sp.CalledProcessError as e:
     print(f"An error occurred: {e}")
