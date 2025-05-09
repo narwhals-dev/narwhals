@@ -44,7 +44,6 @@ repos:
   hooks:
     - id: check-api-reference
       name: check-api-reference
-      entry: make check-api-reference
       entry: python -m utils.check_api_reference
       language: python
       additional_dependencies: [polars]
