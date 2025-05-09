@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from datetime import date
 from datetime import datetime
+from datetime import time
 from datetime import timedelta
 from decimal import Decimal
 from typing import Any
@@ -29,6 +31,8 @@ from tests.utils import PANDAS_VERSION
         (b"a", b"a"),
         (datetime(2021, 1, 1), datetime(2021, 1, 1)),
         (timedelta(days=1), timedelta(days=1)),
+        (date(1980, 1, 1), date(1980, 1, 1)),
+        (time(9, 45), time(9, 45)),
         (pd.Timestamp("2020-01-01"), datetime(2020, 1, 1)),
         (pd.Timedelta(days=3), timedelta(days=3)),
         (np.datetime64("2020-01-01", "s"), datetime(2020, 1, 1)),

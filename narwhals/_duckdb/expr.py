@@ -339,15 +339,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         invert = cast("Callable[..., duckdb.Expression]", operator.invert)
         return self._with_callable(invert)
 
-    def alias(self, name: str) -> Self:
-        def alias_output_names(names: Sequence[str]) -> Sequence[str]:
-            if len(names) != 1:
-                msg = f"Expected function with single output, found output names: {names}"
-                raise ValueError(msg)
-            return [name]
-
-        return self._with_alias_output_names(alias_output_names)
-
     def abs(self) -> Self:
         return self._with_callable(lambda _input: FunctionExpression("abs", _input))
 
