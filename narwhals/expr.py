@@ -517,7 +517,7 @@ class Expr:
             │ 2.428571 │
             └──────────┘
         """
-        return self._with_elementwise_op(
+        return self._with_orderable_window(
             lambda plx: self._to_compliant_expr(plx).ewm_mean(
                 com=com,
                 span=span,
@@ -1634,7 +1634,7 @@ class Expr:
             |3  1  c        False         True|
             └─────────────────────────────────┘
         """
-        return self._with_elementwise_op(
+        return self._with_unorderable_window(
             lambda plx: self._to_compliant_expr(plx).is_unique()
         )
 

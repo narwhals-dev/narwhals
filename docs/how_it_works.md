@@ -309,6 +309,8 @@ Here's a brief description of each piece of metadata:
     - `nw.col('a').diff()` contains 1 orderable operation.
     - `nw.col('a').diff().shift()` contains 2 orderable operation.
 
+- `is_elementwise`: Whether it preserves length and operates on each row independently
+  of the rows around it (e.g. `abs`, `is_null`, `round`, ...).
 - `preserves_length`: Whether the output of the expression is the same length as
   the dataframe it gets evaluated on.
 - `is_scalar_like`: Whether the output of the expression is always length-1.
