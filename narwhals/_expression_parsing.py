@@ -363,22 +363,17 @@ class ExprMetadata:
 
     def with_ordered_over(self) -> ExprMetadata:
         if self.has_windows:
-            msg = (
-                "Cannot nest `over` statements. If you used `rank` or `is_unique` "
-                "and then `over`, make sure that the `over` statement comes "
-                "immediately after the window function, e.g. "
-                "`nw.col('a').rank().over('b')`."
-            )
-            raise InvalidOperationError(msg)
-        n_orderable_ops = self.n_orderable_ops
-        if not n_orderable_ops:
-            msg = "Cannot use `order_by` in `over` on expression which isn't orderable."
+            msg = "Cannot nest `over` statements."
             raise InvalidOperationError(msg)
         if self.is_elementwise or self.is_filtration:
             msg = (
                 "Cannot use `over` on expressions which are elementwise\n"
                 "(e.g. `abs`) or which change length (e.g. `drop_nulls`)."
             )
+            raise InvalidOperationError(msg)
+        n_orderable_ops = self.n_orderable_ops
+        if not n_orderable_ops:
+            msg = "Cannot use `order_by` in `over` on expression which isn't orderable."
             raise InvalidOperationError(msg)
         if self.last_node.is_orderable_window:
             n_orderable_ops -= 1
@@ -395,21 +390,12 @@ class ExprMetadata:
 
     def with_partitioned_over(self) -> ExprMetadata:
         if self.has_windows:
-            msg = (
-                "Cannot nest `over` statements. If you used `rank` or `is_unique` "
-                "and then `over`, make sure that the `over` statement comes "
-                "immediately after the window function, e.g. "
-                "`nw.col('a').rank().over('b')`."
-            )
+            msg = "Cannot nest `over` statements."
             raise InvalidOperationError(msg)
-        if (
-            self.is_elementwise or self.is_filtration
-        ) and not self.last_node.is_unorderable_window:
+        if self.is_elementwise or self.is_filtration:
             msg = (
-                "Cannot `over` on expressions which are elementwise\n"
-                "(e.g. `abs`) or which change length (e.g. `drop_nulls`). "
-                "If you wanted to combine `rank` (or `is_unique`) with `over`, "
-                "make sure that `over` comes right after `rank` (or `is_unique`)."
+                "Cannot use `over` on expressions which are elementwise\n"
+                "(e.g. `abs`) or which change length (e.g. `drop_nulls`)."
             )
             raise InvalidOperationError(msg)
         return ExprMetadata(
