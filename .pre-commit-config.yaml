@@ -42,18 +42,12 @@ repos:
             )$
 - repo: local
   hooks:
-    - id: init-env
-      name: init-env
-      entry: python --version
-      language: python
-      pass_filenames: false
-      description: This hook serves as a env initializer, used both in check-api-reference and mypy hook
     - id: check-api-reference
       name: check-api-reference
       entry: make check-api-reference
-      language: system
-      require_serial: true
-      pass_filenames: false
+      entry: python -m utils.check_api_reference
+      language: python
+      additional_dependencies: [polars]
     - id: imports-are-banned
       name: import are banned (use `get_pandas` instead of `import pandas`)
       entry: python utils/import_check.py
