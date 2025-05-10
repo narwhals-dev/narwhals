@@ -651,22 +651,10 @@ class PandasLikeDataFrame(
     def _join_semi(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
     ) -> Self:
-        implementation = self._implementation
-        backend_version = self._backend_version
-
-        # rename to avoid creating extra columns in join
-        other_native = (
-            rename(
-                select_columns_by_name(
-                    other.native,
-                    column_names=list(right_on),
-                    backend_version=backend_version,
-                    implementation=implementation,
-                ),
-                columns=dict(zip(right_on, left_on)),
-                implementation=implementation,
-                backend_version=backend_version,
-            ).drop_duplicates()  # avoids potential rows duplication from inner join
+        other_native = self._join_filter_rename(
+            other=other,
+            columns_to_select=list(right_on),
+            columns_mapping=dict(zip(right_on, left_on)),
         )
         return self._with_native(
             self.native.merge(
@@ -678,7 +666,6 @@ class PandasLikeDataFrame(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
     ) -> Self:
         implementation = self._implementation
-        backend_version = self._backend_version
 
         if implementation.is_cudf():
             return self._with_native(
@@ -691,19 +678,11 @@ class PandasLikeDataFrame(
             n_bytes=8, columns=(*self.columns, *other.columns)
         )
 
-        # rename to avoid creating extra columns in join
-        other_native = rename(
-            select_columns_by_name(
-                other.native,
-                column_names=list(right_on),
-                backend_version=backend_version,
-                implementation=implementation,
-            ),
-            columns=dict(zip(right_on, left_on)),
-            implementation=implementation,
-            backend_version=backend_version,
-        ).drop_duplicates()
-
+        other_native = self._join_filter_rename(
+            other=other,
+            columns_to_select=list(right_on),
+            columns_mapping=dict(zip(right_on, left_on)),
+        )
         return self._with_native(
             self.native.merge(
                 other_native,
@@ -716,6 +695,30 @@ class PandasLikeDataFrame(
             .loc[lambda t: t[indicator_token] == "left_only"]
             .drop(columns=indicator_token)
         )
+
+    def _join_filter_rename(
+        self, other: Self, columns_to_select: list[str], columns_mapping: dict[str, str]
+    ) -> pd.DataFrame:
+        """Helper function to avoid creating extra columns and row duplication.
+
+        Used in `"anti"` and `"semi`" join's.
+
+        Notice that a native object is returned.
+        """
+        implementation = self._implementation
+        backend_version = self._backend_version
+
+        return rename(
+            select_columns_by_name(
+                other.native,
+                column_names=columns_to_select,
+                backend_version=backend_version,
+                implementation=implementation,
+            ),
+            columns=columns_mapping,
+            implementation=implementation,
+            backend_version=backend_version,
+        ).drop_duplicates()
 
     def join(
         self,

@@ -327,17 +327,10 @@ class DaskLazyFrame(
     def _join_semi(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
     ) -> Self:
-        other_native = (
-            select_columns_by_name(
-                other.native,
-                list(right_on),
-                self._backend_version,
-                self._implementation,
-            )
-            .rename(  # rename to avoid creating extra columns in join
-                columns=dict(zip(right_on, left_on))
-            )
-            .drop_duplicates()  # avoids potential rows duplication from inner join
+        other_native = self._join_filter_rename(
+            other=other,
+            columns_to_select=list(right_on),
+            columns_mapping=dict(zip(right_on, left_on)),
         )
         return self._with_native(
             self.native.merge(
@@ -351,17 +344,10 @@ class DaskLazyFrame(
         indicator_token = generate_temporary_column_name(
             n_bytes=8, columns=(*self.columns, *other.columns)
         )
-
-        other_native = (
-            select_columns_by_name(
-                other.native,
-                column_names=list(right_on),
-                backend_version=self._backend_version,
-                implementation=self._implementation,
-            )
-            # rename to avoid creating extra columns in join
-            .rename(columns=dict(zip(right_on, left_on)))
-            .drop_duplicates()
+        other_native = self._join_filter_rename(
+            other=other,
+            columns_to_select=list(right_on),
+            columns_mapping=dict(zip(right_on, left_on)),
         )
         df = self.native.merge(
             other_native,
@@ -372,6 +358,27 @@ class DaskLazyFrame(
         )
         return self._with_native(
             df[df[indicator_token] == "left_only"].drop(columns=[indicator_token])
+        )
+
+    def _join_filter_rename(
+        self, other: Self, columns_to_select: list[str], columns_mapping: dict[str, str]
+    ) -> dd.DataFrame:
+        """Helper function to avoid creating extra columns and row duplication.
+
+        Used in `"anti"` and `"semi`" join's.
+
+        Notice that a native object is returned.
+        """
+        return (
+            select_columns_by_name(
+                other.native,
+                column_names=columns_to_select,
+                backend_version=self._backend_version,
+                implementation=self._implementation,
+            )
+            # rename to avoid creating extra columns in join
+            .rename(columns=columns_mapping)
+            .drop_duplicates()
         )
 
     def join(
