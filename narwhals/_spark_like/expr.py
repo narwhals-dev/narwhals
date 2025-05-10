@@ -568,6 +568,12 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             _clip_both, lower_bound=lower_bound, upper_bound=upper_bound
         )
 
+    def first(self) -> Self:
+        def fn(_input: Column) -> Column:
+            return self._F.first(_input, ignorenulls=False)
+
+        return self._with_callable(fn)
+
     def is_finite(self) -> Self:
         def _is_finite(_input: Column) -> Column:
             # A value is finite if it's not NaN, and not infinite, while NULLs should be
