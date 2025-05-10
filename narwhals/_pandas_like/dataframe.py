@@ -707,7 +707,7 @@ class PandasLikeDataFrame(
         return self._with_native(
             self.native.merge(
                 other_native,
-                how="outer",
+                how="left",
                 indicator=indicator_token,
                 left_on=left_on,
                 right_on=left_on,
