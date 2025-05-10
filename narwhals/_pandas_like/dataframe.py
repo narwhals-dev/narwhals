@@ -599,12 +599,11 @@ class PandasLikeDataFrame(
             right_on=right_on,
             suffixes=("", suffix),
         )
-        extra = []
-        for left_key, right_key in zip(left_on, right_on):
-            if right_key != left_key and right_key not in self.columns:
-                extra.append(right_key)
-            elif right_key != left_key:
-                extra.append(f"{right_key}{suffix}")
+        extra = (
+            right_key if right_key not in self.columns else f"{right_key}{suffix}"
+            for left_key, right_key in zip(left_on, right_on)
+            if right_key != left_key
+        )
         return self._with_native(result_native.drop(columns=extra))
 
     def _join_full(
@@ -614,12 +613,12 @@ class PandasLikeDataFrame(
         right_on_mapper = _remap_full_join_keys(left_on, right_on, suffix)
         other_native = other.native.rename(columns=right_on_mapper)
         check_column_names_are_unique(other_native.columns)
-        right_on = list(right_on_mapper.values())  # we now have the suffixed keys
+        right_suffixed = list(right_on_mapper.values())
         return self._with_native(
             self.native.merge(
                 other_native,
                 left_on=left_on,
-                right_on=right_on,
+                right_on=right_suffixed,
                 how="outer",
                 suffixes=("", suffix),
             ),
@@ -632,9 +631,8 @@ class PandasLikeDataFrame(
             implementation.is_pandas() and backend_version < (1, 4)
         ):
             key_token = generate_temporary_column_name(
-                n_bytes=8, columns=[*self.columns, *other.columns]
+                n_bytes=8, columns=(*self.columns, *other.columns)
             )
-
             return self._with_native(
                 self.native.assign(**{key_token: 0})
                 .merge(
@@ -646,7 +644,6 @@ class PandasLikeDataFrame(
                 )
                 .drop(columns=key_token)
             )
-
         return self._with_native(
             self.native.merge(other.native, how="cross", suffixes=("", suffix))
         )
@@ -691,7 +688,7 @@ class PandasLikeDataFrame(
             )
 
         indicator_token = generate_temporary_column_name(
-            n_bytes=8, columns=[*self.columns, *other.columns]
+            n_bytes=8, columns=(*self.columns, *other.columns)
         )
 
         # rename to avoid creating extra columns in join
@@ -731,9 +728,8 @@ class PandasLikeDataFrame(
         if how == "cross":
             return self._join_cross(other=other, suffix=suffix)
 
-        # help mypy
-        assert left_on is not None  # noqa: S101
-        assert right_on is not None  # noqa: S101
+        if left_on is None or right_on is None:  # pragma: no cover
+            raise ValueError(left_on, right_on)
 
         if how == "inner":
             return self._join_inner(
