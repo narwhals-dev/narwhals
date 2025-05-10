@@ -158,7 +158,7 @@ def test_collect_to_invalid_backend(
 
 def test_collect_with_kwargs(constructor: Constructor) -> None:
     collect_kwargs = {
-        nw.Implementation.POLARS: {"no_optimization": True},
+        nw.Implementation.POLARS: {"engine": "in-memory"},
         nw.Implementation.DASK: {"optimize_graph": False},
         nw.Implementation.PYARROW: {},
     }
