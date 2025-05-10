@@ -281,6 +281,7 @@ class PolarsExpr:
     diff: Method[Self]
     drop_nulls: Method[Self]
     fill_null: Method[Self]
+    first: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]
     is_finite: Method[Self]
