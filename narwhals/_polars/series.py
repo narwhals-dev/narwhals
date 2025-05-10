@@ -83,6 +83,7 @@ INHERITED_METHODS = frozenset(
         "drop_nulls",
         "fill_null",
         "filter",
+        "first",
         "gather_every",
         "head",
         "is_between",
@@ -662,6 +663,7 @@ class PolarsSeries:
     drop_nulls: Method[Self]
     fill_null: Method[Self]
     filter: Method[Self]
+    first: Method[Any]
     gather_every: Method[Self]
     head: Method[Self]
     is_between: Method[Self]
