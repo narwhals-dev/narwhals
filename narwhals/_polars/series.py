@@ -83,7 +83,6 @@ INHERITED_METHODS = frozenset(
         "drop_nulls",
         "fill_null",
         "filter",
-        "first",
         "gather_every",
         "head",
         "is_between",
@@ -612,6 +611,13 @@ class PolarsSeries:
     def to_polars(self) -> pl.Series:
         return self.native
 
+    def first(self) -> Any:
+        if self._backend_version >= (1, 1):
+            return self.native.first()
+        elif len(self):
+            return self.native.item(0)
+        return None
+
     @property
     def dt(self) -> PolarsSeriesDateTimeNamespace:
         return PolarsSeriesDateTimeNamespace(self)
@@ -663,7 +669,6 @@ class PolarsSeries:
     drop_nulls: Method[Self]
     fill_null: Method[Self]
     filter: Method[Self]
-    first: Method[Any]
     gather_every: Method[Self]
     head: Method[Self]
     is_between: Method[Self]
