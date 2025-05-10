@@ -159,12 +159,13 @@ def test_collect_to_invalid_backend(
 
 
 def test_collect_with_kwargs(constructor: Constructor) -> None:
+    pl_kwargs = (
+        {"optimizations": get_polars().QueryOptFlags(predicate_pushdown=False)}
+        if POLARS_VERSION > (1, 29, 0)
+        else {"no_optimization": True}
+    )
     collect_kwargs = {
-        nw.Implementation.POLARS: {
-            "optimizations": get_polars().QueryOptFlags(predicate_pushdown=False)
-        }
-        if POLARS_VERSION > (1, 29)
-        else {"no_optimization": True},
+        nw.Implementation.POLARS: pl_kwargs,
         nw.Implementation.DASK: {"optimize_graph": False},
         nw.Implementation.PYARROW: {},
     }
