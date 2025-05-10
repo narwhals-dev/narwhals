@@ -381,6 +381,9 @@ class PandasLikeSeries(EagerSeries[Any]):
             other_native = predicate
         return self._with_native(self.native.loc[other_native]).alias(self.name)
 
+    def first(self) -> Any:
+        return self.native.iloc[0]
+
     def __eq__(self, other: object) -> PandasLikeSeries:  # type: ignore[override]
         ser, other = align_and_extract_native(self, other)
         return self._with_native(ser == other).alias(self.name)
