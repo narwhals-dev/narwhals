@@ -614,9 +614,9 @@ class PolarsSeries:
     def first(self) -> Any:
         if self._backend_version >= (1, 10):
             return self.native.first()
-        elif len(self):
+        elif len(self):  # pragma: no cover
             return self.native.item(0)
-        return None
+        return None  # pragma: no cover
 
     @property
     def dt(self) -> PolarsSeriesDateTimeNamespace:
