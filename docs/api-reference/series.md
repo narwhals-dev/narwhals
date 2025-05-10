@@ -28,6 +28,7 @@
         - ewm_mean
         - fill_null
         - filter
+        - first
         - gather_every
         - head
         - hist
