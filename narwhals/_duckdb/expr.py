@@ -408,6 +408,12 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             _clip_both, lower_bound=lower_bound, upper_bound=upper_bound
         )
 
+    def first(self) -> Self:
+        def fn(_input: duckdb.Expression) -> duckdb.Expression:
+            return FunctionExpression("first", _input)
+
+        return self._with_callable(fn)
+
     def sum(self) -> Self:
         return self._with_callable(lambda _input: FunctionExpression("sum", _input))
 
