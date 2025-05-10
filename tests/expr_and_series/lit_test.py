@@ -9,6 +9,7 @@ import pyarrow as pa
 import pytest
 
 import narwhals as nw
+from tests.utils import DASK_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
@@ -74,6 +75,7 @@ def test_lit_out_name(constructor: Constructor) -> None:
     [
         ("left_lit", nw.lit(1) + nw.col("a"), [2, 4, 3]),
         ("right_lit", nw.col("a") + nw.lit(1), [2, 4, 3]),
+        ("right_lit_with_abs", nw.col("a") + nw.lit(-1).abs(), [2, 4, 3]),
         ("left_lit_with_agg", nw.lit(1) + nw.col("a").mean(), [3]),
         ("right_lit_with_agg", nw.col("a").mean() - nw.lit(1), [1]),
         ("left_scalar", 1 + nw.col("a"), [2, 4, 3]),
@@ -89,6 +91,13 @@ def test_lit_operation_in_select(
     expr: nw.Expr,
     expected_result: list[int],
 ) -> None:
+    if (
+        "dask" in str(constructor)
+        and col_name == "right_lit_with_abs"
+        and DASK_VERSION < (2025,)
+    ):
+        pytest.skip()
+
     data = {"a": [1, 3, 2]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()

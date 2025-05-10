@@ -50,6 +50,6 @@ class ExprStructNamespace(Generic[ExprT]):
             |└──────────────┴──────┘|
             └───────────────────────┘
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).struct.field(name)
         )
