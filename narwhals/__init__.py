@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import typing as _t
+
 from narwhals import dependencies
 from narwhals import dtypes
 from narwhals import exceptions
@@ -81,7 +83,7 @@ from narwhals.utils import maybe_get_index
 from narwhals.utils import maybe_reset_index
 from narwhals.utils import maybe_set_index
 
-__version__ = "1.38.2"
+__version__: str
 
 __all__ = [
     "Array",
@@ -165,3 +167,16 @@ __all__ = [
     "to_py_scalar",
     "when",
 ]
+
+
+def __getattr__(name: _t.Literal["__version__"]) -> str:  # type: ignore[misc]
+    if name == "__version__":
+        global __version__  # noqa: PLW0603
+
+        from importlib import metadata
+
+        __version__ = metadata.version(__name__)
+        return __version__
+    else:
+        msg = f"module {__name__!r} has no attribute {name!r}"
+        raise AttributeError(msg)
