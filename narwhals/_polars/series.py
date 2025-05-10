@@ -612,7 +612,7 @@ class PolarsSeries:
         return self.native
 
     def first(self) -> Any:
-        if self._backend_version >= (1, 1):
+        if self._backend_version >= (1, 10):
             return self.native.first()
         elif len(self):
             return self.native.item(0)
