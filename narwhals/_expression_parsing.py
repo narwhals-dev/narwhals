@@ -252,12 +252,8 @@ class ExprMetadata:
     ) -> None:
         if is_literal:
             assert is_scalar_like  # noqa: S101  # debug assertion
-        if not is_scalar_like:
-            assert not is_literal  # noqa: S101 # debug assertion
         if is_elementwise:
             assert preserves_length  # noqa: S101  # debug assertion
-        if not preserves_length:
-            assert not is_elementwise  # noqa: S101 # debug assertion
         self.expansion_kind = expansion_kind
         self.last_node = last_node
         self.has_windows = has_windows
