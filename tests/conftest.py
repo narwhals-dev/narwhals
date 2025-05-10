@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from narwhals.typing import NativeLazyFrame
     from tests.utils import Constructor
     from tests.utils import ConstructorEager
+    from tests.utils import ConstructorLazy
 
     Data: TypeAlias = "dict[str, list[Any]]"
 
@@ -227,7 +228,7 @@ EAGER_CONSTRUCTORS: dict[str, ConstructorEager] = {
     "cudf": cudf_constructor,
     "polars[eager]": polars_eager_constructor,
 }
-LAZY_CONSTRUCTORS: dict[str, Constructor] = {
+LAZY_CONSTRUCTORS: dict[str, ConstructorLazy] = {
     "dask": dask_lazy_p2_constructor,
     "polars[lazy]": polars_lazy_constructor,
     "duckdb": duckdb_lazy_constructor,
@@ -259,6 +260,8 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
 
     eager_constructors: list[ConstructorEager] = []
     eager_constructors_ids: list[str] = []
+    lazy_constructors: list[ConstructorLazy] = []
+    lazy_constructors_ids: list[str] = []
     constructors: list[Constructor] = []
     constructors_ids: list[str] = []
 
@@ -274,8 +277,12 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             eager_constructors_ids.append(constructor)
             constructors.append(EAGER_CONSTRUCTORS[constructor])
         elif constructor in {"pyspark", "pyspark[connect]"}:  # pragma: no cover
+            lazy_constructors.append(pyspark_lazy_constructor())
+            lazy_constructors_ids.append(constructor)
             constructors.append(pyspark_lazy_constructor())
         elif constructor in LAZY_CONSTRUCTORS:
+            lazy_constructors.append(LAZY_CONSTRUCTORS[constructor])
+            lazy_constructors_ids.append(constructor)
             constructors.append(LAZY_CONSTRUCTORS[constructor])
         else:  # pragma: no cover
             msg = f"Expected one of {EAGER_CONSTRUCTORS.keys()} or {LAZY_CONSTRUCTORS.keys()}, got {constructor}"
@@ -285,6 +292,10 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     if "constructor_eager" in metafunc.fixturenames:
         metafunc.parametrize(
             "constructor_eager", eager_constructors, ids=eager_constructors_ids
+        )
+    elif "constructor_lazy" in metafunc.fixturenames:
+        metafunc.parametrize(
+            "constructor_lazy", lazy_constructors, ids=lazy_constructors_ids
         )
     elif "constructor" in metafunc.fixturenames:
         metafunc.parametrize("constructor", constructors, ids=constructors_ids)

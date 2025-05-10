@@ -15,6 +15,7 @@ from narwhals._spark_like.utils import import_functions
 from narwhals._spark_like.utils import import_native_dtypes
 from narwhals._spark_like.utils import import_window
 from narwhals._spark_like.utils import native_to_narwhals_dtype
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
@@ -274,6 +275,13 @@ class SparkLikeLazyFrame(
     ) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
         new_columns_list = [col.alias(col_name) for (col_name, col) in new_columns]
+        if self._implementation.is_pyspark():  # pragma: no cover
+            from pyspark.errors import AnalysisException
+
+            try:
+                return self._with_native(self.native.select(*new_columns_list))
+            except AnalysisException as e:
+                raise ColumnNotFoundError.from_available_column_names(self.columns) from e
         return self._with_native(self.native.select(*new_columns_list))
 
     def with_columns(self, *exprs: SparkLikeExpr) -> Self:
