@@ -34,7 +34,7 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo").alias("alias_for_foo").name.keep()).columns
             ['foo']
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).name.keep()
         )
 
@@ -61,7 +61,7 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.map(renaming_func)).columns
             ['oof', 'RAB']
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).name.map(function)
         )
 
@@ -87,7 +87,7 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.prefix("with_prefix")).columns
             ['with_prefixfoo', 'with_prefixBAR']
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).name.prefix(prefix)
         )
 
@@ -113,7 +113,7 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.suffix("_with_suffix")).columns
             ['foo_with_suffix', 'BAR_with_suffix']
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).name.suffix(suffix)
         )
 
@@ -136,7 +136,7 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.to_lowercase()).columns
             ['foo', 'bar']
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).name.to_lowercase()
         )
 
@@ -159,6 +159,6 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.to_uppercase()).columns
             ['FOO', 'BAR']
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).name.to_uppercase()
         )

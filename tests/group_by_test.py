@@ -539,9 +539,10 @@ def test_group_by_expr(
             pytest.raises(OrderDependentExprError),
         ),  # Transform and Window
         ([nw.lit(42)], pytest.raises(ComputeError)),  # Literal
+        ([nw.lit(42).abs()], pytest.raises(ComputeError)),  # Literal
     ],
 )
-def test_group_by_raise_if_not_transform(
+def test_group_by_raise_if_not_elementwise(
     constructor: Constructor, keys: list[nw.Expr], lazy_context: Any
 ) -> None:
     data = {"a": [1, 2, 2, None], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
