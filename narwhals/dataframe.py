@@ -1605,10 +1605,12 @@ class DataFrame(BaseFrame[DataFrameT]):
         ]
         expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
 
-        if not all(kind is ExprKind.TRANSFORM for kind in kinds):
+        if not all(kind is ExprKind.ELEMENTWISE for kind in kinds):
             from narwhals.exceptions import ComputeError
 
-            msg = "Group by is not supported with keys that are not transformation expressions"
+            msg = (
+                "Group by is not supported with keys that are not elementwise expressions"
+            )
             raise ComputeError(msg)
 
         return GroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)
@@ -2199,7 +2201,7 @@ class LazyFrame(BaseFrame[FrameT]):
             plx = self.__narwhals_namespace__()
             return plx.col(arg)
         if isinstance(arg, Expr):
-            if arg._metadata._window_kind.is_open():
+            if arg._metadata.n_orderable_ops:
                 msg = (
                     "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
                     "Hints:\n"
@@ -2209,7 +2211,7 @@ class LazyFrame(BaseFrame[FrameT]):
                     "See https://narwhals-dev.github.io/narwhals/basics/order_dependence/."
                 )
                 raise OrderDependentExprError(msg)
-            if arg._metadata.kind.is_filtration():
+            if arg._metadata.is_filtration:
                 msg = (
                     "Length-changing expressions are not supported for use in LazyFrame, unless\n"
                     "followed by an aggregation.\n\n"
@@ -2907,10 +2909,12 @@ class LazyFrame(BaseFrame[FrameT]):
         _keys = [k if is_expr else col(k) for k, is_expr in zip(flat_keys, key_is_expr)]
         expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
 
-        if not all(kind is ExprKind.TRANSFORM for kind in kinds):
+        if not all(kind is ExprKind.ELEMENTWISE for kind in kinds):
             from narwhals.exceptions import ComputeError
 
-            msg = "Group by is not supported with keys that are not transformation expressions"
+            msg = (
+                "Group by is not supported with keys that are not elementwise expressions"
+            )
             raise ComputeError(msg)
 
         return LazyGroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)

@@ -12,10 +12,8 @@ from typing import Sequence
 from typing import TypeVar
 from typing import cast
 
-from narwhals._expression_parsing import ExpansionKind
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
-from narwhals._expression_parsing import WindowKind
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import check_expressions_preserve_length
 from narwhals._expression_parsing import combine_metadata
@@ -1192,14 +1190,7 @@ def len_() -> Expr:
     def func(plx: Any) -> Any:
         return plx.len()
 
-    return Expr(
-        func,
-        ExprMetadata(
-            ExprKind.AGGREGATION,
-            window_kind=WindowKind.NONE,
-            expansion_kind=ExpansionKind.SINGLE,
-        ),
-    )
+    return Expr(func, ExprMetadata.aggregation())
 
 
 def sum(*columns: str) -> Expr:
@@ -1665,14 +1656,7 @@ def lit(value: NonNestedLiteral, dtype: DType | type[DType] | None = None) -> Ex
         msg = f"Nested datatypes are not supported yet. Got {value}"
         raise NotImplementedError(msg)
 
-    return Expr(
-        lambda plx: plx.lit(value, dtype),
-        ExprMetadata(
-            ExprKind.LITERAL,
-            window_kind=WindowKind.NONE,
-            expansion_kind=ExpansionKind.SINGLE,
-        ),
-    )
+    return Expr(lambda plx: plx.lit(value, dtype), ExprMetadata.literal())
 
 
 def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
