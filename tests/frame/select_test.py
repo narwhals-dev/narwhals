@@ -86,7 +86,11 @@ def test_comparison_with_list_error_message() -> None:
 def test_missing_columns(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if (
+        ("pyspark" in str(constructor))
+        or "duckdb" in str(constructor)
+        or "ibis" in str(constructor)
+    ):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
@@ -165,7 +169,10 @@ def test_select_duplicates(constructor: Constructor) -> None:
         # cudf already raises its own error
         pytest.skip()
     df = nw.from_native(constructor({"a": [1, 2]})).lazy()
-    with pytest.raises(ValueError, match="Expected unique|[Dd]uplicate|more than one"):
+    with pytest.raises(
+        ValueError,
+        match="Expected unique|[Dd]uplicate|more than one|Duplicate column name",
+    ):
         df.select("a", nw.col("a") + 1).collect()
 
 

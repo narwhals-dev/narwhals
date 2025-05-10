@@ -43,7 +43,11 @@ def test_median_series(
 def test_median_expr_raises_on_str(
     constructor: Constructor, expr: nw.Expr, request: pytest.FixtureRequest
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if (
+        ("pyspark" in str(constructor))
+        or "duckdb" in str(constructor)
+        or "ibis" in str(constructor)
+    ):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))

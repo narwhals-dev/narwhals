@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import os
 import sys
+import uuid
 from copy import deepcopy
+from functools import lru_cache
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -16,9 +18,11 @@ from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     import duckdb
+    import ibis
     import pandas as pd
     import polars as pl
     import pyarrow as pa
+    from ibis.backends.duckdb import Backend as IbisDuckDBBackend
     from pyspark.sql import DataFrame as PySparkDataFrame
     from typing_extensions import TypeAlias
 
@@ -41,7 +45,9 @@ if default_constructors := os.environ.get(
 ):  # pragma: no cover
     DEFAULT_CONSTRUCTORS = default_constructors
 else:
-    DEFAULT_CONSTRUCTORS = "pandas,pandas[pyarrow],polars[eager],pyarrow,duckdb,sqlframe"
+    DEFAULT_CONSTRUCTORS = (
+        "pandas,pandas[pyarrow],polars[eager],pyarrow,duckdb,sqlframe,ibis"
+    )
 
 
 def pytest_addoption(parser: Any) -> None:
@@ -217,6 +223,22 @@ def sqlframe_pyspark_lazy_constructor(obj: Data) -> SQLFrameDataFrame:  # pragma
     return session.createDataFrame([*zip(*obj.values())], schema=[*obj.keys()])
 
 
+@lru_cache(maxsize=1)
+def _ibis_backend() -> IbisDuckDBBackend:  # pragma: no cover
+    """Cached (singleton) in-memory backend to ensure all tables exist within the same in-memory database."""
+    import ibis
+
+    return ibis.duckdb.connect()
+
+
+def ibis_lazy_constructor(obj: Data) -> ibis.Table:  # pragma: no cover
+    import polars as pl
+
+    ldf = pl.from_dict(obj).lazy()
+    table_name = str(uuid.uuid4())
+    return _ibis_backend().create_table(table_name, ldf)
+
+
 EAGER_CONSTRUCTORS: dict[str, ConstructorEager] = {
     "pandas": pandas_constructor,
     "pandas[nullable]": pandas_nullable_constructor,
@@ -233,6 +255,7 @@ LAZY_CONSTRUCTORS: dict[str, Constructor] = {
     "duckdb": duckdb_lazy_constructor,
     "pyspark": pyspark_lazy_constructor,  # type: ignore[dict-item]
     "sqlframe": sqlframe_pyspark_lazy_constructor,
+    "ibis": ibis_lazy_constructor,
 }
 GPU_CONSTRUCTORS: dict[str, ConstructorEager] = {"cudf": cudf_constructor}
 

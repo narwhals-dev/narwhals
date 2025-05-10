@@ -387,6 +387,11 @@ class Implementation(NoAutoEnum):
 
             return sqlframe
 
+        if self is Implementation.IBIS:
+            import ibis  # ignore-banned-import
+
+            return ibis
+
         if self is Implementation.PYSPARK_CONNECT:  # pragma: no cover
             import pyspark.sql.connect  # ignore-banned-import
 

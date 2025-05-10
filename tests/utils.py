@@ -77,8 +77,14 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
         hasattr(result, "_compliant_frame")
         and result._compliant_frame._implementation is Implementation.DUCKDB
     )
+    is_ibis = (
+        hasattr(result, "_compliant_frame")
+        and result._compliant_frame._implementation is Implementation.IBIS
+    )
     if is_duckdb:
         result = from_native(result.to_native().arrow())
+    if is_ibis:
+        result = from_native(result.to_native().to_pyarrow())
     if hasattr(result, "collect"):
         kwargs: dict[Implementation, dict[str, Any]] = {Implementation.POLARS: {}}
 

@@ -129,7 +129,11 @@ class CompliantSelectorNamespace(Protocol[FrameT, SeriesOrExprT]):
         p = re.compile(pattern)
 
         def series(df: FrameT) -> Sequence[SeriesOrExprT]:
-            if is_compliant_dataframe(df) and not self._implementation.is_duckdb():
+            if (
+                is_compliant_dataframe(df)
+                and not self._implementation.is_duckdb()
+                and not self._implementation.is_ibis()
+            ):
                 return [df.get_column(col) for col in df.columns if p.search(col)]
 
             return [ser for ser, name in self._iter_columns_names(df) if p.search(name)]

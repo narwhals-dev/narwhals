@@ -77,7 +77,11 @@ def test_categorical(
         15,
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
-    if "pyspark" in str(constructor) or "duckdb" in str(constructor):
+    if (
+        "pyspark" in str(constructor)
+        or "duckdb" in str(constructor)
+        or "ibis" in str(constructor)
+    ):
         request.applymarker(pytest.mark.xfail)
     expected = {"b": ["a", "b", "c"]}
 
@@ -94,6 +98,7 @@ def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> N
         or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
         or ("pyarrow" in str(constructor) and is_windows())
         or ("pandas" in str(constructor) and PANDAS_VERSION < (2,))
+        or "ibis" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
@@ -223,7 +228,10 @@ def test_set_ops(
     expected: list[str],
     request: pytest.FixtureRequest,
 ) -> None:
-    if ("duckdb" in str(constructor) or "sqlframe" in str(constructor)) and not expected:
+    if (
+        any(x in str(constructor) for x in ("duckdb", "sqlframe", "ibis"))
+        and not expected
+    ):
         # https://github.com/narwhals-dev/narwhals/issues/2469
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
@@ -267,7 +275,11 @@ def test_tz_aware(constructor: Constructor, request: pytest.FixtureRequest) -> N
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,):
         # bug in old pyarrow
         pytest.skip()
-    if "duckdb" in str(constructor) or "pyspark" in str(constructor):
+    if (
+        "duckdb" in str(constructor)
+        or "pyspark" in str(constructor)
+        or "ibis" in str(constructor)
+    ):
         # replace_time_zone not implemented
         request.applymarker(pytest.mark.xfail)
 
