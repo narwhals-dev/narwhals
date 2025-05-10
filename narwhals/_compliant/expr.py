@@ -852,6 +852,9 @@ class EagerExpr(
             context=self,
         )
 
+    def first(self) -> Self:
+        return self._reuse_series("first", returns_scalar=True)
+
     @property
     def cat(self) -> EagerExprCatNamespace[Self]:
         return EagerExprCatNamespace(self)
