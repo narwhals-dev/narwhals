@@ -599,11 +599,11 @@ class PandasLikeDataFrame(
             right_on=right_on,
             suffixes=("", suffix),
         )
-        extra = (
+        extra = [
             right_key if right_key not in self.columns else f"{right_key}{suffix}"
             for left_key, right_key in zip(left_on, right_on)
             if right_key != left_key
-        )
+        ]
         return self._with_native(result_native.drop(columns=extra))
 
     def _join_full(
@@ -707,7 +707,8 @@ class PandasLikeDataFrame(
         return self._with_native(
             self.native.merge(
                 other_native,
-                how="left",
+                # TODO(FBruzzesi): Raise issue upstream for Modin
+                how="left" if implementation.is_pandas() else "outer",
                 indicator=indicator_token,
                 left_on=left_on,
                 right_on=left_on,
