@@ -65,6 +65,15 @@ class SparkLikeExprDateTimeNamespace:
             return (self._compliant_expr._F.dayofweek(_input) + 6) % 7
 
         return self._compliant_expr._with_callable(_weekday)
+    
+    def to_string(self, format: str) -> SparkLikeExpr:
+        def _to_string(_input: Column) -> Column:
+            from narwhals._spark_like.expr_str import strptime_to_pyspark_format
+
+            _format = strptime_to_pyspark_format(format)
+            return self._compliant_expr._F.date_format(_input, _format)
+        
+        return self._compliant_expr._with_callable(_to_string)
 
     def truncate(self, every: str) -> SparkLikeExpr:
         multiple, unit = parse_interval_string(every)
