@@ -66,6 +66,7 @@ class SparkLikeExprDateTimeNamespace:
 
         return self._compliant_expr._with_callable(_weekday)
     
+    
     def to_string(self, format: str) -> SparkLikeExpr:
         def _to_string(_input: Column) -> Column:
             from narwhals._spark_like.expr_str import strptime_to_pyspark_format
