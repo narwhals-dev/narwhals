@@ -897,6 +897,7 @@ class LazyExpr(  # type: ignore[misc]
     gather_every: not_implemented = not_implemented()
     replace_strict: not_implemented = not_implemented()
     cat: not_implemented = not_implemented()  # pyright: ignore[reportAssignmentType]
+    first: not_implemented = not_implemented()
 
     @classmethod
     def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:
