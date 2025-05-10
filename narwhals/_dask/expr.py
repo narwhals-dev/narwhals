@@ -663,6 +663,12 @@ class DaskExpr(
 
         return self._with_callable(da.isfinite, "is_finite")
 
+    def first(self) -> Self:
+        def fn(_input: dx.Series) -> dx.Series:
+            return _input[0].to_series()
+
+        return self._with_callable(fn, "first")
+
     @property
     def str(self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
