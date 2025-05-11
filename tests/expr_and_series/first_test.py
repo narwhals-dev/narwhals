@@ -7,6 +7,8 @@ from typing import Sequence
 import pytest
 
 import narwhals as nw
+from tests.utils import DUCKDB_VERSION
+from tests.utils import POLARS_VERSION
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
@@ -69,7 +71,7 @@ def test_first_expr_lazy_with_columns(
     expected: PythonLiteral,
     request: pytest.FixtureRequest,
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "pandas")):
+    if any(x in str(constructor) for x in ("pyarrow_table", "pandas", "modin")):
         request.applymarker(
             pytest.mark.xfail(
                 reason="Some kind of index error, see https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2083582828"
@@ -77,6 +79,21 @@ def test_first_expr_lazy_with_columns(
         )
     if any(x in str(constructor) for x in ("dask",)):
         request.applymarker(pytest.mark.xfail(reason="Need to add the over support"))
+
+    request.applymarker(
+        pytest.mark.xfail(
+            ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)),
+            reason="Needs `SQLExpression`",
+            raises=NotImplementedError,
+        )
+    )
+    request.applymarker(
+        pytest.mark.xfail(
+            ("polars" in str(constructor) and POLARS_VERSION < (1, 10)),
+            reason="Needs `order_by`",
+            raises=NotImplementedError,
+        )
+    )
 
     frame = nw.from_native(constructor(data))
     expr = nw.col(col).first().over(order_by="idx").alias("result")
