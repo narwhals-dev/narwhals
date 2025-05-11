@@ -665,7 +665,7 @@ class DaskExpr(
 
     def first(self) -> Self:
         def fn(_input: dx.Series) -> dx.Series:
-            return _input[0].to_series()
+            return _input.head(1)
 
         return self._with_callable(fn, "first")
 
