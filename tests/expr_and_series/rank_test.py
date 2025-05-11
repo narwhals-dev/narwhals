@@ -127,6 +127,8 @@ def test_rank_expr_in_over_context(
         pytest.skip(reason="bug in old version")
     if "pandas" in str(constructor) and PANDAS_VERSION < (1, 1):
         pytest.skip(reason="bug in old version")
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip(reason="too old version")
 
     df = nw.from_native(constructor(data_float))
 
