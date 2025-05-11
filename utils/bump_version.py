@@ -53,7 +53,7 @@ how = sys.argv[1]
 
 new_version = sp.run(
     [UV, VERSION, "--bump", how, "--short"], capture_output=True, text=True, check=False
-).stdout
+).stdout.strip()
 
 sp.run([GIT, COMMIT, "-a", "-m", f"release: Bump version to {new_version}"], check=False)
 sp.run([GIT, TAG, "-a", f"v{new_version}", "-m", f"v{new_version}"], check=False)
