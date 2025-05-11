@@ -57,7 +57,7 @@ def test_first_expr_eager(
 @pytest.mark.parametrize(("col", "expected"), [("a", 8), ("b", 58), ("c", 2.5)])
 def test_first_expr_lazy_select(
     constructor: Constructor, col: str, expected: PythonLiteral
-) -> None:
+) -> None:  # pragma: no cover
     frame = nw.from_native(constructor(data))
     expr = nw.col(col).first().over(order_by="idx")
     result = frame.select(expr)
