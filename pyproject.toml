@@ -124,7 +124,7 @@ exclude = [
 line-length = 90
 fix = true
 target-version = "py38"
-extend-exclude = ["utils/bump_version.py", "**/this.py"]
+extend-exclude = ["**/this.py"]
 
 [tool.ruff.lint]
 preview = true
@@ -189,6 +189,7 @@ builtins-ignorelist = ["format"]
 ]
 "tpch/tests/*" = ["S101"]
 "utils/*" = ["S311", "PTH123"]
+"utils/bump_version.py" = ["S603", "S607", "T201"]
 "tpch/execute/*" = ["T201"]
 "tpch/notebooks/*" = [
   "ANN001",
