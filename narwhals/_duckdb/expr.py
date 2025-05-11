@@ -408,11 +408,15 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             _clip_both, lower_bound=lower_bound, upper_bound=upper_bound
         )
 
+    @requires.backend_version((1, 3))
     def first(self) -> Self:
-        def fn(_input: duckdb.Expression) -> duckdb.Expression:
-            return FunctionExpression("first", _input)
+        def fn(window_inputs: WindowInputs) -> duckdb.Expression:
+            order_by = generate_order_by_sql(*window_inputs.order_by, ascending=True)
+            partition_by = generate_partition_by_sql(*window_inputs.partition_by)
+            window = f"({partition_by} {order_by})"
+            return SQLExpression(f"first({window_inputs.expr}) over {window}")
 
-        return self._with_callable(fn)
+        return self._with_window_function(fn)
 
     def sum(self) -> Self:
         return self._with_callable(lambda _input: FunctionExpression("sum", _input))
