@@ -11,13 +11,15 @@ from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.typing import PythonLiteral
+    from tests.utils import Constructor
     from tests.utils import ConstructorEager
 
-data = {
+data: dict[str, list[PythonLiteral]] = {
     "a": [8, 2, 1, None],
     "b": [58, 5, 6, 12],
     "c": [2.5, 1.0, 3.0, 0.9],
     "d": [2, 1, 4, 3],
+    "idx": [0, 1, 2, 3],
 }
 
 
@@ -45,6 +47,42 @@ def test_first_expr_eager(
     expr = nw.col(col).first()
     result = df.select(expr)
     assert_equal_data(result, {col: [expected]})
+
+
+@pytest.mark.skip(
+    reason="https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2083557149"
+)
+@pytest.mark.parametrize(("col", "expected"), [("a", 8), ("b", 58), ("c", 2.5)])
+def test_first_expr_lazy_select(
+    constructor: Constructor, col: str, expected: PythonLiteral
+) -> None:
+    frame = nw.from_native(constructor(data))
+    expr = nw.col(col).first().over(order_by="idx")
+    result = frame.select(expr)
+    assert_equal_data(result, {col: [expected]})
+
+
+@pytest.mark.parametrize(("col", "expected"), [("a", 8), ("b", 58), ("c", 2.5)])
+def test_first_expr_lazy_with_columns(
+    constructor: Constructor,
+    col: str,
+    expected: PythonLiteral,
+    request: pytest.FixtureRequest,
+) -> None:
+    if any(x in str(constructor) for x in ("pyarrow_table", "pandas")):
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="Some kind of index error, see https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2083582828"
+            )
+        )
+    if any(x in str(constructor) for x in ("dask", "duckdb")):
+        request.applymarker(pytest.mark.xfail(reason="Need to add the over support"))
+
+    frame = nw.from_native(constructor(data))
+    expr = nw.col(col).first().over(order_by="idx").alias("result")
+    result = frame.with_columns(expr).select("result")
+    expected_broadcast = len(data[col]) * [expected]
+    assert_equal_data(result, {"result": expected_broadcast})
 
 
 @pytest.mark.parametrize(
