@@ -373,8 +373,8 @@ class SparkLikeLazyFrame(
             window = self._Window.partitionBy(subset or self.columns)
             df = (
                 self.native.withColumn(tmp, self._F.count("*").over(window))
-                .filter(self._F.col(tmp) == 1)
-                .drop(tmp)
+                .filter(self._F.col(tmp) == self._F.lit(1))
+                .drop(self._F.col(tmp))
             )
             return self._with_native(df)
         return self._with_native(self.native.dropDuplicates(subset=subset))

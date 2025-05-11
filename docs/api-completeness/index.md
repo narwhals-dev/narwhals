@@ -1,3 +1,8 @@
+---
+search:
+  exclude: true
+---
+
 # API Completeness
 
 In the following section it is possible to check which method is implemented for which
