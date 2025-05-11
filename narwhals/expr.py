@@ -1965,6 +1965,16 @@ class Expr:
             ),
         )
 
+    def first(self) -> Self:
+        """Get the first value.
+
+        Returns:
+            A new expression.
+        """
+        return self._with_orderable_aggregation(
+            lambda plx: self._to_compliant_expr(plx).first()
+        )
+
     def mode(self) -> Self:
         r"""Compute the most occurring value(s).
 
