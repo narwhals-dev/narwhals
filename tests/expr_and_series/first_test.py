@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import Mapping
+from typing import Sequence
 
 import pytest
 
@@ -8,14 +10,20 @@ import narwhals as nw
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
+    from narwhals.typing import PythonLiteral
     from tests.utils import ConstructorEager
 
-data = {"a": [8, 2, 1], "b": [58, 5, 6], "c": [2.5, 1.0, 3.0]}
+data = {
+    "a": [8, 2, 1, None],
+    "b": [58, 5, 6, 12],
+    "c": [2.5, 1.0, 3.0, 0.9],
+    "d": [2, 1, 4, 3],
+}
 
 
 @pytest.mark.parametrize(("col", "expected"), [("a", 8), ("b", 58), ("c", 2.5)])
 def test_first_series(
-    constructor_eager: ConstructorEager, col: str, expected: float
+    constructor_eager: ConstructorEager, col: str, expected: PythonLiteral
 ) -> None:
     series = nw.from_native(constructor_eager(data), eager_only=True)[col]
     result = series.first()
@@ -27,3 +35,34 @@ def test_first_series_empty(constructor_eager: ConstructorEager) -> None:
     series = series.filter(series > 50)
     result = series.first()
     assert result is None
+
+
+@pytest.mark.parametrize(("col", "expected"), [("a", 8), ("b", 58), ("c", 2.5)])
+def test_first_expr_eager(
+    constructor_eager: ConstructorEager, col: str, expected: PythonLiteral
+) -> None:
+    df = nw.from_native(constructor_eager(data))
+    expr = nw.col(col).first()
+    result = df.select(expr)
+    assert_equal_data(result, {col: [expected]})
+
+
+@pytest.mark.parametrize(
+    "expected",
+    [{"a": [8], "c": [2.5]}, {"d": [2], "b": [58]}, {"c": [2.5], "a": [8], "d": [2]}],
+)
+def test_first_expr_eager_expand(
+    constructor_eager: ConstructorEager, expected: Mapping[str, Sequence[PythonLiteral]]
+) -> None:
+    df = nw.from_native(constructor_eager(data))
+    expr = nw.col(expected).first()
+    result = df.select(expr)
+    assert_equal_data(result, expected)
+
+
+def test_first_expr_eager_expand_sort(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data))
+    expr = nw.col("d", "a", "b", "c").first()
+    result = df.sort("d").select(expr)
+    expected = {"d": [1], "a": [2], "b": [5], "c": [1.0]}
+    assert_equal_data(result, expected)
