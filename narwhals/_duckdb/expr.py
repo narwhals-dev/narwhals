@@ -715,9 +715,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
     @requires.backend_version((1, 3))
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
-        if self._backend_version < (1, 3):
-            msg = "At least version 1.3 of DuckDB is required for `rank`."
-            raise NotImplementedError(msg)
         if method in {"min", "max", "average"}:
             func = FunctionExpression("rank")
         elif method == "dense":
