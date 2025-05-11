@@ -38,6 +38,7 @@ if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import Into1DArray
     from narwhals.typing import MultiIndexSelector
+    from narwhals.typing import PythonLiteral
     from narwhals.typing import _1DArray
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -611,11 +612,11 @@ class PolarsSeries:
     def to_polars(self) -> pl.Series:
         return self.native
 
-    def first(self) -> Any:
+    def first(self) -> PythonLiteral:
         if self._backend_version >= (1, 10):
             return self.native.first()
         elif len(self):  # pragma: no cover
-            return self.native.item(0)
+            return self.native.item(0)  # type: ignore[no-any-return]
         return None  # pragma: no cover
 
     @property

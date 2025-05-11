@@ -49,6 +49,7 @@ if TYPE_CHECKING:
     from narwhals.typing import MultiIndexSelector
     from narwhals.typing import NonNestedLiteral
     from narwhals.typing import NumericLiteral
+    from narwhals.typing import PythonLiteral
     from narwhals.typing import RankMethod
     from narwhals.typing import RollingInterpolationMethod
     from narwhals.typing import SizedMultiIndexSelector
@@ -177,7 +178,7 @@ class CompliantSeries(
         limit: int | None,
     ) -> Self: ...
     def filter(self, predicate: Any) -> Self: ...
-    def first(self) -> Any: ...
+    def first(self) -> PythonLiteral: ...
     def gather_every(self, n: int, offset: int) -> Self: ...
     @unstable
     def hist(

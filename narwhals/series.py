@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from narwhals.typing import ClosedInterval
     from narwhals.typing import FillNullStrategy
     from narwhals.typing import NumericLiteral
+    from narwhals.typing import PythonLiteral
     from narwhals.typing import RankMethod
     from narwhals.typing import RollingInterpolationMethod
     from narwhals.typing import TemporalLiteral
@@ -801,7 +802,7 @@ class Series(Generic[IntoSeriesT]):
             )
         )
 
-    def first(self) -> Any:
+    def first(self) -> PythonLiteral:
         """Get the first element of the Series.
 
         Returns:

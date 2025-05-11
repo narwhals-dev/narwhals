@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from narwhals.typing import Into1DArray
     from narwhals.typing import NonNestedLiteral
     from narwhals.typing import NumericLiteral
+    from narwhals.typing import PythonLiteral
     from narwhals.typing import RankMethod
     from narwhals.typing import RollingInterpolationMethod
     from narwhals.typing import SizedMultiIndexSelector
@@ -381,7 +382,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             other_native = predicate
         return self._with_native(self.native.loc[other_native]).alias(self.name)
 
-    def first(self) -> Any:
+    def first(self) -> PythonLiteral:
         return self.native.iloc[0] if len(self.native) else None
 
     def __eq__(self, other: object) -> PandasLikeSeries:  # type: ignore[override]
