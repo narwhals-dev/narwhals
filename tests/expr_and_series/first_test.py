@@ -71,7 +71,7 @@ def test_first_expr_lazy_with_columns(
     expected: PythonLiteral,
     request: pytest.FixtureRequest,
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "pandas", "modin")):
+    if any(x in str(constructor) for x in ("pyarrow_table", "pandas", "modin", "cudf")):
         request.applymarker(
             pytest.mark.xfail(
                 reason="Some kind of index error, see https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2083582828"
