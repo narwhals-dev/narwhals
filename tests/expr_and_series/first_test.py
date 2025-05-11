@@ -92,6 +92,13 @@ def test_first_expr_lazy_with_columns(
             raises=NotImplementedError,
         )
     )
+    request.applymarker(
+        pytest.mark.xfail(
+            ("dask" in str(constructor)),
+            reason="Abandoned https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2083585895",
+            raises=NotImplementedError,
+        )
+    )
 
     frame = nw.from_native(constructor(data))
     expr = nw.col(col).first().over(order_by="idx").alias("result")

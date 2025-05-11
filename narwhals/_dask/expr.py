@@ -663,12 +663,6 @@ class DaskExpr(
 
         return self._with_callable(da.isfinite, "is_finite")
 
-    def first(self) -> Self:
-        def fn(_input: dx.Series) -> dx.Series:
-            return _input.head(1)
-
-        return self._with_callable(fn, "first")
-
     @property
     def str(self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
@@ -680,3 +674,4 @@ class DaskExpr(
     list = not_implemented()  # pyright: ignore[reportAssignmentType]
     struct = not_implemented()  # pyright: ignore[reportAssignmentType]
     rank = not_implemented()  # pyright: ignore[reportAssignmentType]
+    first = not_implemented()
