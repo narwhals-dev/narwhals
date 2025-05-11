@@ -77,8 +77,6 @@ def test_first_expr_lazy_with_columns(
                 reason="Some kind of index error, see https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2083582828"
             )
         )
-    if any(x in str(constructor) for x in ("dask",)):
-        request.applymarker(pytest.mark.xfail(reason="Need to add the over support"))
 
     request.applymarker(
         pytest.mark.xfail(
