@@ -91,6 +91,29 @@ There are three steps to writing dataframe-agnostic code using Narwhals:
 
 ## Example
 
+Narwhals allows you to define dataframe-agnostic functions. For example:
+
+```python
+import narwhals as nw
+from narwhals.typing import IntoFrameT
+
+
+def agnostic_function(
+    df_native: IntoFrameT,
+    date_column: str,
+    price_column: str,
+) -> IntoFrameT:
+    return (
+        nw.from_native(df_native)
+        .group_by(nw.col(date_column).dt.truncate("1mo"))
+        .agg(nw.col("price").mean())
+        .to_native()
+    )
+```
+You can then pass `pandas.DataFrame`, `polars.DataFrame`, `polars.LazyFrame`, `duckdb.DuckDBPyRelation`,
+`pyspark.sql.DataFrame`, `pyarrow.Table`, and more, to `agnostic_function`. In each case, no additional
+dependencies will be required, and computation will stay native to the input library.
+
 See the [tutorial](https://narwhals-dev.github.io/narwhals/basics/dataframe/) for several examples!
 
 ## Scope
