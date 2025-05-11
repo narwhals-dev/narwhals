@@ -126,7 +126,8 @@ class ParseKeysGroupBy(
 
         def _temporary_name(key: str) -> str:
             # 5 is the length of `__tmp`
-            return f"_{key}_tmp{'_' * (tmp_name_length - len(key) - 5)}"
+            key_str = str(key)  # pandas allows non-string column names :sob:
+            return f"_{key_str}_tmp{'_' * (tmp_name_length - len(key_str) - 5)}"
 
         output_names = compliant_frame._evaluate_aliases(*keys)
 
