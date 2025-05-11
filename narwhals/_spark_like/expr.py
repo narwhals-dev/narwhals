@@ -561,10 +561,12 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         )
 
     def first(self) -> Self:
-        def fn(_input: Column) -> Column:
-            return self._F.first(_input, ignorenulls=False)
+        def fn(inputs: WindowInputs) -> Column:
+            return self._F.first(inputs.expr, ignorenulls=False).over(
+                self.partition_by(inputs).orderBy(*self._sort(inputs))
+            )
 
-        return self._with_callable(fn)
+        return self._with_window_function(fn)
 
     def is_finite(self) -> Self:
         def _is_finite(_input: Column) -> Column:
