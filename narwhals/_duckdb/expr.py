@@ -188,7 +188,8 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     ) -> Self:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
             col_names = evaluate_column_names(df)
-            check_columns_exist(col_names, available_columns=df.columns)
+            if error := check_columns_exist(col_names, available_columns=df.columns):
+                raise error
             return [col(name) for name in col_names]
 
         return cls(

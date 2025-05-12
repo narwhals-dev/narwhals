@@ -116,11 +116,11 @@ class DaskExpr(
                     for column_name in evaluate_column_names(df)
                 ]
             except KeyError as e:
-                check_columns_exist(
-                    evaluate_column_names(df), available_columns=df.columns, from_error=e
-                )
-                msg = "Unreachable code, please report a bug."
-                raise AssertionError(msg) from e
+                if error := check_columns_exist(
+                    evaluate_column_names(df), available_columns=df.columns
+                ):
+                    raise error from e
+                raise
 
         return cls(
             func,

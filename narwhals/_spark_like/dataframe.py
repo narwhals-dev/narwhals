@@ -257,7 +257,8 @@ class SparkLikeLazyFrame(
         raise ValueError(msg)  # pragma: no cover
 
     def simple_select(self, *column_names: str) -> Self:
-        check_columns_exist(column_names, available_columns=self.columns)
+        if error := check_columns_exist(column_names, available_columns=self.columns):
+            raise error
         return self._with_native(self.native.select(*column_names))
 
     def aggregate(
@@ -359,8 +360,10 @@ class SparkLikeLazyFrame(
     def unique(
         self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self:
-        if subset:
-            check_columns_exist(subset, available_columns=self.columns)
+        if subset and (
+            error := check_columns_exist(subset, available_columns=self.columns)
+        ):
+            raise error
         subset = list(subset) if subset else None
         if keep == "none":
             tmp = generate_temporary_column_name(8, self.columns)

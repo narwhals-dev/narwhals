@@ -230,8 +230,10 @@ class DaskLazyFrame(
     def unique(
         self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self:
-        if subset:
-            check_columns_exist(subset, available_columns=self.columns)
+        if subset and (
+            error := check_columns_exist(subset, available_columns=self.columns)
+        ):
+            raise error
         if keep == "none":
             subset = subset or self.columns
             token = generate_temporary_column_name(n_bytes=8, columns=subset)

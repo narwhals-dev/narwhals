@@ -390,7 +390,8 @@ class DuckDBLazyFrame(
                 )
                 raise NotImplementedError(msg)
             # Sanitise input
-            check_columns_exist(subset_, available_columns=self.columns)
+            if error := check_columns_exist(subset_, available_columns=self.columns):
+                raise error
             idx_name = generate_temporary_column_name(8, self.columns)
             count_name = generate_temporary_column_name(8, [*self.columns, idx_name])
             partition_by_sql = generate_partition_by_sql(*(subset_))

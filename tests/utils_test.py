@@ -23,7 +23,6 @@ from pandas.testing import assert_series_equal
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import _DeferredIterable
@@ -340,30 +339,16 @@ def test_parse_version(
 def test_check_columns_exists() -> None:
     columns = ["a", "b", "c"]
     subset = ["d", "f"]
-    with pytest.raises(ColumnNotFoundError) as excinfo:
-        check_columns_exist(subset, available_columns=columns)
-    assert str(excinfo.value) == (
+    error = check_columns_exist(subset, available_columns=columns)
+    assert error is not None
+    assert str(error) == (
         "The following columns were not found: ['d', 'f']\n\nHint: Did you mean one of these columns: ['a', 'b', 'c']?"
     )
-    assert excinfo.value.__cause__ is None
 
-    # Check that the error is not raised
+    # Check that the error is not returned
     subset = ["a", "b"]
-    check_columns_exist(subset, available_columns=columns)
-
-
-def test_check_columns_exists_from_error() -> None:
-    columns = ["a", "b", "c"]
-    subset = ["d", "f"]
-    with pytest.raises(ColumnNotFoundError) as excinfo:
-        check_columns_exist(
-            subset, available_columns=columns, from_error=ValueError("test")
-        )
-    assert excinfo.value.__cause__ is not None
-
-    # Check that the error is not raised
-    subset = ["a", "b"]
-    check_columns_exist(subset, available_columns=columns, from_error=ValueError("test"))
+    error = check_columns_exist(subset, available_columns=columns)
+    assert error is None
 
 
 def test_not_implemented() -> None:

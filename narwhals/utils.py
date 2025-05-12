@@ -1272,7 +1272,8 @@ def parse_columns_to_drop(
     cols = compliant_frame.columns
     to_drop = list(columns)
     if strict:
-        check_columns_exist(to_drop, available_columns=cols)
+        if error := check_columns_exist(to_drop, available_columns=cols):
+            raise error
     else:
         to_drop = list(set(cols).intersection(set(to_drop)))
     return to_drop
@@ -1538,18 +1539,13 @@ def generate_repr(header: str, native_repr: str) -> str:
 
 
 def check_columns_exist(
-    columns: Sequence[str],
-    *,
-    available_columns: Sequence[str],
-    from_error: Exception | None = None,
-) -> None:
+    columns: Sequence[str], *, available_columns: Sequence[str]
+) -> ColumnNotFoundError | None:
     if missing := set(columns).difference(available_columns):
-        error = ColumnNotFoundError.from_missing_and_available_column_names(
+        return ColumnNotFoundError.from_missing_and_available_column_names(
             missing_columns=sorted(missing), available_columns=list(available_columns)
         )
-        if from_error is not None:
-            raise error from from_error
-        raise error
+    return None
 
 
 def check_column_names_are_unique(columns: Sequence[str]) -> None:

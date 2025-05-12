@@ -764,8 +764,10 @@ class PandasLikeDataFrame(
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
         mapped_keep = {"none": False, "any": "first"}.get(keep, keep)
-        if subset:
-            check_columns_exist(subset, available_columns=self.columns)
+        if subset and (
+            error := check_columns_exist(subset, available_columns=self.columns)
+        ):
+            raise error
         return self._with_native(
             self.native.drop_duplicates(subset=subset, keep=mapped_keep),
             validate_column_names=False,

@@ -226,7 +226,8 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             col_names = evaluate_column_names(df)
-            check_columns_exist(col_names, available_columns=df.columns)
+            if error := check_columns_exist(col_names, available_columns=df.columns):
+                raise error
             return [df._F.col(col_name) for col_name in col_names]
 
         return cls(
