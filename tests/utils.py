@@ -150,3 +150,8 @@ def windows_has_tzdata() -> bool:  # pragma: no cover
 def is_pyarrow_windows_no_tzdata(constructor: Constructor, /) -> bool:
     """Skip test on Windows when the tz database is not configured."""
     return "pyarrow" in str(constructor) and is_windows() and not windows_has_tzdata()
+
+
+def is_pandas_like(constructor: Constructor) -> bool:
+    """Return `True` when `constructor` produces a native pandas-like object."""
+    return any(x in str(constructor) for x in ("pandas", "modin", "cudf"))

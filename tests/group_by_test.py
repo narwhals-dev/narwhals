@@ -20,6 +20,7 @@ from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
+from tests.utils import is_pandas_like
 
 data: Mapping[str, Any] = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
 
@@ -594,30 +595,51 @@ def test_renaming_edge_case(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+XFAIL_PANDAS_SKIPNA = pytest.mark.xfail(
+    reason="Requires `skipna=False`, which was introduced in `2.2.1`.\n"
+    "https://github.com/pandas-dev/pandas/issues/57019\n"
+)
+
+
 @pytest.mark.parametrize(
-    ("keys", "aggs", "expected", "pre_sort"),
+    ("keys", "aggs", "expected", "pre_sort", "marks"),
     [
-        (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 2, 4, 6]}, None),
-        (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 3, 5, 6]}, {"descending": True}),
-        (["a"], ["c"], {"a": [1, 2, 3, 4], "c": [None, "A", None, "B"]}, None),
+        (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 2, 4, 6]}, None, None),
+        (
+            ["a"],
+            ["b"],
+            {"a": [1, 2, 3, 4], "b": [1, 3, 5, 6]},
+            {"descending": True},
+            None,
+        ),
+        (
+            ["a"],
+            ["c"],
+            {"a": [1, 2, 3, 4], "c": [None, "A", None, "B"]},
+            None,
+            [XFAIL_PANDAS_SKIPNA],
+        ),
         (
             ["a"],
             ["c"],
             {"a": [1, 2, 3, 4], "c": [None, "A", "B", "B"]},
             {"nulls_last": True},
+            None,
         ),
     ],
 )
 def test_group_by_agg_first(
     constructor_eager: ConstructorEager,
-    request: pytest.FixtureRequest,
     keys: Sequence[str],
     aggs: Sequence[str],
     expected: Mapping[str, Any],
     pre_sort: Mapping[str, Any] | None,
+    marks: Sequence[pytest.MarkDecorator] | None,
+    request: pytest.FixtureRequest,
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pandas", "modin", "cudf")):
-        request.applymarker(pytest.mark.xfail(reason="Not implemented yet."))
+    if is_pandas_like(constructor_eager) and marks is not None:
+        for mark in marks:
+            request.applymarker(mark)
     request.applymarker(
         pytest.mark.xfail(
             "pyarrow_table" in str(constructor_eager) and (PYARROW_VERSION < (14, 0)),
