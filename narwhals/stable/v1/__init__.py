@@ -14,13 +14,6 @@ import narwhals as nw
 from narwhals import dependencies
 from narwhals import exceptions
 from narwhals import selectors
-from narwhals.dataframe import DataFrame as NwDataFrame
-from narwhals.dataframe import LazyFrame as NwLazyFrame
-from narwhals.dataframe import MultiColSelector
-from narwhals.dataframe import MultiIndexSelector
-from narwhals.dependencies import get_polars
-from narwhals.exceptions import InvalidIntoExprError
-from narwhals.expr import Expr as NwExpr
 from narwhals.functions import Then as NwThen
 from narwhals.functions import When as NwWhen
 from narwhals.functions import _from_arrow_impl
@@ -34,10 +27,7 @@ from narwhals.functions import _scan_parquet_impl
 from narwhals.functions import get_level
 from narwhals.functions import show_versions
 from narwhals.functions import when as nw_when
-from narwhals.schema import Schema as NwSchema
-from narwhals.series import Series as NwSeries
 from narwhals.stable.v1 import dtypes
-from narwhals.stable.v1 import sql
 from narwhals.stable.v1.dataframe import DataFrame
 from narwhals.stable.v1.dataframe import LazyFrame
 from narwhals.stable.v1.dtypes import Array
@@ -94,15 +84,12 @@ from narwhals.stable.v1.utils import _stableify
 from narwhals.translate import _from_native_impl
 from narwhals.translate import get_native_namespace
 from narwhals.translate import to_py_scalar
-from narwhals.typing import ConcatMethod
 from narwhals.typing import SingleColSelector
 from narwhals.typing import SingleIndexSelector
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import deprecate_native_namespace
-from narwhals.utils import find_stacklevel
 from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import inherit_doc
 from narwhals.utils import is_ordered_categorical
 from narwhals.utils import maybe_align_index
 from narwhals.utils import maybe_convert_dtypes
@@ -957,7 +944,7 @@ def from_dict(
     """Instantiate DataFrame from dictionary.
 
     Indexes (if present, for pandas-like backends) are aligned following
-    the [left-hand-rule](../pandas_like_concepts/pandas_index.md/).
+    the [left-hand-rule](../concepts/pandas_index.md/).
 
     Notes:
         For pandas-like dataframes, conversion to schema is applied after dataframe
@@ -1215,7 +1202,6 @@ __all__ = [
     "Binary",
     "Boolean",
     "Categorical",
-    "ConcatMethod",
     "DataFrame",
     "Date",
     "Datetime",
@@ -1232,16 +1218,8 @@ __all__ = [
     "Int32",
     "Int64",
     "Int128",
-    "InvalidIntoExprError",
     "LazyFrame",
     "List",
-    "MultiColSelector",
-    "MultiIndexSelector",
-    "NwDataFrame",
-    "NwExpr",
-    "NwLazyFrame",
-    "NwSchema",
-    "NwSeries",
     "Object",
     "Schema",
     "Series",
@@ -1266,7 +1244,6 @@ __all__ = [
     "dtypes",
     "exceptions",
     "exclude",
-    "find_stacklevel",
     "from_arrow",
     "from_dict",
     "from_native",
@@ -1274,8 +1251,6 @@ __all__ = [
     "generate_temporary_column_name",
     "get_level",
     "get_native_namespace",
-    "get_polars",
-    "inherit_doc",
     "is_ordered_categorical",
     "len",
     "lit",
@@ -1301,7 +1276,6 @@ __all__ = [
     "scan_parquet",
     "selectors",
     "show_versions",
-    "sql",
     "sum",
     "sum_horizontal",
     "to_native",

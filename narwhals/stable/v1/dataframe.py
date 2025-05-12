@@ -10,8 +10,6 @@ from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
 from narwhals.dependencies import get_polars
 from narwhals.exceptions import InvalidIntoExprError
-from narwhals.stable.v1.functions import all
-from narwhals.stable.v1.series import Series
 from narwhals.typing import IntoDataFrameT
 from narwhals.typing import IntoFrameT
 from narwhals.utils import Implementation
@@ -26,6 +24,7 @@ if TYPE_CHECKING:
 
     from narwhals.dataframe import MultiColSelector
     from narwhals.dataframe import MultiIndexSelector
+    from narwhals.stable.v1.series import Series
     from narwhals.typing import IntoSeries
     from narwhals.typing import SingleColSelector
     from narwhals.typing import SingleIndexSelector
@@ -55,6 +54,8 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
     @property
     def _series(self) -> type[Series[Any]]:
+        from narwhals.stable.v1.series import Series
+
         return cast("type[Series[Any]]", Series)
 
     @property
@@ -128,6 +129,8 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         Returns:
             A new DataFrame.
         """
+        from narwhals.stable.v1.functions import all
+
         return self.select(all()._l1_norm())
 
 
@@ -181,6 +184,8 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         Returns:
             A new lazyframe.
         """
+        from narwhals.stable.v1.functions import all
+
         return self.select(all()._l1_norm())
 
     def tail(self, n: int = 5) -> Self:  # pragma: no cover

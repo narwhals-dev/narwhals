@@ -12,7 +12,6 @@ from narwhals.stable.v1.dataframe import DataFrame
 from narwhals.stable.v1.dataframe import LazyFrame
 from narwhals.stable.v1.expr import Expr
 from narwhals.stable.v1.series import Series
-from narwhals.utils import Version
 
 if TYPE_CHECKING:
     from typing_extensions import ParamSpec
@@ -55,6 +54,8 @@ def _stableify(
     | NwExpr
     | Any,
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT] | Expr | Any:
+    from narwhals.utils import Version
+
     if isinstance(obj, NwDataFrame):
         return DataFrame(obj._compliant_frame._with_version(Version.V1), level=obj._level)
     if isinstance(obj, NwLazyFrame):
