@@ -9,7 +9,6 @@ from typing import Literal
 from typing import Sequence
 from typing import cast
 from typing import overload
-from warnings import warn
 
 import narwhals as nw
 from narwhals import dependencies
@@ -17,6 +16,8 @@ from narwhals import exceptions
 from narwhals import selectors
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
+from narwhals.dataframe import MultiColSelector
+from narwhals.dataframe import MultiIndexSelector
 from narwhals.dependencies import get_polars
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.expr import Expr as NwExpr
@@ -36,6 +37,9 @@ from narwhals.functions import when as nw_when
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.stable.v1 import dtypes
+from narwhals.stable.v1 import sql
+from narwhals.stable.v1.dataframe import DataFrame
+from narwhals.stable.v1.dataframe import LazyFrame
 from narwhals.stable.v1.dtypes import Array
 from narwhals.stable.v1.dtypes import Binary
 from narwhals.stable.v1.dtypes import Boolean
@@ -64,11 +68,35 @@ from narwhals.stable.v1.dtypes import UInt32
 from narwhals.stable.v1.dtypes import UInt64
 from narwhals.stable.v1.dtypes import UInt128
 from narwhals.stable.v1.dtypes import Unknown
+from narwhals.stable.v1.expr import Expr
+from narwhals.stable.v1.functions import all
+from narwhals.stable.v1.functions import all_horizontal
+from narwhals.stable.v1.functions import any_horizontal
+from narwhals.stable.v1.functions import col
+from narwhals.stable.v1.functions import concat
+from narwhals.stable.v1.functions import concat_str
+from narwhals.stable.v1.functions import exclude
+from narwhals.stable.v1.functions import len
+from narwhals.stable.v1.functions import lit
+from narwhals.stable.v1.functions import max
+from narwhals.stable.v1.functions import max_horizontal
+from narwhals.stable.v1.functions import mean
+from narwhals.stable.v1.functions import mean_horizontal
+from narwhals.stable.v1.functions import median
+from narwhals.stable.v1.functions import min
+from narwhals.stable.v1.functions import min_horizontal
+from narwhals.stable.v1.functions import nth
+from narwhals.stable.v1.functions import sum
+from narwhals.stable.v1.functions import sum_horizontal
+from narwhals.stable.v1.schema import Schema
+from narwhals.stable.v1.series import Series
+from narwhals.stable.v1.utils import _stableify
 from narwhals.translate import _from_native_impl
 from narwhals.translate import get_native_namespace
 from narwhals.translate import to_py_scalar
-from narwhals.typing import IntoDataFrameT
-from narwhals.typing import IntoFrameT
+from narwhals.typing import ConcatMethod
+from narwhals.typing import SingleColSelector
+from narwhals.typing import SingleIndexSelector
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import deprecate_native_namespace
@@ -87,22 +115,17 @@ if TYPE_CHECKING:
     from types import ModuleType
     from typing import Mapping
 
-    from typing_extensions import ParamSpec
-    from typing_extensions import Self
     from typing_extensions import TypeVar
 
     from narwhals._translate import IntoArrowTable
-    from narwhals.dataframe import MultiColSelector
-    from narwhals.dataframe import MultiIndexSelector
     from narwhals.dtypes import DType
-    from narwhals.typing import ConcatMethod
+    from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
+    from narwhals.typing import IntoFrameT
     from narwhals.typing import IntoLazyFrameT
     from narwhals.typing import IntoSeries
     from narwhals.typing import NonNestedLiteral
-    from narwhals.typing import SingleColSelector
-    from narwhals.typing import SingleIndexSelector
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
 
@@ -112,384 +135,11 @@ if TYPE_CHECKING:
     SeriesT = TypeVar("SeriesT", bound="Series[Any]")
     IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
     T = TypeVar("T", default=Any)
-    P = ParamSpec("P")
-    R = TypeVar("R")
 else:
     from typing import TypeVar
 
     IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries")
     T = TypeVar("T")
-
-
-class DataFrame(NwDataFrame[IntoDataFrameT]):
-    @inherit_doc(NwDataFrame)
-    def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
-        super().__init__(df, level=level)
-
-    # We need to override any method which don't return Self so that type
-    # annotations are correct.
-
-    @property
-    def _series(self) -> type[Series[Any]]:
-        return cast("type[Series[Any]]", Series)
-
-    @property
-    def _lazyframe(self) -> type[LazyFrame[Any]]:
-        return cast("type[LazyFrame[Any]]", LazyFrame)
-
-    @overload
-    def __getitem__(self, item: tuple[SingleIndexSelector, SingleColSelector]) -> Any: ...
-
-    @overload
-    def __getitem__(  # type: ignore[overload-overlap]
-        self, item: str | tuple[MultiIndexSelector, SingleColSelector]
-    ) -> Series[Any]: ...
-
-    @overload
-    def __getitem__(
-        self,
-        item: (
-            SingleIndexSelector
-            | MultiIndexSelector
-            | MultiColSelector
-            | tuple[SingleIndexSelector, MultiColSelector]
-            | tuple[MultiIndexSelector, MultiColSelector]
-        ),
-    ) -> Self: ...
-    def __getitem__(
-        self,
-        item: (
-            SingleIndexSelector
-            | SingleColSelector
-            | MultiColSelector
-            | MultiIndexSelector
-            | tuple[SingleIndexSelector, SingleColSelector]
-            | tuple[SingleIndexSelector, MultiColSelector]
-            | tuple[MultiIndexSelector, SingleColSelector]
-            | tuple[MultiIndexSelector, MultiColSelector]
-        ),
-    ) -> Series[Any] | Self | Any:
-        return super().__getitem__(item)
-
-    def lazy(
-        self,
-        backend: ModuleType | Implementation | str | None = None,
-    ) -> LazyFrame[Any]:
-        return super().lazy(backend=backend)  # type: ignore[return-value]
-
-    # Not sure what mypy is complaining about, probably some fancy
-    # thing that I need to understand category theory for
-    @overload  # type: ignore[override]
-    def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series[Any]]: ...
-    @overload
-    def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
-    @overload
-    def to_dict(
-        self, *, as_series: bool
-    ) -> dict[str, Series[Any]] | dict[str, list[Any]]: ...
-    def to_dict(
-        self, *, as_series: bool = True
-    ) -> dict[str, Series[Any]] | dict[str, list[Any]]:
-        return super().to_dict(as_series=as_series)  # type: ignore[return-value]
-
-    def is_duplicated(self) -> Series[Any]:
-        return super().is_duplicated()  # type: ignore[return-value]
-
-    def is_unique(self) -> Series[Any]:
-        return super().is_unique()  # type: ignore[return-value]
-
-    def _l1_norm(self) -> Self:
-        """Private, just used to test the stable API.
-
-        Returns:
-            A new DataFrame.
-        """
-        return self.select(all()._l1_norm())
-
-
-class LazyFrame(NwLazyFrame[IntoFrameT]):
-    @inherit_doc(NwLazyFrame)
-    def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
-        super().__init__(df, level=level)
-
-    @property
-    def _dataframe(self) -> type[DataFrame[Any]]:
-        return DataFrame
-
-    def _extract_compliant(self, arg: Any) -> Any:
-        # After v1, we raise when passing order-dependent or length-changing
-        # expressions to LazyFrame
-        from narwhals.dataframe import BaseFrame
-        from narwhals.expr import Expr
-        from narwhals.series import Series
-
-        if isinstance(arg, BaseFrame):
-            return arg._compliant_frame
-        if isinstance(arg, Series):  # pragma: no cover
-            msg = "Mixing Series with LazyFrame is not supported."
-            raise TypeError(msg)
-        if isinstance(arg, Expr):
-            # After stable.v1, we raise for order-dependent exprs or filtrations
-            return arg._to_compliant_expr(self.__narwhals_namespace__())
-        if isinstance(arg, str):
-            plx = self.__narwhals_namespace__()
-            return plx.col(arg)
-        if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
-            msg = (
-                f"Expected Narwhals object, got: {type(arg)}.\n\n"
-                "Perhaps you:\n"
-                "- Forgot a `nw.from_native` somewhere?\n"
-                "- Used `pl.col` instead of `nw.col`?"
-            )
-            raise TypeError(msg)
-        raise InvalidIntoExprError.from_invalid_type(type(arg))
-
-    def collect(
-        self,
-        backend: ModuleType | Implementation | str | None = None,
-        **kwargs: Any,
-    ) -> DataFrame[Any]:
-        return super().collect(backend=backend, **kwargs)  # type: ignore[return-value]
-
-    def _l1_norm(self) -> Self:
-        """Private, just used to test the stable API.
-
-        Returns:
-            A new lazyframe.
-        """
-        return self.select(all()._l1_norm())
-
-    def tail(self, n: int = 5) -> Self:  # pragma: no cover
-        r"""Get the last `n` rows.
-
-        Arguments:
-            n: Number of rows to return.
-
-        Returns:
-            A subset of the LazyFrame of shape (n, n_columns).
-        """
-        return super().tail(n)
-
-    def gather_every(self, n: int, offset: int = 0) -> Self:
-        r"""Take every nth row in the DataFrame and return as a new DataFrame.
-
-        Arguments:
-            n: Gather every *n*-th row.
-            offset: Starting index.
-
-        Returns:
-            The LazyFrame containing only the selected rows.
-        """
-        return self._with_compliant(
-            self._compliant_frame.gather_every(n=n, offset=offset)
-        )
-
-
-class Series(NwSeries[IntoSeriesT]):
-    @inherit_doc(NwSeries)
-    def __init__(
-        self, series: Any, *, level: Literal["full", "lazy", "interchange"]
-    ) -> None:
-        super().__init__(series, level=level)
-
-    # We need to override any method which don't return Self so that type
-    # annotations are correct.
-
-    @property
-    def _dataframe(self) -> type[DataFrame[Any]]:
-        return DataFrame
-
-    def to_frame(self) -> DataFrame[Any]:
-        return super().to_frame()  # type: ignore[return-value]
-
-    def value_counts(
-        self,
-        *,
-        sort: bool = False,
-        parallel: bool = False,
-        name: str | None = None,
-        normalize: bool = False,
-    ) -> DataFrame[Any]:
-        return super().value_counts(  # type: ignore[return-value]
-            sort=sort, parallel=parallel, name=name, normalize=normalize
-        )
-
-    def hist(
-        self,
-        bins: list[float | int] | None = None,
-        *,
-        bin_count: int | None = None,
-        include_breakpoint: bool = True,
-    ) -> DataFrame[Any]:
-        from narwhals.exceptions import NarwhalsUnstableWarning
-        from narwhals.utils import find_stacklevel
-
-        msg = (
-            "`Series.hist` is being called from the stable API although considered "
-            "an unstable feature."
-        )
-        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
-        return super().hist(  # type: ignore[return-value]
-            bins=bins,
-            bin_count=bin_count,
-            include_breakpoint=include_breakpoint,
-        )
-
-
-class Expr(NwExpr):
-    def _l1_norm(self) -> Self:
-        return super()._taxicab_norm()
-
-    def head(self, n: int = 10) -> Self:
-        r"""Get the first `n` rows.
-
-        Arguments:
-            n: Number of rows to return.
-
-        Returns:
-            A new expression.
-        """
-        return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).head(n)
-        )
-
-    def tail(self, n: int = 10) -> Self:
-        r"""Get the last `n` rows.
-
-        Arguments:
-            n: Number of rows to return.
-
-        Returns:
-            A new expression.
-        """
-        return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).tail(n)
-        )
-
-    def gather_every(self, n: int, offset: int = 0) -> Self:
-        r"""Take every nth value in the Series and return as new Series.
-
-        Arguments:
-            n: Gather every *n*-th row.
-            offset: Starting index.
-
-        Returns:
-            A new expression.
-        """
-        return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset)
-        )
-
-    def unique(self, *, maintain_order: bool | None = None) -> Self:
-        """Return unique values of this expression.
-
-        Arguments:
-            maintain_order: Keep the same order as the original expression.
-                This is deprecated and will be removed in a future version,
-                but will still be kept around in `narwhals.stable.v1`.
-
-        Returns:
-            A new expression.
-        """
-        if maintain_order is not None:
-            msg = (
-                "`maintain_order` has no effect and is only kept around for backwards-compatibility. "
-                "You can safely remove this argument."
-            )
-            warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
-        return self._with_filtration(lambda plx: self._to_compliant_expr(plx).unique())
-
-    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
-        """Sort this column. Place null values first.
-
-        Arguments:
-            descending: Sort in descending order.
-            nulls_last: Place null values last instead of first.
-
-        Returns:
-            A new expression.
-        """
-        return self._with_unorderable_window(
-            lambda plx: self._to_compliant_expr(plx).sort(
-                descending=descending, nulls_last=nulls_last
-            )
-        )
-
-    def arg_true(self) -> Self:
-        """Find elements where boolean expression is True.
-
-        Returns:
-            A new expression.
-        """
-        return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).arg_true(),
-        )
-
-    def sample(
-        self,
-        n: int | None = None,
-        *,
-        fraction: float | None = None,
-        with_replacement: bool = False,
-        seed: int | None = None,
-    ) -> Self:
-        """Sample randomly from this expression.
-
-        Arguments:
-            n: Number of items to return. Cannot be used with fraction.
-            fraction: Fraction of items to return. Cannot be used with n.
-            with_replacement: Allow values to be sampled more than once.
-            seed: Seed for the random number generator. If set to None (default), a random
-                seed is generated for each sample operation.
-
-        Returns:
-            A new expression.
-        """
-        return self._with_filtration(
-            lambda plx: self._to_compliant_expr(plx).sample(
-                n, fraction=fraction, with_replacement=with_replacement, seed=seed
-            )
-        )
-
-
-class Schema(NwSchema):
-    _version = Version.V1
-
-    @inherit_doc(NwSchema)
-    def __init__(
-        self, schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None = None
-    ) -> None:
-        super().__init__(schema)
-
-
-@overload
-def _stableify(obj: NwDataFrame[IntoFrameT]) -> DataFrame[IntoFrameT]: ...
-@overload
-def _stableify(obj: NwLazyFrame[IntoFrameT]) -> LazyFrame[IntoFrameT]: ...
-@overload
-def _stableify(obj: NwSeries[IntoSeriesT]) -> Series[IntoSeriesT]: ...
-@overload
-def _stableify(obj: NwExpr) -> Expr: ...
-@overload
-def _stableify(obj: Any) -> Any: ...
-
-
-def _stableify(
-    obj: NwDataFrame[IntoFrameT]
-    | NwLazyFrame[IntoFrameT]
-    | NwSeries[IntoSeriesT]
-    | NwExpr
-    | Any,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT] | Expr | Any:
-    if isinstance(obj, NwDataFrame):
-        return DataFrame(obj._compliant_frame._with_version(Version.V1), level=obj._level)
-    if isinstance(obj, NwLazyFrame):
-        return LazyFrame(obj._compliant_frame._with_version(Version.V1), level=obj._level)
-    if isinstance(obj, NwSeries):
-        return Series(obj._compliant_series._with_version(Version.V1), level=obj._level)
-    if isinstance(obj, NwExpr):
-        return Expr(obj._to_compliant_expr, obj._metadata)
-    return obj
 
 
 @overload
@@ -1177,292 +827,6 @@ def narwhalify(
         return decorator(func)
 
 
-def all() -> Expr:
-    """Instantiate an expression representing all columns.
-
-    Returns:
-        A new expression.
-    """
-    return _stableify(nw.all())
-
-
-def col(*names: str | Iterable[str]) -> Expr:
-    """Creates an expression that references one or more columns by their name(s).
-
-    Arguments:
-        names: Name(s) of the columns to use.
-
-    Returns:
-        A new expression.
-    """
-    return _stableify(nw.col(*names))
-
-
-def exclude(*names: str | Iterable[str]) -> Expr:
-    """Creates an expression that excludes columns by their name(s).
-
-    Arguments:
-        names: Name(s) of the columns to exclude.
-
-    Returns:
-        A new expression.
-    """
-    return _stableify(nw.exclude(*names))
-
-
-def nth(*indices: int | Sequence[int]) -> Expr:
-    """Creates an expression that references one or more columns by their index(es).
-
-    Notes:
-        `nth` is not supported for Polars version<1.0.0. Please use
-        [`narwhals.col`][] instead.
-
-    Arguments:
-        indices: One or more indices representing the columns to retrieve.
-
-    Returns:
-        A new expression.
-    """
-    return _stableify(nw.nth(*indices))
-
-
-def len() -> Expr:
-    """Return the number of rows.
-
-    Returns:
-        A new expression.
-    """
-    return _stableify(nw.len())
-
-
-def lit(value: NonNestedLiteral, dtype: DType | type[DType] | None = None) -> Expr:
-    """Return an expression representing a literal value.
-
-    Arguments:
-        value: The value to use as literal.
-        dtype: The data type of the literal value. If not provided, the data type will
-            be inferred by the native library.
-
-    Returns:
-        A new expression.
-    """
-    return _stableify(nw.lit(value, dtype))
-
-
-def min(*columns: str) -> Expr:
-    """Return the minimum value.
-
-    Note:
-       Syntactic sugar for ``nw.col(columns).min()``.
-
-    Arguments:
-        columns: Name(s) of the columns to use in the aggregation function.
-
-    Returns:
-        A new expression.
-    """
-    return _stableify(nw.min(*columns))
-
-
-def max(*columns: str) -> Expr:
-    """Return the maximum value.
-
-    Note:
-       Syntactic sugar for ``nw.col(columns).max()``.
-
-    Arguments:
-        columns: Name(s) of the columns to use in the aggregation function.
-
-    Returns:
-        A new expression.
-    """
-    return _stableify(nw.max(*columns))
-
-
-def mean(*columns: str) -> Expr:
-    """Get the mean value.
-
-    Note:
-        Syntactic sugar for ``nw.col(columns).mean()``
-
-    Arguments:
-        columns: Name(s) of the columns to use in the aggregation function
-
-    Returns:
-        A new expression.
-    """
-    return _stableify(nw.mean(*columns))
-
-
-def median(*columns: str) -> Expr:
-    """Get the median value.
-
-    Notes:
-        - Syntactic sugar for ``nw.col(columns).median()``
-        - Results might slightly differ across backends due to differences in the
-            underlying algorithms used to compute the median.
-
-    Arguments:
-        columns: Name(s) of the columns to use in the aggregation function
-
-    Returns:
-        A new expression.
-    """
-    return _stableify(nw.median(*columns))
-
-
-def sum(*columns: str) -> Expr:
-    """Sum all values.
-
-    Note:
-        Syntactic sugar for ``nw.col(columns).sum()``
-
-    Arguments:
-        columns: Name(s) of the columns to use in the aggregation function
-
-    Returns:
-        A new expression.
-    """
-    return _stableify(nw.sum(*columns))
-
-
-def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-    """Sum all values horizontally across columns.
-
-    Warning:
-        Unlike Polars, we support horizontal sum over numeric columns only.
-
-    Arguments:
-        exprs: Name(s) of the columns to use in the aggregation function. Accepts
-            expression input.
-
-    Returns:
-        A new expression.
-    """
-    return _stableify(nw.sum_horizontal(*exprs))
-
-
-def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-    r"""Compute the bitwise AND horizontally across columns.
-
-    Arguments:
-        exprs: Name(s) of the columns to use in the aggregation function. Accepts
-            expression input.
-
-    Returns:
-        A new expression.
-    """
-    return _stableify(nw.all_horizontal(*exprs))
-
-
-def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-    r"""Compute the bitwise OR horizontally across columns.
-
-    Arguments:
-        exprs: Name(s) of the columns to use in the aggregation function. Accepts
-            expression input.
-
-    Returns:
-        A new expression.
-    """
-    return _stableify(nw.any_horizontal(*exprs))
-
-
-def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-    """Compute the mean of all values horizontally across columns.
-
-    Arguments:
-        exprs: Name(s) of the columns to use in the aggregation function. Accepts
-            expression input.
-
-    Returns:
-        A new expression.
-    """
-    return _stableify(nw.mean_horizontal(*exprs))
-
-
-def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-    """Get the minimum value horizontally across columns.
-
-    Notes:
-        We support `min_horizontal` over numeric columns only.
-
-    Arguments:
-        exprs: Name(s) of the columns to use in the aggregation function. Accepts
-            expression input.
-
-    Returns:
-        A new expression.
-    """
-    return _stableify(nw.min_horizontal(*exprs))
-
-
-def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
-    """Get the maximum value horizontally across columns.
-
-    Notes:
-        We support `max_horizontal` over numeric columns only.
-
-    Arguments:
-        exprs: Name(s) of the columns to use in the aggregation function. Accepts
-            expression input.
-
-    Returns:
-        A new expression.
-    """
-    return _stableify(nw.max_horizontal(*exprs))
-
-
-def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT:
-    """Concatenate multiple DataFrames, LazyFrames into a single entity.
-
-    Arguments:
-        items: DataFrames, LazyFrames to concatenate.
-        how: concatenating strategy
-
-            - vertical: Concatenate vertically. Column names must match.
-            - horizontal: Concatenate horizontally. If lengths don't match, then
-                missing rows are filled with null values. This is only supported
-                when all inputs are (eager) DataFrames.
-            - diagonal: Finds a union between the column schemas and fills missing column
-                values with null.
-
-    Returns:
-        A new DataFrame or LazyFrame resulting from the concatenation.
-
-    Raises:
-        TypeError: The items to concatenate should either all be eager, or all lazy
-    """
-    return cast("FrameT", _stableify(nw.concat(items, how=how)))
-
-
-def concat_str(
-    exprs: IntoExpr | Iterable[IntoExpr],
-    *more_exprs: IntoExpr,
-    separator: str = "",
-    ignore_nulls: bool = False,
-) -> Expr:
-    r"""Horizontally concatenate columns into a single string column.
-
-    Arguments:
-        exprs: Columns to concatenate into a single string column. Accepts expression
-            input. Strings are parsed as column names, other non-expression inputs are
-            parsed as literals. Non-`String` columns are cast to `String`.
-        *more_exprs: Additional columns to concatenate into a single string column,
-            specified as positional arguments.
-        separator: String that will be used to separate the values of each column.
-        ignore_nulls: Ignore null values (default is `False`).
-            If set to `False`, null values will be propagated and if the row contains any
-            null values, the output is null.
-
-    Returns:
-        A new expression.
-    """
-    return _stableify(
-        nw.concat_str(exprs, *more_exprs, separator=separator, ignore_nulls=ignore_nulls)
-    )
-
-
 class When(NwWhen):
     @classmethod
     def from_when(cls, when: NwWhen) -> When:
@@ -1593,7 +957,7 @@ def from_dict(
     """Instantiate DataFrame from dictionary.
 
     Indexes (if present, for pandas-like backends) are aligned following
-    the [left-hand-rule](../concepts/pandas_index.md/).
+    the [left-hand-rule](../pandas_like_concepts/pandas_index.md/).
 
     Notes:
         For pandas-like dataframes, conversion to schema is applied after dataframe
@@ -1851,6 +1215,7 @@ __all__ = [
     "Binary",
     "Boolean",
     "Categorical",
+    "ConcatMethod",
     "DataFrame",
     "Date",
     "Datetime",
@@ -1867,11 +1232,21 @@ __all__ = [
     "Int32",
     "Int64",
     "Int128",
+    "InvalidIntoExprError",
     "LazyFrame",
     "List",
+    "MultiColSelector",
+    "MultiIndexSelector",
+    "NwDataFrame",
+    "NwExpr",
+    "NwLazyFrame",
+    "NwSchema",
+    "NwSeries",
     "Object",
     "Schema",
     "Series",
+    "SingleColSelector",
+    "SingleIndexSelector",
     "String",
     "Struct",
     "Time",
@@ -1891,6 +1266,7 @@ __all__ = [
     "dtypes",
     "exceptions",
     "exclude",
+    "find_stacklevel",
     "from_arrow",
     "from_dict",
     "from_native",
@@ -1898,6 +1274,8 @@ __all__ = [
     "generate_temporary_column_name",
     "get_level",
     "get_native_namespace",
+    "get_polars",
+    "inherit_doc",
     "is_ordered_categorical",
     "len",
     "lit",
@@ -1916,12 +1294,14 @@ __all__ = [
     "narwhalify",
     "new_series",
     "nth",
+    "nw",
     "read_csv",
     "read_parquet",
     "scan_csv",
     "scan_parquet",
     "selectors",
     "show_versions",
+    "sql",
     "sum",
     "sum_horizontal",
     "to_native",
