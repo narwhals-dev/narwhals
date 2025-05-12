@@ -605,10 +605,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
 
     def is_unique(self) -> Self:
         return self._with_callable(
-            lambda _input: _input.cast("string")
-            .fill_null("__NULL__")
-            .count()
-            .over(ibis.window(group_by=_input))
+            lambda _input: _input.isnull().count().over(ibis.window(group_by=(_input)))
             == 1
         )
 
