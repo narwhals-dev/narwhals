@@ -611,6 +611,14 @@ def test_group_by_agg_first(
 ) -> None:
     if any(x in str(constructor_eager) for x in ("pandas", "modin", "cudf")):
         request.applymarker(pytest.mark.xfail(reason="Not implemented yet."))
+    request.applymarker(
+        pytest.mark.xfail(
+            "pyarrow_table" in str(constructor_eager)
+            and (PYARROW_VERSION < (14, 0) and PYARROW_VERSION >= (13, 0)),
+            reason="https://github.com/apache/arrow/issues/36709",
+            raises=NotImplementedError,
+        )
+    )
     data = {"a": [1, 2, 2, 3, 3, 4], "b": [1, 2, 3, 4, 5, 6]}
     df = nw.from_native(constructor_eager(data))
     if pre_sort:

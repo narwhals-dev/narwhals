@@ -46,6 +46,12 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         "first": "min",
         "last": "max",
     }
+    _OPTION_COUNT_ALL: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(
+        ("len", "n_unique")
+    )
+    _OPTION_COUNT_VALID: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("count",))
+    _OPTION_ORDERED: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("first",))
+    _OPTION_VARIANCE: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("std", "var"))
 
     def __init__(
         self,
@@ -64,30 +70,37 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
     def _configure_agg(
         self, grouped: pa.TableGroupBy, expr: ArrowExpr, /
     ) -> tuple[pa.TableGroupBy, Aggregation, AggregateOptions | None]:
-        option: AggregateOptions | None
+        option: AggregateOptions | None = None
         function_name = self._leaf_name(expr)
-        if function_name in {"std", "var"}:
+        if function_name in self._OPTION_VARIANCE:
             option = pc.VarianceOptions(ddof=expr._call_kwargs["ddof"])
-        elif function_name in {"len", "n_unique"}:
+        elif function_name in self._OPTION_COUNT_ALL:
             option = pc.CountOptions(mode="all")
-        elif function_name == "count":
+        elif function_name in self._OPTION_COUNT_VALID:
             option = pc.CountOptions(mode="only_valid")
-        elif function_name == "first":
-            # TODO @dangotbanned: split this into an ordered agg method
-            # - will need the same for `last`
-            # - and need to handle compat https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2084603274
-            option = pc.ScalarAggregateOptions(skip_nulls=False)
+        elif function_name in self._OPTION_ORDERED:
+            grouped, option = self._ordered_agg(grouped)
+        return grouped, self._remap_expr_name(function_name), option
+
+    def _ordered_agg(
+        self, grouped: pa.TableGroupBy, /
+    ) -> tuple[pa.TableGroupBy, AggregateOptions]:
+        # NOTE: Will need the same for `last`
+        backend_version = self.compliant._backend_version
+        if backend_version >= (14, 0) and grouped._use_threads:
             # NOTE: `pyarrow` defaults to multi-threading, but is not compatible with ordered aggs
             # If we see any that are ordered, the entire aggregation must disable threading
             #   `ArrowNotImplementedError: Using ordered aggregator in multiple threaded execution is not supported`
-            # Need to avoid overwriting `self._grouped`, since we don't want to slow down unrelated `.agg(...)` calls
-            if grouped._use_threads:
-                grouped = pa.TableGroupBy(
-                    self.compliant.native, grouped.keys, use_threads=False
-                )
-        else:
-            option = None
-        return grouped, self._remap_expr_name(function_name), option
+            # Also need to avoid overwriting `self._grouped`, since we don't want to slow down unrelated `.agg(...)` calls
+            grouped = pa.TableGroupBy(
+                self.compliant.native, grouped.keys, use_threads=False
+            )
+        elif backend_version < (14, 0) and backend_version >= (13, 0):  # pragma: no cover
+            # TODO @dangotbanned: Write up an message to suggest upgrading to `>=14.0.0`
+            msg = "https://github.com/apache/arrow/issues/36709"
+            raise NotImplementedError(msg)
+        # NOTE: Prior to `13.0.0`, threading was disabled
+        return grouped, pc.ScalarAggregateOptions(skip_nulls=False)
 
     def agg(self, *exprs: ArrowExpr) -> ArrowDataFrame:
         self._ensure_all_simple(exprs)
