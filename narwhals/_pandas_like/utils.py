@@ -675,8 +675,7 @@ def select_columns_by_name(
             available_columns=df.columns.tolist(),  # type: ignore[attr-defined]
         ):
             raise error from e
-        msg = "Unreachable code, please report a bug."
-        raise AssertionError(msg) from e
+        raise
 
 
 def check_column_names_are_unique(columns: pd.Index[str]) -> None:
