@@ -12,7 +12,7 @@ If you haven't, this is also for you as you might experience it and you need to 
 Take the following two codes as an example.
 
 === "Approach 1"
-    ```python exec="true" source="above" result="python" session="df_ex1"
+    ```python exec="true" source="above" result="python" session="df_ex1" hl_lines="12"
     import narwhals as nw
     import pandas as pd
     from narwhals.typing import IntoFrameT
@@ -24,9 +24,7 @@ Take the following two codes as an example.
 
     def approach_1(df_native: IntoFrameT) -> IntoFrameT:
         df = nw.from_native(df_native)
-        # Pay attention to this next line
         df = df.group_by("a").agg(d=(nw.col("b") + nw.col("c")).sum())
-
         return df.to_native()
 
 
@@ -34,7 +32,7 @@ Take the following two codes as an example.
     ```
 
 === "Approach 2"
-    ```python exec="true" source="above" result="python" session="df_ex2"
+    ```python exec="true" source="above" result="python" session="df_ex2" hl_lines="11"
     import narwhals as nw
     import pandas as pd
 
@@ -45,10 +43,7 @@ Take the following two codes as an example.
 
     def approach_2(df_native: IntoFrameT) -> IntoFrameT:
         df = nw.from_native(df_native)
-
-        # Pay attention to this next line
         df = df.with_columns(d=nw.col("b") + nw.col("c")).group_by("a").agg(nw.sum("d"))
-
         return df.to_native()
 
 
@@ -94,5 +89,4 @@ then this is going to be much more efficient! That's why it's preferred.
 2. Avoid redundant computations: if an operation (like addition) is used multiple times,
    compute it once and store the result in a new column.
 
-In a future version of Narwhals, we might be able to do some of this automatically for
-you, even for backends like pandas which don't natively do query optimisation.
+**_Happy grouping!_** 🫡

@@ -111,6 +111,7 @@ def agnostic_function(
         .to_native()
     )
 ```
+
 You can then pass `pandas.DataFrame`, `polars.DataFrame`, `polars.LazyFrame`, `duckdb.DuckDBPyRelation`,
 `pyspark.sql.DataFrame`, `pyarrow.Table`, and more, to `agnostic_function`. In each case, no additional
 dependencies will be required, and computation will stay native to the input library:
@@ -130,7 +131,8 @@ print()
 print("Polars result:")
 print(agnostic_function(pl.DataFrame(data), "date", "price"))
 ```
-```
+
+```terminal
 pandas result:
         date  price
 0 2020-01-01    2.5
