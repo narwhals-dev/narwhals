@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from contextlib import nullcontext as does_not_raise
 
 import pandas as pd
@@ -8,7 +7,7 @@ import pyarrow as pa
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import LengthChangingExprError
+from narwhals.exceptions import InvalidOperationError
 from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
@@ -299,7 +298,7 @@ def test_over_anonymous_reduction(
 def test_over_unsupported() -> None:
     dfpd = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     with pytest.raises(NotImplementedError):
-        nw.from_native(dfpd).select(nw.col("a").round().over("a"))
+        nw.from_native(dfpd).select(nw.col("a").null_count().over("a"))
 
 
 def test_over_unsupported_dask() -> None:
@@ -308,7 +307,7 @@ def test_over_unsupported_dask() -> None:
 
     df = dd.from_pandas(pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]}))
     with pytest.raises(NotImplementedError):
-        nw.from_native(df).select(nw.col("a").round().over("a"))
+        nw.from_native(df).select(nw.col("a").null_count().over("a"))
 
 
 def test_over_shift(
@@ -392,10 +391,7 @@ def test_over_cum_reverse(
 def test_over_raise_len_change(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
 
-    with pytest.raises(
-        LengthChangingExprError,
-        match=re.escape("`.over()` can not be used for expressions which change length."),
-    ):
+    with pytest.raises(InvalidOperationError):
         nw.from_native(df).select(nw.col("b").drop_nulls().over("a"))
 
 

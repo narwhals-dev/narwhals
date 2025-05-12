@@ -543,9 +543,10 @@ def test_group_by_expr(
             pytest.raises(OrderDependentExprError),
         ),  # Transform and Window
         ([nw.lit(42)], pytest.raises(ComputeError)),  # Literal
+        ([nw.lit(42).abs()], pytest.raises(ComputeError)),  # Literal
     ],
 )
-def test_group_by_raise_if_not_transform(
+def test_group_by_raise_if_not_elementwise(
     constructor: Constructor, keys: list[nw.Expr], lazy_context: Any
 ) -> None:
     data = {"a": [1, 2, 2, None], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
@@ -586,4 +587,11 @@ def test_group_by_selector(constructor: Constructor) -> None:
         .sort("a", "b")
     )
     expected = {"a": [1, 1], "b": [4, 6], "c": [8.0, 9.0]}
+    assert_equal_data(result, expected)
+
+
+def test_renaming_edge_case(constructor: Constructor) -> None:
+    data = {"a": [0, 0, 0], "_a_tmp": [1, 2, 3], "b": [4, 5, 6]}
+    result = nw.from_native(constructor(data)).group_by(nw.col("a")).agg(nw.all().min())
+    expected = {"a": [0], "_a_tmp": [1], "b": [4]}
     assert_equal_data(result, expected)

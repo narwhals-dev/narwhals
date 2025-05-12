@@ -80,15 +80,7 @@ Concretely, we would do the following:
 So, although Narwhals' main API (and `narwhals.stable.v2`) will have introduced a breaking change,
 users of `narwhals.stable.v1` will have their code unaffected.
 
-## `import narwhals as nw` or `import narwhals.stable.v1 as nw`?
-
-Which should you use? In general we recommend:
-
-- When prototyping, use `import narwhals as nw`, so you can iterate quickly.
-- Once you're happy with what you've got and want to release something production-ready and stable,
-  then switch out your `import narwhals as nw` usage for `import narwhals.stable.v1 as nw`.
-
-## Exceptions
+### Exceptions
 
 Are we really promising perfect backwards compatibility in all cases, without exceptions? Not quite.
 There are some exceptions, which we'll now list. But we'll never intentionally break your code.
@@ -108,16 +100,21 @@ Here are exceptions to our backwards compatibility policy:
 In general, decision are driven by use-cases, and we conduct a search of public GitHub repositories
 before making any change.
 
-## Breaking changes carried out so far
 
-### After `stable.v1`
+### `import narwhals as nw` or `import narwhals.stable.v1 as nw`?
 
-The following are differences between the main Narwhals namespace and `narwhals.stable.v1`:
+Which should you use? In general we recommend:
+
+- When prototyping, use `import narwhals as nw`, so you can iterate quickly.
+- Once you're happy with what you've got and want to release something production-ready and stable,
+  then switch out your `import narwhals as nw` usage for `import narwhals.stable.v1 as nw`.
+
+## `main` vs `stable.v1`
 
 - Since Narwhals 1.35:
 
-  - pandas' ordered categoricals get mapped to `nw.Enum` instead of `nw.Categorical`.
-  - `nw.Enum` must be provided `categories` at instantiation.
+    - pandas' ordered categoricals get mapped to `nw.Enum` instead of `nw.Categorical`.
+    - `nw.Enum` must be provided `categories` at instantiation.
 
 - Since Narwhals 1.29.0, `LazyFrame.gather_every` has been deprecated from the main namespace.
 

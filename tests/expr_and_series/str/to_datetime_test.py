@@ -36,11 +36,7 @@ def test_to_datetime(constructor: Constructor) -> None:
     )
     result_schema = result.collect_schema()
     assert isinstance(result_schema["b"], nw.Datetime)
-    if "sqlframe" in str(constructor):
-        # https://github.com/eakmanrq/sqlframe/issues/326
-        assert result_schema["b"].time_zone == "UTC"  # pyright: ignore[reportAttributeAccessIssue]
-    else:
-        assert result_schema["b"].time_zone is None  # pyright: ignore[reportAttributeAccessIssue]
+    assert result_schema["b"].time_zone is None  # pyright: ignore[reportAttributeAccessIssue]
     result_item = result.collect().item(row=0, column="b")
     assert str(result_item) == expected
 

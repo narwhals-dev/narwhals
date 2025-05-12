@@ -83,7 +83,7 @@ def test_unary_series(constructor_eager: ConstructorEager) -> None:
 def test_unary_two_elements(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "sqlframe" in str(constructor) or "ibis" in str(constructor):
+    if "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2], "b": [2, 10], "c": [2.0, None]}
     result = nw.from_native(constructor(data)).select(
