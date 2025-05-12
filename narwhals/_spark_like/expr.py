@@ -505,36 +505,28 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_callable(self._F.sum)
 
     def std(self, ddof: int) -> Self:
-        from functools import partial
+        F = self._F  # noqa: N806
+        if ddof == 0:
+            return self._with_callable(F.stddev_pop)
+        if ddof == 1:
+            return self._with_callable(F.stddev_samp)
 
-        import numpy as np  # ignore-banned-import
-
-        from narwhals._spark_like.utils import _std
-
-        func = partial(
-            _std,
-            ddof=ddof,
-            np_version=parse_version(np),
-            functions=self._F,
-            implementation=self._implementation,
-        )
+        def func(expr: Column) -> Column:
+            n_rows = F.count(expr)
+            return F.stddev_samp(expr) * F.sqrt((n_rows - 1) / (n_rows - ddof))
 
         return self._with_callable(func)
 
     def var(self, ddof: int) -> Self:
-        from functools import partial
+        F = self._F  # noqa: N806
+        if ddof == 0:
+            return self._with_callable(F.var_pop)
+        if ddof == 1:
+            return self._with_callable(F.var_samp)
 
-        import numpy as np  # ignore-banned-import
-
-        from narwhals._spark_like.utils import _var
-
-        func = partial(
-            _var,
-            ddof=ddof,
-            np_version=parse_version(np),
-            functions=self._F,
-            implementation=self._implementation,
-        )
+        def func(expr: Column) -> Column:
+            n_rows = F.count(expr)
+            return F.var_samp(expr) * (n_rows - 1) / (n_rows - ddof)
 
         return self._with_callable(func)
 

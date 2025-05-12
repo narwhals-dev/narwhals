@@ -2,7 +2,7 @@
 
 Narwhals has four main public classes:
 
-- `Expr`: what gets created when you write `nw.col('a')`.
+- `Expr`: this is what gets created when you write `nw.col('a')`.
 - `DataFrame`: in-memory, eager dataframe with a well-defined row order which
   is preserved across `with_columns` and `select` operations.
 - `LazyFrame`: a dataframe which makes no assumptions about row-ordering. This
@@ -45,7 +45,6 @@ session = DuckDBSession()
 sqlframe_df = session.createDataFrame(df_pd)
 lf = nw.from_native(sqlframe_df)
 result = lf.with_columns(a_cum_sum=nw.col("a").cum_sum().over(order_by="i"))
-print(result)
 print(result.collect("pandas"))
 ```
 

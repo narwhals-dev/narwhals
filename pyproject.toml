@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.38.2"
+version = "1.39.0"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
@@ -107,24 +107,22 @@ local-dev = [
   {include-group = "docs"}
 ]
 
-[tool.hatch.build]
-exclude = [
-  "/.*",
-  "/docs",
-  "/tests",
-  "/tpch",
-  "/utils",
-  ".gitignore",
-  "CONTRIBUTING.md",
-  "mkdocs.yml",
-  "noxfile.py",
+[tool.hatch.build.targets.sdist]
+include = [
+  "narwhals/*",
+  "tests/*",
+]
+
+[tool.hatch.build.targets.wheel]
+include = [
+  "narwhals/*",
 ]
 
 [tool.ruff]
 line-length = 90
 fix = true
 target-version = "py38"
-extend-exclude = ["utils/bump_version.py", "**/this.py"]
+extend-exclude = ["**/this.py"]
 
 [tool.ruff.lint]
 preview = true
@@ -189,6 +187,7 @@ builtins-ignorelist = ["format"]
 ]
 "tpch/tests/*" = ["S101"]
 "utils/*" = ["S311", "PTH123"]
+"utils/bump_version.py" = ["S603", "S607", "T201"]
 "tpch/execute/*" = ["T201"]
 "tpch/notebooks/*" = [
   "ANN001",
