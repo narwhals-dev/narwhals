@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import Any
 from typing import Iterable
 from typing import Sequence
+from typing import TypeVar
 from typing import cast
 
 import narwhals as nw
@@ -10,11 +12,14 @@ from narwhals.stable.v1.utils import _stableify
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
+    from narwhals.stable.v1.dataframe import DataFrame
+    from narwhals.stable.v1.dataframe import LazyFrame
     from narwhals.stable.v1.expr import Expr
-    from narwhals.stable.v1.typing import FrameT
     from narwhals.typing import ConcatMethod
     from narwhals.typing import IntoExpr
     from narwhals.typing import NonNestedLiteral
+
+    FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
 
 
 def all() -> Expr:
