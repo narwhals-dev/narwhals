@@ -611,16 +611,6 @@ def test_group_by_agg_first(
 ) -> None:
     if any(x in str(constructor_eager) for x in ("pandas", "modin", "cudf")):
         request.applymarker(pytest.mark.xfail(reason="Not implemented yet."))
-    if "pyarrow_table" in str(constructor_eager):
-        from pyarrow import ArrowNotImplementedError
-
-        request.applymarker(
-            pytest.mark.xfail(
-                reason="Need to disable threading if this appears\n"
-                "Using ordered aggregator in multiple threaded execution is not supported",
-                raises=ArrowNotImplementedError,
-            )
-        )
     data = {"a": [1, 2, 2, 3, 3, 4], "b": [1, 2, 3, 4, 5, 6]}
     df = nw.from_native(constructor_eager(data))
     if pre_sort:

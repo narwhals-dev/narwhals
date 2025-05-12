@@ -67,6 +67,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         expected_pyarrow_column_names: list[str] = self._keys.copy()
         new_column_names: list[str] = self._keys.copy()
         exclude = (*self._keys, *self._output_key_names)
+        grouped = self._grouped
 
         for expr in exprs:
             output_names, aliases = evaluate_output_names_and_aliases(
@@ -93,6 +94,14 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
                 option = pc.CountOptions(mode="only_valid")
             elif function_name == "first":
                 option = pc.ScalarAggregateOptions(skip_nulls=False)
+                # NOTE: `pyarrow` defaults to multithreading, but is not compatible with ordered aggs
+                # If we see any that are ordered, the entire aggregation must disable threading
+                #   `ArrowNotImplementedError: Using ordered aggregator in multiple threaded execution is not supported`
+                # Need to avoid overwriting `self._grouped`, since we don't want to slow down unrelated `.agg(...)` calls
+                if grouped._use_threads:
+                    grouped = pa.TableGroupBy(
+                        self.compliant.native, grouped.keys, use_threads=False
+                    )
             else:
                 option = None
 
@@ -105,7 +114,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
                 [(output_name, function_name, option) for output_name in output_names]
             )
 
-        result_simple = self._grouped.aggregate(aggs)
+        result_simple = grouped.aggregate(aggs)
 
         # Rename columns, being very careful
         expected_old_names_indices: dict[str, list[int]] = collections.defaultdict(list)
