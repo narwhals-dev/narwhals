@@ -61,7 +61,35 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         self._grouped = pa.TableGroupBy(self.compliant.native, self._keys)
         self._drop_null_keys = drop_null_keys
 
-    def agg(self, *exprs: ArrowExpr) -> ArrowDataFrame:  # noqa: C901
+    def _configure_agg(
+        self, grouped: pa.TableGroupBy, expr: ArrowExpr, /
+    ) -> tuple[pa.TableGroupBy, Aggregation, AggregateOptions | None]:
+        option: AggregateOptions | None
+        function_name = self._leaf_name(expr)
+        if function_name in {"std", "var"}:
+            option = pc.VarianceOptions(ddof=expr._call_kwargs["ddof"])
+        elif function_name in {"len", "n_unique"}:
+            option = pc.CountOptions(mode="all")
+        elif function_name == "count":
+            option = pc.CountOptions(mode="only_valid")
+        elif function_name == "first":
+            # TODO @dangotbanned: split this into an ordered agg method
+            # - will need the same for `last`
+            # - and need to handle compat https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2084603274
+            option = pc.ScalarAggregateOptions(skip_nulls=False)
+            # NOTE: `pyarrow` defaults to multi-threading, but is not compatible with ordered aggs
+            # If we see any that are ordered, the entire aggregation must disable threading
+            #   `ArrowNotImplementedError: Using ordered aggregator in multiple threaded execution is not supported`
+            # Need to avoid overwriting `self._grouped`, since we don't want to slow down unrelated `.agg(...)` calls
+            if grouped._use_threads:
+                grouped = pa.TableGroupBy(
+                    self.compliant.native, grouped.keys, use_threads=False
+                )
+        else:
+            option = None
+        return grouped, self._remap_expr_name(function_name), option
+
+    def agg(self, *exprs: ArrowExpr) -> ArrowDataFrame:
         self._ensure_all_simple(exprs)
         aggs: list[tuple[str, Aggregation, AggregateOptions | None]] = []
         expected_pyarrow_column_names: list[str] = self._keys.copy()
@@ -85,27 +113,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
                 aggs.append((self._keys[0], "count", pc.CountOptions(mode="all")))
                 continue
 
-            function_name = self._leaf_name(expr)
-            if function_name in {"std", "var"}:
-                option: Any = pc.VarianceOptions(ddof=expr._call_kwargs["ddof"])
-            elif function_name in {"len", "n_unique"}:
-                option = pc.CountOptions(mode="all")
-            elif function_name == "count":
-                option = pc.CountOptions(mode="only_valid")
-            elif function_name == "first":
-                option = pc.ScalarAggregateOptions(skip_nulls=False)
-                # NOTE: `pyarrow` defaults to multithreading, but is not compatible with ordered aggs
-                # If we see any that are ordered, the entire aggregation must disable threading
-                #   `ArrowNotImplementedError: Using ordered aggregator in multiple threaded execution is not supported`
-                # Need to avoid overwriting `self._grouped`, since we don't want to slow down unrelated `.agg(...)` calls
-                if grouped._use_threads:
-                    grouped = pa.TableGroupBy(
-                        self.compliant.native, grouped.keys, use_threads=False
-                    )
-            else:
-                option = None
-
-            function_name = self._remap_expr_name(function_name)
+            grouped, function_name, option = self._configure_agg(grouped, expr)
             new_column_names.extend(aliases)
             expected_pyarrow_column_names.extend(
                 [f"{output_name}_{function_name}" for output_name in output_names]
