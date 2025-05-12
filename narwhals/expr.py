@@ -34,6 +34,8 @@ if TYPE_CHECKING:
 
     from narwhals._compliant import CompliantExpr
     from narwhals._compliant import CompliantNamespace
+    from narwhals._compliant.typing import CompliantExprAny
+    from narwhals._compliant.typing import CompliantNamespaceAny
     from narwhals.dtypes import DType
     from narwhals.typing import ClosedInterval
     from narwhals.typing import FillNullStrategy
@@ -1111,6 +1113,115 @@ class Expr:
                 descending=descending, nulls_last=nulls_last
             )
         )
+
+    def sort_by(
+        self,
+        by: str | Iterable[str],
+        *more_by: str,
+        descending: bool | Sequence[bool] = False,
+        nulls_last: bool = False,
+    ) -> Self:
+        """Sort this column by the ordering of other columns.
+
+        When used in a projection/selection context, the whole column is sorted.
+        When used in a group by context, the groups are sorted.
+
+        Arguments:
+            by: Column name(s) to sort by.
+            *more_by: Additional columns to sort by, specified as positional arguments.
+            descending: Sort in descending order. When sorting by multiple columns, can be
+                specified per column by passing a sequence of booleans.
+            nulls_last: Place null values last.
+
+        Returns:
+            A new expression.
+
+        Note:
+            Unlike Polars, it is not possible to specify a sequence of booleans for
+            `nulls_last` in order to control per-column behaviour. Instead a single
+            boolean is applied for all `by` columns.
+
+        Examples:
+            Pass a single column name to sort by that column.
+
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_pl = pl.DataFrame(
+            ...     {
+            ...         "group": ["a", "a", "b", "b"],
+            ...         "value1": [1, 3, 4, 2],
+            ...         "value2": [8, 7, 6, 5],
+            ...     }
+            ... )
+            >>> df = nw.from_native(df_pl)
+            >>> df.select(nw.col("group").sort_by("value1"))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |  shape: (4, 1)   |
+            |  ┌───────┐       |
+            |  │ group │       |
+            |  │ ---   │       |
+            |  │ str   │       |
+            |  ╞═══════╡       |
+            |  │ a     │       |
+            |  │ b     │       |
+            |  │ a     │       |
+            |  │ b     │       |
+            |  └───────┘       |
+            └──────────────────┘
+
+            Sort by multiple columns by passing a list of columns.
+
+            >>> df.select(nw.col("group").sort_by(["value1", "value2"], descending=True))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |  shape: (4, 1)   |
+            |  ┌───────┐       |
+            |  │ group │       |
+            |  │ ---   │       |
+            |  │ str   │       |
+            |  ╞═══════╡       |
+            |  │ b     │       |
+            |  │ a     │       |
+            |  │ b     │       |
+            |  │ a     │       |
+            |  └───────┘       |
+            └──────────────────┘
+
+            Or use positional arguments to sort by multiple columns in the same way.
+
+            >>> df.select(nw.col("group").sort_by("value1", "value2"))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |  shape: (4, 1)   |
+            |  ┌───────┐       |
+            |  │ group │       |
+            |  │ ---   │       |
+            |  │ str   │       |
+            |  ╞═══════╡       |
+            |  │ a     │       |
+            |  │ b     │       |
+            |  │ a     │       |
+            |  │ b     │       |
+            |  └───────┘       |
+            └──────────────────┘
+        """
+        if more_by:
+            by = (by, *more_by) if isinstance(by, str) else (*by, *more_by)
+        else:
+            by = (by,) if isinstance(by, str) else tuple(by)
+
+        def fn(plx: CompliantNamespaceAny) -> CompliantExprAny:
+            return self._to_compliant_expr(plx).sort_by(
+                *by, descending=descending, nulls_last=nulls_last
+            )
+
+        # NOTE: Just doing this to skip things for now
+        # Will need to decide how it fits into the `over`-centric stuff
+        return self._with_elementwise_op(fn)
 
     # --- transform ---
     def is_between(
