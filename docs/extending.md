@@ -2,7 +2,7 @@
 
 !!! warning
 
-  The extension mechanism in Narwhals is experimental and under development.
+    The extension mechanism in Narwhals is experimental and under development.
 
 If you want your own library to be recognised too, you're welcome open a PR (with tests)!.
 Alternatively, if you can't do that (for example, if you library is closed-source), see

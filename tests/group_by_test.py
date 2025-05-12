@@ -584,3 +584,10 @@ def test_group_by_selector(constructor: Constructor) -> None:
     )
     expected = {"a": [1, 1], "b": [4, 6], "c": [8.0, 9.0]}
     assert_equal_data(result, expected)
+
+
+def test_renaming_edge_case(constructor: Constructor) -> None:
+    data = {"a": [0, 0, 0], "_a_tmp": [1, 2, 3], "b": [4, 5, 6]}
+    result = nw.from_native(constructor(data)).group_by(nw.col("a")).agg(nw.all().min())
+    expected = {"a": [0], "_a_tmp": [1], "b": [4]}
+    assert_equal_data(result, expected)

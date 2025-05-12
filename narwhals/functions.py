@@ -264,7 +264,7 @@ def from_dict(
     """Instantiate DataFrame from dictionary.
 
     Indexes (if present, for pandas-like backends) are aligned following
-    the [left-hand-rule](../pandas_like_concepts/pandas_index.md/).
+    the [left-hand-rule](../concepts/pandas_index.md/).
 
     Notes:
         For pandas-like dataframes, conversion to schema is applied after dataframe
