@@ -122,15 +122,21 @@ class ParseKeysGroupBy(
             no overlap with any existing column name.
         - Add these temporary columns to the compliant dataframe.
         """
-        suffix_token = "_" * (max(len(str(c)) for c in compliant_frame.columns) + 1)
+        tmp_name_length = max(len(str(c)) for c in compliant_frame.columns) + 1
+
+        def _temporary_name(key: str) -> str:
+            # 5 is the length of `__tmp`
+            key_str = str(key)  # pandas allows non-string column names :sob:
+            return f"_{key_str}_tmp{'_' * (tmp_name_length - len(key_str) - 5)}"
+
         output_names = compliant_frame._evaluate_aliases(*keys)
 
         safe_keys = [
             # multi-output expression cannot have duplicate names, hence it's safe to suffix
-            key.name.suffix(suffix_token)
+            key.name.map(_temporary_name)
             if (metadata := key._metadata) and metadata.expansion_kind.is_multi_output()
             # otherwise it's single named and we can use Expr.alias
-            else key.alias(f"{new_name}{suffix_token}")
+            else key.alias(_temporary_name(new_name))
             for key, new_name in zip(keys, output_names)
         ]
         return (
