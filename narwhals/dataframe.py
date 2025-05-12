@@ -177,6 +177,7 @@ class BaseFrame(Generic[_FrameT]):
                     flat_exprs, available_columns=self.columns
                 ):
                     raise error from e
+                raise
         compliant_exprs, kinds = self._flatten_and_extract(*flat_exprs, **named_exprs)
         if compliant_exprs and all_exprs_are_scalar_like(*flat_exprs, **named_exprs):
             return self._with_compliant(self._compliant_frame.aggregate(*compliant_exprs))
