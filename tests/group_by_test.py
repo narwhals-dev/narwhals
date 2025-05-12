@@ -613,8 +613,7 @@ def test_group_by_agg_first(
         request.applymarker(pytest.mark.xfail(reason="Not implemented yet."))
     request.applymarker(
         pytest.mark.xfail(
-            "pyarrow_table" in str(constructor_eager)
-            and (PYARROW_VERSION < (14, 0) and PYARROW_VERSION >= (13, 0)),
+            "pyarrow_table" in str(constructor_eager) and (PYARROW_VERSION < (14, 0)),
             reason="https://github.com/apache/arrow/issues/36709",
             raises=NotImplementedError,
         )

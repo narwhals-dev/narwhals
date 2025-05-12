@@ -99,6 +99,9 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
             # TODO @dangotbanned: Write up an message to suggest upgrading to `>=14.0.0`
             msg = "https://github.com/apache/arrow/issues/36709"
             raise NotImplementedError(msg)
+        else:  # pragma: no cover
+            msg = "`hash_first` wasn't available until `13` https://arrow.apache.org/docs/12.0/python/compute.html"
+            raise NotImplementedError(msg)
         # NOTE: Prior to `13.0.0`, threading was disabled
         return grouped, pc.ScalarAggregateOptions(skip_nulls=False)
 
