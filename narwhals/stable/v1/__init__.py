@@ -10,7 +10,6 @@ from typing import Sequence
 from typing import cast
 from typing import overload
 
-import narwhals as nw
 from narwhals import dependencies
 from narwhals import exceptions
 from narwhals import selectors
@@ -84,8 +83,6 @@ from narwhals.stable.v1.utils import _stableify
 from narwhals.translate import _from_native_impl
 from narwhals.translate import get_native_namespace
 from narwhals.translate import to_py_scalar
-from narwhals.typing import SingleColSelector
-from narwhals.typing import SingleIndexSelector
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import deprecate_native_namespace
@@ -1223,8 +1220,6 @@ __all__ = [
     "Object",
     "Schema",
     "Series",
-    "SingleColSelector",
-    "SingleIndexSelector",
     "String",
     "Struct",
     "Time",
@@ -1269,7 +1264,6 @@ __all__ = [
     "narwhalify",
     "new_series",
     "nth",
-    "nw",
     "read_csv",
     "read_parquet",
     "scan_csv",
