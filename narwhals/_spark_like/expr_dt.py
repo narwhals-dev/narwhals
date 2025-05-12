@@ -71,6 +71,9 @@ class SparkLikeExprDateTimeNamespace:
         if multiple != 1:
             msg = f"Only multiple 1 is currently supported for Spark-like.\nGot {multiple!s}."
             raise ValueError(msg)
+        if unit == "ns":
+            msg = "Truncating to nanoseconds is not yet supported for Spark-like."
+            raise NotImplementedError(msg)
         format = UNITS_DICT[unit]
 
         def _truncate(_input: Column) -> Column:

@@ -43,7 +43,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 2027-12-13 │
             └────────────┘
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).dt.date()
         )
 
@@ -72,7 +72,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |1 2065-01-01  2065|
             └──────────────────┘
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).dt.year()
         )
 
@@ -98,7 +98,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[1978-06-01 00:00:00.000000,2065-01-01 00:00:00.000000]]
             month: [[6,1]]
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).dt.month()
         )
 
@@ -124,7 +124,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[1978-06-01 00:00:00.000000,2065-01-01 00:00:00.000000]]
             day: [[1,1]]
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).dt.day()
         )
 
@@ -159,7 +159,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |└─────────────────────┴──────┘|
             └──────────────────────────────┘
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).dt.hour()
         )
 
@@ -184,7 +184,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             0 1978-01-01 01:01:00       1
             1 2065-01-01 10:20:00      20
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).dt.minute()
         )
 
@@ -215,7 +215,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[1978-01-01 01:01:01.000000,2065-01-01 10:20:30.000000]]
             second: [[1,30]]
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).dt.second()
         )
 
@@ -248,7 +248,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[1978-01-01 01:01:01.000000,2065-01-01 10:20:30.067000]]
             millisecond: [[0,67]]
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).dt.millisecond()
         )
 
@@ -281,7 +281,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[1978-01-01 01:01:01.000000,2065-01-01 10:20:30.067000]]
             microsecond: [[0,67000]]
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).dt.microsecond()
         )
 
@@ -314,7 +314,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[1978-01-01 01:01:01.000000,2065-01-01 10:20:30.067000]]
             nanosecond: [[0,67000000]]
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).dt.nanosecond()
         )
 
@@ -341,7 +341,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |1 2020-08-03            216|
             └───────────────────────────┘
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).dt.ordinal_day()
         )
 
@@ -368,7 +368,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |1 2020-08-03           1|
             └────────────────────────┘
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).dt.weekday()
         )
 
@@ -404,7 +404,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 20m 40s      ┆ 20              │
             └──────────────┴─────────────────┘
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).dt.total_minutes()
         )
 
@@ -440,7 +440,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 20s 40ms     ┆ 20              │
             └──────────────┴─────────────────┘
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).dt.total_seconds()
         )
 
@@ -481,7 +481,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             │ 20040µs      ┆ 20                   │
             └──────────────┴──────────────────────┘
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).dt.total_milliseconds()
         )
 
@@ -519,7 +519,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             a: [[10,1200]]
             a_total_microseconds: [[10,1200]]
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).dt.total_microseconds()
         )
 
@@ -556,7 +556,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             0 2024-01-01 00:00:00.000000001                       NaN
             1 2024-01-01 00:00:00.000000002                       1.0
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).dt.total_nanoseconds()
         )
 
@@ -577,12 +577,12 @@ class ExprDateTimeNamespace(Generic[ExprT]):
               whereas pandas and Python stdlib use `".%f"`.
             - PyArrow interprets `"%S"` as "seconds, including fractional seconds"
               whereas most other tools interpret it as "just seconds, as 2 digits".
-
-            Therefore, we make the following adjustments:
+            ---
+            Therefore, we make the following adjustments.
 
             - for pandas-like libraries, we replace `"%S.%f"` with `"%S%.f"`.
             - for PyArrow, we replace `"%S.%f"` with `"%S"`.
-
+            ---
             Workarounds like these don't make us happy, and we try to avoid them as
             much as possible, but here we feel like it's the best compromise.
 
@@ -592,8 +592,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
 
             - `"%Y-%m-%dT%H:%M:%S%.f"` for datetimes
             - `"%Y-%m-%d"` for dates
-
-            though note that, even then, different tools may return a different number
+            ---
+            Though note that, even then, different tools may return a different number
             of trailing zeros. Nonetheless, this is probably consistent enough for
             most applications.
 
@@ -628,7 +628,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |└─────────────────────┘|
             └───────────────────────┘
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).dt.to_string(format)
         )
 
@@ -659,7 +659,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             0 2024-01-01 00:00:00+05:45
             1 2024-01-02 00:00:00+05:45
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).dt.replace_time_zone(
                 time_zone
             ),
@@ -698,7 +698,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         if time_zone is None:
             msg = "Target `time_zone` cannot be `None` in `convert_time_zone`. Please use `replace_time_zone(None)` if you want to remove the time zone."
             raise TypeError(msg)
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).dt.convert_time_zone(
                 time_zone
             ),
@@ -708,8 +708,10 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         """Return a timestamp in the given time unit.
 
         Arguments:
-            time_unit: {'ns', 'us', 'ms'}
-                Time unit.
+            time_unit: One of
+                - 'ns': nanosecond.
+                - 'us': microsecond.
+                - 'ms': millisecond.
 
         Returns:
             A new expression.
@@ -741,7 +743,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
                 f"\n\nExpected one of {{'ns', 'us', 'ms'}}, got {time_unit!r}."
             )
             raise ValueError(msg)
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).dt.timestamp(time_unit),
         )
 
@@ -750,7 +752,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
 
         Arguments:
             every: Length of bucket. Must be of form `<multiple><unit>`,
-                where `multiple` is a positive integer and `unit` is one of:
+                where `multiple` is a positive integer and `unit` is one of
 
                 - 'ns': nanosecond.
                 - 'us': microsecond.
@@ -788,6 +790,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |└─────────────────────┴─────────────────────┘|
             └─────────────────────────────────────────────┘
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).dt.truncate(every),
         )

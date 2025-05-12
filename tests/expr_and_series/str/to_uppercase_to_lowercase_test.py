@@ -35,9 +35,16 @@ def test_str_to_uppercase(
     if (
         any(
             x in str(constructor)
-            for x in ("pandas_constructor", "pandas_nullable", "polars")
+            for x in (
+                "pandas_constructor",
+                "pandas_nullable",
+                "polars",
+                "cudf",
+                "pyspark",
+            )
         )
         and "ẞ" in expected["a"][0]
+        and "sqlframe" not in str(constructor)
     ):
         expected = {"a": ["SPECIAL CASE SS", "ΣPECIAL CAΣE"]}
 
@@ -72,9 +79,16 @@ def test_str_to_uppercase_series(
     if (
         any(
             x in str(constructor_eager)
-            for x in ("pandas_constructor", "pandas_nullable", "polars")
+            for x in (
+                "pandas_constructor",
+                "pandas_nullable",
+                "polars",
+                "cudf",
+                "pyspark",
+            )
         )
         and "ẞ" in expected["a"][0]
+        and "sqlframe" not in str(constructor_eager)
     ):
         expected = {"a": ["SPECIAL CASE SS", "ΣPECIAL CAΣE"]}
 

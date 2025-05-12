@@ -41,7 +41,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |└───────┴───────────┘|
             └─────────────────────┘
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).str.len_chars()
         )
 
@@ -73,7 +73,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |1  abc abc123   abc123|
             └──────────────────────┘
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).str.replace(
                 pattern, value, literal=literal, n=n
             )
@@ -104,7 +104,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |1  abc abc123      123|
             └──────────────────────┘
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).str.replace_all(
                 pattern, value, literal=literal
             )
@@ -132,7 +132,7 @@ class ExprStringNamespace(Generic[ExprT]):
             ... )
             {'fruits': ['apple', '\nmango'], 'stripped': ['apple', 'mango']}
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).str.strip_chars(characters)
         )
 
@@ -160,7 +160,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |2   None       None|
             └───────────────────┘
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).str.starts_with(prefix)
         )
 
@@ -188,7 +188,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |2   None       None|
             └───────────────────┘
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).str.ends_with(suffix)
         )
 
@@ -221,7 +221,7 @@ class ExprStringNamespace(Generic[ExprT]):
             default_match: [[true,false,true]]
             case_insensitive_match: [[true,false,true]]
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).str.contains(
                 pattern, literal=literal
             )
@@ -253,7 +253,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |2  papaya       ya|
             └──────────────────┘
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).str.slice(
                 offset=offset, length=length
             )
@@ -288,7 +288,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |└─────────┴────────────────┘|
             └────────────────────────────┘
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).str.split(by=by)
         )
 
@@ -317,7 +317,7 @@ class ExprStringNamespace(Generic[ExprT]):
             lyrics: [["taata","taatatata","zukkyun"]]
             lyrics_head: [["taata","taata","zukky"]]
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).str.slice(0, n)
         )
 
@@ -346,7 +346,7 @@ class ExprStringNamespace(Generic[ExprT]):
             lyrics: [["taata","taatatata","zukkyun"]]
             lyrics_tail: [["taata","atata","kkyun"]]
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).str.slice(
                 offset=-n, length=None
             )
@@ -393,7 +393,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |└─────────────────────┘|
             └───────────────────────┘
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).str.to_datetime(format=format)
         )
 
@@ -422,7 +422,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |1   None      None|
             └──────────────────┘
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).str.to_uppercase()
         )
 
@@ -446,6 +446,6 @@ class ExprStringNamespace(Generic[ExprT]):
             |1   None      None|
             └──────────────────┘
         """
-        return self._expr._with_callable(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).str.to_lowercase()
         )

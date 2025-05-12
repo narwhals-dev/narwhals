@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime
 
 import pandas as pd
-import polars as pl
 import pytest
 
 import narwhals as nw
@@ -100,11 +99,14 @@ def test_truncate(
     every: str,
     expected: list[datetime],
 ) -> None:
-    if any(x in str(constructor) for x in ("sqlframe",)):
+    if any(x in str(constructor) for x in ("sqlframe", "pyspark")):
+        # TODO(marco): investigate pyspark, it also localizes to UTC here.
         request.applymarker(
             pytest.mark.xfail(reason="https://github.com/eakmanrq/sqlframe/issues/383")
         )
-    if every.endswith("ns") and any(x in str(constructor) for x in ("polars", "duckdb")):
+    if every.endswith("ns") and any(
+        x in str(constructor) for x in ("polars", "duckdb", "pyspark")
+    ):
         request.applymarker(pytest.mark.xfail())
     if any(every.endswith(x) for x in ("mo", "q", "y")) and any(
         x in str(constructor) for x in ("dask", "cudf")
@@ -183,7 +185,7 @@ def test_truncate(
         ),
     ],
 )
-def test_truncate_custom(
+def test_truncate_multiples(
     request: pytest.FixtureRequest,
     constructor: Constructor,
     every: str,
@@ -195,10 +197,20 @@ def test_truncate_custom(
         )
     if every.endswith("ns") and any(x in str(constructor) for x in ("polars", "duckdb")):
         request.applymarker(pytest.mark.xfail())
+    if "cudf" in str(constructor):
+        # https://github.com/rapidsai/cudf/issues/18654
+        request.applymarker(pytest.mark.xfail(reason="Not implemented"))
     if any(every.endswith(x) for x in ("mo", "q", "y")) and any(
-        x in str(constructor) for x in ("dask", "cudf")
+        x in str(constructor) for x in ("dask",)
     ):
         request.applymarker(pytest.mark.xfail(reason="Not implemented"))
+    request.applymarker(
+        pytest.mark.xfail(
+            "pyspark" in str(constructor),
+            raises=ValueError,
+            reason="Only multiple 1 is currently supported",
+        )
+    )
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").dt.truncate(every))
     assert_equal_data(result, {"a": expected})
@@ -224,6 +236,10 @@ def test_truncate_custom(
     ],
 )
 def test_truncate_polars_ns(every: str, expected: list[datetime]) -> None:
+    pytest.importorskip("polars")
+
+    import polars as pl
+
     df_pl = pl.DataFrame(data, schema={"a": pl.Datetime(time_unit="ns")})
     df = nw.from_native(df_pl)
     result = df.select(nw.col("a").dt.truncate(every))

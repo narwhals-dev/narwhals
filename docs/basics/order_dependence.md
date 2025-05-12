@@ -45,7 +45,6 @@ session = DuckDBSession()
 sqlframe_df = session.createDataFrame(df_pd)
 lf = nw.from_native(sqlframe_df)
 result = lf.with_columns(a_cum_sum=nw.col("a").cum_sum().over(order_by="i"))
-print(result)
 print(result.collect("pandas"))
 ```
 
