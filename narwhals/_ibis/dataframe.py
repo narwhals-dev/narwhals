@@ -275,9 +275,9 @@ class IbisLazyFrame(
         if how_native == "cross":
             joined = self.native.join(other.native, how=how_native, rname=rname)
             return self._with_native(joined)
-        if left_on is None or right_on is None:  # pragma: no cover
-            msg = f"For '{how_native}' joins, both 'left_on' and 'right_on' must be provided."
-            raise ValueError(msg)
+        # help mypy
+        assert left_on is not None  # noqa: S101
+        assert right_on is not None  # noqa: S101
         predicates = self._convert_predicates(other, left_on, right_on)
         joined = self.native.join(other.native, predicates, how=how_native, rname=rname)
         if how_native == "left":
@@ -308,9 +308,9 @@ class IbisLazyFrame(
         rname = "{name}" + suffix
         strategy_op = {"backward": operator.ge, "forward": operator.le}
         predicates: JoinPredicates = []
-        if left_on is None or right_on is None:  # pragma: no cover
-            msg = "Both 'left_on' and 'right_on' must be provided for asof joins."
-            raise ValueError(msg)
+        # help mypy
+        assert left_on is not None  # noqa: S101
+        assert right_on is not None  # noqa: S101
         if op := strategy_op.get(strategy):
             on: ir.BooleanColumn = op(self.native[left_on], other.native[right_on])
         else:
@@ -321,7 +321,6 @@ class IbisLazyFrame(
         joined = self.native.asof_join(other.native, on, predicates, rname=rname)
         joined = self._join_drop_duplicate_columns(joined, [right_on + suffix])
         if by_right is not None:
-            by_right = by_right if not isinstance(by_right, str) else [by_right]
             right_names = (n + suffix for n in by_right)
             joined = self._join_drop_duplicate_columns(joined, right_names)
         return self._with_native(joined)
