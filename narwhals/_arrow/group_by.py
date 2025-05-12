@@ -39,6 +39,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         "len": "count",
         "n_unique": "count_distinct",
         "count": "count",
+        "first": "first",
     }
     _REMAP_UNIQUE: ClassVar[Mapping[UniqueKeepStrategy, Aggregation]] = {
         "any": "min",
@@ -60,7 +61,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         self._grouped = pa.TableGroupBy(self.compliant.native, self._keys)
         self._drop_null_keys = drop_null_keys
 
-    def agg(self, *exprs: ArrowExpr) -> ArrowDataFrame:
+    def agg(self, *exprs: ArrowExpr) -> ArrowDataFrame:  # noqa: C901
         self._ensure_all_simple(exprs)
         aggs: list[tuple[str, Aggregation, AggregateOptions | None]] = []
         expected_pyarrow_column_names: list[str] = self._keys.copy()
@@ -90,6 +91,8 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
                 option = pc.CountOptions(mode="all")
             elif function_name == "count":
                 option = pc.CountOptions(mode="only_valid")
+            elif function_name == "first":
+                option = pc.ScalarAggregateOptions(skip_nulls=False)
             else:
                 option = None
 

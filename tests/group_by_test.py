@@ -609,12 +609,16 @@ def test_group_by_agg_first(
     expected: Mapping[str, Any],
     pre_sort: Mapping[str, Any] | None,
 ) -> None:
-    if any(
-        x in str(constructor_eager) for x in ("pyarrow_table", "pandas", "modin", "cudf")
-    ):
+    if any(x in str(constructor_eager) for x in ("pandas", "modin", "cudf")):
+        request.applymarker(pytest.mark.xfail(reason="Not implemented yet."))
+    if "pyarrow_table" in str(constructor_eager):
+        from pyarrow import ArrowNotImplementedError
+
         request.applymarker(
             pytest.mark.xfail(
-                reason="Not implemented yet.\n `pyarrow` should be possible."
+                reason="Need to disable threading if this appears\n"
+                "Using ordered aggregator in multiple threaded execution is not supported",
+                raises=ArrowNotImplementedError,
             )
         )
     data = {"a": [1, 2, 2, 3, 3, 4], "b": [1, 2, 3, 4, 5, 6]}
