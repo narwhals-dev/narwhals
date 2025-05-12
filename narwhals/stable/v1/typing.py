@@ -6,6 +6,9 @@ from typing import Protocol
 from typing import TypeVar
 from typing import Union
 
+from narwhals.stable.v1 import DataFrame
+from narwhals.stable.v1 import LazyFrame
+
 if TYPE_CHECKING:
     import sys
 
@@ -14,9 +17,7 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import TypeAlias
 
-    from narwhals.stable.v1 import DataFrame
     from narwhals.stable.v1 import Expr
-    from narwhals.stable.v1 import LazyFrame
     from narwhals.stable.v1 import Series
     from narwhals.stable.v1 import dtypes
 
@@ -132,7 +133,7 @@ Examples:
     ...     return df.with_columns(c=df["a"] + 1).to_native()
 """
 
-FrameT = TypeVar("FrameT", bound="Frame")
+FrameT = TypeVar("FrameT", DataFrame[Any], LazyFrame[Any])
 """TypeVar bound to Narwhals DataFrame or Narwhals LazyFrame.
 
 Use this if your function accepts either `nw.DataFrame` or `nw.LazyFrame` and returns
