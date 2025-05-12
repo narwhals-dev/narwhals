@@ -599,6 +599,13 @@ def test_renaming_edge_case(constructor: Constructor) -> None:
     [
         (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 2, 4, 6]}, None),
         (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 3, 5, 6]}, {"descending": True}),
+        (["a"], ["c"], {"a": [1, 2, 3, 4], "c": [None, "A", None, "B"]}, None),
+        (
+            ["a"],
+            ["c"],
+            {"a": [1, 2, 3, 4], "c": [None, "A", "B", "B"]},
+            {"nulls_last": True},
+        ),
     ],
 )
 def test_group_by_agg_first(
@@ -618,7 +625,11 @@ def test_group_by_agg_first(
             raises=NotImplementedError,
         )
     )
-    data = {"a": [1, 2, 2, 3, 3, 4], "b": [1, 2, 3, 4, 5, 6]}
+    data = {
+        "a": [1, 2, 2, 3, 3, 4],
+        "b": [1, 2, 3, 4, 5, 6],
+        "c": [None, "A", "A", None, "B", "B"],
+    }
     df = nw.from_native(constructor_eager(data))
     if pre_sort:
         df = df.sort(aggs, **pre_sort)
