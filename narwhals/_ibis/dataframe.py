@@ -284,11 +284,14 @@ class IbisLazyFrame(
             right_names = (n + suffix for n in right_on)
             joined = self._join_drop_duplicate_columns(joined, right_names)
             it = (cast("Binary", p.op()) for p in predicates if not isinstance(p, str))
+            to_drop = []
             for pred in it:
                 right = pred.right.name
                 # Mirrors how polars works.
                 if right not in self.columns and pred.left.name != right:
-                    joined = joined.drop(right)
+                    to_drop.append(right)
+            if to_drop:
+                joined = joined.drop(*to_drop)
         return self._with_native(joined)
 
     def join_asof(
