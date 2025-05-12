@@ -16,6 +16,7 @@ from narwhals._arrow.utils import extract_py_scalar
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals.utils import generate_temporary_column_name
+from narwhals.utils import requires
 
 if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
@@ -79,30 +80,34 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         elif function_name in self._OPTION_COUNT_VALID:
             option = pc.CountOptions(mode="only_valid")
         elif function_name in self._OPTION_ORDERED:
-            grouped, option = self._ordered_agg(grouped)
+            grouped, option = self._ordered_agg(grouped, function_name)
         return grouped, self._remap_expr_name(function_name), option
 
     def _ordered_agg(
-        self, grouped: pa.TableGroupBy, /
+        self, grouped: pa.TableGroupBy, name: NarwhalsAggregation, /
     ) -> tuple[pa.TableGroupBy, AggregateOptions]:
-        # NOTE: Will need the same for `last`
+        """The default behavior of `pyarrow` raises when `first` or `last` are used.
+
+        You'd see an error like:
+
+            ArrowNotImplementedError: Using ordered aggregator in multiple threaded execution is not supported
+
+        We need to **disable** multi-threading to use them, but the ability to do so
+        wasn't possible before `14.0.0` ([pyarrow-36709])
+
+        [pyarrow-36709]: https://github.com/apache/arrow/issues/36709
+        """
         backend_version = self.compliant._backend_version
         if backend_version >= (14, 0) and grouped._use_threads:
-            # NOTE: `pyarrow` defaults to multi-threading, but is not compatible with ordered aggs
-            # If we see any that are ordered, the entire aggregation must disable threading
-            #   `ArrowNotImplementedError: Using ordered aggregator in multiple threaded execution is not supported`
-            # Also need to avoid overwriting `self._grouped`, since we don't want to slow down unrelated `.agg(...)` calls
-            grouped = pa.TableGroupBy(
-                self.compliant.native, grouped.keys, use_threads=False
+            native = self.compliant.native
+            grouped = pa.TableGroupBy(native, grouped.keys, use_threads=False)
+        elif backend_version < (14, 0):  # pragma: no cover
+            msg = (
+                f"Using `{name}()` in a `group_by().agg(...)` context is only available in 'pyarrow>=14.0.0', "
+                f"found version {requires._unparse_version(backend_version)!r}.\n\n"
+                f"See https://github.com/apache/arrow/issues/36709"
             )
-        elif backend_version < (14, 0) and backend_version >= (13, 0):  # pragma: no cover
-            # TODO @dangotbanned: Write up an message to suggest upgrading to `>=14.0.0`
-            msg = "https://github.com/apache/arrow/issues/36709"
             raise NotImplementedError(msg)
-        else:  # pragma: no cover
-            msg = "`hash_first` wasn't available until `13` https://arrow.apache.org/docs/12.0/python/compute.html"
-            raise NotImplementedError(msg)
-        # NOTE: Prior to `13.0.0`, threading was disabled
         return grouped, pc.ScalarAggregateOptions(skip_nulls=False)
 
     def agg(self, *exprs: ArrowExpr) -> ArrowDataFrame:
