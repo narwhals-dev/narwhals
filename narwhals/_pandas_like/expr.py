@@ -10,6 +10,7 @@ from narwhals._pandas_like.group_by import PandasLikeGroupBy
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import generate_temporary_column_name
+from narwhals.utils import not_implemented
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -393,3 +394,5 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         return self._reuse_series(
             "rank", call_kwargs={"method": method, "descending": descending}
         )
+
+    sort_by = not_implemented()

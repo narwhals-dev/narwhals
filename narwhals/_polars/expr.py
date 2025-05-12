@@ -141,6 +141,20 @@ class PolarsExpr:
         native = self.native.rolling_mean(window_size=window_size, center=center, **kwds)
         return self._with_native(native)
 
+    def sort_by(
+        self, *by: str, descending: bool | Sequence[bool], nulls_last: bool
+    ) -> Self:
+        if self._backend_version >= (0, 20, 31):
+            native = self.native.sort_by(
+                *by, descending=descending, nulls_last=nulls_last
+            )
+        elif nulls_last is True:
+            msg = "`nulls_last` in Polars requires version 0.20.31 or greater"
+            raise NotImplementedError(msg)
+        else:
+            native = self.native.sort_by(*by, descending=descending)
+        return self._with_native(native)
+
     def map_batches(
         self, function: Callable[[Any], Any], return_dtype: DType | type[DType] | None
     ) -> Self:

@@ -160,6 +160,9 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def cum_prod(self, *, reverse: bool) -> Self: ...
     def is_in(self, other: Any) -> Self: ...
     def sort(self, *, descending: bool, nulls_last: bool) -> Self: ...
+    def sort_by(
+        self, *by: str, descending: bool | Sequence[bool], nulls_last: bool
+    ) -> Self: ...
     def rank(self, method: RankMethod, *, descending: bool) -> Self: ...
     def replace_strict(
         self,
@@ -893,6 +896,7 @@ class LazyExpr(  # type: ignore[misc]
     gather_every: not_implemented = not_implemented()
     replace_strict: not_implemented = not_implemented()
     cat: not_implemented = not_implemented()  # pyright: ignore[reportAssignmentType]
+    sort_by: not_implemented = not_implemented()
 
     @classmethod
     def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:

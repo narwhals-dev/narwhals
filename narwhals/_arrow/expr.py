@@ -211,3 +211,4 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         return self._reuse_series("rank", method=method, descending=descending)
 
     ewm_mean = not_implemented()
+    sort_by = not_implemented()
