@@ -11,7 +11,6 @@ from narwhals.utils import find_stacklevel
 from narwhals.utils import inherit_doc
 
 if TYPE_CHECKING:
-    from typing_extensions import ParamSpec
     from typing_extensions import TypeVar
 
     from narwhals.stable.v1.dataframe import LazyFrame
@@ -22,9 +21,6 @@ if TYPE_CHECKING:
     LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[Any]")
     SeriesT = TypeVar("SeriesT", bound="Series[Any]")
     IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
-    T = TypeVar("T", default=Any)
-    P = ParamSpec("P")
-    R = TypeVar("R")
 else:
     from typing import TypeVar
 

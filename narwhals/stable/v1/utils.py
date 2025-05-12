@@ -14,7 +14,6 @@ from narwhals.stable.v1.expr import Expr
 from narwhals.stable.v1.series import Series
 
 if TYPE_CHECKING:
-    from typing_extensions import ParamSpec
     from typing_extensions import TypeVar
 
     from narwhals.typing import IntoFrameT
@@ -25,14 +24,6 @@ if TYPE_CHECKING:
     LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[Any]")
     SeriesT = TypeVar("SeriesT", bound="Series[Any]")
     IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
-    T = TypeVar("T", default=Any)
-    P = ParamSpec("P")
-    R = TypeVar("R")
-else:
-    from typing import TypeVar
-
-    IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries")
-    T = TypeVar("T")
 
 
 @overload

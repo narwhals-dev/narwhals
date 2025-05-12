@@ -18,14 +18,12 @@ from narwhals.utils import inherit_doc
 if TYPE_CHECKING:
     from types import ModuleType
 
-    from typing_extensions import ParamSpec
     from typing_extensions import Self
     from typing_extensions import TypeVar
 
     from narwhals.dataframe import MultiColSelector
     from narwhals.dataframe import MultiIndexSelector
     from narwhals.stable.v1.series import Series
-    from narwhals.typing import IntoSeries
     from narwhals.typing import SingleColSelector
     from narwhals.typing import SingleIndexSelector
 
@@ -33,15 +31,6 @@ if TYPE_CHECKING:
     DataFrameT = TypeVar("DataFrameT", bound="DataFrame[Any]")
     LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[Any]")
     SeriesT = TypeVar("SeriesT", bound="Series[Any]")
-    IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
-    T = TypeVar("T", default=Any)
-    P = ParamSpec("P")
-    R = TypeVar("R")
-else:
-    from typing import TypeVar
-
-    IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries")
-    T = TypeVar("T")
 
 
 class DataFrame(NwDataFrame[IntoDataFrameT]):
