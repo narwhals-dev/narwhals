@@ -4,6 +4,7 @@ import os
 from contextlib import nullcontext
 from typing import Any
 from typing import Mapping
+from typing import Sequence
 
 import pandas as pd
 import pyarrow as pa
@@ -590,4 +591,35 @@ def test_renaming_edge_case(constructor: Constructor) -> None:
     data = {"a": [0, 0, 0], "_a_tmp": [1, 2, 3], "b": [4, 5, 6]}
     result = nw.from_native(constructor(data)).group_by(nw.col("a")).agg(nw.all().min())
     expected = {"a": [0], "_a_tmp": [1], "b": [4]}
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("keys", "aggs", "expected", "pre_sort"),
+    [
+        (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 2, 4, 6]}, None),
+        (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 3, 5, 6]}, {"descending": True}),
+    ],
+)
+def test_group_by_agg_first(
+    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest,
+    keys: Sequence[str],
+    aggs: Sequence[str],
+    expected: Mapping[str, Any],
+    pre_sort: Mapping[str, Any] | None,
+) -> None:
+    if any(
+        x in str(constructor_eager) for x in ("pyarrow_table", "pandas", "modin", "cudf")
+    ):
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="Not implemented yet.\n `pyarrow` should be possible."
+            )
+        )
+    data = {"a": [1, 2, 2, 3, 3, 4], "b": [1, 2, 3, 4, 5, 6]}
+    df = nw.from_native(constructor_eager(data))
+    if pre_sort:
+        df = df.sort(aggs, **pre_sort)
+    result = df.group_by(keys).agg(nw.col(aggs).first()).sort(keys)
     assert_equal_data(result, expected)
