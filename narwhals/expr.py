@@ -899,7 +899,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Arguments:
             reverse: reverse the operation
@@ -933,7 +933,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Returns:
             A new expression.
@@ -979,7 +979,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Arguments:
             n: Number of positions to shift values by.
@@ -1265,7 +1265,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -1302,7 +1302,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -1363,7 +1363,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -1451,7 +1451,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -1534,7 +1534,7 @@ class Expr:
                 so, this is a bit less flexible than Polars' `Expr.over`.
             order_by: Column(s) to order window functions by.
                 For lazy backends, this argument is required when `over` is applied
-                to order-dependent functions, see [order-dependence](../basics/order_dependence.md).
+                to order-dependent functions, see [order-dependence](../concepts/order_dependence.md).
 
         Returns:
             A new expression.
@@ -1647,7 +1647,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -1674,7 +1674,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Returns:
             A new expression.
@@ -1706,7 +1706,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Returns:
             A new expression.
@@ -2003,7 +2003,7 @@ class Expr:
 
         Warning:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
             `is_finite` will return False for NaN and Null's in the Dask and
             pandas non-nullable backend, while for Polars, PyArrow and pandas
@@ -2043,7 +2043,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Arguments:
             reverse: reverse the operation
@@ -2079,7 +2079,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Arguments:
             reverse: reverse the operation
@@ -2115,7 +2115,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Arguments:
             reverse: reverse the operation
@@ -2151,7 +2151,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Arguments:
             reverse: reverse the operation
@@ -2199,7 +2199,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Arguments:
             window_size: The length of the window in number of elements. It must be a
@@ -2260,7 +2260,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Arguments:
             window_size: The length of the window in number of elements. It must be a
@@ -2322,7 +2322,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Arguments:
             window_size: The length of the window in number of elements. It must be a
@@ -2383,7 +2383,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Arguments:
             window_size: The length of the window in number of elements. It must be a
@@ -2437,7 +2437,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Arguments:
             method: The method used to assign ranks to tied elements.
