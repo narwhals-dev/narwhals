@@ -9,6 +9,7 @@ from typing import Sequence
 from typing import cast
 
 import ibis
+from ibis import _ as col
 
 from narwhals._compliant import LazyExpr
 from narwhals._expression_parsing import ExprKind
@@ -77,8 +78,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         self, *, reverse: bool, func_name: Literal["sum", "max", "min", "count"]
     ) -> WindowFunction:
         def func(window_inputs: WindowInputs) -> ir.Value:
-            from ibis import _ as col  # ignore-banned-import
-
             if reverse:
                 order_by_cols = [
                     ibis.desc(getattr(col, x), nulls_first=False)
@@ -120,8 +119,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
             following = 0
 
         def func(window_inputs: WindowInputs) -> ir.Value:
-            from ibis import _ as col  # ignore-banned-import
-
             order_by_cols = [
                 ibis.asc(getattr(col, x), nulls_first=True)
                 for x in window_inputs.order_by
@@ -483,8 +480,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
 
     def is_first_distinct(self) -> Self:
         def func(window_inputs: WindowInputs) -> ir.BooleanValue:
-            from ibis import _ as col  # ignore-banned-import
-
             order_by_cols = [
                 ibis.asc(getattr(col, x), nulls_first=True)
                 for x in window_inputs.order_by
@@ -500,8 +495,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
 
     def is_last_distinct(self) -> Self:
         def func(window_inputs: WindowInputs) -> ir.Value:
-            from ibis import _ as col  # ignore-banned-import
-
             order_by_cols = [ibis.desc(getattr(col, x)) for x in window_inputs.order_by]
             window = ibis.window(
                 group_by=[*window_inputs.partition_by, window_inputs.expr],
