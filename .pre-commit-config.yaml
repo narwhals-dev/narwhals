@@ -75,7 +75,7 @@ repos:
         (?x)
           ^(
             narwhals/utils\.py|
-            narwhals/stable/v1/_dtypes.py|
+            narwhals/stable/v1/|
             narwhals/.*__init__.py|
             narwhals/.*typing\.py
           )
