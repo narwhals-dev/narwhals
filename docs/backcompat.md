@@ -109,7 +109,7 @@ Which should you use? In general we recommend:
 - Once you're happy with what you've got and want to release something production-ready and stable,
   then switch out your `import narwhals as nw` usage for `import narwhals.stable.v1 as nw`.
 
-## `main` vs `stable.v1` differences
+## `main` vs `stable.v1`
 
 - Since Narwhals 1.35:
 

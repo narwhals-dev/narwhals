@@ -92,4 +92,4 @@ Let's learn about what you just did, and what Narwhals can do for you!
 !!! info
 
     These examples are using pandas, Polars, and PyArrow, however Narwhals
-    supports other dataframe libraries (See [the front page](index.md) for supported libraries).
+    supports other dataframe libraries (See [the home page](index.md) for supported libraries).
