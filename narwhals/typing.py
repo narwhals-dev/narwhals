@@ -11,6 +11,8 @@ from typing import Union
 from narwhals._compliant import CompliantDataFrame
 from narwhals._compliant import CompliantLazyFrame
 from narwhals._compliant import CompliantSeries
+from narwhals.dataframe import DataFrame
+from narwhals.dataframe import LazyFrame
 
 if TYPE_CHECKING:
     import datetime as dt
@@ -23,8 +25,6 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals import dtypes
-    from narwhals.dataframe import DataFrame
-    from narwhals.dataframe import LazyFrame
     from narwhals.expr import Expr
     from narwhals.series import Series
 
@@ -148,7 +148,7 @@ Examples:
 
 IntoLazyFrameT = TypeVar("IntoLazyFrameT", bound="IntoLazyFrame")
 
-FrameT = TypeVar("FrameT", bound="Frame")
+FrameT = TypeVar("FrameT", DataFrame[Any], LazyFrame[Any])
 """TypeVar bound to Narwhals DataFrame or Narwhals LazyFrame.
 
 Use this if your function accepts either `nw.DataFrame` or `nw.LazyFrame` and returns
