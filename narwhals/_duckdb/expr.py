@@ -29,7 +29,6 @@ from narwhals._duckdb.utils import narwhals_to_native_dtype
 from narwhals._duckdb.utils import when
 from narwhals._expression_parsing import ExprKind
 from narwhals.utils import Implementation
-from narwhals.utils import check_columns_exist
 from narwhals.utils import not_implemented
 from narwhals.utils import requires
 
@@ -187,10 +186,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         context: _FullContext,
     ) -> Self:
         def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
-            col_names = evaluate_column_names(df)
-            if error := check_columns_exist(col_names, available_columns=df.columns):
-                raise error
-            return [col(name) for name in col_names]
+            return [col(name) for name in evaluate_column_names(df)]
 
         return cls(
             func,
@@ -719,9 +715,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
     @requires.backend_version((1, 3))
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
-        if self._backend_version < (1, 3):
-            msg = "At least version 1.3 of DuckDB is required for `rank`."
-            raise NotImplementedError(msg)
         if method in {"min", "max", "average"}:
             func = FunctionExpression("rank")
         elif method == "dense":

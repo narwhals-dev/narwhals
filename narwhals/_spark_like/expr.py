@@ -26,7 +26,6 @@ from narwhals._spark_like.utils import narwhals_to_native_dtype
 from narwhals.dependencies import get_pyspark
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
-from narwhals.utils import check_columns_exist
 from narwhals.utils import not_implemented
 from narwhals.utils import parse_version
 
@@ -282,10 +281,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         context: _FullContext,
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            col_names = evaluate_column_names(df)
-            if error := check_columns_exist(col_names, available_columns=df.columns):
-                raise error
-            return [df._F.col(col_name) for col_name in col_names]
+            return [df._F.col(col_name) for col_name in evaluate_column_names(df)]
 
         return cls(
             func,

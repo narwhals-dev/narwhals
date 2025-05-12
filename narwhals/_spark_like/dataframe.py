@@ -257,8 +257,6 @@ class SparkLikeLazyFrame(
         raise ValueError(msg)  # pragma: no cover
 
     def simple_select(self, *column_names: str) -> Self:
-        if error := check_columns_exist(column_names, available_columns=self.columns):
-            raise error
         return self._with_native(self.native.select(*column_names))
 
     def aggregate(
