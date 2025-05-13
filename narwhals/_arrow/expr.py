@@ -149,9 +149,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
             df = df.simple_select(*aliases, *sort_only).sort(
                 *by, descending=descending, nulls_last=nulls_last
             )
-            if sort_only:
-                native = df.native.drop(list(sort_only))
-                df = df._with_native(native, validate_column_names=False)
+            df = df._drop(sort_only) if sort_only else df
             return list(df.iter_columns())
 
         return self.__class__(

@@ -36,7 +36,6 @@ from narwhals.utils import _remap_full_join_keys
 from narwhals.utils import check_column_exists
 from narwhals.utils import exclude_column_names
 from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import scale_bytes
 from narwhals.utils import validate_backend_version
@@ -492,13 +491,9 @@ class PandasLikeDataFrame(
             )
         )
 
-    def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
-        to_drop = parse_columns_to_drop(
-            compliant_frame=self, columns=columns, strict=strict
-        )
-        return self._with_native(
-            self.native.drop(columns=to_drop), validate_column_names=False
-        )
+    def _drop(self, columns: Iterable[str], /) -> Self:
+        native = self.native.drop(columns=list(columns))
+        return self._with_native(native, validate_column_names=False)
 
     # --- transform ---
     def sort(

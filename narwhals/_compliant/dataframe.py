@@ -3,6 +3,7 @@ from __future__ import annotations
 from itertools import chain
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Iterable
 from typing import Iterator
 from typing import Literal
 from typing import Mapping
@@ -36,6 +37,7 @@ from narwhals.utils import is_sequence_like
 from narwhals.utils import is_sized_multi_index_selector
 from narwhals.utils import is_slice_index
 from narwhals.utils import is_slice_none
+from narwhals.utils import parse_columns_to_drop
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -382,6 +384,10 @@ class EagerDataFrame(
 
     def to_narwhals(self) -> DataFrame[NativeFrameT]:
         return self._version.dataframe(self, level="full")
+
+    def _drop(self, columns: Iterable[str], /) -> Self: ...
+    def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
+        return self._drop(parse_columns_to_drop(self, columns, strict=strict))
 
     def _evaluate_expr(self, expr: EagerExprT, /) -> EagerSeriesT:
         """Evaluate `expr` and ensure it has a **single** output."""
