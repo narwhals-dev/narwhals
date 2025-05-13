@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from typing import Any
 from typing import Generic
-from typing import TypeVar
+
+from narwhals.typing import SeriesT
 
 if TYPE_CHECKING:
-    from narwhals.series import Series
     from narwhals.typing import TimeUnit
-
-SeriesT = TypeVar("SeriesT", bound="Series[Any]")
 
 
 class SeriesDateTimeNamespace(Generic[SeriesT]):
