@@ -600,8 +600,9 @@ def test_renaming_edge_case(constructor: Constructor) -> None:
 
 
 XFAIL_PANDAS_SKIPNA = pytest.mark.xfail(
+    PANDAS_VERSION >= (1,),
     reason="Requires `skipna=False`, which was introduced in `2.2.1`.\n"
-    "https://github.com/pandas-dev/pandas/issues/57019\n"
+    "https://github.com/pandas-dev/pandas/issues/57019\n",
 )
 
 
