@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from tpch._typing import FrameT
+    from narwhals.typing import FrameT
 
 
 def query(line_item_ds: FrameT) -> FrameT:
