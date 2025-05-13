@@ -7,11 +7,12 @@ from tests.utils import assert_equal_data
 
 
 def test_len_no_filter(constructor: Constructor) -> None:
-    data = {"a": list("xyz"), "b": [1, 2, 1]}
-    expected = {"l": [3], "l2": [6]}
+    data = {"a": list("xyz"), "b": [1, 2, None]}
+    expected = {"l": [3], "l2": [6], "l3": [3]}
     df = nw.from_native(constructor(data)).select(
         nw.col("a").len().alias("l"),
         (nw.col("a").len() * 2).alias("l2"),
+        nw.col("b").len().alias("l3"),
     )
 
     assert_equal_data(df, expected)

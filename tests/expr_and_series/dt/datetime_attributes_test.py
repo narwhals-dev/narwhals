@@ -49,6 +49,8 @@ def test_datetime_attributes(
         request.applymarker(pytest.mark.xfail)
     if attribute == "date" and "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
+    if attribute == "nanosecond" and "ibis" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
     result = df.select(getattr(nw.col("a").dt, attribute)())
