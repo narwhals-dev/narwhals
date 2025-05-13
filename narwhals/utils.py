@@ -1267,18 +1267,17 @@ def generate_temporary_column_name(n_bytes: int, columns: Sequence[str]) -> str:
 def parse_columns_to_drop(
     compliant_frame: Any,
     columns: Iterable[str],
-    strict: bool,  # noqa: FBT001
+    *,
+    strict: bool,
 ) -> list[str]:
-    cols = compliant_frame.columns
+    available = compliant_frame.columns
+    if not strict:
+        return list(set(available).intersection(columns))
     to_drop = list(columns)
-    if strict:
-        missing_columns = [x for x in to_drop if x not in cols]
-        if missing_columns:
-            raise ColumnNotFoundError.from_missing_and_available_column_names(
-                missing_columns=missing_columns, available_columns=cols
-            )
-    else:
-        to_drop = list(set(cols).intersection(set(to_drop)))
+    if missing := [x for x in to_drop if x not in available]:
+        raise ColumnNotFoundError.from_missing_and_available_column_names(
+            missing, available
+        )
     return to_drop
 
 
