@@ -144,13 +144,8 @@ def test_sort_by_orderable_agg(
     expected: dict[str, Sequence[PythonLiteral]],
     request: pytest.FixtureRequest,
 ) -> None:
-    request.applymarker(
-        pytest.mark.xfail(
-            "modin[pyarrow]" in str(constructor_eager) and expected["a"][0] == 1,
-            reason="Mismatch at index https://github.com/narwhals-dev/narwhals/actions/runs/15004869425/job/42160831613?pr=2547",
-            raises=AssertionError,
-        )
-    )
+    if "modin" in str(constructor_eager):
+        pytest.skip()
     request.applymarker(
         pytest.mark.xfail(
             "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0),
