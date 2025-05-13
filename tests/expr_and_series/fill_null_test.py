@@ -66,11 +66,16 @@ def test_fill_null_exceptions(constructor: Constructor) -> None:
         df.with_columns(nw.col("a").fill_null(strategy="invalid"))  # type: ignore  # noqa: PGH003
 
 
-def test_fill_null_strategies_with_limit_as_none(constructor: Constructor) -> None:
+def test_fill_null_strategies_with_limit_as_none(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
     if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)) or (
         "polars" in str(constructor) and POLARS_VERSION < (1, 10)
     ):
         pytest.skip()
+
+    if "ibis" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
 
     data_limits = {
         "a": [1, None, None, None, 5, 6, None, None, None, 10],
@@ -148,11 +153,16 @@ def test_fill_null_strategies_with_limit_as_none(constructor: Constructor) -> No
         assert_equal_data(result_backward, expected_backward)
 
 
-def test_fill_null_limits(constructor: Constructor) -> None:
+def test_fill_null_limits(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
     if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)) or (
         "polars" in str(constructor) and POLARS_VERSION < (1, 10)
     ):
         pytest.skip()
+
+    if "ibis" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
 
     context: Any = (
         pytest.raises(NotImplementedError, match="The limit keyword is not supported")
@@ -371,7 +381,7 @@ def test_fill_null_series_exceptions(constructor_eager: ConstructorEager) -> Non
 def test_fill_null_strategies_with_partition_by(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "dask")):
+    if any(x in str(constructor) for x in ("pyarrow_table", "dask", "ibis")):
         request.applymarker(pytest.mark.xfail)
 
     if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)) or (

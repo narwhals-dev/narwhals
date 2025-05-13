@@ -261,6 +261,10 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         result._window_function = window_function
         return result
 
+    @classmethod
+    def _alias_native(cls, expr: duckdb.Expression, name: str) -> duckdb.Expression:
+        return expr.alias(name)
+
     def __and__(self, other: DuckDBExpr) -> Self:
         return self._with_callable(lambda _input, other: _input & other, other=other)
 

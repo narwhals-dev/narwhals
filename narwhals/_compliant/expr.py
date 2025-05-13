@@ -876,7 +876,7 @@ class EagerExpr(
         return EagerExprStructNamespace(self)
 
 
-class LazyExpr(  # type: ignore[misc]
+class LazyExpr(
     CompliantExpr[CompliantLazyFrameT, NativeExprT],
     Protocol38[CompliantLazyFrameT, NativeExprT],
 ):
@@ -908,6 +908,9 @@ class LazyExpr(  # type: ignore[misc]
             return [name]
 
         return self._with_alias_output_names(fn)
+
+    @classmethod
+    def _alias_native(cls, expr: NativeExprT, name: str, /) -> NativeExprT: ...
 
     @property
     def name(self) -> LazyExprNameNamespace[Self]:
