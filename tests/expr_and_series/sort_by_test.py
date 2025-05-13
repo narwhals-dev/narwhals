@@ -141,7 +141,7 @@ def test_sort_by_orderable_agg(
 ) -> None:
     request.applymarker(
         pytest.mark.xfail(
-            "modin[pyarrow]" in str(constructor_eager) and expected == {"a": [1]},
+            "modin[pyarrow]" in str(constructor_eager) and expected["a"][0] == 1,
             reason="Mismatch at index https://github.com/narwhals-dev/narwhals/actions/runs/15004869425/job/42160831613?pr=2547",
             raises=AssertionError,
         )
