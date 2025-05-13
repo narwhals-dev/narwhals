@@ -213,7 +213,10 @@ class DuckDBLazyFrame(
             for name in self.columns
         ]
         result.extend(value.alias(name) for name, value in new_columns_map.items())
-        return self._with_native(self.native.select(*result))
+        try:
+            return self._with_native(self.native.select(*result))
+        except duckdb.BinderException as e:
+            raise ColumnNotFoundError.from_available_column_names(self.columns) from e
 
     def filter(self, predicate: DuckDBExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column

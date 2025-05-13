@@ -286,6 +286,13 @@ class SparkLikeLazyFrame(
 
     def with_columns(self, *exprs: SparkLikeExpr) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
+        if self._implementation.is_pyspark():  # pragma: no cover
+            from pyspark.errors import AnalysisException
+
+            try:
+                return self._with_native(self.native.withColumns(dict(new_columns)))
+            except AnalysisException as e:
+                raise ColumnNotFoundError.from_available_column_names(self.columns) from e
         return self._with_native(self.native.withColumns(dict(new_columns)))
 
     def filter(self, predicate: SparkLikeExpr) -> Self:
