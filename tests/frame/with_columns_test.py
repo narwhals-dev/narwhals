@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 import narwhals as nw
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import ShapeError
 from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
@@ -78,3 +79,27 @@ def test_with_columns_series_shape_mismatch(constructor_eager: ConstructorEager)
     ]
     with pytest.raises(ShapeError):
         df1.with_columns(second=second)
+
+
+def test_with_columns_missing_column(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("pyspark", "duckdb", "sqlframe")):
+        request.applymarker(pytest.mark.xfail)
+    data = {"a": [1, 2], "b": [3, 4]}
+    df = nw.from_native(constructor(data))
+
+    msg = (
+        r"The following columns were not found: \[.*\]"
+        r"\n\nHint: Did you mean one of these columns: \['a', 'b'\]?"
+    )
+    if "polars" in str(constructor):
+        msg = r"^c\n\n"
+
+    if "polars_lazy" in str(constructor) and isinstance(df, nw.LazyFrame):
+        # In the lazy case, Polars only errors when we call `collect`
+        with pytest.raises(ColumnNotFoundError, match=msg):
+            df.with_columns(d=nw.col("c") + 1).collect()
+    else:
+        with pytest.raises(ColumnNotFoundError, match=msg):
+            df.with_columns(d=nw.col("c") + 1)

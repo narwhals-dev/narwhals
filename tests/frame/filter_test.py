@@ -5,6 +5,7 @@ from contextlib import nullcontext as does_not_raise
 import pytest
 
 import narwhals as nw
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.exceptions import ShapeError
 from tests.utils import Constructor
@@ -68,3 +69,26 @@ def test_filter_with_constrains(constructor: Constructor) -> None:
     expected_expr = {"a": [1, 2], "b": [4, 6]}
 
     assert_equal_data(result_expr, expected_expr)
+
+
+def test_filter_missing_column(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("pyspark", "duckdb", "sqlframe")):
+        request.applymarker(pytest.mark.xfail)
+    data = {"a": [1, 2], "b": [3, 4]}
+    df = nw.from_native(constructor(data))
+
+    msg = (
+        r"The following columns were not found: \[.*\]"
+        r"\n\nHint: Did you mean one of these columns: \['a', 'b'\]?"
+    )
+    if "polars" in str(constructor):
+        msg = r"^unable to find column \"c\"; valid columns: \[\"a\", \"b\"\]"
+
+    if "polars_lazy" in str(constructor) and isinstance(df, nw.LazyFrame):
+        with pytest.raises(ColumnNotFoundError, match=msg):
+            df.filter(c=5).collect()
+    else:
+        with pytest.raises(ColumnNotFoundError, match=msg):
+            df.filter(c=5)
