@@ -817,10 +817,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
         func_name = self._REMAP_RANK_METHOD[method]
 
-        def _rank(_input: Column) -> Column:
-            order_by = self._sort(_input, descending=descending, nulls_last=True)
-            window = self.partition_by().orderBy(*order_by)
-            count_window = self.partition_by(_input)
+        def _rank(_input: Column, window: WindowSpec, count_window: WindowSpec) -> Column:
             if method == "max":
                 expr = (
                     getattr(self._F, func_name)().over(window)
@@ -838,7 +835,13 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
             return self._F.when(_input.isNotNull(), expr)
 
-        def _window_rank(window_inputs: UnorderableWindowInputs) -> Column:
+        def _unpartitioned_rank(_input: Column) -> Column:
+            order_by = self._sort(_input, descending=descending, nulls_last=True)
+            window = self.partition_by().orderBy(*order_by)
+            count_window = self.partition_by(_input)
+            return _rank(_input, window, count_window)
+
+        def _partitioned_rank(window_inputs: UnorderableWindowInputs) -> Column:
             if descending:
                 order_by_cols = [self._F.desc_nulls_last(window_inputs.expr)]
             else:
@@ -853,25 +856,10 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
                 *window_inputs.partition_by, window_inputs.expr
             )
 
-            if method == "max":
-                expr = (
-                    getattr(self._F, func_name)().over(window)
-                    + self._F.count(window_inputs.expr).over(count_window)
-                    - self._F.lit(1)
-                )
+            return _rank(window_inputs.expr, window, count_window)
 
-            elif method == "average":
-                expr = getattr(self._F, func_name)().over(window) + (
-                    self._F.count(window_inputs.expr).over(count_window) - self._F.lit(1)
-                ) / self._F.lit(2)
-
-            else:
-                expr = getattr(self._F, func_name)().over(window)
-
-            return self._F.when(window_inputs.expr.isNotNull(), expr)
-
-        return self._with_callable(_rank)._with_unorderable_window_function(
-            _window_rank, self._call
+        return self._with_callable(_unpartitioned_rank)._with_unorderable_window_function(
+            _partitioned_rank, self._call
         )
 
     @property

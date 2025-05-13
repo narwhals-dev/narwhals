@@ -752,7 +752,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         return self._with_callable(func)
 
     @requires.backend_version((1, 3))
-    def rank(self, method: RankMethod, *, descending: bool) -> Self:  # noqa: C901
+    def rank(self, method: RankMethod, *, descending: bool) -> Self:
         if method in {"min", "max", "average"}:
             func = FunctionExpression("rank")
         elif method == "dense":
@@ -760,64 +760,56 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         else:  # method == "ordinal"
             func = FunctionExpression("row_number")
 
-        def _rank(_input: duckdb.Expression) -> duckdb.Expression:
+        def _rank(
+            _input: duckdb.Expression,
+            *,
+            descending: bool,
+            partition_by_sql: str | None = None,
+        ) -> duckdb.Expression:
             if descending:
                 by_sql = f"{_input} desc nulls last"
             else:
                 by_sql = f"{_input} asc nulls last"
             order_by_sql = f"order by {by_sql}"
             count_expr = FunctionExpression("count", StarExpression())
-
+            if partition_by_sql is not None:
+                order_by_sql = f"{partition_by_sql} {order_by_sql}"
+                partition_expr = SQLExpression(
+                    f"{count_expr} OVER ({partition_by_sql}, {_input})"
+                )
+            else:
+                partition_expr = SQLExpression(
+                    f"{count_expr} OVER (PARTITION BY {_input})"
+                )
             if method == "max":
                 expr = (
                     SQLExpression(f"{func} OVER ({order_by_sql})")
-                    + SQLExpression(f"{count_expr} OVER (PARTITION BY {_input})")
+                    + partition_expr
                     - lit(1)
                 )
             elif method == "average":
                 expr = SQLExpression(f"{func} OVER ({order_by_sql})") + (
-                    SQLExpression(f"{count_expr} OVER (PARTITION BY {_input})") - lit(1)
+                    partition_expr - lit(1)
                 ) / lit(2.0)
             else:
                 expr = SQLExpression(f"{func} OVER ({order_by_sql})")
-
             return when(_input.isnotnull(), expr)
 
-        def _window_rank(
+        def _unpartitioned_rank(_input: duckdb.Expression) -> duckdb.Expression:
+            return _rank(_input, descending=descending)
+
+        def _partitioned_rank(
             window_inputs: UnorderableWindowInputs,
         ) -> duckdb.Expression:
             partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
-            if descending:
-                by_sql = f"{window_inputs.expr} desc nulls last"
-            else:
-                by_sql = f"{window_inputs.expr} asc nulls last"
-            order_by_sql = f"order by {by_sql}"
-            count_expr = FunctionExpression("count", StarExpression())
+            return _rank(
+                window_inputs.expr,
+                descending=descending,
+                partition_by_sql=partition_by_sql,
+            )
 
-            if method == "max":
-                expr = (
-                    SQLExpression(f"{func} OVER ({partition_by_sql} {order_by_sql})")
-                    + SQLExpression(
-                        f"{count_expr} OVER ({partition_by_sql}, {window_inputs.expr})"
-                    )
-                    - lit(1)
-                )
-            elif method == "average":
-                expr = SQLExpression(
-                    f"{func} OVER ({partition_by_sql} {order_by_sql})"
-                ) + (
-                    SQLExpression(
-                        f"{count_expr} OVER ({partition_by_sql}, {window_inputs.expr})"
-                    )
-                    - lit(1)
-                ) / lit(2.0)
-            else:
-                expr = SQLExpression(f"{func} OVER ({partition_by_sql} {order_by_sql})")
-
-            return when(window_inputs.expr.isnotnull(), expr)
-
-        return self._with_callable(_rank)._with_unorderable_window_function(
-            _window_rank,
+        return self._with_callable(_unpartitioned_rank)._with_unorderable_window_function(
+            _partitioned_rank,
             self._call,
         )
 
