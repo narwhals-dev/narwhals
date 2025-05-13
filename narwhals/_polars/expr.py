@@ -148,10 +148,10 @@ class PolarsExpr:
             native = self.native.sort_by(
                 *by, descending=descending, nulls_last=nulls_last
             )
-        elif nulls_last is True:
+        elif nulls_last is True:  # pragma: no cover
             msg = "`nulls_last` in Polars requires version 0.20.31 or greater"
             raise NotImplementedError(msg)
-        else:
+        else:  # pragma: no cover
             native = self.native.sort_by(*by, descending=descending)
         return self._with_native(native)
 
