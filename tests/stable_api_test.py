@@ -84,7 +84,8 @@ def test_stable_api_completeness() -> None:
     main_namespace_api = nw.__all__
     extra = set(v_1_api).difference(main_namespace_api)
     assert not extra
-    missing = set(main_namespace_api).difference(v_1_api).difference({"stable"})
+    # SQL not (yet) in "stable"
+    missing = set(main_namespace_api).difference(v_1_api).difference({"stable", "sql"})
     assert not missing
 
 
