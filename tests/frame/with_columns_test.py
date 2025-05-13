@@ -89,13 +89,13 @@ def test_with_columns_missing_column(
     data = {"a": [1, 2], "b": [3, 4]}
     df = nw.from_native(constructor(data))
 
-    msg = (
-        r"The following columns were not found: \[.*\]"
-        r"\n\nHint: Did you mean one of these columns: \['a', 'b'\]?"
-    )
     if "polars" in str(constructor):
-        msg = r"^c\n\n"
-
+        msg = r"^c"
+    else:
+        msg = (
+            r"The following columns were not found: \[.*\]"
+            r"\n\nHint: Did you mean one of these columns: \['a', 'b'\]?"
+        )
     if "polars_lazy" in str(constructor) and isinstance(df, nw.LazyFrame):
         # In the lazy case, Polars only errors when we call `collect`
         with pytest.raises(ColumnNotFoundError, match=msg):
