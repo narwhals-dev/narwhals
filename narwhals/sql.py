@@ -59,7 +59,7 @@ def table(
     except ImportError as exc:  # pragma: no cover
         msg = (
             "`narwhals.sql` requires SQLFrame to be installed.\n\n"
-            "Hint: `pip install -U sqlframe"
+            "Hint: run `pip install -U narwhals[sql]`"
         )
         raise ModuleNotFoundError(msg) from exc
     from sqlframe.standalone import types

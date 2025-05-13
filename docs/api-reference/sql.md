@@ -1,4 +1,4 @@
-# `narwhals.selectors`
+# `narwhals.sql`
 
 ::: narwhals.sql
     handler: python

@@ -6,11 +6,12 @@ nav:
   - Home: index.md
   - Why: why.md
   - Installation and quick start: installation.md
-  - Intro tutorial:
+  - Tutorials:
     - basics/dataframe.md
     - basics/series.md
     - basics/complete_example.md
     - basics/dataframe_conversion.md
+    - basics/generating_sql.md
   - Concepts:
     - concepts/order_dependence.md
     - concepts/pandas_index.md
