@@ -112,7 +112,16 @@ def test_sort_by_self(
     assert_equal_data(result, expected)
 
 
-def test_sort_by_invalid(constructor_eager: ConstructorEager) -> None:
+def test_sort_by_invalid(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    request.applymarker(
+        pytest.mark.xfail(
+            "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0),
+            reason="Unstable sort",
+            raises=NotImplementedError,
+        )
+    )
     df = nw.from_native(constructor_eager(data), eager_only=True)
     with pytest.raises((ColumnNotFoundError, KeyError), match="NON EXIST"):
         df.select(nw.col("b", "group_2").sort_by("group_1", "NON EXIST"))
@@ -140,6 +149,13 @@ def test_sort_by_orderable_agg(
             "modin[pyarrow]" in str(constructor_eager) and expected["a"][0] == 1,
             reason="Mismatch at index https://github.com/narwhals-dev/narwhals/actions/runs/15004869425/job/42160831613?pr=2547",
             raises=AssertionError,
+        )
+    )
+    request.applymarker(
+        pytest.mark.xfail(
+            "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0),
+            reason="Unstable sort",
+            raises=NotImplementedError,
         )
     )
     data = {"a": [9, 8, 7], "i": [0, 2, 1]}
