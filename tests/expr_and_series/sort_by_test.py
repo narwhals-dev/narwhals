@@ -103,3 +103,21 @@ def test_sort_by_invalid(constructor_eager: ConstructorEager) -> None:
         df.with_columns(
             nw.col("b", "group_2").sort_by("group_1", "NON EXIST").name.suffix("_suffix")
         )
+
+
+@pytest.mark.parametrize(
+    ("expr", "expected"),
+    [
+        (nw.col("a").sort_by("i").arg_min(), {"a": [1]}),
+        (nw.col("a").sort_by("i").arg_max(), {"a": [0]}),
+    ],
+)
+def test_sort_by_orderable_agg(
+    constructor_eager: ConstructorEager,
+    expr: nw.Expr,
+    expected: dict[str, Sequence[PythonLiteral]],
+) -> None:
+    data = {"a": [9, 8, 7], "i": [0, 2, 1]}
+    df = nw.from_native(constructor_eager(data)).sort("a", descending=False)
+    result = df.select(expr)
+    assert_equal_data(result, expected)
