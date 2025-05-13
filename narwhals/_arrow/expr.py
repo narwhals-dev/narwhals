@@ -140,6 +140,35 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
     def shift(self, n: int) -> Self:
         return self._reuse_series("shift", n=n)
 
+    def sort_by(
+        self, *by: str, descending: bool | Sequence[bool], nulls_last: bool
+    ) -> Self:
+        def fn(df: ArrowDataFrame) -> Sequence[ArrowSeries]:
+            aliases = df._evaluate_aliases(self)
+            if overlap := set(aliases).intersection(by):
+                msg = (
+                    f"Can support this by aliasing the `by`, since they don't end up in the final columns.\n"
+                    f"Overlap: {sorted(overlap)!r}"
+                )
+                raise NotImplementedError(msg)
+            df = df.simple_select(*aliases, *by).sort(
+                *by, descending=descending, nulls_last=nulls_last
+            )
+            compliant = df._with_native(
+                df.native.drop(list(by)), validate_column_names=False
+            )
+            return list(compliant.iter_columns())
+
+        return self.__class__(
+            fn,
+            depth=self._depth + 1,
+            function_name=self._function_name + "->sort_by",
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+        )
+
     def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
         assert self._metadata is not None  # noqa: S101
         if partition_by and not self._metadata.is_scalar_like:
@@ -211,4 +240,3 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         return self._reuse_series("rank", method=method, descending=descending)
 
     ewm_mean = not_implemented()
-    sort_by = not_implemented()
