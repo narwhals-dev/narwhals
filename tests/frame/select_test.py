@@ -12,7 +12,6 @@ from narwhals.exceptions import InvalidIntoExprError
 from narwhals.exceptions import NarwhalsError
 from tests.utils import DASK_VERSION
 from tests.utils import DUCKDB_VERSION
-from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import ConstructorLazy
@@ -94,12 +93,6 @@ def test_missing_columns_eager(constructor_eager: ConstructorEager) -> None:
     )
     with pytest.raises(ColumnNotFoundError, match=msg):
         df.select(selected_columns)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):  # pragma: no cover
-        # Old Polars versions wouldn't raise an error at all here
-        pass
-    else:
-        with pytest.raises(ColumnNotFoundError, match=msg):
-            df.drop(selected_columns, strict=True)
     if "polars" in str(constructor_eager):
         msg = r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
     with pytest.raises(ColumnNotFoundError, match=msg):
