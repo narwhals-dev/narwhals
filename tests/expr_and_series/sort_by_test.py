@@ -13,16 +13,25 @@ if TYPE_CHECKING:
     from narwhals.typing import PythonLiteral
     from tests.utils import ConstructorEager
 
-data = {"a": [0, 0, 2, -1], "b": [1, 3, 2, None]}
+_EXPECTED_A = 0, 0, 2, -1, 1
+
+data = {
+    "a": _EXPECTED_A,
+    "b": [1, 3, 2, None, None],
+    "c": [None, None, 12.0, 5.5, 12.1],
+    "d": [4, 0, 1, 3, 2],
+    "group_1": ["C", "D", "D", "E", "E"],
+    "group_2": [None, "G", "F", "G", None],
+}
 
 
 @pytest.mark.parametrize(
     ("descending", "nulls_last", "expected"),
     [
-        (True, True, {"a": [0, 0, 2, -1], "b": [3, 2, 1, None]}),
-        (True, False, {"a": [0, 0, 2, -1], "b": [None, 3, 2, 1]}),
-        (False, True, {"a": [0, 0, 2, -1], "b": [1, 2, 3, None]}),
-        (False, False, {"a": [0, 0, 2, -1], "b": [None, 1, 2, 3]}),
+        (True, True, {"a": _EXPECTED_A, "b": [3, 2, 1, None, None]}),
+        (True, False, {"a": _EXPECTED_A, "b": [None, None, 3, 2, 1]}),
+        (False, True, {"a": _EXPECTED_A, "b": [1, 2, 3, None, None]}),
+        (False, False, {"a": _EXPECTED_A, "b": [None, None, 1, 2, 3]}),
     ],
 )
 def test_sort_by_self(
