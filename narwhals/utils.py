@@ -1265,17 +1265,17 @@ def generate_temporary_column_name(n_bytes: int, columns: Sequence[str]) -> str:
 
 
 def parse_columns_to_drop(
-    compliant_frame: Any,
-    columns: Iterable[str],
-    strict: bool,  # noqa: FBT001
+    frame: _StoresColumns,
+    subset: Iterable[str],
+    /,
+    *,
+    strict: bool,
 ) -> list[str]:
-    cols = compliant_frame.columns
-    to_drop = list(columns)
-    if strict:
-        if error := check_columns_exist(to_drop, available_columns=cols):
-            raise error
-    else:
-        to_drop = list(set(cols).intersection(set(to_drop)))
+    if not strict:
+        return list(set(frame.columns).intersection(subset))
+    to_drop = list(subset)
+    if error := check_columns_exist(frame, to_drop):
+        raise error
     return to_drop
 
 
@@ -1539,11 +1539,16 @@ def generate_repr(header: str, native_repr: str) -> str:
 
 
 def check_columns_exist(
-    columns: Sequence[str], *, available_columns: Sequence[str]
+    frame_or_available: _StoresColumns | list[str], subset: Sequence[str], /
 ) -> ColumnNotFoundError | None:
-    if missing := set(columns).difference(available_columns):
+    available = (
+        frame_or_available
+        if isinstance(frame_or_available, list)
+        else frame_or_available.columns
+    )
+    if missing := set(subset).difference(available):
         return ColumnNotFoundError.from_missing_and_available_column_names(
-            missing_columns=sorted(missing), available_columns=list(available_columns)
+            missing, available
         )
     return None
 

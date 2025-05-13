@@ -208,9 +208,7 @@ class DaskLazyFrame(
         return self.schema
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
-        to_drop = parse_columns_to_drop(
-            compliant_frame=self, columns=columns, strict=strict
-        )
+        to_drop = parse_columns_to_drop(self, columns, strict=strict)
 
         return self._with_native(self.native.drop(columns=to_drop))
 
@@ -230,9 +228,7 @@ class DaskLazyFrame(
     def unique(
         self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self:
-        if subset and (
-            error := check_columns_exist(subset, available_columns=self.columns)
-        ):
+        if subset and (error := check_columns_exist(self, subset)):
             raise error
         if keep == "none":
             subset = subset or self.columns

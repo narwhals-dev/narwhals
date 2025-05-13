@@ -173,9 +173,7 @@ class BaseFrame(Generic[_FrameT]):
                 )
             except Exception as e:
                 # Column not found is the only thing that can realistically be raised here.
-                if error := check_columns_exist(
-                    flat_exprs, available_columns=self.columns
-                ):
+                if error := check_columns_exist(self, flat_exprs):
                     raise error from e
                 raise
         compliant_exprs, kinds = self._flatten_and_extract(*flat_exprs, **named_exprs)

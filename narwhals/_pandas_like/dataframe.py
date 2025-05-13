@@ -493,9 +493,7 @@ class PandasLikeDataFrame(
         )
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
-        to_drop = parse_columns_to_drop(
-            compliant_frame=self, columns=columns, strict=strict
-        )
+        to_drop = parse_columns_to_drop(self, columns, strict=strict)
         return self._with_native(
             self.native.drop(columns=to_drop), validate_column_names=False
         )
@@ -766,9 +764,7 @@ class PandasLikeDataFrame(
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
         mapped_keep = {"none": False, "any": "first"}.get(keep, keep)
-        if subset and (
-            error := check_columns_exist(subset, available_columns=self.columns)
-        ):
+        if subset and (error := check_columns_exist(self, subset)):
             raise error
         return self._with_native(
             self.native.drop_duplicates(subset=subset, keep=mapped_keep),

@@ -187,7 +187,7 @@ class DuckDBLazyFrame(
         return self._with_native(self.native.select(*selection))
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
-        columns_to_drop = parse_columns_to_drop(self, columns=columns, strict=strict)
+        columns_to_drop = parse_columns_to_drop(self, columns, strict=strict)
         selection = (name for name in self.columns if name not in columns_to_drop)
         return self._with_native(self.native.select(*selection))
 
@@ -390,7 +390,7 @@ class DuckDBLazyFrame(
                 )
                 raise NotImplementedError(msg)
             # Sanitise input
-            if error := check_columns_exist(subset_, available_columns=self.columns):
+            if error := check_columns_exist(self, subset_):
                 raise error
             idx_name = generate_temporary_column_name(8, self.columns)
             count_name = generate_temporary_column_name(8, [*self.columns, idx_name])

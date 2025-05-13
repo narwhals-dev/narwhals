@@ -339,7 +339,7 @@ def test_parse_version(
 def test_check_columns_exists() -> None:
     columns = ["a", "b", "c"]
     subset = ["d", "f"]
-    error = check_columns_exist(subset, available_columns=columns)
+    error = check_columns_exist(columns, subset)
     assert error is not None
     assert str(error) == (
         "The following columns were not found: ['d', 'f']\n\nHint: Did you mean one of these columns: ['a', 'b', 'c']?"
@@ -347,7 +347,7 @@ def test_check_columns_exists() -> None:
 
     # Check that the error is not returned
     subset = ["a", "b"]
-    error = check_columns_exist(subset, available_columns=columns)
+    error = check_columns_exist(columns, subset)
     assert error is None
 
 

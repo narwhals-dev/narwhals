@@ -303,9 +303,7 @@ class SparkLikeLazyFrame(
         return self.schema
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
-        columns_to_drop = parse_columns_to_drop(
-            compliant_frame=self, columns=columns, strict=strict
-        )
+        columns_to_drop = parse_columns_to_drop(self, columns, strict=strict)
         return self._with_native(self.native.drop(*columns_to_drop))
 
     def head(self, n: int) -> Self:
@@ -358,9 +356,7 @@ class SparkLikeLazyFrame(
     def unique(
         self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self:
-        if subset and (
-            error := check_columns_exist(subset, available_columns=self.columns)
-        ):
+        if subset and (error := check_columns_exist(self, subset)):
             raise error
         subset = list(subset) if subset else None
         if keep == "none":

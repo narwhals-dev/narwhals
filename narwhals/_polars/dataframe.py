@@ -453,9 +453,7 @@ class PolarsDataFrame:
         return self._with_native(self.native.with_row_index(name))
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
-        to_drop = parse_columns_to_drop(
-            compliant_frame=self, columns=columns, strict=strict
-        )
+        to_drop = parse_columns_to_drop(self, columns, strict=strict)
         return self._with_native(self.native.drop(to_drop))
 
     def unpivot(

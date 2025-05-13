@@ -662,8 +662,8 @@ def select_columns_by_name(
         # See https://github.com/narwhals-dev/narwhals/issues/1349#issuecomment-2470118122
         # for why we need this
         if error := check_columns_exist(
+            df.columns.tolist(),  # type: ignore[attr-defined]
             column_names,  # type: ignore[arg-type]
-            available_columns=df.columns.tolist(),  # type: ignore[attr-defined]
         ):
             raise error
         return df.loc[:, column_names]  # type: ignore[attr-defined]
@@ -671,8 +671,8 @@ def select_columns_by_name(
         return df[column_names]  # type: ignore[index]
     except KeyError as e:
         if error := check_columns_exist(
+            df.columns.tolist(),  # type: ignore[attr-defined]
             column_names,  # type: ignore[arg-type]
-            available_columns=df.columns.tolist(),  # type: ignore[attr-defined]
         ):
             raise error from e
         raise

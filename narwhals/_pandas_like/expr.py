@@ -128,9 +128,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     for column_name in evaluate_column_names(df)
                 ]
             except KeyError as e:
-                if error := check_columns_exist(
-                    evaluate_column_names(df), available_columns=df.columns
-                ):
+                if error := check_columns_exist(df, evaluate_column_names(df)):
                     raise error from e
                 raise
 
