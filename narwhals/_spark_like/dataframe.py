@@ -281,7 +281,11 @@ class SparkLikeLazyFrame(
             try:
                 return self._with_native(self.native.select(*new_columns_list))
             except AnalysisException as e:
-                raise ColumnNotFoundError.from_available_column_names(self.columns) from e
+                if str(e).startswith("[UNRESOLVED_COLUMN.WITH_SUGGESTION]"):
+                    raise ColumnNotFoundError.from_available_column_names(
+                        self.columns
+                    ) from e
+                raise
         return self._with_native(self.native.select(*new_columns_list))
 
     def with_columns(self, *exprs: SparkLikeExpr) -> Self:
@@ -292,7 +296,11 @@ class SparkLikeLazyFrame(
             try:
                 return self._with_native(self.native.withColumns(dict(new_columns)))
             except AnalysisException as e:
-                raise ColumnNotFoundError.from_available_column_names(self.columns) from e
+                if str(e).startswith("[UNRESOLVED_COLUMN.WITH_SUGGESTION]"):
+                    raise ColumnNotFoundError.from_available_column_names(
+                        self.columns
+                    ) from e
+                raise
         return self._with_native(self.native.withColumns(dict(new_columns)))
 
     def filter(self, predicate: SparkLikeExpr) -> Self:
@@ -304,7 +312,11 @@ class SparkLikeLazyFrame(
             try:
                 return self._with_native(self.native.where(condition))
             except AnalysisException as e:
-                raise ColumnNotFoundError.from_available_column_names(self.columns) from e
+                if str(e).startswith("[UNRESOLVED_COLUMN.WITH_SUGGESTION]"):
+                    raise ColumnNotFoundError.from_available_column_names(
+                        self.columns
+                    ) from e
+                raise
         return self._with_native(self.native.where(condition))
 
     @property
