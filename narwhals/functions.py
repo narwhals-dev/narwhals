@@ -9,7 +9,6 @@ from typing import Iterable
 from typing import Literal
 from typing import Mapping
 from typing import Sequence
-from typing import TypeVar
 from typing import cast
 
 from narwhals._expression_parsing import ExprKind
@@ -54,6 +53,7 @@ if TYPE_CHECKING:
     from narwhals.schema import Schema
     from narwhals.series import Series
     from narwhals.typing import ConcatMethod
+    from narwhals.typing import FrameT
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoSeriesT
     from narwhals.typing import NativeFrame
@@ -64,7 +64,6 @@ if TYPE_CHECKING:
     from narwhals.typing import _2DArray
 
     _IntoSchema: TypeAlias = "Mapping[str, DType] | Schema | Sequence[str] | None"
-    FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
 
 
 def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT:
@@ -774,6 +773,7 @@ def _scan_csv_impl(
         Implementation.CUDF,
         Implementation.DASK,
         Implementation.DUCKDB,
+        Implementation.IBIS,
     }:
         native_frame = native_namespace.read_csv(source, **kwargs)
     elif implementation is Implementation.PYARROW:
@@ -870,6 +870,7 @@ def _read_parquet_impl(
         Implementation.MODIN,
         Implementation.CUDF,
         Implementation.DUCKDB,
+        Implementation.IBIS,
     }:
         native_frame = native_namespace.read_parquet(source, **kwargs)
     elif implementation is Implementation.PYARROW:
@@ -982,6 +983,7 @@ def _scan_parquet_impl(
         Implementation.CUDF,
         Implementation.DASK,
         Implementation.DUCKDB,
+        Implementation.IBIS,
     }:
         native_frame = native_namespace.read_parquet(source, **kwargs)
     elif implementation is Implementation.PYARROW:
