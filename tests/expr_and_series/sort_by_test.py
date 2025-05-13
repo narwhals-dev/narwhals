@@ -77,6 +77,17 @@ def test_sort_by(
             raises=NotImplementedError,
         )
     )
+    request.applymarker(
+        pytest.mark.xfail(
+            "polars" in str(constructor_eager)
+            and POLARS_VERSION < (1, 0)
+            and isinstance(descending, list)
+            and tuple(descending) == (True, False)
+            and nulls_last is False,
+            reason="Not sure, pre-1.0.0 seems to be less stable. https://github.com/narwhals-dev/narwhals/actions/runs/15005898549/job/42164346613?pr=2547",
+            raises=AssertionError,
+        )
+    )
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(
         nw.col(cols).sort_by(by, descending=descending, nulls_last=nulls_last)
