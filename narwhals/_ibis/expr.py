@@ -374,6 +374,19 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
     def sum(self) -> Self:
         return self._with_callable(lambda _input: _input.sum())
 
+    def first(self) -> Self:
+        def fn(window_inputs: WindowInputs) -> ir.Value:
+            inputs = window_inputs
+            order_by = [ibis.asc(by, nulls_first=True) for by in window_inputs.order_by]
+            expr = cast("ir.Column", window_inputs.expr)
+            if partition_by := inputs.partition_by:  # pragma: no cover
+                window = ibis.window(group_by=list(partition_by), order_by=order_by)
+                return expr.first(include_null=True).over(window)
+            else:
+                return expr.first(order_by=order_by, include_null=True)
+
+        return self._with_window_function(fn)
+
     def n_unique(self) -> Self:
         return self._with_callable(
             lambda _input: _input.nunique() + _input.isnull().any().cast("int8")
@@ -669,4 +682,3 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
     # NOTE: https://github.com/ibis-project/ibis/issues/11176
     skew = not_implemented()
     unique = not_implemented()
-    first = not_implemented()

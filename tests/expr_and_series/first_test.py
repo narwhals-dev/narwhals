@@ -99,13 +99,6 @@ def test_first_expr_lazy_with_columns(
             raises=NotImplementedError,
         )
     )
-    request.applymarker(
-        pytest.mark.xfail(
-            ("ibis" in str(constructor)),
-            reason="Need to implement, following https://github.com/narwhals-dev/narwhals/pull/2000",
-            raises=NotImplementedError,
-        )
-    )
 
     frame = nw.from_native(constructor(data))
     expr = nw.col(col).first().over(order_by="idx").alias("result")
