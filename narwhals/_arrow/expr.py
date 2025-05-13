@@ -145,19 +145,14 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
     ) -> Self:
         def fn(df: ArrowDataFrame) -> Sequence[ArrowSeries]:
             aliases = df._evaluate_aliases(self)
-            if overlap := set(aliases).intersection(by):
-                msg = (
-                    f"Can support this by aliasing the `by`, since they don't end up in the final columns.\n"
-                    f"Overlap: {sorted(overlap)!r}"
-                )
-                raise NotImplementedError(msg)
-            df = df.simple_select(*aliases, *by).sort(
+            sort_only = set(by).difference(aliases)
+            df = df.simple_select(*aliases, *sort_only).sort(
                 *by, descending=descending, nulls_last=nulls_last
             )
-            compliant = df._with_native(
-                df.native.drop(list(by)), validate_column_names=False
-            )
-            return list(compliant.iter_columns())
+            if sort_only:
+                native = df.native.drop(list(sort_only))
+                df = df._with_native(native, validate_column_names=False)
+            return list(df.iter_columns())
 
         return self.__class__(
             fn,
