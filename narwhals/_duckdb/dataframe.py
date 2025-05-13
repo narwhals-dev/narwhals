@@ -184,7 +184,12 @@ class DuckDBLazyFrame(
         *exprs: DuckDBExpr,
     ) -> Self:
         selection = (val.alias(name) for name, val in evaluate_exprs(self, *exprs))
-        return self._with_native(self.native.select(*selection))
+        try:
+            return self._with_native(self.native.select(*selection))
+        except duckdb.BinderException as e:
+            if "this column cannot be referenced before it is defined" in str(e):
+                raise ColumnNotFoundError.from_available_column_names(self.columns) from e
+            raise
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         columns_to_drop = parse_columns_to_drop(self, columns=columns, strict=strict)
@@ -210,12 +215,22 @@ class DuckDBLazyFrame(
             for name in self.columns
         ]
         result.extend(value.alias(name) for name, value in new_columns_map.items())
-        return self._with_native(self.native.select(*result))
+        try:
+            return self._with_native(self.native.select(*result))
+        except duckdb.BinderException as e:
+            if "not found in FROM clause" in str(e):
+                raise ColumnNotFoundError.from_available_column_names(self.columns) from e
+            raise
 
     def filter(self, predicate: DuckDBExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
         mask = predicate(self)[0]
-        return self._with_native(self.native.filter(mask))
+        try:
+            return self._with_native(self.native.filter(mask))
+        except duckdb.BinderException as e:
+            if "not found in FROM clause" in str(e):
+                raise ColumnNotFoundError.from_available_column_names(self.columns) from e
+            raise
 
     @property
     def schema(self) -> dict[str, DType]:
