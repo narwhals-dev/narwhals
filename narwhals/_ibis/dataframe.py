@@ -177,7 +177,7 @@ class IbisLazyFrame(
         return self._with_native(t)
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
-        columns_to_drop = parse_columns_to_drop(self, columns=columns, strict=strict)
+        columns_to_drop = parse_columns_to_drop(self, columns, strict=strict)
         selection = (col for col in self.columns if col not in columns_to_drop)
         return self._with_native(self.native.select(*selection))
 
