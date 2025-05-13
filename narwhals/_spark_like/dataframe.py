@@ -298,8 +298,14 @@ class SparkLikeLazyFrame(
     def filter(self, predicate: SparkLikeExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
         condition = predicate._call(self)[0]
-        spark_df = self.native.where(condition)
-        return self._with_native(spark_df)
+        if self._implementation.is_pyspark():
+            from pyspark.errors import AnalysisException
+
+            try:
+                return self._with_native(self.native.where(condition))
+            except AnalysisException as e:
+                raise ColumnNotFoundError.from_available_column_names(self.columns) from e
+        return self._with_native(self.native.where(condition))
 
     @property
     def schema(self) -> dict[str, DType]:

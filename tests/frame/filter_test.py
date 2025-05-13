@@ -74,13 +74,16 @@ def test_filter_with_constrains(constructor: Constructor) -> None:
 def test_filter_missing_column(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("pyspark", "duckdb", "sqlframe")):
+    constructor_id = str(request.node.callspec.id)
+    if any(id_ == constructor_id for id_ in ("sqlframe", "pyspark[connect]")):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2], "b": [3, 4]}
     df = nw.from_native(constructor(data))
 
     if "polars" in str(constructor):
         msg = r"^unable to find column \"c\"; valid columns: \[\"a\", \"b\"\]"
+    elif any(id_ == constructor_id for id_ in ("duckdb", "pyspark")):
+        msg = r"\n\nHint: Did you mean one of these columns: \['a', 'b'\]?"
     else:
         msg = (
             r"The following columns were not found: \[.*\]"

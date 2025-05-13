@@ -221,7 +221,10 @@ class DuckDBLazyFrame(
     def filter(self, predicate: DuckDBExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
         mask = predicate(self)[0]
-        return self._with_native(self.native.filter(mask))
+        try:
+            return self._with_native(self.native.filter(mask))
+        except duckdb.BinderException as e:
+            raise ColumnNotFoundError.from_available_column_names(self.columns) from e
 
     @property
     def schema(self) -> dict[str, DType]:
