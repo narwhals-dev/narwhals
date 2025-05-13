@@ -74,8 +74,10 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         self._alias_output_names = alias_output_names
         self._backend_version = backend_version
         self._version = version
-        self._window_function: WindowFunction | None = None
         self._metadata: ExprMetadata | None = None
+
+        # This can only be set by `_with_window_function`.
+        self._window_function: WindowFunction | None = None
 
     def __call__(self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
         return self._call(df)
