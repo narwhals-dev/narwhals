@@ -21,9 +21,13 @@ data = {"a": ["foobar", "bar\n", " baz"]}
 )
 def test_str_strip_chars(
     constructor: Constructor,
+    request: pytest.FixtureRequest,
     characters: str | None,
     expected: Any,
 ) -> None:
+    if "ibis" in str(constructor) and characters is not None:
+        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor(data))
     result_frame = df.select(nw.col("a").str.strip_chars(characters))
     assert_equal_data(result_frame, expected)

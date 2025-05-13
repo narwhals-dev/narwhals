@@ -208,6 +208,10 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         result._window_function = window_function
         return result
 
+    @classmethod
+    def _alias_native(cls, expr: Column, name: str) -> Column:
+        return expr.alias(name)
+
     def _cum_window_func(
         self,
         *,
