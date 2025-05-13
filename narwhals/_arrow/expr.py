@@ -140,28 +140,6 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
     def shift(self, n: int) -> Self:
         return self._reuse_series("shift", n=n)
 
-    def sort_by(
-        self, *by: str, descending: bool | Sequence[bool], nulls_last: bool
-    ) -> Self:
-        def fn(df: ArrowDataFrame) -> Sequence[ArrowSeries]:
-            aliases = df._evaluate_aliases(self)
-            sort_only = set(by).difference(aliases)
-            df = df.simple_select(*aliases, *sort_only).sort(
-                *by, descending=descending, nulls_last=nulls_last
-            )
-            df = df._drop(sort_only) if sort_only else df
-            return list(df.iter_columns())
-
-        return self.__class__(
-            fn,
-            depth=self._depth + 1,
-            function_name=self._function_name + "->sort_by",
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-
     def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
         assert self._metadata is not None  # noqa: S101
         if partition_by and not self._metadata.is_scalar_like:

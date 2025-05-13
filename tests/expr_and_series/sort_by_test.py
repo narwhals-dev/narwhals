@@ -64,10 +64,7 @@ def test_sort_by(
     descending: bool | Sequence[bool],
     nulls_last: bool,
     expected: dict[str, Sequence[PythonLiteral]],
-    request: pytest.FixtureRequest,
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pandas", "modin", "cudf")):
-        request.applymarker(pytest.mark.xfail(reason="Not implemented"))
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(
         nw.col(cols).sort_by(by, descending=descending, nulls_last=nulls_last)
@@ -89,10 +86,7 @@ def test_sort_by_self(
     descending: bool | Sequence[bool],
     nulls_last: bool,
     expected: dict[str, Sequence[PythonLiteral]],
-    request: pytest.FixtureRequest,
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pandas", "modin", "cudf")):
-        request.applymarker(pytest.mark.xfail(reason="Not implemented"))
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(
         "a", nw.col("b").sort_by("b", descending=descending, nulls_last=nulls_last)

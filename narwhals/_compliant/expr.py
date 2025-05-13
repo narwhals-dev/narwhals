@@ -705,6 +705,27 @@ class EagerExpr(
     def sort(self, *, descending: bool, nulls_last: bool) -> Self:
         return self._reuse_series("sort", descending=descending, nulls_last=nulls_last)
 
+    def sort_by(
+        self, *by: str, descending: bool | Sequence[bool], nulls_last: bool
+    ) -> Self:
+        def fn(df: EagerDataFrameT) -> Sequence[EagerSeriesT]:
+            aliases = df._evaluate_aliases(self)
+            sort_only = set(by).difference(aliases)
+            df = df.simple_select(*aliases, *sort_only).sort(
+                *by, descending=descending, nulls_last=nulls_last
+            )
+            df = df._drop(sort_only) if sort_only else df
+            return list(df.iter_columns())
+
+        return self._from_callable(
+            fn,
+            depth=self._depth + 1,
+            function_name=self._function_name + "->sort_by",
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            context=self,
+        )
+
     def abs(self) -> Self:
         return self._reuse_series("abs")
 
