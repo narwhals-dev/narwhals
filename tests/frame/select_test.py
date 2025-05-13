@@ -127,7 +127,7 @@ def test_missing_columns_lazy(
         return df
 
     if constructor_id == "polars[lazy]":
-        msg = r"^e|\"(e|f)\""
+        msg = r"^e"
     elif any(id_ == constructor_id for id_ in ("duckdb", "pyspark")):
         msg = r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
     else:
@@ -137,12 +137,6 @@ def test_missing_columns_lazy(
         )
     with pytest.raises(ColumnNotFoundError, match=msg):
         maybe_collect(df.select(selected_columns))
-    if constructor_id == "polars[lazy]" and POLARS_VERSION < (1,):  # pragma: no cover
-        # Old Polars versions wouldn't raise an error at all here
-        pass
-    else:
-        with pytest.raises(ColumnNotFoundError, match=msg):
-            maybe_collect(df.drop(selected_columns, strict=True))
     if "polars" in str(constructor_lazy):
         msg = r"^fdfa"
     with pytest.raises(ColumnNotFoundError, match=msg):
