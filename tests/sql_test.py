@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import pytest
+
 import narwhals as nw
 
 
 def test_sql() -> None:
+    pytest.importorskip("sqlframe")
     schema = {"date": nw.Date, "price": nw.Int64, "symbol": nw.String}
     assets = nw.sql.table("assets", schema)
     result = (
