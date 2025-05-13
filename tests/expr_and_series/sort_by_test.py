@@ -30,6 +30,31 @@ data = {
     [
         ("group_1", "d", False, False, {"group_1": ["D", "D", "E", "E", "C"]}),
         ("group_1", ["c", "b"], False, True, {"group_1": ["E", "D", "E", "C", "D"]}),
+        (
+            ["d", "a"],
+            ["group_2", "b"],
+            [True, False],
+            False,
+            {"d": [2, 4, 3, 0, 1], "a": [1, 0, -1, 0, 2]},
+        ),
+        (
+            ["d", "a"],
+            ["group_2", "b"],
+            [True, False],
+            True,
+            {"d": [0, 3, 1, 4, 2], "a": [0, -1, 2, 0, 1]},
+        ),
+        (
+            ["c", "a", "group_2"],
+            ["group_1", "b", "d"],
+            [True, False, False],
+            False,
+            {
+                "c": [12.1, 5.5, 12.0, None, None],
+                "a": [1, -1, 2, 0, 0],
+                "group_2": [None, "G", "F", "G", None],
+            },
+        ),
     ],
 )
 def test_sort_by(
