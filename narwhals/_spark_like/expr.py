@@ -91,8 +91,10 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         self._backend_version = backend_version
         self._version = version
         self._implementation = implementation
-        self._window_function: WindowFunction | None = None
         self._metadata: ExprMetadata | None = None
+
+        # This can only be set by `_with_window_function`.
+        self._window_function: WindowFunction | None = None
 
     def __call__(self, df: SparkLikeLazyFrame) -> Sequence[Column]:
         return self._call(df)
