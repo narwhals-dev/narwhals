@@ -4,7 +4,7 @@ You can use Narwhals as a lightweight tool to generate SQL queries.
 
 For example:
 
-```python exec="1" source="above" session="conversion" result="python"
+```python exec="1" source="above" session="sql-generation" result="python"
 import narwhals as nw
 from narwhals.typing import IntoFrameT
 
