@@ -9,7 +9,6 @@ from typing import Iterable
 from typing import Literal
 from typing import Mapping
 from typing import Sequence
-from typing import TypeVar
 from typing import cast
 
 from narwhals._expression_parsing import ExprKind
@@ -54,6 +53,7 @@ if TYPE_CHECKING:
     from narwhals.schema import Schema
     from narwhals.series import Series
     from narwhals.typing import ConcatMethod
+    from narwhals.typing import FrameT
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoSeriesT
     from narwhals.typing import NativeFrame
@@ -64,7 +64,6 @@ if TYPE_CHECKING:
     from narwhals.typing import _2DArray
 
     _IntoSchema: TypeAlias = "Mapping[str, DType] | Schema | Sequence[str] | None"
-    FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
 
 
 def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT:
@@ -264,7 +263,7 @@ def from_dict(
     """Instantiate DataFrame from dictionary.
 
     Indexes (if present, for pandas-like backends) are aligned following
-    the [left-hand-rule](../pandas_like_concepts/pandas_index.md/).
+    the [left-hand-rule](../concepts/pandas_index.md/).
 
     Notes:
         For pandas-like dataframes, conversion to schema is applied after dataframe

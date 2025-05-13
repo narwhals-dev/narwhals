@@ -95,6 +95,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import MultiColSelector
     from narwhals.dataframe import MultiIndexSelector
     from narwhals.dtypes import DType
+    from narwhals.stable.v1.typing import FrameT
     from narwhals.typing import ConcatMethod
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoFrame
@@ -106,7 +107,6 @@ if TYPE_CHECKING:
     from narwhals.typing import _1DArray
     from narwhals.typing import _2DArray
 
-    FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
     DataFrameT = TypeVar("DataFrameT", bound="DataFrame[Any]")
     LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[Any]")
     SeriesT = TypeVar("SeriesT", bound="Series[Any]")
@@ -1593,7 +1593,7 @@ def from_dict(
     """Instantiate DataFrame from dictionary.
 
     Indexes (if present, for pandas-like backends) are aligned following
-    the [left-hand-rule](../pandas_like_concepts/pandas_index.md/).
+    the [left-hand-rule](../concepts/pandas_index.md/).
 
     Notes:
         For pandas-like dataframes, conversion to schema is applied after dataframe

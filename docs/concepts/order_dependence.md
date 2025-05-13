@@ -2,7 +2,7 @@
 
 Narwhals has four main public classes:
 
-- `Expr`: what gets created when you write `nw.col('a')`.
+- `Expr`: this is what gets created when you write `nw.col('a')`.
 - `DataFrame`: in-memory, eager dataframe with a well-defined row order which
   is preserved across `with_columns` and `select` operations.
 - `LazyFrame`: a dataframe which makes no assumptions about row-ordering. This
