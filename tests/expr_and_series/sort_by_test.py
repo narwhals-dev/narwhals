@@ -7,6 +7,7 @@ from typing import Sequence
 import pytest
 
 import narwhals as nw
+from narwhals.exceptions import ColumnNotFoundError
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
@@ -92,3 +93,13 @@ def test_sort_by_self(
         "a", nw.col("b").sort_by("b", descending=descending, nulls_last=nulls_last)
     )
     assert_equal_data(result, expected)
+
+
+def test_sort_by_invalid(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    with pytest.raises((ColumnNotFoundError, KeyError), match="NON EXIST"):
+        df.select(nw.col("b", "group_2").sort_by("group_1", "NON EXIST"))
+    with pytest.raises((ColumnNotFoundError, KeyError), match="NON EXIST"):
+        df.with_columns(
+            nw.col("b", "group_2").sort_by("group_1", "NON EXIST").name.suffix("_suffix")
+        )
