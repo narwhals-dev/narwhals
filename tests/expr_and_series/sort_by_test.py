@@ -8,6 +8,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import ColumnNotFoundError
+from tests.utils import POLARS_VERSION
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
@@ -65,7 +66,17 @@ def test_sort_by(
     descending: bool | Sequence[bool],
     nulls_last: bool,
     expected: dict[str, Sequence[PythonLiteral]],
+    request: pytest.FixtureRequest,
 ) -> None:
+    request.applymarker(
+        pytest.mark.xfail(
+            "polars" in str(constructor_eager)
+            and POLARS_VERSION < (0, 20, 31)
+            and nulls_last,
+            reason="Missing `nulls_last` support",
+            raises=NotImplementedError,
+        )
+    )
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(
         nw.col(cols).sort_by(by, descending=descending, nulls_last=nulls_last)
@@ -87,7 +98,17 @@ def test_sort_by_self(
     descending: bool | Sequence[bool],
     nulls_last: bool,
     expected: dict[str, Sequence[PythonLiteral]],
+    request: pytest.FixtureRequest,
 ) -> None:
+    request.applymarker(
+        pytest.mark.xfail(
+            "polars" in str(constructor_eager)
+            and POLARS_VERSION < (0, 20, 31)
+            and nulls_last,
+            reason="Missing `nulls_last` support",
+            raises=NotImplementedError,
+        )
+    )
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(
         "a", nw.col("b").sort_by("b", descending=descending, nulls_last=nulls_last)
