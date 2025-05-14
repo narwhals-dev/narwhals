@@ -648,6 +648,12 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
 
         return self._with_callable(_rank)
 
+    def log(self, base: float) -> Self:
+        def _log(_input: ir.Column) -> ir.Column:
+            return _input.log(base)
+
+        return self._with_callable(_log)
+
     @property
     def str(self) -> IbisExprStringNamespace:
         return IbisExprStringNamespace(self)

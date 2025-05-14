@@ -753,6 +753,14 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
         return self._with_callable(_rank)
 
+    def log(self, base: float) -> Self:
+        def _log(_input: duckdb.Expression) -> duckdb.Expression:
+            return FunctionExpression("log", _input) / FunctionExpression(
+                "log", lit(base)
+            )
+
+        return self._with_callable(_log)
+
     @property
     def str(self) -> DuckDBExprStringNamespace:
         return DuckDBExprStringNamespace(self)
