@@ -46,3 +46,7 @@ class And(Operator): ...
 
 
 class Or(Operator): ...
+
+
+class Not(Operator):
+    """`__invert__`."""

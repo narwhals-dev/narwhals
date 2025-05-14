@@ -6,6 +6,10 @@ from narwhals._plan.common import Function
 class StringFunction(Function): ...
 
 
+class ConcatHorizontal(StringFunction):
+    """`concat_str`."""
+
+
 class Contains(StringFunction): ...
 
 
