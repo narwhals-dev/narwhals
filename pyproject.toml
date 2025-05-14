@@ -290,6 +290,7 @@ strict = true
 [[tool.mypy.overrides]]
 module = [
   "cudf.*",
+  "cupy.*",
   "dask.*",
   "dask_expr.*",
   "duckdb.*",

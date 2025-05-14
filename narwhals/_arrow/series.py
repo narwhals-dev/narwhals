@@ -1149,7 +1149,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             raise InvalidOperationError(msg) from exc
 
     def log(self, base: float) -> Self:
-        return self._with_native(pc.logb(self.native, base))
+        return self._with_native(pc.logb(self.native, base))  # type: ignore[arg-type]
 
     @property
     def dt(self) -> ArrowSeriesDateTimeNamespace:
