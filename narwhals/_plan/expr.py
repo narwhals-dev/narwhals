@@ -2,53 +2,89 @@ from __future__ import annotations
 
 # NOTE: Needed to avoid naming collisions
 # - Literal
-import typing as t  # noqa: F401
+import typing as t
 
 from narwhals._plan.common import ExprIR
 
+if t.TYPE_CHECKING:
+    from typing_extensions import TypeAlias
 
-class Alias(ExprIR): ...
+    from narwhals._plan.operators import Operator
+    from narwhals.dtypes import DType
+    from narwhals.typing import PythonLiteral
+
+    SortOptions: TypeAlias = t.Any
+    SortMultipleOptions: TypeAlias = t.Any
 
 
-class Column(ExprIR): ...
+class Alias(ExprIR):
+    expr: ExprIR
+    name: str
 
 
-class Literal(ExprIR): ...
+class Column(ExprIR):
+    name: str
+
+
+class Columns(ExprIR):
+    names: t.Sequence[str]
+
+
+class Literal(ExprIR):
+    value: PythonLiteral
 
 
 class BinaryExpr(ExprIR):
-    """Seems like the application of two exprs via an `Operator`.
+    """Application of two exprs via an `Operator`.
 
     This ✅
-    - https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-python/src/lazyframe/visitor/expr_nodes.rs#L271-L279
     - https://github.com/pola-rs/polars/blob/6df23a09a81c640c21788607611e09d9f43b1abc/crates/polars-plan/src/plans/aexpr/mod.rs#L152-L155
-    - https://github.com/pola-rs/polars/blob/da27decd9a1adabe0498b786585287eb730d1d91/crates/polars-expr/src/expressions/binary.rs
 
     Not this ❌
     - https://github.com/pola-rs/polars/blob/da27decd9a1adabe0498b786585287eb730d1d91/crates/polars-plan/src/dsl/function_expr/mod.rs#L127
     """
 
+    left: ExprIR
+    op: Operator
+    right: ExprIR
 
-class Cast(ExprIR): ...
+
+class Cast(ExprIR):
+    expr: ExprIR
+    dtype: DType
 
 
-class Sort(ExprIR): ...
+class Sort(ExprIR):
+    expr: ExprIR
+    options: SortOptions
 
 
 class SortBy(ExprIR):
     """https://github.com/narwhals-dev/narwhals/issues/2534."""
 
+    expr: ExprIR
+    by: t.Sequence[ExprIR]
+    options: SortMultipleOptions
 
-class Filter(ExprIR): ...
+
+class Filter(ExprIR):
+    expr: ExprIR
+    by: ExprIR
 
 
 class Len(ExprIR): ...
 
 
-class Exclude(ExprIR): ...
+class Exclude(ExprIR):
+    names: t.Sequence[str]
 
 
-class Nth(ExprIR): ...
+class Nth(ExprIR):
+    index: int
+
+
+class IndexColumns(ExprIR):
+    indices: t.Sequence[int]
 
 
 class All(ExprIR): ...
