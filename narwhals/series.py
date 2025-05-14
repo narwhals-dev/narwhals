@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -2600,6 +2601,32 @@ class Series(Generic[IntoSeriesT]):
             ),
             level=self._level,
         )
+
+    def log(self, base: float = math.e) -> Self:
+        r"""Compute the logarithm to a given base.
+
+        Arguments:
+            base: Given base, defaults to `e`
+
+        Returns:
+            A new expression log values data.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> s_native = pd.Series([1, 2, 4], name="a")
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.log(base=2)
+            ┌───────────────────────┐
+            |    Narwhals Series    |
+            |-----------------------|
+            |0    0.0               |
+            |1    1.0               |
+            |2    2.0               |
+            |Name: a, dtype: float64|
+            └───────────────────────┘
+        """
+        return self._with_compliant(self._compliant_series.log(base=base))
 
     @property
     def str(self) -> SeriesStringNamespace[Self]:

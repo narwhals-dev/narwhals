@@ -1015,6 +1015,38 @@ class PandasLikeSeries(EagerSeries[Any]):
         data["count"] = result.reset_index(drop=True)
         return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
 
+    def log(self, base: float) -> Self:
+        native = self.native
+        implementation = self._implementation
+
+        dtype_backend = get_dtype_backend(native.dtype, implementation=implementation)
+
+        if implementation.is_cudf():
+            import cupy as cp
+
+            return self._with_native(cp.log(native) / cp.log(base))
+
+        if dtype_backend == "pyarrow":
+            import pyarrow.compute as pc
+
+            ca = native.array._pa_array
+            result_arr = pc.logb(ca, base)
+        else:
+            result_arr = np.log(native) / np.log(base)
+
+        out_dtype = narwhals_to_native_dtype(
+            dtype=self._version.dtypes.Float64(),
+            dtype_backend=dtype_backend,
+            implementation=implementation,
+            backend_version=self._backend_version,
+            version=self._version,
+        )
+
+        result_native = native.__class__(
+            result_arr, dtype=out_dtype, index=native.index, name=native.name
+        )
+        return self._with_native(result_native)
+
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:
         return PandasLikeSeriesStringNamespace(self)

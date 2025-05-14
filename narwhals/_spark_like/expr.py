@@ -811,6 +811,12 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_callable(_rank)
 
+    def log(self, base: float) -> Self:
+        def _log(_input: Column) -> Column:
+            return self._F.log(base, _input)
+
+        return self._with_callable(_log)
+
     @property
     def str(self) -> SparkLikeExprStringNamespace:
         return SparkLikeExprStringNamespace(self)

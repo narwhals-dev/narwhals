@@ -45,6 +45,7 @@
         - is_unique
         - item
         - len
+        - log
         - max
         - mean
         - median
