@@ -33,6 +33,7 @@ Related:
 - https://github.com/narwhals-dev/narwhals/issues/2225
 - https://github.com/narwhals-dev/narwhals/issues/1848
 - https://github.com/narwhals-dev/narwhals/issues/2534#issuecomment-2875676729
+- https://github.com/narwhals-dev/narwhals/issues/2291
 """
 
 from __future__ import annotations
