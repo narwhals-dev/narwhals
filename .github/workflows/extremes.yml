@@ -142,25 +142,10 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         run: uv pip install -e . --group tests --system
-      - name: install-kaggle
-        run: uv pip install kaggle --system
-      - name: Check Polars Kaggle kernel status
-        id: kaggle_status
-        run: |
-          output=$(kaggle kernels status marcogorelli/variable-brink-glacier)
-          echo "Kaggle kernel status: $output"
-          if echo "$output" | grep -q "running"; then
-            echo "::set-output name=skip_install::true"
-            echo "skip_install=true" >> $GITHUB_OUTPUT
-          else
-            echo "skip_install=false" >> $GITHUB_OUTPUT
-          fi
-      - name: Install polars nightly
-        if: steps.kaggle_status.outputs.skip_install == 'false'
+      - name: install polars pre-release
         run: |
           uv pip uninstall polars --system
-          kaggle kernels output "marcogorelli/variable-brink-glacier"
-          python -m pip install *.whl
+          uv pip install -U --pre polars --system
       - name: install-pandas-nightly
         run: |
           uv pip uninstall pandas --system
