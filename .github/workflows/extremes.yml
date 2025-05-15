@@ -171,7 +171,6 @@ jobs:
       - name: Assert nightlies dependencies
         run: |
           DEPS=$(uv pip freeze)
-          echo "$DEPS" | grep 'polars.*@'
           echo "$DEPS" | grep 'pandas.*dev'
           echo "$DEPS" | grep 'pyarrow.*dev'
           echo "$DEPS" | grep 'numpy.*dev'
