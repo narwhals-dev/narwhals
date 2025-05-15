@@ -649,14 +649,13 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         return self._with_callable(_rank)
 
     def log(self, base: float) -> Self:
-        def _log(_input: ir.NumericColumn) -> ir.Column:
-            lit_base = cast("ir.NumericValue", lit(base))
-            result = ibis.cases(
-                (_input < ibis.literal(0), ibis.literal(float("nan"))),
-                (_input == ibis.literal(0), ibis.literal(float("-inf"))),
-                else_=_input.log(lit_base),
+        def _log(_input: ir.NumericColumn) -> ir.Value:
+            otherwise = _input.log(cast("ir.NumericValue", lit(base)))
+            return ibis.cases(
+                (_input < lit(0), lit(float("nan"))),
+                (_input == lit(0), lit(float("-inf"))),
+                else_=otherwise,
             )
-            return cast("ir.Column", result)
 
         return self._with_callable(_log)
 
