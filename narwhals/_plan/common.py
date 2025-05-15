@@ -29,7 +29,8 @@ class Immutable:
 
     def __hash__(self) -> int:
         empty = object()
-        return hash(tuple(getattr(self, name, empty) for name in self.__slots__))
+        slots: tuple[str, ...] = self.__slots__
+        return hash(tuple(getattr(self, name, empty) for name in slots))
 
     def __eq__(self, other: object) -> bool:
         if self is other:
@@ -37,9 +38,9 @@ class Immutable:
         elif type(self) is not type(other):
             return False
         empty = object()
+        slots: tuple[str, ...] = self.__slots__
         return all(
-            getattr(self, name, empty) == getattr(other, name, empty)
-            for name in self.__slots__
+            getattr(self, name, empty) == getattr(other, name, empty) for name in slots
         )
 
 

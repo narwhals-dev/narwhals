@@ -9,6 +9,8 @@ if TYPE_CHECKING:
 
 
 class Agg(ExprIR):
+    __slots__ = ("expr",)
+
     expr: ExprIR
 
 
@@ -39,11 +41,15 @@ class NUnique(Agg): ...
 
 
 class Quantile(Agg):
+    __slots__ = ("expr", "interpolation", "quantile")
+
     quantile: ExprIR
     interpolation: RollingInterpolationMethod
 
 
 class Std(Agg):
+    __slots__ = ("ddof", "expr")
+
     ddof: int
 
 
@@ -51,6 +57,8 @@ class Sum(Agg): ...
 
 
 class Var(Agg):
+    __slots__ = ("ddof", "expr")
+
     ddof: int
 
 

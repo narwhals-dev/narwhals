@@ -18,19 +18,27 @@ if t.TYPE_CHECKING:
 
 
 class Alias(ExprIR):
+    __slots__ = ("expr", "name")
+
     expr: ExprIR
     name: str
 
 
 class Column(ExprIR):
+    __slots__ = ("name",)
+
     name: str
 
 
 class Columns(ExprIR):
+    __slots__ = ("names",)
+
     names: t.Sequence[str]
 
 
 class Literal(ExprIR):
+    __slots__ = ("value",)
+
     value: PythonLiteral
 
 
@@ -44,23 +52,31 @@ class BinaryExpr(ExprIR):
     - https://github.com/pola-rs/polars/blob/da27decd9a1adabe0498b786585287eb730d1d91/crates/polars-plan/src/dsl/function_expr/mod.rs#L127
     """
 
+    __slots__ = ("left", "op", "right")
+
     left: ExprIR
     op: Operator
     right: ExprIR
 
 
 class Cast(ExprIR):
+    __slots__ = ("dtype", "expr")
+
     expr: ExprIR
     dtype: DType
 
 
 class Sort(ExprIR):
+    __slots__ = ("expr", "options")
+
     expr: ExprIR
     options: SortOptions
 
 
 class SortBy(ExprIR):
     """https://github.com/narwhals-dev/narwhals/issues/2534."""
+
+    __slots__ = ("by", "expr", "options")
 
     expr: ExprIR
     by: t.Sequence[ExprIR]
@@ -73,18 +89,24 @@ class FunctionExpr(ExprIR):
     https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/function_expr/mod.rs#L123
     """
 
+    __slots__ = ("function", "input", "options")
+
     input: t.Sequence[ExprIR]
     function: Function
     options: FunctionOptions
 
 
 class Filter(ExprIR):
+    __slots__ = ("by", "expr")
+
     expr: ExprIR
     by: ExprIR
 
 
 class WindowExpr(ExprIR):
     """https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/expr.rs#L129-L136."""
+
+    __slots__ = ("expr", "options", "order_by", "partition_by")
 
     expr: ExprIR
     """Renamed from `function`."""
@@ -106,10 +128,14 @@ class Len(ExprIR): ...
 
 
 class Exclude(ExprIR):
+    __slots__ = ("names",)
+
     names: t.Sequence[str]
 
 
 class Nth(ExprIR):
+    __slots__ = ("index",)
+
     index: int
 
 
@@ -120,6 +146,8 @@ class IndexColumns(ExprIR):
 
     https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/expr.rs#L80
     """
+
+    __slots__ = ("indices",)
 
     indices: t.Sequence[int]
 

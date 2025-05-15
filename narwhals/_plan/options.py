@@ -48,6 +48,8 @@ class FunctionFlags(enum.Flag):
 
 
 class FunctionOptions(Immutable):
+    __slots__ = ("flags",)
+
     flags: FunctionFlags
 
     def is_elementwise(self) -> bool:
@@ -99,12 +101,16 @@ class FunctionOptions(Immutable):
         return FunctionOptions.groupwise().with_flags(FunctionFlags.RETURNS_SCALAR)
 
 
-# TODO @dangotbanned: spec these out
+# TODO @dangotbanned: Decide on constructors
 class SortOptions(Immutable):
+    __slots__ = ("descending", "nulls_last")
+
     descending: bool
     nulls_last: bool
 
 
 class SortMultipleOptions(Immutable):
+    __slots__ = ("descending", "nulls_last")
+
     descending: Sequence[bool]
     nulls_last: Sequence[bool]
