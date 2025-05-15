@@ -6,11 +6,8 @@ if TYPE_CHECKING:
     from typing import Any
 
     from typing_extensions import Never
-    from typing_extensions import TypeAlias
 
     from narwhals._plan.options import FunctionOptions
-
-    WindowType: TypeAlias = Any
 
 
 class Immutable:
