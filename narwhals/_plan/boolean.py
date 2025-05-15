@@ -1,3 +1,5 @@
+"""TODO: Attributes."""
+
 from __future__ import annotations
 
 # NOTE: Needed to avoid naming collisions

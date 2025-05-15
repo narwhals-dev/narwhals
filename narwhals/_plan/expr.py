@@ -84,7 +84,7 @@ class SortBy(ExprIR):
 
 
 class FunctionExpr(ExprIR):
-    """Polars uses seemingly for namespacing, but maybe I'll use for traversal?
+    """Polars uses *seemingly* for namespacing, but maybe I'll use for traversal?
 
     https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/function_expr/mod.rs#L123
     """
