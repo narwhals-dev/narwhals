@@ -262,6 +262,8 @@ omit = [
   'narwhals/_ibis/typing.py',
   # Remove after finishing eager sub-protocols
   'narwhals/_compliant/namespace.py',
+  # Doesn't have a full impl yet
+  'narwhals/_plan/*'
 ]
 exclude_also = [
   "if sys.version_info() <",
