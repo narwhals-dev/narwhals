@@ -6,8 +6,12 @@
 from __future__ import annotations
 
 import enum
+from typing import TYPE_CHECKING
 
 from narwhals._plan.common import Immutable
+
+if TYPE_CHECKING:
+    from typing import Sequence
 
 
 class FunctionFlags(enum.Flag):
@@ -93,3 +97,14 @@ class FunctionOptions(Immutable):
     @staticmethod
     def aggregation() -> FunctionOptions:
         return FunctionOptions.groupwise().with_flags(FunctionFlags.RETURNS_SCALAR)
+
+
+# TODO @dangotbanned: spec these out
+class SortOptions(Immutable):
+    descending: bool
+    nulls_last: bool
+
+
+class SortMultipleOptions(Immutable):
+    descending: Sequence[bool]
+    nulls_last: Sequence[bool]

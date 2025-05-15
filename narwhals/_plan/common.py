@@ -10,8 +10,6 @@ if TYPE_CHECKING:
 
     from narwhals._plan.options import FunctionOptions
 
-    SortOptions: TypeAlias = Any
-    SortMultipleOptions: TypeAlias = Any
     WindowType: TypeAlias = Any
 
 

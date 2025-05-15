@@ -8,10 +8,10 @@ from narwhals._plan.common import ExprIR
 
 if t.TYPE_CHECKING:
     from narwhals._plan.common import Function
-    from narwhals._plan.common import SortMultipleOptions
-    from narwhals._plan.common import SortOptions
     from narwhals._plan.operators import Operator
     from narwhals._plan.options import FunctionOptions
+    from narwhals._plan.options import SortMultipleOptions
+    from narwhals._plan.options import SortOptions
     from narwhals._plan.window import Window
     from narwhals.dtypes import DType
     from narwhals.typing import PythonLiteral
