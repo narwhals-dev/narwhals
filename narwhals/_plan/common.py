@@ -20,6 +20,28 @@ class Immutable:
         msg = f"{type(self).__name__!r} is immutable, {name!r} cannot be set."
         raise AttributeError(msg)
 
+    def __init_subclass__(cls, *args: Any, **kwds: Any) -> None:
+        super().__init_subclass__(*args, **kwds)
+        if cls.__slots__:
+            ...
+        else:
+            cls.__slots__ = ()
+
+    def __hash__(self) -> int:
+        empty = object()
+        return hash(tuple(getattr(self, name, empty) for name in self.__slots__))
+
+    def __eq__(self, other: object) -> bool:
+        if self is other:
+            return True
+        elif type(self) is not type(other):
+            return False
+        empty = object()
+        return all(
+            getattr(self, name, empty) == getattr(other, name, empty)
+            for name in self.__slots__
+        )
+
 
 class ExprIR(Immutable): ...
 
