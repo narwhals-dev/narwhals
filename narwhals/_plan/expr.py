@@ -7,14 +7,14 @@ import typing as t
 from narwhals._plan.common import ExprIR
 
 if t.TYPE_CHECKING:
-    from typing_extensions import TypeAlias
-
+    from narwhals._plan.common import Function
+    from narwhals._plan.common import SortMultipleOptions
+    from narwhals._plan.common import SortOptions
     from narwhals._plan.operators import Operator
+    from narwhals._plan.options import FunctionOptions
+    from narwhals._plan.window import Window
     from narwhals.dtypes import DType
     from narwhals.typing import PythonLiteral
-
-    SortOptions: TypeAlias = t.Any
-    SortMultipleOptions: TypeAlias = t.Any
 
 
 class Alias(ExprIR):
@@ -67,9 +67,39 @@ class SortBy(ExprIR):
     options: SortMultipleOptions
 
 
+class FunctionExpr(ExprIR):
+    """Polars uses seemingly for namespacing, but maybe I'll use for traversal?
+
+    https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/function_expr/mod.rs#L123
+    """
+
+    input: t.Sequence[ExprIR]
+    function: Function
+    options: FunctionOptions
+
+
 class Filter(ExprIR):
     expr: ExprIR
     by: ExprIR
+
+
+class WindowExpr(ExprIR):
+    """https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/expr.rs#L129-L136."""
+
+    expr: ExprIR
+    """Renamed from `function`."""
+
+    partition_by: t.Sequence[ExprIR]
+    order_by: tuple[ExprIR, SortOptions] | None
+    options: Window
+    """Little confused on the nesting.
+
+    - We don't allow choosing `WindowMapping` kinds
+    - Haven't ventured into rolling much yet
+
+    Expr::Window { options: WindowType::Over(WindowMapping) }
+    Expr::Window { options: WindowType::Rolling(RollingGroupOptions) }
+    """
 
 
 class Len(ExprIR): ...
@@ -84,6 +114,13 @@ class Nth(ExprIR):
 
 
 class IndexColumns(ExprIR):
+    """Renamed from `IndexColumn`.
+
+    `Nth` provides the single variant.
+
+    https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/expr.rs#L80
+    """
+
     indices: t.Sequence[int]
 
 

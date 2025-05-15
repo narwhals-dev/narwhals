@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from narwhals._plan.common import FunctionExpr
+from narwhals._plan.expr import FunctionExpr
 
 
 class Abs(FunctionExpr): ...
