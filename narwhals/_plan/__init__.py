@@ -5,7 +5,7 @@ Notes:
   - But the node does not need to be unique to the method
 - A chain of `Expr` methods should form a plan of operations
 - We must be able to enforce rules on what plans are permitted:
-  - Must be flexible to both eager/lazy and invdividual backends
+  - Must be flexible to both eager/lazy and individual backends
   - Must be flexible to a given context (select, with_columns, filter, group_by)
 - Nodes & plans are:
   - Immutable, but
@@ -29,7 +29,7 @@ Related:
 - https://github.com/narwhals-dev/narwhals/pull/2483#issuecomment-2867331343
 - https://github.com/narwhals-dev/narwhals/pull/2483#issuecomment-2867446959
 - https://github.com/narwhals-dev/narwhals/pull/2483#issuecomment-2869070157
-- https://github.com/narwhals-dev/narwhals/pull/2538/commits/a7eeb0d23e67cb70e7cfa73cec2c7b69a15c8bef#r2083562677
+- (https://github.com/narwhals-dev/narwhals/pull/2538/commits/a7eeb0d23e67cb70e7cfa73cec2c7b69a15c8bef#r2083562677)
 - https://github.com/narwhals-dev/narwhals/issues/2225
 - https://github.com/narwhals-dev/narwhals/issues/1848
 - https://github.com/narwhals-dev/narwhals/issues/2534#issuecomment-2875676729
