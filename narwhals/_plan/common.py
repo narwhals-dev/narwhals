@@ -6,6 +6,7 @@ if TYPE_CHECKING:
     from typing import Any
 
     from typing_extensions import Never
+    from typing_extensions import Self
 
     from narwhals._plan.options import FunctionOptions
 
@@ -41,7 +42,36 @@ class Immutable:
         )
 
 
-class ExprIR(Immutable): ...
+class ExprIR(Immutable):
+    """Anything that can be a node on a graph of expressions."""
+
+    def to_narwhals(self) -> DummyExpr:
+        return DummyExpr._from_ir(self)
+
+    def to_compliant(self) -> DummyCompliantExpr:
+        return DummyCompliantExpr._from_ir(self)
+
+
+# NOTE: Overly simplified placeholders for mocking typing
+# Entirely ignoring namespace + function binding
+class DummyExpr:
+    _ir: ExprIR
+
+    @classmethod
+    def _from_ir(cls, ir: ExprIR, /) -> Self:
+        obj = cls.__new__(cls)
+        obj._ir = ir
+        return obj
+
+
+class DummyCompliantExpr:
+    _ir: ExprIR
+
+    @classmethod
+    def _from_ir(cls, ir: ExprIR, /) -> Self:
+        obj = cls.__new__(cls)
+        obj._ir = ir
+        return obj
 
 
 class Function(ExprIR):
