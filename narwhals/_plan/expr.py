@@ -94,6 +94,11 @@ class FunctionExpr(ExprIR):
     input: t.Sequence[ExprIR]
     function: Function
     options: FunctionOptions
+    """Assuming this is **either**:
+
+    1. `function.function_options`
+    2. The union of (1) and any `FunctionOptions` in `inputs`
+    """
 
 
 class Filter(ExprIR):
