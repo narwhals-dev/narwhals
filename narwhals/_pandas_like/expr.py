@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.typing import FillNullStrategy
     from narwhals.typing import NonNestedLiteral
-    from narwhals.typing import RankMethod
+    from narwhals.typing import RankMethod, ScalarKwargs
     from narwhals.utils import Implementation
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -85,7 +85,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
-        scalar_kwargs: dict[str, Any] | None = None,
+        scalar_kwargs: ScalarKwargs | None = None,
     ) -> None:
         self._call = call
         self._depth = depth

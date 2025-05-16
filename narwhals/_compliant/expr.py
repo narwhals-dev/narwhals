@@ -62,7 +62,7 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprKind
     from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
-    from narwhals.typing import FillNullStrategy
+    from narwhals.typing import FillNullStrategy, ScalarKwargs
     from narwhals.typing import NonNestedLiteral
     from narwhals.typing import NumericLiteral
     from narwhals.typing import RankMethod
@@ -337,7 +337,7 @@ class EagerExpr(
     Protocol38[EagerDataFrameT, EagerSeriesT],
 ):
     _call: EvalSeries[EagerDataFrameT, EagerSeriesT]
-    _scalar_kwargs: dict[str, Any]
+    _scalar_kwargs: ScalarKwargs
 
     def __init__(
         self,
@@ -350,7 +350,7 @@ class EagerExpr(
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
-        scalar_kwargs: dict[str, Any] | None = None,
+        scalar_kwargs: ScalarKwargs | None = None,
     ) -> None: ...
 
     def __call__(self, df: EagerDataFrameT) -> Sequence[EagerSeriesT]:
@@ -371,7 +371,7 @@ class EagerExpr(
         evaluate_output_names: EvalNames[EagerDataFrameT],
         alias_output_names: AliasNames | None,
         context: _FullContext,
-        scalar_kwargs: dict[str, Any] | None = None,
+        scalar_kwargs: ScalarKwargs | None = None,
     ) -> Self:
         return cls(
             func,
@@ -403,7 +403,7 @@ class EagerExpr(
         method_name: str,
         *,
         returns_scalar: bool = False,
-        scalar_kwargs: dict[str, Any] | None = None,
+        scalar_kwargs: ScalarKwargs | None = None,
         **expressifiable_args: Any,
     ) -> Self:
         """Reuse Series implementation for expression.
@@ -454,7 +454,7 @@ class EagerExpr(
         *,
         method_name: str,
         returns_scalar: bool,
-        scalar_kwargs: dict[str, Any],
+        scalar_kwargs: ScalarKwargs,
         expressifiable_args: dict[str, Any],
     ) -> Sequence[EagerSeriesT]:
         kwargs = {
@@ -487,7 +487,7 @@ class EagerExpr(
         self,
         series_namespace: Literal["cat", "dt", "list", "name", "str", "struct"],
         method_name: str,
-        **kwargs: Any,
+        **scalar_kwargs: ScalarKwargs,
     ) -> Self:
         """Reuse Series implementation for expression.
 
@@ -501,14 +501,14 @@ class EagerExpr(
         """
         return self._from_callable(
             lambda df: [
-                getattr(getattr(series, series_namespace), method_name)(**kwargs)
+                getattr(getattr(series, series_namespace), method_name)(**scalar_kwargs)
                 for series in self(df)
             ],
             depth=self._depth + 1,
             function_name=f"{self._function_name}->{series_namespace}.{method_name}",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            scalar_kwargs={**self._scalar_kwargs, **kwargs},
+            scalar_kwargs={**self._scalar_kwargs, **scalar_kwargs},
             context=self,
         )
 

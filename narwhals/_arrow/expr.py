@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import EvalNames
     from narwhals._compliant.typing import EvalSeries
     from narwhals._expression_parsing import ExprMetadata
-    from narwhals.typing import RankMethod
+    from narwhals.typing import RankMethod, ScalarKwargs
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
 
@@ -41,7 +41,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         alias_output_names: AliasNames | None,
         backend_version: tuple[int, ...],
         version: Version,
-        scalar_kwargs: dict[str, Any] | None = None,
+        scalar_kwargs: ScalarKwargs | None = None,
         implementation: Implementation | None = None,
     ) -> None:
         self._call = call

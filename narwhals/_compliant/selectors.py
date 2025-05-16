@@ -50,7 +50,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import EvalNames
     from narwhals._compliant.typing import EvalSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import TimeUnit
+    from narwhals.typing import TimeUnit, ScalarKwargs
     from narwhals.utils import Implementation
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -226,7 +226,7 @@ class CompliantSelector(
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
-    _scalar_kwargs: dict[str, Any]
+    _scalar_kwargs: ScalarKwargs
 
     @classmethod
     def from_callables(
