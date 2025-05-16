@@ -116,13 +116,10 @@ class DaskLazyFrame(
         if backend is None or backend is Implementation.PANDAS:
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
-            implementation = Implementation.PANDAS
-            backend_version = parse_version(pd)
-
             return PandasLikeDataFrame(
                 result,
-                implementation=implementation,
-                backend_version=backend_version,
+                implementation=Implementation.PANDAS,
+                backend_version=parse_version(pd),
                 version=self._version,
                 validate_column_names=True,
             )
