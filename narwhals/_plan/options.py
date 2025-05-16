@@ -1,8 +1,3 @@
-"""`ExprMetadata` but less god object.
-
-- https://github.com/pola-rs/polars/blob/3fd7ecc5f9de95f62b70ea718e7e5dbf951b6d1c/crates/polars-plan/src/plans/options.rs
-"""
-
 from __future__ import annotations
 
 import enum
@@ -19,6 +14,12 @@ class FunctionFlags(enum.Flag):
     """> Raise if use in group by
 
     Not sure where this is disabled.
+    """
+
+    INPUT_WILDCARD_EXPANSION = 1 << 4
+    """Appears on all the horizontal aggs.
+
+    https://github.com/pola-rs/polars/blob/e8ad1059721410e65a3d5c1d84055fb22a4d6d43/crates/polars-plan/src/plans/options.rs#L49-L58
     """
 
     RETURNS_SCALAR = 1 << 5
@@ -48,6 +49,11 @@ class FunctionFlags(enum.Flag):
 
 
 class FunctionOptions(Immutable):
+    """ExprMetadata` but less god object.
+
+    https://github.com/pola-rs/polars/blob/3fd7ecc5f9de95f62b70ea718e7e5dbf951b6d1c/crates/polars-plan/src/plans/options.rs
+    """
+
     __slots__ = ("flags",)
 
     flags: FunctionFlags
