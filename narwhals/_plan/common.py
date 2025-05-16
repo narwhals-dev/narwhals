@@ -41,6 +41,31 @@ class Immutable:
             getattr(self, name, empty) == getattr(other, name, empty) for name in slots
         )
 
+    def __init__(self, **kwds: Any) -> None:
+        # NOTE: DUMMY CONSTRUCTOR - don't use beyond prototyping!
+        # Just need a quick way to demonstrate `ExprIR` and interactions
+        slots: set[str] = set(self.__slots__)
+        if not slots and not kwds:
+            # NOTE: Fastpath for empty slots
+            ...
+        elif slots == set(kwds):
+            # NOTE: Everything is as expected
+            for name, value in kwds.items():
+                object.__setattr__(self, name, value)
+        elif missing := slots.difference(kwds):
+            msg = (
+                f"{type(self).__name__!r} requires attributes {sorted(slots)!r}, \n"
+                f"but missing values for {sorted(missing)!r}"
+            )
+            raise TypeError(msg)
+        else:
+            extra = set(kwds).difference(slots)
+            msg = (
+                f"{type(self).__name__!r} only supports attributes {sorted(slots)!r}, \n"
+                f"but got unknown arguments {sorted(extra)!r}"
+            )
+            raise TypeError(msg)
+
 
 class ExprIR(Immutable):
     """Anything that can be a node on a graph of expressions."""
