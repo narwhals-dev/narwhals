@@ -110,7 +110,9 @@ class SortBy(ExprIR):
 
 
 class FunctionExpr(ExprIR):
-    """Polars uses *seemingly* for namespacing, but maybe I'll use for traversal?
+    """**Representing `Expr::Function`**.
+
+    https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L114-L120
 
     https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/function_expr/mod.rs#L123
     """
@@ -119,6 +121,13 @@ class FunctionExpr(ExprIR):
 
     input: t.Sequence[ExprIR]
     function: Function
+    """Enum type is named `FunctionExpr` in `polars`.
+
+    Mirroring *exactly* doesn't make much sense in OOP.
+
+    https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/function_expr/mod.rs#L123
+    """
+
     options: FunctionOptions
     """Assuming this is **either**:
 
