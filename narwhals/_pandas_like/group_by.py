@@ -33,6 +33,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
         "len": "size",
         "n_unique": "nunique",
         "count": "count",
+        "first": "first",
     }
 
     def __init__(

@@ -4,6 +4,7 @@ import os
 from contextlib import nullcontext
 from typing import Any
 from typing import Mapping
+from typing import Sequence
 
 import pandas as pd
 import pyarrow as pa
@@ -19,6 +20,7 @@ from tests.utils import PYARROW_VERSION
 from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
+from tests.utils import is_pandas_like
 
 data: Mapping[str, Any] = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
 
@@ -594,4 +596,69 @@ def test_renaming_edge_case(constructor: Constructor) -> None:
     data = {"a": [0, 0, 0], "_a_tmp": [1, 2, 3], "b": [4, 5, 6]}
     result = nw.from_native(constructor(data)).group_by(nw.col("a")).agg(nw.all().min())
     expected = {"a": [0], "_a_tmp": [1], "b": [4]}
+    assert_equal_data(result, expected)
+
+
+XFAIL_PANDAS_SKIPNA = pytest.mark.xfail(
+    PANDAS_VERSION >= (1,),
+    reason="Requires `skipna=False`, which was introduced in `2.2.1`.\n"
+    "https://github.com/pandas-dev/pandas/issues/57019\n",
+)
+
+
+@pytest.mark.parametrize(
+    ("keys", "aggs", "expected", "pre_sort", "marks"),
+    [
+        (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 2, 4, 6]}, None, None),
+        (
+            ["a"],
+            ["b"],
+            {"a": [1, 2, 3, 4], "b": [1, 3, 5, 6]},
+            {"descending": True},
+            None,
+        ),
+        (
+            ["a"],
+            ["c"],
+            {"a": [1, 2, 3, 4], "c": [None, "A", None, "B"]},
+            None,
+            [XFAIL_PANDAS_SKIPNA],
+        ),
+        (
+            ["a"],
+            ["c"],
+            {"a": [1, 2, 3, 4], "c": [None, "A", "B", "B"]},
+            {"nulls_last": True},
+            None,
+        ),
+    ],
+)
+def test_group_by_agg_first(
+    constructor_eager: ConstructorEager,
+    keys: Sequence[str],
+    aggs: Sequence[str],
+    expected: Mapping[str, Any],
+    pre_sort: Mapping[str, Any] | None,
+    marks: Sequence[pytest.MarkDecorator] | None,
+    request: pytest.FixtureRequest,
+) -> None:
+    if is_pandas_like(constructor_eager) and marks is not None:
+        for mark in marks:
+            request.applymarker(mark)
+    request.applymarker(
+        pytest.mark.xfail(
+            "pyarrow_table" in str(constructor_eager) and (PYARROW_VERSION < (14, 0)),
+            reason="https://github.com/apache/arrow/issues/36709",
+            raises=NotImplementedError,
+        )
+    )
+    data = {
+        "a": [1, 2, 2, 3, 3, 4],
+        "b": [1, 2, 3, 4, 5, 6],
+        "c": [None, "A", "A", None, "B", "B"],
+    }
+    df = nw.from_native(constructor_eager(data))
+    if pre_sort:
+        df = df.sort(aggs, **pre_sort)
+    result = df.group_by(keys).agg(nw.col(aggs).first()).sort(keys)
     assert_equal_data(result, expected)
