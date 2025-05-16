@@ -34,6 +34,7 @@ Related:
 - https://github.com/narwhals-dev/narwhals/issues/1848
 - https://github.com/narwhals-dev/narwhals/issues/2534#issuecomment-2875676729
 - https://github.com/narwhals-dev/narwhals/issues/2291
+- https://github.com/narwhals-dev/narwhals/issues/2522
 """
 
 from __future__ import annotations

@@ -8,6 +8,7 @@ from narwhals._plan.common import ExprIR
 
 if t.TYPE_CHECKING:
     from narwhals._plan.common import Function
+    from narwhals._plan.functions import MapBatches
     from narwhals._plan.literal import LiteralValue
     from narwhals._plan.operators import Operator
     from narwhals._plan.options import FunctionOptions
@@ -134,6 +135,20 @@ class FunctionExpr(ExprIR):
     1. `function.function_options`
     2. The union of (1) and any `FunctionOptions` in `inputs`
     """
+
+
+class AnonymousFunctionExpr(ExprIR):
+    """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L158-L166."""
+
+    __slots__ = ("function", "input", "options")
+
+    input: t.Sequence[ExprIR]
+    function: MapBatches
+    options: FunctionOptions
+
+    @property
+    def is_scalar(self) -> bool:
+        return self.function.function_options.returns_scalar()
 
 
 class Filter(ExprIR):

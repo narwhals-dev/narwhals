@@ -8,6 +8,8 @@ from narwhals._plan.common import Immutable
 if TYPE_CHECKING:
     from typing import Sequence
 
+    from narwhals.typing import RankMethod
+
 
 class FunctionFlags(enum.Flag):
     ALLOW_GROUP_AWARE = 1 << 0
@@ -120,3 +122,35 @@ class SortMultipleOptions(Immutable):
 
     descending: Sequence[bool]
     nulls_last: Sequence[bool]
+
+
+class RankOptions(Immutable):
+    __slots__ = ("descending", "method")
+
+    method: RankMethod
+    descending: bool
+
+
+class EWMOptions(Immutable):
+    """Deviates from polars, since we aren't pre-computing alpha.
+
+    https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-arrow/src/legacy/kernels/ewm/mod.rs#L14-L20
+    """
+
+    __slots__ = (
+        "adjust",
+        "alpha",
+        "com",
+        "half_life",
+        "ignore_nulls",
+        "min_samples",
+        "span",
+    )
+
+    com: float | None
+    span: float | None
+    half_life: float | None
+    alpha: float | None
+    adjust: bool
+    min_samples: int
+    ignore_nulls: bool
