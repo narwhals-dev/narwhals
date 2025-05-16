@@ -92,3 +92,7 @@ class Function(ExprIR):
         from narwhals._plan.options import FunctionOptions
 
         return FunctionOptions.default()
+
+    @property
+    def is_scalar(self) -> bool:
+        return self.function_options.returns_scalar()
