@@ -88,6 +88,9 @@ def test_lazy_cum_prod_grouped(
     if "cudf" in str(constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
+    if "ibis" in str(constructor):
+        # https://github.com/ibis-project/ibis/issues/10542
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
         constructor(

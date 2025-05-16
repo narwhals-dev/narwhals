@@ -1,15 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
 from typing import Generic
-from typing import TypeVar
 
-if TYPE_CHECKING:
-    from narwhals.series import Series
-
-
-SeriesT = TypeVar("SeriesT", bound="Series[Any]")
+from narwhals.typing import SeriesT
 
 
 class SeriesListNamespace(Generic[SeriesT]):

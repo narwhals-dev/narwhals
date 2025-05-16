@@ -227,10 +227,10 @@ class LazyGroupBy(
             exclude = {*self._keys, *self._output_key_names}
             for native_expr, name, alias in zip(native_exprs, output_names, aliases):
                 if name not in exclude:
-                    yield native_expr.alias(alias)
+                    yield expr._alias_native(native_expr, alias)
         else:
             for native_expr, alias in zip(native_exprs, aliases):
-                yield native_expr.alias(alias)
+                yield expr._alias_native(native_expr, alias)
 
     def _evaluate_exprs(
         self, exprs: Iterable[LazyExprT_contra], /
