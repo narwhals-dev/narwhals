@@ -13,6 +13,10 @@ class Agg(ExprIR):
 
     expr: ExprIR
 
+    @property
+    def is_scalar(self) -> bool:
+        return True
+
 
 class Count(Agg): ...
 
