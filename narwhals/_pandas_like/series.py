@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
     from typing_extensions import TypeIs
 
+    from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.dtypes import DType
@@ -1029,22 +1030,23 @@ class PandasLikeSeries(EagerSeries[Any]):
         if dtype_backend == "pyarrow":
             import pyarrow.compute as pc
 
+            from narwhals._arrow.utils import native_to_narwhals_dtype
+
             ca = native.array._pa_array
-            result_arr = pc.logb(ca, base)
+            result_arr = cast("ChunkedArrayAny", pc.logb(ca, base))
+            nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
+            out_dtype = narwhals_to_native_dtype(
+                nw_dtype,
+                "pyarrow",
+                self._implementation,
+                self._backend_version,
+                self._version,
+            )
+            result_native = native.__class__(
+                result_arr, dtype=out_dtype, index=native.index, name=native.name
+            )
         else:
-            result_arr = np.log(native) / np.log(base)
-
-        out_dtype = narwhals_to_native_dtype(
-            dtype=self._version.dtypes.Float64(),
-            dtype_backend=dtype_backend,
-            implementation=implementation,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-
-        result_native = native.__class__(
-            result_arr, dtype=out_dtype, index=native.index, name=native.name
-        )
+            result_native = np.log(native) / np.log(base)
         return self._with_native(result_native)
 
     @property
