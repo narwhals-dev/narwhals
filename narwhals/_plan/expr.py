@@ -23,6 +23,10 @@ class Alias(ExprIR):
     expr: ExprIR
     name: str
 
+    @property
+    def is_scalar(self) -> bool:
+        return self.expr.is_scalar
+
 
 class Column(ExprIR):
     __slots__ = ("name",)
@@ -41,6 +45,10 @@ class Literal(ExprIR):
 
     value: PythonLiteral
 
+    @property
+    def is_scalar(self) -> bool:
+        return True
+
 
 class BinaryExpr(ExprIR):
     """Application of two exprs via an `Operator`.
@@ -58,6 +66,10 @@ class BinaryExpr(ExprIR):
     op: Operator
     right: ExprIR
 
+    @property
+    def is_scalar(self) -> bool:
+        return self.left.is_scalar and self.right.is_scalar
+
 
 class Cast(ExprIR):
     __slots__ = ("dtype", "expr")
@@ -65,12 +77,20 @@ class Cast(ExprIR):
     expr: ExprIR
     dtype: DType
 
+    @property
+    def is_scalar(self) -> bool:
+        return self.expr.is_scalar
+
 
 class Sort(ExprIR):
     __slots__ = ("expr", "options")
 
     expr: ExprIR
     options: SortOptions
+
+    @property
+    def is_scalar(self) -> bool:
+        return self.expr.is_scalar
 
 
 class SortBy(ExprIR):
@@ -81,6 +101,10 @@ class SortBy(ExprIR):
     expr: ExprIR
     by: t.Sequence[ExprIR]
     options: SortMultipleOptions
+
+    @property
+    def is_scalar(self) -> bool:
+        return self.expr.is_scalar
 
 
 class FunctionExpr(ExprIR):
@@ -107,6 +131,10 @@ class Filter(ExprIR):
     expr: ExprIR
     by: ExprIR
 
+    @property
+    def is_scalar(self) -> bool:
+        return self.expr.is_scalar and self.by.is_scalar
+
 
 class WindowExpr(ExprIR):
     """https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/expr.rs#L129-L136."""
@@ -129,7 +157,10 @@ class WindowExpr(ExprIR):
     """
 
 
-class Len(ExprIR): ...
+class Len(ExprIR):
+    @property
+    def is_scalar(self) -> bool:
+        return True
 
 
 class Exclude(ExprIR):

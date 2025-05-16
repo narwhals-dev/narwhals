@@ -51,6 +51,10 @@ class ExprIR(Immutable):
     def to_compliant(self) -> DummyCompliantExpr:
         return DummyCompliantExpr._from_ir(self)
 
+    @property
+    def is_scalar(self) -> bool:
+        return False
+
 
 # NOTE: Overly simplified placeholders for mocking typing
 # Entirely ignoring namespace + function binding
