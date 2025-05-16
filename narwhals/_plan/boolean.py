@@ -111,3 +111,11 @@ class IsUnique(BooleanFunction):
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.length_preserving()
+
+
+class Not(BooleanFunction):
+    """`__invert__`."""
+
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.elementwise()
