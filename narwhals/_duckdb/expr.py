@@ -74,8 +74,10 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         self._alias_output_names = alias_output_names
         self._backend_version = backend_version
         self._version = version
-        self._window_function: WindowFunction | None = None
         self._metadata: ExprMetadata | None = None
+
+        # This can only be set by `_with_window_function`.
+        self._window_function: WindowFunction | None = None
 
     def __call__(self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
         return self._call(df)
@@ -261,6 +263,10 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         result._window_function = window_function
         return result
 
+    @classmethod
+    def _alias_native(cls, expr: duckdb.Expression, name: str) -> duckdb.Expression:
+        return expr.alias(name)
+
     def __and__(self, other: DuckDBExpr) -> Self:
         return self._with_callable(lambda _input, other: _input & other, other=other)
 
@@ -338,15 +344,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     def __invert__(self) -> Self:
         invert = cast("Callable[..., duckdb.Expression]", operator.invert)
         return self._with_callable(invert)
-
-    def alias(self, name: str) -> Self:
-        def alias_output_names(names: Sequence[str]) -> Sequence[str]:
-            if len(names) != 1:
-                msg = f"Expected function with single output, found output names: {names}"
-                raise ValueError(msg)
-            return [name]
-
-        return self._with_alias_output_names(alias_output_names)
 
     def abs(self) -> Self:
         return self._with_callable(lambda _input: FunctionExpression("abs", _input))
@@ -724,9 +721,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
     @requires.backend_version((1, 3))
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
-        if self._backend_version < (1, 3):
-            msg = "At least version 1.3 of DuckDB is required for `rank`."
-            raise NotImplementedError(msg)
         if method in {"min", "max", "average"}:
             func = FunctionExpression("rank")
         elif method == "dense":

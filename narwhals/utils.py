@@ -342,7 +342,7 @@ class Implementation(NoAutoEnum):
             else cls.from_native_namespace(backend)
         )
 
-    def to_native_namespace(self) -> ModuleType:
+    def to_native_namespace(self) -> ModuleType:  # noqa: C901, PLR0911
         """Return the native namespace module corresponding to Implementation.
 
         Returns:
@@ -386,6 +386,11 @@ class Implementation(NoAutoEnum):
             import sqlframe  # ignore-banned-import
 
             return sqlframe
+
+        if self is Implementation.IBIS:
+            import ibis  # ignore-banned-import
+
+            return ibis
 
         if self is Implementation.PYSPARK_CONNECT:  # pragma: no cover
             import pyspark.sql.connect  # ignore-banned-import
@@ -930,7 +935,7 @@ def maybe_set_index(
         Same type as input.
 
     Raises:
-        ValueError: If one of the following condition happens:
+        ValueError: If one of the following conditions happens
 
             - none of `column_names` and `index` are provided
             - both `column_names` and `index` are provided
@@ -1145,7 +1150,7 @@ def scale_bytes(sz: int, unit: SizeUnit) -> int | float:
         raise ValueError(msg)
 
 
-def is_ordered_categorical(series: Series[Any]) -> bool:
+def is_ordered_categorical(series: Series[Any]) -> bool:  # noqa: PLR0911
     """Return whether indices of categories are semantically meaningful.
 
     This is a convenience function to accessing what would otherwise be

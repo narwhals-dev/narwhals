@@ -287,45 +287,41 @@ print(nw.col("a").mean().over("b"))
 Note how they tell us something about their metadata. This section is all about
 making sense of what that all means, what the rules are, and what it enables.
 
-### Expression kinds
+Here's a brief description of each piece of metadata:
 
-Each Narwhals expression can be of one of the following kinds:
+- `expansion_kind`: How and whether the expression expands to multiple outputs.
+  This can be one of:
 
-- `LITERAL`: expressions which correspond to literal values, such as the `3` in `nw.col('a')+3`.
-- `AGGREGATION`: expressions which reduce a column to a single value (e.g. `nw.col('a').mean()`).
-- `TRANSFORM`: expressions which don't change length (e.g. `nw.col('a').abs()`).
-- `WINDOW`: like `TRANSFORM`, but the last operation is a (row-order-dependent) 
-   window function (`rolling_*`, `cum_*`, `diff`, `shift`, `is_*_distinct`).
-- `FILTRATION`: expressions which change length but don't
-   aggregate (e.g. `nw.col('a').drop_nulls()`).
+    - `ExpansionKind.SINGLE`: Only produces a single output. For example, `nw.col('a')`.
+    - `ExpansionKind.MULTI_NAMED`: Produces multiple outputs whose names can be
+      determined statically, for example `nw.col('a', 'b')`.
+    - `ExpansionKind.MULTI_UNNAMED`: Produces multiple outputs whose names depend
+      on the input dataframe. For example, `nw.nth(0, 1)` or `nw.selectors.numeric()`.
 
-For example:
+- `last_node`: Kind of the last operation in the expression. See
+  `narwhals._expression_parsing.ExprKind` for the various options.
+- `has_windows`: Whether the expression already contains an `over(...)` statement.
+- `n_orderable_ops`: How many order-dependent operations the expression contains.
+  
+    Examples:
 
-  - `nw.col('a')` is not order-dependent, so it's `TRANSFORM`.
-  - `nw.col('a').abs()` is not order-dependent, so it's a `TRANSFORM`.
-  - `nw.col('a').cum_sum()`'s last operation is `cum_sum`, so it's `WINDOW`.
-  - `nw.col('a').cum_sum() + 1`'s last operation is `__add__`, and it preserves
-     the input dataframe's length, so it's a `TRANSFORM`.
+    - `nw.col('a')` contains 0 orderable operations.
+    - `nw.col('a').diff()` contains 1 orderable operation.
+    - `nw.col('a').diff().shift()` contains 2 orderable operation.
 
-How these change depends on the operation.
+- `is_elementwise`: Whether it preserves length and operates on each row independently
+  of the rows around it (e.g. `abs`, `is_null`, `round`, ...).
+- `preserves_length`: Whether the output of the expression is the same length as
+  the dataframe it gets evaluated on.
+- `is_scalar_like`: Whether the output of the expression is always length-1.
+- `is_literal`: Whether the expression doesn't depend on any column but instead
+  only on literal values, like `nw.lit(1)`.
 
 #### Chaining
 
 Say we have `expr.expr_method()`. How does `expr`'s `ExprMetadata` change?
-This depends on `expr_method`.
-
-- Element-wise expressions such `abs`, `alias`, `cast`, `__invert__`, and
-  many more, preserve the input kind (unless `expr` is a `WINDOW`, in
-  which case it becomes a `TRANSFORM`. This is because for an expression
-  to be `WINDOW`, the last expression needs to be the order-dependent one).
-- `rolling_*`, `cum_*`, `diff`, `shift`, `ewm_mean`, and `is_*_distinct`
-  are window functions and result in `WINDOW`.
-- `mean`, `std`, `median`, and other aggregations result in `AGGREGATION`,
-  and can only be applied to `TRANSFORM` and `WINDOW`.
-- `drop_nulls` and `filter` result in `FILTRATION`, and can only be applied
-  to `TRANSFORM` and `WINDOW`.
-- `over` always results in `TRANSFORM`. This is a bit more complicated,
-  so we elaborate on it in the ["You open a window ..."](#you-open-a-window-to-another-window-to-another-window-to-another-window).
+This depends on `expr_method`. Details can be found in `narwhals/_expression_parsing`,
+in the `ExprMetadata.with_*` methods.
 
 #### Binary operations (e.g. `nw.col('a') + nw.col('b')`)
 
@@ -333,16 +329,15 @@ How do expression kinds change under binary operations? For example,
 if we do `expr1 + expr2`, then what can we say about the output kind?
 The rules are:
 
-- If both are `LITERAL`, then the output is `LITERAL`.
-- If one is a `FILTRATION`, then:
+- If one changes the input length (e.g. `Expr.drop_nulls`), then:
 
-    - if the other is `LITERAL` or `AGGREGATION`, then the output is `FILTRATION`.
+    - if the other is scalar-like, then the output also changes length.
     - else, we raise an error.
 
-- If one is `TRANSFORM` or `WINDOW` and the other is not `FILTRATION`,
-  then the output is `TRANSFORM`.
-- If one is `AGGREGATION` and the other is `LITERAL` or `AGGREGATION`,
-  the output is `AGGREGATION`.
+- If one preserves length and the other is scalar-like, then the output
+  preserves length (because of broadcasting).
+- If one is scalar-like but not literal and the other is scalar-like,
+  the output is scalar-like but not literal.
 
 For n-ary operations such as `nw.sum_horizontal`, the above logic is
 extended across inputs. For example, `nw.sum_horizontal(expr1, expr2, expr3)`
@@ -350,24 +345,21 @@ is `LITERAL` if all of `expr1`, `expr2`, and `expr3` are.
 
 ### "You open a window to another window to another window to another window"
 
-When we print out an expression, in addition to the expression kind,
-we also see `window_kind`. There are four window kinds:
-
-- `NONE`: non-order-dependent operations, like `.abs()` or `.mean()`.
-- `CLOSEABLE`: expression where the last operation is order-dependent. For
-  example, `nw.col('a').diff()`.
-- `UNCLOSEABLE`: expression where some operation is order-dependent but
-  the order-dependent operation wasn't the last one. For example,
-  `nw.col('a').diff().abs()`.
-- `CLOSED`: expression contains `over` at some point, and any order-dependent
-  operation was immediately followed by `over(order_by=...)`.
-
 When working with `DataFrame`s, row order is well-defined, as the dataframes
-are assumed to be eager and in-memory. Therefore, it's allowed to work
-with all window kinds.
+are assumed to be eager and in-memory. Therefore, `n_orderable_ops` is
+disregarded.
 
 When working with `LazyFrame`s, on the other hand, row order is undefined.
-Therefore, window kinds must either be `NONE` or `CLOSED`.
+Therefore, when evaluating an expression, `n_orderable_ops` must be exactly
+zero - if it's not, it means that the expression depends on physical row order,
+which is not allowed for `LazyFrame`s. The way that `n_orderable_ops` can change
+is:
+
+- Orderable window functions like `diff` and `rolling_mean` increase `n_orderable_ops`
+  by 1.
+- If an orderable window function is immediately followed by `over(order_by=...)`,
+  then `n_orderable_ops` is decreased by 1. This is the only way that
+  `n_orderable_ops` can decrease.
 
 ### Broadcasting
 
@@ -383,7 +375,7 @@ length-1 Series, and pandas does its own broadcasting of scalars.
 
 Narwhals triggers a broadcast in these situations:
 
-- In `select` when some values are `ExprKind.TRANSFORM` and others aren't, e.g.
+- In `select` when some values preserve length and others don't, e.g.
   `df.select('a', nw.col('b').mean())`.
 - In `with_columns`, all new columns get broadcasted to the length of the dataframe.
 - In n-ary operations between expressions, such as `nw.col('a') + nw.col('a').mean()`.

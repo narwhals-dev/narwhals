@@ -100,7 +100,12 @@ def test_full_join(
     assert_equal_data(result, expected)
 
 
-def test_full_join_duplicate(constructor: Constructor) -> None:
+def test_full_join_duplicate(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    if "ibis" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     df1 = {"foo": [1, 2, 3], "val1": [1, 2, 3]}
     df2 = {"foo": [1, 2, 3], "foo_right": [1, 2, 3]}
     df_left = nw.from_native(constructor(df1)).lazy()
@@ -464,6 +469,12 @@ def test_join_keys_exceptions(constructor: Constructor, how: str) -> None:
     ):
         df.join(df, how=how, on="antananarivo", right_on="antananarivo")  # type: ignore[arg-type]
 
+    with pytest.raises(
+        ValueError,
+        match="`left_on` and `right_on` must have the same length.",
+    ):
+        df.join(df, how=how, left_on=["antananarivo", "bob"], right_on="antananarivo")  # type: ignore[arg-type]
+
 
 @pytest.mark.parametrize(
     ("strategy", "expected"),
@@ -502,7 +513,9 @@ def test_joinasof_numeric(
 ) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "pyspark")):
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and strategy == "nearest":
+    if (
+        "duckdb" in str(constructor) or "ibis" in str(constructor)
+    ) and strategy == "nearest":
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and (
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
@@ -574,7 +587,9 @@ def test_joinasof_time(
 ) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "pyspark")):
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and strategy == "nearest":
+    if (
+        "duckdb" in str(constructor) or "ibis" in str(constructor)
+    ) and strategy == "nearest":
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and ("pandas_pyarrow" in str(constructor)):
         request.applymarker(pytest.mark.xfail)
@@ -774,6 +789,17 @@ def test_joinasof_by_exceptions(constructor: Constructor) -> None:
     ):
         df.join_asof(df, on="antananarivo", by_right="bob", by="bob")
 
+    with pytest.raises(
+        ValueError,
+        match="`by_left` and `by_right` must have the same length.",
+    ):
+        df.join_asof(
+            df,
+            on="antananarivo",
+            by_left=["antananarivo", "bob"],
+            by_right=["antananarivo"],
+        )
+
 
 def test_join_duplicate_column_names(
     constructor: Constructor, request: pytest.FixtureRequest
@@ -796,6 +822,9 @@ def test_join_duplicate_column_names(
         exception = AnalysisException
     elif "modin" in str(constructor):
         exception = NotImplementedError
+    elif "ibis" in str(constructor):
+        # ibis doesn't raise here
+        request.applymarker(pytest.mark.xfail)
     else:
         exception = nw.exceptions.DuplicateError
     df = constructor({"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]})

@@ -79,7 +79,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
                 observed=True,
             )
 
-    def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:  # noqa: PLR0915
+    def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:  # noqa: C901, PLR0912, PLR0914, PLR0915
         implementation = self.compliant._implementation
         backend_version = self.compliant._backend_version
         new_names: list[str] = self._keys.copy()
@@ -110,7 +110,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
         expected_old_names: list[str] = []
         simple_agg_new_names: list[str] = []
 
-        if all_aggs_are_simple:
+        if all_aggs_are_simple:  # noqa: PLR1702
             for expr in exprs:
                 output_names, aliases = evaluate_output_names_and_aliases(
                     expr, self.compliant, exclude
@@ -265,7 +265,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
             "pandas API. If you can, please rewrite your query such that group-by aggregations "
             "are simple (e.g. mean, std, min, max, ...). \n\n"
             "Please see: "
-            "https://narwhals-dev.github.io/narwhals/pandas_like_concepts/improve_group_by_operation/",
+            "https://narwhals-dev.github.io/narwhals/concepts/improve_group_by_operation/",
             UserWarning,
             stacklevel=find_stacklevel(),
         )

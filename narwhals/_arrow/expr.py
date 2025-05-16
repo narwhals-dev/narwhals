@@ -9,7 +9,6 @@ import pyarrow.compute as pc
 from narwhals._arrow.series import ArrowSeries
 from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._expression_parsing import is_scalar_like
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import generate_temporary_column_name
@@ -143,7 +142,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
 
     def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
         assert self._metadata is not None  # noqa: S101
-        if partition_by and not is_scalar_like(self._metadata.kind):
+        if partition_by and not self._metadata.is_scalar_like:
             msg = "Only aggregation or literal operations are supported in grouped `over` context for PyArrow."
             raise NotImplementedError(msg)
 

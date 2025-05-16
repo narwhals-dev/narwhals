@@ -267,7 +267,7 @@ class DaskLazyFrame(
             self.native.sort_values(list(by), ascending=ascending, na_position=position)
         )
 
-    def join(
+    def join(  # noqa: C901
         self,
         other: Self,
         *,
@@ -398,8 +398,8 @@ class DaskLazyFrame(
         self,
         other: Self,
         *,
-        left_on: str | None,
-        right_on: str | None,
+        left_on: str,
+        right_on: str,
         by_left: Sequence[str] | None,
         by_right: Sequence[str] | None,
         strategy: AsofJoinStrategy,

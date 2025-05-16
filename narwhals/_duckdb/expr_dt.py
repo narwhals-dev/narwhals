@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from duckdb import FunctionExpression
 
+from narwhals._duckdb.utils import UNITS_DICT
 from narwhals._duckdb.utils import lit
+from narwhals._duration import parse_interval_string
+from narwhals.utils import not_implemented
 
 if TYPE_CHECKING:
     from narwhals._duckdb.expr import DuckDBExpr
@@ -105,6 +109,16 @@ class DuckDBExprDateTimeNamespace:
             + FunctionExpression("datepart", lit("microsecond"), _input),
         )
 
-    def total_nanoseconds(self) -> DuckDBExpr:
-        msg = "`total_nanoseconds` is not implemented for DuckDB"
-        raise NotImplementedError(msg)
+    def truncate(self, every: str) -> DuckDBExpr:
+        multiple, unit = parse_interval_string(every)
+        if unit == "ns":
+            msg = "Truncating to nanoseconds is not yet supported for DuckDB."
+            raise NotImplementedError(msg)
+        every = f"{multiple!s} {UNITS_DICT[unit]}"
+        return self._compliant_expr._with_callable(
+            lambda _input: FunctionExpression(
+                "time_bucket", lit(every), _input, lit(datetime(1970, 1, 1))
+            )
+        )
+
+    total_nanoseconds = not_implemented()

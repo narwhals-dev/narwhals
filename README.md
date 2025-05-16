@@ -15,7 +15,7 @@
 Extremely lightweight and extensible compatibility layer between dataframe libraries!
 
 - **Full API support**: cuDF, Modin, pandas, Polars, PyArrow.
-- **Lazy-only support**: Dask, SQLFrame, PySpark. Work in progress: DuckDB, Ibis.
+- **Lazy-only support**: Dask, DuckDB, Ibis, PySpark, SQLFrame. Work in progress: Daft.
 
 Seamlessly support all, without depending on any!
 
@@ -91,6 +91,65 @@ There are three steps to writing dataframe-agnostic code using Narwhals:
 
 ## Example
 
+Narwhals allows you to define dataframe-agnostic functions. For example:
+
+```python
+import narwhals as nw
+from narwhals.typing import IntoFrameT
+
+
+def agnostic_function(
+    df_native: IntoFrameT,
+    date_column: str,
+    price_column: str,
+) -> IntoFrameT:
+    return (
+        nw.from_native(df_native)
+        .group_by(nw.col(date_column).dt.truncate("1mo"))
+        .agg(nw.col(price_column).mean())
+        .sort(date_column)
+        .to_native()
+    )
+```
+
+You can then pass `pandas.DataFrame`, `polars.DataFrame`, `polars.LazyFrame`, `duckdb.DuckDBPyRelation`,
+`pyspark.sql.DataFrame`, `pyarrow.Table`, and more, to `agnostic_function`. In each case, no additional
+dependencies will be required, and computation will stay native to the input library:
+
+```python
+import pandas as pd
+import polars as pl
+from datetime import datetime
+
+data = {
+    "date": [datetime(2020, 1, 1), datetime(2020, 1, 8), datetime(2020, 2, 3)],
+    "price": [1, 4, 3],
+}
+print("pandas result:")
+print(agnostic_function(pd.DataFrame(data), "date", "price"))
+print()
+print("Polars result:")
+print(agnostic_function(pl.DataFrame(data), "date", "price"))
+```
+
+```terminal
+pandas result:
+        date  price
+0 2020-01-01    2.5
+1 2020-02-01    3.0
+
+Polars result:
+shape: (2, 2)
+┌─────────────────────┬───────┐
+│ date                ┆ price │
+│ ---                 ┆ ---   │
+│ datetime[μs]        ┆ f64   │
+╞═════════════════════╪═══════╡
+│ 2020-01-01 00:00:00 ┆ 2.5   │
+│ 2020-02-01 00:00:00 ┆ 3.0   │
+└─────────────────────┴───────┘
+```
+
 See the [tutorial](https://narwhals-dev.github.io/narwhals/basics/dataframe/) for several examples!
 
 ## Scope
@@ -127,6 +186,7 @@ Join the party!
 - [tea-tasting](https://github.com/e10v/tea-tasting)
 - [timebasedcv](https://github.com/FBruzzesi/timebasedcv)
 - [tubular](https://github.com/lvgig/tubular)
+- [Validoopsie](https://github.com/akmalsoliev/Validoopsie)
 - [vegafusion](https://github.com/vega/vegafusion)
 - [wimsey](https://github.com/benrutter/wimsey)
 

@@ -1,14 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
 from typing import Generic
-from typing import TypeVar
 
-if TYPE_CHECKING:
-    from narwhals.series import Series
-
-SeriesT = TypeVar("SeriesT", bound="Series[Any]")
+from narwhals.typing import SeriesT
 
 
 class SeriesStringNamespace(Generic[SeriesT]):
@@ -265,7 +259,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
 
         Notes:
             1. When the `n` input is negative, `head` returns characters up to the n-th from the end of the string.
-                For example, if `n = -3`, then all characters except the last three are returned.
+            For example, if `n = -3`, then all characters except the last three are returned.
             2. If the length of the string has fewer than `n` characters, the full string is returned.
 
         Examples:
@@ -298,7 +292,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
 
         Notes:
             1. When the `n` input is negative, `tail` returns characters starting from the n-th from the beginning of
-                the string. For example, if `n = -3`, then all characters except the first three are returned.
+            the string. For example, if `n = -3`, then all characters except the first three are returned.
             2. If the length of the string has fewer than `n` characters, the full string is returned.
 
         Examples:

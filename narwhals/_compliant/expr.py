@@ -876,7 +876,7 @@ class EagerExpr(
         return EagerExprStructNamespace(self)
 
 
-class LazyExpr(  # type: ignore[misc]
+class LazyExpr(
     CompliantExpr[CompliantLazyFrameT, NativeExprT],
     Protocol38[CompliantLazyFrameT, NativeExprT],
 ):
@@ -900,6 +900,17 @@ class LazyExpr(  # type: ignore[misc]
 
     def _with_callable(self, call: Callable[..., Any], /) -> Self: ...
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
+    def alias(self, name: str) -> Self:
+        def fn(names: Sequence[str]) -> Sequence[str]:
+            if len(names) != 1:
+                msg = f"Expected function with single output, found output names: {names}"
+                raise ValueError(msg)
+            return [name]
+
+        return self._with_alias_output_names(fn)
+
+    @classmethod
+    def _alias_native(cls, expr: NativeExprT, name: str, /) -> NativeExprT: ...
 
     @property
     def name(self) -> LazyExprNameNamespace[Self]:
@@ -1004,6 +1015,9 @@ class EagerExprDateTimeNamespace(
 
     def total_nanoseconds(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("dt", "total_nanoseconds")
+
+    def truncate(self, every: str) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("dt", "truncate", every=every)
 
 
 class EagerExprListNamespace(

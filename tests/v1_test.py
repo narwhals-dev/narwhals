@@ -209,7 +209,7 @@ def test_cast_to_enum_v1(
     if (
         any(
             backend in str(constructor)
-            for backend in ["pyarrow_table", "sqlframe", "pyspark"]
+            for backend in ["pyarrow_table", "sqlframe", "pyspark", "ibis"]
         )
         or str(constructor) == "modin"
     ):
@@ -239,3 +239,17 @@ def test_v1_enum_polars() -> None:
         pl.Series(["a", "b"], dtype=pl.Enum(["a", "b"])), series_only=True
     )
     assert s.dtype == nw_v1.Enum
+
+
+def test_v1_enum_duckdb_2550() -> None:
+    pytest.importorskip("duckdb")
+    import duckdb
+
+    result_v1 = nw_v1.from_native(
+        duckdb.sql("select 'a'::enum('a', 'b', 'c') as a")
+    ).collect_schema()
+    assert result_v1 == {"a": nw_v1.Enum()}
+    result = nw.from_native(
+        duckdb.sql("select 'a'::enum('a', 'b', 'c') as a")
+    ).collect_schema()
+    assert result == {"a": nw.Enum(("a", "b", "c"))}

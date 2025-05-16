@@ -20,8 +20,6 @@ from narwhals.series_str import SeriesStringNamespace
 from narwhals.series_struct import SeriesStructNamespace
 from narwhals.translate import to_native
 from narwhals.typing import IntoSeriesT
-from narwhals.typing import NonNestedLiteral
-from narwhals.typing import SingleIndexSelector
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import generate_repr
 from narwhals.utils import is_compliant_series
@@ -43,9 +41,11 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import ClosedInterval
     from narwhals.typing import FillNullStrategy
+    from narwhals.typing import NonNestedLiteral
     from narwhals.typing import NumericLiteral
     from narwhals.typing import RankMethod
     from narwhals.typing import RollingInterpolationMethod
+    from narwhals.typing import SingleIndexSelector
     from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
     from narwhals.utils import Implementation
@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 class Series(Generic[IntoSeriesT]):
     """Narwhals Series, backed by a native series.
 
-    !!! warning
+    Warning:
         This class is not meant to be instantiated directly - instead:
 
         - If the native object is a series from one of the supported backend (e.g.
@@ -858,7 +858,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
 
         Returns:
@@ -1246,7 +1246,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
 
         Returns:
@@ -1279,7 +1279,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -1310,7 +1310,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
 
         Returns:
@@ -1692,7 +1692,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
 
         Returns:
@@ -1798,9 +1798,10 @@ class Series(Generic[IntoSeriesT]):
             normalize: If true gives relative frequencies of the unique values
 
         Returns:
-            A DataFrame with two columns:
-            - The original values as first column
-            - Either count or proportion as second column, depending on normalize parameter.
+            A DataFrame with two columns
+
+                - The original values as first column
+                - Either count or proportion as second column, depending on normalize parameter.
 
         Examples:
             >>> import pandas as pd
@@ -2493,19 +2494,18 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             method: The method used to assign ranks to tied elements.
-                The following methods are available (default is 'average'):
+                The following methods are available (default is 'average')
 
-                - 'average' : The average of the ranks that would have been assigned to
-                  all the tied values is assigned to each value.
-                - 'min' : The minimum of the ranks that would have been assigned to all
+                - *"average"*: The average of the ranks that would have been assigned to
+                    all the tied values is assigned to each value.
+                - *"min"*: The minimum of the ranks that would have been assigned to all
                     the tied values is assigned to each value. (This is also referred to
                     as "competition" ranking.)
-                - 'max' : The maximum of the ranks that would have been assigned to all
+                - *"max"*: The maximum of the ranks that would have been assigned to all
                     the tied values is assigned to each value.
-                - 'dense' : Like 'min', but the rank of the next highest element is
-                   assigned the rank immediately after those assigned to the tied
-                   elements.
-                - 'ordinal' : All values are given a distinct rank, corresponding to the
+                - *"dense"*: Like "min", but the rank of the next highest element is
+                    assigned the rank immediately after those assigned to the tied elements.
+                - *"ordinal"*: All values are given a distinct rank, corresponding to the
                     order that the values occur in the Series.
 
             descending: Rank in descending order.
@@ -2553,7 +2553,7 @@ class Series(Generic[IntoSeriesT]):
     ) -> DataFrame[Any]:
         """Bin values into buckets and count their occurrences.
 
-        !!! warning
+        Warning:
             This functionality is considered **unstable**. It may be changed at any point
             without it being considered a breaking change.
 

@@ -12,7 +12,6 @@ from narwhals.utils import isinstance_or_issubclass
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import sqlframe.base.functions as sqlframe_functions
     import sqlframe.base.types as sqlframe_types
     from sqlframe.base.column import Column
     from typing_extensions import TypeAlias
@@ -23,6 +22,19 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
     _NativeDType: TypeAlias = sqlframe_types.DataType
+
+UNITS_DICT = {
+    "y": "year",
+    "q": "quarter",
+    "mo": "month",
+    "d": "day",
+    "h": "hour",
+    "m": "minute",
+    "s": "second",
+    "ms": "millisecond",
+    "us": "microsecond",
+    "ns": "nanosecond",
+}
 
 
 class WindowInputs:
@@ -40,7 +52,7 @@ class WindowInputs:
 
 
 # NOTE: don't lru_cache this as `ModuleType` isn't hashable
-def native_to_narwhals_dtype(
+def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     dtype: _NativeDType, version: Version, spark_types: ModuleType
 ) -> DType:
     dtypes = version.dtypes
@@ -100,7 +112,7 @@ def native_to_narwhals_dtype(
     return dtypes.Unknown()  # pragma: no cover
 
 
-def narwhals_to_native_dtype(
+def narwhals_to_native_dtype(  # noqa: C901, PLR0912
     dtype: DType | type[DType], version: Version, spark_types: ModuleType
 ) -> _NativeDType:
     dtypes = version.dtypes
@@ -191,53 +203,6 @@ def evaluate_exprs(
         native_results.extend(zip(output_names, native_series_list))
 
     return native_results
-
-
-def _std(
-    column: Column,
-    ddof: int,
-    np_version: tuple[int, ...],
-    functions: ModuleType,
-    implementation: Implementation,
-) -> Column:
-    if TYPE_CHECKING:
-        F = sqlframe_functions  # noqa: N806
-    else:
-        F = functions  # noqa: N806
-    if implementation is Implementation.PYSPARK and np_version < (2, 0):
-        from pyspark.pandas.spark.functions import stddev
-
-        return stddev(column, ddof)  # pyright: ignore[reportReturnType, reportArgumentType]
-    if ddof == 0:
-        return F.stddev_pop(column)
-    if ddof == 1:
-        return F.stddev_samp(column)
-    n_rows = F.count(column)
-    return F.stddev_samp(column) * F.sqrt((n_rows - 1) / (n_rows - ddof))
-
-
-def _var(
-    column: Column,
-    ddof: int,
-    np_version: tuple[int, ...],
-    functions: ModuleType,
-    implementation: Implementation,
-) -> Column:
-    if TYPE_CHECKING:
-        F = sqlframe_functions  # noqa: N806
-    else:
-        F = functions  # noqa: N806
-    if implementation is Implementation.PYSPARK and np_version < (2, 0):
-        from pyspark.pandas.spark.functions import var
-
-        return var(column, ddof)  # pyright: ignore[reportReturnType, reportArgumentType]
-    if ddof == 0:
-        return F.var_pop(column)
-    if ddof == 1:
-        return F.var_samp(column)
-
-    n_rows = F.count(column)
-    return F.var_samp(column) * (n_rows - 1) / (n_rows - ddof)
 
 
 def import_functions(implementation: Implementation, /) -> ModuleType:

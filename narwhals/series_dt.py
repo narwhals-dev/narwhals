@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from typing import Any
 from typing import Generic
-from typing import TypeVar
+
+from narwhals.typing import SeriesT
 
 if TYPE_CHECKING:
-    from narwhals.series import Series
     from narwhals.typing import TimeUnit
-
-SeriesT = TypeVar("SeriesT", bound="Series[Any]")
 
 
 class SeriesDateTimeNamespace(Generic[SeriesT]):
@@ -502,12 +499,12 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
               whereas pandas and Python stdlib use `".%f"`.
             - PyArrow interprets `"%S"` as "seconds, including fractional seconds"
               whereas most other tools interpret it as "just seconds, as 2 digits".
-
-            Therefore, we make the following adjustments:
+            ---
+            Therefore, we make the following adjustments.
 
             - for pandas-like libraries, we replace `"%S.%f"` with `"%S%.f"`.
             - for PyArrow, we replace `"%S.%f"` with `"%S"`.
-
+            ---
             Workarounds like these don't make us happy, and we try to avoid them as
             much as possible, but here we feel like it's the best compromise.
 
@@ -517,8 +514,8 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
 
             - `"%Y-%m-%dT%H:%M:%S%.f"` for datetimes
             - `"%Y-%m-%d"` for dates
-
-            though note that, even then, different tools may return a different number
+            ---
+            Though note that, even then, different tools may return a different number
             of trailing zeros. Nonetheless, this is probably consistent enough for
             most applications.
 
@@ -624,8 +621,10 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
         """Return a timestamp in the given time unit.
 
         Arguments:
-            time_unit: {'ns', 'us', 'ms'}
-                Time unit.
+            time_unit: One of
+                - 'ns': nanosecond.
+                - 'us': microsecond.
+                - 'ms': millisecond.
 
         Returns:
             A new Series with timestamps in the specified time unit.
@@ -652,4 +651,39 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             raise ValueError(msg)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.timestamp(time_unit)
+        )
+
+    def truncate(self, every: str) -> SeriesT:
+        """Divide the date/datetime range into buckets.
+
+        Arguments:
+            every: Length of bucket. Must be of form `<multiple><unit>`,
+                where `multiple` is a positive integer and `unit` is one of
+
+                - 'ns': nanosecond.
+                - 'us': microsecond.
+                - 'ms': millisecond.
+                - 's': second.
+                - 'm': minute.
+                - 'h': hour.
+                - 'd': day.
+                - 'mo': month.
+                - 'q': quarter.
+                - 'y': year.
+
+        Returns:
+            Series of data type `Date` or `Datetime`.
+
+        Examples:
+            >>> from datetime import datetime
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> s_native = pd.Series([datetime(2021, 3, 1, 12, 34)])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.dt.truncate("1h").to_native()
+            0   2021-03-01 12:00:00
+            dtype: datetime64[ns]
+        """
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.dt.truncate(every)
         )

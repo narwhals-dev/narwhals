@@ -197,24 +197,6 @@ class DaskExpr(
             call_kwargs=self._call_kwargs,
         )
 
-    def alias(self, name: str) -> Self:
-        def alias_output_names(names: Sequence[str]) -> Sequence[str]:
-            if len(names) != 1:
-                msg = f"Expected function with single output, found output names: {names}"
-                raise ValueError(msg)
-            return [name]
-
-        return self.__class__(
-            self._call,
-            depth=self._depth,
-            function_name=self._function_name,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=alias_output_names,
-            backend_version=self._backend_version,
-            version=self._version,
-            call_kwargs=self._call_kwargs,
-        )
-
     def __add__(self, other: Any) -> Self:
         return self._with_callable(
             lambda _input, other: _input.__add__(other), "__add__", other=other
@@ -613,7 +595,7 @@ class DaskExpr(
             msg = (
                 "Only elementary expressions are supported for `.over` in dask.\n\n"
                 "Please see: "
-                "https://narwhals-dev.github.io/narwhals/pandas_like_concepts/improve_group_by_operation/"
+                "https://narwhals-dev.github.io/narwhals/concepts/improve_group_by_operation/"
             )
             raise NotImplementedError(msg)
         elif order_by:
@@ -692,3 +674,4 @@ class DaskExpr(
     list = not_implemented()  # pyright: ignore[reportAssignmentType]
     struct = not_implemented()  # pyright: ignore[reportAssignmentType]
     rank = not_implemented()  # pyright: ignore[reportAssignmentType]
+    _alias_native = not_implemented()

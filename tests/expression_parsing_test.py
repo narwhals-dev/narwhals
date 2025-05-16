@@ -3,52 +3,52 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from narwhals._expression_parsing import WindowKind
+import narwhals.stable.v1 as nw_v1
 from narwhals.exceptions import InvalidOperationError
 
 
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [
-        (nw.col("a"), WindowKind.NONE),
-        (nw.col("a").mean(), WindowKind.NONE),
-        (nw.col("a").cum_sum(), WindowKind.CLOSEABLE),
-        (nw.col("a").cum_sum().over(order_by="id"), WindowKind.CLOSED),
-        (nw.col("a").cum_sum().abs().over(order_by="id"), WindowKind.UNCLOSEABLE),
-        ((nw.col("a").cum_sum() + 1).over(order_by="id"), WindowKind.UNCLOSEABLE),
-        (nw.col("a").cum_sum().cum_sum().over(order_by="id"), WindowKind.UNCLOSEABLE),
-        (nw.col("a").cum_sum().cum_sum(), WindowKind.UNCLOSEABLE),
-        (nw.sum_horizontal(nw.col("a"), nw.col("a").cum_sum()), WindowKind.UNCLOSEABLE),
+        (nw.col("a"), 0),
+        (nw.col("a").mean(), 0),
+        (nw.col("a").cum_sum(), 1),
+        (nw.col("a").cum_sum().over(order_by="id"), 0),
+        (nw.col("a").cum_sum().abs().over(order_by="id"), 1),
+        ((nw.col("a").cum_sum() + 1).over(order_by="id"), 1),
+        (nw.col("a").cum_sum().cum_sum().over(order_by="id"), 1),
+        (nw.col("a").cum_sum().cum_sum(), 2),
+        (nw.sum_horizontal(nw.col("a"), nw.col("a").cum_sum()), 1),
         (
-            nw.sum_horizontal(nw.col("a"), nw.col("a").cum_sum()).over("a"),
-            WindowKind.UNCLOSEABLE,
+            nw.sum_horizontal(nw.col("a"), nw.col("a").cum_sum()).over(order_by="a"),
+            1,
         ),
         (
             nw.sum_horizontal(nw.col("a"), nw.col("a").cum_sum().over(order_by="i")),
-            WindowKind.CLOSED,
+            0,
         ),
         (
             nw.sum_horizontal(
                 nw.col("a").diff(), nw.col("a").cum_sum().over(order_by="i")
             ),
-            WindowKind.UNCLOSEABLE,
+            1,
         ),
         (
             nw.sum_horizontal(nw.col("a").diff(), nw.col("a").cum_sum()).over(
                 order_by="i"
             ),
-            WindowKind.UNCLOSEABLE,
+            2,
         ),
         (
             nw.sum_horizontal(nw.col("a").diff().abs(), nw.col("a").cum_sum()).over(
                 order_by="i"
             ),
-            WindowKind.UNCLOSEABLE,
+            2,
         ),
     ],
 )
-def test_window_kind(expr: nw.Expr, expected: WindowKind) -> None:
-    assert expr._metadata.window_kind is expected
+def test_window_kind(expr: nw.Expr, expected: int) -> None:
+    assert expr._metadata.n_orderable_ops == expected
 
 
 def test_misleading_order_by() -> None:
@@ -73,3 +73,39 @@ def test_double_agg() -> None:
 def test_filter_aggregation() -> None:
     with pytest.raises(InvalidOperationError):
         nw.col("a").mean().drop_nulls()
+
+
+def test_head_aggregation() -> None:
+    with pytest.raises(InvalidOperationError):
+        nw_v1.col("a").mean().head()
+
+
+def test_rank_aggregation() -> None:
+    with pytest.raises(InvalidOperationError):
+        nw.col("a").mean().rank()
+
+
+def test_diff_aggregation() -> None:
+    with pytest.raises(InvalidOperationError):
+        nw.col("a").mean().diff()
+
+
+def test_invalid_over() -> None:
+    with pytest.raises(InvalidOperationError):
+        nw.col("a").fill_null(3).over("b")
+
+
+def test_nested_over() -> None:
+    with pytest.raises(InvalidOperationError):
+        nw.col("a").mean().over("b").over("c")
+    with pytest.raises(InvalidOperationError):
+        nw.col("a").mean().over("b").over("c", order_by="i")
+
+
+def test_filtration_over() -> None:
+    with pytest.raises(InvalidOperationError):
+        nw.col("a").drop_nulls().over("b")
+    with pytest.raises(InvalidOperationError):
+        nw.col("a").drop_nulls().over("b", order_by="i")
+    with pytest.raises(InvalidOperationError):
+        nw.col("a").diff().drop_nulls().over("b", order_by="i")

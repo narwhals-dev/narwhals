@@ -190,8 +190,8 @@ class CompliantDataFrame(
         self,
         other: Self,
         *,
-        left_on: str | None,
-        right_on: str | None,
+        left_on: str,
+        right_on: str,
         by_left: Sequence[str] | None,
         by_right: Sequence[str] | None,
         strategy: AsofJoinStrategy,
@@ -335,8 +335,8 @@ class CompliantLazyFrame(
         self,
         other: Self,
         *,
-        left_on: str | None,
-        right_on: str | None,
+        left_on: str,
+        right_on: str,
         by_left: Sequence[str] | None,
         by_right: Sequence[str] | None,
         strategy: AsofJoinStrategy,
@@ -432,7 +432,7 @@ class EagerDataFrame(
     ) -> Self: ...
     def _select_slice_index(self, columns: _SliceIndex | range) -> Self: ...
     def _select_slice_name(self, columns: _SliceName) -> Self: ...
-    def __getitem__(
+    def __getitem__(  # noqa: C901, PLR0912
         self,
         item: tuple[
             SingleIndexSelector | MultiIndexSelector[EagerSeriesT],

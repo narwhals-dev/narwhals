@@ -15,6 +15,7 @@ from typing import cast
 
 from narwhals.dependencies import is_narwhals_series
 from narwhals.dependencies import is_numpy_array
+from narwhals.exceptions import InvalidOperationError
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.exceptions import MultiOutputExpressionError
 from narwhals.exceptions import ShapeError
@@ -33,6 +34,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import EagerNamespaceAny
     from narwhals._compliant.typing import EvalNames
     from narwhals.expr import Expr
+    from narwhals.series import Series
     from narwhals.typing import IntoExpr
     from narwhals.typing import NonNestedLiteral
     from narwhals.typing import _1DArray
@@ -45,6 +47,13 @@ def is_expr(obj: Any) -> TypeIs[Expr]:
     from narwhals.expr import Expr
 
     return isinstance(obj, Expr)
+
+
+def is_series(obj: Any) -> TypeIs[Series[Any]]:
+    """Check whether `obj` is a Narwhals Expr."""
+    from narwhals.series import Series
+
+    return isinstance(obj, Series)
 
 
 def combine_evaluate_output_names(
@@ -115,72 +124,79 @@ def evaluate_output_names_and_aliases(
 
 
 class ExprKind(Enum):
-    """Describe which kind of expression we are dealing with.
-
-    Commutative composition rules are:
-    - LITERAL vs LITERAL -> LITERAL
-    - FILTRATION vs (LITERAL | AGGREGATION) -> FILTRATION
-    - FILTRATION vs (FILTRATION | TRANSFORM | WINDOW) -> raise
-    - (TRANSFORM | WINDOW) vs (...) -> TRANSFORM
-    - AGGREGATION vs (LITERAL | AGGREGATION) -> AGGREGATION
-    """
+    """Describe which kind of expression we are dealing with."""
 
     LITERAL = auto()
     """e.g. `nw.lit(1)`"""
 
     AGGREGATION = auto()
-    """e.g. `nw.col('a').mean()`"""
+    """Reduces to a single value, not affected by row order, e.g. `nw.col('a').mean()`"""
 
-    TRANSFORM = auto()
-    """preserves length, e.g. `nw.col('a').round()`"""
+    ORDERABLE_AGGREGATION = auto()
+    """Reduces to a single value, affected by row order, e.g. `nw.col('a').arg_max()`"""
 
-    WINDOW = auto()
-    """transform in which last node is order-dependent
+    ELEMENTWISE = auto()
+    """Preserves length, can operate without context for surrounding rows, e.g. `nw.col('a').abs()`."""
 
-    examples:
-    - `nw.col('a').cum_sum()`
-    - `(nw.col('a')+1).cum_sum()`
+    ORDERABLE_WINDOW = auto()
+    """Depends on the rows around it and on their order, e.g. `diff`."""
 
-    non-examples:
-    - `nw.col('a').cum_sum()+1`
-    - `nw.col('a').cum_sum().mean()`
-    """
+    UNORDERABLE_WINDOW = auto()
+    """Depends on the rows around it but not on their order, e.g. `rank`."""
 
     FILTRATION = auto()
-    """e.g. `nw.col('a').drop_nulls()`"""
+    """Changes length, not affected by row order, e.g. `drop_nulls`."""
 
-    def preserves_length(self) -> bool:
-        return self in {ExprKind.TRANSFORM, ExprKind.WINDOW}
+    ORDERABLE_FILTRATION = auto()
+    """Changes length, affected by row order, e.g. `tail`."""
 
-    def is_window(self) -> bool:
-        return self is ExprKind.WINDOW
+    NARY = auto()
+    """Results from the combination of multiple expressions."""
 
-    def is_filtration(self) -> bool:
-        return self is ExprKind.FILTRATION
+    OVER = auto()
+    """Results from calling `.over` on expression."""
 
+    UNKNOWN = auto()
+    """Based on the information we have, we can't determine the ExprKind."""
+
+    @property
     def is_scalar_like(self) -> bool:
-        return is_scalar_like(self)
+        return self in {ExprKind.LITERAL, ExprKind.AGGREGATION}
+
+    @property
+    def is_orderable_window(self) -> bool:
+        return self in {ExprKind.ORDERABLE_WINDOW, ExprKind.ORDERABLE_AGGREGATION}
+
+    @classmethod
+    def from_expr(cls, obj: Expr) -> ExprKind:
+        meta = obj._metadata
+        if meta.is_literal:
+            return ExprKind.LITERAL
+        if meta.is_scalar_like:
+            return ExprKind.AGGREGATION
+        if meta.is_elementwise:
+            return ExprKind.ELEMENTWISE
+        return ExprKind.UNKNOWN
 
     @classmethod
     def from_into_expr(
         cls, obj: IntoExpr | NonNestedLiteral | _1DArray, *, str_as_lit: bool
     ) -> ExprKind:
         if is_expr(obj):
-            return obj._metadata.kind
+            return cls.from_expr(obj)
         if (
             is_narwhals_series(obj)
             or is_numpy_array(obj)
             or (isinstance(obj, str) and not str_as_lit)
         ):
-            return ExprKind.TRANSFORM
+            return ExprKind.ELEMENTWISE
         return ExprKind.LITERAL
 
 
 def is_scalar_like(
-    kind: ExprKind,
-) -> TypeIs[Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]]:
-    # Like ExprKind.is_scalar_like, but uses TypeIs for better type checking.
-    return kind in {ExprKind.AGGREGATION, ExprKind.LITERAL}
+    obj: ExprKind,
+) -> TypeIs[Literal[ExprKind.LITERAL, ExprKind.AGGREGATION]]:
+    return obj.is_scalar_like
 
 
 class ExpansionKind(Enum):
@@ -210,140 +226,250 @@ class ExpansionKind(Enum):
         raise AssertionError(msg)  # pragma: no cover
 
 
-class WindowKind(Enum):
-    """Describe what kind of window the expression contains."""
-
-    NONE = auto()
-    """e.g. `nw.col('a').abs()`, no windows."""
-
-    CLOSEABLE = auto()
-    """e.g. `nw.col('a').cum_sum()` - can be closed if immediately followed by `over(order_by=...)`."""
-
-    UNCLOSEABLE = auto()
-    """e.g. `nw.col('a').cum_sum().abs()` - the window function (`cum_sum`) wasn't immediately followed by
-    `over(order_by=...)`, and so the window is uncloseable.
-
-    Uncloseable windows can be used freely in `nw.DataFrame`, but not in `nw.LazyFrame` where
-    row-order is undefined."""
-
-    CLOSED = auto()
-    """e.g. `nw.col('a').cum_sum().over(order_by='i')`."""
-
-    def is_open(self) -> bool:
-        return self in {WindowKind.UNCLOSEABLE, WindowKind.CLOSEABLE}
-
-    def is_closed(self) -> bool:
-        return self is WindowKind.CLOSED
-
-    def is_uncloseable(self) -> bool:
-        return self is WindowKind.UNCLOSEABLE
-
-
 class ExprMetadata:
-    __slots__ = ("_expansion_kind", "_kind", "_window_kind")
+    __slots__ = (
+        "expansion_kind",
+        "has_windows",
+        "is_elementwise",
+        "is_literal",
+        "is_scalar_like",
+        "last_node",
+        "n_orderable_ops",
+        "preserves_length",
+    )
 
     def __init__(
         self,
-        kind: ExprKind,
-        /,
-        *,
-        window_kind: WindowKind,
         expansion_kind: ExpansionKind,
+        last_node: ExprKind,
+        *,
+        has_windows: bool = False,
+        n_orderable_ops: int = 0,
+        preserves_length: bool = True,
+        is_elementwise: bool = True,
+        is_scalar_like: bool = False,
+        is_literal: bool = False,
     ) -> None:
-        self._kind: ExprKind = kind
-        self._window_kind = window_kind
-        self._expansion_kind = expansion_kind
+        if is_literal:
+            assert is_scalar_like  # noqa: S101  # debug assertion
+        if is_elementwise:
+            assert preserves_length  # noqa: S101  # debug assertion
+        self.expansion_kind = expansion_kind
+        self.last_node = last_node
+        self.has_windows = has_windows
+        self.n_orderable_ops = n_orderable_ops
+        self.is_elementwise = is_elementwise
+        self.preserves_length = preserves_length
+        self.is_scalar_like = is_scalar_like
+        self.is_literal = is_literal
 
     def __init_subclass__(cls, /, *args: Any, **kwds: Any) -> Never:  # pragma: no cover
         msg = f"Cannot subclass {cls.__name__!r}"
         raise TypeError(msg)
 
-    def __repr__(self) -> str:
-        return f"ExprMetadata(kind: {self._kind}, window_kind: {self._window_kind}, expansion_kind: {self._expansion_kind})"
-
-    @property
-    def kind(self) -> ExprKind:
-        return self._kind
-
-    @property
-    def window_kind(self) -> WindowKind:
-        return self._window_kind
-
-    @property
-    def expansion_kind(self) -> ExpansionKind:
-        return self._expansion_kind
-
-    def with_kind(self, kind: ExprKind, /) -> ExprMetadata:
-        """Change metadata kind, leaving all other attributes the same."""
-        return ExprMetadata(
-            kind,
-            window_kind=self._window_kind,
-            expansion_kind=self._expansion_kind,
+    def __repr__(self) -> str:  # pragma: no cover
+        return (
+            f"ExprMetadata(\n"
+            f"  expansion_kind: {self.expansion_kind},\n"
+            f"  last_node: {self.last_node},\n"
+            f"  has_windows: {self.has_windows},\n"
+            f"  n_orderable_ops: {self.n_orderable_ops},\n"
+            f"  is_elementwise: {self.is_elementwise},\n"
+            f"  preserves_length: {self.preserves_length},\n"
+            f"  is_scalar_like: {self.is_scalar_like},\n"
+            f"  is_literal: {self.is_literal},\n"
+            ")"
         )
 
-    def with_uncloseable_window(self) -> ExprMetadata:
-        """Add uncloseable window, leaving other attributes the same."""
-        if self._window_kind is WindowKind.CLOSED:  # pragma: no cover
-            msg = "Unreachable code, please report a bug."
-            raise AssertionError(msg)
+    @property
+    def is_filtration(self) -> bool:
+        return not self.preserves_length and not self.is_scalar_like
+
+    def with_aggregation(self) -> ExprMetadata:
+        if self.is_scalar_like:
+            msg = "Can't apply aggregations to scalar-like expressions."
+            raise InvalidOperationError(msg)
         return ExprMetadata(
-            self.kind,
-            window_kind=WindowKind.UNCLOSEABLE,
-            expansion_kind=self._expansion_kind,
+            self.expansion_kind,
+            ExprKind.AGGREGATION,
+            has_windows=self.has_windows,
+            n_orderable_ops=self.n_orderable_ops,
+            preserves_length=False,
+            is_elementwise=False,
+            is_scalar_like=True,
+            is_literal=False,
         )
 
-    def with_kind_and_closeable_window(self, kind: ExprKind, /) -> ExprMetadata:
-        """Change metadata kind and add closeable window.
-
-        If we already have an uncloseable window, the window stays uncloseable.
-        """
-        if self._window_kind is WindowKind.NONE:
-            window_kind = WindowKind.CLOSEABLE
-        elif self._window_kind is WindowKind.CLOSED:  # pragma: no cover
-            msg = "Unreachable code, please report a bug."
-            raise AssertionError(msg)
-        else:
-            window_kind = WindowKind.UNCLOSEABLE
+    def with_orderable_aggregation(self) -> ExprMetadata:
+        if self.is_scalar_like:
+            msg = "Can't apply aggregations to scalar-like expressions."
+            raise InvalidOperationError(msg)
         return ExprMetadata(
-            kind,
-            window_kind=window_kind,
-            expansion_kind=self._expansion_kind,
+            self.expansion_kind,
+            ExprKind.ORDERABLE_AGGREGATION,
+            has_windows=self.has_windows,
+            n_orderable_ops=self.n_orderable_ops + 1,
+            preserves_length=False,
+            is_elementwise=False,
+            is_scalar_like=True,
+            is_literal=False,
         )
 
-    def with_kind_and_uncloseable_window(self, kind: ExprKind, /) -> ExprMetadata:
-        """Change metadata kind and set window kind to uncloseable."""
+    def with_elementwise_op(self) -> ExprMetadata:
         return ExprMetadata(
-            kind,
-            window_kind=WindowKind.UNCLOSEABLE,
-            expansion_kind=self._expansion_kind,
+            self.expansion_kind,
+            ExprKind.ELEMENTWISE,
+            has_windows=self.has_windows,
+            n_orderable_ops=self.n_orderable_ops,
+            preserves_length=self.preserves_length,
+            is_elementwise=self.is_elementwise,
+            is_scalar_like=self.is_scalar_like,
+            is_literal=self.is_literal,
+        )
+
+    def with_unorderable_window(self) -> ExprMetadata:
+        if self.is_scalar_like:
+            msg = "Can't apply unorderable window (`rank`, `is_unique`) to scalar-like expression."
+            raise InvalidOperationError(msg)
+        return ExprMetadata(
+            self.expansion_kind,
+            ExprKind.UNORDERABLE_WINDOW,
+            has_windows=self.has_windows,
+            n_orderable_ops=self.n_orderable_ops,
+            preserves_length=self.preserves_length,
+            is_elementwise=False,
+            is_scalar_like=False,
+            is_literal=False,
+        )
+
+    def with_orderable_window(self) -> ExprMetadata:
+        if self.is_scalar_like:
+            msg = "Can't apply orderable window (e.g. `diff`, `shift`) to scalar-like expression."
+            raise InvalidOperationError(msg)
+        return ExprMetadata(
+            self.expansion_kind,
+            ExprKind.ORDERABLE_WINDOW,
+            has_windows=self.has_windows,
+            n_orderable_ops=self.n_orderable_ops + 1,
+            preserves_length=self.preserves_length,
+            is_elementwise=False,
+            is_scalar_like=False,
+            is_literal=False,
+        )
+
+    def with_ordered_over(self) -> ExprMetadata:
+        if self.has_windows:
+            msg = "Cannot nest `over` statements."
+            raise InvalidOperationError(msg)
+        if self.is_elementwise or self.is_filtration:
+            msg = (
+                "Cannot use `over` on expressions which are elementwise\n"
+                "(e.g. `abs`) or which change length (e.g. `drop_nulls`)."
+            )
+            raise InvalidOperationError(msg)
+        n_orderable_ops = self.n_orderable_ops
+        if not n_orderable_ops:
+            msg = "Cannot use `order_by` in `over` on expression which isn't orderable."
+            raise InvalidOperationError(msg)
+        if self.last_node.is_orderable_window:
+            n_orderable_ops -= 1
+        return ExprMetadata(
+            self.expansion_kind,
+            ExprKind.OVER,
+            has_windows=True,
+            n_orderable_ops=n_orderable_ops,
+            preserves_length=True,
+            is_elementwise=False,
+            is_scalar_like=False,
+            is_literal=False,
+        )
+
+    def with_partitioned_over(self) -> ExprMetadata:
+        if self.has_windows:
+            msg = "Cannot nest `over` statements."
+            raise InvalidOperationError(msg)
+        if self.is_elementwise or self.is_filtration:
+            msg = (
+                "Cannot use `over` on expressions which are elementwise\n"
+                "(e.g. `abs`) or which change length (e.g. `drop_nulls`)."
+            )
+            raise InvalidOperationError(msg)
+        return ExprMetadata(
+            self.expansion_kind,
+            ExprKind.OVER,
+            has_windows=True,
+            n_orderable_ops=self.n_orderable_ops,
+            preserves_length=True,
+            is_elementwise=False,
+            is_scalar_like=False,
+            is_literal=False,
+        )
+
+    def with_filtration(self) -> ExprMetadata:
+        if self.is_scalar_like:
+            msg = "Can't apply filtration (e.g. `drop_nulls`) to scalar-like expression."
+            raise InvalidOperationError(msg)
+        return ExprMetadata(
+            self.expansion_kind,
+            ExprKind.FILTRATION,
+            has_windows=self.has_windows,
+            n_orderable_ops=self.n_orderable_ops,
+            preserves_length=False,
+            is_elementwise=False,
+            is_scalar_like=False,
+            is_literal=False,
+        )
+
+    def with_orderable_filtration(self) -> ExprMetadata:
+        if self.is_scalar_like:
+            msg = "Can't apply filtration (e.g. `drop_nulls`) to scalar-like expression."
+            raise InvalidOperationError(msg)
+        return ExprMetadata(
+            self.expansion_kind,
+            ExprKind.ORDERABLE_FILTRATION,
+            has_windows=self.has_windows,
+            n_orderable_ops=self.n_orderable_ops + 1,
+            preserves_length=False,
+            is_elementwise=False,
+            is_scalar_like=False,
+            is_literal=False,
+        )
+
+    @staticmethod
+    def aggregation() -> ExprMetadata:
+        return ExprMetadata(
+            ExpansionKind.SINGLE,
+            ExprKind.AGGREGATION,
+            is_elementwise=False,
+            preserves_length=False,
+            is_scalar_like=True,
+        )
+
+    @staticmethod
+    def literal() -> ExprMetadata:
+        return ExprMetadata(
+            ExpansionKind.SINGLE,
+            ExprKind.LITERAL,
+            is_elementwise=False,
+            preserves_length=False,
+            is_literal=True,
+            is_scalar_like=True,
         )
 
     @staticmethod
     def selector_single() -> ExprMetadata:
         # e.g. `nw.col('a')`, `nw.nth(0)`
-        return ExprMetadata(
-            ExprKind.TRANSFORM,
-            window_kind=WindowKind.NONE,
-            expansion_kind=ExpansionKind.SINGLE,
-        )
+        return ExprMetadata(ExpansionKind.SINGLE, ExprKind.ELEMENTWISE)
 
     @staticmethod
     def selector_multi_named() -> ExprMetadata:
         # e.g. `nw.col('a', 'b')`
-        return ExprMetadata(
-            ExprKind.TRANSFORM,
-            window_kind=WindowKind.NONE,
-            expansion_kind=ExpansionKind.MULTI_NAMED,
-        )
+        return ExprMetadata(ExpansionKind.MULTI_NAMED, ExprKind.ELEMENTWISE)
 
     @staticmethod
     def selector_multi_unnamed() -> ExprMetadata:
         # e.g. `nw.all()`
-        return ExprMetadata(
-            ExprKind.TRANSFORM,
-            window_kind=WindowKind.NONE,
-            expansion_kind=ExpansionKind.MULTI_UNNAMED,
-        )
+        return ExprMetadata(ExpansionKind.MULTI_UNNAMED, ExprKind.ELEMENTWISE)
 
     @classmethod
     def from_binary_op(cls, lhs: Expr, rhs: IntoExpr, /) -> ExprMetadata:
@@ -360,7 +486,7 @@ class ExprMetadata:
         )
 
 
-def combine_metadata(  # noqa: PLR0915
+def combine_metadata(  # noqa: C901, PLR0912
     *args: IntoExpr | object | None,
     str_as_lit: bool,
     allow_multi_output: bool,
@@ -376,17 +502,23 @@ def combine_metadata(  # noqa: PLR0915
             of the inputs (e.g. `nw.sum_horizontal`).
     """
     n_filtrations = 0
-    has_transforms_or_windows = False
-    has_aggregations = False
-    has_literals = False
     result_expansion_kind = ExpansionKind.SINGLE
-    has_closeable_windows = False
-    has_uncloseable_windows = False
-    has_closed_windows = False
+    result_has_windows = False
+    result_n_orderable_ops = 0
+    # result preserves length if at least one input does
+    result_preserves_length = False
+    # result is elementwise if all inputs are elementwise
+    result_is_not_elementwise = False
+    # result is scalar-like if all inputs are scalar-like
+    result_is_not_scalar_like = False
+    # result is literal if all inputs are literal
+    result_is_not_literal = False
 
-    for i, arg in enumerate(args):
-        if isinstance(arg, str) and not str_as_lit:
-            has_transforms_or_windows = True
+    for i, arg in enumerate(args):  # noqa: PLR1702
+        if (isinstance(arg, str) and not str_as_lit) or is_series(arg):
+            result_preserves_length = True
+            result_is_not_scalar_like = True
+            result_is_not_literal = True
         elif is_expr(arg):
             metadata = arg._metadata
             if metadata.expansion_kind.is_multi_output():
@@ -403,56 +535,37 @@ def combine_metadata(  # noqa: PLR0915
                         result_expansion_kind = expansion_kind
                     else:
                         result_expansion_kind = result_expansion_kind & expansion_kind
-            kind = metadata.kind
-            if kind is ExprKind.AGGREGATION:
-                has_aggregations = True
-            elif kind is ExprKind.LITERAL:
-                has_literals = True
-            elif kind is ExprKind.FILTRATION:
+
+            if metadata.has_windows:
+                result_has_windows = True
+            result_n_orderable_ops += metadata.n_orderable_ops
+            if metadata.preserves_length:
+                result_preserves_length = True
+            if not metadata.is_elementwise:
+                result_is_not_elementwise = True
+            if not metadata.is_scalar_like:
+                result_is_not_scalar_like = True
+            if not metadata.is_literal:
+                result_is_not_literal = True
+            if metadata.is_filtration:
                 n_filtrations += 1
-            elif kind.preserves_length():
-                has_transforms_or_windows = True
-            else:  # pragma: no cover
-                msg = "unreachable code"
-                raise AssertionError(msg)
 
-            window_kind = metadata.window_kind
-            if window_kind is WindowKind.UNCLOSEABLE:
-                has_uncloseable_windows = True
-            elif window_kind is WindowKind.CLOSEABLE:
-                has_closeable_windows = True
-            elif window_kind is WindowKind.CLOSED:
-                has_closed_windows = True
-
-    if (
-        has_literals
-        and not has_aggregations
-        and not has_transforms_or_windows
-        and not n_filtrations
-    ):
-        result_kind = ExprKind.LITERAL
-    elif n_filtrations > 1:
+    if n_filtrations > 1:
         msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
         raise LengthChangingExprError(msg)
-    elif n_filtrations and has_transforms_or_windows:
+    if result_preserves_length and n_filtrations:
         msg = "Cannot combine length-changing expressions with length-preserving ones or aggregations"
         raise ShapeError(msg)
-    elif n_filtrations:
-        result_kind = ExprKind.FILTRATION
-    elif has_transforms_or_windows:
-        result_kind = ExprKind.TRANSFORM
-    else:
-        result_kind = ExprKind.AGGREGATION
-
-    if has_uncloseable_windows or has_closeable_windows:
-        result_window_kind = WindowKind.UNCLOSEABLE
-    elif has_closed_windows:
-        result_window_kind = WindowKind.CLOSED
-    else:
-        result_window_kind = WindowKind.NONE
 
     return ExprMetadata(
-        result_kind, window_kind=result_window_kind, expansion_kind=result_expansion_kind
+        result_expansion_kind,
+        ExprKind.NARY,
+        has_windows=result_has_windows,
+        n_orderable_ops=result_n_orderable_ops,
+        preserves_length=result_preserves_length,
+        is_elementwise=not result_is_not_elementwise,
+        is_scalar_like=not result_is_not_scalar_like,
+        is_literal=not result_is_not_literal,
     )
 
 
@@ -463,8 +576,7 @@ def check_expressions_preserve_length(*args: IntoExpr, function_name: str) -> No
     from narwhals.series import Series
 
     if not all(
-        (is_expr(x) and x._metadata.kind.preserves_length())
-        or isinstance(x, (str, Series))
+        (is_expr(x) and x._metadata.preserves_length) or isinstance(x, (str, Series))
         for x in args
     ):
         msg = f"Expressions which aggregate or change length cannot be passed to '{function_name}'."
@@ -476,7 +588,7 @@ def all_exprs_are_scalar_like(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
     # For Series input, we don't raise (yet), we let such checks happen later,
     # as this function works lazily and so can't evaluate lengths.
     exprs = chain(args, kwargs.values())
-    return all(is_expr(x) and x._metadata.kind.is_scalar_like() for x in exprs)
+    return all(is_expr(x) and x._metadata.is_scalar_like for x in exprs)
 
 
 def apply_n_ary_operation(
@@ -494,7 +606,7 @@ def apply_n_ary_operation(
         for comparand in comparands
     ]
 
-    broadcast = any(not kind.is_scalar_like() for kind in kinds)
+    broadcast = any(not kind.is_scalar_like for kind in kinds)
     compliant_exprs = (
         compliant_expr.broadcast(kind)
         if broadcast and is_compliant_expr(compliant_expr) and is_scalar_like(kind)

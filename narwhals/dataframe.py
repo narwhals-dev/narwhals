@@ -273,6 +273,12 @@ class BaseFrame(Generic[_FrameT]):
         if on is not None:
             left_on = right_on = on
 
+        if (isinstance(left_on, list) and isinstance(right_on, list)) and (
+            len(left_on) != len(right_on)
+        ):
+            msg = "`left_on` and `right_on` must have the same length."
+            raise ValueError(msg)
+
         return self._with_compliant(
             self._compliant_frame.join(
                 self._extract_compliant(other),
@@ -288,7 +294,7 @@ class BaseFrame(Generic[_FrameT]):
             self._compliant_frame.gather_every(n=n, offset=offset)
         )
 
-    def join_asof(
+    def join_asof(  # noqa: C901
         self,
         other: Self,
         *,
@@ -332,6 +338,13 @@ class BaseFrame(Generic[_FrameT]):
             by_left = [by_left]
         if isinstance(by_right, str):
             by_right = [by_right]
+
+        if (isinstance(by_left, list) and isinstance(by_right, list)) and (
+            len(by_left) != len(by_right)
+        ):
+            msg = "`by_left` and `by_right` must have the same length."
+            raise ValueError(msg)
+
         return self._with_compliant(
             self._compliant_frame.join_asof(
                 self._extract_compliant(other),
@@ -396,7 +409,7 @@ class BaseFrame(Generic[_FrameT]):
 class DataFrame(BaseFrame[DataFrameT]):
     """Narwhals DataFrame, backed by a native eager dataframe.
 
-    !!! warning
+    Warning:
         This class is not meant to be instantiated directly - instead:
 
         - If the native object is a eager dataframe from one of the supported
@@ -541,7 +554,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                 given library does not support lazy execution, then this will restrict
                 the API to lazy-only operations.
 
-                `backend` can be specified in various ways:
+                `backend` can be specified in various ways
 
                 - As `Implementation.<BACKEND>` with `BACKEND` being `DASK`, `DUCKDB`
                     or `POLARS`.
@@ -823,7 +836,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             | tuple[MultiIndexSelector, MultiColSelector]
         ),
     ) -> Self: ...
-    def __getitem__(
+    def __getitem__(  # noqa: C901, PLR0912
         self,
         item: (
             SingleIndexSelector
@@ -840,7 +853,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Arguments:
             item: How to slice dataframe. What happens depends on what is passed. It's easiest
-                to explain by example. Suppose we have a Dataframe `df`:
+                to explain by example. Suppose we have a Dataframe `df`
 
                 - `df['a']` extracts column `'a'` and returns a `Series`.
                 - `df[0:2]` extracts the first two rows and returns a `DataFrame`.
@@ -979,7 +992,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def row(self, index: int) -> tuple[Any, ...]:
         """Get values at given row.
 
-        !!! warning
+        Warning:
             You should NEVER use this method to iterate over a DataFrame;
             if you require row-iteration you should strongly prefer use of iter_rows()
             instead.
@@ -1046,7 +1059,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md)
+            See [null_handling](../concepts/null_handling.md)
             for reference.
 
         Examples:
@@ -1602,10 +1615,12 @@ class DataFrame(BaseFrame[DataFrameT]):
         ]
         expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
 
-        if not all(kind is ExprKind.TRANSFORM for kind in kinds):
+        if not all(kind is ExprKind.ELEMENTWISE for kind in kinds):
             from narwhals.exceptions import ComputeError
 
-            msg = "Group by is not supported with keys that are not transformation expressions"
+            msg = (
+                "Group by is not supported with keys that are not elementwise expressions"
+            )
             raise ComputeError(msg)
 
         return GroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)
@@ -1854,7 +1869,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -1956,7 +1971,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             values: One or multiple keys to group by. If None, all remaining columns not
                 specified on `on` and `index` will be used. At least one of `index` and
                 `values` must be specified.
-            aggregate_function: Choose from:
+            aggregate_function: Choose from
 
                 - None: no aggregation takes place, will raise error if multiple values
                     are in group.
@@ -2173,7 +2188,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 class LazyFrame(BaseFrame[FrameT]):
     """Narwhals LazyFrame, backed by a native lazyframe.
 
-    !!! warning
+    Warning:
         This class is not meant to be instantiated directly - instead use
         [`narwhals.from_native`][] with a native
         object that is a lazy dataframe from one of the supported
@@ -2196,17 +2211,17 @@ class LazyFrame(BaseFrame[FrameT]):
             plx = self.__narwhals_namespace__()
             return plx.col(arg)
         if isinstance(arg, Expr):
-            if arg._metadata._window_kind.is_open():
+            if arg._metadata.n_orderable_ops:
                 msg = (
                     "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
                     "Hints:\n"
                     "- Instead of `lf.select(nw.col('a').sort())`, use `lf.select('a').sort()`.\n"
                     "- Instead of `lf.select(nw.col('a').cum_sum())`, use\n"
                     "  `lf.select(nw.col('a').cum_sum().over(order_by='date'))`.\n\n"
-                    "See https://narwhals-dev.github.io/narwhals/basics/order_dependence/."
+                    "See https://narwhals-dev.github.io/narwhals/concepts/order_dependence/."
                 )
                 raise OrderDependentExprError(msg)
-            if arg._metadata.kind.is_filtration():
+            if arg._metadata.is_filtration:
                 msg = (
                     "Length-changing expressions are not supported for use in LazyFrame, unless\n"
                     "followed by an aggregation.\n\n"
@@ -2280,21 +2295,21 @@ class LazyFrame(BaseFrame[FrameT]):
         Arguments:
             backend: specifies which eager backend collect to. This will be the underlying
                 backend for the resulting Narwhals DataFrame. If None, then the following
-                default conversions will be applied:
+                default conversions will be applied
 
                 - `polars.LazyFrame` -> `polars.DataFrame`
                 - `dask.DataFrame` -> `pandas.DataFrame`
                 - `duckdb.PyRelation` -> `pyarrow.Table`
                 - `pyspark.DataFrame` -> `pyarrow.Table`
 
-                `backend` can be specified in various ways:
+                `backend` can be specified in various ways
 
                 - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`
                     or `POLARS`.
                 - As a string: `"pandas"`, `"pyarrow"` or `"polars"`
                 - Directly as a module `pandas`, `pyarrow` or `polars`.
             kwargs: backend specific kwargs to pass along. To know more please check the
-                backend specific documentation:
+                backend specific documentation
 
                 - [polars.LazyFrame.collect](https://docs.pola.rs/api/python/dev/reference/lazyframe/api/polars.LazyFrame.collect.html)
                 - [dask.dataframe.DataFrame.compute](https://docs.dask.org/en/stable/generated/dask.dataframe.DataFrame.compute.html)
@@ -2412,7 +2427,7 @@ class LazyFrame(BaseFrame[FrameT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -2649,7 +2664,7 @@ class LazyFrame(BaseFrame[FrameT]):
     def tail(self, n: int = 5) -> Self:  # pragma: no cover
         r"""Get the last `n` rows.
 
-        !!! warning
+        Warning:
             `LazyFrame.tail` is deprecated and will be removed in a future version.
             Note: this will remain available in `narwhals.stable.v1`.
             See [stable api](../backcompat.md/) for more information.
@@ -2904,10 +2919,12 @@ class LazyFrame(BaseFrame[FrameT]):
         _keys = [k if is_expr else col(k) for k, is_expr in zip(flat_keys, key_is_expr)]
         expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
 
-        if not all(kind is ExprKind.TRANSFORM for kind in kinds):
+        if not all(kind is ExprKind.ELEMENTWISE for kind in kinds):
             from narwhals.exceptions import ComputeError
 
-            msg = "Group by is not supported with keys that are not transformation expressions"
+            msg = (
+                "Group by is not supported with keys that are not elementwise expressions"
+            )
             raise ComputeError(msg)
 
         return LazyGroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)
@@ -3120,7 +3137,7 @@ class LazyFrame(BaseFrame[FrameT]):
     def gather_every(self, n: int, offset: int = 0) -> Self:
         r"""Take every nth row in the DataFrame and return as a new DataFrame.
 
-        !!! warning
+        Warning:
             `LazyFrame.gather_every` is deprecated and will be removed in a future version.
             Note: this will remain available in `narwhals.stable.v1`.
             See [stable api](../backcompat.md/) for more information.
