@@ -25,7 +25,7 @@ class ScalarLiteral(LiteralValue):
 
     def __repr__(self) -> str:
         if self.value is not None:
-            return f"{type(self.value).__name__}: {self.value}"
+            return f"{type(self.value).__name__}: {self.value!s}"
         return "null"
 
 

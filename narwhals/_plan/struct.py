@@ -17,3 +17,6 @@ class FieldByName(StructFunction):
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.elementwise()
+
+    def __repr__(self) -> str:
+        return f"struct.field_by_name({self.name!r})"

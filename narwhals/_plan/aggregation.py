@@ -17,6 +17,14 @@ class Agg(ExprIR):
     def is_scalar(self) -> bool:
         return True
 
+    def __repr__(self) -> str:
+        tp = type(self)
+        if tp in {Agg, OrderableAgg}:
+            return tp.__name__
+        m = {ArgMin: "arg_min", ArgMax: "arg_max", NUnique: "n_unique"}
+        name = m.get(tp, tp.__name__.lower())
+        return f"{self.expr!r}.{name}()"
+
 
 class Count(Agg): ...
 

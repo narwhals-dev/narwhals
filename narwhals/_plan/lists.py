@@ -13,3 +13,6 @@ class Len(ListFunction):
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.elementwise()
+
+    def __repr__(self) -> str:
+        return "list.len"

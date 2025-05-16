@@ -12,7 +12,28 @@ if t.TYPE_CHECKING:
     from narwhals.typing import ClosedInterval
 
 
-class BooleanFunction(Function): ...
+class BooleanFunction(Function):
+    def __repr__(self) -> str:
+        tp = type(self)
+        if tp is BooleanFunction:
+            return tp.__name__
+        m = {
+            All: "all",
+            Any: "any",
+            AllHorizontal: "all_horizontal",
+            AnyHorizontal: "any_horizontal",
+            IsBetween: "is_between",
+            IsDuplicated: "is_duplicated",
+            IsFinite: "is_finite",
+            IsNan: "is_nan",
+            IsNull: "is_null",
+            IsFirstDistinct: "is_first_distinct",
+            IsLastDistinct: "is_last_distinct",
+            IsUnique: "is_unique",
+            IsIn: "is_in",
+            Not: "not",
+        }
+        return m[tp]
 
 
 class All(BooleanFunction):
