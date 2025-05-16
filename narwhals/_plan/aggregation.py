@@ -45,14 +45,14 @@ class NUnique(Agg): ...
 
 
 class Quantile(Agg):
-    __slots__ = ("expr", "interpolation", "quantile")
+    __slots__ = (*Agg.__slots__, "interpolation", "quantile")
 
     quantile: ExprIR
     interpolation: RollingInterpolationMethod
 
 
 class Std(Agg):
-    __slots__ = ("ddof", "expr")
+    __slots__ = (*Agg.__slots__, "ddof")
 
     ddof: int
 
@@ -61,7 +61,7 @@ class Sum(Agg): ...
 
 
 class Var(Agg):
-    __slots__ = ("ddof", "expr")
+    __slots__ = (*Agg.__slots__, "ddof")
 
     ddof: int
 
