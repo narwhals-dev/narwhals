@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 import pytest
 
 import narwhals.stable.v1 as nw
@@ -7,19 +9,26 @@ from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-data = {"a": [-1.0, 0, 1, 2, 4]}
-expected = {"a": [float("nan"), float("-inf"), 0, 1, 2]}
+data = {"a": [-1, 0, 1, 2, 4]}
+
+expected = {  # base: expected values
+    2: [float("nan"), float("-inf"), 0, 1, 2],
+    10: [float("nan"), float("-inf"), 0, 0.30103, 0.60206],
+    math.e: [float("nan"), float("-inf"), 0, 0.693147, 1.386294],
+}
 
 
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
-def test_log_expr(constructor: Constructor) -> None:
+@pytest.mark.parametrize("base", [2, 10, math.e])
+def test_log_expr(constructor: Constructor, base: float) -> None:
     df = nw.from_native(constructor(data))
-    result = df.select(nw.col("a").log(base=2))
-    assert_equal_data(result, expected)
+    result = df.select(nw.col("a").log(base=base))
+    assert_equal_data(result, {"a": expected[base]})
 
 
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
-def test_log_series(constructor_eager: ConstructorEager) -> None:
+@pytest.mark.parametrize("base", [2, 10, math.e])
+def test_log_series(constructor_eager: ConstructorEager, base: float) -> None:
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
-    result = series.log(base=2)
-    assert_equal_data({"a": result}, expected)
+    result = series.log(base=base)
+    assert_equal_data({"a": result}, {"a": expected[base]})
