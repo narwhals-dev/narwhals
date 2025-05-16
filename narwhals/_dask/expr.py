@@ -663,6 +663,14 @@ class DaskExpr(
 
         return self._with_callable(da.isfinite, "is_finite")
 
+    def log(self, base: float) -> Self:
+        import dask.array as da
+
+        def _log(_input: dx.Series) -> dx.Series:
+            return da.log(_input) / da.log(base)
+
+        return self._with_callable(_log, "log")
+
     @property
     def str(self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)

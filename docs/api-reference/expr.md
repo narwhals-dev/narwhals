@@ -37,6 +37,7 @@
         - is_null
         - is_unique
         - len
+        - log
         - map_batches
         - max
         - mean

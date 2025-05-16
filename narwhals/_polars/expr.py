@@ -291,6 +291,7 @@ class PolarsExpr:
     is_null: Method[Self]
     is_unique: Method[Self]
     len: Method[Self]
+    log: Method[Self]
     max: Method[Self]
     mean: Method[Self]
     median: Method[Self]
