@@ -10,9 +10,8 @@ from narwhals._plan.options import FunctionFlags
 from narwhals._plan.options import FunctionOptions
 
 if TYPE_CHECKING:
-    from typing import Any
-    from typing import Sequence
-
+    from narwhals._plan.common import Seq
+    from narwhals._plan.common import Udf
     from narwhals._plan.options import EWMOptions
     from narwhals._plan.options import RankOptions
     from narwhals.dtypes import DType
@@ -42,7 +41,7 @@ class HistBins(Hist):
 
     __slots__ = (*Hist.__slots__, "bins")
 
-    bins: Sequence[float]
+    bins: Seq[float]
 
 
 class HistBinCount(Hist):
@@ -237,7 +236,7 @@ class GatherEvery(Function):
 class MapBatches(Function):
     __slots__ = ("function", "is_elementwise", "return_dtype", "returns_scalar")
 
-    function: Any
+    function: Udf
     return_dtype: DType | None
     is_elementwise: bool
     returns_scalar: bool

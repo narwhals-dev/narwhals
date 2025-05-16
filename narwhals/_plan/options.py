@@ -6,8 +6,7 @@ from typing import TYPE_CHECKING
 from narwhals._plan.common import Immutable
 
 if TYPE_CHECKING:
-    from typing import Sequence
-
+    from narwhals._plan.common import Seq
     from narwhals.typing import RankMethod
 
 
@@ -120,8 +119,8 @@ class SortOptions(Immutable):
 class SortMultipleOptions(Immutable):
     __slots__ = ("descending", "nulls_last")
 
-    descending: Sequence[bool]
-    nulls_last: Sequence[bool]
+    descending: Seq[bool]
+    nulls_last: Seq[bool]
 
 
 class RankOptions(Immutable):

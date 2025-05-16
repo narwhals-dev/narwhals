@@ -1,14 +1,29 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import TypeVar
 
 if TYPE_CHECKING:
     from typing import Any
+    from typing import Callable
 
     from typing_extensions import Never
     from typing_extensions import Self
+    from typing_extensions import TypeAlias
 
     from narwhals._plan.options import FunctionOptions
+
+
+T = TypeVar("T")
+
+Seq: TypeAlias = "tuple[T,...]"
+"""Immutable Sequence.
+
+Using instead of `Sequence`, as a `list` can be passed there (can't break immutability promise).
+"""
+
+Udf: TypeAlias = "Callable[[Any], Any]"
+"""Placeholder for `map_batches(function=...)`."""
 
 
 class Immutable:

@@ -7,7 +7,7 @@ from narwhals._plan.common import ExprIR
 if TYPE_CHECKING:
     from narwhals._plan.common import DummySeries
     from narwhals.dtypes import DType
-    from narwhals.typing import PythonLiteral
+    from narwhals.typing import NonNestedLiteral
 
 
 class LiteralValue(ExprIR):
@@ -17,7 +17,7 @@ class LiteralValue(ExprIR):
 class ScalarLiteral(LiteralValue):
     __slots__ = ("value",)
 
-    value: PythonLiteral
+    value: NonNestedLiteral
 
     @property
     def is_scalar(self) -> bool:

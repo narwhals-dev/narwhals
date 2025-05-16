@@ -8,6 +8,7 @@ from narwhals._plan.common import ExprIR
 
 if t.TYPE_CHECKING:
     from narwhals._plan.common import Function
+    from narwhals._plan.common import Seq
     from narwhals._plan.functions import MapBatches
     from narwhals._plan.literal import LiteralValue
     from narwhals._plan.operators import Operator
@@ -44,7 +45,7 @@ class Column(ExprIR):
 class Columns(ExprIR):
     __slots__ = ("names",)
 
-    names: t.Sequence[str]
+    names: Seq[str]
 
     def __repr__(self) -> str:
         return f"cols({self.names!r})"
@@ -124,7 +125,7 @@ class SortBy(ExprIR):
     __slots__ = ("by", "expr", "options")
 
     expr: ExprIR
-    by: t.Sequence[ExprIR]
+    by: Seq[ExprIR]
     options: SortMultipleOptions
 
     @property
@@ -145,7 +146,7 @@ class FunctionExpr(ExprIR):
 
     __slots__ = ("function", "input", "options")
 
-    input: t.Sequence[ExprIR]
+    input: Seq[ExprIR]
     function: Function
     """Enum type is named `FunctionExpr` in `polars`.
 
@@ -167,7 +168,7 @@ class AnonymousFunctionExpr(ExprIR):
 
     __slots__ = ("function", "input", "options")
 
-    input: t.Sequence[ExprIR]
+    input: Seq[ExprIR]
     function: MapBatches
     options: FunctionOptions
 
@@ -198,7 +199,7 @@ class WindowExpr(ExprIR):
     expr: ExprIR
     """Renamed from `function`."""
 
-    partition_by: t.Sequence[ExprIR]
+    partition_by: Seq[ExprIR]
     order_by: tuple[ExprIR, SortOptions] | None
     options: Window
     """Little confused on the nesting.
@@ -223,7 +224,7 @@ class Len(ExprIR):
 class Exclude(ExprIR):
     __slots__ = ("names",)
 
-    names: t.Sequence[str]
+    names: Seq[str]
 
 
 class Nth(ExprIR):
@@ -245,7 +246,7 @@ class IndexColumns(ExprIR):
 
     __slots__ = ("indices",)
 
-    indices: t.Sequence[int]
+    indices: Seq[int]
 
     def __repr__(self) -> str:
         return f"index_columns({self.indices!r})"
