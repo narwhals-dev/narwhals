@@ -57,7 +57,7 @@ def test_log_dtype_pandas_nullabe() -> None:
 
 
 @pytest.mark.skipif(
-    PANDAS_VERSION < (2, 0, 0),
+    PANDAS_VERSION < (2, 1, 0),
     reason="nullable types require pandas2+",
 )
 def test_log_dtype_pandas_pyarrow() -> None:
