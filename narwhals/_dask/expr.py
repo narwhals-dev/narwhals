@@ -60,9 +60,7 @@ class DaskExpr(
         alias_output_names: AliasNames | None,
         backend_version: tuple[int, ...],
         version: Version,
-        # Kwargs with metadata which we may need in group-by agg
-        # (e.g. `ddof` for `std` and `var`).
-        call_kwargs: dict[str, Any] | None = None,
+        scalar_kwargs: dict[str, Any] | None = None,
     ) -> None:
         self._call = call
         self._depth = depth
@@ -71,7 +69,7 @@ class DaskExpr(
         self._alias_output_names = alias_output_names
         self._backend_version = backend_version
         self._version = version
-        self._call_kwargs = call_kwargs or {}
+        self._scalar_kwargs = scalar_kwargs or {}
         self._metadata: ExprMetadata | None = None
 
     def __call__(self, df: DaskLazyFrame) -> Sequence[dx.Series]:
@@ -97,7 +95,7 @@ class DaskExpr(
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            call_kwargs=self._call_kwargs,
+            scalar_kwargs=self._scalar_kwargs,
         )
 
     @classmethod
@@ -159,7 +157,7 @@ class DaskExpr(
         call: Callable[..., dx.Series],
         /,
         expr_name: str = "",
-        call_kwargs: dict[str, Any] | None = None,
+        scalar_kwargs: dict[str, Any] | None = None,
         **expressifiable_args: Self | Any,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
@@ -182,7 +180,7 @@ class DaskExpr(
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            call_kwargs=call_kwargs,
+            scalar_kwargs=scalar_kwargs,
         )
 
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
@@ -194,7 +192,7 @@ class DaskExpr(
             alias_output_names=func,
             backend_version=self._backend_version,
             version=self._version,
-            call_kwargs=self._call_kwargs,
+            scalar_kwargs=self._scalar_kwargs,
         )
 
     def __add__(self, other: Any) -> Self:
@@ -325,14 +323,14 @@ class DaskExpr(
         return self._with_callable(
             lambda _input: _input.std(ddof=ddof).to_series(),
             "std",
-            call_kwargs={"ddof": ddof},
+            scalar_kwargs={"ddof": ddof},
         )
 
     def var(self, ddof: int) -> Self:
         return self._with_callable(
             lambda _input: _input.var(ddof=ddof).to_series(),
             "var",
-            call_kwargs={"ddof": ddof},
+            scalar_kwargs={"ddof": ddof},
         )
 
     def skew(self) -> Self:
@@ -630,11 +628,11 @@ class DaskExpr(
                             msg = "Safety check failed, please report a bug."
                             raise AssertionError(msg)
                         res_native = grouped.transform(
-                            dask_function_name, **self._call_kwargs
+                            dask_function_name, **self._scalar_kwargs
                         ).to_frame(output_names[0])
                     else:
                         res_native = grouped[list(output_names)].transform(
-                            dask_function_name, **self._call_kwargs
+                            dask_function_name, **self._scalar_kwargs
                         )
                 result_frame = df._with_native(
                     res_native.rename(columns=dict(zip(output_names, aliases)))

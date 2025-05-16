@@ -226,7 +226,7 @@ class CompliantSelector(
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
-    _call_kwargs: dict[str, Any]
+    _scalar_kwargs: dict[str, Any]
 
     @classmethod
     def from_callables(
@@ -245,7 +245,7 @@ class CompliantSelector(
         obj._implementation = context._implementation
         obj._backend_version = context._backend_version
         obj._version = context._version
-        obj._call_kwargs = {}
+        obj._scalar_kwargs = {}
         return obj
 
     @property
