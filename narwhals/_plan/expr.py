@@ -8,13 +8,13 @@ from narwhals._plan.common import ExprIR
 
 if t.TYPE_CHECKING:
     from narwhals._plan.common import Function
+    from narwhals._plan.literal import LiteralValue
     from narwhals._plan.operators import Operator
     from narwhals._plan.options import FunctionOptions
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.options import SortOptions
     from narwhals._plan.window import Window
     from narwhals.dtypes import DType
-    from narwhals.typing import PythonLiteral
 
 
 class Alias(ExprIR):
@@ -41,13 +41,15 @@ class Columns(ExprIR):
 
 
 class Literal(ExprIR):
+    """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L81."""
+
     __slots__ = ("value",)
 
-    value: PythonLiteral
+    value: LiteralValue
 
     @property
     def is_scalar(self) -> bool:
-        return True
+        return self.value.is_scalar
 
 
 class BinaryExpr(ExprIR):

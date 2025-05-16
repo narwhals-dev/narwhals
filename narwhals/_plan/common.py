@@ -78,6 +78,9 @@ class DummyCompliantExpr:
         return obj
 
 
+class DummySeries: ...
+
+
 class Function(ExprIR):
     """Shared by expr functions and namespace functions.
 
