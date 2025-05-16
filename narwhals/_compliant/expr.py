@@ -508,7 +508,7 @@ class EagerExpr(
             function_name=f"{self._function_name}->{series_namespace}.{method_name}",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            call_kwargs={**self._call_kwargs, **kwargs},
+            call_kwargs=self._call_kwargs,
             context=self,
         )
 
