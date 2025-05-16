@@ -389,10 +389,16 @@ SingleColSelector: TypeAlias = "SingleIndexSelector | SingleNameSelector"
 MultiColSelector: TypeAlias = "MultiIndexSelector[_T] | MultiNameSelector[_T]"
 
 class ScalarKwargs(TypedDict):
+    strategy: NotRequired[FillNullStrategy|None]
     min_samples: NotRequired[int]
+    method: NotRequired[RankMethod]
+    window_size: NotRequired[int]
+    descending: NotRequired[bool]
     n: NotRequired[int]
     ddof: NotRequired[int]
     center: NotRequired[int]
+    reverse: NotRequired[bool]
+    limit: NotRequired[int|None]
 
 
 __all__ = [
