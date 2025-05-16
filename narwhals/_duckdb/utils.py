@@ -124,6 +124,8 @@ def native_to_narwhals_dtype(duckdb_dtype: DuckDBPyType, version: Version) -> DT
         return dtypes.Array(inner=inner, shape=tuple(shape))
 
     if duckdb_dtype_id == "enum":
+        if version is Version.V1:
+            return dtypes.Enum()  # type: ignore[call-arg]
         categories = duckdb_dtype.children[0][1]
         return dtypes.Enum(categories=categories)
 

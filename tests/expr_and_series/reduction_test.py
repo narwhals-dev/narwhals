@@ -73,7 +73,11 @@ def test_empty_scalar_reduction_select(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     # pyspark doesn't necessarely fails, but returns all None's
-    if "pyspark" in str(constructor) or "duckdb" in str(constructor):
+    if (
+        "pyspark" in str(constructor)
+        or "duckdb" in str(constructor)
+        or "ibis" in str(constructor)
+    ):
         request.applymarker(pytest.mark.xfail)
     data = {
         "str": [*"abcde"],

@@ -595,7 +595,7 @@ class DaskExpr(
             msg = (
                 "Only elementary expressions are supported for `.over` in dask.\n\n"
                 "Please see: "
-                "https://narwhals-dev.github.io/narwhals/pandas_like_concepts/improve_group_by_operation/"
+                "https://narwhals-dev.github.io/narwhals/concepts/improve_group_by_operation/"
             )
             raise NotImplementedError(msg)
         elif order_by:
@@ -674,3 +674,4 @@ class DaskExpr(
     list = not_implemented()  # pyright: ignore[reportAssignmentType]
     struct = not_implemented()  # pyright: ignore[reportAssignmentType]
     rank = not_implemented()  # pyright: ignore[reportAssignmentType]
+    _alias_native = not_implemented()

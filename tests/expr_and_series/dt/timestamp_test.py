@@ -54,7 +54,7 @@ def test_timestamp_datetimes(
     time_unit: Literal["ns", "us", "ms"],
     expected: list[int | None],
 ) -> None:
-    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
+    if any(x in str(constructor) for x in ("duckdb", "pyspark", "ibis")):
         request.applymarker(
             pytest.mark.xfail(reason="Backend timestamp conversion not yet implemented")
         )
@@ -98,7 +98,7 @@ def test_timestamp_datetimes_tz_aware(
     time_unit: Literal["ns", "us", "ms"],
     expected: list[int | None],
 ) -> None:
-    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
+    if any(x in str(constructor) for x in ("duckdb", "pyspark", "ibis")):
         request.applymarker(
             pytest.mark.xfail(reason="Backend timestamp conversion not yet implemented")
         )
@@ -157,7 +157,7 @@ def test_timestamp_dates(
     time_unit: Literal["ns", "us", "ms"],
     expected: list[int | None],
 ) -> None:
-    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
+    if any(x in str(constructor) for x in ("duckdb", "pyspark", "ibis")):
         request.applymarker(
             pytest.mark.xfail(reason="Backend timestamp conversion not yet implemented")
         )
@@ -184,7 +184,7 @@ def test_timestamp_dates(
 def test_timestamp_invalid_date(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
+    if any(x in str(constructor) for x in ("duckdb", "pyspark", "ibis")):
         request.applymarker(
             pytest.mark.xfail(reason="Backend timestamp conversion not yet implemented")
         )

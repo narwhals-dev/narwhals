@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING
 from duckdb import FunctionExpression
 
 from narwhals._duckdb.utils import lit
+from narwhals.utils import not_implemented
 
 if TYPE_CHECKING:
     import duckdb
-    from typing_extensions import Never
 
     from narwhals._duckdb.expr import DuckDBExpr
 
@@ -93,10 +93,6 @@ class DuckDBExprStringNamespace:
             lambda _input: FunctionExpression("replace", _input, lit(pattern), lit(value))
         )
 
-    def replace(self, pattern: str, value: str, *, literal: bool, n: int) -> Never:
-        msg = "`replace` is currently not supported for DuckDB"
-        raise NotImplementedError(msg)
-
     def to_datetime(self, format: str | None) -> DuckDBExpr:
         if format is None:
             msg = "Cannot infer format with DuckDB backend, please specify `format` explicitly."
@@ -105,3 +101,5 @@ class DuckDBExprStringNamespace:
         return self._compliant_expr._with_callable(
             lambda _input: FunctionExpression("strptime", _input, lit(format))
         )
+
+    replace = not_implemented()
