@@ -10,11 +10,16 @@ if TYPE_CHECKING:
     from tests.utils import Constructor
 
 
-def test_ops_preserve_column_index_name(constructor: Constructor) -> None:
+def test_ops_preserve_column_index_name(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
     if not any(x in str(constructor) for x in ("pandas", "modin", "cudf", "dask")):
         pytest.skip(
             reason="Dataframe columns is a list and do not have a `name` like a pandas Index does"
         )
+    if "dask" in str(constructor):
+        # https://github.com/dask/dask/issues/11874
+        request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df_native = constructor(data)

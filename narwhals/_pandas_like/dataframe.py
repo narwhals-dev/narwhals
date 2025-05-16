@@ -25,7 +25,6 @@ from narwhals._pandas_like.utils import get_dtype_backend
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
 from narwhals._pandas_like.utils import rename
-from narwhals._pandas_like.utils import rename_axis
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._pandas_like.utils import set_index
 from narwhals.dependencies import is_pandas_like_dataframe
@@ -123,7 +122,6 @@ class PandasLikeDataFrame(
         validate_backend_version(self._implementation, self._backend_version)
         if validate_column_names:
             check_column_names_are_unique(native_dataframe.columns)
-        self._native_columns_name = native_dataframe.columns.name
 
     @classmethod
     def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self:
@@ -255,12 +253,7 @@ class PandasLikeDataFrame(
 
     def _with_native(self, df: Any, *, validate_column_names: bool = True) -> Self:
         return self.__class__(
-            rename_axis(
-                df,
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-                columns=self._native_columns_name,
-            ),
+            df,
             implementation=self._implementation,
             backend_version=self._backend_version,
             version=self._version,
@@ -429,6 +422,8 @@ class PandasLikeDataFrame(
         new_series = align_series_full_broadcast(*new_series)
         namespace = self.__narwhals_namespace__()
         df = namespace._concat_horizontal([s.native for s in new_series])
+        # `concat` creates a new object, so fine to modify `.columns.name` inplace.
+        df.columns.name = self.native.columns.name
         return self._with_native(df, validate_column_names=True)
 
     def drop_nulls(
@@ -487,6 +482,8 @@ class PandasLikeDataFrame(
         to_concat.extend(self._extract_comparand(s) for s in name_columns.values())
         namespace = self.__narwhals_namespace__()
         df = namespace._concat_horizontal(to_concat)
+        # `concat` creates a new object, so fine to modify `.columns.name` inplace.
+        df.columns.name = self.native.columns.name
         return self._with_native(df, validate_column_names=False)
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
@@ -542,12 +539,7 @@ class PandasLikeDataFrame(
             import pandas as pd  # ignore-banned-import
 
             return PandasLikeDataFrame(
-                rename_axis(
-                    self.to_pandas(),
-                    implementation=self._implementation,
-                    backend_version=self._backend_version,
-                    columns=self._native_columns_name,
-                ),
+                self.to_pandas(),
                 implementation=Implementation.PANDAS,
                 backend_version=parse_version(pd),
                 version=self._version,
