@@ -23,6 +23,11 @@ class ScalarLiteral(LiteralValue):
     def is_scalar(self) -> bool:
         return True
 
+    def __repr__(self) -> str:
+        if self.value is not None:
+            return f"{type(self.value).__name__}: {self.value}"
+        return "null"
+
 
 class SeriesLiteral(LiteralValue):
     """We already need this.
@@ -33,6 +38,9 @@ class SeriesLiteral(LiteralValue):
     __slots__ = ("value",)
 
     value: DummySeries
+
+    def __repr__(self) -> str:
+        return "Series"
 
 
 class RangeLiteral(LiteralValue):

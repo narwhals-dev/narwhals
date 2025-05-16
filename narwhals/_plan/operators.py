@@ -3,7 +3,28 @@ from __future__ import annotations
 from narwhals._plan.common import Immutable
 
 
-class Operator(Immutable): ...
+class Operator(Immutable):
+    def __repr__(self) -> str:
+        tp = type(self)
+        if tp is Operator:
+            return "Operator"
+        m = {
+            Eq: "==",
+            NotEq: "!=",
+            Lt: "<",
+            LtEq: "<=",
+            Gt: ">",
+            GtEq: ">=",
+            Add: "+",
+            Sub: "-",
+            Multiply: "*",
+            TrueDivide: "/",
+            FloorDivide: "//",
+            Modulus: "%",
+            And: "&",
+            Or: "|",
+        }
+        return m[tp]
 
 
 class Eq(Operator): ...

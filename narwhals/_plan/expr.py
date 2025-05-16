@@ -28,17 +28,26 @@ class Alias(ExprIR):
     def is_scalar(self) -> bool:
         return self.expr.is_scalar
 
+    def __repr__(self) -> str:
+        return f"{self.expr!r}.alias({self.name!r})"
+
 
 class Column(ExprIR):
     __slots__ = ("name",)
 
     name: str
 
+    def __repr__(self) -> str:
+        return f"col({self.name!r})"
+
 
 class Columns(ExprIR):
     __slots__ = ("names",)
 
     names: t.Sequence[str]
+
+    def __repr__(self) -> str:
+        return f"cols({self.names!r})"
 
 
 class Literal(ExprIR):
@@ -51,6 +60,9 @@ class Literal(ExprIR):
     @property
     def is_scalar(self) -> bool:
         return self.value.is_scalar
+
+    def __repr__(self) -> str:
+        return f"lit({self.value!r})"
 
 
 class BinaryExpr(ExprIR):
@@ -73,6 +85,9 @@ class BinaryExpr(ExprIR):
     def is_scalar(self) -> bool:
         return self.left.is_scalar and self.right.is_scalar
 
+    def __repr__(self) -> str:
+        return f"[({self.left!r}) {self.op!r} ({self.right!r})]"
+
 
 class Cast(ExprIR):
     __slots__ = ("dtype", "expr")
@@ -84,6 +99,9 @@ class Cast(ExprIR):
     def is_scalar(self) -> bool:
         return self.expr.is_scalar
 
+    def __repr__(self) -> str:
+        return f"{self.expr!r}.cast({self.dtype!r})"
+
 
 class Sort(ExprIR):
     __slots__ = ("expr", "options")
@@ -94,6 +112,10 @@ class Sort(ExprIR):
     @property
     def is_scalar(self) -> bool:
         return self.expr.is_scalar
+
+    def __repr__(self) -> str:
+        direction = "desc" if self.options.descending else "asc"
+        return f"{self.expr!r}.sort({direction})"
 
 
 class SortBy(ExprIR):
@@ -108,6 +130,9 @@ class SortBy(ExprIR):
     @property
     def is_scalar(self) -> bool:
         return self.expr.is_scalar
+
+    def __repr__(self) -> str:
+        return f"{self.expr!r}.sort_by(by={self.by!r}, options={self.options!r})"
 
 
 class FunctionExpr(ExprIR):
@@ -161,6 +186,9 @@ class Filter(ExprIR):
     def is_scalar(self) -> bool:
         return self.expr.is_scalar and self.by.is_scalar
 
+    def __repr__(self) -> str:
+        return f"{self.expr!r}.filter({self.by!r})"
+
 
 class WindowExpr(ExprIR):
     """https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/expr.rs#L129-L136."""
@@ -188,6 +216,9 @@ class Len(ExprIR):
     def is_scalar(self) -> bool:
         return True
 
+    def __repr__(self) -> str:
+        return "len()"
+
 
 class Exclude(ExprIR):
     __slots__ = ("names",)
@@ -199,6 +230,9 @@ class Nth(ExprIR):
     __slots__ = ("index",)
 
     index: int
+
+    def __repr__(self) -> str:
+        return f"nth({self.index})"
 
 
 class IndexColumns(ExprIR):
@@ -213,8 +247,18 @@ class IndexColumns(ExprIR):
 
     indices: t.Sequence[int]
 
+    def __repr__(self) -> str:
+        return f"index_columns({self.indices!r})"
 
-class All(ExprIR): ...
+
+class All(ExprIR):
+    """Aka Wildcard (`pl.all()` or `pl.col("*")`).
+
+    https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L137
+    """
+
+    def __repr__(self) -> str:
+        return "*"
 
 
 # NOTE: by_dtype, matches, numeric, boolean, string, categorical, datetime, all
