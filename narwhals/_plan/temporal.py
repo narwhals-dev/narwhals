@@ -1,11 +1,18 @@
-"""TODO: Attributes."""
-
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from narwhals._plan.common import Function
+from narwhals._plan.options import FunctionOptions
+
+if TYPE_CHECKING:
+    from narwhals.typing import TimeUnit
 
 
-class TemporalFunction(Function): ...
+class TemporalFunction(Function):
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.elementwise()
 
 
 class Date(TemporalFunction): ...
@@ -59,16 +66,31 @@ class TotalMicroseconds(TemporalFunction): ...
 class TotalNanoseconds(TemporalFunction): ...
 
 
-class ToString(TemporalFunction): ...
+class ToString(TemporalFunction):
+    __slots__ = ("format",)
+
+    format: str
 
 
-class ReplaceTimeZone(TemporalFunction): ...
+class ReplaceTimeZone(TemporalFunction):
+    __slots__ = ("time_zone",)
+
+    time_zone: str | None
 
 
-class ConvertTimeZone(TemporalFunction): ...
+class ConvertTimeZone(TemporalFunction):
+    __slots__ = ("time_zone",)
+
+    time_zone: str
 
 
-class Timestamp(TemporalFunction): ...
+class Timestamp(TemporalFunction):
+    __slots__ = ("time_unit",)
+
+    time_unit: TimeUnit
 
 
-class Truncate(TemporalFunction): ...
+class Truncate(TemporalFunction):
+    __slots__ = ("every",)
+
+    every: str
