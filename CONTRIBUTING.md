@@ -139,6 +139,23 @@ If you add code that should be tested, please add tests.
   - To run tests using `cudf.pandas`, run `NARWHALS_DEFAULT_CONSTRUCTORS=pandas python -m cudf.pandas -m pytest`
   - To run tests using `polars[gpu]`, run `NARWHALS_POLARS_GPU=1 pytest --constructors=polars[lazy]`
 
+### Backend-specific advice
+
+- pandas:
+
+  - Don't use `apply` or `map`. The only place we currently use `apply` is in `group_by` for operations
+    which the pandas API just doesn't support, and even then, it's accompanied by a big warning.
+  - Don't use inplace methods, unless you're creating a new object and are sure it's safe to modify
+    it. In particular, you should never ever modify the user's input data.
+
+- Polars:
+
+  - Never use `map_elements`.
+
+- DuckDB / PySpark / anything lazy-only:
+
+  - Never assume that your data is ordered in any pre-defined way.
+
 ### Test Failure Patterns
 
 We aim to use three standard patterns for handling test failures:
