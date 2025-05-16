@@ -19,7 +19,10 @@ if TYPE_CHECKING:
     from narwhals.typing import FillNullStrategy
 
 
-class Abs(Function): ...
+class Abs(Function):
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.elementwise()
 
 
 class Hist(Function):
@@ -28,6 +31,10 @@ class Hist(Function):
     __slots__ = ("include_breakpoint",)
 
     include_breakpoint: bool
+
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.groupwise()
 
 
 class HistBins(Hist):
@@ -44,16 +51,26 @@ class HistBinCount(Hist):
     bin_count: int
 
 
-class NullCount(Function): ...
+class NullCount(Function):
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.aggregation()
 
 
-class Pow(Function): ...
+class Pow(Function):
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.elementwise()
 
 
 class FillNull(Function):
     __slots__ = ("value",)
 
     value: ExprIR
+
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.elementwise()
 
 
 class FillNullWithStrategy(Function):
@@ -64,17 +81,39 @@ class FillNullWithStrategy(Function):
     strategy: FillNullStrategy
     limit: int | None
 
+    @property
+    def function_options(self) -> FunctionOptions:
+        # NOTE: We don't support these strategies yet
+        # but might be good to encode this difference now
+        return (
+            FunctionOptions.elementwise()
+            if self.strategy in {"one", "zero"}
+            else FunctionOptions.groupwise()
+        )
 
-class Shift(Function): ...
+
+class Shift(Function):
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.length_preserving()
 
 
-class DropNulls(Function): ...
+class DropNulls(Function):
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.row_separable()
 
 
-class Mode(Function): ...
+class Mode(Function):
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.groupwise()
 
 
-class Skew(Function): ...
+class Skew(Function):
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.aggregation()
 
 
 class Rank(Function):
@@ -82,14 +121,25 @@ class Rank(Function):
 
     options: RankOptions
 
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.groupwise()
 
-class Clip(Function): ...
+
+class Clip(Function):
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.elementwise()
 
 
 class CumAgg(Function):
     __slots__ = ("reverse",)
 
     reverse: bool
+
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.length_preserving()
 
 
 class CumCount(CumAgg): ...
@@ -104,10 +154,16 @@ class CumMax(CumAgg): ...
 class CumProd(CumAgg): ...
 
 
-class Diff(Function): ...
+class Diff(Function):
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.length_preserving()
 
 
-class Unique(Function): ...
+class Unique(Function):
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.groupwise()
 
 
 class Round(Function):
@@ -115,17 +171,41 @@ class Round(Function):
 
     decimals: int
 
-
-class SumHorizontal(Function): ...
-
-
-class MinHorizontal(Function): ...
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.elementwise()
 
 
-class MaxHorizontal(Function): ...
+class SumHorizontal(Function):
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.elementwise().with_flags(
+            FunctionFlags.INPUT_WILDCARD_EXPANSION
+        )
 
 
-class MeanHorizontal(Function): ...
+class MinHorizontal(Function):
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.elementwise().with_flags(
+            FunctionFlags.INPUT_WILDCARD_EXPANSION
+        )
+
+
+class MaxHorizontal(Function):
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.elementwise().with_flags(
+            FunctionFlags.INPUT_WILDCARD_EXPANSION
+        )
+
+
+class MeanHorizontal(Function):
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.elementwise().with_flags(
+            FunctionFlags.INPUT_WILDCARD_EXPANSION
+        )
 
 
 class EwmMean(Function):
@@ -133,14 +213,25 @@ class EwmMean(Function):
 
     options: EWMOptions
 
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.length_preserving()
+
 
 class ReplaceStrict(Function):
     __slots__ = ("return_dtype",)
 
     return_dtype: DType | type[DType] | None
 
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.elementwise()
 
-class GatherEvery(Function): ...
+
+class GatherEvery(Function):
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.groupwise()
 
 
 class MapBatches(Function):
