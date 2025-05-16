@@ -35,6 +35,7 @@ def test_skew_series(
         ([1, 2, 3, 2, 1], 0.343622),
     ],
 )
+@pytest.mark.filterwarnings("ignore:.*invalid value:RuntimeWarning:dask")
 def test_skew_expr(
     constructor: Constructor,
     data: list[float],
