@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from typing import Any
 from typing import Sequence
+from typing import cast
 
 from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.typing import FillNullStrategy
     from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import PythonLiteral
     from narwhals.typing import RankMethod
     from narwhals.utils import Implementation
     from narwhals.utils import Version
@@ -48,10 +49,10 @@ WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
 
 
 def window_kwargs_to_pandas_equivalent(
-    function_name: str, kwargs: dict[str, object]
-) -> dict[str, object]:
+    function_name: str, kwargs: dict[str, PythonLiteral]
+) -> dict[str, PythonLiteral]:
     if function_name == "shift":
-        pandas_kwargs: dict[str, object] = {"periods": kwargs["n"]}
+        pandas_kwargs: dict[str, PythonLiteral] = {"periods": kwargs["n"]}
     elif function_name == "rank":
         _method = kwargs["method"]
         pandas_kwargs = {
@@ -85,7 +86,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
-        scalar_kwargs: dict[str, Any] | None = None,
+        scalar_kwargs: dict[str, PythonLiteral] | None = None,
     ) -> None:
         self._call = call
         self._depth = depth
@@ -251,7 +252,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     df = df.with_columns(~plx.col(*output_names).is_null())
 
                 if function_name.startswith("cum_"):
-                    reverse = self._scalar_kwargs["reverse"]
+                    reverse = cast("bool", self._scalar_kwargs["reverse"])
                 else:
                     assert "reverse" not in self._scalar_kwargs  # noqa: S101
                     reverse = False

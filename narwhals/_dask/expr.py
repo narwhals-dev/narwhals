@@ -38,6 +38,7 @@ if TYPE_CHECKING:
     from narwhals.typing import FillNullStrategy
     from narwhals.typing import NonNestedLiteral
     from narwhals.typing import NumericLiteral
+    from narwhals.typing import PythonLiteral
     from narwhals.typing import RollingInterpolationMethod
     from narwhals.typing import TemporalLiteral
     from narwhals.utils import Version
@@ -60,7 +61,7 @@ class DaskExpr(
         alias_output_names: AliasNames | None,
         backend_version: tuple[int, ...],
         version: Version,
-        scalar_kwargs: dict[str, Any] | None = None,
+        scalar_kwargs: dict[str, PythonLiteral] | None = None,
     ) -> None:
         self._call = call
         self._depth = depth
@@ -157,7 +158,7 @@ class DaskExpr(
         call: Callable[..., dx.Series],
         /,
         expr_name: str = "",
-        scalar_kwargs: dict[str, Any] | None = None,
+        scalar_kwargs: dict[str, PythonLiteral] | None = None,
         **expressifiable_args: Self | Any,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
