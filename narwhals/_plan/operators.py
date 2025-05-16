@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from narwhals._plan.common import ExprIR
+from narwhals._plan.common import Immutable
 
 
-class Operator(ExprIR): ...
+class Operator(Immutable): ...
 
 
 class Eq(Operator): ...
