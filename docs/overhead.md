@@ -38,8 +38,15 @@ everything lazy. Narwhals never evaluates a full query unless you ask it to
 (with `.collect()`).
 
 In order to mimic Polars' behaviour, there are some places
-where Narwhals does need to inspect dataframes' schemas. This is typically
-cheap, as it does not require reading a full dataset into memory and can often just
-be done from metadata alone. However, it's not completely free, especially if your
+where Narwhals does need to inspect dataframes' schemas, such as:
+
+- joins
+- selectors
+- `nth`
+- `concat` with `how='vertical'`
+- `unique`
+
+This is typically cheap (as it does not require reading a full dataset into memory and
+can often just be done from metadata alone) but it's not free, especially if your
 data lives on the cloud. To minimise the overhead, when Narwhals needs to evaluate
 schemas or column names, it makes sure to cache them.
