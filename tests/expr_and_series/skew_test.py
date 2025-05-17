@@ -34,6 +34,7 @@ def test_skew_series(
         ([0.0, 0.0, 0.0], None),
         ([1, 2, 3, 2, 1], 0.343622),
     ],
+    ids=range(5),
 )
 @pytest.mark.filterwarnings("ignore:.*invalid value:RuntimeWarning:dask")
 def test_skew_expr(
@@ -45,5 +46,10 @@ def test_skew_expr(
     if "ibis" in str(constructor):
         # https://github.com/ibis-project/ibis/issues/11176
         request.applymarker(pytest.mark.xfail)
+
+    if "pyspark" in str(constructor) and request.node.callspec.id[-1] == 0:
+        # Can not infer schema from empty dataset.
+        pytest.skip()
+
     result = nw.from_native(constructor({"a": data})).select(nw.col("a").skew())
     assert_equal_data(result, {"a": [expected]})
