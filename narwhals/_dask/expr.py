@@ -135,19 +135,15 @@ class DaskExpr(
         )
 
     @classmethod
-    def from_column_indices(
-        cls: type[Self], *column_indices: int, context: _FullContext
-    ) -> Self:
+    def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            return [
-                df._native_frame.iloc[:, column_index] for column_index in column_indices
-            ]
+            return [df.native.iloc[:, i] for i in column_indices]
 
         return cls(
             func,
             depth=0,
             function_name="nth",
-            evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
+            evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
             backend_version=context._backend_version,
             version=context._version,
