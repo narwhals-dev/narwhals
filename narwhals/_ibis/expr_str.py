@@ -6,6 +6,7 @@ from typing import Callable
 
 from ibis.expr.datatypes import Timestamp
 
+from narwhals.utils import _is_naive_format
 from narwhals.utils import not_implemented
 
 if TYPE_CHECKING:
@@ -103,7 +104,3 @@ class IbisExprStringNamespace:
         return self._compliant_expr._with_callable(fn(format))
 
     replace = not_implemented()
-
-
-def _is_naive_format(format_: str) -> bool:
-    return not any(x in format_ for x in ("%s", "%z", "Z"))

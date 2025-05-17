@@ -3,6 +3,8 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING
 
+from narwhals.utils import _is_naive_format
+
 if TYPE_CHECKING:
     from sqlframe.base.column import Column
 
@@ -100,7 +102,7 @@ class SparkLikeExprStringNamespace:
         F = self._compliant_expr._F  # noqa: N806
         if not format:
             function = F.to_timestamp
-        elif is_naive_format(format):
+        elif _is_naive_format(format):
             function = partial(
                 F.to_timestamp_ntz, format=F.lit(strptime_to_pyspark_format(format))
             )
@@ -110,10 +112,6 @@ class SparkLikeExprStringNamespace:
         return self._compliant_expr._with_callable(
             lambda _input: function(F.replace(_input, F.lit("T"), F.lit(" "))),
         )
-
-
-def is_naive_format(format: str) -> bool:
-    return not any(x in format for x in ("%s", "%z", "Z"))
 
 
 def strptime_to_pyspark_format(format: str) -> str:
