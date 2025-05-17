@@ -99,7 +99,7 @@ def test_truncate(
     every: str,
     expected: list[datetime],
 ) -> None:
-    if any(x in str(constructor) for x in ("sqlframe", "pyspark")):
+    if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
         # TODO(marco): investigate pyspark, it also localizes to UTC here.
         request.applymarker(
             pytest.mark.xfail(reason="https://github.com/eakmanrq/sqlframe/issues/383")

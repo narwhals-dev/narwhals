@@ -817,7 +817,24 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
         func_name = self._REMAP_RANK_METHOD[method]
 
-        def _rank(_input: Column, window: WindowSpec, count_window: WindowSpec) -> Column:
+        def _rank(
+            _input: Column,
+            *,
+            descending: bool,
+            partition_by: Sequence[str | Column] | None = None,
+        ) -> Column:
+            if partition_by is not None:
+                if descending:
+                    order_by_cols = [self._F.desc_nulls_last(_input)]
+                else:
+                    order_by_cols = [self._F.asc_nulls_last(_input)]
+
+                window = self._Window().partitionBy(partition_by).orderBy(order_by_cols)
+                count_window = self._Window().partitionBy(partition_by, _input)
+            else:
+                order_by = self._sort(_input, descending=descending, nulls_last=True)
+                window = self.partition_by().orderBy(*order_by)
+                count_window = self.partition_by(_input)
             if method == "max":
                 expr = (
                     getattr(self._F, func_name)().over(window)
@@ -836,27 +853,14 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             return self._F.when(_input.isNotNull(), expr)
 
         def _unpartitioned_rank(_input: Column) -> Column:
-            order_by = self._sort(_input, descending=descending, nulls_last=True)
-            window = self.partition_by().orderBy(*order_by)
-            count_window = self.partition_by(_input)
-            return _rank(_input, window, count_window)
+            return _rank(_input, descending=descending)
 
         def _partitioned_rank(window_inputs: UnorderableWindowInputs) -> Column:
-            if descending:
-                order_by_cols = [self._F.desc_nulls_last(window_inputs.expr)]
-            else:
-                order_by_cols = [self._F.asc_nulls_last(window_inputs.expr)]
-
-            window = (
-                self._Window()
-                .partitionBy(*window_inputs.partition_by)
-                .orderBy(order_by_cols)
+            return _rank(
+                window_inputs.expr,
+                descending=descending,
+                partition_by=window_inputs.partition_by,
             )
-            count_window = self._Window().partitionBy(
-                *window_inputs.partition_by, window_inputs.expr
-            )
-
-            return _rank(window_inputs.expr, window, count_window)
 
         return self._with_callable(_unpartitioned_rank)._with_unorderable_window_function(
             _partitioned_rank, self._call
