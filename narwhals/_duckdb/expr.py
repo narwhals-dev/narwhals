@@ -77,9 +77,13 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         self._alias_output_names = alias_output_names
         self._backend_version = backend_version
         self._version = version
-        self._window_function: WindowFunction | None = None
-        self._unorderable_window_function: UnorderableWindowFunction | None = None
         self._metadata: ExprMetadata | None = None
+
+        # This can only be set by `_with_window_function`.
+        self._window_function: WindowFunction | None = None
+
+        # These can only be set by `_with_unorderable_window_function`
+        self._unorderable_window_function: UnorderableWindowFunction | None = None
         self._previous_call = previous_call
 
     def __call__(self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
@@ -812,6 +816,17 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             _partitioned_rank,
             self._call,
         )
+
+    def log(self, base: float) -> Self:
+        def _log(_input: duckdb.Expression) -> duckdb.Expression:
+            log = FunctionExpression("log", _input)
+            return (
+                when(_input < lit(0), lit(float("nan")))
+                .when(_input == lit(0), lit(float("-inf")))
+                .otherwise(log / FunctionExpression("log", lit(base)))
+            )
+
+        return self._with_callable(_log)
 
     @property
     def str(self) -> DuckDBExprStringNamespace:

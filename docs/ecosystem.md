@@ -55,7 +55,7 @@ to various SQL (as well as Polars LazyFrame) engines. Some differences with Narw
 
 * Narwhals allows you to write "Dataframe X in, Dataframe X out" functions.
   Ibis allows materialising to pandas, Polars (eager), and PyArrow, but has
-  no way to get back to the input type exactly (e.g. `Enum` don't round-trip in Ibis)
+  no way to get back to the input type exactly (e.g. `Enum`s don't round-trip in Ibis)
 * Narwhals respects input data types as much as possible, Ibis doesn't
   support Categorical / Enum.
 * Narwhals separates between lazy and eager APIs, with the eager API
@@ -70,8 +70,6 @@ to various SQL (as well as Polars LazyFrame) engines. Some differences with Narw
 * Narwhals supports pandas and Dask, which Ibis has deprecated support for.
 
 Although people often ask about the two tools, we consider them to be
-very different and not in competition. Further efforts to clarify the
-distinction are welcome 🙏!
-
-Furthermore, [there is work is in progress](https://github.com/narwhals-dev/narwhals/pull/2536)
-to support `ibis.Table` in Narwhals!
+very different and not in competition. In particular,
+**Narwhals supports ibis Tables**, meaning that dataframe-agnostic code
+written using Narwhals' lazy API also supports Ibis.

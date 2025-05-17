@@ -8,8 +8,10 @@ import pytest
 import narwhals as nw
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_polars
 from narwhals.utils import Implementation
 from tests.utils import PANDAS_VERSION
+from tests.utils import POLARS_VERSION
 from tests.utils import Constructor
 from tests.utils import assert_equal_data
 
@@ -157,8 +159,13 @@ def test_collect_to_invalid_backend(
 
 
 def test_collect_with_kwargs(constructor: Constructor) -> None:
+    pl_kwargs = (
+        {"optimizations": get_polars().QueryOptFlags(predicate_pushdown=False)}
+        if POLARS_VERSION > (1, 29, 0)
+        else {"no_optimization": True}
+    )
     collect_kwargs = {
-        nw.Implementation.POLARS: {"no_optimization": True},
+        nw.Implementation.POLARS: pl_kwargs,
         nw.Implementation.DASK: {"optimize_graph": False},
         nw.Implementation.PYARROW: {},
     }
@@ -168,7 +175,7 @@ def test_collect_with_kwargs(constructor: Constructor) -> None:
     result = (
         df.lazy()
         .select(nw.col("a", "b").sum())
-        .collect(**collect_kwargs.get(df.implementation, {}))  # type: ignore[arg-type]
+        .collect(**collect_kwargs.get(df.implementation, {}))
     )
 
     expected = {"a": [3], "b": [7]}

@@ -65,6 +65,7 @@ class IbisLazyFrame(
         self._version = version
         self._backend_version = backend_version
         self._cached_schema: dict[str, DType] | None = None
+        self._cached_columns: list[str] | None = None
         validate_backend_version(self._implementation, self._backend_version)
 
     @staticmethod
@@ -213,7 +214,13 @@ class IbisLazyFrame(
 
     @property
     def columns(self) -> list[str]:
-        return list(self.native.columns)
+        if self._cached_columns is None:
+            self._cached_columns = (
+                list(self.schema)
+                if self._cached_schema is not None
+                else list(self.native.columns)
+            )
+        return self._cached_columns
 
     def to_pandas(self) -> pd.DataFrame:
         # only if version is v1, keep around for backcompat
@@ -298,8 +305,8 @@ class IbisLazyFrame(
         self,
         other: Self,
         *,
-        left_on: str | None,
-        right_on: str | None,
+        left_on: str,
+        right_on: str,
         by_left: Sequence[str] | None,
         by_right: Sequence[str] | None,
         strategy: AsofJoinStrategy,
@@ -308,9 +315,6 @@ class IbisLazyFrame(
         rname = "{name}" + suffix
         strategy_op = {"backward": operator.ge, "forward": operator.le}
         predicates: JoinPredicates = []
-        # help mypy
-        assert left_on is not None  # noqa: S101
-        assert right_on is not None  # noqa: S101
         if op := strategy_op.get(strategy):
             on: ir.BooleanColumn = op(self.native[left_on], other.native[right_on])
         else:

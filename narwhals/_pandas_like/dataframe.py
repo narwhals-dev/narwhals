@@ -422,6 +422,8 @@ class PandasLikeDataFrame(
         new_series = align_series_full_broadcast(*new_series)
         namespace = self.__narwhals_namespace__()
         df = namespace._concat_horizontal([s.native for s in new_series])
+        # `concat` creates a new object, so fine to modify `.columns.name` inplace.
+        df.columns.name = self.native.columns.name
         return self._with_native(df, validate_column_names=True)
 
     def drop_nulls(
@@ -480,6 +482,8 @@ class PandasLikeDataFrame(
         to_concat.extend(self._extract_comparand(s) for s in name_columns.values())
         namespace = self.__narwhals_namespace__()
         df = namespace._concat_horizontal(to_concat)
+        # `concat` creates a new object, so fine to modify `.columns.name` inplace.
+        df.columns.name = self.native.columns.name
         return self._with_native(df, validate_column_names=False)
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
@@ -727,8 +731,8 @@ class PandasLikeDataFrame(
         self,
         other: Self,
         *,
-        left_on: str | None,
-        right_on: str | None,
+        left_on: str,
+        right_on: str,
         by_left: Sequence[str] | None,
         by_right: Sequence[str] | None,
         strategy: AsofJoinStrategy,

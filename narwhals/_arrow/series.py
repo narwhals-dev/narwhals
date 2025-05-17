@@ -1148,6 +1148,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             msg = f"Unable to compare other of type {type(other)} with series of type {self.dtype}."
             raise InvalidOperationError(msg) from exc
 
+    def log(self, base: float) -> Self:
+        return self._with_native(pc.logb(self.native, lit(base)))
+
     @property
     def dt(self) -> ArrowSeriesDateTimeNamespace:
         return ArrowSeriesDateTimeNamespace(self)
