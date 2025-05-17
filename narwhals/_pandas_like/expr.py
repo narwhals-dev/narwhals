@@ -68,7 +68,7 @@ def window_kwargs_to_pandas_equivalent(
         pandas_kwargs = {"skipna": True}
     elif function_name.startswith("rolling_"):  # Rolling operation
         assert "min_samples" in kwargs  # noqa: S101
-        assert "window" in kwargs  # noqa: S101
+        assert "window_size" in kwargs  # noqa: S101
         assert "center" in kwargs  # noqa: S101
         pandas_kwargs = {
             "min_periods": kwargs["min_samples"],
