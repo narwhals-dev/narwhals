@@ -10,8 +10,35 @@ if TYPE_CHECKING:
     from typing_extensions import Never
     from typing_extensions import Self
     from typing_extensions import TypeAlias
+    from typing_extensions import dataclass_transform
 
     from narwhals._plan.options import FunctionOptions
+else:
+    # NOTE: This isn't important to the proposal, just wanted IDE support
+    # for the **temporary** constructors.
+    # It is interesting how much boilerplate this avoids though 🤔
+    # https://docs.python.org/3/library/typing.html#typing.dataclass_transform
+    def dataclass_transform(
+        *,
+        eq_default: bool = True,
+        order_default: bool = False,
+        kw_only_default: bool = False,
+        frozen_default: bool = False,
+        field_specifiers: tuple[type[Any] | Callable[..., Any], ...] = (),
+        **kwargs: Any,
+    ) -> Callable[[T], T]:
+        def decorator(cls_or_fn: T) -> T:
+            cls_or_fn.__dataclass_transform__ = {
+                "eq_default": eq_default,
+                "order_default": order_default,
+                "kw_only_default": kw_only_default,
+                "frozen_default": frozen_default,
+                "field_specifiers": field_specifiers,
+                "kwargs": kwargs,
+            }
+            return cls_or_fn
+
+        return decorator
 
 
 T = TypeVar("T")
@@ -26,6 +53,7 @@ Udf: TypeAlias = "Callable[[Any], Any]"
 """Placeholder for `map_batches(function=...)`."""
 
 
+@dataclass_transform(kw_only_default=True, frozen_default=True)
 class Immutable:
     __slots__ = ()
 
