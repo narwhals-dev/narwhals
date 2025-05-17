@@ -13,12 +13,12 @@ from typing import TypeVar
 import pandas as pd
 
 from narwhals._compliant.series import EagerSeriesNamespace
-from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import DuplicateError
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import _DeferredIterable
+from narwhals.utils import check_columns_exist
 from narwhals.utils import isinstance_or_issubclass
 
 T = TypeVar("T", bound=Sized)
@@ -631,21 +631,21 @@ def select_columns_by_name(
     ):
         # See https://github.com/narwhals-dev/narwhals/issues/1349#issuecomment-2470118122
         # for why we need this
-        available_columns = df.columns.tolist()  # type: ignore[attr-defined]
-        missing_columns = [x for x in column_names if x not in available_columns]
-        if missing_columns:  # pragma: no cover
-            raise ColumnNotFoundError.from_missing_and_available_column_names(
-                missing_columns, available_columns
-            )
+        if error := check_columns_exist(
+            df.columns.tolist(),  # type: ignore[attr-defined]
+            column_names,  # type: ignore[arg-type]
+        ):
+            raise error
         return df.loc[:, column_names]  # type: ignore[attr-defined]
     try:
         return df[column_names]  # type: ignore[index]
     except KeyError as e:
-        available_columns = df.columns.tolist()  # type: ignore[attr-defined]
-        missing_columns = [x for x in column_names if x not in available_columns]
-        raise ColumnNotFoundError.from_missing_and_available_column_names(
-            missing_columns, available_columns
-        ) from e
+        if error := check_columns_exist(
+            df.columns.tolist(),  # type: ignore[attr-defined]
+            column_names,  # type: ignore[arg-type]
+        ):
+            raise error from e
+        raise
 
 
 def check_column_names_are_unique(columns: pd.Index[str]) -> None:

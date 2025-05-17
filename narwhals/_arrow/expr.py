@@ -9,8 +9,8 @@ import pyarrow.compute as pc
 from narwhals._arrow.series import ArrowSeries
 from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
+from narwhals.utils import check_columns_exist
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import not_implemented
 
@@ -76,12 +76,9 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                     for column_name in evaluate_column_names(df)
                 ]
             except KeyError as e:
-                missing_columns = [
-                    x for x in evaluate_column_names(df) if x not in df.columns
-                ]
-                raise ColumnNotFoundError.from_missing_and_available_column_names(
-                    missing_columns=missing_columns, available_columns=df.columns
-                ) from e
+                if error := check_columns_exist(df, evaluate_column_names(df)):
+                    raise error from e
+                raise
 
         return cls(
             func,

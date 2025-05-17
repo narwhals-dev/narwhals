@@ -21,13 +21,13 @@ from narwhals._expression_parsing import check_expressions_preserve_length
 from narwhals._expression_parsing import is_scalar_like
 from narwhals.dependencies import get_polars
 from narwhals.dependencies import is_numpy_array
-from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.exceptions import LengthChangingExprError
 from narwhals.exceptions import OrderDependentExprError
 from narwhals.schema import Schema
 from narwhals.translate import to_native
 from narwhals.utils import Implementation
+from narwhals.utils import check_columns_exist
 from narwhals.utils import find_stacklevel
 from narwhals.utils import flatten
 from narwhals.utils import generate_repr
@@ -173,11 +173,9 @@ class BaseFrame(Generic[_FrameT]):
                 )
             except Exception as e:
                 # Column not found is the only thing that can realistically be raised here.
-                available_columns = self.columns
-                missing_columns = [x for x in flat_exprs if x not in available_columns]
-                raise ColumnNotFoundError.from_missing_and_available_column_names(
-                    missing_columns, available_columns
-                ) from e
+                if error := check_columns_exist(self, flat_exprs):
+                    raise error from e
+                raise
         compliant_exprs, kinds = self._flatten_and_extract(*flat_exprs, **named_exprs)
         if compliant_exprs and all_exprs_are_scalar_like(*flat_exprs, **named_exprs):
             return self._with_compliant(self._compliant_frame.aggregate(*compliant_exprs))

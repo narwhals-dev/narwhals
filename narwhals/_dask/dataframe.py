@@ -16,8 +16,8 @@ from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import _remap_full_join_keys
-from narwhals.utils import check_column_exists
 from narwhals.utils import check_column_names_are_unique
+from narwhals.utils import check_columns_exist
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
@@ -208,9 +208,7 @@ class DaskLazyFrame(
         return self.schema
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
-        to_drop = parse_columns_to_drop(
-            compliant_frame=self, columns=columns, strict=strict
-        )
+        to_drop = parse_columns_to_drop(self, columns, strict=strict)
 
         return self._with_native(self.native.drop(columns=to_drop))
 
@@ -230,7 +228,8 @@ class DaskLazyFrame(
     def unique(
         self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self:
-        check_column_exists(self.columns, subset)
+        if subset and (error := check_columns_exist(self, subset)):
+            raise error
         if keep == "none":
             subset = subset or self.columns
             token = generate_temporary_column_name(n_bytes=8, columns=subset)

@@ -23,8 +23,8 @@ from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
-from narwhals.utils import check_column_exists
 from narwhals.utils import check_column_names_are_unique
+from narwhals.utils import check_columns_exist
 from narwhals.utils import convert_str_slice_to_int_slice
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import not_implemented
@@ -437,9 +437,7 @@ class ArrowDataFrame(
     join_asof = not_implemented()
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
-        to_drop = parse_columns_to_drop(
-            compliant_frame=self, columns=columns, strict=strict
-        )
+        to_drop = parse_columns_to_drop(self, columns, strict=strict)
         return self._with_native(self.native.drop(to_drop), validate_column_names=False)
 
     def drop_nulls(self: ArrowDataFrame, subset: Sequence[str] | None) -> ArrowDataFrame:
@@ -695,7 +693,8 @@ class ArrowDataFrame(
         # and has no effect on the output.
         import numpy as np  # ignore-banned-import
 
-        check_column_exists(self.columns, subset)
+        if subset and (error := check_columns_exist(self, subset)):
+            raise error
         subset = list(subset or self.columns)
 
         if keep in {"any", "first", "last"}:
