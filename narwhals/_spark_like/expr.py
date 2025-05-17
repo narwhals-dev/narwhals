@@ -816,7 +816,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             return (
                 self._F.when(_input < 0, self._F.lit(float("nan")))
                 .when(_input == 0, self._F.lit(float("-inf")))
-                .otherwise(self._F.log(base, _input))
+                .otherwise(self._F.log(float(base), _input))
             )
 
         return self._with_callable(_log)
