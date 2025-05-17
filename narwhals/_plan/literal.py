@@ -15,9 +15,10 @@ class LiteralValue(ExprIR):
 
 
 class ScalarLiteral(LiteralValue):
-    __slots__ = ("value",)
+    __slots__ = ("dtype", "value")
 
     value: NonNestedLiteral
+    dtype: DType
 
     @property
     def is_scalar(self) -> bool:

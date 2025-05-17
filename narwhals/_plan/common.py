@@ -13,6 +13,8 @@ if TYPE_CHECKING:
     from typing_extensions import dataclass_transform
 
     from narwhals._plan.options import FunctionOptions
+    from narwhals.dtypes import DType
+
 else:
     # NOTE: This isn't important to the proposal, just wanted IDE support
     # for the **temporary** constructors.
@@ -134,6 +136,54 @@ class DummyExpr:
         obj = cls.__new__(cls)
         obj._ir = ir
         return obj
+
+    def alias(self, name: str) -> Self:
+        from narwhals._plan.expr import Alias
+
+        return self._from_ir(Alias(expr=self._ir, name=name))
+
+    def cast(self, dtype: DType | type[DType]) -> Self:
+        from narwhals._plan.expr import Cast
+        from narwhals.dtypes import DType
+        from narwhals.dtypes import Unknown
+
+        dtype = dtype if isinstance(dtype, DType) else Unknown()
+        return self._from_ir(Cast(expr=self._ir, dtype=dtype))
+
+    def count(self) -> Self:
+        from narwhals._plan.aggregation import Count
+
+        return self._from_ir(Count(expr=self._ir))
+
+    def max(self) -> Self:
+        from narwhals._plan.aggregation import Max
+
+        return self._from_ir(Max(expr=self._ir))
+
+    def mean(self) -> Self:
+        from narwhals._plan.aggregation import Mean
+
+        return self._from_ir(Mean(expr=self._ir))
+
+    def min(self) -> Self:
+        from narwhals._plan.aggregation import Min
+
+        return self._from_ir(Min(expr=self._ir))
+
+    def median(self) -> Self:
+        from narwhals._plan.aggregation import Median
+
+        return self._from_ir(Median(expr=self._ir))
+
+    def n_unique(self) -> Self:
+        from narwhals._plan.aggregation import NUnique
+
+        return self._from_ir(NUnique(expr=self._ir))
+
+    def sum(self) -> Self:
+        from narwhals._plan.aggregation import Sum
+
+        return self._from_ir(Sum(expr=self._ir))
 
 
 class DummyCompliantExpr:
