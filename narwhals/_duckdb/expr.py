@@ -65,7 +65,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
     def __init__(
         self,
         call: EvalSeries[DuckDBLazyFrame, duckdb.Expression],
-        previous_call: EvalSeries[DuckDBLazyFrame, duckdb.Expression] | None = None,
         *,
         evaluate_output_names: EvalNames[DuckDBLazyFrame],
         alias_output_names: AliasNames | None,
@@ -84,7 +83,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
 
         # These can only be set by `_with_unorderable_window_function`
         self._unorderable_window_function: UnorderableWindowFunction | None = None
-        self._previous_call = previous_call
+        self._previous_call: EvalSeries[DuckDBLazyFrame, duckdb.Expression] | None = None
 
     def __call__(self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
         return self._call(df)
@@ -774,14 +773,14 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
                 by_sql = f"{_input} desc nulls last"
             else:
                 by_sql = f"{_input} asc nulls last"
-            order_by_sql = f"order by {by_sql}"
             count_expr = FunctionExpression("count", StarExpression())
             if partition_by_sql is not None:
-                order_by_sql = f"{partition_by_sql} {order_by_sql}"
+                order_by_sql = f"{partition_by_sql} order by {by_sql}"
                 partition_expr = SQLExpression(
                     f"{count_expr} OVER ({partition_by_sql}, {_input})"
                 )
             else:
+                order_by_sql = f"order by {by_sql}"
                 partition_expr = SQLExpression(
                     f"{count_expr} OVER (PARTITION BY {_input})"
                 )

@@ -80,7 +80,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def __init__(
         self,
         call: EvalSeries[SparkLikeLazyFrame, Column],
-        previous_call: EvalSeries[SparkLikeLazyFrame, Column] | None = None,
         *,
         evaluate_output_names: EvalNames[SparkLikeLazyFrame],
         alias_output_names: AliasNames | None,
@@ -100,8 +99,8 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         self._window_function: WindowFunction | None = None
 
         # These can only be set by `_with_unorderable_window_function`
-        self._previous_call = previous_call
         self._unorderable_window_function: UnorderableWindowFunction | None = None
+        self._previous_call: EvalSeries[SparkLikeLazyFrame, Column] | None = None
 
     def __call__(self, df: SparkLikeLazyFrame) -> Sequence[Column]:
         return self._call(df)
