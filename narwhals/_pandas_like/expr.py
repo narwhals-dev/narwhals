@@ -261,6 +261,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     assert "reverse" in self._scalar_kwargs  # noqa: S101
                     reverse = self._scalar_kwargs["reverse"]
                 else:
+                    assert "reverse" not in self._scalar_kwargs  # noqa: S101
                     reverse = False
 
                 if order_by:
