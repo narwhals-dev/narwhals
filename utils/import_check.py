@@ -5,6 +5,7 @@ import sys
 
 BANNED_IMPORTS = {
     "cudf",
+    "cupy",
     "dask",
     "dask.dataframe",
     "dask_expr",

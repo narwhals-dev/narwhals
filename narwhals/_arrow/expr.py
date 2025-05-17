@@ -207,4 +207,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
         return self._reuse_series("rank", method=method, descending=descending)
 
+    def log(self, base: float) -> Self:
+        return self._reuse_series("log", base=base)
+
     ewm_mean = not_implemented()

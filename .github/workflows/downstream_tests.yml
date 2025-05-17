@@ -189,6 +189,7 @@ jobs:
           # temporary pin to get ci green
           make narwhals-install-shiny
           uv pip install "pyflakes<3.3.0" "flake8<7.2.0" --system
+          uv pip install "plotly<6.1.0" --system
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals --system

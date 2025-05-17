@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -2480,6 +2481,41 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).rank(
                 method=method, descending=descending
             )
+        )
+
+    def log(self, base: float = math.e) -> Self:
+        r"""Compute the logarithm to a given base.
+
+        Arguments:
+            base: Given base, defaults to `e`
+
+        Returns:
+            A new expression log values data.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> df_native = pa.table({"values": [1, 2, 4]})
+            >>> df = nw.from_native(df_native)
+            >>> result = df.with_columns(
+            ...     log=nw.col("values").log(), log_2=nw.col("values").log(base=2)
+            ... )
+            >>> result
+            ┌────────────────────────────────────────────────┐
+            |               Narwhals DataFrame               |
+            |------------------------------------------------|
+            |pyarrow.Table                                   |
+            |values: int64                                   |
+            |log: double                                     |
+            |log_2: double                                   |
+            |----                                            |
+            |values: [[1,2,4]]                               |
+            |log: [[0,0.6931471805599453,1.3862943611198906]]|
+            |log_2: [[0,1,2]]                                |
+            └────────────────────────────────────────────────┘
+        """
+        return self._with_elementwise_op(
+            lambda plx: self._to_compliant_expr(plx).log(base=base)
         )
 
     @property
