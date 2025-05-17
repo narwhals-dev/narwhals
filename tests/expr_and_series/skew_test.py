@@ -47,7 +47,7 @@ def test_skew_expr(
         # https://github.com/ibis-project/ibis/issues/11176
         request.applymarker(pytest.mark.xfail)
 
-    if "pyspark" in str(constructor) and request.node.callspec.id[-1] == 0:
+    if "pyspark" in str(constructor) and int(request.node.callspec.id[-1]) == 0:
         # Can not infer schema from empty dataset.
         pytest.skip()
 
