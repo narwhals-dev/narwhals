@@ -24,7 +24,6 @@ from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dependencies import is_pyarrow_table
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr import Expr
-from narwhals.series import Series
 from narwhals.translate import from_native
 from narwhals.translate import to_native
 from narwhals.utils import Implementation

@@ -60,8 +60,10 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         self._alias_output_names = alias_output_names
         self._backend_version = backend_version
         self._version = version
-        self._window_function: WindowFunction | None = None
         self._metadata: ExprMetadata | None = None
+
+        # This can only be set by `_with_window_function`.
+        self._window_function: WindowFunction | None = None
 
     def __call__(self, df: IbisLazyFrame) -> Sequence[ir.Value]:
         return self._call(df)
@@ -645,6 +647,17 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
             return cast("ir.Column", ibis.cases((_input.notnull(), rank_)))
 
         return self._with_callable(_rank)
+
+    def log(self, base: float) -> Self:
+        def _log(_input: ir.NumericColumn) -> ir.Value:
+            otherwise = _input.log(cast("ir.NumericValue", lit(base)))
+            return ibis.cases(
+                (_input < lit(0), lit(float("nan"))),
+                (_input == lit(0), lit(float("-inf"))),
+                else_=otherwise,
+            )
+
+        return self._with_callable(_log)
 
     @property
     def str(self) -> IbisExprStringNamespace:

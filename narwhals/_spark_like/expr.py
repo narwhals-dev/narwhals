@@ -94,10 +94,14 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         self._backend_version = backend_version
         self._version = version
         self._implementation = implementation
-        self._window_function: WindowFunction | None = None
-        self._unorderable_window_function: UnorderableWindowFunction | None = None
         self._metadata: ExprMetadata | None = None
+
+        # This can only be set by `_with_window_function`.
+        self._window_function: WindowFunction | None = None
+
+        # These can only be set by `_with_unorderable_window_function`
         self._previous_call = previous_call
+        self._unorderable_window_function: UnorderableWindowFunction | None = None
 
     def __call__(self, df: SparkLikeLazyFrame) -> Sequence[Column]:
         return self._call(df)
@@ -865,6 +869,16 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_callable(_unpartitioned_rank)._with_unorderable_window_function(
             _partitioned_rank, self._call
         )
+
+    def log(self, base: float) -> Self:
+        def _log(_input: Column) -> Column:
+            return (
+                self._F.when(_input < 0, self._F.lit(float("nan")))
+                .when(_input == 0, self._F.lit(float("-inf")))
+                .otherwise(self._F.log(float(base), _input))
+            )
+
+        return self._with_callable(_log)
 
     @property
     def str(self) -> SparkLikeExprStringNamespace:
