@@ -6,7 +6,13 @@ from typing import Protocol
 if TYPE_CHECKING:
     import duckdb
 
+    from narwhals._duckdb.utils import UnorderableWindowInputs
     from narwhals._duckdb.utils import WindowInputs
 
     class WindowFunction(Protocol):
         def __call__(self, window_inputs: WindowInputs) -> duckdb.Expression: ...
+
+    class UnorderableWindowFunction(Protocol):
+        def __call__(
+            self, window_inputs: UnorderableWindowInputs
+        ) -> duckdb.Expression: ...
