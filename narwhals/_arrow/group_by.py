@@ -7,7 +7,6 @@ from typing import ClassVar
 from typing import Iterator
 from typing import Mapping
 from typing import Sequence
-from typing import cast
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -86,8 +85,8 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
 
             function_name = self._leaf_name(expr)
             if function_name in {"std", "var"}:
-                ddof = cast("int", expr._scalar_kwargs["ddof"])
-                option: Any = pc.VarianceOptions(ddof=ddof)
+                assert "ddof" in expr._scalar_kwargs  # noqa: S101
+                option: Any = pc.VarianceOptions(ddof=expr._scalar_kwargs["ddof"])
             elif function_name in {"len", "n_unique"}:
                 option = pc.CountOptions(mode="all")
             elif function_name == "count":

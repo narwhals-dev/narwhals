@@ -8,7 +8,6 @@ from typing import ClassVar
 from typing import Iterator
 from typing import Mapping
 from typing import Sequence
-from typing import cast
 
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
@@ -134,14 +133,16 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
                 for output_name, alias in zip(output_names, aliases):
                     if is_n_unique:
                         nunique_aggs[alias] = output_name
-                    elif is_std and (ddof := expr._scalar_kwargs["ddof"]) != 1:
-                        ddof = cast("int", ddof)
-                        std_aggs[ddof][0].append(output_name)
-                        std_aggs[ddof][1].append(alias)
-                    elif is_var and (ddof := expr._scalar_kwargs["ddof"]) != 1:
-                        ddof = cast("int", ddof)
-                        var_aggs[ddof][0].append(output_name)
-                        var_aggs[ddof][1].append(alias)
+                    elif is_std:
+                        assert "ddof" in expr._scalar_kwargs  # noqa: S101
+                        if (ddof := expr._scalar_kwargs["ddof"]) != 1:
+                            std_aggs[ddof][0].append(output_name)
+                            std_aggs[ddof][1].append(alias)
+                    elif is_var:
+                        assert "ddof" in expr._scalar_kwargs  # noqa: S101
+                        if (ddof := expr._scalar_kwargs["ddof"]) != 1:
+                            var_aggs[ddof][0].append(output_name)
+                            var_aggs[ddof][1].append(alias)
                     else:
                         expected_old_names.append(f"{output_name}_{function_name}")
                         simple_aggs[output_name].append(function_name)

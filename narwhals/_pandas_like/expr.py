@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Sequence
-from typing import cast
 
 from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
@@ -24,6 +23,7 @@ if TYPE_CHECKING:
     from narwhals.typing import NonNestedLiteral
     from narwhals.typing import PythonLiteral
     from narwhals.typing import RankMethod
+    from narwhals.typing import ScalarKwargs
     from narwhals.utils import Implementation
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -49,11 +49,14 @@ WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
 
 
 def window_kwargs_to_pandas_equivalent(
-    function_name: str, kwargs: dict[str, PythonLiteral]
+    function_name: str, kwargs: ScalarKwargs
 ) -> dict[str, PythonLiteral]:
     if function_name == "shift":
+        assert "n" in kwargs  # noqa: S101
         pandas_kwargs: dict[str, PythonLiteral] = {"periods": kwargs["n"]}
     elif function_name == "rank":
+        assert "rank" in kwargs  # noqa: S101
+        assert "descending" in kwargs  # noqa: S101
         _method = kwargs["method"]
         pandas_kwargs = {
             "method": "first" if _method == "ordinal" else _method,
@@ -64,13 +67,16 @@ def window_kwargs_to_pandas_equivalent(
     elif function_name.startswith("cum_"):  # Cumulative operation
         pandas_kwargs = {"skipna": True}
     elif function_name.startswith("rolling_"):  # Rolling operation
+        assert "min_samples" in kwargs  # noqa: S101
+        assert "window" in kwargs  # noqa: S101
+        assert "center" in kwargs  # noqa: S101
         pandas_kwargs = {
             "min_periods": kwargs["min_samples"],
             "window": kwargs["window_size"],
             "center": kwargs["center"],
         }
     else:  # e.g. std, var
-        pandas_kwargs = kwargs
+        pandas_kwargs = kwargs  # type: ignore[assignment]
     return pandas_kwargs
 
 
@@ -86,7 +92,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
-        scalar_kwargs: dict[str, PythonLiteral] | None = None,
+        scalar_kwargs: ScalarKwargs | None = None,
     ) -> None:
         self._call = call
         self._depth = depth
@@ -252,9 +258,9 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     df = df.with_columns(~plx.col(*output_names).is_null())
 
                 if function_name.startswith("cum_"):
-                    reverse = cast("bool", self._scalar_kwargs["reverse"])
+                    assert "reverse" in self._scalar_kwargs  # noqa: S101
+                    reverse = self._scalar_kwargs["reverse"]
                 else:
-                    assert "reverse" not in self._scalar_kwargs  # noqa: S101
                     reverse = False
 
                 if order_by:
@@ -274,12 +280,15 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     rolling = grouped[list(output_names)].rolling(**pandas_kwargs)
                     assert pandas_function_name is not None  # help mypy  # noqa: S101
                     if pandas_function_name in {"std", "var"}:
+                        assert "ddof" in self._scalar_kwargs  # noqa: S101
                         res_native = getattr(rolling, pandas_function_name)(
                             ddof=self._scalar_kwargs["ddof"]
                         )
                     else:
                         res_native = getattr(rolling, pandas_function_name)()
                 elif function_name == "fill_null":
+                    assert "strategy" in self._scalar_kwargs  # noqa: S101
+                    assert "limit" in self._scalar_kwargs  # noqa: S101
                     df_grouped = grouped[list(output_names)]
                     if self._scalar_kwargs["strategy"] == "forward":
                         res_native = df_grouped.ffill(limit=self._scalar_kwargs["limit"])

@@ -65,9 +65,9 @@ if TYPE_CHECKING:
     from narwhals.typing import FillNullStrategy
     from narwhals.typing import NonNestedLiteral
     from narwhals.typing import NumericLiteral
-    from narwhals.typing import PythonLiteral
     from narwhals.typing import RankMethod
     from narwhals.typing import RollingInterpolationMethod
+    from narwhals.typing import ScalarKwargs
     from narwhals.typing import TemporalLiteral
     from narwhals.typing import TimeUnit
     from narwhals.utils import Implementation
@@ -338,7 +338,7 @@ class EagerExpr(
     Protocol38[EagerDataFrameT, EagerSeriesT],
 ):
     _call: EvalSeries[EagerDataFrameT, EagerSeriesT]
-    _scalar_kwargs: dict[str, PythonLiteral]
+    _scalar_kwargs: ScalarKwargs
 
     def __init__(
         self,
@@ -351,7 +351,7 @@ class EagerExpr(
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
-        scalar_kwargs: dict[str, PythonLiteral] | None = None,
+        scalar_kwargs: ScalarKwargs | None = None,
     ) -> None: ...
 
     def __call__(self, df: EagerDataFrameT) -> Sequence[EagerSeriesT]:
@@ -372,7 +372,7 @@ class EagerExpr(
         evaluate_output_names: EvalNames[EagerDataFrameT],
         alias_output_names: AliasNames | None,
         context: _FullContext,
-        scalar_kwargs: dict[str, PythonLiteral] | None = None,
+        scalar_kwargs: ScalarKwargs | None = None,
     ) -> Self:
         return cls(
             func,
@@ -404,7 +404,7 @@ class EagerExpr(
         method_name: str,
         *,
         returns_scalar: bool = False,
-        scalar_kwargs: dict[str, PythonLiteral] | None = None,
+        scalar_kwargs: ScalarKwargs | None = None,
         **expressifiable_args: Any,
     ) -> Self:
         """Reuse Series implementation for expression.
@@ -455,7 +455,7 @@ class EagerExpr(
         *,
         method_name: str,
         returns_scalar: bool,
-        scalar_kwargs: dict[str, PythonLiteral],
+        scalar_kwargs: ScalarKwargs,
         expressifiable_args: dict[str, Any],
     ) -> Sequence[EagerSeriesT]:
         kwargs = {

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 from typing import Any
 from typing import Literal
 from typing import Protocol
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from typing import Sized
 
     import numpy as np
-    from typing_extensions import TypeAlias
+    from typing_extensions import TypeAlias, NotRequired
 
     from narwhals import dtypes
     from narwhals.expr import Expr
@@ -387,6 +387,18 @@ MultiNameSelector: TypeAlias = "_SliceName | SizedMultiNameSelector[_T]"
 # Mixed selectors
 SingleColSelector: TypeAlias = "SingleIndexSelector | SingleNameSelector"
 MultiColSelector: TypeAlias = "MultiIndexSelector[_T] | MultiNameSelector[_T]"
+
+class ScalarKwargs(TypedDict):
+    strategy: NotRequired[FillNullStrategy|None]
+    min_samples: NotRequired[int]
+    method: NotRequired[RankMethod]
+    window_size: NotRequired[int]
+    descending: NotRequired[bool]
+    n: NotRequired[int]
+    ddof: NotRequired[int]
+    center: NotRequired[int]
+    reverse: NotRequired[bool]
+    limit: NotRequired[int|None]
 
 
 __all__ = [
