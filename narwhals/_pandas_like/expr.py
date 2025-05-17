@@ -55,7 +55,7 @@ def window_kwargs_to_pandas_equivalent(
         assert "n" in kwargs  # noqa: S101
         pandas_kwargs: dict[str, PythonLiteral] = {"periods": kwargs["n"]}
     elif function_name == "rank":
-        assert "rank" in kwargs  # noqa: S101
+        assert "method" in kwargs  # noqa: S101
         assert "descending" in kwargs  # noqa: S101
         _method = kwargs["method"]
         pandas_kwargs = {
