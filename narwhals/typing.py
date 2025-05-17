@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
 from typing import Protocol
 from typing import Sequence
+from typing import TypedDict
 from typing import TypeVar
 from typing import Union
 
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
     from typing import Sized
 
     import numpy as np
-    from typing_extensions import TypeAlias, NotRequired
+    from typing_extensions import TypeAlias
 
     from narwhals import dtypes
     from narwhals.expr import Expr
@@ -388,17 +389,20 @@ MultiNameSelector: TypeAlias = "_SliceName | SizedMultiNameSelector[_T]"
 SingleColSelector: TypeAlias = "SingleIndexSelector | SingleNameSelector"
 MultiColSelector: TypeAlias = "MultiIndexSelector[_T] | MultiNameSelector[_T]"
 
-class ScalarKwargs(TypedDict):
-    strategy: NotRequired[FillNullStrategy|None]
-    min_samples: NotRequired[int]
-    method: NotRequired[RankMethod]
-    window_size: NotRequired[int]
-    descending: NotRequired[bool]
-    n: NotRequired[int]
-    ddof: NotRequired[int]
-    center: NotRequired[int]
-    reverse: NotRequired[bool]
-    limit: NotRequired[int|None]
+
+class ScalarKwargs(TypedDict, total=False):
+    """Non-expressifiable args which we may need to reuse in `agg` or `over`."""
+
+    center: int
+    ddof: int
+    descending: bool
+    limit: int | None
+    method: RankMethod
+    min_samples: int
+    n: int
+    reverse: bool
+    strategy: FillNullStrategy | None
+    window_size: int
 
 
 __all__ = [
