@@ -148,25 +148,19 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         )
 
     @classmethod
-    def from_column_indices(
-        cls: type[Self], *column_indices: int, context: _FullContext
-    ) -> Self:
+    def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            native = df.native
             return [
-                PandasLikeSeries(
-                    df._native_frame.iloc[:, column_index],
-                    implementation=df._implementation,
-                    backend_version=df._backend_version,
-                    version=df._version,
-                )
-                for column_index in column_indices
+                PandasLikeSeries.from_native(native.iloc[:, i], context=df)
+                for i in column_indices
             ]
 
         return cls(
             func,
             depth=0,
             function_name="nth",
-            evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
+            evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
             implementation=context._implementation,
             backend_version=context._backend_version,
