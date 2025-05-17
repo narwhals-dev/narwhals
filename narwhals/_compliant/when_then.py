@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.typing import EvalSeries
     from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import ScalarKwargs
     from narwhals.utils import Implementation
     from narwhals.utils import Version
     from narwhals.utils import _FullContext
@@ -91,7 +92,7 @@ class CompliantThen(CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, 
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
-    _call_kwargs: dict[str, Any]
+    _scalar_kwargs: ScalarKwargs
 
     @classmethod
     def from_when(
@@ -113,7 +114,7 @@ class CompliantThen(CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, 
         obj._implementation = when._implementation
         obj._backend_version = when._backend_version
         obj._version = when._version
-        obj._call_kwargs = {}
+        obj._scalar_kwargs = {}
         return obj
 
     def otherwise(self, otherwise: IntoExpr[SeriesT, ExprT], /) -> ExprT:
