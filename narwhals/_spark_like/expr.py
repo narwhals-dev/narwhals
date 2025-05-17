@@ -833,8 +833,8 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
                 else:
                     order_by_cols = [self._F.asc_nulls_last(_input)]
 
-                window = self._Window().partitionBy(partition_by).orderBy(order_by_cols)
-                count_window = self._Window().partitionBy(partition_by, _input)
+                window = self._Window().partitionBy(*partition_by).orderBy(order_by_cols)
+                count_window = self._Window().partitionBy(*partition_by, _input)
             else:
                 order_by = self._sort(_input, descending=descending, nulls_last=True)
                 window = self.partition_by().orderBy(*order_by)
