@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from narwhals._plan.common import Udf
     from narwhals._plan.options import EWMOptions
     from narwhals._plan.options import RankOptions
+    from narwhals._plan.options import RollingOptionsFixedWindow
     from narwhals.dtypes import DType
     from narwhals.typing import FillNullStrategy
 
@@ -150,6 +151,17 @@ class CumAgg(Function):
         return FunctionOptions.length_preserving()
 
 
+class RollingWindow(Function):
+    __slots__ = ("options",)
+
+    options: RollingOptionsFixedWindow
+
+    @property
+    def function_options(self) -> FunctionOptions:
+        """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/function_expr/mod.rs#L1276."""
+        return FunctionOptions.length_preserving()
+
+
 class CumCount(CumAgg): ...
 
 
@@ -160,6 +172,18 @@ class CumMax(CumAgg): ...
 
 
 class CumProd(CumAgg): ...
+
+
+class RollingSum(RollingWindow): ...
+
+
+class RollingMean(RollingWindow): ...
+
+
+class RollingVar(RollingWindow): ...
+
+
+class RollingStd(RollingWindow): ...
 
 
 class Diff(Function):

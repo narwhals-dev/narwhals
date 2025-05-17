@@ -10,6 +10,7 @@ if t.TYPE_CHECKING:
     from narwhals._plan.common import Function
     from narwhals._plan.common import Seq
     from narwhals._plan.functions import MapBatches
+    from narwhals._plan.functions import RollingWindow
     from narwhals._plan.literal import LiteralValue
     from narwhals._plan.operators import Operator
     from narwhals._plan.options import FunctionOptions
@@ -17,6 +18,9 @@ if t.TYPE_CHECKING:
     from narwhals._plan.options import SortOptions
     from narwhals._plan.window import Window
     from narwhals.dtypes import DType
+
+_FunctionT = t.TypeVar("_FunctionT", bound="Function")
+_RollingT = t.TypeVar("_RollingT", bound="RollingWindow")
 
 
 class Alias(ExprIR):
@@ -136,7 +140,7 @@ class SortBy(ExprIR):
         return f"{self.expr!r}.sort_by(by={self.by!r}, options={self.options!r})"
 
 
-class FunctionExpr(ExprIR):
+class FunctionExpr(ExprIR, t.Generic[_FunctionT]):
     """**Representing `Expr::Function`**.
 
     https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L114-L120
@@ -147,7 +151,7 @@ class FunctionExpr(ExprIR):
     __slots__ = ("function", "input", "options")
 
     input: Seq[ExprIR]
-    function: Function
+    function: _FunctionT
     """Enum type is named `FunctionExpr` in `polars`.
 
     Mirroring *exactly* doesn't make much sense in OOP.
@@ -161,6 +165,9 @@ class FunctionExpr(ExprIR):
     1. `function.function_options`
     2. The union of (1) and any `FunctionOptions` in `inputs`
     """
+
+
+class RollingExpr(FunctionExpr[_RollingT]): ...
 
 
 class AnonymousFunctionExpr(ExprIR):
@@ -192,12 +199,23 @@ class Filter(ExprIR):
 
 
 class WindowExpr(ExprIR):
-    """https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/expr.rs#L129-L136."""
+    """A fully specified `.over()`, that occured after another expression.
+
+    I think we want variants for partitioned, ordered, both.
+
+    Related:
+    - https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/expr.rs#L129-L136
+    - https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/mod.rs#L835-L838
+    - https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/mod.rs#L840-L876
+    """
 
     __slots__ = ("expr", "options", "order_by", "partition_by")
 
     expr: ExprIR
-    """Renamed from `function`."""
+    """Renamed from `function`.
+
+    For lazy backends, this should be the only place we allow `rolling_*`, `cum_*`.
+    """
 
     partition_by: Seq[ExprIR]
     order_by: tuple[ExprIR, SortOptions] | None
@@ -206,6 +224,8 @@ class WindowExpr(ExprIR):
 
     - We don't allow choosing `WindowMapping` kinds
     - Haven't ventured into rolling much yet
+      - Turns out this is for `Expr.rolling` (not `Expr.rolling_<agg>`)
+      - https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/mod.rs#L879-L888
 
     Expr::Window { options: WindowType::Over(WindowMapping) }
     Expr::Window { options: WindowType::Rolling(RollingGroupOptions) }

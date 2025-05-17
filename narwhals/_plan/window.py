@@ -1,4 +1,4 @@
-"""TODO: Attributes."""
+"""TODO: Figure out what `Over` should be holding or skip it and go straight to `WindowExpr`."""
 
 from __future__ import annotations
 
@@ -12,19 +12,9 @@ class Window(ExprIR):
     """
 
 
-class OverWindow(Window): ...
-
-
-class RollingWindow(Window): ...
-
-
-class RollingSum(RollingWindow): ...
-
-
-class RollingMean(RollingWindow): ...
-
-
-class RollingVar(RollingWindow): ...
-
-
-class RollingStd(RollingWindow): ...
+# TODO @dangotbanned: What are all the variants we have code paths for?
+# - Over has *at least* (partition_by,), (order_by,), (partition_by, order_by), + options
+# - `_plan.expr.WindowExpr` has:
+#    - expr (last node)
+#    - partition_by, optional order_by, `options` which is one of these classes?
+class Over(Window): ...

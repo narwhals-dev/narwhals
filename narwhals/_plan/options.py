@@ -155,3 +155,22 @@ class EWMOptions(Immutable):
     adjust: bool
     min_samples: int
     ignore_nulls: bool
+
+
+class RollingVarParams(Immutable):
+    __slots__ = ("ddof",)
+
+    ddof: int
+
+
+class RollingOptionsFixedWindow(Immutable):
+    """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-core/src/chunked_array/ops/rolling_window.rs#L10-L23."""
+
+    __slots__ = ("center", "fn_params", "min_samples", "window_size")
+
+    window_size: int
+    min_samples: int
+    """Renamed from `min_periods`, re-uses `window_size` if null."""
+
+    center: bool
+    fn_params: RollingVarParams | None
