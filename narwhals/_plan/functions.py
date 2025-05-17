@@ -73,7 +73,10 @@ class FillNull(Function):
 
 
 class FillNullWithStrategy(Function):
-    """We don't support this variant in a lot of backends, so worth keeping it split out."""
+    """We don't support this variant in a lot of backends, so worth keeping it split out.
+
+    https://github.com/narwhals-dev/narwhals/pull/2555
+    """
 
     __slots__ = ("limit", "strategy")
 
@@ -92,6 +95,11 @@ class FillNullWithStrategy(Function):
 
 
 class Shift(Function):
+    __slots__ = ("n",)
+
+    n: int
+    """https://github.com/narwhals-dev/narwhals/pull/2555"""
+
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.length_preserving()
@@ -135,6 +143,7 @@ class CumAgg(Function):
     __slots__ = ("reverse",)
 
     reverse: bool
+    """https://github.com/narwhals-dev/narwhals/pull/2555"""
 
     @property
     def function_options(self) -> FunctionOptions:

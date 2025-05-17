@@ -63,6 +63,7 @@ class Std(Agg):
     __slots__ = (*Agg.__slots__, "ddof")
 
     ddof: int
+    """https://github.com/narwhals-dev/narwhals/pull/2555"""
 
 
 class Sum(Agg): ...
@@ -72,6 +73,7 @@ class Var(Agg):
     __slots__ = (*Agg.__slots__, "ddof")
 
     ddof: int
+    """https://github.com/narwhals-dev/narwhals/pull/2555"""
 
 
 class OrderableAgg(Agg): ...

@@ -124,6 +124,8 @@ class SortMultipleOptions(Immutable):
 
 
 class RankOptions(Immutable):
+    """https://github.com/narwhals-dev/narwhals/pull/2555."""
+
     __slots__ = ("descending", "method")
 
     method: RankMethod
