@@ -17,7 +17,7 @@ class BooleanFunction(Function):
         tp = type(self)
         if tp is BooleanFunction:
             return tp.__name__
-        m = {
+        m: dict[type[BooleanFunction], str] = {
             All: "all",
             Any: "any",
             AllHorizontal: "all_horizontal",
