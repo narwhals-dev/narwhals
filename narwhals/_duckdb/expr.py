@@ -204,9 +204,13 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             columns = df.columns
             return [col(columns[i]) for i in column_indices]
 
+        def eval_names(df: DuckDBLazyFrame) -> Sequence[str]:
+            cols = df.columns
+            return [cols[i] for i in column_indices]
+
         return cls(
             func,
-            evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
+            evaluate_output_names=eval_names,
             alias_output_names=None,
             backend_version=context._backend_version,
             version=context._version,
