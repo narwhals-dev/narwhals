@@ -52,7 +52,7 @@ class Columns(ExprIR):
     names: Seq[str]
 
     def __repr__(self) -> str:
-        return f"cols({self.names!r})"
+        return f"cols({list(self.names)!r})"
 
 
 class Literal(ExprIR):

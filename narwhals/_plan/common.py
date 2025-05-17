@@ -131,6 +131,9 @@ class ExprIR(Immutable):
 class DummyExpr:
     _ir: ExprIR
 
+    def __repr__(self) -> str:
+        return f"Narwhals DummyExpr:\n{self._ir!r}"
+
     @classmethod
     def _from_ir(cls, ir: ExprIR, /) -> Self:
         obj = cls.__new__(cls)
