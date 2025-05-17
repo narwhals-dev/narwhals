@@ -156,15 +156,11 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 for i in column_indices
             ]
 
-        def eval_names(df: PandasLikeDataFrame) -> Sequence[str]:
-            cols = df.columns
-            return [cols[i] for i in column_indices]
-
         return cls(
             func,
             depth=0,
             function_name="nth",
-            evaluate_output_names=eval_names,
+            evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
             implementation=context._implementation,
             backend_version=context._backend_version,

@@ -263,6 +263,7 @@ class PolarsExpr:
     __call__: Any
     from_column_names: Any
     from_column_indices: Any
+    _eval_names_indices: Any
 
     # Polars
     abs: Method[Self]
