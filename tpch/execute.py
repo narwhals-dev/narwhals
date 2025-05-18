@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 from importlib import import_module
 from pathlib import Path
+from typing import TYPE_CHECKING
+from typing import Any
 
 import dask.dataframe as dd
 import duckdb
@@ -14,6 +16,11 @@ from polars.testing import assert_frame_equal
 from sqlframe.duckdb import DuckDBSession
 
 import narwhals as nw
+
+if TYPE_CHECKING:
+    from types import ModuleType
+
+    from pytest_codspeed.plugin import BenchmarkFixture
 
 pd.options.mode.copy_on_write = True
 pd.options.future.infer_string = True  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
@@ -87,31 +94,50 @@ QUERY_DATA_PATH_MAP = {
     "q22": (CUSTOMER_PATH, ORDERS_PATH),
 }
 
+ROOT_PATH = Path(__file__).resolve().parent.parent
+# Directory containing all the query scripts
+QUERIES_DIR = ROOT_PATH / "queries"
 
-def execute_query(query_id: str) -> None:
+
+def _execute_query_single_backend(
+    query_id: str, native_namespace: ModuleType, **kwargs: Any
+) -> pl.DataFrame:
     query_module = import_module(f"tpch.queries.{query_id}")
     data_paths = QUERY_DATA_PATH_MAP[query_id]
 
-    expected = pl.read_parquet(DATA_DIR / f"result_{query_id}.parquet")
+    return (
+        query_module.query(
+            *(
+                nw.scan_parquet(str(path), backend=native_namespace, **kwargs)
+                for path in data_paths
+            )
+        )
+        .lazy()
+        .collect(backend=nw.Implementation.POLARS)
+        .to_native()
+    )
 
+
+def execute_query(query_id: str, *, benchmark: BenchmarkFixture | None = None) -> None:
+    expected = pl.read_parquet(DATA_DIR / f"result_{query_id}.parquet")
     for backend, (native_namespace, kwargs) in BACKEND_NAMESPACE_KWARGS_MAP.items():
         if backend in {"duckdb", "sqlframe"} and query_id in DUCKDB_SKIPS:
             print(f"\nSkipping {query_id} for {backend}")  # noqa: T201
             continue
 
         print(f"\nRunning {query_id} with {backend=}")  # noqa: T201
-        result: pl.DataFrame = (
-            query_module.query(
-                *(
-                    nw.scan_parquet(str(path), backend=native_namespace, **kwargs)
-                    for path in data_paths
-                )
-            )
-            .lazy()
-            .collect(backend=nw.Implementation.POLARS)
-            .to_native()
-        )
 
+        if benchmark is not None:
+            result = benchmark(
+                _execute_query_single_backend,
+                query_id=query_id,
+                native_namespace=native_namespace,
+                **kwargs,
+            )
+        else:
+            result = _execute_query_single_backend(
+                query_id=query_id, native_namespace=native_namespace, **kwargs
+            )
         assert_frame_equal(expected, result, check_dtypes=False)
 
 
