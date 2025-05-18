@@ -59,7 +59,11 @@ class DummyExpr:
     def sum(self) -> Self:
         return self._from_ir(agg.Sum(expr=self._ir))
 
-    def __ne__(self, other: DummyExpr) -> DummyExpr:
+    def __eq__(self, other: DummyExpr) -> DummyExpr:  # type: ignore[override]
+        op = ops.Eq()
+        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+
+    def __ne__(self, other: DummyExpr) -> DummyExpr:  # type: ignore[override]
         op = ops.NotEq()
         return op.to_binary_expr(self._ir, other._ir).to_narwhals()
 
