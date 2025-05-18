@@ -5,7 +5,6 @@ from narwhals._plan.options import FunctionFlags
 from narwhals._plan.options import FunctionOptions
 
 
-# TODO @dangotbanned: repr
 class StringFunction(Function):
     @property
     def function_options(self) -> FunctionOptions:
