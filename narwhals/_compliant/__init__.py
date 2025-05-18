@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from narwhals._compliant.dataframe import CompliantDataFrame
 from narwhals._compliant.dataframe import CompliantLazyFrame
-from narwhals._compliant.dataframe import EagerDataFrame
+from narwhals._compliant.dataframe import ImplDataFrame
+from narwhals._compliant.dataframe import ImplLazyFrame
 from narwhals._compliant.expr import CompliantExpr
 from narwhals._compliant.expr import EagerExpr
 from narwhals._compliant.expr import LazyExpr
@@ -23,10 +24,10 @@ from narwhals._compliant.typing import CompliantExprT
 from narwhals._compliant.typing import CompliantFrameT
 from narwhals._compliant.typing import CompliantSeriesOrNativeExprT_co
 from narwhals._compliant.typing import CompliantSeriesT
-from narwhals._compliant.typing import EagerDataFrameT
 from narwhals._compliant.typing import EagerSeriesT
 from narwhals._compliant.typing import EvalNames
 from narwhals._compliant.typing import EvalSeries
+from narwhals._compliant.typing import ImplDataFrameT
 from narwhals._compliant.typing import IntoCompliantExpr
 from narwhals._compliant.typing import NativeFrameT_co
 from narwhals._compliant.typing import NativeSeriesT_co
@@ -51,8 +52,6 @@ __all__ = [
     "CompliantThen",
     "CompliantWhen",
     "DepthTrackingGroupBy",
-    "EagerDataFrame",
-    "EagerDataFrameT",
     "EagerExpr",
     "EagerGroupBy",
     "EagerNamespace",
@@ -62,6 +61,9 @@ __all__ = [
     "EagerWhen",
     "EvalNames",
     "EvalSeries",
+    "ImplDataFrame",
+    "ImplDataFrameT",
+    "ImplLazyFrame",
     "IntoCompliantExpr",
     "LazyExpr",
     "LazyGroupBy",

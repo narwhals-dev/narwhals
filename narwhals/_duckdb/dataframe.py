@@ -13,6 +13,7 @@ import duckdb
 from duckdb import FunctionExpression
 from duckdb import StarExpression
 
+from narwhals._compliant import ImplLazyFrame
 from narwhals._duckdb.utils import col
 from narwhals._duckdb.utils import evaluate_exprs
 from narwhals._duckdb.utils import generate_partition_by_sql
@@ -21,7 +22,6 @@ from narwhals._duckdb.utils import native_to_narwhals_dtype
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import generate_temporary_column_name
@@ -55,13 +55,7 @@ with contextlib.suppress(ImportError):  # requires duckdb>=1.3.0
     from duckdb import SQLExpression  # type: ignore[attr-defined, unused-ignore]
 
 
-class DuckDBLazyFrame(
-    CompliantLazyFrame[
-        "DuckDBExpr",
-        "duckdb.DuckDBPyRelation",
-        "LazyFrame[duckdb.DuckDBPyRelation] | DataFrameV1[duckdb.DuckDBPyRelation]",
-    ]
-):
+class DuckDBLazyFrame(ImplLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"]):
     _implementation = Implementation.DUCKDB
 
     def __init__(
@@ -229,16 +223,6 @@ class DuckDBLazyFrame(
                 )
             }
         return self._cached_schema
-
-    @property
-    def columns(self) -> list[str]:
-        if self._cached_columns is None:
-            self._cached_columns = (
-                list(self.schema)
-                if self._cached_schema is not None
-                else self.native.columns
-            )
-        return self._cached_columns
 
     def to_pandas(self) -> pd.DataFrame:
         # only if version is v1, keep around for backcompat

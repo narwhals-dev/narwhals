@@ -18,6 +18,7 @@ from narwhals._compliant.typing import CompliantLazyFrameAny
 from narwhals._compliant.typing import CompliantSeriesT
 from narwhals._compliant.typing import EagerExprT
 from narwhals._compliant.typing import EagerSeriesT
+from narwhals._compliant.typing import LazyExprT
 from narwhals._compliant.typing import NativeFrameT
 from narwhals._compliant.typing import NativeSeriesT
 from narwhals._translate import ArrowConvertible
@@ -73,7 +74,7 @@ if TYPE_CHECKING:
 
     Incomplete: TypeAlias = Any
 
-__all__ = ["CompliantDataFrame", "CompliantLazyFrame", "EagerDataFrame"]
+__all__ = ["CompliantDataFrame", "CompliantLazyFrame", "ImplDataFrame", "ImplLazyFrame"]
 
 T = TypeVar("T")
 
@@ -371,7 +372,7 @@ class CompliantLazyFrame(
         return list(chain.from_iterable(it))
 
 
-class EagerDataFrame(
+class ImplDataFrame(
     CompliantDataFrame[EagerSeriesT, EagerExprT, NativeFrameT, "DataFrame[NativeFrameT]"],
     CompliantLazyFrame[EagerExprT, NativeFrameT, "DataFrame[NativeFrameT]"],
     Protocol[EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
@@ -475,3 +476,22 @@ class EagerDataFrame(
                 raise AssertionError(msg)
 
         return compliant
+
+
+class ImplLazyFrame(
+    CompliantLazyFrame[
+        LazyExprT, NativeFrameT, "LazyFrame[NativeFrameT] | DataFrame[NativeFrameT]"
+    ],
+):
+    _cached_schema: dict[str, DType] | None
+    _cached_columns: list[str] | None
+
+    @property
+    def columns(self) -> list[str]:
+        if self._cached_columns is None:
+            self._cached_columns = (
+                list(self.schema)
+                if self._cached_schema is not None
+                else list(self.native.columns)
+            )
+        return self._cached_columns

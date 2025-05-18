@@ -9,11 +9,11 @@ from typing import Sequence
 import dask.dataframe as dd
 import pandas as pd
 
+from narwhals._compliant import ImplLazyFrame
 from narwhals._dask.utils import add_row_index
 from narwhals._dask.utils import evaluate_exprs
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._pandas_like.utils import select_columns_by_name
-from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import _remap_full_join_keys
 from narwhals.utils import check_column_exists
@@ -44,9 +44,7 @@ if TYPE_CHECKING:
     from narwhals.utils import _FullContext
 
 
-class DaskLazyFrame(
-    CompliantLazyFrame["DaskExpr", "dd.DataFrame", "LazyFrame[dd.DataFrame]"]
-):
+class DaskLazyFrame(ImplLazyFrame["DaskExpr", "dd.DataFrame"]):
     def __init__(
         self,
         native_dataframe: dd.DataFrame,
@@ -149,16 +147,6 @@ class DaskLazyFrame(
 
         msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
         raise ValueError(msg)  # pragma: no cover
-
-    @property
-    def columns(self) -> list[str]:
-        if self._cached_columns is None:
-            self._cached_columns = (
-                list(self.schema)
-                if self._cached_schema is not None
-                else self.native.columns.tolist()
-            )
-        return self._cached_columns
 
     def filter(self, predicate: DaskExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column

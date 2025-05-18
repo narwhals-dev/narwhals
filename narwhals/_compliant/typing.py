@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.dataframe import CompliantDataFrame
     from narwhals._compliant.dataframe import CompliantLazyFrame
-    from narwhals._compliant.dataframe import EagerDataFrame
+    from narwhals._compliant.dataframe import ImplDataFrame
     from narwhals._compliant.expr import CompliantExpr
     from narwhals._compliant.expr import DepthTrackingExpr
     from narwhals._compliant.expr import EagerExpr
@@ -47,10 +47,10 @@ CompliantNamespaceAny: TypeAlias = "CompliantNamespace[Any, Any]"
 
 DepthTrackingExprAny: TypeAlias = "DepthTrackingExpr[Any, Any]"
 
-EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any, Any, Any]"
+ImplDataFrameAny: TypeAlias = "ImplDataFrame[Any, Any, Any, Any]"
 EagerSeriesAny: TypeAlias = "EagerSeries[Any]"
 EagerExprAny: TypeAlias = "EagerExpr[Any, Any]"
-EagerNamespaceAny: TypeAlias = "EagerNamespace[EagerDataFrameAny, EagerSeriesAny, EagerExprAny, NativeFrame, NativeSeries]"
+EagerNamespaceAny: TypeAlias = "EagerNamespace[ImplDataFrameAny, EagerSeriesAny, EagerExprAny, NativeFrame, NativeSeries]"
 
 LazyExprAny: TypeAlias = "LazyExpr[Any, Any]"
 
@@ -110,8 +110,8 @@ EagerExprT_contra = TypeVar("EagerExprT_contra", bound=EagerExprAny, contravaria
 EagerSeriesT = TypeVar("EagerSeriesT", bound=EagerSeriesAny)
 EagerSeriesT_co = TypeVar("EagerSeriesT_co", bound=EagerSeriesAny, covariant=True)
 
-# NOTE: `pyright` gives false (8) positives if this uses `EagerDataFrameAny`?
-EagerDataFrameT = TypeVar("EagerDataFrameT", bound="EagerDataFrame[Any, Any, Any, Any]")
+# NOTE: `pyright` gives false (8) positives if this uses `ImplDataFrameAny`?
+ImplDataFrameT = TypeVar("ImplDataFrameT", bound="ImplDataFrame[Any, Any, Any, Any]")
 
 LazyExprT = TypeVar("LazyExprT", bound=LazyExprAny)
 LazyExprT_contra = TypeVar("LazyExprT_contra", bound=LazyExprAny, contravariant=True)

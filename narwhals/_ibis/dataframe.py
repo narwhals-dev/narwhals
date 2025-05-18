@@ -13,11 +13,11 @@ from typing import cast
 import ibis
 import ibis.expr.types as ir
 
+from narwhals._compliant import ImplLazyFrame
 from narwhals._ibis.utils import evaluate_exprs
 from narwhals._ibis.utils import native_to_narwhals_dtype
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import not_implemented
@@ -51,11 +51,7 @@ if TYPE_CHECKING:
     JoinPredicates: TypeAlias = "Sequence[ir.BooleanColumn] | Sequence[str]"
 
 
-class IbisLazyFrame(
-    CompliantLazyFrame[
-        "IbisExpr", "ir.Table", "LazyFrame[ir.Table] | DataFrameV1[ir.Table]"
-    ]
-):
+class IbisLazyFrame(ImplLazyFrame["IbisExpr", "ir.Table"]):
     _implementation = Implementation.IBIS
 
     def __init__(
@@ -211,16 +207,6 @@ class IbisLazyFrame(
                 for name, dtype in self.native.schema().fields.items()
             }
         return self._cached_schema
-
-    @property
-    def columns(self) -> list[str]:
-        if self._cached_columns is None:
-            self._cached_columns = (
-                list(self.schema)
-                if self._cached_schema is not None
-                else list(self.native.columns)
-            )
-        return self._cached_columns
 
     def to_pandas(self) -> pd.DataFrame:
         # only if version is v1, keep around for backcompat

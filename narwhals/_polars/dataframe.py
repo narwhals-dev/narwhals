@@ -323,7 +323,7 @@ class PolarsDataFrame:
         else:  # pragma: no cover
             # TODO(marco): we can delete this branch after Polars==0.20.30 becomes the minimum
             # Polars version we support
-            # This mostly mirrors the logic in `EagerDataFrame.__getitem__`.
+            # This mostly mirrors the logic in `ImplDataFrame.__getitem__`.
             rows = list(rows) if isinstance(rows, tuple) else rows
             columns = list(columns) if isinstance(columns, tuple) else columns
             if is_numpy_array_1d(columns):

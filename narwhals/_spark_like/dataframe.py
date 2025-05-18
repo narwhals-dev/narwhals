@@ -9,6 +9,7 @@ from typing import Iterator
 from typing import Mapping
 from typing import Sequence
 
+from narwhals._compliant import ImplLazyFrame
 from narwhals._namespace import is_native_spark_like
 from narwhals._spark_like.utils import evaluate_exprs
 from narwhals._spark_like.utils import import_functions
@@ -16,7 +17,6 @@ from narwhals._spark_like.utils import import_native_dtypes
 from narwhals._spark_like.utils import import_window
 from narwhals._spark_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import check_column_exists
 from narwhals.utils import find_stacklevel
@@ -54,11 +54,7 @@ Incomplete: TypeAlias = Any  # pragma: no cover
 """Marker for working code that fails type checking."""
 
 
-class SparkLikeLazyFrame(
-    CompliantLazyFrame[
-        "SparkLikeExpr", "SQLFrameDataFrame", "LazyFrame[SQLFrameDataFrame]"
-    ]
-):
+class SparkLikeLazyFrame(ImplLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"]):
     def __init__(
         self,
         native_dataframe: SQLFrameDataFrame,
@@ -202,16 +198,6 @@ class SparkLikeLazyFrame(
     def _iter_columns(self) -> Iterator[Column]:
         for col in self.columns:
             yield self._F.col(col)
-
-    @property
-    def columns(self) -> list[str]:
-        if self._cached_columns is None:
-            self._cached_columns = (
-                list(self.schema)
-                if self._cached_schema is not None
-                else self.native.columns
-            )
-        return self._cached_columns
 
     def collect(
         self, backend: ModuleType | Implementation | str | None, **kwargs: Any

@@ -25,9 +25,9 @@ from narwhals._compliant.typing import CompliantExprT_co
 from narwhals._compliant.typing import CompliantFrameT
 from narwhals._compliant.typing import CompliantLazyFrameT
 from narwhals._compliant.typing import CompliantSeriesOrNativeExprT_co
-from narwhals._compliant.typing import EagerDataFrameT
 from narwhals._compliant.typing import EagerExprT
 from narwhals._compliant.typing import EagerSeriesT
+from narwhals._compliant.typing import ImplDataFrameT
 from narwhals._compliant.typing import LazyExprT
 from narwhals._compliant.typing import NativeExprT
 from narwhals.dependencies import get_numpy
@@ -338,19 +338,19 @@ class DepthTrackingExpr(
 
 
 class EagerExpr(
-    DepthTrackingExpr[EagerDataFrameT, EagerSeriesT],
-    Protocol38[EagerDataFrameT, EagerSeriesT],
+    DepthTrackingExpr[ImplDataFrameT, EagerSeriesT],
+    Protocol38[ImplDataFrameT, EagerSeriesT],
 ):
-    _call: EvalSeries[EagerDataFrameT, EagerSeriesT]
+    _call: EvalSeries[ImplDataFrameT, EagerSeriesT]
     _call_kwargs: dict[str, Any]
 
     def __init__(
         self,
-        call: EvalSeries[EagerDataFrameT, EagerSeriesT],
+        call: EvalSeries[ImplDataFrameT, EagerSeriesT],
         *,
         depth: int,
         function_name: str,
-        evaluate_output_names: EvalNames[EagerDataFrameT],
+        evaluate_output_names: EvalNames[ImplDataFrameT],
         alias_output_names: AliasNames | None,
         implementation: Implementation,
         backend_version: tuple[int, ...],
@@ -358,22 +358,22 @@ class EagerExpr(
         call_kwargs: dict[str, Any] | None = None,
     ) -> None: ...
 
-    def __call__(self, df: EagerDataFrameT) -> Sequence[EagerSeriesT]:
+    def __call__(self, df: ImplDataFrameT) -> Sequence[EagerSeriesT]:
         return self._call(df)
 
     def __narwhals_namespace__(
         self,
-    ) -> EagerNamespace[EagerDataFrameT, EagerSeriesT, Self, Any, Any]: ...
+    ) -> EagerNamespace[ImplDataFrameT, EagerSeriesT, Self, Any, Any]: ...
     def __narwhals_expr__(self) -> None: ...
 
     @classmethod
     def _from_callable(
         cls,
-        func: EvalSeries[EagerDataFrameT, EagerSeriesT],
+        func: EvalSeries[ImplDataFrameT, EagerSeriesT],
         *,
         depth: int,
         function_name: str,
-        evaluate_output_names: EvalNames[EagerDataFrameT],
+        evaluate_output_names: EvalNames[ImplDataFrameT],
         alias_output_names: AliasNames | None,
         context: _FullContext,
         call_kwargs: dict[str, Any] | None = None,
@@ -455,7 +455,7 @@ class EagerExpr(
 
     def _reuse_series_inner(
         self,
-        df: EagerDataFrameT,
+        df: ImplDataFrameT,
         *,
         method_name: str,
         returns_scalar: bool,
@@ -521,7 +521,7 @@ class EagerExpr(
         # Mark the resulting Series with `_broadcast = True`.
         # Then, when extracting native objects, `extract_native` will
         # know what to do.
-        def func(df: EagerDataFrameT) -> list[EagerSeriesT]:
+        def func(df: ImplDataFrameT) -> list[EagerSeriesT]:
             results = []
             for result in self(df):
                 result._broadcast = True
@@ -830,7 +830,7 @@ class EagerExpr(
         function: Callable[[Any], Any],
         return_dtype: DType | type[DType] | None,
     ) -> Self:
-        def func(df: EagerDataFrameT) -> Sequence[EagerSeriesT]:
+        def func(df: ImplDataFrameT) -> Sequence[EagerSeriesT]:
             input_series_list = self(df)
             output_names = [input_series.name for input_series in input_series_list]
             result = [function(series) for series in input_series_list]
