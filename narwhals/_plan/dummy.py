@@ -2,19 +2,24 @@
 
 from __future__ import annotations
 
+import typing as t
 from typing import TYPE_CHECKING
 
 from narwhals._plan import aggregation as agg
 from narwhals._plan import boolean
 from narwhals._plan import expr
 from narwhals._plan import operators as ops
+from narwhals._plan.options import SortOptions
+from narwhals._plan.window import Over
 from narwhals.dtypes import DType
 from narwhals.dtypes import Unknown
+from narwhals.utils import flatten
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan.common import ExprIR
+    from narwhals._plan.common import Seq
     from narwhals.typing import NativeSeries
 
 
@@ -59,6 +64,24 @@ class DummyExpr:
 
     def sum(self) -> Self:
         return self._from_ir(agg.Sum(expr=self._ir))
+
+    def over(
+        self,
+        *partition_by: DummyExpr | t.Iterable[DummyExpr],
+        order_by: DummyExpr | t.Iterable[DummyExpr] | None = None,
+        descending: bool = False,
+        nulls_last: bool = False,
+    ) -> DummyExpr:
+        order: tuple[Seq[ExprIR], SortOptions] | None = None
+        partition = tuple(expr._ir for expr in flatten(partition_by))
+        if not (partition) and order_by is None:
+            msg = "At least one of `partition_by` or `order_by` must be specified."
+            raise TypeError(msg)
+        if order_by is not None:
+            by = tuple(expr._ir for expr in flatten([order_by]))
+            options = SortOptions(descending=descending, nulls_last=nulls_last)
+            order = by, options
+        return Over().to_window_expr(self._ir, partition, order).to_narwhals()
 
     def __eq__(self, other: DummyExpr) -> DummyExpr:  # type: ignore[override]
         op = ops.Eq()

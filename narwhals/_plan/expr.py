@@ -245,7 +245,12 @@ class WindowExpr(ExprIR):
     """
 
     partition_by: Seq[ExprIR]
-    order_by: tuple[ExprIR, SortOptions] | None
+    order_by: tuple[Seq[ExprIR], SortOptions] | None
+    """Deviates from the `polars` version.
+
+    - `order_by` starts the same as here, but `polars` reduces into a struct - becoming a single (nested) node.
+    """
+
     options: Window
     """Little confused on the nesting.
 
@@ -257,6 +262,25 @@ class WindowExpr(ExprIR):
     Expr::Window { options: WindowType::Over(WindowMapping) }
     Expr::Window { options: WindowType::Rolling(RollingGroupOptions) }
     """
+
+    def __repr__(self) -> str:
+        if self.order_by is None:
+            return f"{self.expr!r}.over({list(self.partition_by)!r})"
+        order, _ = self.order_by
+        if not self.partition_by:
+            args = f"order_by={list(order)!r}"
+        else:
+            args = f"partition_by={list(self.partition_by)!r}, order_by={list(order)!r}"
+        return f"{self.expr!r}.over({args})"
+
+    def __str__(self) -> str:
+        if self.order_by is None:
+            order_by = "None"
+        else:
+            order, opts = self.order_by
+            order_by = f"({order}, {opts})"
+        args = f"expr={self.expr}, partition_by={self.partition_by}, order_by={order_by}, options={self.options}"
+        return f"{type(self).__name__}({args})"
 
 
 class Len(ExprIR):

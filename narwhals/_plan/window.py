@@ -1,8 +1,13 @@
-"""TODO: Figure out what `Over` should be holding or skip it and go straight to `WindowExpr`."""
-
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from narwhals._plan.common import ExprIR
+
+if TYPE_CHECKING:
+    from narwhals._plan.common import Seq
+    from narwhals._plan.expr import WindowExpr
+    from narwhals._plan.options import SortOptions
 
 
 class Window(ExprIR):
@@ -17,4 +22,16 @@ class Window(ExprIR):
 # - `_plan.expr.WindowExpr` has:
 #    - expr (last node)
 #    - partition_by, optional order_by, `options` which is one of these classes?
-class Over(Window): ...
+class Over(Window):
+    def to_window_expr(
+        self,
+        expr: ExprIR,
+        partition_by: Seq[ExprIR],
+        order_by: tuple[Seq[ExprIR], SortOptions] | None,
+        /,
+    ) -> WindowExpr:
+        from narwhals._plan.expr import WindowExpr
+
+        return WindowExpr(
+            expr=expr, partition_by=partition_by, order_by=order_by, options=self
+        )
