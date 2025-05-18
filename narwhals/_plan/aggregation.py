@@ -55,7 +55,7 @@ class NUnique(Agg): ...
 class Quantile(Agg):
     __slots__ = (*Agg.__slots__, "interpolation", "quantile")
 
-    quantile: ExprIR
+    quantile: float
     interpolation: RollingInterpolationMethod
 
 

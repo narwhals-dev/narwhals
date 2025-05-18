@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from narwhals._plan.common import ExprIR
     from narwhals._plan.common import Seq
     from narwhals.typing import NativeSeries
+    from narwhals.typing import RollingInterpolationMethod
 
 
 # NOTE: Overly simplified placeholders for mocking typing
@@ -64,6 +65,25 @@ class DummyExpr:
 
     def sum(self) -> Self:
         return self._from_ir(agg.Sum(expr=self._ir))
+
+    def first(self) -> Self:
+        return self._from_ir(agg.First(expr=self._ir))
+
+    def last(self) -> Self:
+        return self._from_ir(agg.Last(expr=self._ir))
+
+    def var(self, *, ddof: int = 1) -> Self:
+        return self._from_ir(agg.Var(expr=self._ir, ddof=ddof))
+
+    def std(self, *, ddof: int = 1) -> Self:
+        return self._from_ir(agg.Std(expr=self._ir, ddof=ddof))
+
+    def quantile(
+        self, quantile: float, interpolation: RollingInterpolationMethod
+    ) -> Self:
+        return self._from_ir(
+            agg.Quantile(expr=self._ir, quantile=quantile, interpolation=interpolation)
+        )
 
     def over(
         self,
