@@ -73,20 +73,16 @@ class Immutable:
             cls.__slots__ = ()
 
     def __hash__(self) -> int:
-        empty = object()
         slots: tuple[str, ...] = self.__slots__
-        return hash(tuple(getattr(self, name, empty) for name in slots))
+        return hash(tuple(getattr(self, name) for name in slots))
 
     def __eq__(self, other: object) -> bool:
         if self is other:
             return True
         elif type(self) is not type(other):
             return False
-        empty = object()
         slots: tuple[str, ...] = self.__slots__
-        return all(
-            getattr(self, name, empty) == getattr(other, name, empty) for name in slots
-        )
+        return all(getattr(self, name) == getattr(other, name) for name in slots)
 
     def __str__(self) -> str:
         # NOTE: Debug repr, closer to constructor
