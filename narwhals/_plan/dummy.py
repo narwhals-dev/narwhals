@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from narwhals._plan import aggregation as agg
 from narwhals._plan import expr
+from narwhals._plan import operators as ops
 from narwhals.dtypes import DType
 from narwhals.dtypes import Unknown
 
@@ -57,6 +58,58 @@ class DummyExpr:
 
     def sum(self) -> Self:
         return self._from_ir(agg.Sum(expr=self._ir))
+
+    def __ne__(self, other: DummyExpr) -> DummyExpr:
+        op = ops.NotEq()
+        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+
+    def __lt__(self, other: DummyExpr) -> DummyExpr:
+        op = ops.Lt()
+        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+
+    def __le__(self, other: DummyExpr) -> DummyExpr:
+        op = ops.LtEq()
+        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+
+    def __gt__(self, other: DummyExpr) -> DummyExpr:
+        op = ops.Gt()
+        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+
+    def __ge__(self, other: DummyExpr) -> DummyExpr:
+        op = ops.GtEq()
+        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+
+    def __add__(self, other: DummyExpr) -> DummyExpr:
+        op = ops.Add()
+        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+
+    def __sub__(self, other: DummyExpr) -> DummyExpr:
+        op = ops.Sub()
+        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+
+    def __mul__(self, other: DummyExpr) -> DummyExpr:
+        op = ops.Multiply()
+        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+
+    def __truediv__(self, other: DummyExpr) -> DummyExpr:
+        op = ops.TrueDivide()
+        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+
+    def __floordiv__(self, other: DummyExpr) -> DummyExpr:
+        op = ops.FloorDivide()
+        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+
+    def __mod__(self, other: DummyExpr) -> DummyExpr:
+        op = ops.Modulus()
+        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+
+    def __and__(self, other: DummyExpr) -> DummyExpr:
+        op = ops.And()
+        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+
+    def __or__(self, other: DummyExpr) -> DummyExpr:
+        op = ops.Or()
+        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
 
 
 class DummyCompliantExpr:
