@@ -29,6 +29,6 @@ jobs:
           restore-keys: |
             mkdocs-material-
       - name: Install dependencies
-        run: uv pip install -e ".[duckdb,sqlframe,ibis]" --group docs --system
+        run: uv pip install -e . --group docs --system
       - name: Deploy docs
         run: mkdocs gh-deploy --force
