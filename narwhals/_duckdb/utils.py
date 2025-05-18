@@ -256,10 +256,10 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
     raise AssertionError(msg)
 
 
-def generate_partition_by_sql(*partition_by: str) -> str:
+def generate_partition_by_sql(*partition_by: str | duckdb.Expression) -> str:
     if not partition_by:
         return ""
-    by_sql = ", ".join([f"{col(x)}" for x in partition_by])
+    by_sql = ", ".join([f"{col(x) if isinstance(x, str) else x}" for x in partition_by])
     return f"partition by {by_sql}"
 
 

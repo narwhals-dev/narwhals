@@ -767,35 +767,32 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
             _input: duckdb.Expression,
             *,
             descending: bool,
-            partition_by_sql: str | None = None,
+            partition_by: Sequence[str | duckdb.Expression] | None = None,
         ) -> duckdb.Expression:
-            if descending:
-                by_sql = f"{_input} desc nulls last"
-            else:
-                by_sql = f"{_input} asc nulls last"
+            order_by_sql = (
+                f"order by {_input} desc nulls last"
+                if descending
+                else f"order by {_input} asc nulls last"
+            )
             count_expr = FunctionExpression("count", StarExpression())
-            if partition_by_sql is not None:
-                order_by_sql = f"{partition_by_sql} order by {by_sql}"
-                partition_expr = SQLExpression(
-                    f"{count_expr} OVER ({partition_by_sql}, {_input})"
-                )
+            if partition_by is not None:
+                window = f"{generate_partition_by_sql(*partition_by)} {order_by_sql}"
+                count_window = f"{generate_partition_by_sql(*partition_by, _input)}"
             else:
-                order_by_sql = f"order by {by_sql}"
-                partition_expr = SQLExpression(
-                    f"{count_expr} OVER (PARTITION BY {_input})"
-                )
+                window = order_by_sql
+                count_window = generate_partition_by_sql(_input)
             if method == "max":
                 expr = (
-                    SQLExpression(f"{func} OVER ({order_by_sql})")
-                    + partition_expr
+                    SQLExpression(f"{func} OVER ({window})")
+                    + SQLExpression(f"{count_expr} over ({count_window})")
                     - lit(1)
                 )
             elif method == "average":
-                expr = SQLExpression(f"{func} OVER ({order_by_sql})") + (
-                    partition_expr - lit(1)
+                expr = SQLExpression(f"{func} OVER ({window})") + (
+                    SQLExpression(f"{count_expr} over ({count_window})") - lit(1)
                 ) / lit(2.0)
             else:
-                expr = SQLExpression(f"{func} OVER ({order_by_sql})")
+                expr = SQLExpression(f"{func} OVER ({window})")
             return when(_input.isnotnull(), expr)
 
         def _unpartitioned_rank(_input: duckdb.Expression) -> duckdb.Expression:
@@ -804,11 +801,10 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "duckdb.Expression"]):
         def _partitioned_rank(
             window_inputs: UnorderableWindowInputs,
         ) -> duckdb.Expression:
-            partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
             return _rank(
                 window_inputs.expr,
                 descending=descending,
-                partition_by_sql=partition_by_sql,
+                partition_by=window_inputs.partition_by,
             )
 
         return self._with_callable(_unpartitioned_rank)._with_unorderable_window_function(
