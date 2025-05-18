@@ -345,10 +345,9 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         strategy: FillNullStrategy | None,
         limit: int | None,
     ) -> Self:
-        scalar_kwargs: ScalarKwargs | None = (
-            {"strategy": strategy, "limit": limit} if strategy is not None else None
+        return self._reuse_series(
+            "fill_null", scalar_kwargs={"strategy": strategy, "limit": limit}, value=value
         )
-        return self._reuse_series("fill_null", scalar_kwargs=scalar_kwargs, value=value)
 
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._reuse_series(

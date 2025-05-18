@@ -38,7 +38,7 @@ if TYPE_CHECKING:
         min_samples: int
         n: int
         reverse: bool
-        strategy: FillNullStrategy
+        strategy: FillNullStrategy | None
         window_size: int
 
 
