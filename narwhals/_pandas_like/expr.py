@@ -76,7 +76,8 @@ def window_kwargs_to_pandas_equivalent(
             "center": kwargs["center"],
         }
     else:  # e.g. std, var
-        pandas_kwargs = kwargs  # type: ignore[assignment]
+        assert "ddof" in kwargs  # noqa: S101
+        pandas_kwargs = {"ddof": kwargs["ddof"]}
     return pandas_kwargs
 
 
@@ -344,9 +345,10 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         strategy: FillNullStrategy | None,
         limit: int | None,
     ) -> Self:
-        return self._reuse_series(
-            "fill_null", scalar_kwargs={"strategy": strategy, "limit": limit}, value=value
+        scalar_kwargs: ScalarKwargs | None = (
+            {"strategy": strategy, "limit": limit} if strategy is not None else None
         )
+        return self._reuse_series("fill_null", scalar_kwargs=scalar_kwargs, value=value)
 
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._reuse_series(
