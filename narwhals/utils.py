@@ -1745,6 +1745,24 @@ def unstable(fn: _Fn, /) -> _Fn:
     return fn
 
 
+def _is_naive_format(format: str) -> bool:
+    """Determines if a datetime format string is 'naive', i.e., does not include timezone information.
+
+    A format is considered naive if it does not contain any of the following
+
+    - '%s': Unix timestamp
+    - '%z': UTC offset
+    - 'Z' : UTC timezone designator
+
+    Arguments:
+        format: The datetime format string to check.
+
+    Returns:
+        bool: True if the format is naive (does not include timezone info), False otherwise.
+    """
+    return not any(x in format for x in ("%s", "%z", "Z"))
+
+
 if TYPE_CHECKING:
     import sys
 
