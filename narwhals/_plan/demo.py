@@ -7,14 +7,12 @@ from narwhals._plan.dummy import DummySeries
 from narwhals._plan.expr import All
 from narwhals._plan.expr import Column
 from narwhals._plan.expr import Columns
-from narwhals._plan.expr import FunctionExpr
 from narwhals._plan.expr import IndexColumns
 from narwhals._plan.expr import Len
 from narwhals._plan.expr import Nth
 from narwhals._plan.functions import SumHorizontal
 from narwhals._plan.literal import ScalarLiteral
 from narwhals._plan.literal import SeriesLiteral
-from narwhals._plan.options import FunctionOptions
 from narwhals.dtypes import DType
 from narwhals.dtypes import Unknown
 from narwhals.utils import flatten
@@ -83,10 +81,5 @@ def sum(*columns: str) -> DummyExpr:
 
 
 def sum_horizontal(*exprs: DummyExpr | t.Iterable[DummyExpr]) -> DummyExpr:
-    flat_exprs = tuple(flatten(exprs))
-    # NOTE: Still need to figure out how these should be generated
-    # Feel like it should be the union of `input` & `function`
-    PLACEHOLDER = FunctionOptions.default()  # noqa: N806
-    return FunctionExpr(
-        input=flat_exprs, function=SumHorizontal(), options=PLACEHOLDER
-    ).to_narwhals()
+    it = (expr._ir for expr in flatten(exprs))
+    return SumHorizontal().to_function_expr(*it).to_narwhals()

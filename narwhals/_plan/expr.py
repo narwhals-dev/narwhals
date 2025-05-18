@@ -7,6 +7,8 @@ import typing as t
 from narwhals._plan.common import ExprIR
 
 if t.TYPE_CHECKING:
+    from typing_extensions import Self
+
     from narwhals._plan.common import Function
     from narwhals._plan.common import Seq
     from narwhals._plan.functions import MapBatches
@@ -169,6 +171,10 @@ class FunctionExpr(ExprIR, t.Generic[_FunctionT]):
     1. `function.function_options`
     2. The union of (1) and any `FunctionOptions` in `inputs`
     """
+
+    def with_options(self, options: FunctionOptions, /) -> Self:
+        options = self.options.with_flags(options.flags)
+        return type(self)(input=self.input, function=self.function, options=options)
 
 
 class RollingExpr(FunctionExpr[_RollingT]): ...

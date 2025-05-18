@@ -8,11 +8,13 @@ if TYPE_CHECKING:
     from typing import Callable
 
     from typing_extensions import Never
+    from typing_extensions import Self
     from typing_extensions import TypeAlias
     from typing_extensions import dataclass_transform
 
     from narwhals._plan.dummy import DummyCompliantExpr
     from narwhals._plan.dummy import DummyExpr
+    from narwhals._plan.expr import FunctionExpr
     from narwhals._plan.options import FunctionOptions
 
 else:
@@ -145,3 +147,12 @@ class Function(ExprIR):
     @property
     def is_scalar(self) -> bool:
         return self.function_options.returns_scalar()
+
+    def to_function_expr(self, *inputs: ExprIR) -> FunctionExpr[Self]:
+        from narwhals._plan.expr import FunctionExpr
+        from narwhals._plan.options import FunctionOptions
+
+        # NOTE: Still need to figure out how these should be generated
+        # Feel like it should be the union of `input` & `function`
+        PLACEHOLDER = FunctionOptions.default()  # noqa: N806
+        return FunctionExpr(input=inputs, function=self, options=PLACEHOLDER)
