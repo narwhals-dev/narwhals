@@ -129,10 +129,10 @@ def execute_query(query_id: str, *, benchmark: BenchmarkFixture | None = None) -
 
         if benchmark is not None:
             result = benchmark(
-                _execute_query_single_backend,
-                query_id=query_id,
-                native_namespace=native_namespace,
-                **kwargs,
+                lambda native_namespace=native_namespace,
+                kwargs=kwargs: _execute_query_single_backend(
+                    query_id=query_id, native_namespace=native_namespace, **kwargs
+                )
             )
         else:
             result = _execute_query_single_backend(
