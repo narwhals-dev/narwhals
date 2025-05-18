@@ -1,3 +1,11 @@
+"""Top-level `Expr` nodes.
+
+Todo:
+- `Selector`
+- `Ternary`
+- `Window` (investigate variants)
+"""
+
 from __future__ import annotations
 
 # NOTE: Needed to avoid naming collisions
@@ -301,8 +309,8 @@ class All(ExprIR):
         return "*"
 
 
-# NOTE: by_dtype, matches, numeric, boolean, string, categorical, datetime, all
-class Selector(ExprIR): ...
+class Selector(ExprIR):
+    """by_dtype, matches, numeric, boolean, string, categorical, datetime, all."""
 
 
 class Ternary(ExprIR):
