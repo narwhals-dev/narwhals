@@ -226,7 +226,7 @@ class Filter(ExprIR):
 
 
 class WindowExpr(ExprIR):
-    """A fully specified `.over()`, that occured after another expression.
+    """A fully specified `.over()`, that occurred after another expression.
 
     I think we want variants for partitioned, ordered, both.
 
@@ -310,7 +310,7 @@ class Nth(ExprIR):
 class IndexColumns(ExprIR):
     """Renamed from `IndexColumn`.
 
-    `Nth` provides the singlular variant.
+    `Nth` provides the singular variant.
 
     https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/expr.rs#L80
     """

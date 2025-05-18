@@ -180,7 +180,7 @@ class RollingOptionsFixedWindow(Immutable):
 
     window_size: int
     min_samples: int
-    """Renamed from `min_periods`, re-uses `window_size` if null."""
+    """Renamed from `min_periods`, reuses `window_size` if null."""
 
     center: bool
     fn_params: RollingVarParams | None

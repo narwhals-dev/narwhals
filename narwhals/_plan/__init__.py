@@ -1,4 +1,4 @@
-"""Brainstorming an `Expr` internal represention.
+"""Brainstorming an `Expr` internal representation.
 
 Notes:
 - Each `Expr` method should be representable by a single node
