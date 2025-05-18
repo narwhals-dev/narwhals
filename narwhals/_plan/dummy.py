@@ -9,6 +9,7 @@ from narwhals._plan import aggregation as agg
 from narwhals._plan import boolean
 from narwhals._plan import expr
 from narwhals._plan import operators as ops
+from narwhals._plan.options import SortMultipleOptions
 from narwhals._plan.options import SortOptions
 from narwhals._plan.window import Over
 from narwhals.dtypes import DType
@@ -102,6 +103,23 @@ class DummyExpr:
             options = SortOptions(descending=descending, nulls_last=nulls_last)
             order = by, options
         return Over().to_window_expr(self._ir, partition, order).to_narwhals()
+
+    def sort_by(
+        self,
+        by: DummyExpr | t.Iterable[DummyExpr],
+        *more_by: DummyExpr,
+        descending: bool | t.Iterable[bool] = False,
+        nulls_last: bool | t.Iterable[bool] = False,
+    ) -> Self:
+        if more_by:
+            by = (by, *more_by) if isinstance(by, DummyExpr) else (*by, *more_by)
+        else:
+            by = (by,) if isinstance(by, DummyExpr) else tuple(by)
+        sort_by = tuple(key._ir for key in by)
+        desc = (descending,) if isinstance(descending, bool) else tuple(descending)
+        nulls = (nulls_last,) if isinstance(nulls_last, bool) else tuple(nulls_last)
+        options = SortMultipleOptions(descending=desc, nulls_last=nulls)
+        return self._from_ir(expr.SortBy(expr=self._ir, by=sort_by, options=options))
 
     def __eq__(self, other: DummyExpr) -> DummyExpr:  # type: ignore[override]
         op = ops.Eq()

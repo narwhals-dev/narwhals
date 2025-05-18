@@ -115,12 +115,22 @@ class SortOptions(Immutable):
     descending: bool
     nulls_last: bool
 
+    def __repr__(self) -> str:
+        args = f"descending={self.descending!r}, nulls_last={self.nulls_last!r}"
+        return f"{type(self).__name__}({args})"
+
 
 class SortMultipleOptions(Immutable):
     __slots__ = ("descending", "nulls_last")
 
     descending: Seq[bool]
     nulls_last: Seq[bool]
+
+    def __repr__(self) -> str:
+        args = (
+            f"descending={list(self.descending)!r}, nulls_last={list(self.nulls_last)!r}"
+        )
+        return f"{type(self).__name__}({args})"
 
 
 class RankOptions(Immutable):
