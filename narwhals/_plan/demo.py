@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import builtins as bltns
+import builtins
 import typing as t
 
 from narwhals._plan.common import DummySeries
@@ -28,7 +28,7 @@ def col(*names: str | t.Iterable[str]) -> DummyExpr:
     flat_names = tuple(flatten(names))
     node = (
         Column(name=flat_names[0])
-        if bltns.len(flat_names) == 1
+        if builtins.len(flat_names) == 1
         else Columns(names=flat_names)
     )
     return node.to_narwhals()
@@ -40,7 +40,7 @@ def nth(*indices: int | t.Sequence[int]) -> DummyExpr:
     flat_indices = tuple(flatten(indices))
     node = (
         Nth(index=flat_indices[0])
-        if bltns.len(flat_indices) == 1
+        if builtins.len(flat_indices) == 1
         else IndexColumns(indices=flat_indices)
     )
     return node.to_narwhals()
