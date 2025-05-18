@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Sequence
+from typing import TypedDict
 from typing import TypeVar
 
 if TYPE_CHECKING:
@@ -21,8 +22,25 @@ if TYPE_CHECKING:
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals._compliant.series import CompliantSeries
     from narwhals._compliant.series import EagerSeries
+    from narwhals.typing import FillNullStrategy
     from narwhals.typing import NativeFrame
     from narwhals.typing import NativeSeries
+    from narwhals.typing import RankMethod
+
+    class ScalarKwargs(TypedDict, total=False):
+        """Non-expressifiable args which we may need to reuse in `agg` or `over`."""
+
+        center: int
+        ddof: int
+        descending: bool
+        limit: int | None
+        method: RankMethod
+        min_samples: int
+        n: int
+        reverse: bool
+        strategy: FillNullStrategy | None
+        window_size: int
+
 
 __all__ = [
     "AliasName",

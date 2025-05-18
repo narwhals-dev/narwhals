@@ -59,6 +59,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import AliasNames
     from narwhals._compliant.typing import EvalNames
     from narwhals._compliant.typing import EvalSeries
+    from narwhals._compliant.typing import ScalarKwargs
     from narwhals._expression_parsing import ExprKind
     from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
@@ -345,7 +346,7 @@ class EagerExpr(
     Protocol38[EagerDataFrameT, EagerSeriesT],
 ):
     _call: EvalSeries[EagerDataFrameT, EagerSeriesT]
-    _call_kwargs: dict[str, Any]
+    _scalar_kwargs: ScalarKwargs
 
     def __init__(
         self,
@@ -358,7 +359,7 @@ class EagerExpr(
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
-        call_kwargs: dict[str, Any] | None = None,
+        scalar_kwargs: ScalarKwargs | None = None,
     ) -> None: ...
 
     def __call__(self, df: EagerDataFrameT) -> Sequence[EagerSeriesT]:
@@ -379,7 +380,7 @@ class EagerExpr(
         evaluate_output_names: EvalNames[EagerDataFrameT],
         alias_output_names: AliasNames | None,
         context: _FullContext,
-        call_kwargs: dict[str, Any] | None = None,
+        scalar_kwargs: ScalarKwargs | None = None,
     ) -> Self:
         return cls(
             func,
@@ -390,7 +391,7 @@ class EagerExpr(
             implementation=context._implementation,
             backend_version=context._backend_version,
             version=context._version,
-            call_kwargs=call_kwargs,
+            scalar_kwargs=scalar_kwargs,
         )
 
     @classmethod
@@ -411,7 +412,7 @@ class EagerExpr(
         method_name: str,
         *,
         returns_scalar: bool = False,
-        call_kwargs: dict[str, Any] | None = None,
+        scalar_kwargs: ScalarKwargs | None = None,
         **expressifiable_args: Any,
     ) -> Self:
         """Reuse Series implementation for expression.
@@ -423,7 +424,7 @@ class EagerExpr(
             method_name: name of method.
             returns_scalar: whether the Series version returns a scalar. In this case,
                 the expression version should return a 1-row Series.
-            call_kwargs: non-expressifiable args which we may need to reuse in `agg` or `over`,
+            scalar_kwargs: non-expressifiable args which we may need to reuse in `agg` or `over`,
                 such as `ddof` for `std` and `var`.
             expressifiable_args: keyword arguments to pass to function, which may
                 be expressifiable (e.g. `nw.col('a').is_between(3, nw.col('b')))`).
@@ -432,7 +433,7 @@ class EagerExpr(
             self._reuse_series_inner,
             method_name=method_name,
             returns_scalar=returns_scalar,
-            call_kwargs=call_kwargs or {},
+            scalar_kwargs=scalar_kwargs or {},
             expressifiable_args=expressifiable_args,
         )
         return self._from_callable(
@@ -441,7 +442,7 @@ class EagerExpr(
             function_name=f"{self._function_name}->{method_name}",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            call_kwargs=call_kwargs,
+            scalar_kwargs=scalar_kwargs,
             context=self,
         )
 
@@ -462,11 +463,11 @@ class EagerExpr(
         *,
         method_name: str,
         returns_scalar: bool,
-        call_kwargs: dict[str, Any],
+        scalar_kwargs: ScalarKwargs,
         expressifiable_args: dict[str, Any],
     ) -> Sequence[EagerSeriesT]:
         kwargs = {
-            **call_kwargs,
+            **scalar_kwargs,
             **{
                 name: df._evaluate_expr(value) if self._is_expr(value) else value
                 for name, value in expressifiable_args.items()
@@ -516,7 +517,7 @@ class EagerExpr(
             function_name=f"{self._function_name}->{series_namespace}.{method_name}",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            call_kwargs=self._call_kwargs,
+            scalar_kwargs=self._scalar_kwargs,
             context=self,
         )
 
@@ -540,7 +541,7 @@ class EagerExpr(
             backend_version=self._backend_version,
             implementation=self._implementation,
             version=self._version,
-            call_kwargs=self._call_kwargs,
+            scalar_kwargs=self._scalar_kwargs,
         )
 
     def cast(self, dtype: DType | type[DType]) -> Self:
@@ -630,10 +631,14 @@ class EagerExpr(
         return self._reuse_series("median", returns_scalar=True)
 
     def std(self, *, ddof: int) -> Self:
-        return self._reuse_series("std", returns_scalar=True, call_kwargs={"ddof": ddof})
+        return self._reuse_series(
+            "std", returns_scalar=True, scalar_kwargs={"ddof": ddof}
+        )
 
     def var(self, *, ddof: int) -> Self:
-        return self._reuse_series("var", returns_scalar=True, call_kwargs={"ddof": ddof})
+        return self._reuse_series(
+            "var", returns_scalar=True, scalar_kwargs={"ddof": ddof}
+        )
 
     def skew(self) -> Self:
         return self._reuse_series("skew", returns_scalar=True)
@@ -771,7 +776,7 @@ class EagerExpr(
             backend_version=self._backend_version,
             implementation=self._implementation,
             version=self._version,
-            call_kwargs=self._call_kwargs,
+            scalar_kwargs=self._scalar_kwargs,
         )
 
     def is_unique(self) -> Self:
@@ -1112,7 +1117,7 @@ class EagerExprNameNamespace(
             backend_version=expr._backend_version,
             implementation=expr._implementation,
             version=expr._version,
-            call_kwargs=expr._call_kwargs,
+            scalar_kwargs=expr._scalar_kwargs,
         )
 
 

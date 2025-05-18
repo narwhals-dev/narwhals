@@ -11,6 +11,7 @@ nav:
     - basics/series.md
     - basics/complete_example.md
     - basics/dataframe_conversion.md
+  - Narwhals and SQL: generating_sql.md
   - Concepts:
     - concepts/order_dependence.md
     - concepts/pandas_index.md

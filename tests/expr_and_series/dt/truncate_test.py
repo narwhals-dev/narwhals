@@ -191,32 +191,20 @@ def test_truncate_multiples(
     every: str,
     expected: list[datetime],
 ) -> None:
-    if any(x in str(constructor) for x in ("sqlframe",)):
-        request.applymarker(
-            pytest.mark.xfail(reason="https://github.com/eakmanrq/sqlframe/issues/383")
-        )
+    if any(x in str(constructor) for x in ("sqlframe", "cudf", "pyspark")):
+        # Reasons:
+        # - sqlframe: https://github.com/eakmanrq/sqlframe/issues/383
+        # - cudf: https://github.com/rapidsai/cudf/issues/18654
+        # - pyspark: Only multiple 1 is currently supported
+        request.applymarker(pytest.mark.xfail())
     if every.endswith("ns") and any(
         x in str(constructor) for x in ("polars", "duckdb", "ibis")
     ):
         request.applymarker(pytest.mark.xfail())
-    if "cudf" in str(constructor):
-        # https://github.com/rapidsai/cudf/issues/18654
-        request.applymarker(pytest.mark.xfail(reason="Not implemented"))
     if any(every.endswith(x) for x in ("mo", "q", "y")) and any(
         x in str(constructor) for x in ("dask",)
     ):
         request.applymarker(pytest.mark.xfail(reason="Not implemented"))
-    if any(every.endswith(x) for x in ("q",)) and any(
-        x in str(constructor) for x in ("ibis",)
-    ):
-        request.applymarker(pytest.mark.xfail(reason="Not implemented"))
-    request.applymarker(
-        pytest.mark.xfail(
-            "pyspark" in str(constructor),
-            raises=ValueError,
-            reason="Only multiple 1 is currently supported",
-        )
-    )
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").dt.truncate(every))
     assert_equal_data(result, {"a": expected})
