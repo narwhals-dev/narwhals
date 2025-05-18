@@ -88,6 +88,12 @@ class Immutable:
             getattr(self, name, empty) == getattr(other, name, empty) for name in slots
         )
 
+    def __str__(self) -> str:
+        # NOTE: Debug repr, closer to constructor
+        slots: tuple[str, ...] = self.__slots__
+        fields = ", ".join(f"{name}={getattr(self, name)}" for name in slots)
+        return f"{type(self).__name__}({fields})"
+
     def __init__(self, **kwds: Any) -> None:
         # NOTE: DUMMY CONSTRUCTOR - don't use beyond prototyping!
         # Just need a quick way to demonstrate `ExprIR` and interactions

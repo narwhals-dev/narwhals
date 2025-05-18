@@ -176,6 +176,15 @@ class FunctionExpr(ExprIR, t.Generic[_FunctionT]):
         options = self.options.with_flags(options.flags)
         return type(self)(input=self.input, function=self.function, options=options)
 
+    def __repr__(self) -> str:
+        if self.input:
+            first = self.input[0]
+            if len(self.input) >= 2:
+                return f"{first!r}.{self.function!r}({list(self.input[1:])!r})"
+            return f"{first!r}.{self.function!r}()"
+        else:
+            return f"{self.function!r}()"
+
 
 class RollingExpr(FunctionExpr[_RollingT]): ...
 

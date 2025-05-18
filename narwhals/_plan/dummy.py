@@ -117,7 +117,7 @@ class DummyExpr:
         return op.to_binary_expr(self._ir, other._ir).to_narwhals()
 
     def __invert__(self) -> DummyExpr:
-        return boolean.Not().to_function_expr().to_narwhals()
+        return boolean.Not().to_function_expr(self._ir).to_narwhals()
 
 
 class DummyCompliantExpr:
