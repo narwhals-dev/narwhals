@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import cast
 
 from narwhals._plan.common import Function
 from narwhals._plan.options import FunctionOptions
@@ -13,6 +14,38 @@ class TemporalFunction(Function):
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.elementwise()
+
+    def __repr__(self) -> str:
+        tp = type(self)
+        if tp is TemporalFunction:
+            return tp.__name__
+        elif tp is Timestamp:
+            tu = cast("Timestamp", self).time_unit
+            return f"dt.timestamp[{tu!r}]"
+        m: dict[type[TemporalFunction], str] = {
+            Year: "year",
+            Month: "month",
+            WeekDay: "weekday",
+            Day: "day",
+            OrdinalDay: "ordinal_day",
+            Date: "date",
+            Hour: "hour",
+            Minute: "minute",
+            Second: "second",
+            Millisecond: "millisecond",
+            Microsecond: "microsecond",
+            Nanosecond: "nanosecond",
+            TotalMinutes: "total_minutes",
+            TotalSeconds: "total_seconds",
+            TotalMilliseconds: "total_milliseconds",
+            TotalMicroseconds: "total_microseconds",
+            TotalNanoseconds: "total_nanoseconds",
+            ToString: "to_string",
+            ConvertTimeZone: "convert_time_zone",
+            ReplaceTimeZone: "replace_time_zone",
+            Truncate: "truncate",
+        }
+        return f"dt.{m[tp]}"
 
 
 class Date(TemporalFunction): ...
