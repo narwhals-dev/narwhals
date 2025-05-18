@@ -29,14 +29,6 @@ class Agg(ExprIR):
 class Count(Agg): ...
 
 
-class First(Agg):
-    """https://github.com/narwhals-dev/narwhals/issues/2526."""
-
-
-class Last(Agg):
-    """https://github.com/narwhals-dev/narwhals/issues/2526."""
-
-
 class Max(Agg): ...
 
 
@@ -77,6 +69,14 @@ class Var(Agg):
 
 
 class OrderableAgg(Agg): ...
+
+
+class First(OrderableAgg):
+    """https://github.com/narwhals-dev/narwhals/issues/2526."""
+
+
+class Last(OrderableAgg):
+    """https://github.com/narwhals-dev/narwhals/issues/2526."""
 
 
 class ArgMin(OrderableAgg): ...
