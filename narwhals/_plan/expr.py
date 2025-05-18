@@ -303,3 +303,10 @@ class All(ExprIR):
 
 # NOTE: by_dtype, matches, numeric, boolean, string, categorical, datetime, all
 class Selector(ExprIR): ...
+
+
+class Ternary(ExprIR):
+    """When-Then-Otherwise.
+
+    Deferring this for now.
+    """
