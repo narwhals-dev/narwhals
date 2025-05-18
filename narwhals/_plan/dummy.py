@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan import aggregation as agg
+from narwhals._plan import boolean
 from narwhals._plan import expr
 from narwhals._plan import operators as ops
 from narwhals.dtypes import DType
@@ -114,6 +115,9 @@ class DummyExpr:
     def __or__(self, other: DummyExpr) -> DummyExpr:
         op = ops.Or()
         return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+
+    def __invert__(self) -> DummyExpr:
+        return boolean.Not().to_function_expr().to_narwhals()
 
 
 class DummyCompliantExpr:
