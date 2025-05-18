@@ -93,7 +93,7 @@ class DaskLazyFrame(ImplLazyFrame["DaskExpr", "dd.DataFrame"]):
             self.native, backend_version=self._backend_version, version=version
         )
 
-    def _with_native(self, df: Any) -> Self:
+    def _with_native(self, df: dd.DataFrame) -> Self:
         return self.__class__(
             df, backend_version=self._backend_version, version=self._version
         )
@@ -191,9 +191,6 @@ class DaskLazyFrame(ImplLazyFrame["DaskExpr", "dd.DataFrame"]):
                 for col in self.native.columns
             }
         return self._cached_schema
-
-    def collect_schema(self) -> dict[str, DType]:
-        return self.schema
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         to_drop = parse_columns_to_drop(

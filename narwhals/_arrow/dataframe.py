@@ -313,9 +313,6 @@ class ArrowDataFrame(
             for name, dtype in zip(schema.names, schema.types)
         }
 
-    def collect_schema(self) -> dict[str, DType]:
-        return self.schema
-
     def estimated_size(self, unit: SizeUnit) -> int | float:
         sz = self.native.nbytes
         return scale_bytes(sz, unit)

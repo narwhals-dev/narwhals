@@ -360,9 +360,6 @@ class DuckDBLazyFrame(ImplLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"]):
             """  # noqa: S608
         return self._with_native(duckdb.sql(query))
 
-    def collect_schema(self) -> dict[str, DType]:
-        return self.schema
-
     def unique(
         self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self:

@@ -285,9 +285,6 @@ class SparkLikeLazyFrame(ImplLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"]):
             }
         return self._cached_schema
 
-    def collect_schema(self) -> dict[str, DType]:
-        return self.schema
-
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         columns_to_drop = parse_columns_to_drop(
             compliant_frame=self, columns=columns, strict=strict

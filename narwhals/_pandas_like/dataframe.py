@@ -399,9 +399,6 @@ class PandasLikeDataFrame(
             for col in self.native.columns
         }
 
-    def collect_schema(self) -> dict[str, DType]:
-        return self.schema
-
     # --- reshape ---
     def simple_select(self, *column_names: str) -> Self:
         return self._with_native(

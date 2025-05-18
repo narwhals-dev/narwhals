@@ -53,6 +53,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals._translate import IntoArrowTable
     from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import LazyFrame  # noqa: F401
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import AsofJoinStrategy
@@ -295,6 +296,8 @@ class CompliantLazyFrame(
 
     def _with_version(self, version: Version) -> Self: ...
 
+    def _with_native(self, df: NativeFrameT) -> Self: ...
+
     @property
     def native(self) -> NativeFrameT:
         return self._native_frame
@@ -477,6 +480,9 @@ class ImplDataFrame(
 
         return compliant
 
+    def collect_schema(self) -> Mapping[str, DType]:
+        return self.schema
+
 
 class ImplLazyFrame(
     CompliantLazyFrame[
@@ -495,3 +501,6 @@ class ImplLazyFrame(
                 else list(self.native.columns)
             )
         return self._cached_columns
+
+    def collect_schema(self) -> Mapping[str, DType]:
+        return self.schema

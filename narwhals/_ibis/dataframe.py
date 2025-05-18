@@ -325,12 +325,6 @@ class IbisLazyFrame(ImplLazyFrame["IbisExpr", "ir.Table"]):
             for left, right in zip(left_on, right_on)
         ]
 
-    def collect_schema(self) -> dict[str, DType]:
-        return {
-            name: native_to_narwhals_dtype(dtype, self._version)
-            for name, dtype in self.native.schema().fields.items()
-        }
-
     def unique(
         self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self:
