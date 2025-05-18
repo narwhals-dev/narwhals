@@ -19,6 +19,9 @@ if TYPE_CHECKING:
     from narwhals.typing import FillNullStrategy
 
 
+# TODO @dangotbanned: repr
+
+
 class Abs(Function):
     @property
     def function_options(self) -> FunctionOptions:
@@ -215,6 +218,9 @@ class SumHorizontal(Function):
             FunctionFlags.INPUT_WILDCARD_EXPANSION
         )
 
+    def __repr__(self) -> str:
+        return "sum_horizontal"
+
 
 class MinHorizontal(Function):
     @property
@@ -222,6 +228,9 @@ class MinHorizontal(Function):
         return FunctionOptions.elementwise().with_flags(
             FunctionFlags.INPUT_WILDCARD_EXPANSION
         )
+
+    def __repr__(self) -> str:
+        return "min_horizontal"
 
 
 class MaxHorizontal(Function):
@@ -231,6 +240,9 @@ class MaxHorizontal(Function):
             FunctionFlags.INPUT_WILDCARD_EXPANSION
         )
 
+    def __repr__(self) -> str:
+        return "max_horizontal"
+
 
 class MeanHorizontal(Function):
     @property
@@ -238,6 +250,9 @@ class MeanHorizontal(Function):
         return FunctionOptions.elementwise().with_flags(
             FunctionFlags.INPUT_WILDCARD_EXPANSION
         )
+
+    def __repr__(self) -> str:
+        return "mean_horizontal"
 
 
 class EwmMean(Function):

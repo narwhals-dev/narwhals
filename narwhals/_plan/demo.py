@@ -3,6 +3,8 @@ from __future__ import annotations
 import builtins
 import typing as t
 
+from narwhals._plan import boolean
+from narwhals._plan import functions as F  # noqa: N812
 from narwhals._plan.dummy import DummySeries
 from narwhals._plan.expr import All
 from narwhals._plan.expr import Column
@@ -10,7 +12,6 @@ from narwhals._plan.expr import Columns
 from narwhals._plan.expr import IndexColumns
 from narwhals._plan.expr import Len
 from narwhals._plan.expr import Nth
-from narwhals._plan.functions import SumHorizontal
 from narwhals._plan.literal import ScalarLiteral
 from narwhals._plan.literal import SeriesLiteral
 from narwhals.dtypes import DType
@@ -80,6 +81,31 @@ def sum(*columns: str) -> DummyExpr:
     return col(columns).sum()
 
 
+def all_horizontal(*exprs: DummyExpr | t.Iterable[DummyExpr]) -> DummyExpr:
+    it = (expr._ir for expr in flatten(exprs))
+    return boolean.AllHorizontal().to_function_expr(*it).to_narwhals()
+
+
+def any_horizontal(*exprs: DummyExpr | t.Iterable[DummyExpr]) -> DummyExpr:
+    it = (expr._ir for expr in flatten(exprs))
+    return boolean.AnyHorizontal().to_function_expr(*it).to_narwhals()
+
+
 def sum_horizontal(*exprs: DummyExpr | t.Iterable[DummyExpr]) -> DummyExpr:
     it = (expr._ir for expr in flatten(exprs))
-    return SumHorizontal().to_function_expr(*it).to_narwhals()
+    return F.SumHorizontal().to_function_expr(*it).to_narwhals()
+
+
+def min_horizontal(*exprs: DummyExpr | t.Iterable[DummyExpr]) -> DummyExpr:
+    it = (expr._ir for expr in flatten(exprs))
+    return F.MinHorizontal().to_function_expr(*it).to_narwhals()
+
+
+def max_horizontal(*exprs: DummyExpr | t.Iterable[DummyExpr]) -> DummyExpr:
+    it = (expr._ir for expr in flatten(exprs))
+    return F.MaxHorizontal().to_function_expr(*it).to_narwhals()
+
+
+def mean_horizontal(*exprs: DummyExpr | t.Iterable[DummyExpr]) -> DummyExpr:
+    it = (expr._ir for expr in flatten(exprs))
+    return F.MeanHorizontal().to_function_expr(*it).to_narwhals()
