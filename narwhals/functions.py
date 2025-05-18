@@ -9,13 +9,10 @@ from typing import Iterable
 from typing import Literal
 from typing import Mapping
 from typing import Sequence
-from typing import TypeVar
 from typing import cast
 
-from narwhals._expression_parsing import ExpansionKind
 from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
-from narwhals._expression_parsing import WindowKind
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import check_expressions_preserve_length
 from narwhals._expression_parsing import combine_metadata
@@ -27,7 +24,6 @@ from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dependencies import is_pyarrow_table
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr import Expr
-from narwhals.series import Series
 from narwhals.translate import from_native
 from narwhals.translate import to_native
 from narwhals.utils import Implementation
@@ -56,6 +52,7 @@ if TYPE_CHECKING:
     from narwhals.schema import Schema
     from narwhals.series import Series
     from narwhals.typing import ConcatMethod
+    from narwhals.typing import FrameT
     from narwhals.typing import IntoExpr
     from narwhals.typing import IntoSeriesT
     from narwhals.typing import NativeFrame
@@ -66,7 +63,6 @@ if TYPE_CHECKING:
     from narwhals.typing import _2DArray
 
     _IntoSchema: TypeAlias = "Mapping[str, DType] | Schema | Sequence[str] | None"
-    FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
 
 
 def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT:
@@ -266,7 +262,7 @@ def from_dict(
     """Instantiate DataFrame from dictionary.
 
     Indexes (if present, for pandas-like backends) are aligned following
-    the [left-hand-rule](../pandas_like_concepts/pandas_index.md/).
+    the [left-hand-rule](../concepts/pandas_index.md/).
 
     Notes:
         For pandas-like dataframes, conversion to schema is applied after dataframe
@@ -776,6 +772,7 @@ def _scan_csv_impl(
         Implementation.CUDF,
         Implementation.DASK,
         Implementation.DUCKDB,
+        Implementation.IBIS,
     }:
         native_frame = native_namespace.read_csv(source, **kwargs)
     elif implementation is Implementation.PYARROW:
@@ -872,6 +869,7 @@ def _read_parquet_impl(
         Implementation.MODIN,
         Implementation.CUDF,
         Implementation.DUCKDB,
+        Implementation.IBIS,
     }:
         native_frame = native_namespace.read_parquet(source, **kwargs)
     elif implementation is Implementation.PYARROW:
@@ -984,6 +982,7 @@ def _scan_parquet_impl(
         Implementation.CUDF,
         Implementation.DASK,
         Implementation.DUCKDB,
+        Implementation.IBIS,
     }:
         native_frame = native_namespace.read_parquet(source, **kwargs)
     elif implementation is Implementation.PYARROW:
@@ -1192,14 +1191,7 @@ def len_() -> Expr:
     def func(plx: Any) -> Any:
         return plx.len()
 
-    return Expr(
-        func,
-        ExprMetadata(
-            ExprKind.AGGREGATION,
-            window_kind=WindowKind.NONE,
-            expansion_kind=ExpansionKind.SINGLE,
-        ),
-    )
+    return Expr(func, ExprMetadata.aggregation())
 
 
 def sum(*columns: str) -> Expr:
@@ -1665,14 +1657,7 @@ def lit(value: NonNestedLiteral, dtype: DType | type[DType] | None = None) -> Ex
         msg = f"Nested datatypes are not supported yet. Got {value}"
         raise NotImplementedError(msg)
 
-    return Expr(
-        lambda plx: plx.lit(value, dtype),
-        ExprMetadata(
-            ExprKind.LITERAL,
-            window_kind=WindowKind.NONE,
-            expansion_kind=ExpansionKind.SINGLE,
-        ),
-    )
+    return Expr(lambda plx: plx.lit(value, dtype), ExprMetadata.literal())
 
 
 def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:

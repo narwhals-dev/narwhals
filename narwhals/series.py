@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -20,8 +21,6 @@ from narwhals.series_str import SeriesStringNamespace
 from narwhals.series_struct import SeriesStructNamespace
 from narwhals.translate import to_native
 from narwhals.typing import IntoSeriesT
-from narwhals.typing import NonNestedLiteral
-from narwhals.typing import SingleIndexSelector
 from narwhals.utils import _validate_rolling_arguments
 from narwhals.utils import generate_repr
 from narwhals.utils import is_compliant_series
@@ -43,9 +42,11 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import ClosedInterval
     from narwhals.typing import FillNullStrategy
+    from narwhals.typing import NonNestedLiteral
     from narwhals.typing import NumericLiteral
     from narwhals.typing import RankMethod
     from narwhals.typing import RollingInterpolationMethod
+    from narwhals.typing import SingleIndexSelector
     from narwhals.typing import TemporalLiteral
     from narwhals.typing import _1DArray
     from narwhals.utils import Implementation
@@ -858,7 +859,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
 
         Returns:
@@ -1246,7 +1247,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
 
         Returns:
@@ -1279,7 +1280,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -1310,7 +1311,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
 
         Returns:
@@ -1692,7 +1693,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
 
         Returns:
@@ -2600,6 +2601,32 @@ class Series(Generic[IntoSeriesT]):
             ),
             level=self._level,
         )
+
+    def log(self, base: float = math.e) -> Self:
+        r"""Compute the logarithm to a given base.
+
+        Arguments:
+            base: Given base, defaults to `e`
+
+        Returns:
+            A new expression log values data.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> s_native = pd.Series([1, 2, 4], name="a")
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.log(base=2)
+            ┌───────────────────────┐
+            |    Narwhals Series    |
+            |-----------------------|
+            |0    0.0               |
+            |1    1.0               |
+            |2    2.0               |
+            |Name: a, dtype: float64|
+            └───────────────────────┘
+        """
+        return self._with_compliant(self._compliant_series.log(base=base))
 
     @property
     def str(self) -> SeriesStringNamespace[Self]:

@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 from functools import partial
 from typing import TYPE_CHECKING
-from typing import Any
 from typing import Collection
 from typing import Iterable
 from typing import Iterator
@@ -49,6 +48,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import CompliantSeriesOrNativeExprAny
     from narwhals._compliant.typing import EvalNames
     from narwhals._compliant.typing import EvalSeries
+    from narwhals._compliant.typing import ScalarKwargs
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
     from narwhals.utils import Implementation
@@ -129,7 +129,11 @@ class CompliantSelectorNamespace(Protocol[FrameT, SeriesOrExprT]):
         p = re.compile(pattern)
 
         def series(df: FrameT) -> Sequence[SeriesOrExprT]:
-            if is_compliant_dataframe(df) and not self._implementation.is_duckdb():
+            if (
+                is_compliant_dataframe(df)
+                and not self._implementation.is_duckdb()
+                and not self._implementation.is_ibis()
+            ):
                 return [df.get_column(col) for col in df.columns if p.search(col)]
 
             return [ser for ser, name in self._iter_columns_names(df) if p.search(name)]
@@ -222,7 +226,7 @@ class CompliantSelector(
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
-    _call_kwargs: dict[str, Any]
+    _scalar_kwargs: ScalarKwargs
 
     @classmethod
     def from_callables(
@@ -241,7 +245,7 @@ class CompliantSelector(
         obj._implementation = context._implementation
         obj._backend_version = context._backend_version
         obj._version = context._version
-        obj._call_kwargs = {}
+        obj._scalar_kwargs = {}
         return obj
 
     @property

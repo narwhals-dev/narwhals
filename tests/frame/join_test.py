@@ -9,7 +9,6 @@ import pandas as pd
 import pytest
 
 import narwhals as nw
-from narwhals.utils import Implementation
 from tests.utils import DUCKDB_VERSION
 from tests.utils import PANDAS_VERSION
 from tests.utils import POLARS_VERSION
@@ -101,7 +100,12 @@ def test_full_join(
     assert_equal_data(result, expected)
 
 
-def test_full_join_duplicate(constructor: Constructor) -> None:
+def test_full_join_duplicate(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    if "ibis" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     df1 = {"foo": [1, 2, 3], "val1": [1, 2, 3]}
     df2 = {"foo": [1, 2, 3], "foo_right": [1, 2, 3]}
     df_left = nw.from_native(constructor(df1)).lazy()
@@ -237,11 +241,14 @@ def test_cross_join_suffix(constructor: Constructor, suffix: str) -> None:
 
 
 def test_cross_join_non_pandas() -> None:
+    _ = pytest.importorskip("modin")
+
+    import modin.pandas as mpd
+
     data = {"antananarivo": [1, 3, 2]}
-    df = nw.from_native(pd.DataFrame(data))
-    # HACK to force testing for a non-pandas codepath
-    df._compliant_frame._implementation = Implementation.MODIN
-    result = df.join(df, how="cross")
+    df1 = nw.from_native(mpd.DataFrame(pd.DataFrame(data)), eager_only=True)
+    df2 = nw.from_native(mpd.DataFrame(pd.DataFrame(data)), eager_only=True)
+    result = df1.join(df2, how="cross")
     expected = {
         "antananarivo": [1, 1, 1, 3, 3, 3, 2, 2, 2],
         "antananarivo_right": [1, 3, 2, 1, 3, 2, 1, 3, 2],
@@ -506,7 +513,9 @@ def test_joinasof_numeric(
 ) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "pyspark")):
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and strategy == "nearest":
+    if (
+        "duckdb" in str(constructor) or "ibis" in str(constructor)
+    ) and strategy == "nearest":
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and (
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
@@ -578,7 +587,9 @@ def test_joinasof_time(
 ) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "pyspark")):
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and strategy == "nearest":
+    if (
+        "duckdb" in str(constructor) or "ibis" in str(constructor)
+    ) and strategy == "nearest":
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and ("pandas_pyarrow" in str(constructor)):
         request.applymarker(pytest.mark.xfail)
@@ -811,6 +822,9 @@ def test_join_duplicate_column_names(
         exception = AnalysisException
     elif "modin" in str(constructor):
         exception = NotImplementedError
+    elif "ibis" in str(constructor):
+        # ibis doesn't raise here
+        request.applymarker(pytest.mark.xfail)
     else:
         exception = nw.exceptions.DuplicateError
     df = constructor({"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]})

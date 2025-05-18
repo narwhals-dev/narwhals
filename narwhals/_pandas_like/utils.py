@@ -166,36 +166,6 @@ def set_index(
     return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[attr-defined]
 
 
-def set_columns(
-    obj: T,
-    columns: list[str],
-    *,
-    implementation: Implementation,
-    backend_version: tuple[int, ...],
-) -> T:
-    """Wrapper around pandas' set_axis to set object columns.
-
-    We can set `copy` / `inplace` based on implementation/version.
-    """
-    if implementation is Implementation.CUDF:  # pragma: no cover
-        obj = obj.copy(deep=False)  # type: ignore[attr-defined]
-        obj.columns = columns  # type: ignore[attr-defined]
-        return obj
-    if implementation is Implementation.PANDAS and (
-        backend_version < (1,)
-    ):  # pragma: no cover
-        kwargs = {"inplace": False}
-    else:
-        kwargs = {}
-    if implementation is Implementation.PANDAS and (
-        (1, 5) <= backend_version < (3,)
-    ):  # pragma: no cover
-        kwargs["copy"] = False
-    else:  # pragma: no cover
-        pass
-    return obj.set_axis(columns, axis=1, **kwargs)  # type: ignore[attr-defined]
-
-
 def rename(
     obj: T,
     *args: Any,

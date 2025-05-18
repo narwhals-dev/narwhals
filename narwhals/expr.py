@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -7,15 +8,12 @@ from typing import Iterable
 from typing import Mapping
 from typing import Sequence
 
-from narwhals._expression_parsing import ExprKind
 from narwhals._expression_parsing import ExprMetadata
-from narwhals._expression_parsing import WindowKind
 from narwhals._expression_parsing import apply_n_ary_operation
 from narwhals._expression_parsing import combine_metadata
 from narwhals._expression_parsing import extract_compliant
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import InvalidOperationError
-from narwhals.exceptions import LengthChangingExprError
 from narwhals.expr_cat import ExprCatNamespace
 from narwhals.expr_dt import ExprDateTimeNamespace
 from narwhals.expr_list import ExprListNamespace
@@ -65,43 +63,31 @@ class Expr:
         self._to_compliant_expr: _ToCompliant = func
         self._metadata = metadata
 
-    def _with_callable(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
-        # Instantiate new Expr keeping metadata unchanged, unless
-        # it's a WINDOW, in which case make it a TRANSFORM.
-        if self._metadata.kind.is_window():
-            # We had a window function, but it wasn't immediately followed by
-            # `over(order_by=...)` - it missed its chance, it's now forever uncloseable.
-            return self.__class__(
-                to_compliant_expr,
-                self._metadata.with_kind_and_uncloseable_window(ExprKind.TRANSFORM),
-            )
-        return self.__class__(to_compliant_expr, self._metadata)
+    def _with_elementwise_op(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
+        return self.__class__(to_compliant_expr, self._metadata.with_elementwise_op())
 
     def _with_aggregation(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
-        if self._metadata.kind.is_scalar_like():
-            msg = "Aggregations can't be applied to scalar-like expressions."
-            raise InvalidOperationError(msg)
-        return self.__class__(
-            to_compliant_expr, self._metadata.with_kind(ExprKind.AGGREGATION)
-        )
+        return self.__class__(to_compliant_expr, self._metadata.with_aggregation())
 
-    def _with_order_dependent_aggregation(
+    def _with_orderable_aggregation(
         self, to_compliant_expr: Callable[[Any], Any]
     ) -> Self:
-        if self._metadata.kind.is_scalar_like():
-            msg = "Aggregations can't be applied to scalar-like expressions."
-            raise InvalidOperationError(msg)
         return self.__class__(
-            to_compliant_expr,
-            self._metadata.with_kind_and_closeable_window(ExprKind.AGGREGATION),
+            to_compliant_expr, self._metadata.with_orderable_aggregation()
         )
 
+    def _with_orderable_window(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
+        return self.__class__(to_compliant_expr, self._metadata.with_orderable_window())
+
+    def _with_unorderable_window(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
+        return self.__class__(to_compliant_expr, self._metadata.with_unorderable_window())
+
     def _with_filtration(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
-        if self._metadata.kind.is_scalar_like():
-            msg = "Length-changing can't be applied to scalar-like expressions."
-            raise InvalidOperationError(msg)
+        return self.__class__(to_compliant_expr, self._metadata.with_filtration())
+
+    def _with_orderable_filtration(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
         return self.__class__(
-            to_compliant_expr, self._metadata.with_kind(ExprKind.FILTRATION)
+            to_compliant_expr, self._metadata.with_orderable_filtration()
         )
 
     def __repr__(self) -> str:
@@ -138,7 +124,10 @@ class Expr:
             |      1  15       |
             └──────────────────┘
         """
-        return self._with_callable(lambda plx: self._to_compliant_expr(plx).alias(name))
+        # Don't use `_with_elementwise_op` so that `_metadata.last_node` is preserved.
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).alias(name), self._metadata
+        )
 
     def pipe(
         self,
@@ -199,7 +188,9 @@ class Expr:
             └──────────────────┘
         """
         _validate_dtype(dtype)
-        return self._with_callable(lambda plx: self._to_compliant_expr(plx).cast(dtype))
+        return self._with_elementwise_op(
+            lambda plx: self._to_compliant_expr(plx).cast(dtype)
+        )
 
     # --- binary ---
     def __eq__(self, other: Self | Any) -> Self:  # type: ignore[override]
@@ -396,7 +387,9 @@ class Expr:
 
     # --- unary ---
     def __invert__(self) -> Self:
-        return self._with_callable(lambda plx: self._to_compliant_expr(plx).__invert__())
+        return self._with_elementwise_op(
+            lambda plx: self._to_compliant_expr(plx).__invert__()
+        )
 
     def any(self) -> Self:
         """Return whether any of the values in the column are `True`.
@@ -526,7 +519,7 @@ class Expr:
             │ 2.428571 │
             └──────────┘
         """
-        return self._with_callable(
+        return self._with_orderable_window(
             lambda plx: self._to_compliant_expr(plx).ewm_mean(
                 com=com,
                 span=span,
@@ -676,12 +669,11 @@ class Expr:
             |2  3  6       4.0       7.0|
             └───────────────────────────┘
         """
-        return self.__class__(
+        # safest assumptions
+        return self._with_orderable_filtration(
             lambda plx: self._to_compliant_expr(plx).map_batches(
                 function=function, return_dtype=return_dtype
-            ),
-            # safest assumptions
-            self._metadata.with_kind_and_closeable_window(ExprKind.FILTRATION),
+            )
         )
 
     def skew(self) -> Self:
@@ -791,7 +783,7 @@ class Expr:
             |0          0          1|
             └───────────────────────┘
         """
-        return self._with_order_dependent_aggregation(
+        return self._with_orderable_aggregation(
             lambda plx: self._to_compliant_expr(plx).arg_min()
         )
 
@@ -814,7 +806,7 @@ class Expr:
             |0          1          0|
             └───────────────────────┘
         """
-        return self._with_order_dependent_aggregation(
+        return self._with_orderable_aggregation(
             lambda plx: self._to_compliant_expr(plx).arg_max()
         )
 
@@ -901,14 +893,14 @@ class Expr:
             |1 -2  4      2      4|
             └─────────────────────┘
         """
-        return self._with_callable(lambda plx: self._to_compliant_expr(plx).abs())
+        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).abs())
 
     def cum_sum(self, *, reverse: bool = False) -> Self:
         """Return cumulative sum.
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Arguments:
             reverse: reverse the operation
@@ -933,9 +925,8 @@ class Expr:
             |4  5  6         15|
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).cum_sum(reverse=reverse),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+        return self._with_orderable_window(
+            lambda plx: self._to_compliant_expr(plx).cum_sum(reverse=reverse)
         )
 
     def diff(self) -> Self:
@@ -943,7 +934,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Returns:
             A new expression.
@@ -980,9 +971,8 @@ class Expr:
             | └─────┴────────┘ |
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).diff(),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+        return self._with_orderable_window(
+            lambda plx: self._to_compliant_expr(plx).diff()
         )
 
     def shift(self, n: int) -> Self:
@@ -990,7 +980,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Arguments:
             n: Number of positions to shift values by.
@@ -1030,9 +1020,8 @@ class Expr:
             |└─────┴─────────┘ |
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).shift(n),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+        return self._with_orderable_window(
+            lambda plx: self._to_compliant_expr(plx).shift(n)
         )
 
     def replace_strict(
@@ -1088,7 +1077,7 @@ class Expr:
             new = list(old.values())
             old = list(old.keys())
 
-        return self._with_callable(
+        return self._with_elementwise_op(
             lambda plx: self._to_compliant_expr(plx).replace_strict(
                 old, new, return_dtype=return_dtype
             )
@@ -1118,11 +1107,10 @@ class Expr:
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
         issue_deprecation_warning(msg, _version="1.23.0")
-        return self.__class__(
+        return self._with_orderable_window(
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
-            ),
-            self._metadata.with_uncloseable_window(),
+            )
         )
 
     # --- transform ---
@@ -1213,7 +1201,7 @@ class Expr:
             └──────────────────┘
         """
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
-            return self._with_callable(
+            return self._with_elementwise_op(
                 lambda plx: self._to_compliant_expr(plx).is_in(
                     to_native(other, pass_through=True)
                 ),
@@ -1258,7 +1246,7 @@ class Expr:
             str_as_lit=False,
             allow_multi_output=True,
             to_single_output=False,
-        ).with_kind(ExprKind.FILTRATION)
+        ).with_filtration()
         return self.__class__(
             lambda plx: apply_n_ary_operation(
                 plx,
@@ -1278,7 +1266,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -1303,7 +1291,9 @@ class Expr:
             |└───────┴────────┴───────────┴───────────┘|
             └──────────────────────────────────────────┘
         """
-        return self._with_callable(lambda plx: self._to_compliant_expr(plx).is_null())
+        return self._with_elementwise_op(
+            lambda plx: self._to_compliant_expr(plx).is_null()
+        )
 
     def is_nan(self) -> Self:
         """Indicate which values are NaN.
@@ -1313,7 +1303,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -1338,7 +1328,9 @@ class Expr:
             |└───────┴────────┴──────────┴──────────┘|
             └────────────────────────────────────────┘
         """
-        return self._with_callable(lambda plx: self._to_compliant_expr(plx).is_nan())
+        return self._with_elementwise_op(
+            lambda plx: self._to_compliant_expr(plx).is_nan()
+        )
 
     def arg_true(self) -> Self:
         """Find elements where boolean expression is True.
@@ -1372,7 +1364,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -1446,7 +1438,7 @@ class Expr:
                 strategy=strategy,
                 limit=limit,
             ),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW)
+            self._metadata.with_orderable_window()
             if strategy is not None
             else self._metadata,
         )
@@ -1460,7 +1452,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -1543,7 +1535,7 @@ class Expr:
                 so, this is a bit less flexible than Polars' `Expr.over`.
             order_by: Column(s) to order window functions by.
                 For lazy backends, this argument is required when `over` is applied
-                to order-dependent functions, see [order-dependence](../basics/order_dependence.md).
+                to order-dependent functions, see [order-dependence](../concepts/order_dependence.md).
 
         Returns:
             A new expression.
@@ -1576,38 +1568,20 @@ class Expr:
             |2  4  y                    4|
             └────────────────────────────┘
         """
-        if self._metadata.kind.is_filtration():
-            msg = "`.over()` can not be used for expressions which change length."
-            raise LengthChangingExprError(msg)
-
         flat_partition_by = flatten(partition_by)
         flat_order_by = [order_by] if isinstance(order_by, str) else order_by
         if not flat_partition_by and not flat_order_by:  # pragma: no cover
             msg = "At least one of `partition_by` or `order_by` must be specified."
             raise ValueError(msg)
 
-        kind = ExprKind.TRANSFORM
-        window_kind = self._metadata.window_kind
-        if window_kind.is_closed():
-            msg = "Nested `over` statements are not allowed."
-            raise InvalidOperationError(msg)
-        if flat_order_by is not None and self._metadata.kind.is_window():
-            # debug assertion, an open window should already have been set
-            # by the window function. If it's immediately followed by `over`, then the
-            # window gets closed.
-            assert window_kind.is_open()  # noqa: S101
-        elif flat_order_by is not None and not window_kind.is_open():
-            msg = "Cannot use `order_by` in `over` on expression which isn't order-dependent."
-            raise InvalidOperationError(msg)
         current_meta = self._metadata
-        next_window_kind = (
-            WindowKind.UNCLOSEABLE if window_kind.is_uncloseable() else WindowKind.CLOSED
-        )
-        next_meta = ExprMetadata(
-            kind,
-            window_kind=next_window_kind,
-            expansion_kind=current_meta.expansion_kind,
-        )
+        if flat_order_by:
+            next_meta = current_meta.with_ordered_over()
+        elif not flat_partition_by:  # pragma: no cover
+            msg = "At least one of `partition_by` or `order_by` must be specified."
+            raise InvalidOperationError(msg)
+        else:
+            next_meta = current_meta.with_partitioned_over()
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).over(
@@ -1662,7 +1636,9 @@ class Expr:
             |3  1  c        False         True|
             └─────────────────────────────────┘
         """
-        return self._with_callable(lambda plx: self._to_compliant_expr(plx).is_unique())
+        return self._with_unorderable_window(
+            lambda plx: self._to_compliant_expr(plx).is_unique()
+        )
 
     def null_count(self) -> Self:
         r"""Count null values.
@@ -1672,7 +1648,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
 
         Examples:
@@ -1699,7 +1675,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Returns:
             A new expression.
@@ -1722,9 +1698,8 @@ class Expr:
             |3  1  c                False                 True|
             └─────────────────────────────────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).is_first_distinct(),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+        return self._with_orderable_window(
+            lambda plx: self._to_compliant_expr(plx).is_first_distinct()
         )
 
     def is_last_distinct(self) -> Self:
@@ -1732,7 +1707,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Returns:
             A new expression.
@@ -1755,9 +1730,8 @@ class Expr:
             |3  1  c                True                True|
             └───────────────────────────────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).is_last_distinct(),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+        return self._with_orderable_window(
+            lambda plx: self._to_compliant_expr(plx).is_last_distinct()
         )
 
     def quantile(
@@ -1821,7 +1795,9 @@ class Expr:
             "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
         )
         issue_deprecation_warning(msg, _version="1.23.0")
-        return self._with_filtration(lambda plx: self._to_compliant_expr(plx).head(n))
+        return self._with_orderable_filtration(
+            lambda plx: self._to_compliant_expr(plx).head(n)
+        )
 
     def tail(self, n: int = 10) -> Self:
         r"""Get the last `n` rows.
@@ -1881,7 +1857,7 @@ class Expr:
             |2  3.901234        3.9|
             └──────────────────────┘
         """
-        return self._with_callable(
+        return self._with_elementwise_op(
             lambda plx: self._to_compliant_expr(plx).round(decimals)
         )
 
@@ -2018,7 +1994,7 @@ class Expr:
 
         Warning:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../pandas_like_concepts/null_handling.md/)
+            See [null_handling](../concepts/null_handling.md/)
             for reference.
             `is_finite` will return False for NaN and Null's in the Dask and
             pandas non-nullable backend, while for Polars, PyArrow and pandas
@@ -2049,14 +2025,16 @@ class Expr:
             |└──────┴─────────────┘|
             └──────────────────────┘
         """
-        return self._with_callable(lambda plx: self._to_compliant_expr(plx).is_finite())
+        return self._with_elementwise_op(
+            lambda plx: self._to_compliant_expr(plx).is_finite()
+        )
 
     def cum_count(self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative count of the non-null values in the column.
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Arguments:
             reverse: reverse the operation
@@ -2083,9 +2061,8 @@ class Expr:
             |3     d            3                    1|
             └─────────────────────────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).cum_count(reverse=reverse),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+        return self._with_orderable_window(
+            lambda plx: self._to_compliant_expr(plx).cum_count(reverse=reverse)
         )
 
     def cum_min(self, *, reverse: bool = False) -> Self:
@@ -2093,7 +2070,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Arguments:
             reverse: reverse the operation
@@ -2120,9 +2097,8 @@ class Expr:
             |3  2.0        1.0                2.0|
             └────────────────────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).cum_min(reverse=reverse),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+        return self._with_orderable_window(
+            lambda plx: self._to_compliant_expr(plx).cum_min(reverse=reverse)
         )
 
     def cum_max(self, *, reverse: bool = False) -> Self:
@@ -2130,7 +2106,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Arguments:
             reverse: reverse the operation
@@ -2157,9 +2133,8 @@ class Expr:
             |3  2.0        3.0                2.0|
             └────────────────────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).cum_max(reverse=reverse),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+        return self._with_orderable_window(
+            lambda plx: self._to_compliant_expr(plx).cum_max(reverse=reverse)
         )
 
     def cum_prod(self, *, reverse: bool = False) -> Self:
@@ -2167,7 +2142,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Arguments:
             reverse: reverse the operation
@@ -2194,9 +2169,8 @@ class Expr:
             |3  2.0         6.0                 2.0|
             └──────────────────────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).cum_prod(reverse=reverse),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+        return self._with_orderable_window(
+            lambda plx: self._to_compliant_expr(plx).cum_prod(reverse=reverse)
         )
 
     def rolling_sum(
@@ -2216,7 +2190,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Arguments:
             window_size: The length of the window in number of elements. It must be a
@@ -2252,13 +2226,12 @@ class Expr:
             window_size=window_size, min_samples=min_samples
         )
 
-        return self.__class__(
+        return self._with_orderable_window(
             lambda plx: self._to_compliant_expr(plx).rolling_sum(
                 window_size=window_size,
                 min_samples=min_samples_int,
                 center=center,
-            ),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+            )
         )
 
     def rolling_mean(
@@ -2278,7 +2251,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Arguments:
             window_size: The length of the window in number of elements. It must be a
@@ -2314,13 +2287,12 @@ class Expr:
             window_size=window_size, min_samples=min_samples
         )
 
-        return self.__class__(
+        return self._with_orderable_window(
             lambda plx: self._to_compliant_expr(plx).rolling_mean(
                 window_size=window_size,
                 min_samples=min_samples,
                 center=center,
-            ),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+            )
         )
 
     def rolling_var(
@@ -2341,7 +2313,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Arguments:
             window_size: The length of the window in number of elements. It must be a
@@ -2378,11 +2350,10 @@ class Expr:
             window_size=window_size, min_samples=min_samples
         )
 
-        return self.__class__(
+        return self._with_orderable_window(
             lambda plx: self._to_compliant_expr(plx).rolling_var(
                 window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
-            ),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+            )
         )
 
     def rolling_std(
@@ -2403,7 +2374,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Arguments:
             window_size: The length of the window in number of elements. It must be a
@@ -2440,14 +2411,13 @@ class Expr:
             window_size=window_size, min_samples=min_samples
         )
 
-        return self.__class__(
+        return self._with_orderable_window(
             lambda plx: self._to_compliant_expr(plx).rolling_std(
                 window_size=window_size,
                 min_samples=min_samples,
                 center=center,
                 ddof=ddof,
-            ),
-            self._metadata.with_kind_and_closeable_window(ExprKind.WINDOW),
+            )
         )
 
     def rank(self, method: RankMethod = "average", *, descending: bool = False) -> Self:
@@ -2458,7 +2428,7 @@ class Expr:
 
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
-            `order_by` specified, see [order-dependence](../basics/order_dependence.md).
+            `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
         Arguments:
             method: The method used to assign ranks to tied elements.
@@ -2507,10 +2477,45 @@ class Expr:
             )
             raise ValueError(msg)
 
-        return self._with_callable(
+        return self._with_unorderable_window(
             lambda plx: self._to_compliant_expr(plx).rank(
                 method=method, descending=descending
             )
+        )
+
+    def log(self, base: float = math.e) -> Self:
+        r"""Compute the logarithm to a given base.
+
+        Arguments:
+            base: Given base, defaults to `e`
+
+        Returns:
+            A new expression log values data.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> df_native = pa.table({"values": [1, 2, 4]})
+            >>> df = nw.from_native(df_native)
+            >>> result = df.with_columns(
+            ...     log=nw.col("values").log(), log_2=nw.col("values").log(base=2)
+            ... )
+            >>> result
+            ┌────────────────────────────────────────────────┐
+            |               Narwhals DataFrame               |
+            |------------------------------------------------|
+            |pyarrow.Table                                   |
+            |values: int64                                   |
+            |log: double                                     |
+            |log_2: double                                   |
+            |----                                            |
+            |values: [[1,2,4]]                               |
+            |log: [[0,0.6931471805599453,1.3862943611198906]]|
+            |log_2: [[0,1,2]]                                |
+            └────────────────────────────────────────────────┘
+        """
+        return self._with_elementwise_op(
+            lambda plx: self._to_compliant_expr(plx).log(base=base)
         )
 
     @property
