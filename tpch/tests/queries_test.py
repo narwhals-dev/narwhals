@@ -41,9 +41,7 @@ def test_benchmark_query(
     query_id = query_path.stem
     native_namespace, kwargs = namespace_and_kwargs
 
-    if (
-        backend in {"duckdb", "sqlframe"} and query_id in DUCKDB_SKIPS
-    ) or backend == "dask":
+    if backend in {"duckdb", "sqlframe"} and query_id in DUCKDB_SKIPS:
         pytest.skip()
 
     _ = benchmark(

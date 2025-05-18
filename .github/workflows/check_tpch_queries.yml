@@ -42,6 +42,5 @@ jobs:
         uses: CodSpeedHQ/action@v3
         with:
           run: |
-            uv pip uninstall dask --system
-            uv pip install pytest-codspeed --system
+            uv pip install "numpy<2" pytest-codspeed --system
             cd tpch && pytest tests/queries_test.py::test_benchmark_scripts --codspeed
