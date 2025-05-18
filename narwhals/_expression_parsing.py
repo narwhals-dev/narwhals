@@ -254,14 +254,14 @@ class ExprMetadata:
             assert is_scalar_like  # noqa: S101  # debug assertion
         if is_elementwise:
             assert preserves_length  # noqa: S101  # debug assertion
-        self.expansion_kind = expansion_kind
-        self.last_node = last_node
-        self.has_windows = has_windows
-        self.n_orderable_ops = n_orderable_ops
-        self.is_elementwise = is_elementwise
-        self.preserves_length = preserves_length
-        self.is_scalar_like = is_scalar_like
-        self.is_literal = is_literal
+        self.expansion_kind: ExpansionKind = expansion_kind
+        self.last_node: ExprKind = last_node
+        self.has_windows: bool = has_windows
+        self.n_orderable_ops: int = n_orderable_ops
+        self.is_elementwise: bool = is_elementwise
+        self.preserves_length: bool = preserves_length
+        self.is_scalar_like: bool = is_scalar_like
+        self.is_literal: bool = is_literal
 
     def __init_subclass__(cls, /, *args: Any, **kwds: Any) -> Never:  # pragma: no cover
         msg = f"Cannot subclass {cls.__name__!r}"

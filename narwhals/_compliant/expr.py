@@ -110,9 +110,14 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         context: _FullContext,
     ) -> Self: ...
     @classmethod
-    def from_column_indices(
-        cls: type[Self], *column_indices: int, context: _FullContext
-    ) -> Self: ...
+    def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self: ...
+    @staticmethod
+    def _eval_names_indices(indices: Sequence[int], /) -> EvalNames[CompliantFrameT]:
+        def fn(df: CompliantFrameT) -> Sequence[str]:
+            column_names = df.columns
+            return [column_names[i] for i in indices]
+
+        return fn
 
     def is_null(self) -> Self: ...
     def abs(self) -> Self: ...

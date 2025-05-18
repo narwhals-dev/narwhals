@@ -95,27 +95,20 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         )
 
     @classmethod
-    def from_column_indices(
-        cls: type[Self], *column_indices: int, context: _FullContext
-    ) -> Self:
-        from narwhals._arrow.series import ArrowSeries
-
+    def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            tbl = df.native
+            cols = df.columns
             return [
-                ArrowSeries(
-                    df.native[column_index],
-                    name=df.native.column_names[column_index],
-                    backend_version=df._backend_version,
-                    version=df._version,
-                )
-                for column_index in column_indices
+                ArrowSeries.from_native(tbl[i], name=cols[i], context=df)
+                for i in column_indices
             ]
 
         return cls(
             func,
             depth=0,
             function_name="nth",
-            evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
+            evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
             backend_version=context._backend_version,
             version=context._version,
