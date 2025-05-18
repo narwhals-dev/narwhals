@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import AliasNames
     from narwhals._compliant.typing import EvalNames
     from narwhals._compliant.typing import EvalSeries
+    from narwhals._compliant.typing import ScalarKwargs
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
@@ -23,7 +24,6 @@ if TYPE_CHECKING:
     from narwhals.typing import NonNestedLiteral
     from narwhals.typing import PythonLiteral
     from narwhals.typing import RankMethod
-    from narwhals.typing import ScalarKwargs
     from narwhals.utils import Implementation
     from narwhals.utils import Version
     from narwhals.utils import _FullContext

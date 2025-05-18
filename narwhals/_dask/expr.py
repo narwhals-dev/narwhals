@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import AliasNames
     from narwhals._compliant.typing import EvalNames
     from narwhals._compliant.typing import EvalSeries
+    from narwhals._compliant.typing import ScalarKwargs
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.namespace import DaskNamespace
     from narwhals._expression_parsing import ExprKind
@@ -39,7 +40,6 @@ if TYPE_CHECKING:
     from narwhals.typing import NonNestedLiteral
     from narwhals.typing import NumericLiteral
     from narwhals.typing import RollingInterpolationMethod
-    from narwhals.typing import ScalarKwargs
     from narwhals.typing import TemporalLiteral
     from narwhals.utils import Version
     from narwhals.utils import _FullContext

@@ -48,8 +48,8 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import CompliantSeriesOrNativeExprAny
     from narwhals._compliant.typing import EvalNames
     from narwhals._compliant.typing import EvalSeries
+    from narwhals._compliant.typing import ScalarKwargs
     from narwhals.dtypes import DType
-    from narwhals.typing import ScalarKwargs
     from narwhals.typing import TimeUnit
     from narwhals.utils import Implementation
     from narwhals.utils import Version

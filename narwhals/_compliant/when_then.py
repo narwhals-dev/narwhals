@@ -25,8 +25,8 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._compliant.typing import EvalSeries
+    from narwhals._compliant.typing import ScalarKwargs
     from narwhals.typing import NonNestedLiteral
-    from narwhals.typing import ScalarKwargs
     from narwhals.utils import Implementation
     from narwhals.utils import Version
     from narwhals.utils import _FullContext

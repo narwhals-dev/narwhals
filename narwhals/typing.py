@@ -5,7 +5,6 @@ from typing import Any
 from typing import Literal
 from typing import Protocol
 from typing import Sequence
-from typing import TypedDict
 from typing import TypeVar
 from typing import Union
 
@@ -388,21 +387,6 @@ MultiNameSelector: TypeAlias = "_SliceName | SizedMultiNameSelector[_T]"
 # Mixed selectors
 SingleColSelector: TypeAlias = "SingleIndexSelector | SingleNameSelector"
 MultiColSelector: TypeAlias = "MultiIndexSelector[_T] | MultiNameSelector[_T]"
-
-
-class ScalarKwargs(TypedDict, total=False):
-    """Non-expressifiable args which we may need to reuse in `agg` or `over`."""
-
-    center: int
-    ddof: int
-    descending: bool
-    limit: int | None
-    method: RankMethod
-    min_samples: int
-    n: int
-    reverse: bool
-    strategy: FillNullStrategy | None
-    window_size: int
 
 
 __all__ = [
