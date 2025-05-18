@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 class NameFunction(Function):
-    """`polars` version doesn't represent in the same way here.
+    """`polars` version doesn't represent these as `FunctionExpr`.
 
     https://github.com/pola-rs/polars/blob/6df23a09a81c640c21788607611e09d9f43b1abc/crates/polars-plan/src/dsl/name.rs
     """
@@ -18,6 +18,20 @@ class NameFunction(Function):
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.elementwise()
+
+    def __repr__(self) -> str:
+        tp = type(self)
+        if tp is NameFunction:
+            return tp.__name__
+        m: dict[type[NameFunction], str] = {
+            Keep: "keep",
+            Map: "map",
+            Suffix: "suffix",
+            Prefix: "prefix",
+            ToLowercase: "to_lowercase",
+            ToUppercase: "to_uppercase",
+        }
+        return f"name.{m[tp]}"
 
 
 class Keep(NameFunction): ...
