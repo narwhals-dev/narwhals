@@ -3,6 +3,7 @@ from __future__ import annotations
 import builtins
 import typing as t
 
+from narwhals._plan import aggregation as agg
 from narwhals._plan import boolean
 from narwhals._plan import functions as F  # noqa: N812
 from narwhals._plan.dummy import DummySeries
@@ -17,10 +18,15 @@ from narwhals._plan.literal import SeriesLiteral
 from narwhals._plan.strings import ConcatHorizontal
 from narwhals.dtypes import DType
 from narwhals.dtypes import Unknown
+from narwhals.exceptions import OrderDependentExprError
 from narwhals.utils import flatten
 
 if t.TYPE_CHECKING:
+    from typing_extensions import TypeIs
+
     from narwhals._plan.dummy import DummyExpr
+    from narwhals._plan.expr import SortBy
+    from narwhals._plan.expr import WindowExpr
     from narwhals.typing import NonNestedLiteral
 
 
@@ -124,3 +130,43 @@ def concat_str(
         .to_function_expr(*it)
         .to_narwhals()
     )
+
+
+def _is_order_enforcing_previous(obj: t.Any) -> TypeIs[SortBy]:
+    """In theory, we could add other nodes to this check."""
+    from narwhals._plan.expr import SortBy
+
+    allowed = (SortBy,)
+    return isinstance(obj, allowed)
+
+
+def _is_order_enforcing_next(obj: t.Any) -> TypeIs[WindowExpr]:
+    """Not sure how this one would work."""
+    from narwhals._plan.expr import WindowExpr
+
+    return isinstance(obj, WindowExpr) and obj.order_by is not None
+
+
+def _order_dependent_error(node: agg.OrderableAgg) -> OrderDependentExprError:
+    previous = node.expr
+    method = repr(node).removeprefix(f"{previous!r}.")
+    msg = (
+        f"{method} is order-dependent and requires an ordering operation for lazy backends.\n"
+        f"Hint:\nInstead of:\n"
+        f"    {node!r}\n\n"
+        "If you want to aggregate to a single value, try:\n"
+        f"    {previous!r}.sort_by(...).{method}\n\n"
+        "Otherwise, try:\n"
+        f"    {node!r}.over(order_by=...)"
+    )
+    return OrderDependentExprError(msg)
+
+
+def ensure_orderable_rules(*exprs: DummyExpr) -> tuple[DummyExpr, ...]:
+    for expr in exprs:
+        node = expr._ir
+        if isinstance(node, agg.OrderableAgg):
+            previous = node.expr
+            if not _is_order_enforcing_previous(previous):
+                raise _order_dependent_error(node)
+    return exprs
