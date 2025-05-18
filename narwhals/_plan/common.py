@@ -8,13 +8,12 @@ if TYPE_CHECKING:
     from typing import Callable
 
     from typing_extensions import Never
-    from typing_extensions import Self
     from typing_extensions import TypeAlias
     from typing_extensions import dataclass_transform
 
+    from narwhals._plan.dummy import DummyCompliantExpr
+    from narwhals._plan.dummy import DummyExpr
     from narwhals._plan.options import FunctionOptions
-    from narwhals.dtypes import DType
-    from narwhals.typing import NativeSeries
 
 else:
     # NOTE: This isn't important to the proposal, just wanted IDE support
@@ -117,133 +116,18 @@ class ExprIR(Immutable):
     """Anything that can be a node on a graph of expressions."""
 
     def to_narwhals(self) -> DummyExpr:
+        from narwhals._plan.dummy import DummyExpr
+
         return DummyExpr._from_ir(self)
 
     def to_compliant(self) -> DummyCompliantExpr:
+        from narwhals._plan.dummy import DummyCompliantExpr
+
         return DummyCompliantExpr._from_ir(self)
 
     @property
     def is_scalar(self) -> bool:
         return False
-
-
-# NOTE: Overly simplified placeholders for mocking typing
-# Entirely ignoring namespace + function binding
-class DummyExpr:
-    _ir: ExprIR
-
-    def __repr__(self) -> str:
-        return f"Narwhals DummyExpr:\n{self._ir!r}"
-
-    @classmethod
-    def _from_ir(cls, ir: ExprIR, /) -> Self:
-        obj = cls.__new__(cls)
-        obj._ir = ir
-        return obj
-
-    def alias(self, name: str) -> Self:
-        from narwhals._plan.expr import Alias
-
-        return self._from_ir(Alias(expr=self._ir, name=name))
-
-    def cast(self, dtype: DType | type[DType]) -> Self:
-        from narwhals._plan.expr import Cast
-        from narwhals.dtypes import DType
-        from narwhals.dtypes import Unknown
-
-        dtype = dtype if isinstance(dtype, DType) else Unknown()
-        return self._from_ir(Cast(expr=self._ir, dtype=dtype))
-
-    def count(self) -> Self:
-        from narwhals._plan.aggregation import Count
-
-        return self._from_ir(Count(expr=self._ir))
-
-    def max(self) -> Self:
-        from narwhals._plan.aggregation import Max
-
-        return self._from_ir(Max(expr=self._ir))
-
-    def mean(self) -> Self:
-        from narwhals._plan.aggregation import Mean
-
-        return self._from_ir(Mean(expr=self._ir))
-
-    def min(self) -> Self:
-        from narwhals._plan.aggregation import Min
-
-        return self._from_ir(Min(expr=self._ir))
-
-    def median(self) -> Self:
-        from narwhals._plan.aggregation import Median
-
-        return self._from_ir(Median(expr=self._ir))
-
-    def n_unique(self) -> Self:
-        from narwhals._plan.aggregation import NUnique
-
-        return self._from_ir(NUnique(expr=self._ir))
-
-    def sum(self) -> Self:
-        from narwhals._plan.aggregation import Sum
-
-        return self._from_ir(Sum(expr=self._ir))
-
-
-class DummyCompliantExpr:
-    _ir: ExprIR
-
-    @classmethod
-    def _from_ir(cls, ir: ExprIR, /) -> Self:
-        obj = cls.__new__(cls)
-        obj._ir = ir
-        return obj
-
-
-class DummySeries:
-    _compliant: DummyCompliantSeries
-
-    @property
-    def dtype(self) -> DType:
-        return self._compliant.dtype
-
-    @property
-    def name(self) -> str:
-        return self._compliant.name
-
-    @classmethod
-    def from_native(cls, native: NativeSeries, /) -> Self:
-        obj = cls.__new__(cls)
-        obj._compliant = DummyCompliantSeries.from_native(native)
-        return obj
-
-
-class DummyCompliantSeries:
-    _native: NativeSeries
-    _name: str
-
-    @property
-    def dtype(self) -> DType:
-        from narwhals.dtypes import Float64
-
-        return Float64()
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    @classmethod
-    def from_native(cls, native: NativeSeries, /) -> Self:
-        from narwhals.utils import _hasattr_static
-
-        name: str = "<PLACEHOLDER>"
-
-        if _hasattr_static(native, "name"):
-            name = getattr(native, "name", name)
-        obj = cls.__new__(cls)
-        obj._native = native
-        obj._name = name
-        return obj
 
 
 class Function(ExprIR):

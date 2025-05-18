@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from narwhals._plan.common import ExprIR
 
 if TYPE_CHECKING:
-    from narwhals._plan.common import DummySeries
+    from narwhals._plan.dummy import DummySeries
     from narwhals._plan.expr import Literal
     from narwhals.dtypes import DType
     from narwhals.typing import NonNestedLiteral

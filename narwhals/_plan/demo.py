@@ -3,7 +3,7 @@ from __future__ import annotations
 import builtins
 import typing as t
 
-from narwhals._plan.common import DummySeries
+from narwhals._plan.dummy import DummySeries
 from narwhals._plan.expr import All
 from narwhals._plan.expr import Column
 from narwhals._plan.expr import Columns
@@ -15,16 +15,16 @@ from narwhals._plan.functions import SumHorizontal
 from narwhals._plan.literal import ScalarLiteral
 from narwhals._plan.literal import SeriesLiteral
 from narwhals._plan.options import FunctionOptions
+from narwhals.dtypes import DType
+from narwhals.dtypes import Unknown
+from narwhals.utils import flatten
 
 if t.TYPE_CHECKING:
-    from narwhals._plan.common import DummyExpr
-    from narwhals.dtypes import DType
+    from narwhals._plan.dummy import DummyExpr
     from narwhals.typing import NonNestedLiteral
 
 
 def col(*names: str | t.Iterable[str]) -> DummyExpr:
-    from narwhals.utils import flatten
-
     flat_names = tuple(flatten(names))
     node = (
         Column(name=flat_names[0])
@@ -35,8 +35,6 @@ def col(*names: str | t.Iterable[str]) -> DummyExpr:
 
 
 def nth(*indices: int | t.Sequence[int]) -> DummyExpr:
-    from narwhals.utils import flatten
-
     flat_indices = tuple(flatten(indices))
     node = (
         Nth(index=flat_indices[0])
@@ -49,12 +47,8 @@ def nth(*indices: int | t.Sequence[int]) -> DummyExpr:
 def lit(
     value: NonNestedLiteral | DummySeries, dtype: DType | type[DType] | None = None
 ) -> DummyExpr:
-    from narwhals.dtypes import DType
-    from narwhals.dtypes import Unknown
-
     if isinstance(value, DummySeries):
         return SeriesLiteral(value=value).to_literal().to_narwhals()
-
     if dtype is None or not isinstance(dtype, DType):
         dtype = Unknown()
     return ScalarLiteral(value=value, dtype=dtype).to_literal().to_narwhals()
@@ -89,8 +83,6 @@ def sum(*columns: str) -> DummyExpr:
 
 
 def sum_horizontal(*exprs: DummyExpr | t.Iterable[DummyExpr]) -> DummyExpr:
-    from narwhals.utils import flatten
-
     flat_exprs = tuple(flatten(exprs))
     # NOTE: Still need to figure out how these should be generated
     # Feel like it should be the union of `input` & `function`
