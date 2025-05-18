@@ -14,6 +14,7 @@ from narwhals._plan.expr import Len
 from narwhals._plan.expr import Nth
 from narwhals._plan.literal import ScalarLiteral
 from narwhals._plan.literal import SeriesLiteral
+from narwhals._plan.strings import ConcatHorizontal
 from narwhals.dtypes import DType
 from narwhals.dtypes import Unknown
 from narwhals.utils import flatten
@@ -109,3 +110,17 @@ def max_horizontal(*exprs: DummyExpr | t.Iterable[DummyExpr]) -> DummyExpr:
 def mean_horizontal(*exprs: DummyExpr | t.Iterable[DummyExpr]) -> DummyExpr:
     it = (expr._ir for expr in flatten(exprs))
     return F.MeanHorizontal().to_function_expr(*it).to_narwhals()
+
+
+def concat_str(
+    exprs: DummyExpr | t.Iterable[DummyExpr],
+    *more_exprs: DummyExpr,
+    separator: str = "",
+    ignore_nulls: bool = False,
+) -> DummyExpr:
+    it = (expr._ir for expr in flatten([*flatten([exprs]), *more_exprs]))
+    return (
+        ConcatHorizontal(separator=separator, ignore_nulls=ignore_nulls)
+        .to_function_expr(*it)
+        .to_narwhals()
+    )

@@ -5,10 +5,14 @@ from narwhals._plan.options import FunctionFlags
 from narwhals._plan.options import FunctionOptions
 
 
+# TODO @dangotbanned: repr
 class StringFunction(Function):
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.elementwise()
+
+    def __repr__(self) -> str:
+        return "StringFunction"
 
 
 class ConcatHorizontal(StringFunction):
@@ -23,23 +27,36 @@ class ConcatHorizontal(StringFunction):
     def function_options(self) -> FunctionOptions:
         return super().function_options.with_flags(FunctionFlags.INPUT_WILDCARD_EXPANSION)
 
+    def __repr__(self) -> str:
+        return "str.concat_horizontal"
+
 
 class Contains(StringFunction):
     __slots__ = ("literal",)
 
     literal: bool
 
+    def __repr__(self) -> str:
+        return "str.contains"
 
-class EndsWith(StringFunction): ...
+
+class EndsWith(StringFunction):
+    def __repr__(self) -> str:
+        return "str.ends_with"
 
 
-class LenChars(StringFunction): ...
+class LenChars(StringFunction):
+    def __repr__(self) -> str:
+        return "str.len_chars"
 
 
 class Replace(StringFunction):
     __slots__ = ("literal",)
 
     literal: bool
+
+    def __repr__(self) -> str:
+        return "str.replace"
 
 
 class ReplaceAll(StringFunction):
@@ -51,6 +68,9 @@ class ReplaceAll(StringFunction):
     __slots__ = ("literal",)
 
     literal: bool
+
+    def __repr__(self) -> str:
+        return "str.replace_all"
 
 
 class Slice(StringFunction):
@@ -66,11 +86,17 @@ class Slice(StringFunction):
     offset: int
     length: int | None
 
+    def __repr__(self) -> str:
+        return "str.slice"
+
 
 class Head(StringFunction):
     __slots__ = ("n",)
 
     n: int
+
+    def __repr__(self) -> str:
+        return "str.head"
 
 
 class Tail(StringFunction):
@@ -78,14 +104,23 @@ class Tail(StringFunction):
 
     n: int
 
-
-class Split(StringFunction): ...
-
-
-class StartsWith(StringFunction): ...
+    def __repr__(self) -> str:
+        return "str.tail"
 
 
-class StripChars(StringFunction): ...
+class Split(StringFunction):
+    def __repr__(self) -> str:
+        return "str.split"
+
+
+class StartsWith(StringFunction):
+    def __repr__(self) -> str:
+        return "str.startswith"
+
+
+class StripChars(StringFunction):
+    def __repr__(self) -> str:
+        return "str.strip_chars"
 
 
 class ToDatetime(StringFunction):
@@ -101,7 +136,11 @@ class ToDatetime(StringFunction):
     format: str | None
 
 
-class ToLowercase(StringFunction): ...
+class ToLowercase(StringFunction):
+    def __repr__(self) -> str:
+        return "str.to_lowercase"
 
 
-class ToUppercase(StringFunction): ...
+class ToUppercase(StringFunction):
+    def __repr__(self) -> str:
+        return "str.to_uppercase"
