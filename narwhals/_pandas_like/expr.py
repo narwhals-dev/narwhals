@@ -75,9 +75,15 @@ def window_kwargs_to_pandas_equivalent(
             "window": kwargs["window_size"],
             "center": kwargs["center"],
         }
-    else:  # e.g. std, var
+    elif function_name in {"std", "var"}:
         assert "ddof" in kwargs  # noqa: S101
         pandas_kwargs = {"ddof": kwargs["ddof"]}
+    elif function_name == "fill_null":
+        assert "strategy" in kwargs  # noqa: S101
+        assert "limit" in kwargs  # noqa: S101
+        pandas_kwargs = {"strategy": kwargs["strategy"], "limit": kwargs["limit"]}
+    else:  # sum, len, ...
+        pandas_kwargs = {}
     return pandas_kwargs
 
 
