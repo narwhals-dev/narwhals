@@ -74,7 +74,8 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         option: AggregateOptions | None = None
         function_name = self._leaf_name(expr)
         if function_name in self._OPTION_VARIANCE:
-            option = pc.VarianceOptions(ddof=expr._call_kwargs["ddof"])
+            ddof = expr._scalar_kwargs.get("ddof", 1)
+            option = pc.VarianceOptions(ddof=ddof)
         elif function_name in self._OPTION_COUNT_ALL:
             option = pc.CountOptions(mode="all")
         elif function_name in self._OPTION_COUNT_VALID:

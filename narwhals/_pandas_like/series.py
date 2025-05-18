@@ -1027,9 +1027,12 @@ class PandasLikeSeries(EagerSeries[Any]):
         dtype_backend = get_dtype_backend(native.dtype, implementation=implementation)
 
         if implementation.is_cudf():
-            import cupy as cp
+            import cupy as cp  # ignore-banned-import  # cuDF dependency.
 
-            return self._with_native(cp.log(native) / cp.log(base))
+            native = self.native
+            log_arr = cp.log(native) / cp.log(base)
+            result_native = type(native)(log_arr, index=native.index, name=native.name)
+            return self._with_native(result_native)
 
         if dtype_backend == "pyarrow":
             import pyarrow.compute as pc
