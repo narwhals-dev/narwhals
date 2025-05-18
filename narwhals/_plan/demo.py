@@ -17,8 +17,8 @@ from narwhals._plan.literal import ScalarLiteral
 from narwhals._plan.literal import SeriesLiteral
 from narwhals._plan.strings import ConcatHorizontal
 from narwhals.dtypes import DType
-from narwhals.dtypes import Unknown
 from narwhals.exceptions import OrderDependentExprError
+from narwhals.utils import Version
 from narwhals.utils import flatten
 
 if t.TYPE_CHECKING:
@@ -56,7 +56,7 @@ def lit(
     if isinstance(value, DummySeries):
         return SeriesLiteral(value=value).to_literal().to_narwhals()
     if dtype is None or not isinstance(dtype, DType):
-        dtype = Unknown()
+        dtype = Version.MAIN.dtypes.Unknown()
     return ScalarLiteral(value=value, dtype=dtype).to_literal().to_narwhals()
 
 

@@ -13,7 +13,7 @@ from narwhals._plan.options import SortMultipleOptions
 from narwhals._plan.options import SortOptions
 from narwhals._plan.window import Over
 from narwhals.dtypes import DType
-from narwhals.dtypes import Unknown
+from narwhals.utils import Version
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
@@ -43,7 +43,7 @@ class DummyExpr:
         return self._from_ir(expr.Alias(expr=self._ir, name=name))
 
     def cast(self, dtype: DType | type[DType]) -> Self:
-        dtype = dtype if isinstance(dtype, DType) else Unknown()
+        dtype = dtype if isinstance(dtype, DType) else Version.MAIN.dtypes.Unknown()
         return self._from_ir(expr.Cast(expr=self._ir, dtype=dtype))
 
     def count(self) -> Self:
@@ -215,9 +215,7 @@ class DummyCompliantSeries:
 
     @property
     def dtype(self) -> DType:
-        from narwhals.dtypes import Float64
-
-        return Float64()
+        return Version.MAIN.dtypes.Float64()
 
     @property
     def name(self) -> str:
