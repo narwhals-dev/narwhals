@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
 
-import dask.dataframe as dd
 import duckdb
 import pandas as pd
 import polars as pl
@@ -20,6 +19,10 @@ import narwhals as nw
 if TYPE_CHECKING:
     from types import ModuleType
 
+try:
+    import dask.dataframe as dd
+except ModuleNotFoundError:
+    dd = None
 
 pd.options.mode.copy_on_write = True
 pd.options.future.infer_string = True  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
