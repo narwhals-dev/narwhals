@@ -6,12 +6,22 @@ from narwhals._plan.common import ExprIR
 
 if TYPE_CHECKING:
     from narwhals._plan.common import DummySeries
+    from narwhals._plan.expr import Literal
     from narwhals.dtypes import DType
     from narwhals.typing import NonNestedLiteral
 
 
 class LiteralValue(ExprIR):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/plans/lit.rs#L67-L73."""
+
+    @property
+    def dtype(self) -> DType:
+        raise NotImplementedError
+
+    def to_literal(self) -> Literal:
+        from narwhals._plan.expr import Literal
+
+        return Literal(value=self)
 
 
 class ScalarLiteral(LiteralValue):
@@ -39,6 +49,10 @@ class SeriesLiteral(LiteralValue):
     __slots__ = ("value",)
 
     value: DummySeries
+
+    @property
+    def dtype(self) -> DType:
+        return self.value.dtype
 
     def __repr__(self) -> str:
         return "Series"

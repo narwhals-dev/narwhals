@@ -3,16 +3,17 @@ from __future__ import annotations
 import builtins as bltns
 import typing as t
 
+from narwhals._plan.common import DummySeries
 from narwhals._plan.expr import All
 from narwhals._plan.expr import Column
 from narwhals._plan.expr import Columns
 from narwhals._plan.expr import FunctionExpr
 from narwhals._plan.expr import IndexColumns
 from narwhals._plan.expr import Len
-from narwhals._plan.expr import Literal
 from narwhals._plan.expr import Nth
 from narwhals._plan.functions import SumHorizontal
 from narwhals._plan.literal import ScalarLiteral
+from narwhals._plan.literal import SeriesLiteral
 from narwhals._plan.options import FunctionOptions
 
 if t.TYPE_CHECKING:
@@ -45,13 +46,18 @@ def nth(*indices: int | t.Sequence[int]) -> DummyExpr:
     return node.to_narwhals()
 
 
-def lit(value: NonNestedLiteral, dtype: DType | type[DType] | None = None) -> DummyExpr:
+def lit(
+    value: NonNestedLiteral | DummySeries, dtype: DType | type[DType] | None = None
+) -> DummyExpr:
     from narwhals.dtypes import DType
     from narwhals.dtypes import Unknown
 
+    if isinstance(value, DummySeries):
+        return SeriesLiteral(value=value).to_literal().to_narwhals()
+
     if dtype is None or not isinstance(dtype, DType):
         dtype = Unknown()
-    return Literal(value=ScalarLiteral(value=value, dtype=dtype)).to_narwhals()
+    return ScalarLiteral(value=value, dtype=dtype).to_literal().to_narwhals()
 
 
 def len() -> DummyExpr:

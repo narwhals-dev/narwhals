@@ -66,6 +66,10 @@ class Literal(ExprIR):
     def is_scalar(self) -> bool:
         return self.value.is_scalar
 
+    @property
+    def dtype(self) -> DType:
+        return self.value.dtype
+
     def __repr__(self) -> str:
         return f"lit({self.value!r})"
 

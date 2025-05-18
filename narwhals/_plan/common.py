@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.options import FunctionOptions
     from narwhals.dtypes import DType
+    from narwhals.typing import NativeSeries
 
 else:
     # NOTE: This isn't important to the proposal, just wanted IDE support
@@ -199,7 +200,50 @@ class DummyCompliantExpr:
         return obj
 
 
-class DummySeries: ...
+class DummySeries:
+    _compliant: DummyCompliantSeries
+
+    @property
+    def dtype(self) -> DType:
+        return self._compliant.dtype
+
+    @property
+    def name(self) -> str:
+        return self._compliant.name
+
+    @classmethod
+    def from_native(cls, native: NativeSeries, /) -> Self:
+        obj = cls.__new__(cls)
+        obj._compliant = DummyCompliantSeries.from_native(native)
+        return obj
+
+
+class DummyCompliantSeries:
+    _native: NativeSeries
+    _name: str
+
+    @property
+    def dtype(self) -> DType:
+        from narwhals.dtypes import Float64
+
+        return Float64()
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @classmethod
+    def from_native(cls, native: NativeSeries, /) -> Self:
+        from narwhals.utils import _hasattr_static
+
+        name: str = "<PLACEHOLDER>"
+
+        if _hasattr_static(native, "name"):
+            name = getattr(native, "name", name)
+        obj = cls.__new__(cls)
+        obj._native = native
+        obj._name = name
+        return obj
 
 
 class Function(ExprIR):
