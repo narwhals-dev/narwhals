@@ -1,3 +1,9 @@
+"""General functions that aren't namespaced.
+
+Todo:
+- repr
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -15,9 +21,6 @@ if TYPE_CHECKING:
     from narwhals._plan.options import RollingOptionsFixedWindow
     from narwhals.dtypes import DType
     from narwhals.typing import FillNullStrategy
-
-
-# TODO @dangotbanned: repr
 
 
 class Abs(Function):
