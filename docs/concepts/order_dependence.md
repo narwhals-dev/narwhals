@@ -25,8 +25,8 @@ no issue.
 import narwhals as nw
 import pandas as pd
 
-df_pd = pd.DataFrame({"a": [1, 3, 4], "i": [0, 1, 2]})
-df = nw.from_native(df_pd)
+data = {"a": [1, 3, 4], "i": [0, 1, 2]}
+df = nw.from_native(pd.DataFrame(data))
 print(df.with_columns(a_cum_sum=nw.col("a").cum_sum()))
 ```
 
@@ -39,13 +39,11 @@ you specify `order_by`. For example:
   or a `LazyFrame`.
 
 ```python exec="1" result="python" session="order_dependence" source="above"
-from sqlframe.duckdb import DuckDBSession
+import polars as pl
 
-session = DuckDBSession()
-sqlframe_df = session.createDataFrame(df_pd)
-lf = nw.from_native(sqlframe_df)
+lf = nw.from_native(pl.LazyFrame(data))
 result = lf.with_columns(a_cum_sum=nw.col("a").cum_sum().over(order_by="i"))
-print(result.collect("pandas"))
+print(result.collect())
 ```
 
 When writing an order-dependent function, if you want it to be executable by `LazyFrame`
