@@ -20,7 +20,6 @@ import narwhals as nw
 if TYPE_CHECKING:
     from types import ModuleType
 
-    from pytest_codspeed.plugin import BenchmarkFixture
 
 pd.options.mode.copy_on_write = True
 pd.options.future.infer_string = True  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
@@ -118,7 +117,7 @@ def _execute_query_single_backend(
     )
 
 
-def execute_query(query_id: str, *, benchmark: BenchmarkFixture | None = None) -> None:
+def execute_query(query_id: str) -> None:
     expected = pl.read_parquet(DATA_DIR / f"result_{query_id}.parquet")
     for backend, (native_namespace, kwargs) in BACKEND_NAMESPACE_KWARGS_MAP.items():
         if backend in {"duckdb", "sqlframe"} and query_id in DUCKDB_SKIPS:
@@ -127,17 +126,9 @@ def execute_query(query_id: str, *, benchmark: BenchmarkFixture | None = None) -
 
         print(f"\nRunning {query_id} with {backend=}")  # noqa: T201
 
-        if benchmark is not None:
-            result = benchmark(
-                lambda native_namespace=native_namespace,
-                kwargs=kwargs: _execute_query_single_backend(
-                    query_id=query_id, native_namespace=native_namespace, **kwargs
-                )
-            )
-        else:
-            result = _execute_query_single_backend(
-                query_id=query_id, native_namespace=native_namespace, **kwargs
-            )
+        result = _execute_query_single_backend(
+            query_id=query_id, native_namespace=native_namespace, **kwargs
+        )
         assert_frame_equal(expected, result, check_dtypes=False)
 
 
