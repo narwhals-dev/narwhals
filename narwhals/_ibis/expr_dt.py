@@ -74,6 +74,8 @@ class IbisExprDateTimeNamespace:
 
     def truncate(self, every: str) -> IbisExpr:
         multiple, unit = parse_interval_string(every)
+        if unit == "q":
+            multiple, unit = 3 * multiple, "mo"
         if multiple != 1:
             if self._compliant_expr._backend_version < (7, 1):  # pragma: no cover
                 msg = "Truncating datetimes with multiples of the unit is only supported in Ibis >= 7.1."
