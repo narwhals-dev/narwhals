@@ -40,7 +40,7 @@ print(avg_monthly_price(df).sql(dialect="duckdb"))
 Or, to print the SQL code in a different dialect (say, databricks):
 
 ```python exec="1" source="above" session="generating-sql" result="sql"
-print(avg_monthly_price(df).sql(dialect="duckdb"))
+print(avg_monthly_price(df).sql(dialect="databricks"))
 ```
 
 ## Via DuckDB
