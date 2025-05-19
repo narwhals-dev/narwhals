@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import datetime as dt
+from decimal import Decimal
 from typing import TYPE_CHECKING
 from typing import TypeVar
 
@@ -12,12 +14,15 @@ if TYPE_CHECKING:
     from typing_extensions import Never
     from typing_extensions import Self
     from typing_extensions import TypeAlias
+    from typing_extensions import TypeIs
     from typing_extensions import dataclass_transform
 
     from narwhals._plan.dummy import DummyCompliantExpr
     from narwhals._plan.dummy import DummyExpr
+    from narwhals._plan.dummy import DummySeries
     from narwhals._plan.expr import FunctionExpr
     from narwhals._plan.options import FunctionOptions
+    from narwhals.typing import NonNestedLiteral
 
 else:
     # NOTE: This isn't important to the proposal, just wanted IDE support
@@ -57,6 +62,9 @@ Using instead of `Sequence`, as a `list` can be passed there (can't break immuta
 
 Udf: TypeAlias = "Callable[[Any], Any]"
 """Placeholder for `map_batches(function=...)`."""
+
+IntoExprColumn: TypeAlias = "DummyExpr | DummySeries | str"
+IntoExpr: TypeAlias = "NonNestedLiteral | IntoExprColumn"
 
 
 @dataclass_transform(kw_only_default=True, frozen_default=True)
@@ -162,3 +170,37 @@ class Function(ExprIR):
         # Feel like it should be the union of `input` & `function`
         PLACEHOLDER = FunctionOptions.default()  # noqa: N806
         return FunctionExpr(input=inputs, function=self, options=PLACEHOLDER)
+
+
+_NON_NESTED_LITERAL_TPS = (
+    int,
+    float,
+    str,
+    dt.date,
+    dt.time,
+    dt.timedelta,
+    bytes,
+    Decimal,
+)
+
+
+def is_non_nested_literal(obj: Any) -> TypeIs[NonNestedLiteral]:
+    return obj is None or isinstance(obj, _NON_NESTED_LITERAL_TPS)
+
+
+def is_expr(obj: Any) -> TypeIs[DummyExpr]:
+    from narwhals._plan.dummy import DummyExpr
+
+    return isinstance(obj, DummyExpr)
+
+
+def is_series(obj: Any) -> TypeIs[DummySeries]:
+    from narwhals._plan.dummy import DummySeries
+
+    return isinstance(obj, DummySeries)
+
+
+def is_iterable_reject(obj: Any) -> TypeIs[str | bytes | DummySeries]:
+    from narwhals._plan.dummy import DummySeries
+
+    return isinstance(obj, (str, bytes, DummySeries))

@@ -5,7 +5,11 @@ import typing as t
 
 from narwhals._plan import aggregation as agg
 from narwhals._plan import boolean
+from narwhals._plan import expr_parsing as parse
 from narwhals._plan import functions as F  # noqa: N812
+from narwhals._plan.common import ExprIR
+from narwhals._plan.common import IntoExpr
+from narwhals._plan.common import is_non_nested_literal
 from narwhals._plan.dummy import DummySeries
 from narwhals._plan.expr import All
 from narwhals._plan.expr import Column
@@ -57,6 +61,9 @@ def lit(
         return SeriesLiteral(value=value).to_literal().to_narwhals()
     if dtype is None or not isinstance(dtype, DType):
         dtype = Version.MAIN.dtypes.Unknown()
+    if not is_non_nested_literal(value):
+        msg = f"{type(value).__name__!r} is not supported in `nw.lit`, got: {value!r}."
+        raise TypeError(msg)
     return ScalarLiteral(value=value, dtype=dtype).to_literal().to_narwhals()
 
 
@@ -170,3 +177,9 @@ def ensure_orderable_rules(*exprs: DummyExpr) -> tuple[DummyExpr, ...]:
             if not _is_order_enforcing_previous(previous):
                 raise _order_dependent_error(node)
     return exprs
+
+
+def select_context(
+    *exprs: IntoExpr | t.Iterable[IntoExpr], **named_exprs: IntoExpr
+) -> tuple[ExprIR, ...]:
+    return parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs)
