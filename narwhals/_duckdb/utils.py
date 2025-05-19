@@ -54,6 +54,18 @@ class WindowInputs:
         self.order_by = order_by
 
 
+class UnorderableWindowInputs:
+    __slots__ = ("expr", "partition_by")
+
+    def __init__(
+        self,
+        expr: duckdb.Expression,
+        partition_by: Sequence[str],
+    ) -> None:
+        self.expr = expr
+        self.partition_by = partition_by
+
+
 def concat_str(*exprs: duckdb.Expression, separator: str = "") -> duckdb.Expression:
     """Concatenate many strings, NULL inputs are skipped.
 
@@ -244,10 +256,10 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
     raise AssertionError(msg)
 
 
-def generate_partition_by_sql(*partition_by: str) -> str:
+def generate_partition_by_sql(*partition_by: str | duckdb.Expression) -> str:
     if not partition_by:
         return ""
-    by_sql = ", ".join([f"{col(x)}" for x in partition_by])
+    by_sql = ", ".join([f"{col(x) if isinstance(x, str) else x}" for x in partition_by])
     return f"partition by {by_sql}"
 
 
