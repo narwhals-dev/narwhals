@@ -95,33 +95,33 @@ def sum(*columns: str) -> DummyExpr:
     return col(columns).sum()
 
 
-def all_horizontal(*exprs: DummyExpr | t.Iterable[DummyExpr]) -> DummyExpr:
-    it = (expr._ir for expr in flatten(exprs))
+def all_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> DummyExpr:
+    it = parse.parse_into_seq_of_expr_ir(*exprs)
     return boolean.AllHorizontal().to_function_expr(*it).to_narwhals()
 
 
-def any_horizontal(*exprs: DummyExpr | t.Iterable[DummyExpr]) -> DummyExpr:
-    it = (expr._ir for expr in flatten(exprs))
+def any_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> DummyExpr:
+    it = parse.parse_into_seq_of_expr_ir(*exprs)
     return boolean.AnyHorizontal().to_function_expr(*it).to_narwhals()
 
 
-def sum_horizontal(*exprs: DummyExpr | t.Iterable[DummyExpr]) -> DummyExpr:
-    it = (expr._ir for expr in flatten(exprs))
+def sum_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> DummyExpr:
+    it = parse.parse_into_seq_of_expr_ir(*exprs)
     return F.SumHorizontal().to_function_expr(*it).to_narwhals()
 
 
-def min_horizontal(*exprs: DummyExpr | t.Iterable[DummyExpr]) -> DummyExpr:
-    it = (expr._ir for expr in flatten(exprs))
+def min_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> DummyExpr:
+    it = parse.parse_into_seq_of_expr_ir(*exprs)
     return F.MinHorizontal().to_function_expr(*it).to_narwhals()
 
 
-def max_horizontal(*exprs: DummyExpr | t.Iterable[DummyExpr]) -> DummyExpr:
-    it = (expr._ir for expr in flatten(exprs))
+def max_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> DummyExpr:
+    it = parse.parse_into_seq_of_expr_ir(*exprs)
     return F.MaxHorizontal().to_function_expr(*it).to_narwhals()
 
 
-def mean_horizontal(*exprs: DummyExpr | t.Iterable[DummyExpr]) -> DummyExpr:
-    it = (expr._ir for expr in flatten(exprs))
+def mean_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> DummyExpr:
+    it = parse.parse_into_seq_of_expr_ir(*exprs)
     return F.MeanHorizontal().to_function_expr(*it).to_narwhals()
 
 
