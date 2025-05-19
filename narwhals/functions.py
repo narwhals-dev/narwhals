@@ -24,7 +24,6 @@ from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dependencies import is_pyarrow_table
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr import Expr
-from narwhals.series import Series
 from narwhals.translate import from_native
 from narwhals.translate import to_native
 from narwhals.utils import Implementation
@@ -773,6 +772,7 @@ def _scan_csv_impl(
         Implementation.CUDF,
         Implementation.DASK,
         Implementation.DUCKDB,
+        Implementation.IBIS,
     }:
         native_frame = native_namespace.read_csv(source, **kwargs)
     elif implementation is Implementation.PYARROW:
@@ -869,6 +869,7 @@ def _read_parquet_impl(
         Implementation.MODIN,
         Implementation.CUDF,
         Implementation.DUCKDB,
+        Implementation.IBIS,
     }:
         native_frame = native_namespace.read_parquet(source, **kwargs)
     elif implementation is Implementation.PYARROW:
@@ -981,6 +982,7 @@ def _scan_parquet_impl(
         Implementation.CUDF,
         Implementation.DASK,
         Implementation.DUCKDB,
+        Implementation.IBIS,
     }:
         native_frame = native_namespace.read_parquet(source, **kwargs)
     elif implementation is Implementation.PYARROW:

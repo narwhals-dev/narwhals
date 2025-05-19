@@ -5,11 +5,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.39.0"
+version = "1.39.1"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
-  { name = "Marco Gorelli", email = "33491632+MarcoGorelli@users.noreply.github.com" },
+  { name = "Marco Gorelli", email = "hello_narwhals@proton.me" },
 ]
 description = "Extremely lightweight compatibility layer between dataframe libraries"
 readme = "README.md"
@@ -72,11 +72,13 @@ typing = [
   "sqlframe",
   "polars==1.25.2",
   "uv",
+  "narwhals[ibis]",
 ]
 docs = [
   "black",  # required by mkdocstrings_handlers
   "jinja2",
   "duckdb",
+  "narwhals[ibis]",
   "markdown-exec[ansi]",
   "mkdocs",
   "mkdocs-autorefs",
@@ -258,10 +260,7 @@ omit = [
   'narwhals/_arrow/typing.py',
   'narwhals/_duckdb/typing.py',
   'narwhals/_spark_like/typing.py',
-  # we can't run this in every environment that we measure coverage on due to upper-bound constraits
-  'narwhals/_ibis/*',
-  # we don't (yet) run these in every environment
-  'tests/ibis_test.py',
+  'narwhals/_ibis/typing.py',
   # Remove after finishing eager sub-protocols
   'narwhals/_compliant/namespace.py',
 ]
@@ -292,9 +291,11 @@ strict = true
 [[tool.mypy.overrides]]
 module = [
   "cudf.*",
+  "cupy.*",
   "dask.*",
   "dask_expr.*",
   "duckdb.*",
+  # https://github.com/ibis-project/ibis/issues/6844
   "ibis.*",
   "joblib.*",
   "modin.*",

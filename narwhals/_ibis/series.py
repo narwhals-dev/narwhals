@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import NoReturn
 
-from narwhals._ibis.dataframe import native_to_narwhals_dtype
+from narwhals._ibis.utils import native_to_narwhals_dtype
 from narwhals.dependencies import get_ibis
 
 if TYPE_CHECKING:
@@ -29,7 +29,9 @@ class IbisInterchangeSeries:
 
     @property
     def dtype(self) -> DType:
-        return native_to_narwhals_dtype(self._native_series.type(), self._version)
+        return native_to_narwhals_dtype(
+            self._native_series.schema().types[0], self._version
+        )
 
     def __getattr__(self, attr: str) -> NoReturn:
         msg = (

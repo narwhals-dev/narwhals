@@ -5,6 +5,7 @@ import sys
 
 BANNED_IMPORTS = {
     "cudf",
+    "cupy",
     "dask",
     "dask.dataframe",
     "dask_expr",
@@ -24,6 +25,7 @@ ALLOWED_IMPORTS = {
     "_dask": {"dask.dataframe", "pandas", "dask_expr"},
     "_polars": {"polars"},
     "_duckdb": {"duckdb"},
+    "_ibis": {"ibis", "ibis._", "ibis.expr.types"},
 }
 
 

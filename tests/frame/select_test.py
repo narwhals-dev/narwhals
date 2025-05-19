@@ -103,7 +103,7 @@ def test_missing_columns_lazy(
     constructor_lazy: ConstructorLazy, request: pytest.FixtureRequest
 ) -> None:
     constructor_id = str(request.node.callspec.id)
-    if any(id_ == constructor_id for id_ in ("sqlframe", "pyspark[connect]")):
+    if any(id_ == constructor_id for id_ in ("sqlframe", "pyspark[connect]", "ibis")):
         # These backend raise errors at collect
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
@@ -174,7 +174,10 @@ def test_select_duplicates(constructor: Constructor) -> None:
         # cudf already raises its own error
         pytest.skip()
     df = nw.from_native(constructor({"a": [1, 2]})).lazy()
-    with pytest.raises(ValueError, match="Expected unique|[Dd]uplicate|more than one"):
+    with pytest.raises(
+        ValueError,
+        match="Expected unique|[Dd]uplicate|more than one|Duplicate column name",
+    ):
         df.select("a", nw.col("a") + 1).collect()
 
 

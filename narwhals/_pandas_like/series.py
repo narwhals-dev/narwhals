@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
     from typing_extensions import TypeIs
 
+    from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.dtypes import DType
@@ -1014,6 +1015,42 @@ class PandasLikeSeries(EagerSeries[Any]):
             data["breakpoint"] = bins[1:] if bins is not None else result.index.right
         data["count"] = result.reset_index(drop=True)
         return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
+
+    def log(self, base: float) -> Self:
+        native = self.native
+        implementation = self._implementation
+
+        dtype_backend = get_dtype_backend(native.dtype, implementation=implementation)
+
+        if implementation.is_cudf():
+            import cupy as cp  # ignore-banned-import  # cuDF dependency.
+
+            native = self.native
+            log_arr = cp.log(native) / cp.log(base)
+            result_native = type(native)(log_arr, index=native.index, name=native.name)
+            return self._with_native(result_native)
+
+        if dtype_backend == "pyarrow":
+            import pyarrow.compute as pc
+
+            from narwhals._arrow.utils import native_to_narwhals_dtype
+
+            ca = native.array._pa_array
+            result_arr = cast("ChunkedArrayAny", pc.logb(ca, base))
+            nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
+            out_dtype = narwhals_to_native_dtype(
+                nw_dtype,
+                "pyarrow",
+                self._implementation,
+                self._backend_version,
+                self._version,
+            )
+            result_native = native.__class__(
+                result_arr, dtype=out_dtype, index=native.index, name=native.name
+            )
+        else:
+            result_native = np.log(native) / np.log(base)
+        return self._with_native(result_native)
 
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:

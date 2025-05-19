@@ -537,32 +537,16 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         )
 
     # Ibis
-    elif is_ibis_table(native_object):  # pragma: no cover
-        from narwhals._ibis.dataframe import IbisLazyFrame
-
-        if eager_only or series_only:
+    elif is_ibis_table(native_object):
+        if eager_only or series_only:  # pragma: no cover
             if not pass_through:
-                msg = (
-                    "Cannot only use `series_only=True` or `eager_only=False` "
-                    "with Ibis table"
-                )
+                msg = "Cannot only use `series_only=True` or `eager_only=False` with ibis.Table"
                 raise TypeError(msg)
             return native_object
-        import ibis  # ignore-banned-import
-
-        backend_version = parse_version(ibis)
-        if version is Version.V1:
-            return DataFrame(
-                IbisLazyFrame(
-                    native_object, backend_version=backend_version, version=version
-                ),
-                level="interchange",
-            )
-        return LazyFrame(
-            IbisLazyFrame(
-                native_object, backend_version=backend_version, version=version
-            ),
-            level="lazy",
+        return (
+            version.namespace.from_native_object(native_object)
+            .compliant.from_native(native_object)
+            .to_narwhals()
         )
 
     # PySpark

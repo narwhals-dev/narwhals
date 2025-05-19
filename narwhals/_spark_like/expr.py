@@ -91,8 +91,10 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         self._backend_version = backend_version
         self._version = version
         self._implementation = implementation
-        self._window_function: WindowFunction | None = None
         self._metadata: ExprMetadata | None = None
+
+        # This can only be set by `_with_window_function`.
+        self._window_function: WindowFunction | None = None
 
     def __call__(self, df: SparkLikeLazyFrame) -> Sequence[Column]:
         return self._call(df)
@@ -208,6 +210,10 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         result._window_function = window_function
         return result
 
+    @classmethod
+    def _alias_native(cls, expr: Column, name: str) -> Column:
+        return expr.alias(name)
+
     def _cum_window_func(
         self,
         *,
@@ -293,16 +299,14 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         )
 
     @classmethod
-    def from_column_indices(
-        cls: type[Self], *column_indices: int, context: _FullContext
-    ) -> Self:
+    def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             columns = df.columns
             return [df._F.col(columns[i]) for i in column_indices]
 
         return cls(
             func,
-            evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
+            evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
             backend_version=context._backend_version,
             version=context._version,
@@ -804,6 +808,16 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             return self._F.when(_input.isNotNull(), expr)
 
         return self._with_callable(_rank)
+
+    def log(self, base: float) -> Self:
+        def _log(_input: Column) -> Column:
+            return (
+                self._F.when(_input < 0, self._F.lit(float("nan")))
+                .when(_input == 0, self._F.lit(float("-inf")))
+                .otherwise(self._F.log(float(base), _input))
+            )
+
+        return self._with_callable(_log)
 
     @property
     def str(self) -> SparkLikeExprStringNamespace:

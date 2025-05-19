@@ -12,7 +12,6 @@ from typing import Sequence
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import select_columns_by_name
-from narwhals._pandas_like.utils import set_columns
 from narwhals.utils import find_stacklevel
 
 if TYPE_CHECKING:
@@ -134,10 +133,10 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
                 for output_name, alias in zip(output_names, aliases):
                     if is_n_unique:
                         nunique_aggs[alias] = output_name
-                    elif is_std and (ddof := expr._call_kwargs["ddof"]) != 1:
+                    elif is_std and (ddof := expr._scalar_kwargs["ddof"]) != 1:  # pyright: ignore[reportTypedDictNotRequiredAccess]
                         std_aggs[ddof][0].append(output_name)
                         std_aggs[ddof][1].append(alias)
-                    elif is_var and (ddof := expr._call_kwargs["ddof"]) != 1:
+                    elif is_var and (ddof := expr._scalar_kwargs["ddof"]) != 1:  # pyright: ignore[reportTypedDictNotRequiredAccess]
                         var_aggs[ddof][0].append(output_name)
                         var_aggs[ddof][1].append(alias)
                     else:
@@ -199,25 +198,17 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
                 result_aggs.append(result_nunique_aggs)
 
             if std_aggs:
-                result_aggs.extend(
-                    set_columns(
-                        self._grouped[std_output_names].std(ddof=ddof),
-                        columns=std_aliases,
-                        implementation=implementation,
-                        backend_version=backend_version,
-                    )
-                    for ddof, (std_output_names, std_aliases) in std_aggs.items()
-                )
+                for ddof, (std_output_names, std_aliases) in std_aggs.items():
+                    _aggregation = self._grouped[std_output_names].std(ddof=ddof)
+                    # `_aggregation` is a new object so it's OK to operate inplace.
+                    _aggregation.columns = std_aliases
+                    result_aggs.append(_aggregation)
             if var_aggs:
-                result_aggs.extend(
-                    set_columns(
-                        self._grouped[var_output_names].var(ddof=ddof),
-                        columns=var_aliases,
-                        implementation=implementation,
-                        backend_version=backend_version,
-                    )
-                    for ddof, (var_output_names, var_aliases) in var_aggs.items()
-                )
+                for ddof, (var_output_names, var_aliases) in var_aggs.items():
+                    _aggregation = self._grouped[var_output_names].var(ddof=ddof)
+                    # `_aggregation` is a new object so it's OK to operate inplace.
+                    _aggregation.columns = var_aliases
+                    result_aggs.append(_aggregation)
 
             if result_aggs:
                 output_names_counter = collections.Counter(

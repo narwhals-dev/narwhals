@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import AliasNames
     from narwhals._compliant.typing import EvalNames
     from narwhals._compliant.typing import EvalSeries
+    from narwhals._compliant.typing import ScalarKwargs
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.namespace import DaskNamespace
     from narwhals._expression_parsing import ExprKind
@@ -60,9 +61,7 @@ class DaskExpr(
         alias_output_names: AliasNames | None,
         backend_version: tuple[int, ...],
         version: Version,
-        # Kwargs with metadata which we may need in group-by agg
-        # (e.g. `ddof` for `std` and `var`).
-        call_kwargs: dict[str, Any] | None = None,
+        scalar_kwargs: ScalarKwargs | None = None,
     ) -> None:
         self._call = call
         self._depth = depth
@@ -71,7 +70,7 @@ class DaskExpr(
         self._alias_output_names = alias_output_names
         self._backend_version = backend_version
         self._version = version
-        self._call_kwargs = call_kwargs or {}
+        self._scalar_kwargs = scalar_kwargs or {}
         self._metadata: ExprMetadata | None = None
 
     def __call__(self, df: DaskLazyFrame) -> Sequence[dx.Series]:
@@ -97,7 +96,7 @@ class DaskExpr(
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            call_kwargs=self._call_kwargs,
+            scalar_kwargs=self._scalar_kwargs,
         )
 
     @classmethod
@@ -135,19 +134,15 @@ class DaskExpr(
         )
 
     @classmethod
-    def from_column_indices(
-        cls: type[Self], *column_indices: int, context: _FullContext
-    ) -> Self:
+    def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            return [
-                df._native_frame.iloc[:, column_index] for column_index in column_indices
-            ]
+            return [df.native.iloc[:, i] for i in column_indices]
 
         return cls(
             func,
             depth=0,
             function_name="nth",
-            evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
+            evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
             backend_version=context._backend_version,
             version=context._version,
@@ -159,7 +154,7 @@ class DaskExpr(
         call: Callable[..., dx.Series],
         /,
         expr_name: str = "",
-        call_kwargs: dict[str, Any] | None = None,
+        scalar_kwargs: ScalarKwargs | None = None,
         **expressifiable_args: Self | Any,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
@@ -182,7 +177,7 @@ class DaskExpr(
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
-            call_kwargs=call_kwargs,
+            scalar_kwargs=scalar_kwargs,
         )
 
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
@@ -194,7 +189,7 @@ class DaskExpr(
             alias_output_names=func,
             backend_version=self._backend_version,
             version=self._version,
-            call_kwargs=self._call_kwargs,
+            scalar_kwargs=self._scalar_kwargs,
         )
 
     def __add__(self, other: Any) -> Self:
@@ -325,14 +320,14 @@ class DaskExpr(
         return self._with_callable(
             lambda _input: _input.std(ddof=ddof).to_series(),
             "std",
-            call_kwargs={"ddof": ddof},
+            scalar_kwargs={"ddof": ddof},
         )
 
     def var(self, ddof: int) -> Self:
         return self._with_callable(
             lambda _input: _input.var(ddof=ddof).to_series(),
             "var",
-            call_kwargs={"ddof": ddof},
+            scalar_kwargs={"ddof": ddof},
         )
 
     def skew(self) -> Self:
@@ -630,11 +625,11 @@ class DaskExpr(
                             msg = "Safety check failed, please report a bug."
                             raise AssertionError(msg)
                         res_native = grouped.transform(
-                            dask_function_name, **self._call_kwargs
+                            dask_function_name, **self._scalar_kwargs
                         ).to_frame(output_names[0])
                     else:
                         res_native = grouped[list(output_names)].transform(
-                            dask_function_name, **self._call_kwargs
+                            dask_function_name, **self._scalar_kwargs
                         )
                 result_frame = df._with_native(
                     res_native.rename(columns=dict(zip(output_names, aliases)))
@@ -663,6 +658,14 @@ class DaskExpr(
 
         return self._with_callable(da.isfinite, "is_finite")
 
+    def log(self, base: float) -> Self:
+        import dask.array as da
+
+        def _log(_input: dx.Series) -> dx.Series:
+            return da.log(_input) / da.log(base)
+
+        return self._with_callable(_log, "log")
+
     @property
     def str(self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
@@ -674,3 +677,4 @@ class DaskExpr(
     list = not_implemented()  # pyright: ignore[reportAssignmentType]
     struct = not_implemented()  # pyright: ignore[reportAssignmentType]
     rank = not_implemented()  # pyright: ignore[reportAssignmentType]
+    _alias_native = not_implemented()
