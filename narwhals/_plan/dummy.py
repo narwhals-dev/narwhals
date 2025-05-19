@@ -14,6 +14,7 @@ from narwhals._plan.options import SortOptions
 from narwhals._plan.window import Over
 from narwhals.dtypes import DType
 from narwhals.utils import Version
+from narwhals.utils import _hasattr_static
 from narwhals.utils import flatten
 
 if TYPE_CHECKING:
@@ -29,9 +30,10 @@ if TYPE_CHECKING:
 # Entirely ignoring namespace + function binding
 class DummyExpr:
     _ir: ExprIR
+    _version: t.ClassVar[Version] = Version.MAIN
 
     def __repr__(self) -> str:
-        return f"Narwhals DummyExpr:\n{self._ir!r}"
+        return f"Narwhals DummyExpr ({self.version.name.lower()}):\n{self._ir!r}"
 
     @classmethod
     def _from_ir(cls, ir: ExprIR, /) -> Self:
@@ -39,11 +41,15 @@ class DummyExpr:
         obj._ir = ir
         return obj
 
+    @property
+    def version(self) -> Version:
+        return self._version
+
     def alias(self, name: str) -> Self:
         return self._from_ir(expr.Alias(expr=self._ir, name=name))
 
     def cast(self, dtype: DType | type[DType]) -> Self:
-        dtype = dtype if isinstance(dtype, DType) else Version.MAIN.dtypes.Unknown()
+        dtype = dtype if isinstance(dtype, DType) else self.version.dtypes.Unknown()
         return self._from_ir(expr.Cast(expr=self._ir, dtype=dtype))
 
     def count(self) -> Self:
@@ -92,7 +98,7 @@ class DummyExpr:
         order_by: DummyExpr | t.Iterable[DummyExpr] | None = None,
         descending: bool = False,
         nulls_last: bool = False,
-    ) -> DummyExpr:
+    ) -> Self:
         order: tuple[Seq[ExprIR], SortOptions] | None = None
         partition = tuple(expr._ir for expr in flatten(partition_by))
         if not (partition) and order_by is None:
@@ -102,7 +108,7 @@ class DummyExpr:
             by = tuple(expr._ir for expr in flatten([order_by]))
             options = SortOptions(descending=descending, nulls_last=nulls_last)
             order = by, options
-        return Over().to_window_expr(self._ir, partition, order).to_narwhals()
+        return self._from_ir(Over().to_window_expr(self._ir, partition, order))
 
     def sort_by(
         self,
@@ -121,78 +127,98 @@ class DummyExpr:
         options = SortMultipleOptions(descending=desc, nulls_last=nulls)
         return self._from_ir(expr.SortBy(expr=self._ir, by=sort_by, options=options))
 
-    def __eq__(self, other: DummyExpr) -> DummyExpr:  # type: ignore[override]
+    def __eq__(self, other: DummyExpr) -> Self:  # type: ignore[override]
         op = ops.Eq()
-        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
 
-    def __ne__(self, other: DummyExpr) -> DummyExpr:  # type: ignore[override]
+    def __ne__(self, other: DummyExpr) -> Self:  # type: ignore[override]
         op = ops.NotEq()
-        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
 
-    def __lt__(self, other: DummyExpr) -> DummyExpr:
+    def __lt__(self, other: DummyExpr) -> Self:
         op = ops.Lt()
-        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
 
-    def __le__(self, other: DummyExpr) -> DummyExpr:
+    def __le__(self, other: DummyExpr) -> Self:
         op = ops.LtEq()
-        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
 
-    def __gt__(self, other: DummyExpr) -> DummyExpr:
+    def __gt__(self, other: DummyExpr) -> Self:
         op = ops.Gt()
-        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
 
-    def __ge__(self, other: DummyExpr) -> DummyExpr:
+    def __ge__(self, other: DummyExpr) -> Self:
         op = ops.GtEq()
-        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
 
-    def __add__(self, other: DummyExpr) -> DummyExpr:
+    def __add__(self, other: DummyExpr) -> Self:
         op = ops.Add()
-        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
 
-    def __sub__(self, other: DummyExpr) -> DummyExpr:
+    def __sub__(self, other: DummyExpr) -> Self:
         op = ops.Sub()
-        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
 
-    def __mul__(self, other: DummyExpr) -> DummyExpr:
+    def __mul__(self, other: DummyExpr) -> Self:
         op = ops.Multiply()
-        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
 
-    def __truediv__(self, other: DummyExpr) -> DummyExpr:
+    def __truediv__(self, other: DummyExpr) -> Self:
         op = ops.TrueDivide()
-        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
 
-    def __floordiv__(self, other: DummyExpr) -> DummyExpr:
+    def __floordiv__(self, other: DummyExpr) -> Self:
         op = ops.FloorDivide()
-        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
 
-    def __mod__(self, other: DummyExpr) -> DummyExpr:
+    def __mod__(self, other: DummyExpr) -> Self:
         op = ops.Modulus()
-        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
 
-    def __and__(self, other: DummyExpr) -> DummyExpr:
+    def __and__(self, other: DummyExpr) -> Self:
         op = ops.And()
-        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
 
-    def __or__(self, other: DummyExpr) -> DummyExpr:
+    def __or__(self, other: DummyExpr) -> Self:
         op = ops.Or()
-        return op.to_binary_expr(self._ir, other._ir).to_narwhals()
+        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
 
-    def __invert__(self) -> DummyExpr:
-        return boolean.Not().to_function_expr(self._ir).to_narwhals()
+    def __invert__(self) -> Self:
+        return self._from_ir(boolean.Not().to_function_expr(self._ir))
+
+
+class DummyExprV1(DummyExpr):
+    _version: t.ClassVar[Version] = Version.V1
 
 
 class DummyCompliantExpr:
     _ir: ExprIR
+    _version: Version
+
+    @property
+    def version(self) -> Version:
+        return self._version
 
     @classmethod
-    def _from_ir(cls, ir: ExprIR, /) -> Self:
+    def _from_ir(cls, ir: ExprIR, /, version: Version) -> Self:
         obj = cls.__new__(cls)
         obj._ir = ir
+        obj._version = version
         return obj
+
+    def to_narwhals(self) -> DummyExpr:
+        if self.version is Version.MAIN:
+            return DummyExpr._from_ir(self._ir)
+        return DummyExprV1._from_ir(self._ir)
 
 
 class DummySeries:
     _compliant: DummyCompliantSeries
+    _version: t.ClassVar[Version] = Version.MAIN
+
+    @property
+    def version(self) -> Version:
+        return self._version
 
     @property
     def dtype(self) -> DType:
@@ -205,31 +231,38 @@ class DummySeries:
     @classmethod
     def from_native(cls, native: NativeSeries, /) -> Self:
         obj = cls.__new__(cls)
-        obj._compliant = DummyCompliantSeries.from_native(native)
+        obj._compliant = DummyCompliantSeries.from_native(native, cls._version)
         return obj
+
+
+class DummySeriesV1(DummySeries):
+    _version: t.ClassVar[Version] = Version.V1
 
 
 class DummyCompliantSeries:
     _native: NativeSeries
     _name: str
+    _version: Version
+
+    @property
+    def version(self) -> Version:
+        return self._version
 
     @property
     def dtype(self) -> DType:
-        return Version.MAIN.dtypes.Float64()
+        return self.version.dtypes.Float64()
 
     @property
     def name(self) -> str:
         return self._name
 
     @classmethod
-    def from_native(cls, native: NativeSeries, /) -> Self:
-        from narwhals.utils import _hasattr_static
-
+    def from_native(cls, native: NativeSeries, /, version: Version) -> Self:
         name: str = "<PLACEHOLDER>"
-
         if _hasattr_static(native, "name"):
             name = getattr(native, "name", name)
         obj = cls.__new__(cls)
         obj._native = native
         obj._name = name
+        obj._version = version
         return obj

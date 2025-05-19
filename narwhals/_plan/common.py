@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import TypeVar
 
+from narwhals.utils import Version
+
 if TYPE_CHECKING:
     from typing import Any
     from typing import Callable
@@ -119,15 +121,17 @@ class Immutable:
 class ExprIR(Immutable):
     """Anything that can be a node on a graph of expressions."""
 
-    def to_narwhals(self) -> DummyExpr:
-        from narwhals._plan.dummy import DummyExpr
+    def to_narwhals(self, version: Version = Version.MAIN) -> DummyExpr:
+        from narwhals._plan import dummy
 
-        return DummyExpr._from_ir(self)
+        if version is Version.MAIN:
+            return dummy.DummyExpr._from_ir(self)
+        return dummy.DummyExprV1._from_ir(self)
 
-    def to_compliant(self) -> DummyCompliantExpr:
+    def to_compliant(self, version: Version = Version.MAIN) -> DummyCompliantExpr:
         from narwhals._plan.dummy import DummyCompliantExpr
 
-        return DummyCompliantExpr._from_ir(self)
+        return DummyCompliantExpr._from_ir(self, version)
 
     @property
     def is_scalar(self) -> bool:
