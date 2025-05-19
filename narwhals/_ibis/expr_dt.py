@@ -85,6 +85,17 @@ class IbisExprDateTimeNamespace:
             fn = self._truncate(UNITS_DICT_TRUNCATE[unit])
         return self._compliant_expr._with_callable(fn)
 
+    def replace_time_zone(self, time_zone: str | None) -> IbisExpr:
+        if time_zone is None:
+            return self._compliant_expr._with_callable(
+                lambda _input: _input.cast("timestamp")
+            )
+        else:  # pragma: no cover
+            msg = (
+                "`replace_time_zone` is non-null `time_zone` not yet implemented for Ibis"
+            )
+            raise NotImplementedError(msg)
+
     nanosecond = not_implemented()
     total_minutes = not_implemented()
     total_seconds = not_implemented()
