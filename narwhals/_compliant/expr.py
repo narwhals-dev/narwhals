@@ -30,11 +30,11 @@ from narwhals._compliant.typing import EagerExprT
 from narwhals._compliant.typing import EagerSeriesT
 from narwhals._compliant.typing import LazyExprT
 from narwhals._compliant.typing import NativeExprT
+from narwhals._typing_compat import deprecated
 from narwhals.dependencies import get_numpy
 from narwhals.dependencies import is_numpy_array
 from narwhals.dtypes import DType
 from narwhals.utils import _StoresCompliant
-from narwhals.utils import deprecated
 from narwhals.utils import not_implemented
 
 if not TYPE_CHECKING:  # pragma: no cover
