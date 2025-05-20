@@ -14,23 +14,11 @@ from typing import TypeVar
 from typing import overload
 
 from narwhals._compliant.expr import CompliantExpr
+from narwhals._typing_compat import Protocol38
 from narwhals.utils import _parse_time_unit_and_time_zone
 from narwhals.utils import dtype_matches_time_unit_and_time_zone
 from narwhals.utils import get_column_names
 from narwhals.utils import is_compliant_dataframe
-
-if not TYPE_CHECKING:  # pragma: no cover
-    # TODO @dangotbanned: Remove after dropping `3.8` (#2084)
-    # - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
-    import sys
-
-    if sys.version_info >= (3, 9):
-        from typing import Protocol as Protocol38
-    else:
-        from typing import Generic as Protocol38
-
-else:  # pragma: no cover
-    from typing import Protocol as Protocol38
 
 if TYPE_CHECKING:
     from datetime import timezone
