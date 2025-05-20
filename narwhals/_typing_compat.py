@@ -1,3 +1,23 @@
+"""Backward compatibility for newer/less buggy typing features.
+
+## Important
+Import from here to avoid introducing a runtime dependency on [`typing_extensions`]
+
+## Notes
+- `Protocol38`
+  - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
+  - https://github.com/narwhals-dev/narwhals/pull/2294#discussion_r2014534830
+- `TypeVar` defaults
+  - https://typing.python.org/en/latest/spec/generics.html#type-parameter-defaults
+  - https://peps.python.org/pep-0696/
+- `@deprecated`
+  - https://docs.python.org/3/library/warnings.html#warnings.deprecated
+  - https://typing.python.org/en/latest/spec/directives.html#deprecated
+  - https://peps.python.org/pep-0702/
+
+[`typing_extensions`]: https://github.com/python/typing_extensions
+"""
+
 from __future__ import annotations
 
 # ruff: noqa: ARG001, ANN202, N802
