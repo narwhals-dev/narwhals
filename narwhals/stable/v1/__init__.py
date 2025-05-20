@@ -15,6 +15,7 @@ import narwhals as nw
 from narwhals import dependencies
 from narwhals import exceptions
 from narwhals import selectors
+from narwhals._typing_compat import TypeVar
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
 from narwhals.dependencies import get_polars
@@ -89,7 +90,6 @@ if TYPE_CHECKING:
 
     from typing_extensions import ParamSpec
     from typing_extensions import Self
-    from typing_extensions import TypeVar
 
     from narwhals._translate import IntoArrowTable
     from narwhals.dataframe import MultiColSelector
@@ -110,15 +110,11 @@ if TYPE_CHECKING:
     DataFrameT = TypeVar("DataFrameT", bound="DataFrame[Any]")
     LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[Any]")
     SeriesT = TypeVar("SeriesT", bound="Series[Any]")
-    IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
     T = TypeVar("T", default=Any)
     P = ParamSpec("P")
     R = TypeVar("R")
-else:
-    from typing import TypeVar
 
-    IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries")
-    T = TypeVar("T")
+IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
 
 
 class DataFrame(NwDataFrame[IntoDataFrameT]):
