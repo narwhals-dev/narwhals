@@ -3,6 +3,7 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from typing import TYPE_CHECKING
+from typing import Callable
 from typing import Iterable
 from typing import Sequence
 
@@ -262,6 +263,24 @@ class SparkLikeNamespace(
                 )
 
             return [result]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            backend_version=self._backend_version,
+            version=self._version,
+            implementation=self._implementation,
+        )
+
+    def reduce(
+        self,
+        function: Callable[[Column, Column], Column],
+        exprs: Iterable[SparkLikeExpr],
+    ) -> SparkLikeExpr:
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            cols = (s for _expr in exprs for s in _expr(df))
+            return [reduce(function, cols)]
 
         return self._expr(
             call=func,

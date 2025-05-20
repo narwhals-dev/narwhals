@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from functools import partial
+from functools import reduce
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Container
 from typing import Iterable
 from typing import Mapping
@@ -21,6 +23,8 @@ from narwhals._compliant.typing import LazyExprT
 from narwhals._compliant.typing import NativeFrameT
 from narwhals._compliant.typing import NativeFrameT_co
 from narwhals._compliant.typing import NativeSeriesT
+from narwhals._expression_parsing import combine_alias_output_names
+from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals.dependencies import is_numpy_array_2d
 from narwhals.utils import exclude_column_names
 from narwhals.utils import get_column_names
@@ -89,6 +93,13 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
         separator: str,
         ignore_nulls: bool,
     ) -> CompliantExprT: ...
+
+    def reduce(
+        self,
+        function: Callable[[CompliantExprT, CompliantExprT], CompliantExprT],
+        exprs: Iterable[CompliantExprT],
+    ) -> CompliantExprT: ...
+
     @property
     def selectors(self) -> CompliantSelectorNamespace[Any, Any]: ...
     @property
@@ -210,3 +221,21 @@ class EagerNamespace(
         else:  # pragma: no cover
             raise NotImplementedError
         return self._dataframe.from_native(native, context=self)
+
+    def reduce(
+        self,
+        function: Callable[[EagerExprT, EagerExprT], EagerExprT],
+        exprs: Iterable[EagerExprT],
+    ) -> EagerExprT:
+        def func(df: EagerDataFrameT) -> list[EagerSeriesT]:
+            cols = (s for _expr in exprs for s in _expr(df))
+            return [reduce(function, cols)]
+
+        return self._expr._from_callable(
+            func=func,
+            depth=max(x._depth for x in exprs) + 1,
+            function_name="reduce",
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )

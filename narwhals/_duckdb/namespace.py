@@ -4,6 +4,7 @@ import operator
 from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING
+from typing import Callable
 from typing import Iterable
 from typing import Sequence
 
@@ -214,6 +215,23 @@ class DuckDBNamespace(
             call=func,
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
+            backend_version=self._backend_version,
+            version=self._version,
+        )
+
+    def reduce(
+        self,
+        function: Callable[[duckdb.Expression, duckdb.Expression], duckdb.Expression],
+        exprs: Iterable[DuckDBExpr],
+    ) -> DuckDBExpr:
+        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+            cols = (s for _expr in exprs for s in _expr(df))
+            return [reduce(function, cols)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             backend_version=self._backend_version,
             version=self._version,
         )

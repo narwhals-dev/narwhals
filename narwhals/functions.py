@@ -5,6 +5,7 @@ import sys
 from importlib.metadata import version
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Iterable
 from typing import Literal
 from typing import Mapping
@@ -1818,6 +1819,40 @@ def concat_str(
             ),
             *flat_exprs,
             str_as_lit=False,
+        ),
+        combine_metadata(
+            *flat_exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
+        ),
+    )
+
+
+def reduce(
+    function: Callable[[Expr, Expr], Expr],
+    exprs: IntoExpr | Iterable[IntoExpr],
+) -> Expr:
+    """Accumulate over multiple columns horizontally/row wise with a left fold.
+
+    Arguments:
+        function: Function to apply over the accumulator and the value.
+            Fn(acc, value) -> new_value
+        exprs: Expressions to aggregate over.
+
+    Returns:
+        A new expression with the accumulated value
+
+    Examples:
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>>
+
+    """
+    if not exprs:
+        msg = "At least one expression must be passed to `mean_horizontal`"
+        raise ValueError(msg)
+    flat_exprs = flatten(exprs)
+    return Expr(
+        lambda plx: apply_n_ary_operation(
+            plx, lambda *args: plx.reduce(function, args), *flat_exprs, str_as_lit=False
         ),
         combine_metadata(
             *flat_exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True

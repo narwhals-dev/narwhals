@@ -40,6 +40,7 @@ Here are the top-level functions available in Narwhals.
         - nth
         - read_csv
         - read_parquet
+        - reduce
         - scan_csv
         - scan_parquet
         - sum
