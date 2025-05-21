@@ -46,6 +46,14 @@ class Alias(ExprIR):
     def __repr__(self) -> str:
         return f"{self.expr!r}.alias({self.name!r})"
 
+    def iter_left(self) -> t.Iterator[ExprIR]:
+        yield from self.expr.iter_left()
+        yield self
+
+    def iter_right(self) -> t.Iterator[ExprIR]:
+        yield self
+        yield from self.expr.iter_right()
+
 
 class Column(ExprIR):
     __slots__ = ("name",)
@@ -107,6 +115,16 @@ class BinaryExpr(ExprIR):
     def __repr__(self) -> str:
         return f"[({self.left!r}) {self.op!r} ({self.right!r})]"
 
+    def iter_left(self) -> t.Iterator[ExprIR]:
+        yield from self.left.iter_left()
+        yield from self.right.iter_left()
+        yield self
+
+    def iter_right(self) -> t.Iterator[ExprIR]:
+        yield self
+        yield from self.right.iter_right()
+        yield from self.left.iter_right()
+
 
 class Cast(ExprIR):
     __slots__ = ("dtype", "expr")
@@ -120,6 +138,14 @@ class Cast(ExprIR):
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.cast({self.dtype!r})"
+
+    def iter_left(self) -> t.Iterator[ExprIR]:
+        yield from self.expr.iter_left()
+        yield self
+
+    def iter_right(self) -> t.Iterator[ExprIR]:
+        yield self
+        yield from self.expr.iter_right()
 
 
 class Sort(ExprIR):
@@ -135,6 +161,14 @@ class Sort(ExprIR):
     def __repr__(self) -> str:
         direction = "desc" if self.options.descending else "asc"
         return f"{self.expr!r}.sort({direction})"
+
+    def iter_left(self) -> t.Iterator[ExprIR]:
+        yield from self.expr.iter_left()
+        yield self
+
+    def iter_right(self) -> t.Iterator[ExprIR]:
+        yield self
+        yield from self.expr.iter_right()
 
 
 class SortBy(ExprIR):
@@ -152,6 +186,18 @@ class SortBy(ExprIR):
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.sort_by(by={self.by!r}, options={self.options!r})"
+
+    def iter_left(self) -> t.Iterator[ExprIR]:
+        yield from self.expr.iter_left()
+        for e in self.by:
+            yield from e.iter_left()
+        yield self
+
+    def iter_right(self) -> t.Iterator[ExprIR]:
+        yield self
+        for e in reversed(self.by):
+            yield from e.iter_right()
+        yield from self.expr.iter_right()
 
 
 class FunctionExpr(ExprIR, t.Generic[_FunctionT]):
@@ -197,6 +243,16 @@ class FunctionExpr(ExprIR, t.Generic[_FunctionT]):
         else:
             return f"{self.function!r}()"
 
+    def iter_left(self) -> t.Iterator[ExprIR]:
+        for e in self.input:
+            yield from e.iter_left()
+        yield self
+
+    def iter_right(self) -> t.Iterator[ExprIR]:
+        yield self
+        for e in reversed(self.input):
+            yield from e.iter_right()
+
 
 class RollingExpr(FunctionExpr[_RollingT]): ...
 
@@ -217,6 +273,16 @@ class Filter(ExprIR):
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.filter({self.by!r})"
+
+    def iter_left(self) -> t.Iterator[ExprIR]:
+        yield from self.expr.iter_left()
+        yield from self.by.iter_left()
+        yield self
+
+    def iter_right(self) -> t.Iterator[ExprIR]:
+        yield self
+        yield from self.by.iter_right()
+        yield from self.expr.iter_right()
 
 
 class WindowExpr(ExprIR):
@@ -275,6 +341,20 @@ class WindowExpr(ExprIR):
             order_by = f"({order}, {opts})"
         args = f"expr={self.expr}, partition_by={self.partition_by}, order_by={order_by}, options={self.options}"
         return f"{type(self).__name__}({args})"
+
+    def iter_left(self) -> t.Iterator[ExprIR]:
+        # NOTE: `order_by` is never considered in `polars`
+        # https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/plans/iterator.rs#L76-L86
+        yield from self.expr.iter_left()
+        for e in self.partition_by:
+            yield from e.iter_left()
+        yield self
+
+    def iter_right(self) -> t.Iterator[ExprIR]:
+        yield self
+        for e in reversed(self.partition_by):
+            yield from e.iter_right()
+        yield from self.expr.iter_right()
 
 
 class Len(ExprIR):

@@ -10,6 +10,7 @@ from narwhals.utils import Version
 if TYPE_CHECKING:
     from typing import Any
     from typing import Callable
+    from typing import Iterator
 
     from typing_extensions import Never
     from typing_extensions import Self
@@ -151,6 +152,59 @@ class ExprIR(Immutable):
     @property
     def is_scalar(self) -> bool:
         return False
+
+    def iter_left(self) -> Iterator[ExprIR]:
+        """Yield nodes root->leaf.
+
+        Examples:
+            >>> from narwhals._plan import demo as nwd
+            >>>
+            >>> a = nwd.col("a")
+            >>> b = a.alias("b")
+            >>> c = b.min().alias("c")
+            >>> d = c.over(nwd.col("e"), nwd.col("f"))
+            >>>
+            >>> list(a._ir.iter_left())
+            [col('a')]
+            >>>
+            >>> list(b._ir.iter_left())
+            [col('a'), col('a').alias('b')]
+            >>>
+            >>> list(c._ir.iter_left())
+            [col('a'), col('a').alias('b'), col('a').alias('b').min(), col('a').alias('b').min().alias('c')]
+            >>>
+            >>> list(d._ir.iter_left())
+            [col('a'), col('a').alias('b'), col('a').alias('b').min(), col('a').alias('b').min().alias('c'), col('e'), col('f'), col('a').alias('b').min().alias('c').over([col('e'), col('f')])]
+        """
+        yield self
+
+    def iter_right(self) -> Iterator[ExprIR]:
+        """Yield nodes leaf->root.
+
+        Note:
+            Identical to `iter_left` for root nodes.
+
+        Examples:
+            >>> from narwhals._plan import demo as nwd
+            >>>
+            >>> a = nwd.col("a")
+            >>> b = a.alias("b")
+            >>> c = b.min().alias("c")
+            >>> d = c.over(nwd.col("e"), nwd.col("f"))
+            >>>
+            >>> list(a._ir.iter_right())
+            [col('a')]
+            >>>
+            >>> list(b._ir.iter_right())
+            [col('a').alias('b'), col('a')]
+            >>>
+            >>> list(c._ir.iter_right())
+            [col('a').alias('b').min().alias('c'), col('a').alias('b').min(), col('a').alias('b'), col('a')]
+            >>>
+            >>> list(d._ir.iter_right())
+            [col('a').alias('b').min().alias('c').over([col('e'), col('f')]), col('f'), col('e'), col('a').alias('b').min().alias('c'), col('a').alias('b').min(), col('a').alias('b'), col('a')]
+        """
+        yield self
 
 
 class Function(Immutable):

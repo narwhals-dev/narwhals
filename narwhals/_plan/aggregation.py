@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING
 from narwhals._plan.common import ExprIR
 
 if TYPE_CHECKING:
+    from typing import Iterator
+
     from narwhals.typing import RollingInterpolationMethod
 
 
@@ -24,6 +26,14 @@ class Agg(ExprIR):
         m = {ArgMin: "arg_min", ArgMax: "arg_max", NUnique: "n_unique"}
         name = m.get(tp, tp.__name__.lower())
         return f"{self.expr!r}.{name}()"
+
+    def iter_left(self) -> Iterator[ExprIR]:
+        yield from self.expr.iter_left()
+        yield self
+
+    def iter_right(self) -> Iterator[ExprIR]:
+        yield self
+        yield from self.expr.iter_right()
 
 
 class Count(Agg): ...
