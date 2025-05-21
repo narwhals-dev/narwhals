@@ -253,11 +253,7 @@ class Expr:
     def __rsub__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx,
-                lambda x, y: x.__rsub__(y),
-                self,
-                other,
-                str_as_lit=True,
+                plx, lambda x, y: x.__rsub__(y), self, other, str_as_lit=True
             ),
             ExprMetadata.from_binary_op(self, other),
         )
@@ -273,11 +269,7 @@ class Expr:
     def __rtruediv__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx,
-                lambda x, y: x.__rtruediv__(y),
-                self,
-                other,
-                str_as_lit=True,
+                plx, lambda x, y: x.__rtruediv__(y), self, other, str_as_lit=True
             ),
             ExprMetadata.from_binary_op(self, other),
         )
@@ -336,11 +328,7 @@ class Expr:
     def __rpow__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx,
-                lambda x, y: x.__rpow__(y),
-                self,
-                other,
-                str_as_lit=True,
+                plx, lambda x, y: x.__rpow__(y), self, other, str_as_lit=True
             ),
             ExprMetadata.from_binary_op(self, other),
         )
@@ -356,11 +344,7 @@ class Expr:
     def __rfloordiv__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx,
-                lambda x, y: x.__rfloordiv__(y),
-                self,
-                other,
-                str_as_lit=True,
+                plx, lambda x, y: x.__rfloordiv__(y), self, other, str_as_lit=True
             ),
             ExprMetadata.from_binary_op(self, other),
         )
@@ -376,11 +360,7 @@ class Expr:
     def __rmod__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx,
-                lambda x, y: x.__rmod__(y),
-                self,
-                other,
-                str_as_lit=True,
+                plx, lambda x, y: x.__rmod__(y), self, other, str_as_lit=True
             ),
             ExprMetadata.from_binary_op(self, other),
         )
@@ -1204,7 +1184,7 @@ class Expr:
             return self._with_elementwise_op(
                 lambda plx: self._to_compliant_expr(plx).is_in(
                     to_native(other, pass_through=True)
-                ),
+                )
             )
         else:
             msg = "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
@@ -2174,11 +2154,7 @@ class Expr:
         )
 
     def rolling_sum(
-        self,
-        window_size: int,
-        *,
-        min_samples: int | None = None,
-        center: bool = False,
+        self, window_size: int, *, min_samples: int | None = None, center: bool = False
     ) -> Self:
         """Apply a rolling sum (moving sum) over the values.
 
@@ -2228,18 +2204,12 @@ class Expr:
 
         return self._with_orderable_window(
             lambda plx: self._to_compliant_expr(plx).rolling_sum(
-                window_size=window_size,
-                min_samples=min_samples_int,
-                center=center,
+                window_size=window_size, min_samples=min_samples_int, center=center
             )
         )
 
     def rolling_mean(
-        self,
-        window_size: int,
-        *,
-        min_samples: int | None = None,
-        center: bool = False,
+        self, window_size: int, *, min_samples: int | None = None, center: bool = False
     ) -> Self:
         """Apply a rolling mean (moving mean) over the values.
 
@@ -2289,9 +2259,7 @@ class Expr:
 
         return self._with_orderable_window(
             lambda plx: self._to_compliant_expr(plx).rolling_mean(
-                window_size=window_size,
-                min_samples=min_samples,
-                center=center,
+                window_size=window_size, min_samples=min_samples, center=center
             )
         )
 
@@ -2413,10 +2381,7 @@ class Expr:
 
         return self._with_orderable_window(
             lambda plx: self._to_compliant_expr(plx).rolling_std(
-                window_size=window_size,
-                min_samples=min_samples,
-                center=center,
-                ddof=ddof,
+                window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
             )
         )
 
@@ -2543,6 +2508,4 @@ class Expr:
         return ExprStructNamespace(self)
 
 
-__all__ = [
-    "Expr",
-]
+__all__ = ["Expr"]

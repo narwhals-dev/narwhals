@@ -21,9 +21,7 @@ from tests.utils import assert_equal_data
     ],
 )
 def test_comparand_operators_scalar_expr(
-    constructor: Constructor,
-    operator: str,
-    expected: list[bool],
+    constructor: Constructor, operator: str, expected: list[bool]
 ) -> None:
     data = {"a": [0, 1, 2]}
     df = nw.from_native(constructor(data))
@@ -43,9 +41,7 @@ def test_comparand_operators_scalar_expr(
     ],
 )
 def test_comparand_operators_expr(
-    constructor: Constructor,
-    operator: str,
-    expected: list[bool],
+    constructor: Constructor, operator: str, expected: list[bool]
 ) -> None:
     data = {"a": [0, 1, 1], "b": [0, 0, 2]}
     df = nw.from_native(constructor(data))
@@ -55,15 +51,10 @@ def test_comparand_operators_expr(
 
 @pytest.mark.parametrize(
     ("operator", "expected"),
-    [
-        ("__and__", [True, False, False, False]),
-        ("__or__", [True, True, True, False]),
-    ],
+    [("__and__", [True, False, False, False]), ("__or__", [True, True, True, False])],
 )
 def test_logic_operators_expr(
-    constructor: Constructor,
-    operator: str,
-    expected: list[bool],
+    constructor: Constructor, operator: str, expected: list[bool]
 ) -> None:
     data = {"a": [True, True, False, False], "b": [True, False, True, False]}
     df = nw.from_native(constructor(data))

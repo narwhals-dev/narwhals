@@ -119,8 +119,7 @@ class DaskExpr(
                     x for x in evaluate_column_names(df) if x not in df.columns
                 ]
                 raise ColumnNotFoundError.from_missing_and_available_column_names(
-                    missing_columns=missing_columns,
-                    available_columns=df.columns,
+                    missing_columns=missing_columns, available_columns=df.columns
                 ) from e
 
         return cls(
@@ -571,11 +570,7 @@ class DaskExpr(
             lambda expr: expr.isna().sum().to_series(), "null_count"
         )
 
-    def over(
-        self,
-        partition_by: Sequence[str],
-        order_by: Sequence[str] | None,
-    ) -> Self:
+    def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
         # pandas is a required dependency of dask so it's safe to import this
         from narwhals._pandas_like.group_by import PandasLikeGroupBy
 

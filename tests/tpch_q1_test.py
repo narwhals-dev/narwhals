@@ -17,10 +17,7 @@ if TYPE_CHECKING:
     from narwhals.stable.v1.typing import IntoFrame
 
 
-@pytest.mark.parametrize(
-    "library",
-    ["pandas", "polars", "pyarrow", "dask"],
-)
+@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow", "dask"])
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 def test_q1(library: str) -> None:
     if library == "dask" and DASK_VERSION < (2024, 10):
@@ -72,7 +69,7 @@ def test_q1(library: str) -> None:
                 nw.col("l_extendedprice").mean().alias("avg_price"),
                 nw.col("l_discount").mean().alias("avg_disc"),
                 nw.len().alias("count_order"),
-            ],
+            ]
         )
         .sort(["l_returnflag", "l_linestatus"])
     )
@@ -101,10 +98,7 @@ def test_q1(library: str) -> None:
     assert_equal_data(query_result, expected)
 
 
-@pytest.mark.parametrize(
-    "library",
-    ["pandas", "polars"],
-)
+@pytest.mark.parametrize("library", ["pandas", "polars"])
 @pytest.mark.filterwarnings(
     "ignore:.*Passing a BlockManager.*:DeprecationWarning",
     "ignore:.*Complex.*:UserWarning",
@@ -129,7 +123,7 @@ def test_q1_w_generic_funcs(library: str) -> None:
                 nw.col("l_extendedprice")
                 * (1.0 - nw.col("l_discount"))
                 * (1.0 + nw.col("l_tax"))
-            ),
+            )
         )
         .group_by(["l_returnflag", "l_linestatus"])
         .agg(
@@ -201,7 +195,7 @@ def test_q1_w_pandas_agg_generic_path() -> None:
                 nw.mean("l_extendedprice").alias("avg_price"),
                 nw.mean("l_discount").alias("avg_disc"),
                 nw.len().alias("count_order"),
-            ],
+            ]
         )
         .sort(["l_returnflag", "l_linestatus"])
     )

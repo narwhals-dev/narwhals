@@ -148,10 +148,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         # Reality: `str` is fine
         concat_str: Incomplete = pc.binary_join_element_wise
         key_values = concat_str(
-            *it,
-            separator_scalar,
-            null_handling="replace",
-            null_replacement=null_token,
+            *it, separator_scalar, null_handling="replace", null_replacement=null_token
         )
         table = table.add_column(i=0, field_=col_token, column=key_values)
 

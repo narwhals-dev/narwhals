@@ -146,8 +146,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     x for x in evaluate_column_names(df) if x not in df.columns
                 ]
                 raise ColumnNotFoundError.from_missing_and_available_column_names(
-                    missing_columns=missing_columns,
-                    available_columns=df.columns,
+                    missing_columns=missing_columns, available_columns=df.columns
                 ) from e
 
         return cls(
@@ -210,9 +209,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         return self._reuse_series("shift", scalar_kwargs={"n": n})
 
     def over(  # noqa: C901, PLR0915
-        self,
-        partition_by: Sequence[str],
-        order_by: Sequence[str] | None,
+        self, partition_by: Sequence[str], order_by: Sequence[str] | None
     ) -> Self:
         if not partition_by:
             # e.g. `nw.col('a').cum_sum().order_by(key)`

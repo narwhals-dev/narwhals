@@ -180,10 +180,7 @@ class DuckDBLazyFrame(
         selection = [val.alias(name) for name, val in evaluate_exprs(self, *exprs)]
         return self._with_native(self.native.aggregate(selection))  # type: ignore[arg-type]
 
-    def select(
-        self,
-        *exprs: DuckDBExpr,
-    ) -> Self:
+    def select(self, *exprs: DuckDBExpr) -> Self:
         selection = (val.alias(name) for name, val in evaluate_exprs(self, *exprs))
         return self._with_native(self.native.select(*selection))
 

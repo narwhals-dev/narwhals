@@ -70,10 +70,7 @@ class DuckDBNamespace(
         return first._with_native(res)
 
     def concat_str(
-        self,
-        *exprs: DuckDBExpr,
-        separator: str,
-        ignore_nulls: bool,
+        self, *exprs: DuckDBExpr, separator: str, ignore_nulls: bool
     ) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> list[Expression]:
             cols = list(chain.from_iterable(expr(df) for expr in exprs))

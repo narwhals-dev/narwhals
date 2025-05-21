@@ -76,9 +76,7 @@ class DuckDBExprStringNamespace:
 
         return self._compliant_expr._with_callable(
             lambda expr: FunctionExpression(
-                "trim",
-                expr,
-                lit(string.whitespace if characters is None else characters),
+                "trim", expr, lit(string.whitespace if characters is None else characters)
             )
         )
 

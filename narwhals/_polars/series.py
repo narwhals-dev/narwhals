@@ -124,11 +124,7 @@ INHERITED_METHODS = frozenset(
 
 class PolarsSeries:
     def __init__(
-        self,
-        series: pl.Series,
-        *,
-        backend_version: tuple[int, ...],
-        version: Version,
+        self, series: pl.Series, *, backend_version: tuple[int, ...], version: Version
     ) -> None:
         self._native_series: pl.Series = series
         self._backend_version = backend_version
@@ -389,12 +385,7 @@ class PolarsSeries:
 
     @requires.backend_version((1,))
     def rolling_var(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
-        ddof: int,
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
         extra_kwargs: dict[str, Any] = (
             {"min_periods": min_samples}
@@ -409,12 +400,7 @@ class PolarsSeries:
 
     @requires.backend_version((1,))
     def rolling_std(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
-        ddof: int,
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
         extra_kwargs: dict[str, Any] = (
             {"min_periods": min_samples}
@@ -427,13 +413,7 @@ class PolarsSeries:
             )
         )
 
-    def rolling_sum(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
-    ) -> Self:
+    def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         extra_kwargs: dict[str, Any] = (
             {"min_periods": min_samples}
             if self._backend_version < (1, 21, 0)
@@ -445,13 +425,7 @@ class PolarsSeries:
             )
         )
 
-    def rolling_mean(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
-    ) -> Self:
+    def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         extra_kwargs: dict[str, Any] = (
             {"min_periods": min_samples}
             if self._backend_version < (1, 21, 0)
@@ -480,12 +454,7 @@ class PolarsSeries:
         return self._with_native(s)
 
     def value_counts(
-        self,
-        *,
-        sort: bool,
-        parallel: bool,
-        name: str | None,
-        normalize: bool,
+        self, *, sort: bool, parallel: bool, name: str | None, normalize: bool
     ) -> PolarsDataFrame:
         from narwhals._polars.dataframe import PolarsDataFrame
 

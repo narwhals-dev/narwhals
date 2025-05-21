@@ -108,12 +108,7 @@ class PolarsNamespace:
             raise TypeError(msg)
 
     @overload
-    def from_numpy(
-        self,
-        data: Into1DArray,
-        /,
-        schema: None = ...,
-    ) -> PolarsSeries: ...
+    def from_numpy(self, data: Into1DArray, /, schema: None = ...) -> PolarsSeries: ...
 
     @overload
     def from_numpy(
@@ -197,10 +192,7 @@ class PolarsNamespace:
         )
 
     def concat_str(
-        self,
-        *exprs: PolarsExpr,
-        separator: str,
-        ignore_nulls: bool,
+        self, *exprs: PolarsExpr, separator: str, ignore_nulls: bool
     ) -> PolarsExpr:
         pl_exprs: list[pl.Expr] = [expr._native_expr for expr in exprs]
 
@@ -235,11 +227,7 @@ class PolarsNamespace:
             )
 
         return self._expr(
-            pl.concat_str(
-                pl_exprs,
-                separator=separator,
-                ignore_nulls=ignore_nulls,
-            ),
+            pl.concat_str(pl_exprs, separator=separator, ignore_nulls=ignore_nulls),
             version=self._version,
             backend_version=self._backend_version,
         )

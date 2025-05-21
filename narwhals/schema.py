@@ -68,8 +68,7 @@ class Schema(BaseSchema):
     _version: ClassVar[Version] = Version.MAIN
 
     def __init__(
-        self,
-        schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None = None,
+        self, schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None = None
     ) -> None:
         schema = schema or {}
         super().__init__(schema)

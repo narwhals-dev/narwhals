@@ -14,10 +14,7 @@ import pandas as pd
 
 
 @given(dates=st.datetimes(min_value=datetime(1960, 1, 1), max_value=datetime(1980, 1, 1)))
-@pytest.mark.skipif(
-    PANDAS_VERSION < (2, 0, 0),
-    reason="pyarrow dtype not available",
-)
+@pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="pyarrow dtype not available")
 @pytest.mark.slow
 def test_ordinal_day(dates: datetime) -> None:
     result_pd = nw.from_native(pd.Series([dates]), series_only=True).dt.ordinal_day()[0]
@@ -37,10 +34,7 @@ def test_ordinal_day(dates: datetime) -> None:
 
 
 @given(dates=st.datetimes(min_value=datetime(1960, 1, 1), max_value=datetime(1980, 1, 1)))
-@pytest.mark.skipif(
-    PANDAS_VERSION < (2, 0, 0),
-    reason="pyarrow dtype not available",
-)
+@pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="pyarrow dtype not available")
 @pytest.mark.slow
 def test_ordinal_day_polars(dates: datetime) -> None:
     pytest.importorskip("polars")

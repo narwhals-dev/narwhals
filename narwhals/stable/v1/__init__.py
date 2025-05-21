@@ -172,8 +172,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         return super().__getitem__(item)
 
     def lazy(
-        self,
-        backend: ModuleType | Implementation | str | None = None,
+        self, backend: ModuleType | Implementation | str | None = None
     ) -> LazyFrame[Any]:
         return super().lazy(backend=backend)  # type: ignore[return-value]
 
@@ -245,9 +244,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     def collect(
-        self,
-        backend: ModuleType | Implementation | str | None = None,
-        **kwargs: Any,
+        self, backend: ModuleType | Implementation | str | None = None, **kwargs: Any
     ) -> DataFrame[Any]:
         return super().collect(backend=backend, **kwargs)  # type: ignore[return-value]
 
@@ -330,9 +327,7 @@ class Series(NwSeries[IntoSeriesT]):
         )
         warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
         return super().hist(  # type: ignore[return-value]
-            bins=bins,
-            bin_count=bin_count,
-            include_breakpoint=include_breakpoint,
+            bins=bins, bin_count=bin_count, include_breakpoint=include_breakpoint
         )
 
 
@@ -422,7 +417,7 @@ class Expr(NwExpr):
             A new expression.
         """
         return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).arg_true(),
+            lambda plx: self._to_compliant_expr(plx).arg_true()
         )
 
     def sample(

@@ -53,8 +53,7 @@ class DaskExprDateTimeNamespace:
 
     def nanosecond(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
-            lambda expr: expr.dt.microsecond * 1000 + expr.dt.nanosecond,
-            "nanosecond",
+            lambda expr: expr.dt.microsecond * 1000 + expr.dt.nanosecond, "nanosecond"
         )
 
     def ordinal_day(self) -> DaskExpr:
@@ -142,14 +141,12 @@ class DaskExprDateTimeNamespace:
 
     def total_microseconds(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
-            lambda expr: expr.dt.total_seconds() * 1_000_000 // 1,
-            "total_microseconds",
+            lambda expr: expr.dt.total_seconds() * 1_000_000 // 1, "total_microseconds"
         )
 
     def total_nanoseconds(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
-            lambda expr: expr.dt.total_seconds() * 1_000_000_000 // 1,
-            "total_nanoseconds",
+            lambda expr: expr.dt.total_seconds() * 1_000_000_000 // 1, "total_nanoseconds"
         )
 
     def truncate(self, every: str) -> DaskExpr:

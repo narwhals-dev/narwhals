@@ -430,11 +430,7 @@ class Implementation(NoAutoEnum):
             >>> df.implementation.is_pandas_like()
             True
         """
-        return self in {
-            Implementation.PANDAS,
-            Implementation.MODIN,
-            Implementation.CUDF,
-        }
+        return self in {Implementation.PANDAS, Implementation.MODIN, Implementation.CUDF}
 
     def is_spark_like(self) -> bool:
         """Return whether implementation is pyspark or sqlframe.
