@@ -173,12 +173,11 @@ class Function(Immutable):
 
     def to_function_expr(self, *inputs: ExprIR) -> FunctionExpr[Self]:
         from narwhals._plan.expr import FunctionExpr
-        from narwhals._plan.options import FunctionOptions
 
-        # NOTE: Still need to figure out how these should be generated
-        # Feel like it should be the union of `input` & `function`
-        PLACEHOLDER = FunctionOptions.default()  # noqa: N806
-        return FunctionExpr(input=inputs, function=self, options=PLACEHOLDER)
+        # NOTE: Still need to figure out if using a closure is needed
+        options = self.function_options
+        # https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L442-L450.
+        return FunctionExpr(input=inputs, function=self, options=options)
 
 
 _NON_NESTED_LITERAL_TPS = (
