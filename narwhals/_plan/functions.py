@@ -31,6 +31,9 @@ class Abs(Function):
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.elementwise()
 
+    def __repr__(self) -> str:
+        return "abs"
+
 
 class Hist(Function):
     """Only supported for `Series` so far."""
@@ -42,6 +45,9 @@ class Hist(Function):
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.groupwise()
+
+    def __repr__(self) -> str:
+        return "hist"
 
 
 class HistBins(Hist):
@@ -76,11 +82,17 @@ class NullCount(Function):
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.aggregation()
 
+    def __repr__(self) -> str:
+        return "null_count"
+
 
 class Pow(Function):
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.elementwise()
+
+    def __repr__(self) -> str:
+        return "pow"
 
 
 class FillNull(Function):
@@ -91,6 +103,9 @@ class FillNull(Function):
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.elementwise()
+
+    def __repr__(self) -> str:
+        return "fill_null"
 
 
 class FillNullWithStrategy(Function):
@@ -114,6 +129,9 @@ class FillNullWithStrategy(Function):
             else FunctionOptions.groupwise()
         )
 
+    def __repr__(self) -> str:
+        return "fill_null_with_strategy"
+
 
 class Shift(Function):
     __slots__ = ("n",)
@@ -125,11 +143,17 @@ class Shift(Function):
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.length_preserving()
 
+    def __repr__(self) -> str:
+        return "shift"
+
 
 class DropNulls(Function):
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.row_separable()
+
+    def __repr__(self) -> str:
+        return "drop_nulls"
 
 
 class Mode(Function):
@@ -137,11 +161,17 @@ class Mode(Function):
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.groupwise()
 
+    def __repr__(self) -> str:
+        return "mode"
+
 
 class Skew(Function):
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.aggregation()
+
+    def __repr__(self) -> str:
+        return "skew"
 
 
 class Rank(Function):
@@ -153,11 +183,17 @@ class Rank(Function):
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.groupwise()
 
+    def __repr__(self) -> str:
+        return "rank"
+
 
 class Clip(Function):
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.elementwise()
+
+    def __repr__(self) -> str:
+        return "clip"
 
 
 class CumAgg(Function):
@@ -170,6 +206,18 @@ class CumAgg(Function):
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.length_preserving()
 
+    def __repr__(self) -> str:
+        tp = type(self)
+        if tp is CumAgg:
+            return tp.__name__
+        m: dict[type[CumAgg], str] = {
+            CumCount: "count",
+            CumMin: "min",
+            CumMax: "max",
+            CumProd: "prod",
+        }
+        return f"cum_{m[tp]}"
+
 
 class RollingWindow(Function):
     __slots__ = ("options",)
@@ -180,6 +228,18 @@ class RollingWindow(Function):
     def function_options(self) -> FunctionOptions:
         """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/function_expr/mod.rs#L1276."""
         return FunctionOptions.length_preserving()
+
+    def __repr__(self) -> str:
+        tp = type(self)
+        if tp is RollingWindow:
+            return tp.__name__
+        m: dict[type[RollingWindow], str] = {
+            RollingSum: "sum",
+            RollingMean: "mean",
+            RollingVar: "var",
+            RollingStd: "std",
+        }
+        return f"rolling_{m[tp]}"
 
 
 class CumCount(CumAgg): ...
@@ -211,11 +271,17 @@ class Diff(Function):
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.length_preserving()
 
+    def __repr__(self) -> str:
+        return "diff"
+
 
 class Unique(Function):
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.groupwise()
+
+    def __repr__(self) -> str:
+        return "unique"
 
 
 class Round(Function):
@@ -226,6 +292,9 @@ class Round(Function):
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.elementwise()
+
+    def __repr__(self) -> str:
+        return "round"
 
 
 class SumHorizontal(Function):
@@ -281,6 +350,9 @@ class EwmMean(Function):
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.length_preserving()
 
+    def __repr__(self) -> str:
+        return "ewm_mean"
+
 
 class ReplaceStrict(Function):
     __slots__ = ("new", "old", "return_dtype")
@@ -293,6 +365,9 @@ class ReplaceStrict(Function):
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.elementwise()
 
+    def __repr__(self) -> str:
+        return "replace_strict"
+
 
 class GatherEvery(Function):
     __slots__ = ("n", "offset")
@@ -303,6 +378,9 @@ class GatherEvery(Function):
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.groupwise()
+
+    def __repr__(self) -> str:
+        return "gather_every"
 
 
 class MapBatches(Function):
@@ -322,3 +400,6 @@ class MapBatches(Function):
         if self.returns_scalar:
             options = options.with_flags(FunctionFlags.RETURNS_SCALAR)
         return options
+
+    def __repr__(self) -> str:
+        return "map_batches"
