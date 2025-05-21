@@ -120,4 +120,13 @@ class DuckDBExprDateTimeNamespace:
             )
         )
 
+    def replace_time_zone(self, time_zone: str | None) -> DuckDBExpr:
+        if time_zone is None:
+            return self._compliant_expr._with_callable(
+                lambda _input: _input.cast("timestamp")
+            )
+        else:  # pragma: no cover
+            msg = "`replace_time_zone` with non-null `time_zone` not yet implemented for duckdb"
+            raise NotImplementedError(msg)
+
     total_nanoseconds = not_implemented()
