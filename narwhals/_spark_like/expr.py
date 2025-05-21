@@ -374,104 +374,80 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         )
 
     def __eq__(self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
-        return self._with_callable(
-            lambda _input, other: _input.__eq__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__eq__(other), other=other)
 
     def __ne__(self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
-        return self._with_callable(
-            lambda _input, other: _input.__ne__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__ne__(other), other=other)
 
     def __add__(self, other: SparkLikeExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: _input.__add__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__add__(other), other=other)
 
     def __sub__(self, other: SparkLikeExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: _input.__sub__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__sub__(other), other=other)
 
     def __rsub__(self, other: SparkLikeExpr) -> Self:
         return self._with_callable(
-            lambda _input, other: other.__sub__(_input), other=other
+            lambda expr, other: other.__sub__(expr), other=other
         ).alias("literal")
 
     def __mul__(self, other: SparkLikeExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: _input.__mul__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__mul__(other), other=other)
 
     def __truediv__(self, other: SparkLikeExpr) -> Self:
         return self._with_callable(
-            lambda _input, other: _input.__truediv__(other), other=other
+            lambda expr, other: expr.__truediv__(other), other=other
         )
 
     def __rtruediv__(self, other: SparkLikeExpr) -> Self:
         return self._with_callable(
-            lambda _input, other: other.__truediv__(_input), other=other
+            lambda expr, other: other.__truediv__(expr), other=other
         ).alias("literal")
 
     def __floordiv__(self, other: SparkLikeExpr) -> Self:
-        def _floordiv(_input: Column, other: Column) -> Column:
-            return self._F.floor(_input / other)
+        def _floordiv(expr: Column, other: Column) -> Column:
+            return self._F.floor(expr / other)
 
         return self._with_callable(_floordiv, other=other)
 
     def __rfloordiv__(self, other: SparkLikeExpr) -> Self:
-        def _rfloordiv(_input: Column, other: Column) -> Column:
-            return self._F.floor(other / _input)
+        def _rfloordiv(expr: Column, other: Column) -> Column:
+            return self._F.floor(other / expr)
 
         return self._with_callable(_rfloordiv, other=other).alias("literal")
 
     def __pow__(self, other: SparkLikeExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: _input.__pow__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__pow__(other), other=other)
 
     def __rpow__(self, other: SparkLikeExpr) -> Self:
         return self._with_callable(
-            lambda _input, other: other.__pow__(_input), other=other
+            lambda expr, other: other.__pow__(expr), other=other
         ).alias("literal")
 
     def __mod__(self, other: SparkLikeExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: _input.__mod__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__mod__(other), other=other)
 
     def __rmod__(self, other: SparkLikeExpr) -> Self:
         return self._with_callable(
-            lambda _input, other: other.__mod__(_input), other=other
+            lambda expr, other: other.__mod__(expr), other=other
         ).alias("literal")
 
     def __ge__(self, other: SparkLikeExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: _input.__ge__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__ge__(other), other=other)
 
     def __gt__(self, other: SparkLikeExpr) -> Self:
-        return self._with_callable(lambda _input, other: _input > other, other=other)
+        return self._with_callable(lambda expr, other: expr > other, other=other)
 
     def __le__(self, other: SparkLikeExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: _input.__le__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__le__(other), other=other)
 
     def __lt__(self, other: SparkLikeExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: _input.__lt__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__lt__(other), other=other)
 
     def __and__(self, other: SparkLikeExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: _input.__and__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__and__(other), other=other)
 
     def __or__(self, other: SparkLikeExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: _input.__or__(other), other=other
-        )
+        return self._with_callable(lambda expr, other: expr.__or__(other), other=other)
 
     def __invert__(self) -> Self:
         invert = cast("Callable[..., Column]", operator.invert)
@@ -487,11 +463,11 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_callable(self._F.bool_or)
 
     def cast(self, dtype: DType | type[DType]) -> Self:
-        def _cast(_input: Column) -> Column:
+        def _cast(expr: Column) -> Column:
             spark_dtype = narwhals_to_native_dtype(
                 dtype, self._version, self._native_dtypes
             )
-            return _input.cast(spark_dtype)
+            return expr.cast(spark_dtype)
 
         return self._with_callable(_cast)
 
@@ -505,7 +481,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_callable(self._F.mean)
 
     def median(self) -> Self:
-        def _median(_input: Column) -> Column:
+        def _median(expr: Column) -> Column:
             if (
                 self._implementation
                 in {Implementation.PYSPARK, Implementation.PYSPARK_CONNECT}
@@ -513,9 +489,9 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
                 and parse_version(pyspark) < (3, 4)
             ):  # pragma: no cover
                 # Use percentile_approx with default accuracy parameter (10000)
-                return self._F.percentile_approx(_input.cast("double"), 0.5)
+                return self._F.percentile_approx(expr.cast("double"), 0.5)
 
-            return self._F.median(_input)
+            return self._F.median(expr)
 
         return self._with_callable(_median)
 
@@ -523,8 +499,8 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_callable(self._F.min)
 
     def null_count(self) -> Self:
-        def _null_count(_input: Column) -> Column:
-            return self._F.count_if(self._F.isnull(_input))
+        def _null_count(expr: Column) -> Column:
+            return self._F.count_if(self._F.isnull(expr))
 
         return self._with_callable(_null_count)
 
@@ -562,21 +538,19 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         lower_bound: Self | NumericLiteral | TemporalLiteral | None = None,
         upper_bound: Self | NumericLiteral | TemporalLiteral | None = None,
     ) -> Self:
-        def _clip_lower(_input: Column, lower_bound: Column) -> Column:
-            result = _input
+        def _clip_lower(expr: Column, lower_bound: Column) -> Column:
+            result = expr
             return self._F.when(result < lower_bound, lower_bound).otherwise(result)
 
-        def _clip_upper(_input: Column, upper_bound: Column) -> Column:
-            result = _input
+        def _clip_upper(expr: Column, upper_bound: Column) -> Column:
+            result = expr
             return self._F.when(result > upper_bound, upper_bound).otherwise(result)
 
-        def _clip_both(
-            _input: Column, lower_bound: Column, upper_bound: Column
-        ) -> Column:
+        def _clip_both(expr: Column, lower_bound: Column, upper_bound: Column) -> Column:
             return (
-                self._F.when(_input < lower_bound, lower_bound)
-                .when(_input > upper_bound, upper_bound)
-                .otherwise(_input)
+                self._F.when(expr < lower_bound, lower_bound)
+                .when(expr > upper_bound, upper_bound)
+                .otherwise(expr)
             )
 
         if lower_bound is None:
@@ -588,43 +562,43 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         )
 
     def is_finite(self) -> Self:
-        def _is_finite(_input: Column) -> Column:
+        def _is_finite(expr: Column) -> Column:
             # A value is finite if it's not NaN, and not infinite, while NULLs should be
             # preserved
             is_finite_condition = (
-                ~self._F.isnan(_input)
-                & (_input != self._F.lit(float("inf")))
-                & (_input != self._F.lit(float("-inf")))
+                ~self._F.isnan(expr)
+                & (expr != self._F.lit(float("inf")))
+                & (expr != self._F.lit(float("-inf")))
             )
-            return self._F.when(~self._F.isnull(_input), is_finite_condition).otherwise(
+            return self._F.when(~self._F.isnull(expr), is_finite_condition).otherwise(
                 None
             )
 
         return self._with_callable(_is_finite)
 
     def is_in(self, values: Sequence[Any]) -> Self:
-        def _is_in(_input: Column) -> Column:
-            return _input.isin(values) if values else self._F.lit(False)  # noqa: FBT003
+        def _is_in(expr: Column) -> Column:
+            return expr.isin(values) if values else self._F.lit(False)  # noqa: FBT003
 
         return self._with_callable(_is_in)
 
     def is_unique(self) -> Self:
-        def _is_unique(_input: Column) -> Column:
+        def _is_unique(expr: Column) -> Column:
             # Create a window spec that treats each value separately
-            return self._F.count("*").over(self.partition_by(_input)) == 1
+            return self._F.count("*").over(self.partition_by(expr)) == 1
 
         return self._with_callable(_is_unique)
 
     def len(self) -> Self:
-        def _len(_input: Column) -> Column:
+        def _len(_expr: Column) -> Column:
             # Use count(*) to count all rows including nulls
             return self._F.count("*")
 
         return self._with_callable(_len)
 
     def round(self, decimals: int) -> Self:
-        def _round(_input: Column) -> Column:
-            return self._F.round(_input, decimals)
+        def _round(expr: Column) -> Column:
+            return self._F.round(expr, decimals)
 
         return self._with_callable(_round)
 
@@ -632,9 +606,9 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_callable(self._F.skewness)
 
     def n_unique(self) -> Self:
-        def _n_unique(_input: Column) -> Column:
-            return self._F.count_distinct(_input) + self._F.max(
-                self._F.isnull(_input).cast(self._native_dtypes.IntegerType())
+        def _n_unique(expr: Column) -> Column:
+            return self._F.count_distinct(expr) + self._F.max(
+                self._F.isnull(expr).cast(self._native_dtypes.IntegerType())
             )
 
         return self._with_callable(_n_unique)
@@ -679,10 +653,8 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_callable(self._F.isnull)
 
     def is_nan(self) -> Self:
-        def _is_nan(_input: Column) -> Column:
-            return self._F.when(self._F.isnull(_input), None).otherwise(
-                self._F.isnan(_input)
-            )
+        def _is_nan(expr: Column) -> Column:
+            return self._F.when(self._F.isnull(expr), None).otherwise(self._F.isnan(expr))
 
         return self._with_callable(_is_nan)
 
@@ -764,8 +736,8 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
             return self._with_window_function(_fill_with_strategy)
 
-        def _fill_constant(_input: Column, value: Column) -> Column:
-            return self._F.ifnull(_input, value)
+        def _fill_constant(expr: Column, value: Column) -> Column:
+            return self._F.ifnull(expr, value)
 
         return self._with_callable(_fill_constant, value=value)
 
@@ -819,37 +791,37 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         func_name = self._REMAP_RANK_METHOD[method]
 
         def _rank(
-            _input: Column,
+            expr: Column,
             *,
             descending: bool,
             partition_by: Sequence[str | Column] | None = None,
         ) -> Column:
-            order_by = self._sort(_input, descending=descending, nulls_last=True)
+            order_by = self._sort(expr, descending=descending, nulls_last=True)
             if partition_by is not None:
                 window = self.partition_by(*partition_by).orderBy(*order_by)
-                count_window = self.partition_by(*partition_by, _input)
+                count_window = self.partition_by(*partition_by, expr)
             else:
                 window = self.partition_by().orderBy(*order_by)
-                count_window = self.partition_by(_input)
+                count_window = self.partition_by(expr)
             if method == "max":
-                expr = (
+                rank_expr = (
                     getattr(self._F, func_name)().over(window)
-                    + self._F.count(_input).over(count_window)
+                    + self._F.count(expr).over(count_window)
                     - self._F.lit(1)
                 )
 
             elif method == "average":
-                expr = getattr(self._F, func_name)().over(window) + (
-                    self._F.count(_input).over(count_window) - self._F.lit(1)
+                rank_expr = getattr(self._F, func_name)().over(window) + (
+                    self._F.count(expr).over(count_window) - self._F.lit(1)
                 ) / self._F.lit(2)
 
             else:
-                expr = getattr(self._F, func_name)().over(window)
+                rank_expr = getattr(self._F, func_name)().over(window)
 
-            return self._F.when(_input.isNotNull(), expr)
+            return self._F.when(expr.isNotNull(), rank_expr)
 
-        def _unpartitioned_rank(_input: Column) -> Column:
-            return _rank(_input, descending=descending)
+        def _unpartitioned_rank(expr: Column) -> Column:
+            return _rank(expr, descending=descending)
 
         def _partitioned_rank(window_inputs: UnorderableWindowInputs) -> Column:
             return _rank(
@@ -863,11 +835,11 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         )
 
     def log(self, base: float) -> Self:
-        def _log(_input: Column) -> Column:
+        def _log(expr: Column) -> Column:
             return (
-                self._F.when(_input < 0, self._F.lit(float("nan")))
-                .when(_input == 0, self._F.lit(float("-inf")))
-                .otherwise(self._F.log(float(base), _input))
+                self._F.when(expr < 0, self._F.lit(float("nan")))
+                .when(expr == 0, self._F.lit(float("-inf")))
+                .otherwise(self._F.log(float(base), expr))
             )
 
         return self._with_callable(_log)
