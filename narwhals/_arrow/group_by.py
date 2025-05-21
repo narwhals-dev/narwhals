@@ -14,9 +14,9 @@ from narwhals.utils import generate_temporary_column_name
 if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.expr import ArrowExpr
-    from narwhals._arrow.typing import (
-        AggregateOptions,  # type: ignore[attr-defined]
-        Aggregation,  # type: ignore[attr-defined]
+    from narwhals._arrow.typing import (  # type: ignore[attr-defined]
+        AggregateOptions,
+        Aggregation,
         Incomplete,
     )
     from narwhals._compliant.group_by import NarwhalsAggregation

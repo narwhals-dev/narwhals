@@ -52,14 +52,14 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
-    from narwhals._arrow.typing import (
+    from narwhals._arrow.typing import (  # type: ignore[attr-defined]
         ArrayAny,
         ArrayOrChunkedArray,
         ArrayOrScalar,
         ChunkedArrayAny,
         Incomplete,
         NullPlacement,
-        Order,  # type: ignore[attr-defined]
+        Order,
         TieBreaker,
         _AsPyType,
         _BasicDataType,

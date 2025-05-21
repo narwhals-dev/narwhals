@@ -49,10 +49,10 @@ if TYPE_CHECKING:
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.group_by import ArrowGroupBy
     from narwhals._arrow.namespace import ArrowNamespace
-    from narwhals._arrow.typing import (
+    from narwhals._arrow.typing import (  # type: ignore[attr-defined]
         ChunkedArrayAny,
-        Mask,  # type: ignore[attr-defined]
-        Order,  # type: ignore[attr-defined]
+        Mask,
+        Order,
     )
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._translate import IntoArrowTable
