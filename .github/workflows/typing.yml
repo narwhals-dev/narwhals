@@ -48,6 +48,5 @@ jobs:
       - name: Run pyright type completeness
         run: |
           source .venv/bin/activate
-          output=$(pyright --verifytypes narwhals --ignoreexternal 2>&1)
-          echo "$output"
-          echo "$output" | grep "Type completeness score: 100%" || exit 1
+          uv pip install -U pyright-cov
+          pyright-cov --verifytypes narwhals --fail-under 100
