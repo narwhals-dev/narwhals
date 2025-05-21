@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from narwhals._plan.common import IntoExprColumn
     from narwhals._plan.common import Seq
     from narwhals._plan.common import Udf
+    from narwhals._plan.meta import ExprIRMetaNamespace
     from narwhals.typing import FillNullStrategy
     from narwhals.typing import NativeSeries
     from narwhals.typing import NumericLiteral
@@ -430,6 +431,12 @@ class DummyExpr:
         exponent = parse.parse_into_expr_ir(other, str_as_lit=True)
         base = self._ir
         return self._from_ir(F.Pow().to_function_expr(base, exponent))
+
+    @property
+    def meta(self) -> ExprIRMetaNamespace:
+        from narwhals._plan.meta import ExprIRMetaNamespace
+
+        return ExprIRMetaNamespace(self._ir)
 
 
 class DummyExprV1(DummyExpr):
