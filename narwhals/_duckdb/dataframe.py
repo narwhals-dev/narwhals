@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import contextlib
 from functools import reduce
 from operator import and_
 from typing import TYPE_CHECKING
@@ -51,9 +50,6 @@ if TYPE_CHECKING:
     from narwhals.typing import JoinStrategy
     from narwhals.typing import LazyUniqueKeepStrategy
     from narwhals.utils import _FullContext
-
-with contextlib.suppress(ImportError):  # requires duckdb>=1.3.0
-    from duckdb import SQLExpression  # type: ignore[attr-defined, unused-ignore]
 
 
 class DuckDBLazyFrame(
@@ -387,6 +383,8 @@ class DuckDBLazyFrame(
                     "with `subset` specified."
                 )
                 raise NotImplementedError(msg)
+            from duckdb import SQLExpression  # type: ignore[attr-defined, unused-ignore]
+
             # Sanitise input
             if any(x not in self.columns for x in subset_):
                 msg = f"Columns {set(subset_).difference(self.columns)} not found in {self.columns}."

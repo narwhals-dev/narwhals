@@ -324,8 +324,10 @@ warn_return_any = false
 pythonPlatform = "All"
 # NOTE (stubs do unsafe `TypeAlias` and `TypeVar` imports)
 # pythonVersion = "3.8"
+reportFunctionMemberAccess = "error"
 reportMissingImports = "none"
 reportMissingModuleSource = "none"
+reportPossiblyUnboundVariable = "error"
 reportPrivateImportUsage = "none"
 reportUnusedExpression = "none"    # handled by (https://docs.astral.sh/ruff/rules/unused-variable/)
 typeCheckingMode = "basic"
