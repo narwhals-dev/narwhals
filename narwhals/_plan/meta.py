@@ -62,7 +62,7 @@ class ExprIRMetaNamespace:
         raise NotImplementedError
 
 
-def profile_polars_expr(expr: pl.Expr) -> dict[str, Any]:
+def polars_expr_metadata(expr: pl.Expr) -> dict[str, Any]:
     """Gather all metadata for a native `Expr`.
 
     Eventual goal would be that a `nw.Expr` matches a `pl.Expr` in as much of this as possible.
@@ -83,3 +83,15 @@ def profile_polars_expr(expr: pl.Expr) -> dict[str, Any]:
         "undo_aliases": expr.meta.undo_aliases(),
         "expr": expr,
     }
+
+
+def polars_expr_to_dict(expr: pl.Expr) -> dict[str, Any]:
+    """Serialize a native `Expr`, roundtrip back to `dict`.
+
+    Using to inspect [`FunctionOptions`] and ensure we combine them in a similar way.
+
+    [`FunctionOptions`]: https://github.com/narwhals-dev/narwhals/pull/2572#issuecomment-2891577685
+    """
+    import json
+
+    return json.loads(expr.meta.serialize(format="json"))  # type: ignore[no-any-return]
