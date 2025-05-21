@@ -13,7 +13,7 @@ class SparkLikeExprStructNamespace:
         self._compliant_expr = expr
 
     def field(self, name: str) -> SparkLikeExpr:
-        def func(_input: Column) -> Column:
-            return _input.getField(name)
+        def func(expr: Column) -> Column:
+            return expr.getField(name)
 
         return self._compliant_expr._with_callable(func).alias(name)
