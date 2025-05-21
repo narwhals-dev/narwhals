@@ -126,7 +126,7 @@ class DuckDBExprDateTimeNamespace:
                 lambda _input: _input.cast("timestamp")
             )
         else:  # pragma: no cover
-            msg = "`replace_time_zone` is non-null `time_zone` not yet implemented for duckdb"
+            msg = "`replace_time_zone` with non-null `time_zone` not yet implemented for duckdb"
             raise NotImplementedError(msg)
 
     total_nanoseconds = not_implemented()

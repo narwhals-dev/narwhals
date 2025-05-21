@@ -91,9 +91,7 @@ class IbisExprDateTimeNamespace:
                 lambda _input: _input.cast("timestamp")
             )
         else:  # pragma: no cover
-            msg = (
-                "`replace_time_zone` is non-null `time_zone` not yet implemented for Ibis"
-            )
+            msg = "`replace_time_zone` with non-null `time_zone` not yet implemented for Ibis"
             raise NotImplementedError(msg)
 
     nanosecond = not_implemented()

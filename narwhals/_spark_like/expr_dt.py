@@ -87,5 +87,5 @@ class SparkLikeExprDateTimeNamespace:
                 lambda _input: _input.cast("timestamp_ntz")
             )
         else:  # pragma: no cover
-            msg = "`replace_time_zone` is non-null `time_zone` not yet implemented for spark-like"
+            msg = "`replace_time_zone` with non-null `time_zone` not yet implemented for spark-like"
             raise NotImplementedError(msg)
