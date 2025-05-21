@@ -8,7 +8,7 @@ from narwhals._duckdb.utils import lit
 from narwhals.utils import not_implemented
 
 if TYPE_CHECKING:
-    import duckdb
+    from duckdb import Expression
 
     from narwhals._duckdb.expr import DuckDBExpr
 
@@ -28,7 +28,7 @@ class DuckDBExprStringNamespace:
         )
 
     def contains(self, pattern: str, *, literal: bool) -> DuckDBExpr:
-        def func(_input: duckdb.Expression) -> duckdb.Expression:
+        def func(_input: Expression) -> Expression:
             if literal:
                 return FunctionExpression("contains", _input, lit(pattern))
             return FunctionExpression("regexp_matches", _input, lit(pattern))
@@ -36,7 +36,7 @@ class DuckDBExprStringNamespace:
         return self._compliant_expr._with_callable(func)
 
     def slice(self, offset: int, length: int) -> DuckDBExpr:
-        def func(_input: duckdb.Expression) -> duckdb.Expression:
+        def func(_input: Expression) -> Expression:
             offset_lit = lit(offset)
             return FunctionExpression(
                 "array_slice",
