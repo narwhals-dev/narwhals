@@ -9,6 +9,7 @@ from typing import Sequence
 
 import duckdb
 from duckdb import CoalesceOperator
+from duckdb import Expression
 from duckdb import FunctionExpression
 from duckdb.typing import BIGINT
 from duckdb.typing import VARCHAR
@@ -74,7 +75,7 @@ class DuckDBNamespace(
         separator: str,
         ignore_nulls: bool,
     ) -> DuckDBExpr:
-        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
             cols = list(chain.from_iterable(expr(df) for expr in exprs))
             if not ignore_nulls:
                 null_mask_result = reduce(operator.or_, (s.isnull() for s in cols))
@@ -101,7 +102,7 @@ class DuckDBNamespace(
         )
 
     def all_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
-        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
             cols = (c for _expr in exprs for c in _expr(df))
             return [reduce(operator.and_, cols)]
 
@@ -114,7 +115,7 @@ class DuckDBNamespace(
         )
 
     def any_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
-        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
             cols = (c for _expr in exprs for c in _expr(df))
             return [reduce(operator.or_, cols)]
 
@@ -127,7 +128,7 @@ class DuckDBNamespace(
         )
 
     def max_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
-        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
             cols = (c for _expr in exprs for c in _expr(df))
             return [FunctionExpression("greatest", *cols)]
 
@@ -140,7 +141,7 @@ class DuckDBNamespace(
         )
 
     def min_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
-        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
             cols = (c for _expr in exprs for c in _expr(df))
             return [FunctionExpression("least", *cols)]
 
@@ -153,7 +154,7 @@ class DuckDBNamespace(
         )
 
     def sum_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
-        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
             cols = (CoalesceOperator(col, lit(0)) for _expr in exprs for col in _expr(df))
             return [reduce(operator.add, cols)]
 
@@ -166,7 +167,7 @@ class DuckDBNamespace(
         )
 
     def mean_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
-        def func(df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
             cols = [c for _expr in exprs for c in _expr(df)]
             return [
                 (
@@ -189,7 +190,7 @@ class DuckDBNamespace(
     def lit(
         self, value: NonNestedLiteral, dtype: DType | type[DType] | None
     ) -> DuckDBExpr:
-        def func(_df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+        def func(_df: DuckDBLazyFrame) -> list[Expression]:
             if dtype is not None:
                 return [
                     lit(value).cast(
@@ -207,7 +208,7 @@ class DuckDBNamespace(
         )
 
     def len(self) -> DuckDBExpr:
-        def func(_df: DuckDBLazyFrame) -> list[duckdb.Expression]:
+        def func(_df: DuckDBLazyFrame) -> list[Expression]:
             return [FunctionExpression("count")]
 
         return self._expr(
@@ -219,17 +220,17 @@ class DuckDBNamespace(
         )
 
 
-class DuckDBWhen(LazyWhen["DuckDBLazyFrame", duckdb.Expression, DuckDBExpr]):
+class DuckDBWhen(LazyWhen["DuckDBLazyFrame", Expression, DuckDBExpr]):
     @property
     def _then(self) -> type[DuckDBThen]:
         return DuckDBThen
 
-    def __call__(self, df: DuckDBLazyFrame) -> Sequence[duckdb.Expression]:
+    def __call__(self, df: DuckDBLazyFrame) -> Sequence[Expression]:
         self.when = when
         self.lit = lit
         return super().__call__(df)
 
 
 class DuckDBThen(
-    CompliantThen["DuckDBLazyFrame", duckdb.Expression, DuckDBExpr], DuckDBExpr
+    CompliantThen["DuckDBLazyFrame", Expression, DuckDBExpr], DuckDBExpr
 ): ...
