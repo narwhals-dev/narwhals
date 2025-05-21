@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan.common import ExprIR
+from narwhals._plan.common import Immutable
 
 if TYPE_CHECKING:
     from narwhals._plan.dummy import DummySeries
@@ -11,12 +11,16 @@ if TYPE_CHECKING:
     from narwhals.typing import NonNestedLiteral
 
 
-class LiteralValue(ExprIR):
+class LiteralValue(Immutable):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/plans/lit.rs#L67-L73."""
 
     @property
     def dtype(self) -> DType:
         raise NotImplementedError
+
+    @property
+    def is_scalar(self) -> bool:
+        return False
 
     def to_literal(self) -> Literal:
         from narwhals._plan.expr import Literal

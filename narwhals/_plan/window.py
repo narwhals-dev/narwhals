@@ -2,15 +2,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan.common import ExprIR
+from narwhals._plan.common import Immutable
 
 if TYPE_CHECKING:
+    from narwhals._plan.common import ExprIR
     from narwhals._plan.common import Seq
     from narwhals._plan.expr import WindowExpr
     from narwhals._plan.options import SortOptions
 
 
-class Window(ExprIR):
+class Window(Immutable):
     """Renamed from `WindowType`.
 
     https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/options/mod.rs#L139
