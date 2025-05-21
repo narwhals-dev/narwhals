@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from itertools import chain
-from typing import TYPE_CHECKING
-from typing import Sequence
+from typing import TYPE_CHECKING, Sequence
 
 from narwhals._compliant import LazyGroupBy
 

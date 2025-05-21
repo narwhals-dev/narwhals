@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._compliant import CompliantSelector
-from narwhals._compliant import LazySelectorNamespace
+from narwhals._compliant import CompliantSelector, LazySelectorNamespace
 from narwhals._duckdb.expr import DuckDBExpr
 
 if TYPE_CHECKING:

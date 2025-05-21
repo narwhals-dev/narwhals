@@ -1,17 +1,14 @@
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Iterable
-from typing import Mapping
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Mapping, Sequence
 
-from narwhals._expression_parsing import ExprMetadata
-from narwhals._expression_parsing import apply_n_ary_operation
-from narwhals._expression_parsing import combine_metadata
-from narwhals._expression_parsing import extract_compliant
+from narwhals._expression_parsing import (
+    ExprMetadata,
+    apply_n_ary_operation,
+    combine_metadata,
+    extract_compliant,
+)
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr_cat import ExprCatNamespace
@@ -21,29 +18,25 @@ from narwhals.expr_name import ExprNameNamespace
 from narwhals.expr_str import ExprStringNamespace
 from narwhals.expr_struct import ExprStructNamespace
 from narwhals.translate import to_native
-from narwhals.utils import _validate_rolling_arguments
-from narwhals.utils import flatten
-from narwhals.utils import issue_deprecation_warning
+from narwhals.utils import _validate_rolling_arguments, flatten, issue_deprecation_warning
 
 if TYPE_CHECKING:
     from typing import TypeVar
 
-    from typing_extensions import Concatenate
-    from typing_extensions import ParamSpec
-    from typing_extensions import Self
-    from typing_extensions import TypeAlias
+    from typing_extensions import Concatenate, ParamSpec, Self, TypeAlias
 
-    from narwhals._compliant import CompliantExpr
-    from narwhals._compliant import CompliantNamespace
+    from narwhals._compliant import CompliantExpr, CompliantNamespace
     from narwhals.dtypes import DType
-    from narwhals.typing import ClosedInterval
-    from narwhals.typing import FillNullStrategy
-    from narwhals.typing import IntoExpr
-    from narwhals.typing import NonNestedLiteral
-    from narwhals.typing import NumericLiteral
-    from narwhals.typing import RankMethod
-    from narwhals.typing import RollingInterpolationMethod
-    from narwhals.typing import TemporalLiteral
+    from narwhals.typing import (
+        ClosedInterval,
+        FillNullStrategy,
+        IntoExpr,
+        NonNestedLiteral,
+        NumericLiteral,
+        RankMethod,
+        RollingInterpolationMethod,
+        TemporalLiteral,
+    )
 
     PS = ParamSpec("PS")
     R = TypeVar("R")

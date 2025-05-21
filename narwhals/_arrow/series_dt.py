@@ -1,27 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import ClassVar
-from typing import Mapping
-from typing import cast
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Mapping, cast
 
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from narwhals._arrow.utils import UNITS_DICT
-from narwhals._arrow.utils import ArrowSeriesNamespace
-from narwhals._arrow.utils import floordiv_compat
-from narwhals._arrow.utils import lit
+from narwhals._arrow.utils import UNITS_DICT, ArrowSeriesNamespace, floordiv_compat, lit
 from narwhals._duration import parse_interval_string
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._arrow.series import ArrowSeries
-    from narwhals._arrow.typing import ChunkedArrayAny
-    from narwhals._arrow.typing import ScalarAny
+    from narwhals._arrow.typing import ChunkedArrayAny, ScalarAny
     from narwhals.dtypes import Datetime
     from narwhals.typing import TimeUnit
 

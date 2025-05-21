@@ -6,11 +6,8 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from narwhals.exceptions import LengthChangingExprError
-from narwhals.exceptions import ShapeError
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from narwhals.exceptions import LengthChangingExprError, ShapeError
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [1, 1, 2]}
 data_str = {"a": ["x", "x", "y"]}

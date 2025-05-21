@@ -208,8 +208,9 @@ convention = "google"
 max-nested-blocks = 4
 
 [tool.ruff.lint.isort]
-force-single-line = true
 required-imports = ["from __future__ import annotations"]
+combine-as-imports = true
+split-on-trailing-comma = false
 
 [tool.ruff.format]
 docstring-code-format = true

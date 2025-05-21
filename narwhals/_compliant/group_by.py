@@ -1,30 +1,34 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import ClassVar
-from typing import Iterable
-from typing import Iterator
-from typing import Literal
-from typing import Mapping
-from typing import Sequence
-from typing import TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    Iterable,
+    Iterator,
+    Literal,
+    Mapping,
+    Sequence,
+    TypeVar,
+)
 
-from narwhals._compliant.typing import CompliantDataFrameAny
-from narwhals._compliant.typing import CompliantDataFrameT
-from narwhals._compliant.typing import CompliantDataFrameT_co
-from narwhals._compliant.typing import CompliantExprT_contra
-from narwhals._compliant.typing import CompliantFrameT
-from narwhals._compliant.typing import CompliantFrameT_co
-from narwhals._compliant.typing import CompliantLazyFrameAny
-from narwhals._compliant.typing import CompliantLazyFrameT
-from narwhals._compliant.typing import DepthTrackingExprAny
-from narwhals._compliant.typing import DepthTrackingExprT_contra
-from narwhals._compliant.typing import EagerExprT_contra
-from narwhals._compliant.typing import LazyExprT_contra
-from narwhals._compliant.typing import NativeExprT_co
+from narwhals._compliant.typing import (
+    CompliantDataFrameAny,
+    CompliantDataFrameT,
+    CompliantDataFrameT_co,
+    CompliantExprT_contra,
+    CompliantFrameT,
+    CompliantFrameT_co,
+    CompliantLazyFrameAny,
+    CompliantLazyFrameT,
+    DepthTrackingExprAny,
+    DepthTrackingExprT_contra,
+    EagerExprT_contra,
+    LazyExprT_contra,
+    NativeExprT_co,
+)
 from narwhals._typing_compat import Protocol38
 from narwhals.utils import is_sequence_of
 

@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
-from narwhals.utils import CompliantT_co
-from narwhals.utils import _StoresCompliant
+from narwhals.utils import CompliantT_co, _StoresCompliant
 
 if TYPE_CHECKING:
     from typing import Callable

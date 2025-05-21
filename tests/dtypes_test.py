@@ -1,13 +1,8 @@
 from __future__ import annotations
 
 import enum
-from datetime import datetime
-from datetime import timedelta
-from datetime import timezone
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Iterable
-from typing import Literal
+from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING, Any, Iterable, Literal
 
 import numpy as np
 import pandas as pd
@@ -15,9 +10,7 @@ import pyarrow as pa
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import PYARROW_VERSION
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoSeries

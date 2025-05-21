@@ -5,13 +5,11 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import ConstructorEager, assert_equal_data
 
 pytest.importorskip("joblib")
 
-from joblib import Parallel
-from joblib import delayed
+from joblib import Parallel, delayed
 
 
 def test_parallelisability(constructor_eager: ConstructorEager) -> None:
