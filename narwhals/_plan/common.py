@@ -97,7 +97,7 @@ class Immutable:
     def __str__(self) -> str:
         # NOTE: Debug repr, closer to constructor
         slots: tuple[str, ...] = self.__slots__
-        fields = ", ".join(f"{name}={getattr(self, name)}" for name in slots)
+        fields = ", ".join(f"{_field_str(name, getattr(self, name))}" for name in slots)
         return f"{type(self).__name__}({fields})"
 
     def __init__(self, **kwds: Any) -> None:
@@ -124,6 +124,13 @@ class Immutable:
                 f"but got unknown arguments {sorted(extra)!r}"
             )
             raise TypeError(msg)
+
+
+def _field_str(name: str, value: Any) -> str:
+    if isinstance(value, tuple):
+        inner = ", ".join(f"{v}" for v in value)
+        return f"{name}=[{inner}]"
+    return f"{name}={value}"
 
 
 class ExprIR(Immutable):
