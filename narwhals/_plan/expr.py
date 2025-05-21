@@ -88,6 +88,10 @@ class Literal(ExprIR):
     def dtype(self) -> DType:
         return self.value.dtype
 
+    @property
+    def name(self) -> str:
+        return self.value.name
+
     def __repr__(self) -> str:
         return f"lit({self.value!r})"
 
@@ -361,6 +365,10 @@ class Len(ExprIR):
     @property
     def is_scalar(self) -> bool:
         return True
+
+    @property
+    def name(self) -> str:
+        return "len"
 
     def __repr__(self) -> str:
         return "len()"

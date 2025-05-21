@@ -19,6 +19,10 @@ class LiteralValue(Immutable):
         raise NotImplementedError
 
     @property
+    def name(self) -> str:
+        return "literal"
+
+    @property
     def is_scalar(self) -> bool:
         return False
 
@@ -57,6 +61,10 @@ class SeriesLiteral(LiteralValue):
     @property
     def dtype(self) -> DType:
         return self.value.dtype
+
+    @property
+    def name(self) -> str:
+        return self.value.name
 
     def __repr__(self) -> str:
         return "Series"

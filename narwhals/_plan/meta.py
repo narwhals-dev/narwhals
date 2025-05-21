@@ -10,6 +10,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals.exceptions import ComputeError
+from narwhals.utils import Version
+
 if TYPE_CHECKING:
     from typing import Any
 
@@ -25,26 +28,31 @@ class ExprIRMetaNamespace:
         self._ir: ExprIR = ir
 
     def has_multiple_outputs(self) -> bool:
-        raise NotImplementedError
+        return any(_has_multiple_outputs(e) for e in self._ir.iter_left())
 
     def is_column(self) -> bool:
-        """Only one that doesn't require iter.
-
-        https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/meta.rs#L65-L71
-        """
         from narwhals._plan.expr import Column
 
         return isinstance(self._ir, Column)
 
     def is_column_selection(self, *, allow_aliasing: bool = False) -> bool:
-        raise NotImplementedError
+        return all(
+            _is_column_selection(e, allow_aliasing=allow_aliasing)
+            for e in self._ir.iter_left()
+        )
 
     def is_literal(self, *, allow_aliasing: bool = False) -> bool:
-        raise NotImplementedError
+        return all(
+            _is_literal(e, allow_aliasing=allow_aliasing) for e in self._ir.iter_left()
+        )
 
     def output_name(self, *, raise_if_undetermined: bool = True) -> str | None:
-        """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/utils.rs#L126-L127."""
-        raise NotImplementedError
+        ok_or_err = _expr_output_name(self._ir)
+        if isinstance(ok_or_err, ComputeError):
+            if raise_if_undetermined:
+                raise ok_or_err
+            return None
+        return ok_or_err
 
     # NOTE: Less important for us, but maybe nice to have
     def pop(self) -> list[ExprIR]:
@@ -60,6 +68,71 @@ class ExprIRMetaNamespace:
     # Maybe not relevant at all
     def is_regex_projection(self) -> bool:
         raise NotImplementedError
+
+
+def _expr_output_name(ir: ExprIR) -> str | ComputeError:
+    from narwhals._plan import expr
+
+    for e in ir.iter_right():
+        if isinstance(e, expr.WindowExpr):
+            return _expr_output_name(e.expr)
+        if isinstance(e, (expr.Column, expr.Alias, expr.Literal, expr.Len)):
+            return e.name
+        if isinstance(e, expr.All):
+            msg = "cannot determine output column without a context for this expression"
+            return ComputeError(msg)
+        if isinstance(e, (expr.Columns, expr.IndexColumns, expr.Nth)):
+            msg = "this expression may produce multiple output names"
+            return ComputeError(msg)
+        continue
+    msg = f"unable to find root column name for expr '{ir!r}' when calling 'output_name'"
+    return ComputeError(msg)
+
+
+def _has_multiple_outputs(ir: ExprIR) -> bool:
+    from narwhals._plan import expr
+
+    return isinstance(ir, (expr.Columns, expr.IndexColumns, expr.Selector, expr.All))
+
+
+def _is_literal(ir: ExprIR, *, allow_aliasing: bool) -> bool:
+    from narwhals._plan import expr
+    from narwhals._plan.literal import ScalarLiteral
+
+    if isinstance(ir, expr.Literal):
+        return True
+    if isinstance(ir, expr.Alias):
+        return allow_aliasing
+    if isinstance(ir, expr.Cast):
+        return (
+            isinstance(ir.expr, expr.Literal)
+            and isinstance(ir.expr, ScalarLiteral)
+            and isinstance(ir.expr.dtype, Version.MAIN.dtypes.Datetime)
+        )
+    return False
+
+
+def _is_column_selection(ir: ExprIR, *, allow_aliasing: bool) -> bool:
+    from narwhals._plan import expr
+
+    if isinstance(
+        ir,
+        (
+            expr.Column,
+            expr.Columns,
+            expr.Exclude,
+            expr.Nth,
+            expr.IndexColumns,
+            expr.Selector,
+            expr.All,
+        ),
+    ):
+        return True
+    # TODO @dangotbanned: Add `KeepName`, `RenameAlias` here later (see `_plan.name`)
+    aliasing_types = (expr.Alias,)
+    if isinstance(ir, aliasing_types):
+        return allow_aliasing
+    return False
 
 
 def polars_expr_metadata(expr: pl.Expr) -> dict[str, Any]:
