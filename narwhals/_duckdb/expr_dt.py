@@ -4,13 +4,14 @@ from typing import TYPE_CHECKING
 
 from duckdb import FunctionExpression
 
-from narwhals._duckdb.utils import UNITS_DICT, lit
+from narwhals._duckdb.utils import UNITS_DICT, get_rel_time_zone, lit
 from narwhals._duration import parse_interval_string
 from narwhals.utils import not_implemented
 
 if TYPE_CHECKING:
     from duckdb import Expression
 
+    from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
 
 
@@ -130,6 +131,23 @@ class DuckDBExprDateTimeNamespace:
                 lambda _input: _input.cast("timestamp")
             )
         else:  # pragma: no cover
+
+            def func(df: DuckDBLazyFrame) -> list[Expression]:
+                native_series_list = self._compliant_expr(df)
+                conn_time_zone = get_rel_time_zone(df.native)
+                if conn_time_zone != time_zone:
+                    msg = "Not implemented"
+                    raise NotImplementedError(msg)
+                return native_series_list
+
+            return self._compliant_expr.__class__(
+                func,
+                evaluate_output_names=self._compliant_expr._evaluate_output_names,
+                alias_output_names=self._compliant_expr._alias_output_names,
+                backend_version=self._compliant_expr._backend_version,
+                version=self._compliant_expr._version,
+            )
+
             msg = "`replace_time_zone` with non-null `time_zone` not yet implemented for duckdb"
             raise NotImplementedError(msg)
 

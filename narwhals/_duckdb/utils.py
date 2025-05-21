@@ -135,6 +135,14 @@ def native_to_narwhals_dtype(duckdb_dtype: DuckDBPyType, version: Version) -> DT
     return _non_nested_native_to_narwhals_dtype(duckdb_dtype_id, version)
 
 
+def get_rel_time_zone(rel: duckdb.DuckDBPyRelation) -> str:
+    result = rel.query(
+        "duckdb_settings()", "select value from duckdb_settings() where name = 'TimeZone'"
+    ).fetchone()
+    assert result is not None  # noqa: S101
+    return result[0]
+
+
 @lru_cache(maxsize=16)
 def _non_nested_native_to_narwhals_dtype(duckdb_dtype_id: str, version: Version) -> DType:
     dtypes = version.dtypes
@@ -154,9 +162,7 @@ def _non_nested_native_to_narwhals_dtype(duckdb_dtype_id: str, version: Version)
         "varchar": dtypes.String(),
         "date": dtypes.Date(),
         "timestamp": dtypes.Datetime(),
-        # TODO(marco): is UTC correct, or should we be getting the connection timezone?
-        # https://github.com/narwhals-dev/narwhals/issues/2165
-        "timestamp with time zone": dtypes.Datetime(time_zone="UTC"),
+        "timestamp with time zone": dtypes.Datetime(time_zone="<unknown>"),
         "boolean": dtypes.Boolean(),
         "interval": dtypes.Duration(),
         "decimal": dtypes.Decimal(),

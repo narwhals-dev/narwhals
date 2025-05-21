@@ -28,7 +28,8 @@ def test_replace_time_zone(
         or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         pytest.skip()
-    if any(x in str(constructor) for x in ("cudf", "duckdb", "pyspark", "ibis")):
+
+    if any(x in str(constructor) for x in ("cudf", "pyspark", "ibis", "duckdb")):
         request.applymarker(pytest.mark.xfail)
     data = {
         "a": [
@@ -57,6 +58,10 @@ def test_replace_time_zone_none(
         or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         pytest.skip()
+    if "duckdb" in str(constructor):
+        import duckdb
+
+        duckdb.sql("""set timezone = 'UTC'""")
     if any(x in str(constructor) for x in ("pyspark",)):
         # pyspark: needs `to_string`
         request.applymarker(pytest.mark.xfail)
