@@ -47,6 +47,32 @@ class ExprIRMetaNamespace:
         )
 
     def output_name(self, *, raise_if_undetermined: bool = True) -> str | None:
+        """Get the output name of this expression.
+
+        Examples:
+            >>> from narwhals._plan import demo as nwd
+            >>>
+            >>> a = nwd.col("a")
+            >>> b = a.alias("b")
+            >>> c = b.min().alias("c")
+            >>> c_over = c.over(nwd.col("e"), nwd.col("f"))
+            >>> c_over_sort = c_over.sort_by(nwd.nth(9), nwd.col("g", "h"))
+            >>>
+            >>> a.meta.output_name()
+            'a'
+            >>> b.meta.output_name()
+            'b'
+            >>> c.meta.output_name()
+            'c'
+            >>> c_over.meta.output_name()
+            'c'
+            >>> c_over_sort.meta.output_name()
+            'c'
+            >>> nwd.lit(1).meta.output_name()
+            'literal'
+            >>> nwd.len().meta.output_name()
+            'len'
+        """
         ok_or_err = _expr_output_name(self._ir)
         if isinstance(ok_or_err, ComputeError):
             if raise_if_undetermined:
@@ -74,7 +100,8 @@ def _expr_output_name(ir: ExprIR) -> str | ComputeError:
     from narwhals._plan import expr
 
     for e in ir.iter_right():
-        if isinstance(e, expr.WindowExpr):
+        if isinstance(e, (expr.WindowExpr, expr.SortBy)):
+            # Don't follow `over(partition_by=...)` or `sort_by(by=...)
             return _expr_output_name(e.expr)
         if isinstance(e, (expr.Column, expr.Alias, expr.Literal, expr.Len)):
             return e.name
