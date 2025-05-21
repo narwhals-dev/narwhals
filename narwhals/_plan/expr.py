@@ -19,7 +19,7 @@ if t.TYPE_CHECKING:
 
     from narwhals._plan.common import Function
     from narwhals._plan.common import Seq
-    from narwhals._plan.functions import MapBatches
+    from narwhals._plan.functions import MapBatches  # noqa: F401
     from narwhals._plan.functions import RollingWindow
     from narwhals._plan.literal import LiteralValue
     from narwhals._plan.operators import Operator
@@ -201,18 +201,8 @@ class FunctionExpr(ExprIR, t.Generic[_FunctionT]):
 class RollingExpr(FunctionExpr[_RollingT]): ...
 
 
-class AnonymousFunctionExpr(ExprIR):
+class AnonymousExpr(FunctionExpr["MapBatches"]):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L158-L166."""
-
-    __slots__ = ("function", "input", "options")
-
-    input: Seq[ExprIR]
-    function: MapBatches
-    options: FunctionOptions
-
-    @property
-    def is_scalar(self) -> bool:
-        return self.function.function_options.returns_scalar()
 
 
 class Filter(ExprIR):
