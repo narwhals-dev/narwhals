@@ -46,13 +46,7 @@ def test_ewm_mean_series(
                 "b": [1.0, 1.6666666666666667, 2.4285714285714284],
             },
         ),
-        (
-            False,
-            {
-                "a": [1.0, 1.0, 1.5],
-                "b": [1.0, 1.5, 2.25],
-            },
-        ),
+        (False, {"a": [1.0, 1.0, 1.5], "b": [1.0, 1.5, 2.25]}),
     ],
 )
 def test_ewm_mean_expr_adjust(
@@ -72,28 +66,8 @@ def test_ewm_mean_expr_adjust(
 @pytest.mark.parametrize(
     ("ignore_nulls", "expected"),
     [
-        (
-            True,
-            {
-                "a": [
-                    2.0,
-                    3.3333333333333335,
-                    None,
-                    3.142857142857143,
-                ]
-            },
-        ),
-        (
-            False,
-            {
-                "a": [
-                    2.0,
-                    3.3333333333333335,
-                    None,
-                    3.090909090909091,
-                ]
-            },
-        ),
+        (True, {"a": [2.0, 3.3333333333333335, None, 3.142857142857143]}),
+        (False, {"a": [2.0, 3.3333333333333335, None, 3.090909090909091]}),
     ],
 )
 def test_ewm_mean_nulls(
@@ -111,8 +85,7 @@ def test_ewm_mean_nulls(
 
 
 def test_ewm_mean_params(
-    request: pytest.FixtureRequest,
-    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
     if any(x in str(constructor_eager) for x in ("pyarrow_table_", "modin", "cudf")):
         request.applymarker(pytest.mark.xfail)

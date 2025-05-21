@@ -376,12 +376,7 @@ def test_over_cum_reverse(
     if "cudf" in str(constructor_eager):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
-    df = constructor_eager(
-        {
-            "a": [1, 1, 2, 2, 2],
-            "b": [4, 5, 7, None, 9],
-        }
-    )
+    df = constructor_eager({"a": [1, 1, 2, 2, 2], "b": [4, 5, 7, None, 9]})
     expr = getattr(nw.col("b"), attr)(reverse=True)
     result = nw.from_native(df).with_columns(expr.over("a"))
     expected = {"a": [1, 1, 2, 2, 2], "b": expected_b}

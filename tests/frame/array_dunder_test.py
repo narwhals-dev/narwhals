@@ -12,8 +12,7 @@ from tests.utils import assert_equal_data
 
 
 def test_array_dunder(
-    request: pytest.FixtureRequest,
-    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (
         16,
@@ -28,8 +27,7 @@ def test_array_dunder(
 
 
 def test_array_dunder_with_dtype(
-    request: pytest.FixtureRequest,
-    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (
         16,
@@ -44,8 +42,7 @@ def test_array_dunder_with_dtype(
 
 
 def test_array_dunder_with_copy(
-    request: pytest.FixtureRequest,
-    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (
         16,

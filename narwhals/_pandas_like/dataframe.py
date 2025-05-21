@@ -333,25 +333,13 @@ class PandasLikeDataFrame(
         return self.native.columns.tolist()
 
     @overload
-    def rows(
-        self,
-        *,
-        named: Literal[True],
-    ) -> list[dict[str, Any]]: ...
+    def rows(self, *, named: Literal[True]) -> list[dict[str, Any]]: ...
 
     @overload
-    def rows(
-        self,
-        *,
-        named: Literal[False],
-    ) -> list[tuple[Any, ...]]: ...
+    def rows(self, *, named: Literal[False]) -> list[tuple[Any, ...]]: ...
 
     @overload
-    def rows(
-        self,
-        *,
-        named: bool,
-    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
+    def rows(self, *, named: bool) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
 
     def rows(self, *, named: bool) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         if not named:
@@ -371,10 +359,7 @@ class PandasLikeDataFrame(
     _iter_columns = iter_columns
 
     def iter_rows(
-        self,
-        *,
-        named: bool,
-        buffer_size: int,
+        self, *, named: bool, buffer_size: int
     ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
         # The param ``buffer_size`` is only here for compatibility with the Polars API
         # and has no effect on the output.
@@ -505,12 +490,7 @@ class PandasLikeDataFrame(
         )
 
     # --- transform ---
-    def sort(
-        self,
-        *by: str,
-        descending: bool | Sequence[bool],
-        nulls_last: bool,
-    ) -> Self:
+    def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
         df = self.native
         if isinstance(descending, bool):
             ascending: bool | list[bool] = not descending
@@ -714,7 +694,7 @@ class PandasLikeDataFrame(
                     right_on=right_on,
                     how="outer",
                     suffixes=("", suffix),
-                ),
+                )
             )
 
         return self._with_native(
@@ -749,7 +729,7 @@ class PandasLikeDataFrame(
                 right_by=by_right,
                 direction=strategy,
                 suffixes=("", suffix),
-            ),
+            )
         )
 
     # --- partial reduction ---
@@ -981,12 +961,7 @@ class PandasLikeDataFrame(
                 yield self._pivot_multi_on_name(col[-n_on:])
 
     def _pivot_remap_column_names(
-        self,
-        column_names: Iterable[Any],
-        *,
-        n_on: int,
-        n_values: int,
-        separator: str,
+        self, column_names: Iterable[Any], *, n_on: int, n_values: int, separator: str
     ) -> list[str]:
         """Reformat output column names from a native pivot operation, to match `polars`.
 

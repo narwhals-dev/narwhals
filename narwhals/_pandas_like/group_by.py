@@ -64,10 +64,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
                 msg = "Grouping by null values is not supported in pandas < 1.1.0"
                 raise NotImplementedError(msg)
             self._grouped = native_frame.groupby(
-                list(self._keys),
-                sort=False,
-                as_index=True,
-                observed=True,
+                list(self._keys), sort=False, as_index=True, observed=True
             )
         else:
             self._grouped = native_frame.groupby(

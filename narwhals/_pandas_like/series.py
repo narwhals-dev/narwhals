@@ -986,10 +986,7 @@ class PandasLikeSeries(EagerSeries[Any]):
                 upper += 0.5
 
             if bin_count == 1:
-                data = {
-                    "breakpoint": [upper],
-                    "count": [self.native.count()],
-                }
+                data = {"breakpoint": [upper], "count": [self.native.count()]}
                 if not include_breakpoint:
                     del data["breakpoint"]
                 return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)

@@ -259,19 +259,13 @@ class SparkLikeLazyFrame(
     def simple_select(self, *column_names: str) -> Self:
         return self._with_native(self.native.select(*column_names))
 
-    def aggregate(
-        self,
-        *exprs: SparkLikeExpr,
-    ) -> Self:
+    def aggregate(self, *exprs: SparkLikeExpr) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
 
         new_columns_list = [col.alias(col_name) for col_name, col in new_columns]
         return self._with_native(self.native.agg(*new_columns_list))
 
-    def select(
-        self,
-        *exprs: SparkLikeExpr,
-    ) -> Self:
+    def select(self, *exprs: SparkLikeExpr) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
         new_columns_list = [col.alias(col_name) for (col_name, col) in new_columns]
         return self._with_native(self.native.select(*new_columns_list))
@@ -318,12 +312,7 @@ class SparkLikeLazyFrame(
 
         return SparkLikeLazyGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
-    def sort(
-        self,
-        *by: str,
-        descending: bool | Sequence[bool],
-        nulls_last: bool,
-    ) -> Self:
+    def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
         if isinstance(descending, bool):
             descending = [descending] * len(by)
 
@@ -499,7 +488,7 @@ class SparkLikeLazyFrame(
                             for col_name in column_names
                         ]
                     )
-                ),
+                )
             )
         else:  # pragma: no cover
             msg = "Unreachable code, please report an issue at https://github.com/narwhals-dev/narwhals/issues"

@@ -8,10 +8,7 @@ from tests.utils import POLARS_VERSION
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-data = {
-    "a": [1, 1, 2, 2, 3],
-    "b": [1, 2, 3, 3, 4],
-}
+data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
 
 
 def test_mode_single_expr(constructor_eager: ConstructorEager) -> None:

@@ -27,6 +27,7 @@ from typing import overload
 from warnings import warn
 
 from narwhals._enum import NoAutoEnum
+from narwhals._typing_compat import deprecated
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_dask_dataframe
@@ -430,11 +431,7 @@ class Implementation(NoAutoEnum):
             >>> df.implementation.is_pandas_like()
             True
         """
-        return self in {
-            Implementation.PANDAS,
-            Implementation.MODIN,
-            Implementation.CUDF,
-        }
+        return self in {Implementation.PANDAS, Implementation.MODIN, Implementation.CUDF}
 
     def is_spark_like(self) -> bool:
         """Return whether implementation is pyspark or sqlframe.
@@ -1761,24 +1758,6 @@ def _is_naive_format(format: str) -> bool:
         bool: True if the format is naive (does not include timezone info), False otherwise.
     """
     return not any(x in format for x in ("%s", "%z", "Z"))
-
-
-if TYPE_CHECKING:
-    import sys
-
-    if sys.version_info >= (3, 13):
-        # NOTE: avoids `mypy`
-        #     error: Module "narwhals.utils" does not explicitly export attribute "deprecated"  [attr-defined]
-        from warnings import deprecated as deprecated  # noqa: PLC0414
-    else:
-        from typing_extensions import deprecated as deprecated  # noqa: PLC0414
-else:
-
-    def deprecated(message: str, /) -> Callable[[_Fn], _Fn]:  # noqa: ARG001
-        def wrapper(func: _Fn, /) -> _Fn:
-            return func
-
-        return wrapper
 
 
 class not_implemented:  # noqa: N801

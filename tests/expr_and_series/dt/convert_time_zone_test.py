@@ -19,8 +19,7 @@ if TYPE_CHECKING:
 
 
 def test_convert_time_zone(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if (
         ("pyarrow" in str(constructor) and is_windows())
@@ -49,8 +48,7 @@ def test_convert_time_zone(
 
 
 def test_convert_time_zone_series(
-    constructor_eager: ConstructorEager,
-    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if (
         ("pyarrow" in str(constructor_eager) and is_windows())

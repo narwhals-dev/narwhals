@@ -27,12 +27,7 @@ class ExprStructNamespace(Generic[ExprT]):
             >>> import polars as pl
             >>> import narwhals as nw
             >>> df_native = pl.DataFrame(
-            ...     {
-            ...         "user": [
-            ...             {"id": "0", "name": "john"},
-            ...             {"id": "1", "name": "jane"},
-            ...         ]
-            ...     }
+            ...     {"user": [{"id": "0", "name": "john"}, {"id": "1", "name": "jane"}]}
             ... )
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(name=nw.col("user").struct.field("name"))
