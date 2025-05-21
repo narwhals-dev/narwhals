@@ -12,8 +12,11 @@ from narwhals._plan.common import ExprIR
 from narwhals._plan.common import Function
 from narwhals._plan.options import FunctionFlags
 from narwhals._plan.options import FunctionOptions
+from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
+    from typing import Any
+
     from narwhals._plan.common import Seq
     from narwhals._plan.common import Udf
     from narwhals._plan.options import EWMOptions
@@ -44,15 +47,28 @@ class Hist(Function):
 class HistBins(Hist):
     """Subclasses for each variant."""
 
-    __slots__ = (*Hist.__slots__, "bins")
+    __slots__ = ("bins", *Hist.__slots__)
 
     bins: Seq[float]
 
+    def __init__(self, *, bins: Seq[float], include_breakpoint: bool = True) -> None:
+        for i in range(1, len(bins)):
+            if bins[i - 1] >= bins[i]:
+                msg = "bins must increase monotonically"
+                raise ComputeError(msg)
+        object.__setattr__(self, "bins", bins)
+        object.__setattr__(self, "include_breakpoint", include_breakpoint)
+
 
 class HistBinCount(Hist):
-    __slots__ = (*Hist.__slots__, "bin_count")
+    __slots__ = ("bin_count", *Hist.__slots__)
 
     bin_count: int
+    """Polars (v1.20) sets `bin_count=10` if neither `bins` or `bin_count` are provided."""
+
+    def __init__(self, *, bin_count: int = 10, include_breakpoint: bool = True) -> None:
+        object.__setattr__(self, "bin_count", bin_count)
+        object.__setattr__(self, "include_breakpoint", include_breakpoint)
 
 
 class NullCount(Function):
@@ -267,8 +283,10 @@ class EwmMean(Function):
 
 
 class ReplaceStrict(Function):
-    __slots__ = ("return_dtype",)
+    __slots__ = ("new", "old", "return_dtype")
 
+    old: Seq[Any]
+    new: Seq[Any]
     return_dtype: DType | type[DType] | None
 
     @property
@@ -277,6 +295,11 @@ class ReplaceStrict(Function):
 
 
 class GatherEvery(Function):
+    __slots__ = ("n", "offset")
+
+    n: int
+    offset: int
+
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.groupwise()

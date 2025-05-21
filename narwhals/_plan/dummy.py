@@ -8,11 +8,18 @@ from typing import TYPE_CHECKING
 from narwhals._plan import aggregation as agg
 from narwhals._plan import boolean
 from narwhals._plan import expr
+from narwhals._plan import expr_parsing as parse
+from narwhals._plan import functions as F  # noqa: N812
 from narwhals._plan import operators as ops
+from narwhals._plan.options import EWMOptions
+from narwhals._plan.options import RankOptions
+from narwhals._plan.options import RollingOptionsFixedWindow
+from narwhals._plan.options import RollingVarParams
 from narwhals._plan.options import SortMultipleOptions
 from narwhals._plan.options import SortOptions
 from narwhals._plan.window import Over
 from narwhals.dtypes import DType
+from narwhals.exceptions import ComputeError
 from narwhals.utils import Version
 from narwhals.utils import _hasattr_static
 from narwhals.utils import flatten
@@ -21,9 +28,16 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan.common import ExprIR
+    from narwhals._plan.common import IntoExpr
+    from narwhals._plan.common import IntoExprColumn
     from narwhals._plan.common import Seq
+    from narwhals._plan.common import Udf
+    from narwhals.typing import FillNullStrategy
     from narwhals.typing import NativeSeries
+    from narwhals.typing import NumericLiteral
+    from narwhals.typing import RankMethod
     from narwhals.typing import RollingInterpolationMethod
+    from narwhals.typing import TemporalLiteral
 
 
 # NOTE: Overly simplified placeholders for mocking typing
@@ -127,6 +141,237 @@ class DummyExpr:
         options = SortMultipleOptions(descending=desc, nulls_last=nulls)
         return self._from_ir(expr.SortBy(expr=self._ir, by=sort_by, options=options))
 
+    def abs(self) -> Self:
+        return self._from_ir(F.Abs().to_function_expr(self._ir))
+
+    def hist(
+        self,
+        bins: t.Sequence[float] | None = None,
+        *,
+        bin_count: int | None = None,
+        include_breakpoint: bool = True,
+    ) -> Self:
+        node: F.Hist
+        if bins is not None:
+            if bin_count is not None:
+                msg = "can only provide one of `bin_count` or `bins`"
+                raise ComputeError(msg)
+            node = F.HistBins(bins=tuple(bins), include_breakpoint=include_breakpoint)
+        elif bin_count is not None:
+            node = F.HistBinCount(
+                bin_count=bin_count, include_breakpoint=include_breakpoint
+            )
+        else:
+            node = F.HistBinCount(include_breakpoint=include_breakpoint)
+        return self._from_ir(node.to_function_expr(self._ir))
+
+    def null_count(self) -> Self:
+        return self._from_ir(F.NullCount().to_function_expr(self._ir))
+
+    def fill_null(
+        self,
+        value: IntoExpr = None,
+        strategy: FillNullStrategy | None = None,
+        limit: int | None = None,
+    ) -> Self:
+        node: F.FillNullWithStrategy | F.FillNull
+        if strategy is not None:
+            node = F.FillNullWithStrategy(strategy=strategy, limit=limit)
+        else:
+            node = F.FillNull(value=parse.parse_into_expr_ir(value, str_as_lit=True))
+        return self._from_ir(node.to_function_expr(self._ir))
+
+    def shift(self, n: int) -> Self:
+        return self._from_ir(F.Shift(n=n).to_function_expr(self._ir))
+
+    def drop_nulls(self) -> Self:
+        return self._from_ir(F.DropNulls().to_function_expr(self._ir))
+
+    def mode(self) -> Self:
+        return self._from_ir(F.Mode().to_function_expr(self._ir))
+
+    def skew(self) -> Self:
+        return self._from_ir(F.Skew().to_function_expr(self._ir))
+
+    def rank(self, method: RankMethod = "average", *, descending: bool = False) -> Self:
+        options = RankOptions(method=method, descending=descending)
+        return self._from_ir(F.Rank(options=options).to_function_expr(self._ir))
+
+    def clip(
+        self,
+        lower_bound: IntoExprColumn | NumericLiteral | TemporalLiteral | None = None,
+        upper_bound: IntoExprColumn | NumericLiteral | TemporalLiteral | None = None,
+    ) -> Self:
+        return self._from_ir(
+            F.Clip().to_function_expr(
+                self._ir, *parse.parse_into_seq_of_expr_ir(lower_bound, upper_bound)
+            )
+        )
+
+    def cum_count(self, *, reverse: bool = False) -> Self:
+        return self._from_ir(F.CumCount(reverse=reverse).to_function_expr(self._ir))
+
+    def cum_min(self, *, reverse: bool = False) -> Self:
+        return self._from_ir(F.CumMin(reverse=reverse).to_function_expr(self._ir))
+
+    def cum_max(self, *, reverse: bool = False) -> Self:
+        return self._from_ir(F.CumMax(reverse=reverse).to_function_expr(self._ir))
+
+    def cum_prod(self, *, reverse: bool = False) -> Self:
+        return self._from_ir(F.CumProd(reverse=reverse).to_function_expr(self._ir))
+
+    def rolling_sum(
+        self,
+        window_size: int,
+        *,
+        min_samples: int | None = None,
+        center: bool = False,
+    ) -> Self:
+        min_samples = window_size if min_samples is None else min_samples
+        fn_params = None
+        options = RollingOptionsFixedWindow(
+            window_size=window_size,
+            min_samples=min_samples,
+            center=center,
+            fn_params=fn_params,
+        )
+        function = F.RollingSum(options=options)
+        return self._from_ir(function.to_function_expr(self._ir))
+
+    def rolling_mean(
+        self,
+        window_size: int,
+        *,
+        min_samples: int | None = None,
+        center: bool = False,
+    ) -> Self:
+        min_samples = window_size if min_samples is None else min_samples
+        fn_params = None
+        options = RollingOptionsFixedWindow(
+            window_size=window_size,
+            min_samples=min_samples,
+            center=center,
+            fn_params=fn_params,
+        )
+        function = F.RollingMean(options=options)
+        return self._from_ir(function.to_function_expr(self._ir))
+
+    def rolling_var(
+        self,
+        window_size: int,
+        *,
+        min_samples: int | None = None,
+        center: bool = False,
+        ddof: int = 1,
+    ) -> Self:
+        min_samples = window_size if min_samples is None else min_samples
+        fn_params = RollingVarParams(ddof=ddof)
+        options = RollingOptionsFixedWindow(
+            window_size=window_size,
+            min_samples=min_samples,
+            center=center,
+            fn_params=fn_params,
+        )
+        function = F.RollingVar(options=options)
+        return self._from_ir(function.to_function_expr(self._ir))
+
+    def rolling_std(
+        self,
+        window_size: int,
+        *,
+        min_samples: int | None = None,
+        center: bool = False,
+        ddof: int = 1,
+    ) -> Self:
+        min_samples = window_size if min_samples is None else min_samples
+        fn_params = RollingVarParams(ddof=ddof)
+        options = RollingOptionsFixedWindow(
+            window_size=window_size,
+            min_samples=min_samples,
+            center=center,
+            fn_params=fn_params,
+        )
+        function = F.RollingStd(options=options)
+        return self._from_ir(function.to_function_expr(self._ir))
+
+    def diff(self) -> Self:
+        return self._from_ir(F.Diff().to_function_expr(self._ir))
+
+    def unique(self) -> Self:
+        return self._from_ir(F.Unique().to_function_expr(self._ir))
+
+    def round(self, decimals: int = 0) -> Self:
+        return self._from_ir(F.Round(decimals=decimals).to_function_expr(self._ir))
+
+    def ewm_mean(
+        self,
+        *,
+        com: float | None = None,
+        span: float | None = None,
+        half_life: float | None = None,
+        alpha: float | None = None,
+        adjust: bool = True,
+        min_samples: int = 1,
+        ignore_nulls: bool = False,
+    ) -> Self:
+        options = EWMOptions(
+            com=com,
+            span=span,
+            half_life=half_life,
+            alpha=alpha,
+            adjust=adjust,
+            min_samples=min_samples,
+            ignore_nulls=ignore_nulls,
+        )
+        return self._from_ir(F.EwmMean(options=options).to_function_expr(self._ir))
+
+    def replace_strict(
+        self,
+        old: t.Sequence[t.Any] | t.Mapping[t.Any, t.Any],
+        new: t.Sequence[t.Any] | None = None,
+        *,
+        return_dtype: DType | type[DType] | None = None,
+    ) -> Self:
+        before: Seq[t.Any]
+        after: Seq[t.Any]
+        if new is None:
+            if not isinstance(old, t.Mapping):
+                msg = "`new` argument is required if `old` argument is not a Mapping type"
+                raise TypeError(msg)
+            before = tuple(old)
+            after = tuple(old.values())
+        elif isinstance(old, t.Mapping):
+            # NOTE: polars raises later when this occurs
+            # TypeError: cannot create expression literal for value of type dict.
+            # Hint: Pass `allow_object=True` to accept any value and create a literal of type Object.
+            msg = "`new` argument cannot be used if `old` argument is a Mapping type"
+            raise TypeError(msg)
+        else:
+            before = tuple(old)
+            after = tuple(new)
+        function = F.ReplaceStrict(old=before, new=after, return_dtype=return_dtype)
+        return self._from_ir(function.to_function_expr(self._ir))
+
+    def gather_every(self, n: int, offset: int = 0) -> Self:
+        return self._from_ir(F.GatherEvery(n=n, offset=offset).to_function_expr(self._ir))
+
+    def map_batches(
+        self,
+        function: Udf,
+        return_dtype: DType | None = None,
+        *,
+        is_elementwise: bool = False,
+        returns_scalar: bool = False,
+    ) -> Self:
+        return self._from_ir(
+            F.MapBatches(
+                function=function,
+                return_dtype=return_dtype,
+                is_elementwise=is_elementwise,
+                returns_scalar=returns_scalar,
+            ).to_function_expr(self._ir)
+        )
+
     def __eq__(self, other: DummyExpr) -> Self:  # type: ignore[override]
         op = ops.Eq()
         return self._from_ir(op.to_binary_expr(self._ir, other._ir))
@@ -185,6 +430,11 @@ class DummyExpr:
 
     def __invert__(self) -> Self:
         return self._from_ir(boolean.Not().to_function_expr(self._ir))
+
+    def __pow__(self, other: IntoExpr) -> Self:
+        exponent = parse.parse_into_expr_ir(other, str_as_lit=True)
+        base = self._ir
+        return self._from_ir(F.Pow().to_function_expr(base, exponent))
 
 
 class DummyExprV1(DummyExpr):
