@@ -15,6 +15,7 @@ import narwhals as nw
 from narwhals import dependencies
 from narwhals import exceptions
 from narwhals import selectors
+from narwhals._typing_compat import TypeVar
 from narwhals.dataframe import DataFrame as NwDataFrame
 from narwhals.dataframe import LazyFrame as NwLazyFrame
 from narwhals.dependencies import get_polars
@@ -89,7 +90,6 @@ if TYPE_CHECKING:
 
     from typing_extensions import ParamSpec
     from typing_extensions import Self
-    from typing_extensions import TypeVar
 
     from narwhals._translate import IntoArrowTable
     from narwhals.dataframe import MultiColSelector
@@ -110,15 +110,11 @@ if TYPE_CHECKING:
     DataFrameT = TypeVar("DataFrameT", bound="DataFrame[Any]")
     LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[Any]")
     SeriesT = TypeVar("SeriesT", bound="Series[Any]")
-    IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
     T = TypeVar("T", default=Any)
     P = ParamSpec("P")
     R = TypeVar("R")
-else:
-    from typing import TypeVar
 
-    IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries")
-    T = TypeVar("T")
+IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
 
 
 class DataFrame(NwDataFrame[IntoDataFrameT]):
@@ -172,8 +168,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         return super().__getitem__(item)
 
     def lazy(
-        self,
-        backend: ModuleType | Implementation | str | None = None,
+        self, backend: ModuleType | Implementation | str | None = None
     ) -> LazyFrame[Any]:
         return super().lazy(backend=backend)  # type: ignore[return-value]
 
@@ -245,9 +240,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     def collect(
-        self,
-        backend: ModuleType | Implementation | str | None = None,
-        **kwargs: Any,
+        self, backend: ModuleType | Implementation | str | None = None, **kwargs: Any
     ) -> DataFrame[Any]:
         return super().collect(backend=backend, **kwargs)  # type: ignore[return-value]
 
@@ -330,9 +323,7 @@ class Series(NwSeries[IntoSeriesT]):
         )
         warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
         return super().hist(  # type: ignore[return-value]
-            bins=bins,
-            bin_count=bin_count,
-            include_breakpoint=include_breakpoint,
+            bins=bins, bin_count=bin_count, include_breakpoint=include_breakpoint
         )
 
 
@@ -422,7 +413,7 @@ class Expr(NwExpr):
             A new expression.
         """
         return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).arg_true(),
+            lambda plx: self._to_compliant_expr(plx).arg_true()
         )
 
     def sample(

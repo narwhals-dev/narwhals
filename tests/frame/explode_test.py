@@ -147,7 +147,6 @@ def test_explode_invalid_operation_error(
         pytest.skip()
 
     with pytest.raises(
-        InvalidOperationError,
-        match="`explode` operation not supported for dtype",
+        InvalidOperationError, match="`explode` operation not supported for dtype"
     ):
         _ = nw.from_native(constructor(data)).lazy().explode("a").collect()

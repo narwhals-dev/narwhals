@@ -68,37 +68,13 @@ from typing import Iterable
 from typing import Mapping
 from typing import Protocol
 
+from narwhals._typing_compat import TypeVar
+
 if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
     from typing_extensions import TypeAlias
     from typing_extensions import TypeIs
-    from typing_extensions import TypeVar
-
-
-else:  # pragma: no cover
-    import sys
-
-    if sys.version_info >= (3, 13):
-        from typing import TypeVar
-    else:
-        from typing import TypeVar as _TypeVar
-
-        def TypeVar(  # noqa: ANN202, N802
-            name: str,
-            *constraints: Any,
-            bound: Any | None = None,
-            covariant: bool = False,
-            contravariant: bool = False,
-            **kwds: Any,  # noqa: ARG001
-        ):
-            return _TypeVar(
-                name,
-                *constraints,
-                bound=bound,
-                covariant=covariant,
-                contravariant=contravariant,
-            )
 
 
 class ArrowStreamExportable(Protocol):

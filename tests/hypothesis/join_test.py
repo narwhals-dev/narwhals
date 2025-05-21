@@ -35,17 +35,8 @@ import pyarrow as pa
         min_size=3,
         max_size=3,
     ),
-    st.lists(
-        st.floats(),
-        min_size=3,
-        max_size=3,
-    ),
-    st.lists(
-        st.sampled_from(["a", "b", "c"]),
-        min_size=1,
-        max_size=3,
-        unique=True,
-    ),
+    st.lists(st.floats(), min_size=3, max_size=3),
+    st.lists(st.sampled_from(["a", "b", "c"]), min_size=1, max_size=3, unique=True),
 )
 @pytest.mark.skipif(POLARS_VERSION < (0, 20, 13), reason="0.0 == -0.0")
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="requires pyarrow")
@@ -100,8 +91,7 @@ def test_join(  # pragma: no cover
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="requires pyarrow")
 @pytest.mark.slow
 def test_cross_join(  # pragma: no cover
-    integers: st.SearchStrategy[list[int]],
-    other_integers: st.SearchStrategy[list[int]],
+    integers: st.SearchStrategy[list[int]], other_integers: st.SearchStrategy[list[int]]
 ) -> None:
     data: Mapping[str, Any] = {"a": integers, "b": other_integers}
 
@@ -157,11 +147,7 @@ def test_left_join(  # pragma: no cover
 ) -> None:
     assume(len(left_key) == len(right_key))
     data_left: dict[str, Any] = {"a": a_left_data, "b": b_left_data, "c": c_left_data}
-    data_right: dict[str, Any] = {
-        "a": a_right_data,
-        "b": b_right_data,
-        "d": d_right_data,
-    }
+    data_right: dict[str, Any] = {"a": a_right_data, "b": b_right_data, "d": d_right_data}
     result_pd = nw.from_native(pd.DataFrame(data_left), eager_only=True).join(
         nw.from_native(pd.DataFrame(data_right), eager_only=True),
         how="left",
@@ -192,6 +178,5 @@ def test_left_join(  # pragma: no cover
         .pipe(lambda df: df.sort(df.columns))
     )
     assert_equal_data(
-        result_pa,
-        result_pd.pipe(lambda df: df.sort(df.columns)).to_dict(as_series=False),
+        result_pa, result_pd.pipe(lambda df: df.sort(df.columns)).to_dict(as_series=False)
     )

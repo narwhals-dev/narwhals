@@ -23,9 +23,7 @@ data: Mapping[str, Any] = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.0]}
     ],
 )
 def test_nth(
-    constructor: Constructor,
-    idx: int | list[int],
-    expected: dict[str, list[int]],
+    constructor: Constructor, idx: int | list[int], expected: dict[str, list[int]]
 ) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 0, 0):
         pytest.skip()

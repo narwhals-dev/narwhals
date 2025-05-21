@@ -53,14 +53,12 @@ def test_median_expr_raises_on_str(
     df = nw.from_native(constructor(data))
     if isinstance(df, nw.LazyFrame):
         with pytest.raises(
-            InvalidOperationError,
-            match="`median` operation not supported",
+            InvalidOperationError, match="`median` operation not supported"
         ):
             df.select(expr).lazy().collect()
     else:
         with pytest.raises(
-            InvalidOperationError,
-            match="`median` operation not supported",
+            InvalidOperationError, match="`median` operation not supported"
         ):
             df.select(expr)
 

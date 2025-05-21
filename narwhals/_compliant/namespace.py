@@ -84,10 +84,7 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
         self, predicate: CompliantExprT
     ) -> CompliantWhen[CompliantFrameT, Incomplete, CompliantExprT]: ...
     def concat_str(
-        self,
-        *exprs: CompliantExprT,
-        separator: str,
-        ignore_nulls: bool,
+        self, *exprs: CompliantExprT, separator: str, ignore_nulls: bool
     ) -> CompliantExprT: ...
     @property
     def selectors(self) -> CompliantSelectorNamespace[Any, Any]: ...
@@ -167,12 +164,7 @@ class EagerNamespace(
         raise TypeError(msg)
 
     @overload
-    def from_numpy(
-        self,
-        data: Into1DArray,
-        /,
-        schema: None = ...,
-    ) -> EagerSeriesT: ...
+    def from_numpy(self, data: Into1DArray, /, schema: None = ...) -> EagerSeriesT: ...
 
     @overload
     def from_numpy(
