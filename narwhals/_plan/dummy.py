@@ -221,11 +221,7 @@ class DummyExpr:
         return self._from_ir(F.CumProd(reverse=reverse).to_function_expr(self._ir))
 
     def rolling_sum(
-        self,
-        window_size: int,
-        *,
-        min_samples: int | None = None,
-        center: bool = False,
+        self, window_size: int, *, min_samples: int | None = None, center: bool = False
     ) -> Self:
         min_samples = window_size if min_samples is None else min_samples
         fn_params = None
@@ -239,11 +235,7 @@ class DummyExpr:
         return self._from_ir(function.to_function_expr(self._ir))
 
     def rolling_mean(
-        self,
-        window_size: int,
-        *,
-        min_samples: int | None = None,
-        center: bool = False,
+        self, window_size: int, *, min_samples: int | None = None, center: bool = False
     ) -> Self:
         min_samples = window_size if min_samples is None else min_samples
         fn_params = None
