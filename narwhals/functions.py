@@ -166,7 +166,7 @@ def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT
         raise InvalidOperationError(msg)
     plx = first_item.__narwhals_namespace__()
     return first_item._with_compliant(
-        plx.concat([df._compliant_frame for df in items], how=how),
+        plx.concat([df._compliant_frame for df in items], how=how)
     )
 
 
@@ -516,10 +516,7 @@ def from_arrow(
 
 
 def _from_arrow_impl(
-    data: IntoArrowTable,
-    *,
-    backend: ModuleType | Implementation | str,
-    version: Version,
+    data: IntoArrowTable, *, backend: ModuleType | Implementation | str, version: Version
 ) -> DataFrame[Any]:
     if not (supports_arrow_c_stream(data) or is_pyarrow_table(data)):
         msg = f"Given object of type {type(data)} does not support PyCapsule interface"
@@ -1724,11 +1721,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         >>> import pyarrow as pa
         >>> import narwhals as nw
         >>>
-        >>> data = {
-        ...     "a": [1, 8, 3],
-        ...     "b": [4, 5, None],
-        ...     "c": ["x", "y", "z"],
-        ... }
+        >>> data = {"a": [1, 8, 3], "b": [4, 5, None], "c": ["x", "y", "z"]}
         >>> df_native = pa.table(data)
 
         We define a dataframe-agnostic function that computes the horizontal mean of "a"
@@ -1791,12 +1784,7 @@ def concat_str(
         >>> (
         ...     nw.from_native(df_native).select(
         ...         nw.concat_str(
-        ...             [
-        ...                 nw.col("a") * 2,
-        ...                 nw.col("b"),
-        ...                 nw.col("c"),
-        ...             ],
-        ...             separator=" ",
+        ...             [nw.col("a") * 2, nw.col("b"), nw.col("c")], separator=" "
         ...         ).alias("full_sentence")
         ...     )
         ... )

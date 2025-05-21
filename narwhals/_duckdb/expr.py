@@ -496,7 +496,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     def null_count(self) -> Self:
         return self._with_callable(
-            lambda expr: FunctionExpression("sum", expr.isnull().cast("int")),
+            lambda expr: FunctionExpression("sum", expr.isnull().cast("int"))
         )
 
     @requires.backend_version((1, 3))
@@ -790,9 +790,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         def _unpartitioned_rank(expr: Expression) -> Expression:
             return _rank(expr, descending=descending)
 
-        def _partitioned_rank(
-            window_inputs: UnorderableWindowInputs,
-        ) -> Expression:
+        def _partitioned_rank(window_inputs: UnorderableWindowInputs) -> Expression:
             return _rank(
                 window_inputs.expr,
                 descending=descending,
@@ -800,8 +798,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             )
 
         return self._with_callable(_unpartitioned_rank)._with_unorderable_window_function(
-            _partitioned_rank,
-            self._call,
+            _partitioned_rank, self._call
         )
 
     def log(self, base: float) -> Self:

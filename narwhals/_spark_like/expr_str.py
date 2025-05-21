@@ -110,7 +110,7 @@ class SparkLikeExprStringNamespace:
             format = strptime_to_pyspark_format(format)
             function = partial(F.to_timestamp, format=format)
         return self._compliant_expr._with_callable(
-            lambda expr: function(F.replace(expr, F.lit("T"), F.lit(" "))),
+            lambda expr: function(F.replace(expr, F.lit("T"), F.lit(" ")))
         )
 
 

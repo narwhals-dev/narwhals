@@ -237,10 +237,7 @@ class DaskNamespace(
         return DaskWhen.from_expr(predicate, context=self)
 
     def concat_str(
-        self,
-        *exprs: DaskExpr,
-        separator: str,
-        ignore_nulls: bool,
+        self, *exprs: DaskExpr, separator: str, ignore_nulls: bool
     ) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
@@ -264,9 +261,7 @@ class DaskNamespace(
                     for nm in null_mask[:-1]
                 )
                 result = reduce(
-                    operator.add,
-                    (s + v for s, v in zip(separators, values)),
-                    init_value,
+                    operator.add, (s + v for s, v in zip(separators, values)), init_value
                 )
 
             return [result]

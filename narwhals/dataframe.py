@@ -160,9 +160,7 @@ class BaseFrame(Generic[_FrameT]):
         return self._with_compliant(self._compliant_frame.with_columns(*compliant_exprs))
 
     def select(
-        self,
-        *exprs: IntoExpr | Iterable[IntoExpr],
-        **named_exprs: IntoExpr,
+        self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
         flat_exprs = tuple(flatten(exprs))
         if flat_exprs and all(isinstance(x, str) for x in flat_exprs) and not named_exprs:
@@ -200,9 +198,7 @@ class BaseFrame(Generic[_FrameT]):
         return self._with_compliant(self._compliant_frame.drop(columns, strict=strict))
 
     def filter(
-        self,
-        *predicates: IntoExpr | Iterable[IntoExpr] | list[bool],
-        **constraints: Any,
+        self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool], **constraints: Any
     ) -> Self:
         if len(predicates) == 1 and is_list_of(predicates[0], bool):
             predicate = predicates[0]
@@ -535,8 +531,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return pa_table.__arrow_c_stream__(requested_schema=requested_schema)  # type: ignore[no-untyped-call]
 
     def lazy(
-        self,
-        backend: ModuleType | Implementation | str | None = None,
+        self, backend: ModuleType | Implementation | str | None = None
     ) -> LazyFrame[Any]:
         """Restrict available API methods to lazy-only ones.
 
@@ -1294,9 +1289,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return super().with_columns(*exprs, **named_exprs)
 
     def select(
-        self,
-        *exprs: IntoExpr | Iterable[IntoExpr],
-        **named_exprs: IntoExpr,
+        self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
         r"""Select columns from this DataFrame.
 
@@ -1465,9 +1458,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         )
 
     def filter(
-        self,
-        *predicates: IntoExpr | Iterable[IntoExpr] | list[bool],
-        **constraints: Any,
+        self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool], **constraints: Any
     ) -> Self:
         r"""Filter the rows in the DataFrame based on one or more predicate expressions.
 
@@ -2128,11 +2119,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> data = {
-            ...     "a": ["x", "y", "z"],
-            ...     "b": [1, 3, 5],
-            ...     "c": [2, 4, 6],
-            ... }
+            >>> data = {"a": ["x", "y", "z"], "b": [1, 3, 5], "c": [2, 4, 6]}
             >>> df_native = pd.DataFrame(data)
             >>> nw.from_native(df_native).unpivot(["b", "c"], index="a")
             ┌────────────────────┐
@@ -2282,9 +2269,7 @@ class LazyFrame(BaseFrame[FrameT]):
         raise TypeError(msg)
 
     def collect(
-        self,
-        backend: ModuleType | Implementation | str | None = None,
-        **kwargs: Any,
+        self, backend: ModuleType | Implementation | str | None = None, **kwargs: Any
     ) -> DataFrame[Any]:
         r"""Materialize this LazyFrame into a DataFrame.
 
@@ -2356,8 +2341,7 @@ class LazyFrame(BaseFrame[FrameT]):
             msg = f"Unsupported `backend` value.\nExpected one of {supported_eager_backends} or None, got: {eager_backend}."
             raise ValueError(msg)
         return self._dataframe(
-            self._compliant_frame.collect(backend=eager_backend, **kwargs),
-            level="full",
+            self._compliant_frame.collect(backend=eager_backend, **kwargs), level="full"
         )
 
     def to_native(self) -> FrameT:
@@ -2564,9 +2548,7 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().with_columns(*exprs, **named_exprs)
 
     def select(
-        self,
-        *exprs: IntoExpr | Iterable[IntoExpr],
-        **named_exprs: IntoExpr,
+        self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
         r"""Select columns from this LazyFrame.
 
@@ -2759,9 +2741,7 @@ class LazyFrame(BaseFrame[FrameT]):
         )
 
     def filter(
-        self,
-        *predicates: IntoExpr | Iterable[IntoExpr] | list[bool],
-        **constraints: Any,
+        self, *predicates: IntoExpr | Iterable[IntoExpr] | list[bool], **constraints: Any
     ) -> Self:
         r"""Filter the rows in the LazyFrame based on a predicate expression.
 

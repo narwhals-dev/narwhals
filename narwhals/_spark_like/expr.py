@@ -337,10 +337,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         )
 
     def _with_callable(
-        self,
-        call: Callable[..., Column],
-        /,
-        **expressifiable_args: Self | Any,
+        self, call: Callable[..., Column], /, **expressifiable_args: Self | Any
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             native_series_list = self(df)

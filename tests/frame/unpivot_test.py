@@ -14,17 +14,9 @@ from tests.utils import assert_equal_data
 if TYPE_CHECKING:
     from narwhals.stable.v1.dtypes import DType
 
-data = {
-    "a": [7, 8, 9],
-    "b": [1, 3, 5],
-    "c": [2, 4, 6],
-}
+data = {"a": [7, 8, 9], "b": [1, 3, 5], "c": [2, 4, 6]}
 
-expected_on_b_idx_a = {
-    "a": [7, 8, 9],
-    "variable": ["b", "b", "b"],
-    "value": [1, 3, 5],
-}
+expected_on_b_idx_a = {"a": [7, 8, 9], "variable": ["b", "b", "b"], "value": [1, 3, 5]}
 
 expected_on_b_c_idx_a = {
     "a": [7, 8, 9, 7, 8, 9],
@@ -80,9 +72,7 @@ def test_unpivot(
     ],
 )
 def test_unpivot_var_value_names(
-    constructor: Constructor,
-    variable_name: str,
-    value_name: str,
+    constructor: Constructor, variable_name: str, value_name: str
 ) -> None:
     context = (
         pytest.raises(NotImplementedError)
@@ -120,7 +110,7 @@ def test_unpivot_default_var_value_names(constructor: Constructor) -> None:
         (
             {"idx": [0, 1], "a": [1, 2], "b": [1.5, 2.5]},
             [nw.Int64(), nw.String(), nw.Float64()],
-        ),
+        )
     ],
 )
 def test_unpivot_mixed_types(

@@ -47,9 +47,7 @@ class DaskExprStringNamespace:
 
     def starts_with(self, prefix: str) -> DaskExpr:
         return self._compliant_expr._with_callable(
-            lambda expr, prefix: expr.str.startswith(prefix),
-            "starts_with",
-            prefix=prefix,
+            lambda expr, prefix: expr.str.startswith(prefix), "starts_with", prefix=prefix
         )
 
     def ends_with(self, suffix: str) -> DaskExpr:
@@ -79,9 +77,7 @@ class DaskExprStringNamespace:
 
     def split(self, by: str) -> DaskExpr:
         return self._compliant_expr._with_callable(
-            lambda expr, by: expr.str.split(pat=by),
-            "split",
-            by=by,
+            lambda expr, by: expr.str.split(pat=by), "split", by=by
         )
 
     def to_datetime(self, format: str | None) -> DaskExpr:

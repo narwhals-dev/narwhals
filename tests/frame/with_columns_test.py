@@ -58,8 +58,7 @@ def test_with_columns_order_single_row(constructor: Constructor) -> None:
 
 
 def test_with_columns_dtypes_single_row(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (15,):
         pytest.skip()

@@ -45,10 +45,7 @@ class WindowInputs:
     __slots__ = ("expr", "order_by", "partition_by")
 
     def __init__(
-        self,
-        expr: Expression,
-        partition_by: Sequence[str],
-        order_by: Sequence[str],
+        self, expr: Expression, partition_by: Sequence[str], order_by: Sequence[str]
     ) -> None:
         self.expr = expr
         self.partition_by = partition_by
@@ -58,11 +55,7 @@ class WindowInputs:
 class UnorderableWindowInputs:
     __slots__ = ("expr", "partition_by")
 
-    def __init__(
-        self,
-        expr: Expression,
-        partition_by: Sequence[str],
-    ) -> None:
+    def __init__(self, expr: Expression, partition_by: Sequence[str]) -> None:
         self.expr = expr
         self.partition_by = partition_by
 

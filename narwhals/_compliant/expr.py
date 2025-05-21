@@ -214,37 +214,19 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     ) -> Self: ...
 
     def rolling_sum(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
+        self, window_size: int, *, min_samples: int, center: bool
     ) -> Self: ...
 
     def rolling_mean(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
+        self, window_size: int, *, min_samples: int, center: bool
     ) -> Self: ...
 
     def rolling_var(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
-        ddof: int,
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self: ...
 
     def rolling_std(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
-        ddof: int,
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self: ...
 
     @deprecated("Since `1.22.0`")
@@ -831,9 +813,7 @@ class EagerExpr(
         )
 
     def map_batches(
-        self,
-        function: Callable[[Any], Any],
-        return_dtype: DType | type[DType] | None,
+        self, function: Callable[[Any], Any], return_dtype: DType | type[DType] | None
     ) -> Self:
         def func(df: EagerDataFrameT) -> Sequence[EagerSeriesT]:
             input_series_list = self(df)
