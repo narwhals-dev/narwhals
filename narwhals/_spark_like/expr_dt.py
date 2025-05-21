@@ -37,22 +37,22 @@ class SparkLikeExprDateTimeNamespace:
         return self._compliant_expr._with_callable(self._compliant_expr._F.second)
 
     def millisecond(self) -> SparkLikeExpr:
-        def _millisecond(_input: Column) -> Column:
+        def _millisecond(expr: Column) -> Column:
             return self._compliant_expr._F.floor(
-                (self._compliant_expr._F.unix_micros(_input) % 1_000_000) / 1000
+                (self._compliant_expr._F.unix_micros(expr) % 1_000_000) / 1000
             )
 
         return self._compliant_expr._with_callable(_millisecond)
 
     def microsecond(self) -> SparkLikeExpr:
-        def _microsecond(_input: Column) -> Column:
-            return self._compliant_expr._F.unix_micros(_input) % 1_000_000
+        def _microsecond(expr: Column) -> Column:
+            return self._compliant_expr._F.unix_micros(expr) % 1_000_000
 
         return self._compliant_expr._with_callable(_microsecond)
 
     def nanosecond(self) -> SparkLikeExpr:
-        def _nanosecond(_input: Column) -> Column:
-            return (self._compliant_expr._F.unix_micros(_input) % 1_000_000) * 1000
+        def _nanosecond(expr: Column) -> Column:
+            return (self._compliant_expr._F.unix_micros(expr) % 1_000_000) * 1000
 
         return self._compliant_expr._with_callable(_nanosecond)
 
@@ -60,9 +60,9 @@ class SparkLikeExprDateTimeNamespace:
         return self._compliant_expr._with_callable(self._compliant_expr._F.dayofyear)
 
     def weekday(self) -> SparkLikeExpr:
-        def _weekday(_input: Column) -> Column:
+        def _weekday(expr: Column) -> Column:
             # PySpark's dayofweek returns 1-7 for Sunday-Saturday
-            return (self._compliant_expr._F.dayofweek(_input) + 6) % 7
+            return (self._compliant_expr._F.dayofweek(expr) + 6) % 7
 
         return self._compliant_expr._with_callable(_weekday)
 
@@ -76,8 +76,8 @@ class SparkLikeExprDateTimeNamespace:
             raise NotImplementedError(msg)
         format = UNITS_DICT[unit]
 
-        def _truncate(_input: Column) -> Column:
-            return self._compliant_expr._F.date_trunc(format, _input)
+        def _truncate(expr: Column) -> Column:
+            return self._compliant_expr._F.date_trunc(format, expr)
 
         return self._compliant_expr._with_callable(_truncate)
 

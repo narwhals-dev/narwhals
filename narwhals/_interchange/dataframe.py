@@ -164,10 +164,7 @@ class InterchangeFrame:
             raise NotImplementedError(msg)
         return self.__class__(frame._df, version=self._version)
 
-    def select(
-        self,
-        *exprs: str,
-    ) -> Self:  # pragma: no cover
+    def select(self, *exprs: str) -> Self:  # pragma: no cover
         msg = (
             "`select`-ing not by name is not supported for interchange-only level.\n\n"
             "If you would like to see this kind of object better supported in "

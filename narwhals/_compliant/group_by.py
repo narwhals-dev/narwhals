@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-import sys
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
@@ -26,6 +25,7 @@ from narwhals._compliant.typing import DepthTrackingExprT_contra
 from narwhals._compliant.typing import EagerExprT_contra
 from narwhals._compliant.typing import LazyExprT_contra
 from narwhals._compliant.typing import NativeExprT_co
+from narwhals._typing_compat import Protocol38
 from narwhals.utils import is_sequence_of
 
 if TYPE_CHECKING:
@@ -33,16 +33,6 @@ if TYPE_CHECKING:
 
     _SameFrameT = TypeVar("_SameFrameT", CompliantDataFrameAny, CompliantLazyFrameAny)
 
-
-if not TYPE_CHECKING:  # pragma: no cover
-    if sys.version_info >= (3, 9):
-        from typing import Protocol as Protocol38
-    else:
-        from typing import Generic as Protocol38
-else:  # pragma: no cover
-    # TODO @dangotbanned: Remove after dropping `3.8` (#2084)
-    # - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
-    from typing import Protocol as Protocol38
 
 __all__ = [
     "CompliantGroupBy",

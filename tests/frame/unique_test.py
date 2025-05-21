@@ -70,10 +70,7 @@ def test_unique(
 @pytest.mark.parametrize("subset", [None, ["a", "b"]])
 @pytest.mark.parametrize(
     ("keep", "expected"),
-    [
-        ("any", {"a": [1, 1, 2], "b": [3, 4, 4]}),
-        ("none", {"a": [1, 2], "b": [4, 4]}),
-    ],
+    [("any", {"a": [1, 1, 2], "b": [3, 4, 4]}), ("none", {"a": [1, 2], "b": [4, 4]})],
 )
 def test_unique_full_subset(
     constructor: Constructor,

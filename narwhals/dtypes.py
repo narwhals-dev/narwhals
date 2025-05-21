@@ -362,9 +362,7 @@ class Datetime(TemporalType, metaclass=_DatetimeMeta):
     """
 
     def __init__(
-        self,
-        time_unit: TimeUnit = "us",
-        time_zone: str | timezone | None = None,
+        self, time_unit: TimeUnit = "us", time_zone: str | timezone | None = None
     ) -> None:
         if time_unit not in {"s", "ms", "us", "ns"}:
             msg = (

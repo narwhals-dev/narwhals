@@ -234,10 +234,7 @@ class ArrowNamespace(
         return ArrowWhen.from_expr(predicate, context=self)
 
     def concat_str(
-        self,
-        *exprs: ArrowExpr,
-        separator: str,
-        ignore_nulls: bool,
+        self, *exprs: ArrowExpr, separator: str, ignore_nulls: bool
     ) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             compliant_series_list = align_series_full_broadcast(
