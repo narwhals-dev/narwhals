@@ -180,6 +180,10 @@ class FunctionExpr(ExprIR, t.Generic[_FunctionT]):
     2. The union of (1) and any `FunctionOptions` in `inputs`
     """
 
+    @property
+    def is_scalar(self) -> bool:
+        return self.function.is_scalar
+
     def with_options(self, options: FunctionOptions, /) -> Self:
         options = self.options.with_flags(options.flags)
         return type(self)(input=self.input, function=self.function, options=options)

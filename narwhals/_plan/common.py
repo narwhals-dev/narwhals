@@ -146,8 +146,10 @@ class ExprIR(Immutable):
         return False
 
 
-class Function(ExprIR):
+class Function(Immutable):
     """Shared by expr functions and namespace functions.
+
+    Only valid in `FunctionExpr.function`
 
     https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/expr.rs#L114
     """
