@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan.common import ExprIR
 from narwhals._plan.common import Function
 from narwhals._plan.options import FunctionFlags
 from narwhals._plan.options import FunctionOptions
@@ -96,10 +95,6 @@ class Pow(Function):
 
 
 class FillNull(Function):
-    __slots__ = ("value",)
-
-    value: ExprIR
-
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.elementwise()

@@ -124,6 +124,10 @@ class DummyExpr:
             order = by, options
         return self._from_ir(Over().to_window_expr(self._ir, partition, order))
 
+    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
+        options = SortOptions(descending=descending, nulls_last=nulls_last)
+        return self._from_ir(expr.Sort(expr=self._ir, options=options))
+
     def sort_by(
         self,
         by: DummyExpr | t.Iterable[DummyExpr],
@@ -174,12 +178,11 @@ class DummyExpr:
         strategy: FillNullStrategy | None = None,
         limit: int | None = None,
     ) -> Self:
-        node: F.FillNullWithStrategy | F.FillNull
-        if strategy is not None:
-            node = F.FillNullWithStrategy(strategy=strategy, limit=limit)
-        else:
-            node = F.FillNull(value=parse.parse_into_expr_ir(value, str_as_lit=True))
-        return self._from_ir(node.to_function_expr(self._ir))
+        if strategy is None:
+            ir = parse.parse_into_expr_ir(value, str_as_lit=True)
+            return self._from_ir(F.FillNull().to_function_expr(self._ir, ir))
+        fill = F.FillNullWithStrategy(strategy=strategy, limit=limit)
+        return self._from_ir(fill.to_function_expr(self._ir))
 
     def shift(self, n: int) -> Self:
         return self._from_ir(F.Shift(n=n).to_function_expr(self._ir))
