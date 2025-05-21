@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 class ExprIRMetaNamespace:
-    """Requires defining iterator behavior per node."""
+    """Methods to modify and traverse existing expressions."""
 
     def __init__(self, ir: ExprIR, /) -> None:
         self._ir: ExprIR = ir
@@ -88,11 +88,6 @@ class ExprIRMetaNamespace:
         raise NotImplementedError
 
     def undo_aliases(self) -> ExprIR:
-        raise NotImplementedError
-
-    # NOTE: We don't support `nw.col("*")` or other patterns in col
-    # Maybe not relevant at all
-    def is_regex_projection(self) -> bool:
         raise NotImplementedError
 
 
