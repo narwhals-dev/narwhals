@@ -5,8 +5,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from narwhals._plan.expr import BinaryExpr
 
-from narwhals._plan.common import ExprIR
-from narwhals._plan.common import Immutable
+from narwhals._plan.common import ExprIR, Immutable
 
 
 class Operator(Immutable):

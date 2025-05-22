@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from narwhals._plan.common import Function
-from narwhals._plan.options import FunctionFlags
-from narwhals._plan.options import FunctionOptions
+from narwhals._plan.options import FunctionFlags, FunctionOptions
 
 
 class StringFunction(Function):

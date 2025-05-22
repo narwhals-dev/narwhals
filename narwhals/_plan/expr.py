@@ -17,15 +17,14 @@ from narwhals._plan.common import ExprIR
 if t.TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._plan.common import Function
-    from narwhals._plan.common import Seq
-    from narwhals._plan.functions import MapBatches  # noqa: F401
-    from narwhals._plan.functions import RollingWindow
+    from narwhals._plan.common import Function, Seq
+    from narwhals._plan.functions import (
+        MapBatches,  # noqa: F401
+        RollingWindow,
+    )
     from narwhals._plan.literal import LiteralValue
     from narwhals._plan.operators import Operator
-    from narwhals._plan.options import FunctionOptions
-    from narwhals._plan.options import SortMultipleOptions
-    from narwhals._plan.options import SortOptions
+    from narwhals._plan.options import FunctionOptions, SortMultipleOptions, SortOptions
     from narwhals._plan.window import Window
     from narwhals.dtypes import DType
 

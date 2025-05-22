@@ -5,40 +5,40 @@ from __future__ import annotations
 import typing as t
 from typing import TYPE_CHECKING
 
-from narwhals._plan import aggregation as agg
-from narwhals._plan import boolean
-from narwhals._plan import expr
-from narwhals._plan import expr_parsing as parse
-from narwhals._plan import functions as F  # noqa: N812
-from narwhals._plan import operators as ops
-from narwhals._plan.options import EWMOptions
-from narwhals._plan.options import RankOptions
-from narwhals._plan.options import RollingOptionsFixedWindow
-from narwhals._plan.options import RollingVarParams
-from narwhals._plan.options import SortMultipleOptions
-from narwhals._plan.options import SortOptions
+from narwhals._plan import (
+    aggregation as agg,
+    boolean,
+    expr,
+    expr_parsing as parse,
+    functions as F,  # noqa: N812
+    operators as ops,
+)
+from narwhals._plan.options import (
+    EWMOptions,
+    RankOptions,
+    RollingOptionsFixedWindow,
+    RollingVarParams,
+    SortMultipleOptions,
+    SortOptions,
+)
 from narwhals._plan.window import Over
 from narwhals.dtypes import DType
 from narwhals.exceptions import ComputeError
-from narwhals.utils import Version
-from narwhals.utils import _hasattr_static
-from narwhals.utils import flatten
+from narwhals.utils import Version, _hasattr_static, flatten
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._plan.common import ExprIR
-    from narwhals._plan.common import IntoExpr
-    from narwhals._plan.common import IntoExprColumn
-    from narwhals._plan.common import Seq
-    from narwhals._plan.common import Udf
+    from narwhals._plan.common import ExprIR, IntoExpr, IntoExprColumn, Seq, Udf
     from narwhals._plan.meta import ExprIRMetaNamespace
-    from narwhals.typing import FillNullStrategy
-    from narwhals.typing import NativeSeries
-    from narwhals.typing import NumericLiteral
-    from narwhals.typing import RankMethod
-    from narwhals.typing import RollingInterpolationMethod
-    from narwhals.typing import TemporalLiteral
+    from narwhals.typing import (
+        FillNullStrategy,
+        NativeSeries,
+        NumericLiteral,
+        RankMethod,
+        RollingInterpolationMethod,
+        TemporalLiteral,
+    )
 
 
 # NOTE: Overly simplified placeholders for mocking typing

@@ -2,25 +2,16 @@ from __future__ import annotations
 
 import datetime as dt
 from decimal import Decimal
-from typing import TYPE_CHECKING
-from typing import TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
-    from typing import Any
-    from typing import Callable
-    from typing import Iterator
+    from typing import Any, Callable, Iterator
 
-    from typing_extensions import Never
-    from typing_extensions import Self
-    from typing_extensions import TypeAlias
-    from typing_extensions import TypeIs
-    from typing_extensions import dataclass_transform
+    from typing_extensions import Never, Self, TypeAlias, TypeIs, dataclass_transform
 
-    from narwhals._plan.dummy import DummyCompliantExpr
-    from narwhals._plan.dummy import DummyExpr
-    from narwhals._plan.dummy import DummySeries
+    from narwhals._plan.dummy import DummyCompliantExpr, DummyExpr, DummySeries
     from narwhals._plan.expr import FunctionExpr
     from narwhals._plan.options import FunctionOptions
     from narwhals.typing import NonNestedLiteral

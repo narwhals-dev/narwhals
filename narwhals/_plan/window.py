@@ -5,8 +5,7 @@ from typing import TYPE_CHECKING
 from narwhals._plan.common import Immutable
 
 if TYPE_CHECKING:
-    from narwhals._plan.common import ExprIR
-    from narwhals._plan.common import Seq
+    from narwhals._plan.common import ExprIR, Seq
     from narwhals._plan.expr import WindowExpr
     from narwhals._plan.options import SortOptions
 

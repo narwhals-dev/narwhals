@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from narwhals._plan.common import Function
 from narwhals._plan.options import FunctionOptions
