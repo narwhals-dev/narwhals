@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Sequence
+
 
 class NarwhalsError(ValueError):
     """Base class for all Narwhals exceptions."""
@@ -40,11 +42,11 @@ class ColumnNotFoundError(FormattedKeyError, NarwhalsError):
 
     @classmethod
     def from_available_column_names(
-        cls: type, available_columns: list[str]
+        cls: type, available_columns: Sequence[str]
     ) -> ColumnNotFoundError:
         message = (
             "The selected columns were not found."
-            f"\n\nHint: Did you mean one of these columns: {available_columns}?"
+            f"\n\nHint: Did you mean one of these columns: {list(available_columns)}?"
         )
         return ColumnNotFoundError(message)
 
