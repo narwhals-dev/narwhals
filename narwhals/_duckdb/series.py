@@ -28,7 +28,9 @@ class DuckDBInterchangeSeries:
 
     @property
     def dtype(self) -> DType:
-        return native_to_narwhals_dtype(self._native_series.types[0], self._version)
+        return native_to_narwhals_dtype(
+            self._native_series.types[0], self._version, self._native_series
+        )
 
     def __getattr__(self, attr: str) -> Never:
         msg = (  # pragma: no cover
