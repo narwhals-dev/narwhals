@@ -5,27 +5,19 @@ import os
 import sys
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Iterator
-from typing import Mapping
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Callable, Iterator, Mapping, Sequence
 
 import pandas as pd
 import pyarrow as pa
 
 import narwhals as nw
 from narwhals.translate import from_native
-from narwhals.utils import Implementation
-from narwhals.utils import parse_version
+from narwhals.utils import Implementation, parse_version
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
-    from narwhals.typing import DataFrameLike
-    from narwhals.typing import NativeFrame
-    from narwhals.typing import NativeLazyFrame
+    from narwhals.typing import DataFrameLike, NativeFrame, NativeLazyFrame
 
 
 def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:

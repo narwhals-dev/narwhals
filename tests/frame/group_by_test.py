@@ -2,23 +2,26 @@ from __future__ import annotations
 
 import os
 from contextlib import nullcontext
-from typing import Any
-from typing import Mapping
+from typing import Any, Mapping
 
 import pandas as pd
 import pyarrow as pa
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import ComputeError
-from narwhals.exceptions import InvalidOperationError
-from narwhals.exceptions import LengthChangingExprError
-from narwhals.exceptions import OrderDependentExprError
-from tests.utils import PANDAS_VERSION
-from tests.utils import PYARROW_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from narwhals.exceptions import (
+    ComputeError,
+    InvalidOperationError,
+    LengthChangingExprError,
+    OrderDependentExprError,
+)
+from tests.utils import (
+    PANDAS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 data: Mapping[str, Any] = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
 

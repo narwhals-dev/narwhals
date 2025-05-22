@@ -4,8 +4,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import MultiOutputExpressionError
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+from tests.utils import Constructor, assert_equal_data
 
 
 def test_double_selected(constructor: Constructor) -> None:

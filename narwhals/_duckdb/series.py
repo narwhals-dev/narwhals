@@ -9,8 +9,7 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     import duckdb
-    from typing_extensions import Never
-    from typing_extensions import Self
+    from typing_extensions import Never, Self
 
     from narwhals.dtypes import DType
     from narwhals.utils import Version

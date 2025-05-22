@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import enum
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import NoReturn
+from typing import TYPE_CHECKING, Any, NoReturn
 
 from narwhals.utils import parse_version
 

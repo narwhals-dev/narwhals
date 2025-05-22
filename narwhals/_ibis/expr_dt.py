@@ -1,20 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 from narwhals._duration import parse_interval_string
-from narwhals._ibis.utils import UNITS_DICT_BUCKET
-from narwhals._ibis.utils import UNITS_DICT_TRUNCATE
+from narwhals._ibis.utils import UNITS_DICT_BUCKET, UNITS_DICT_TRUNCATE
 from narwhals.utils import not_implemented
 
 if TYPE_CHECKING:
     import ibis.expr.types as ir
 
     from narwhals._ibis.expr import IbisExpr
-    from narwhals._ibis.utils import BucketUnit
-    from narwhals._ibis.utils import TruncateUnit
+    from narwhals._ibis.utils import BucketUnit, TruncateUnit
 
 
 class IbisExprDateTimeNamespace:
@@ -84,6 +80,15 @@ class IbisExprDateTimeNamespace:
         else:
             fn = self._truncate(UNITS_DICT_TRUNCATE[unit])
         return self._compliant_expr._with_callable(fn)
+
+    def replace_time_zone(self, time_zone: str | None) -> IbisExpr:
+        if time_zone is None:
+            return self._compliant_expr._with_callable(
+                lambda _input: _input.cast("timestamp")
+            )
+        else:  # pragma: no cover
+            msg = "`replace_time_zone` with non-null `time_zone` not yet implemented for Ibis"
+            raise NotImplementedError(msg)
 
     nanosecond = not_implemented()
     total_minutes = not_implemented()

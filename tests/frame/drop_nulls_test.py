@@ -3,8 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+from tests.utils import Constructor, assert_equal_data
 
 data = {"alpha": [1.0, 2.0, None, 4.0], "beta gamma": [None, 3.0, None, 5.0]}
 

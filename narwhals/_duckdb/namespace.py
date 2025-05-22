@@ -3,35 +3,26 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING
-from typing import Iterable
-from typing import Sequence
+from typing import TYPE_CHECKING, Iterable, Sequence
 
 import duckdb
-from duckdb import CoalesceOperator
-from duckdb import Expression
-from duckdb import FunctionExpression
-from duckdb.typing import BIGINT
-from duckdb.typing import VARCHAR
+from duckdb import CoalesceOperator, Expression, FunctionExpression
+from duckdb.typing import BIGINT, VARCHAR
 
-from narwhals._compliant import CompliantThen
-from narwhals._compliant import LazyNamespace
-from narwhals._compliant import LazyWhen
+from narwhals._compliant import CompliantThen, LazyNamespace, LazyWhen
 from narwhals._duckdb.dataframe import DuckDBLazyFrame
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.selectors import DuckDBSelectorNamespace
-from narwhals._duckdb.utils import concat_str
-from narwhals._duckdb.utils import lit
-from narwhals._duckdb.utils import narwhals_to_native_dtype
-from narwhals._duckdb.utils import when
-from narwhals._expression_parsing import combine_alias_output_names
-from narwhals._expression_parsing import combine_evaluate_output_names
+from narwhals._duckdb.utils import concat_str, lit, narwhals_to_native_dtype, when
+from narwhals._expression_parsing import (
+    combine_alias_output_names,
+    combine_evaluate_output_names,
+)
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
-    from narwhals.typing import ConcatMethod
-    from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import ConcatMethod, NonNestedLiteral
     from narwhals.utils import Version
 
 

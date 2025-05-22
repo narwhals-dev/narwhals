@@ -38,8 +38,6 @@ jobs:
         run: |
           cd altair
           uv pip install -e ".[dev, all]" --system
-          # temporary pin to get ci green
-          uv pip install "numpy<2.2" --system
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals --system
@@ -186,10 +184,7 @@ jobs:
           UV_SYSTEM_PYTHON: 1
         run: |
           cd py-shiny
-          # temporary pin to get ci green
           make narwhals-install-shiny
-          uv pip install "pyflakes<3.3.0" "flake8<7.2.0" --system
-          uv pip install "plotly<6.1.0" --system
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals --system
@@ -280,6 +275,8 @@ jobs:
         run: |
           uv pip uninstall narwhals --system
           uv pip install -e . --system
+          # temporary pin to get CI green
+          uv pip install "polars<1.30" --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -356,8 +353,6 @@ jobs:
       - name: install-deps
         run: |
           cd hierarchicalforecast
-          # temporary pin to get ci green
-          uv pip install "IPython<9" --system
           uv pip install --system ".[dev]"
       - name: install-narwhals-dev
         run: |

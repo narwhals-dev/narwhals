@@ -5,8 +5,7 @@ from typing import TYPE_CHECKING
 
 from duckdb import FunctionExpression
 
-from narwhals._duckdb.utils import UNITS_DICT
-from narwhals._duckdb.utils import lit
+from narwhals._duckdb.utils import UNITS_DICT, lit
 from narwhals._duration import parse_interval_string
 from narwhals.utils import not_implemented
 
@@ -119,5 +118,14 @@ class DuckDBExprDateTimeNamespace:
                 "time_bucket", lit(every), expr, lit(datetime(1970, 1, 1))
             )
         )
+
+    def replace_time_zone(self, time_zone: str | None) -> DuckDBExpr:
+        if time_zone is None:
+            return self._compliant_expr._with_callable(
+                lambda _input: _input.cast("timestamp")
+            )
+        else:  # pragma: no cover
+            msg = "`replace_time_zone` with non-null `time_zone` not yet implemented for duckdb"
+            raise NotImplementedError(msg)
 
     total_nanoseconds = not_implemented()

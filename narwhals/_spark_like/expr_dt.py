@@ -80,3 +80,12 @@ class SparkLikeExprDateTimeNamespace:
             return self._compliant_expr._F.date_trunc(format, expr)
 
         return self._compliant_expr._with_callable(_truncate)
+
+    def replace_time_zone(self, time_zone: str | None) -> SparkLikeExpr:
+        if time_zone is None:
+            return self._compliant_expr._with_callable(
+                lambda _input: _input.cast("timestamp_ntz")
+            )
+        else:  # pragma: no cover
+            msg = "`replace_time_zone` with non-null `time_zone` not yet implemented for spark-like"
+            raise NotImplementedError(msg)

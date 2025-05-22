@@ -2,15 +2,13 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from typing import TYPE_CHECKING
-from typing import Iterable
-from typing import Sequence
+from typing import TYPE_CHECKING, Iterable, Sequence
 
-from narwhals._compliant import CompliantThen
-from narwhals._compliant import LazyNamespace
-from narwhals._compliant import LazyWhen
-from narwhals._expression_parsing import combine_alias_output_names
-from narwhals._expression_parsing import combine_evaluate_output_names
+from narwhals._compliant import CompliantThen, LazyNamespace, LazyWhen
+from narwhals._expression_parsing import (
+    combine_alias_output_names,
+    combine_evaluate_output_names,
+)
 from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 from narwhals._spark_like.expr import SparkLikeExpr
 from narwhals._spark_like.selectors import SparkLikeSelectorNamespace
@@ -21,10 +19,8 @@ if TYPE_CHECKING:
 
     from narwhals._spark_like.dataframe import SQLFrameDataFrame  # noqa: F401
     from narwhals.dtypes import DType
-    from narwhals.typing import ConcatMethod
-    from narwhals.typing import NonNestedLiteral
-    from narwhals.utils import Implementation
-    from narwhals.utils import Version
+    from narwhals.typing import ConcatMethod, NonNestedLiteral
+    from narwhals.utils import Implementation, Version
 
 
 class SparkLikeNamespace(

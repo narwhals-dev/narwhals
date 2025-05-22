@@ -2,12 +2,7 @@ from __future__ import annotations
 
 import re
 from collections import deque
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Iterable
-from typing import Sequence
-from typing import cast
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Sequence, cast
 
 import pytest
 
@@ -16,12 +11,10 @@ from narwhals._namespace import Namespace
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
-    from typing_extensions import assert_type
+    from typing_extensions import TypeAlias, assert_type
 
     from narwhals._arrow.namespace import ArrowNamespace  # noqa: F401
-    from narwhals._namespace import BackendName
-    from narwhals._namespace import _EagerAllowed
+    from narwhals._namespace import BackendName, _EagerAllowed
     from narwhals._pandas_like.namespace import PandasLikeNamespace  # noqa: F401
     from narwhals._polars.namespace import PolarsNamespace  # noqa: F401
     from narwhals.typing import _2DArray

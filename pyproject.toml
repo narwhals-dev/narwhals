@@ -61,7 +61,8 @@ tests = [
 extra = [  # heavier dependencies we don't necessarily need in every testing job
   "scikit-learn",
 ]
-typing = [
+typing = [  # keep some of these pinned and bump periodically so there's fewer surprises for contributors
+  "duckdb==1.3.0",
   "hypothesis",
   "pytest",
   "pandas-stubs==2.2.3.250308",
@@ -70,7 +71,7 @@ typing = [
   "pyright",
   "pyarrow-stubs==19.2",
   "sqlframe",
-  "polars==1.25.2",
+  "polars==1.30.0",
   "uv",
   "narwhals[ibis]",
 ]
@@ -208,8 +209,9 @@ convention = "google"
 max-nested-blocks = 4
 
 [tool.ruff.lint.isort]
-force-single-line = true
 required-imports = ["from __future__ import annotations"]
+combine-as-imports = true
+split-on-trailing-comma = false
 
 [tool.ruff.format]
 docstring-code-format = true

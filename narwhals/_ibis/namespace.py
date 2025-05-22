@@ -3,27 +3,21 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Iterable
-from typing import Sequence
-from typing import cast
+from typing import TYPE_CHECKING, Any, Iterable, Sequence, cast
 
 import ibis
 import ibis.expr.types as ir
 
-from narwhals._compliant import CompliantThen
-from narwhals._compliant import LazyNamespace
-from narwhals._compliant import LazyWhen
-from narwhals._expression_parsing import combine_alias_output_names
-from narwhals._expression_parsing import combine_evaluate_output_names
+from narwhals._compliant import CompliantThen, LazyNamespace, LazyWhen
+from narwhals._expression_parsing import (
+    combine_alias_output_names,
+    combine_evaluate_output_names,
+)
 from narwhals._ibis.dataframe import IbisLazyFrame
 from narwhals._ibis.expr import IbisExpr
 from narwhals._ibis.selectors import IbisSelectorNamespace
-from narwhals._ibis.utils import lit
-from narwhals._ibis.utils import narwhals_to_native_dtype
-from narwhals.utils import Implementation
-from narwhals.utils import requires
+from narwhals._ibis.utils import lit, narwhals_to_native_dtype
+from narwhals.utils import Implementation, requires
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType

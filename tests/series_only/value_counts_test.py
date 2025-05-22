@@ -5,9 +5,7 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import PANDAS_VERSION, ConstructorEager, assert_equal_data
 
 data = [4, 4, 4, 1, 6, 6, 4, 4, 1, 1]
 

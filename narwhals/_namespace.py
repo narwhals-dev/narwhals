@@ -2,30 +2,32 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Generic
-from typing import Literal
-from typing import Protocol
-from typing import TypeVar
-from typing import overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Literal,
+    Protocol,
+    TypeVar,
+    overload,
+)
 
-from narwhals._compliant.typing import CompliantNamespaceAny
-from narwhals._compliant.typing import CompliantNamespaceT_co
-from narwhals.dependencies import get_cudf
-from narwhals.dependencies import get_modin
-from narwhals.dependencies import get_pandas
-from narwhals.dependencies import get_polars
-from narwhals.dependencies import get_pyarrow
-from narwhals.dependencies import is_dask_dataframe
-from narwhals.dependencies import is_duckdb_relation
-from narwhals.dependencies import is_ibis_table
-from narwhals.dependencies import is_pyspark_connect_dataframe
-from narwhals.dependencies import is_pyspark_dataframe
-from narwhals.dependencies import is_sqlframe_dataframe
-from narwhals.utils import Implementation
-from narwhals.utils import Version
+from narwhals._compliant.typing import CompliantNamespaceAny, CompliantNamespaceT_co
+from narwhals.dependencies import (
+    get_cudf,
+    get_modin,
+    get_pandas,
+    get_polars,
+    get_pyarrow,
+    is_dask_dataframe,
+    is_duckdb_relation,
+    is_ibis_table,
+    is_pyspark_connect_dataframe,
+    is_pyspark_dataframe,
+    is_sqlframe_dataframe,
+)
+from narwhals.utils import Implementation, Version
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -37,8 +39,7 @@ if TYPE_CHECKING:
     import pyarrow as pa
     import pyspark.sql as pyspark_sql
     from pyspark.sql.connect.dataframe import DataFrame as PySparkConnectDataFrame
-    from typing_extensions import TypeAlias
-    from typing_extensions import TypeIs
+    from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._dask.namespace import DaskNamespace
@@ -48,10 +49,7 @@ if TYPE_CHECKING:
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
-    from narwhals.typing import DataFrameLike
-    from narwhals.typing import NativeFrame
-    from narwhals.typing import NativeLazyFrame
-    from narwhals.typing import NativeSeries
+    from narwhals.typing import DataFrameLike, NativeFrame, NativeLazyFrame, NativeSeries
 
     T = TypeVar("T")
 
