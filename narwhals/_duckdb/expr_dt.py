@@ -132,7 +132,7 @@ class DuckDBExprDateTimeNamespace:
             if conn_time_zone != time_zone:
                 msg = (
                     "DuckDB stores the time zone in the connection, rather than in the "
-                    "data type, so only `None` and {conn_time_zone} (the current "
+                    f"data type, so only `None` and {conn_time_zone} (the current "
                     "connection time zone) are supported in `convert_time_zone`."
                 )
                 raise NotImplementedError(msg)
@@ -159,7 +159,7 @@ class DuckDBExprDateTimeNamespace:
                 if conn_time_zone != time_zone:
                     msg = (
                         "DuckDB stores the time zone in the connection, rather than in the "
-                        "data type, so only `None` and {conn_time_zone} (the current "
+                        f"data type, so only `None` and {conn_time_zone} (the current "
                         "connection time zone) are supported in `replace_time_zone`."
                     )
                     raise NotImplementedError(msg)
