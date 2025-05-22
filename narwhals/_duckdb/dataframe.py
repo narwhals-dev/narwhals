@@ -378,7 +378,7 @@ class DuckDBLazyFrame(
                     "with `subset` specified."
                 )
                 raise NotImplementedError(msg)
-            from duckdb import SQLExpression  # type: ignore[attr-defined, unused-ignore]
+            from duckdb import SQLExpression
 
             # Sanitise input
             if any(x not in self.columns for x in subset_):

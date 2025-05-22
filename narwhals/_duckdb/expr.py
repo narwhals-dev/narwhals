@@ -91,7 +91,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         reverse: bool,
         func_name: Literal["sum", "max", "min", "count", "product"],
     ) -> WindowFunction:
-        from duckdb import SQLExpression  # type: ignore[attr-defined, unused-ignore]
+        from duckdb import SQLExpression
 
         def func(window_inputs: WindowInputs) -> Expression:
             order_by_sql = generate_order_by_sql(
@@ -115,7 +115,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         min_samples: int,
         ddof: int | None = None,
     ) -> WindowFunction:
-        from duckdb import SQLExpression  # type: ignore[attr-defined, unused-ignore]
+        from duckdb import SQLExpression
 
         ensure_type(window_size, int, type(None))
         ensure_type(min_samples, int)
@@ -162,7 +162,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         if self._backend_version < (1, 3):
             msg = "At least version 1.3 of DuckDB is required for binary operations between aggregates and columns."
             raise NotImplementedError(msg)
-        from duckdb import SQLExpression  # type: ignore[attr-defined, unused-ignore]
+        from duckdb import SQLExpression
 
         template = "{expr} over ()"
 
@@ -493,7 +493,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     @requires.backend_version((1, 3))
     def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
-        from duckdb import SQLExpression  # type: ignore[attr-defined, unused-ignore]
+        from duckdb import SQLExpression
 
         if (window_function := self._window_function) is not None:
             assert order_by is not None  # noqa: S101
@@ -554,7 +554,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     @requires.backend_version((1, 3))
     def shift(self, n: int) -> Self:
-        from duckdb import SQLExpression  # type: ignore[attr-defined, unused-ignore]
+        from duckdb import SQLExpression
 
         ensure_type(n, int)
 
@@ -570,7 +570,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     @requires.backend_version((1, 3))
     def is_first_distinct(self) -> Self:
-        from duckdb import SQLExpression  # type: ignore[attr-defined, unused-ignore]
+        from duckdb import SQLExpression
 
         def func(window_inputs: WindowInputs) -> Expression:
             order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=True)
@@ -588,7 +588,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     @requires.backend_version((1, 3))
     def is_last_distinct(self) -> Self:
-        from duckdb import SQLExpression  # type: ignore[attr-defined, unused-ignore]
+        from duckdb import SQLExpression
 
         def func(window_inputs: WindowInputs) -> Expression:
             order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=False)
@@ -606,7 +606,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     @requires.backend_version((1, 3))
     def diff(self) -> Self:
-        from duckdb import SQLExpression  # type: ignore[attr-defined, unused-ignore]
+        from duckdb import SQLExpression
 
         def func(window_inputs: WindowInputs) -> Expression:
             order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=True)
@@ -706,7 +706,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             if self._backend_version < (1, 3):  # pragma: no cover
                 msg = f"`fill_null` with `strategy={strategy}` is only available in 'duckdb>=1.3.0'."
                 raise NotImplementedError(msg)
-            from duckdb import SQLExpression  # type: ignore[attr-defined, unused-ignore]
+            from duckdb import SQLExpression
 
             def _fill_with_strategy(window_inputs: WindowInputs) -> Expression:
                 order_by_sql = generate_order_by_sql(
@@ -743,7 +743,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     @requires.backend_version((1, 3))
     def is_unique(self) -> Self:
-        from duckdb import SQLExpression  # type: ignore[attr-defined, unused-ignore]
+        from duckdb import SQLExpression
 
         def func(expr: Expression) -> Expression:
             sql = f"count(*) over (partition by {expr})"
@@ -753,7 +753,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     @requires.backend_version((1, 3))
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
-        from duckdb import SQLExpression  # type: ignore[attr-defined, unused-ignore]
+        from duckdb import SQLExpression
 
         if method in {"min", "max", "average"}:
             func = FunctionExpression("rank")
