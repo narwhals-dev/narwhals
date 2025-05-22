@@ -673,3 +673,4 @@ class DaskExpr(
     struct = not_implemented()  # pyright: ignore[reportAssignmentType]
     rank = not_implemented()  # pyright: ignore[reportAssignmentType]
     _alias_native = not_implemented()
+    first = not_implemented()
