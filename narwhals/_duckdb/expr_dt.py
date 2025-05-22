@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import TYPE_CHECKING
 
 from duckdb import FunctionExpression
@@ -10,6 +9,8 @@ from narwhals._duration import parse_interval_string
 from narwhals.utils import not_implemented
 
 if TYPE_CHECKING:
+    from duckdb import Expression
+
     from narwhals._duckdb.expr import DuckDBExpr
 
 
@@ -109,15 +110,19 @@ class DuckDBExprDateTimeNamespace:
 
     def truncate(self, every: str) -> DuckDBExpr:
         multiple, unit = parse_interval_string(every)
+        if multiple != 1:
+            # https://github.com/duckdb/duckdb/issues/17554
+            msg = f"Only multiple 1 is currently supported for DuckDB.\nGot {multiple!s}."
+            raise ValueError(msg)
         if unit == "ns":
             msg = "Truncating to nanoseconds is not yet supported for DuckDB."
             raise NotImplementedError(msg)
-        every = f"{multiple!s} {UNITS_DICT[unit]}"
-        return self._compliant_expr._with_callable(
-            lambda expr: FunctionExpression(
-                "time_bucket", lit(every), expr, lit(datetime(1970, 1, 1))
-            )
-        )
+        format = lit(UNITS_DICT[unit])
+
+        def _truncate(expr: Expression) -> Expression:
+            return FunctionExpression("date_trunc", format, expr)
+
+        return self._compliant_expr._with_callable(_truncate)
 
     def replace_time_zone(self, time_zone: str | None) -> DuckDBExpr:
         if time_zone is None:

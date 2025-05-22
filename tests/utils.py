@@ -4,6 +4,7 @@ import math
 import os
 import sys
 import warnings
+from datetime import date, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Iterator, Mapping, Sequence
 
@@ -116,8 +117,11 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
                 )
             elif pd.isna(lhs):
                 are_equivalent_values = pd.isna(rhs)
+            elif type(lhs) is date and type(rhs) is datetime:
+                are_equivalent_values = datetime(lhs.year, lhs.month, lhs.day) == rhs
             else:
                 are_equivalent_values = lhs == rhs
+
             assert are_equivalent_values, (
                 f"Mismatch at index {i}: {lhs} != {rhs}\nExpected: {expected}\nGot: {result}"
             )
