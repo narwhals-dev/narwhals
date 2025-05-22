@@ -459,7 +459,7 @@ def test_enum_hash() -> None:
     assert nw.Enum(["a", "b"]) not in {nw.Enum(["a", "b", "c"])}
 
 
-def test_datetime_w_tz_duckb() -> None:
+def test_datetime_w_tz_duckdb() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("zoneinfo")
     import duckdb
@@ -473,3 +473,12 @@ def test_datetime_w_tz_duckb() -> None:
     duckdb.sql("""set timezone = 'Asia/Kathmandu'""")
     result = df.collect_schema()
     assert result["a"] == nw.Datetime("us", "Asia/Kathmandu")
+
+    df = nw.from_native(
+        duckdb.sql(
+            """select * from values (timestamptz '2020-01-01', [[timestamptz '2020-01-02']])df(a,b)"""
+        )
+    )
+    result = df.collect_schema()
+    assert result["a"] == nw.Datetime("us", "Asia/Kathmandu")
+    assert result["b"] == nw.List(nw.List(nw.Datetime("us", "Asia/Kathmandu")))

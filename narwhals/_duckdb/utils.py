@@ -8,7 +8,7 @@ import duckdb
 from narwhals.utils import Version, isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    from duckdb import Expression
+    from duckdb import DuckDBPyRelation, Expression
     from duckdb.typing import DuckDBPyType
 
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
@@ -96,21 +96,27 @@ def evaluate_exprs(
 
 
 def native_to_narwhals_dtype(
-    duckdb_dtype: DuckDBPyType, version: Version, rel: duckdb.DuckDBPyRelation
+    duckdb_dtype: DuckDBPyType,
+    version: Version,
+    rel: DuckDBPyRelation,
+    time_zone: str | None = None,
 ) -> DType:
     duckdb_dtype_id = duckdb_dtype.id
     dtypes = version.dtypes
 
     # Handle nested data types first
     if duckdb_dtype_id == "list":
-        return dtypes.List(native_to_narwhals_dtype(duckdb_dtype.child, version, rel))
+        return dtypes.List(
+            native_to_narwhals_dtype(duckdb_dtype.child, version, rel, time_zone)
+        )
 
     if duckdb_dtype_id == "struct":
         children = duckdb_dtype.children
         return dtypes.Struct(
             [
                 dtypes.Field(
-                    name=child[0], dtype=native_to_narwhals_dtype(child[1], version, rel)
+                    name=child[0],
+                    dtype=native_to_narwhals_dtype(child[1], version, rel, time_zone),
                 )
                 for child in children
             ]
@@ -124,7 +130,7 @@ def native_to_narwhals_dtype(
             child, size = child[1].children
             shape.insert(0, size[1])
 
-        inner = native_to_narwhals_dtype(child[1], version, rel)
+        inner = native_to_narwhals_dtype(child[1], version, rel, time_zone)
         return dtypes.Array(inner=inner, shape=tuple(shape))
 
     if duckdb_dtype_id == "enum":
@@ -134,7 +140,9 @@ def native_to_narwhals_dtype(
         return dtypes.Enum(categories=categories)
 
     if duckdb_dtype_id == "timestamp with time zone":
-        return dtypes.Datetime(time_zone=get_rel_time_zone(rel))
+        # Only calculate time zone if it wasn't already calculated from another column.
+        time_zone = time_zone or get_rel_time_zone(rel)
+        return dtypes.Datetime(time_zone=time_zone)
 
     return _non_nested_native_to_narwhals_dtype(duckdb_dtype_id, version)
 
