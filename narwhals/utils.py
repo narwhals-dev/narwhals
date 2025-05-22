@@ -27,6 +27,7 @@ from typing import overload
 from warnings import warn
 
 from narwhals._enum import NoAutoEnum
+from narwhals._typing_compat import deprecated
 from narwhals.dependencies import get_cudf
 from narwhals.dependencies import get_dask
 from narwhals.dependencies import get_dask_dataframe
@@ -430,11 +431,7 @@ class Implementation(NoAutoEnum):
             >>> df.implementation.is_pandas_like()
             True
         """
-        return self in {
-            Implementation.PANDAS,
-            Implementation.MODIN,
-            Implementation.CUDF,
-        }
+        return self in {Implementation.PANDAS, Implementation.MODIN, Implementation.CUDF}
 
     def is_spark_like(self) -> bool:
         """Return whether implementation is pyspark or sqlframe.
@@ -1270,11 +1267,7 @@ def generate_temporary_column_name(n_bytes: int, columns: Sequence[str]) -> str:
 
 
 def parse_columns_to_drop(
-    frame: _StoresColumns,
-    subset: Iterable[str],
-    /,
-    *,
-    strict: bool,
+    frame: _StoresColumns, subset: Iterable[str], /, *, strict: bool
 ) -> list[str]:
     if not strict:
         return list(set(frame.columns).intersection(subset))
@@ -1751,22 +1744,22 @@ def unstable(fn: _Fn, /) -> _Fn:
     return fn
 
 
-if TYPE_CHECKING:
-    import sys
+def _is_naive_format(format: str) -> bool:
+    """Determines if a datetime format string is 'naive', i.e., does not include timezone information.
 
-    if sys.version_info >= (3, 13):
-        # NOTE: avoids `mypy`
-        #     error: Module "narwhals.utils" does not explicitly export attribute "deprecated"  [attr-defined]
-        from warnings import deprecated as deprecated  # noqa: PLC0414
-    else:
-        from typing_extensions import deprecated as deprecated  # noqa: PLC0414
-else:
+    A format is considered naive if it does not contain any of the following
 
-    def deprecated(message: str, /) -> Callable[[_Fn], _Fn]:  # noqa: ARG001
-        def wrapper(func: _Fn, /) -> _Fn:
-            return func
+    - '%s': Unix timestamp
+    - '%z': UTC offset
+    - 'Z' : UTC timezone designator
 
-        return wrapper
+    Arguments:
+        format: The datetime format string to check.
+
+    Returns:
+        bool: True if the format is naive (does not include timezone info), False otherwise.
+    """
+    return not any(x in format for x in ("%s", "%z", "Z"))
 
 
 class not_implemented:  # noqa: N801

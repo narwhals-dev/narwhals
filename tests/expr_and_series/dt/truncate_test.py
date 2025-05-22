@@ -11,10 +11,7 @@ from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
 data = {
-    "a": [
-        datetime(2021, 3, 1, 12, 34, 56, 49012),
-        datetime(2020, 1, 2, 2, 4, 14, 715123),
-    ],
+    "a": [datetime(2021, 3, 1, 12, 34, 56, 49012), datetime(2020, 1, 2, 2, 4, 14, 715123)]
 }
 
 
@@ -42,55 +39,13 @@ data = {
                 datetime(2020, 1, 2, 2, 4, 14, 715000),
             ],
         ),
-        (
-            "1s",
-            [
-                datetime(2021, 3, 1, 12, 34, 56),
-                datetime(2020, 1, 2, 2, 4, 14),
-            ],
-        ),
-        (
-            "1m",
-            [
-                datetime(2021, 3, 1, 12, 34),
-                datetime(2020, 1, 2, 2, 4),
-            ],
-        ),
-        (
-            "1h",
-            [
-                datetime(2021, 3, 1, 12, 0, 0, 0),
-                datetime(2020, 1, 2, 2, 0, 0, 0),
-            ],
-        ),
-        (
-            "1d",
-            [
-                datetime(2021, 3, 1),
-                datetime(2020, 1, 2),
-            ],
-        ),
-        (
-            "1mo",
-            [
-                datetime(2021, 3, 1),
-                datetime(2020, 1, 1),
-            ],
-        ),
-        (
-            "1q",
-            [
-                datetime(2021, 1, 1),
-                datetime(2020, 1, 1),
-            ],
-        ),
-        (
-            "1y",
-            [
-                datetime(2021, 1, 1),
-                datetime(2020, 1, 1),
-            ],
-        ),
+        ("1s", [datetime(2021, 3, 1, 12, 34, 56), datetime(2020, 1, 2, 2, 4, 14)]),
+        ("1m", [datetime(2021, 3, 1, 12, 34), datetime(2020, 1, 2, 2, 4)]),
+        ("1h", [datetime(2021, 3, 1, 12, 0, 0, 0), datetime(2020, 1, 2, 2, 0, 0, 0)]),
+        ("1d", [datetime(2021, 3, 1), datetime(2020, 1, 2)]),
+        ("1mo", [datetime(2021, 3, 1), datetime(2020, 1, 1)]),
+        ("1q", [datetime(2021, 1, 1), datetime(2020, 1, 1)]),
+        ("1y", [datetime(2021, 1, 1), datetime(2020, 1, 1)]),
     ],
 )
 def test_truncate(
@@ -141,48 +96,12 @@ def test_truncate(
                 datetime(2020, 1, 2, 2, 4, 14, 714000),
             ],
         ),
-        (
-            "10s",
-            [
-                datetime(2021, 3, 1, 12, 34, 50),
-                datetime(2020, 1, 2, 2, 4, 10),
-            ],
-        ),
-        (
-            "7m",
-            [
-                datetime(2021, 3, 1, 12, 30),
-                datetime(2020, 1, 2, 1, 59),
-            ],
-        ),
-        (
-            "7h",
-            [
-                datetime(2021, 3, 1, 9, 0, 0, 0),
-                datetime(2020, 1, 2, 0, 0, 0, 0),
-            ],
-        ),
-        (
-            "13d",
-            [
-                datetime(2021, 2, 23),
-                datetime(2019, 12, 22),
-            ],
-        ),
-        (
-            "3mo",
-            [
-                datetime(2021, 1, 1),
-                datetime(2020, 1, 1),
-            ],
-        ),
-        (
-            "2q",
-            [
-                datetime(2021, 1, 1),
-                datetime(2020, 1, 1),
-            ],
-        ),
+        ("10s", [datetime(2021, 3, 1, 12, 34, 50), datetime(2020, 1, 2, 2, 4, 10)]),
+        ("7m", [datetime(2021, 3, 1, 12, 30), datetime(2020, 1, 2, 1, 59)]),
+        ("7h", [datetime(2021, 3, 1, 9, 0, 0, 0), datetime(2020, 1, 2, 0, 0, 0, 0)]),
+        ("13d", [datetime(2021, 2, 23), datetime(2019, 12, 22)]),
+        ("3mo", [datetime(2021, 1, 1), datetime(2020, 1, 1)]),
+        ("2q", [datetime(2021, 1, 1), datetime(2020, 1, 1)]),
     ],
 )
 def test_truncate_multiples(
@@ -191,32 +110,20 @@ def test_truncate_multiples(
     every: str,
     expected: list[datetime],
 ) -> None:
-    if any(x in str(constructor) for x in ("sqlframe",)):
-        request.applymarker(
-            pytest.mark.xfail(reason="https://github.com/eakmanrq/sqlframe/issues/383")
-        )
+    if any(x in str(constructor) for x in ("sqlframe", "cudf", "pyspark")):
+        # Reasons:
+        # - sqlframe: https://github.com/eakmanrq/sqlframe/issues/383
+        # - cudf: https://github.com/rapidsai/cudf/issues/18654
+        # - pyspark: Only multiple 1 is currently supported
+        request.applymarker(pytest.mark.xfail())
     if every.endswith("ns") and any(
         x in str(constructor) for x in ("polars", "duckdb", "ibis")
     ):
         request.applymarker(pytest.mark.xfail())
-    if "cudf" in str(constructor):
-        # https://github.com/rapidsai/cudf/issues/18654
-        request.applymarker(pytest.mark.xfail(reason="Not implemented"))
     if any(every.endswith(x) for x in ("mo", "q", "y")) and any(
         x in str(constructor) for x in ("dask",)
     ):
         request.applymarker(pytest.mark.xfail(reason="Not implemented"))
-    if any(every.endswith(x) for x in ("q",)) and any(
-        x in str(constructor) for x in ("ibis",)
-    ):
-        request.applymarker(pytest.mark.xfail(reason="Not implemented"))
-    request.applymarker(
-        pytest.mark.xfail(
-            "pyspark" in str(constructor),
-            raises=ValueError,
-            reason="Only multiple 1 is currently supported",
-        )
-    )
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").dt.truncate(every))
     assert_equal_data(result, {"a": expected})
@@ -252,16 +159,11 @@ def test_truncate_polars_ns(every: str, expected: list[datetime]) -> None:
     assert_equal_data(result, {"a": expected})
 
 
-def test_truncate_series(
-    constructor_eager: ConstructorEager,
-) -> None:
+def test_truncate_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(df["a"].dt.truncate("1h"))
     expected = {
-        "a": [
-            datetime(2021, 3, 1, 12, 0, 0, 0),
-            datetime(2020, 1, 2, 2, 0, 0, 0),
-        ]
+        "a": [datetime(2021, 3, 1, 12, 0, 0, 0), datetime(2020, 1, 2, 2, 0, 0, 0)]
     }
     assert_equal_data(result, expected)
 

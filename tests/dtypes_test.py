@@ -311,13 +311,7 @@ def test_dtype_is_x() -> None:
     )
 
     is_signed_integer = {nw.Int8, nw.Int16, nw.Int32, nw.Int64, nw.Int128}
-    is_unsigned_integer = {
-        nw.UInt8,
-        nw.UInt16,
-        nw.UInt32,
-        nw.UInt64,
-        nw.UInt128,
-    }
+    is_unsigned_integer = {nw.UInt8, nw.UInt16, nw.UInt32, nw.UInt64, nw.UInt128}
     is_float = {nw.Float32, nw.Float64}
     is_decimal = {nw.Decimal}
     is_temporal = {nw.Datetime, nw.Date, nw.Duration, nw.Time}
@@ -362,8 +356,7 @@ def test_huge_int_to_native() -> None:
     result = (
         nw.from_native(rel)
         .with_columns(
-            a_int=nw.col("a").cast(nw.Int128()),
-            a_unit=nw.col("a").cast(nw.UInt128()),
+            a_int=nw.col("a").cast(nw.Int128()), a_unit=nw.col("a").cast(nw.UInt128())
         )
         .select("a_int", "a_unit")
         .to_native()
@@ -407,12 +400,7 @@ def test_cast_decimal_to_native() -> None:
 
 @pytest.mark.parametrize(
     "categories",
-    [
-        ["a", "b"],
-        [np.str_("a"), np.str_("b")],
-        enum.Enum("Test", "a b"),
-        [1, 2, 3],
-    ],
+    [["a", "b"], [np.str_("a"), np.str_("b")], enum.Enum("Test", "a b"), [1, 2, 3]],
 )
 def test_enum_valid(categories: Iterable[Any] | type[enum.Enum]) -> None:
     dtype = nw.Enum(categories)

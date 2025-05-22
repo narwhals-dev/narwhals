@@ -26,17 +26,13 @@ def test_sort_expr(
 ) -> None:
     df = nw_v1.from_native(constructor_eager(data), eager_only=True)
     result = df.select(
-        "a",
-        nw_v1.col("b").sort(descending=descending, nulls_last=nulls_last),
+        "a", nw_v1.col("b").sort(descending=descending, nulls_last=nulls_last)
     )
     assert_equal_data(result, expected)
     with pytest.deprecated_call(
         match="is deprecated and will be removed in a future version"
     ):
-        df.select(
-            "a",
-            nw.col("b").sort(descending=descending, nulls_last=nulls_last),
-        )
+        df.select("a", nw.col("b").sort(descending=descending, nulls_last=nulls_last))
 
 
 @pytest.mark.parametrize(

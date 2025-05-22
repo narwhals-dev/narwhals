@@ -45,3 +45,9 @@ jobs:
         run: |
           source .venv/bin/activate
           pyright
+      - name: Run pyright type completeness
+        run: |
+          source .venv/bin/activate
+          output=$(pyright --verifytypes narwhals --ignoreexternal 2>&1)
+          echo "$output"
+          echo "$output" | grep "Type completeness score: 100%" || exit 1

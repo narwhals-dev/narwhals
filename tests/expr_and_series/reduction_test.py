@@ -28,9 +28,7 @@ from tests.utils import assert_equal_data
     ],
 )
 def test_scalar_reduction_select(
-    constructor: Constructor,
-    expr: list[Any],
-    expected: dict[str, list[Any]],
+    constructor: Constructor, expr: list[Any], expected: dict[str, list[Any]]
 ) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
@@ -57,9 +55,7 @@ def test_scalar_reduction_select(
     ],
 )
 def test_scalar_reduction_with_columns(
-    constructor: Constructor,
-    expr: list[Any],
-    expected: dict[str, list[Any]],
+    constructor: Constructor, expr: list[Any], expected: dict[str, list[Any]]
 ) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()

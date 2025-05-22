@@ -8,11 +8,7 @@ if TYPE_CHECKING:
     from narwhals.typing import FrameT
 
 
-def query(
-    nation_ds: FrameT,
-    partsupp_ds: FrameT,
-    supplier_ds: FrameT,
-) -> FrameT:
+def query(nation_ds: FrameT, partsupp_ds: FrameT, supplier_ds: FrameT) -> FrameT:
     var1 = "GERMANY"
     var2 = 0.0001
 

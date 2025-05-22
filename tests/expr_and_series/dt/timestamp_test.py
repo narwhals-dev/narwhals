@@ -23,10 +23,7 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoSeriesT
 
 data = {
-    "a": [
-        datetime(2021, 3, 1, 12, 34, 56, 49000),
-        datetime(2020, 1, 2, 2, 4, 14, 715000),
-    ],
+    "a": [datetime(2021, 3, 1, 12, 34, 56, 49000), datetime(2020, 1, 2, 2, 4, 14, 715000)]
 }
 
 

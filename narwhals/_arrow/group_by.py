@@ -85,7 +85,8 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
 
             function_name = self._leaf_name(expr)
             if function_name in {"std", "var"}:
-                option: Any = pc.VarianceOptions(ddof=expr._call_kwargs["ddof"])
+                assert "ddof" in expr._scalar_kwargs  # noqa: S101
+                option: Any = pc.VarianceOptions(ddof=expr._scalar_kwargs["ddof"])
             elif function_name in {"len", "n_unique"}:
                 option = pc.CountOptions(mode="all")
             elif function_name == "count":
@@ -147,10 +148,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         # Reality: `str` is fine
         concat_str: Incomplete = pc.binary_join_element_wise
         key_values = concat_str(
-            *it,
-            separator_scalar,
-            null_handling="replace",
-            null_replacement=null_token,
+            *it, separator_scalar, null_handling="replace", null_replacement=null_token
         )
         table = table.add_column(i=0, field_=col_token, column=key_values)
 

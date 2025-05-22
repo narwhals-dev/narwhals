@@ -587,12 +587,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return maybe_extract_py_scalar(self.native[index], return_py_scalar=True)
 
     def value_counts(
-        self,
-        *,
-        sort: bool,
-        parallel: bool,
-        name: str | None,
-        normalize: bool,
+        self, *, sort: bool, parallel: bool, name: str | None, normalize: bool
     ) -> ArrowDataFrame:
         """Parallel is unused, exists for compatibility."""
         from narwhals._arrow.dataframe import ArrowDataFrame

@@ -5,11 +5,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.39.1"
+version = "1.40.0"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
-  { name = "Marco Gorelli", email = "33491632+MarcoGorelli@users.noreply.github.com" },
+  { name = "Marco Gorelli", email = "hello_narwhals@proton.me" },
 ]
 description = "Extremely lightweight compatibility layer between dataframe libraries"
 readme = "README.md"
@@ -78,6 +78,7 @@ docs = [
   "black",  # required by mkdocstrings_handlers
   "jinja2",
   "duckdb",
+  "narwhals[ibis]",
   "markdown-exec[ansi]",
   "mkdocs",
   "mkdocs-autorefs",
@@ -212,6 +213,7 @@ required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.format]
 docstring-code-format = true
+skip-magic-trailing-comma = true
 
 [tool.pytest.ini_options]
 norecursedirs =  ['*.egg', '.*', '_darcs', 'build', 'CVS', 'dist', 'node_modules', 'venv', '{arch}', 'narwhals/_*']

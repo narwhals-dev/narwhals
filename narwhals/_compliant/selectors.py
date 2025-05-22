@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 from functools import partial
 from typing import TYPE_CHECKING
-from typing import Any
 from typing import Collection
 from typing import Iterable
 from typing import Iterator
@@ -15,23 +14,11 @@ from typing import TypeVar
 from typing import overload
 
 from narwhals._compliant.expr import CompliantExpr
+from narwhals._typing_compat import Protocol38
 from narwhals.utils import _parse_time_unit_and_time_zone
 from narwhals.utils import dtype_matches_time_unit_and_time_zone
 from narwhals.utils import get_column_names
 from narwhals.utils import is_compliant_dataframe
-
-if not TYPE_CHECKING:  # pragma: no cover
-    # TODO @dangotbanned: Remove after dropping `3.8` (#2084)
-    # - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
-    import sys
-
-    if sys.version_info >= (3, 9):
-        from typing import Protocol as Protocol38
-    else:
-        from typing import Generic as Protocol38
-
-else:  # pragma: no cover
-    from typing import Protocol as Protocol38
 
 if TYPE_CHECKING:
     from datetime import timezone
@@ -49,6 +36,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import CompliantSeriesOrNativeExprAny
     from narwhals._compliant.typing import EvalNames
     from narwhals._compliant.typing import EvalSeries
+    from narwhals._compliant.typing import ScalarKwargs
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
     from narwhals.utils import Implementation
@@ -226,7 +214,7 @@ class CompliantSelector(
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
-    _call_kwargs: dict[str, Any]
+    _scalar_kwargs: ScalarKwargs
 
     @classmethod
     def from_callables(
@@ -245,7 +233,7 @@ class CompliantSelector(
         obj._implementation = context._implementation
         obj._backend_version = context._backend_version
         obj._version = context._version
-        obj._call_kwargs = {}
+        obj._scalar_kwargs = {}
         return obj
 
     @property

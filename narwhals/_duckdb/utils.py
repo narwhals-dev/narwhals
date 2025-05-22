@@ -11,6 +11,7 @@ from narwhals.utils import Version
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
+    from duckdb import Expression
     from duckdb.typing import DuckDBPyType
 
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
@@ -44,17 +45,22 @@ class WindowInputs:
     __slots__ = ("expr", "order_by", "partition_by")
 
     def __init__(
-        self,
-        expr: duckdb.Expression,
-        partition_by: Sequence[str],
-        order_by: Sequence[str],
+        self, expr: Expression, partition_by: Sequence[str], order_by: Sequence[str]
     ) -> None:
         self.expr = expr
         self.partition_by = partition_by
         self.order_by = order_by
 
 
-def concat_str(*exprs: duckdb.Expression, separator: str = "") -> duckdb.Expression:
+class UnorderableWindowInputs:
+    __slots__ = ("expr", "partition_by")
+
+    def __init__(self, expr: Expression, partition_by: Sequence[str]) -> None:
+        self.expr = expr
+        self.partition_by = partition_by
+
+
+def concat_str(*exprs: Expression, separator: str = "") -> Expression:
     """Concatenate many strings, NULL inputs are skipped.
 
     Wraps [concat] and [concat_ws] `FunctionExpression`(s).
@@ -78,8 +84,8 @@ def concat_str(*exprs: duckdb.Expression, separator: str = "") -> duckdb.Express
 
 def evaluate_exprs(
     df: DuckDBLazyFrame, /, *exprs: DuckDBExpr
-) -> list[tuple[str, duckdb.Expression]]:
-    native_results: list[tuple[str, duckdb.Expression]] = []
+) -> list[tuple[str, Expression]]:
+    native_results: list[tuple[str, Expression]] = []
     for expr in exprs:
         native_series_list = expr._call(df)
         output_names = expr._evaluate_output_names(df)
@@ -244,10 +250,10 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> st
     raise AssertionError(msg)
 
 
-def generate_partition_by_sql(*partition_by: str) -> str:
+def generate_partition_by_sql(*partition_by: str | Expression) -> str:
     if not partition_by:
         return ""
-    by_sql = ", ".join([f"{col(x)}" for x in partition_by])
+    by_sql = ", ".join([f"{col(x) if isinstance(x, str) else x}" for x in partition_by])
     return f"partition by {by_sql}"
 
 

@@ -64,10 +64,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
                 msg = "Grouping by null values is not supported in pandas < 1.1.0"
                 raise NotImplementedError(msg)
             self._grouped = native_frame.groupby(
-                list(self._keys),
-                sort=False,
-                as_index=True,
-                observed=True,
+                list(self._keys), sort=False, as_index=True, observed=True
             )
         else:
             self._grouped = native_frame.groupby(
@@ -133,10 +130,10 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
                 for output_name, alias in zip(output_names, aliases):
                     if is_n_unique:
                         nunique_aggs[alias] = output_name
-                    elif is_std and (ddof := expr._call_kwargs["ddof"]) != 1:
+                    elif is_std and (ddof := expr._scalar_kwargs["ddof"]) != 1:  # pyright: ignore[reportTypedDictNotRequiredAccess]
                         std_aggs[ddof][0].append(output_name)
                         std_aggs[ddof][1].append(alias)
-                    elif is_var and (ddof := expr._call_kwargs["ddof"]) != 1:
+                    elif is_var and (ddof := expr._scalar_kwargs["ddof"]) != 1:  # pyright: ignore[reportTypedDictNotRequiredAccess]
                         var_aggs[ddof][0].append(output_name)
                         var_aggs[ddof][1].append(alias)
                     else:

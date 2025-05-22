@@ -513,9 +513,7 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
     raise AssertionError(msg)
 
 
-def align_series_full_broadcast(
-    *series: PandasLikeSeries,
-) -> list[PandasLikeSeries]:
+def align_series_full_broadcast(*series: PandasLikeSeries) -> list[PandasLikeSeries]:
     # Ensure all of `series` have the same length and index. Scalars get broadcasted to
     # the full length of the longest Series. This is useful when you need to construct a
     # full Series anyway (e.g. `DataFrame.select`). It should not be used in binary operations,

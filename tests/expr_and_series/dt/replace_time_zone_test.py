@@ -56,7 +56,8 @@ def test_replace_time_zone_none(
         or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         pytest.skip()
-    if any(x in str(constructor) for x in ("duckdb", "pyspark", "ibis")):
+    if any(x in str(constructor) for x in ("pyspark",)):
+        # pyspark: needs `to_string`
         request.applymarker(pytest.mark.xfail)
     data = {
         "a": [

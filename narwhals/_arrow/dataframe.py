@@ -431,7 +431,7 @@ class ArrowDataFrame(
                 join_type=how_to_join_map[how],
                 right_suffix=suffix,
                 coalesce_keys=coalesce_keys,
-            ),
+            )
         )
 
     join_asof = not_implemented()
@@ -446,12 +446,7 @@ class ArrowDataFrame(
         plx = self.__narwhals_namespace__()
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
-    def sort(
-        self,
-        *by: str,
-        descending: bool | Sequence[bool],
-        nulls_last: bool,
-    ) -> Self:
+    def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
         if isinstance(descending, bool):
             order: Order = "descending" if descending else "ascending"
             sorting: list[tuple[str, Order]] = [(key, order) for key in by]
