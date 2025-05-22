@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
-from tests.utils import PYARROW_VERSION
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+from tests.utils import PYARROW_VERSION, Constructor, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.stable.v1.dtypes import DType

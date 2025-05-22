@@ -6,9 +6,7 @@ import pyarrow as pa
 import pytest
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
 
 data = {"a": [1, 2, 3], "b": ["dogs", "cats", None], "c": ["play", "swim", "walk"]}
 

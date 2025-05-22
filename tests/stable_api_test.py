@@ -1,18 +1,14 @@
 from __future__ import annotations
 
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from inspect import getdoc
-from typing import Any
-from typing import Iterator
+from typing import Any, Iterator
 
 import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from tests.utils import DUCKDB_VERSION
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+from tests.utils import DUCKDB_VERSION, Constructor, assert_equal_data
 
 
 def remove_docstring_examples(doc: str) -> str:

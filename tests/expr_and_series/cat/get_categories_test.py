@@ -4,9 +4,7 @@ import pyarrow as pa
 import pytest
 
 import narwhals as nw
-from tests.utils import PYARROW_VERSION
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import PYARROW_VERSION, ConstructorEager, assert_equal_data
 
 data = {"a": ["one", "two", "two"]}
 

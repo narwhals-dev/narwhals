@@ -11,6 +11,7 @@ repos:
     - id: ruff
       args: [--fix]
     - id: ruff
+      name: check-docstrings
       alias: check-docstrings
       entry: python utils/check_docstrings.py
 - repo: https://github.com/codespell-project/codespell

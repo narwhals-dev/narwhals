@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._compliant import CompliantSelector
-from narwhals._compliant import EagerSelectorNamespace
+from narwhals._compliant import CompliantSelector, EagerSelectorNamespace
 from narwhals._pandas_like.expr import PandasLikeExpr
 
 if TYPE_CHECKING:

@@ -1,18 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Generic
-from typing import Iterable
-from typing import Iterator
-from typing import Sequence
-from typing import TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Iterable, Iterator, Sequence, TypeVar
 
 from narwhals._expression_parsing import all_exprs_are_scalar_like
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import DataFrameT
-from narwhals.utils import flatten
-from narwhals.utils import tupleify
+from narwhals.utils import flatten, tupleify
 
 if TYPE_CHECKING:
     from narwhals._compliant.typing import CompliantExprAny

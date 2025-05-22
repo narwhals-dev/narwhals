@@ -5,11 +5,8 @@ from contextlib import nullcontext as does_not_raise
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import LengthChangingExprError
-from narwhals.exceptions import ShapeError
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from narwhals.exceptions import LengthChangingExprError, ShapeError
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 
 def test_filter(constructor: Constructor) -> None:

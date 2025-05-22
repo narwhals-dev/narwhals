@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
-from narwhals.dependencies import get_cudf
-from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_cudf, get_modin
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:

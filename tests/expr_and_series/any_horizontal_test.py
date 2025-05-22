@@ -5,8 +5,7 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+from tests.utils import Constructor, assert_equal_data
 
 
 @pytest.mark.parametrize("expr1", ["a", nw.col("a")])

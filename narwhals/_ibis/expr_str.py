@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 from ibis.expr.datatypes import Timestamp
 
-from narwhals.utils import _is_naive_format
-from narwhals.utils import not_implemented
+from narwhals.utils import _is_naive_format, not_implemented
 
 if TYPE_CHECKING:
     import ibis.expr.types as ir
