@@ -9,18 +9,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan.common import Function
-from narwhals._plan.options import FunctionFlags
-from narwhals._plan.options import FunctionOptions
+from narwhals._plan.options import FunctionFlags, FunctionOptions
 from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
     from typing import Any
 
-    from narwhals._plan.common import Seq
-    from narwhals._plan.common import Udf
-    from narwhals._plan.options import EWMOptions
-    from narwhals._plan.options import RankOptions
-    from narwhals._plan.options import RollingOptionsFixedWindow
+    from narwhals._plan.common import Seq, Udf
+    from narwhals._plan.options import EWMOptions, RankOptions, RollingOptionsFixedWindow
     from narwhals.dtypes import DType
     from narwhals.typing import FillNullStrategy
 

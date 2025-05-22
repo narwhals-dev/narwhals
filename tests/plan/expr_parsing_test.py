@@ -1,23 +1,21 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Callable
-from typing import Iterable
+from typing import TYPE_CHECKING, Callable, Iterable
 
 import pytest
 
 import narwhals as nw
 import narwhals._plan.demo as nwd
-from narwhals._plan import boolean
-from narwhals._plan import functions as F  # noqa: N812
-from narwhals._plan.common import ExprIR
-from narwhals._plan.common import Function
+from narwhals._plan import (
+    boolean,
+    functions as F,  # noqa: N812
+)
+from narwhals._plan.common import ExprIR, Function
 from narwhals._plan.dummy import DummyExpr
 from narwhals._plan.expr import FunctionExpr
 
 if TYPE_CHECKING:
-    from narwhals._plan.common import IntoExpr
-    from narwhals._plan.common import Seq
+    from narwhals._plan.common import IntoExpr, Seq
 
 
 @pytest.mark.parametrize(

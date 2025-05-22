@@ -5,8 +5,7 @@ from __future__ import annotations
 import typing as t
 
 from narwhals._plan.common import Function
-from narwhals._plan.options import FunctionFlags
-from narwhals._plan.options import FunctionOptions
+from narwhals._plan.options import FunctionFlags, FunctionOptions
 
 if t.TYPE_CHECKING:
     from narwhals.typing import ClosedInterval

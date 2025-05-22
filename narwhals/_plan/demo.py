@@ -3,34 +3,26 @@ from __future__ import annotations
 import builtins
 import typing as t
 
-from narwhals._plan import aggregation as agg
-from narwhals._plan import boolean
-from narwhals._plan import expr_parsing as parse
-from narwhals._plan import functions as F  # noqa: N812
-from narwhals._plan.common import ExprIR
-from narwhals._plan.common import IntoExpr
-from narwhals._plan.common import is_non_nested_literal
+from narwhals._plan import (
+    aggregation as agg,
+    boolean,
+    expr_parsing as parse,
+    functions as F,  # noqa: N812
+)
+from narwhals._plan.common import ExprIR, IntoExpr, is_non_nested_literal
 from narwhals._plan.dummy import DummySeries
-from narwhals._plan.expr import All
-from narwhals._plan.expr import Column
-from narwhals._plan.expr import Columns
-from narwhals._plan.expr import IndexColumns
-from narwhals._plan.expr import Len
-from narwhals._plan.expr import Nth
-from narwhals._plan.literal import ScalarLiteral
-from narwhals._plan.literal import SeriesLiteral
+from narwhals._plan.expr import All, Column, Columns, IndexColumns, Len, Nth
+from narwhals._plan.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.strings import ConcatHorizontal
 from narwhals.dtypes import DType
 from narwhals.exceptions import OrderDependentExprError
-from narwhals.utils import Version
-from narwhals.utils import flatten
+from narwhals.utils import Version, flatten
 
 if t.TYPE_CHECKING:
     from typing_extensions import TypeIs
 
     from narwhals._plan.dummy import DummyExpr
-    from narwhals._plan.expr import SortBy
-    from narwhals._plan.expr import WindowExpr
+    from narwhals._plan.expr import SortBy, WindowExpr
     from narwhals.typing import NonNestedLiteral
 
 

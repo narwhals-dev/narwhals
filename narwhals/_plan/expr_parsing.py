@@ -1,28 +1,18 @@
 from __future__ import annotations
 
 # ruff: noqa: A002
-from typing import TYPE_CHECKING
-from typing import Iterable
-from typing import Sequence
-from typing import TypeVar
+from typing import TYPE_CHECKING, Iterable, Sequence, TypeVar
 
-from narwhals._plan.common import is_expr
-from narwhals._plan.common import is_iterable_reject
-from narwhals.dependencies import get_polars
-from narwhals.dependencies import is_pandas_dataframe
-from narwhals.dependencies import is_pandas_series
+from narwhals._plan.common import is_expr, is_iterable_reject
+from narwhals.dependencies import get_polars, is_pandas_dataframe, is_pandas_series
 from narwhals.exceptions import InvalidIntoExprError
 
 if TYPE_CHECKING:
-    from typing import Any
-    from typing import Iterator
+    from typing import Any, Iterator
 
-    from typing_extensions import TypeAlias
-    from typing_extensions import TypeIs
+    from typing_extensions import TypeAlias, TypeIs
 
-    from narwhals._plan.common import ExprIR
-    from narwhals._plan.common import IntoExpr
-    from narwhals._plan.common import Seq
+    from narwhals._plan.common import ExprIR, IntoExpr, Seq
     from narwhals.dtypes import DType
 
 T = TypeVar("T")
