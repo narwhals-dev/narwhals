@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Sequence
 
 from duckdb import FunctionExpression
 
@@ -125,18 +125,43 @@ class DuckDBExprDateTimeNamespace:
 
         return self._compliant_expr._with_callable(_truncate)
 
+    def convert_time_zone(self, time_zone: str) -> DuckDBExpr:
+        def func(df: DuckDBLazyFrame) -> Sequence[Expression]:
+            native_series_list = self._compliant_expr(df)
+            conn_time_zone = get_rel_time_zone(df.native)
+            if conn_time_zone != time_zone:
+                msg = (
+                    "DuckDB stores the time zone in the connection, rather than in the "
+                    "data type, so only `None` and {conn_time_zone} (the current "
+                    "connection time zone) are supported in `convert_time_zone`."
+                )
+                raise NotImplementedError(msg)
+            return native_series_list
+
+        return self._compliant_expr.__class__(
+            func,
+            evaluate_output_names=self._compliant_expr._evaluate_output_names,
+            alias_output_names=self._compliant_expr._alias_output_names,
+            backend_version=self._compliant_expr._backend_version,
+            version=self._compliant_expr._version,
+        )
+
     def replace_time_zone(self, time_zone: str | None) -> DuckDBExpr:
         if time_zone is None:
             return self._compliant_expr._with_callable(
                 lambda _input: _input.cast("timestamp")
             )
-        else:  # pragma: no cover
+        else:
 
-            def func(df: DuckDBLazyFrame) -> list[Expression]:
+            def func(df: DuckDBLazyFrame) -> Sequence[Expression]:
                 native_series_list = self._compliant_expr(df)
                 conn_time_zone = get_rel_time_zone(df.native)
                 if conn_time_zone != time_zone:
-                    msg = "Not implemented"
+                    msg = (
+                        "DuckDB stores the time zone in the connection, rather than in the "
+                        "data type, so only `None` and {conn_time_zone} (the current "
+                        "connection time zone) are supported in `replace_time_zone`."
+                    )
                     raise NotImplementedError(msg)
                 return native_series_list
 
@@ -147,8 +172,5 @@ class DuckDBExprDateTimeNamespace:
                 backend_version=self._compliant_expr._backend_version,
                 version=self._compliant_expr._version,
             )
-
-            msg = "`replace_time_zone` with non-null `time_zone` not yet implemented for duckdb"
-            raise NotImplementedError(msg)
 
     total_nanoseconds = not_implemented()

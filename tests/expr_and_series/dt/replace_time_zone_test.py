@@ -58,10 +58,6 @@ def test_replace_time_zone_none(
         or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         pytest.skip()
-    if "duckdb" in str(constructor):
-        import duckdb
-
-        duckdb.sql("""set timezone = 'UTC'""")
     if any(x in str(constructor) for x in ("pyspark",)):
         # pyspark: needs `to_string`
         request.applymarker(pytest.mark.xfail)
@@ -134,3 +130,22 @@ def test_replace_time_zone_none_series(constructor_eager: ConstructorEager) -> N
     result_str = result.select(df["a"].dt.to_string("%Y-%m-%dT%H:%M"))
     expected = {"a": ["2020-01-01T00:00", "2020-01-02T00:00"]}
     assert_equal_data(result_str, expected)
+
+
+def test_replace_time_zone_to_connection_tz_duckdb() -> None:
+    pytest.importorskip("duckdb")
+    pytest.importorskip("zoneinfo")
+    import duckdb
+    from zoneinfo import ZoneInfo
+
+    duckdb.sql("set timezone = 'Asia/Kolkata'")
+    rel = duckdb.sql("""select * from values (timestamptz '2020-01-01') df(a)""")
+    result = nw.from_native(rel).with_columns(
+        nw.col("a").dt.replace_time_zone("Asia/Kolkata")
+    )
+    expected = {"a": [datetime(2020, 1, 1, tzinfo=ZoneInfo("Asia/Kolkata"))]}
+    assert_equal_data(result, expected)
+    with pytest.raises(NotImplementedError):
+        result = nw.from_native(rel).with_columns(
+            nw.col("a").dt.replace_time_zone("Asia/Kathmandu")
+        )
