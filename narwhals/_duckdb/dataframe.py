@@ -175,7 +175,7 @@ class DuckDBLazyFrame(
     def aggregate(self, *exprs: DuckDBExpr) -> Self:
         selection = [val.alias(name) for name, val in evaluate_exprs(self, *exprs)]
         try:
-            return self._with_native(self.native.aggregate(*selection))  # type: ignore[arg-type]
+            return self._with_native(self.native.aggregate(selection))  # type: ignore[arg-type]
         except Exception as e:  # noqa: BLE001
             raise catch_duckdb_column_not_found_exception(
                 e, available_columns=self.columns
