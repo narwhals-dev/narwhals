@@ -228,14 +228,12 @@ class DuckDBLazyFrame(
             # TODO(unassigned): can we optimise this in the case of nested dtypes?
             # E.g. list of "datetime with timezone"s
             nonlocal time_zone
-            if "timestamp with time zone" in duckdb_dtype.id:
-                if time_zone is None:  # Fetch only if needed and only once
-                    time_zone = get_rel_time_zone(self.native)
-                return native_to_narwhals_dtype(
-                    duckdb_dtype, self._version, self.native, time_zone
-                )
-            else:
-                return native_to_narwhals_dtype(duckdb_dtype, self._version, self.native)
+            if duckdb_dtype.id == "timestamp with time zone" and time_zone is None:
+                # Fetch only if needed and only once
+                time_zone = get_rel_time_zone(self.native)
+            return native_to_narwhals_dtype(
+                duckdb_dtype, self._version, self.native, time_zone
+            )
 
         return {
             column_name: _get_dtype(duckdb_dtype)
