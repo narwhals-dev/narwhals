@@ -131,6 +131,8 @@ def _field_str(name: str, value: Any) -> str:
     if isinstance(value, tuple):
         inner = ", ".join(f"{v}" for v in value)
         return f"{name}=[{inner}]"
+    elif isinstance(value, str):
+        return f"{name}={value!r}"
     return f"{name}={value}"
 
 

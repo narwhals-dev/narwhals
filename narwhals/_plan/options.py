@@ -48,6 +48,10 @@ class FunctionFlags(enum.Flag):
     def default() -> FunctionFlags:
         return FunctionFlags.ALLOW_GROUP_AWARE
 
+    def __str__(self) -> str:
+        name = self.name or "<FUNCTION_FLAGS_UNKNOWN>"
+        return name.replace("|", " | ")
+
 
 class FunctionOptions(Immutable):
     """ExprMetadata` but less god object.
@@ -58,6 +62,9 @@ class FunctionOptions(Immutable):
     __slots__ = ("flags",)
 
     flags: FunctionFlags
+
+    def __str__(self) -> str:
+        return f"{type(self).__name__}(flags='{self.flags}')"
 
     def is_elementwise(self) -> bool:
         return self.flags.is_elementwise()
