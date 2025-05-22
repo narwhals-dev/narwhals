@@ -37,7 +37,7 @@ def iter_api_reference_names(tp: type[Any]) -> Iterator[str]:
 ret = 0
 
 NAMESPACES = {"dt", "str", "cat", "name", "list", "struct"}
-EXPR_ONLY_METHODS = {"over", "map_batches"}
+EXPR_ONLY_METHODS = {"over", "map_batches", "sort_by"}
 SERIES_ONLY_METHODS = {
     "dtype",
     "implementation",

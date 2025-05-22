@@ -4,6 +4,7 @@ from functools import partial
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Collection
+from typing import Iterable
 from typing import Iterator
 from typing import Literal
 from typing import Mapping
@@ -28,7 +29,6 @@ from narwhals.utils import check_column_names_are_unique
 from narwhals.utils import convert_str_slice_to_int_slice
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import not_implemented
-from narwhals.utils import parse_columns_to_drop
 from narwhals.utils import parse_version
 from narwhals.utils import scale_bytes
 from narwhals.utils import supports_arrow_c_stream
@@ -436,11 +436,9 @@ class ArrowDataFrame(
 
     join_asof = not_implemented()
 
-    def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
-        to_drop = parse_columns_to_drop(
-            compliant_frame=self, columns=columns, strict=strict
-        )
-        return self._with_native(self.native.drop(to_drop), validate_column_names=False)
+    def _drop(self, columns: Iterable[str], /) -> Self:
+        native = self.native.drop(list(columns))
+        return self._with_native(native, validate_column_names=False)
 
     def drop_nulls(self: ArrowDataFrame, subset: Sequence[str] | None) -> ArrowDataFrame:
         if subset is None:

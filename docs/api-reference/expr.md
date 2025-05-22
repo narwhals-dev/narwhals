@@ -58,6 +58,7 @@
         - sample
         - shift
         - sort
+        - sort_by
         - skew
         - std
         - sum
