@@ -1,78 +1,65 @@
 from __future__ import annotations
 
-import sys
 from functools import partial
 from operator import methodcaller
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Generic
-from typing import Literal
-from typing import Mapping
-from typing import Protocol
-from typing import Sequence
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Literal,
+    Mapping,
+    Protocol,
+    Sequence,
+)
 
-from narwhals._compliant.any_namespace import CatNamespace
-from narwhals._compliant.any_namespace import DateTimeNamespace
-from narwhals._compliant.any_namespace import ListNamespace
-from narwhals._compliant.any_namespace import NameNamespace
-from narwhals._compliant.any_namespace import StringNamespace
-from narwhals._compliant.any_namespace import StructNamespace
+from narwhals._compliant.any_namespace import (
+    CatNamespace,
+    DateTimeNamespace,
+    ListNamespace,
+    NameNamespace,
+    StringNamespace,
+    StructNamespace,
+)
 from narwhals._compliant.namespace import CompliantNamespace
-from narwhals._compliant.typing import AliasName
-from narwhals._compliant.typing import AliasNames
-from narwhals._compliant.typing import CompliantExprT_co
-from narwhals._compliant.typing import CompliantFrameT
-from narwhals._compliant.typing import CompliantLazyFrameT
-from narwhals._compliant.typing import CompliantSeriesOrNativeExprT_co
-from narwhals._compliant.typing import EagerDataFrameT
-from narwhals._compliant.typing import EagerExprT
-from narwhals._compliant.typing import EagerSeriesT
-from narwhals._compliant.typing import LazyExprT
-from narwhals._compliant.typing import NativeExprT
-from narwhals.dependencies import get_numpy
-from narwhals.dependencies import is_numpy_array
+from narwhals._compliant.typing import (
+    AliasName,
+    AliasNames,
+    CompliantExprT_co,
+    CompliantFrameT,
+    CompliantLazyFrameT,
+    CompliantSeriesOrNativeExprT_co,
+    EagerDataFrameT,
+    EagerExprT,
+    EagerSeriesT,
+    LazyExprT,
+    NativeExprT,
+)
+from narwhals._typing_compat import Protocol38, deprecated
+from narwhals.dependencies import get_numpy, is_numpy_array
 from narwhals.dtypes import DType
-from narwhals.utils import _StoresCompliant
-from narwhals.utils import deprecated
-from narwhals.utils import not_implemented
-
-if not TYPE_CHECKING:  # pragma: no cover
-    if sys.version_info >= (3, 9):
-        from typing import Protocol as Protocol38
-    else:
-        from typing import Generic as Protocol38
-else:  # pragma: no cover
-    # TODO @dangotbanned: Remove after dropping `3.8` (#2084)
-    # - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
-    from typing import Protocol as Protocol38
+from narwhals.utils import _StoresCompliant, not_implemented
 
 if TYPE_CHECKING:
     from typing import Mapping
 
-    from typing_extensions import Self
-    from typing_extensions import TypeIs
+    from typing_extensions import Self, TypeIs
 
-    from narwhals._compliant.namespace import CompliantNamespace
-    from narwhals._compliant.namespace import EagerNamespace
+    from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._compliant.series import CompliantSeries
-    from narwhals._compliant.typing import AliasNames
-    from narwhals._compliant.typing import EvalNames
-    from narwhals._compliant.typing import EvalSeries
-    from narwhals._compliant.typing import ScalarKwargs
-    from narwhals._expression_parsing import ExprKind
-    from narwhals._expression_parsing import ExprMetadata
+    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries, ScalarKwargs
+    from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals.dtypes import DType
-    from narwhals.typing import FillNullStrategy
-    from narwhals.typing import NonNestedLiteral
-    from narwhals.typing import NumericLiteral
-    from narwhals.typing import RankMethod
-    from narwhals.typing import RollingInterpolationMethod
-    from narwhals.typing import TemporalLiteral
-    from narwhals.typing import TimeUnit
-    from narwhals.utils import Implementation
-    from narwhals.utils import Version
-    from narwhals.utils import _FullContext
+    from narwhals.typing import (
+        FillNullStrategy,
+        NonNestedLiteral,
+        NumericLiteral,
+        RankMethod,
+        RollingInterpolationMethod,
+        TemporalLiteral,
+        TimeUnit,
+    )
+    from narwhals.utils import Implementation, Version, _FullContext
 
 __all__ = ["CompliantExpr", "EagerExpr", "LazyExpr", "NativeExpr"]
 
@@ -214,37 +201,19 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     ) -> Self: ...
 
     def rolling_sum(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
+        self, window_size: int, *, min_samples: int, center: bool
     ) -> Self: ...
 
     def rolling_mean(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
+        self, window_size: int, *, min_samples: int, center: bool
     ) -> Self: ...
 
     def rolling_var(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
-        ddof: int,
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self: ...
 
     def rolling_std(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
-        ddof: int,
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self: ...
 
     @deprecated("Since `1.22.0`")
@@ -831,9 +800,7 @@ class EagerExpr(
         )
 
     def map_batches(
-        self,
-        function: Callable[[Any], Any],
-        return_dtype: DType | type[DType] | None,
+        self, function: Callable[[Any], Any], return_dtype: DType | type[DType] | None
     ) -> Self:
         def func(df: EagerDataFrameT) -> Sequence[EagerSeriesT]:
             input_series_list = self(df)

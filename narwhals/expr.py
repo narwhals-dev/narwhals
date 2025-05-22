@@ -1,17 +1,14 @@
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Iterable
-from typing import Mapping
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Mapping, Sequence
 
-from narwhals._expression_parsing import ExprMetadata
-from narwhals._expression_parsing import apply_n_ary_operation
-from narwhals._expression_parsing import combine_metadata
-from narwhals._expression_parsing import extract_compliant
+from narwhals._expression_parsing import (
+    ExprMetadata,
+    apply_n_ary_operation,
+    combine_metadata,
+    extract_compliant,
+)
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr_cat import ExprCatNamespace
@@ -21,29 +18,25 @@ from narwhals.expr_name import ExprNameNamespace
 from narwhals.expr_str import ExprStringNamespace
 from narwhals.expr_struct import ExprStructNamespace
 from narwhals.translate import to_native
-from narwhals.utils import _validate_rolling_arguments
-from narwhals.utils import flatten
-from narwhals.utils import issue_deprecation_warning
+from narwhals.utils import _validate_rolling_arguments, flatten, issue_deprecation_warning
 
 if TYPE_CHECKING:
     from typing import TypeVar
 
-    from typing_extensions import Concatenate
-    from typing_extensions import ParamSpec
-    from typing_extensions import Self
-    from typing_extensions import TypeAlias
+    from typing_extensions import Concatenate, ParamSpec, Self, TypeAlias
 
-    from narwhals._compliant import CompliantExpr
-    from narwhals._compliant import CompliantNamespace
+    from narwhals._compliant import CompliantExpr, CompliantNamespace
     from narwhals.dtypes import DType
-    from narwhals.typing import ClosedInterval
-    from narwhals.typing import FillNullStrategy
-    from narwhals.typing import IntoExpr
-    from narwhals.typing import NonNestedLiteral
-    from narwhals.typing import NumericLiteral
-    from narwhals.typing import RankMethod
-    from narwhals.typing import RollingInterpolationMethod
-    from narwhals.typing import TemporalLiteral
+    from narwhals.typing import (
+        ClosedInterval,
+        FillNullStrategy,
+        IntoExpr,
+        NonNestedLiteral,
+        NumericLiteral,
+        RankMethod,
+        RollingInterpolationMethod,
+        TemporalLiteral,
+    )
 
     PS = ParamSpec("PS")
     R = TypeVar("R")
@@ -253,11 +246,7 @@ class Expr:
     def __rsub__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx,
-                lambda x, y: x.__rsub__(y),
-                self,
-                other,
-                str_as_lit=True,
+                plx, lambda x, y: x.__rsub__(y), self, other, str_as_lit=True
             ),
             ExprMetadata.from_binary_op(self, other),
         )
@@ -273,11 +262,7 @@ class Expr:
     def __rtruediv__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx,
-                lambda x, y: x.__rtruediv__(y),
-                self,
-                other,
-                str_as_lit=True,
+                plx, lambda x, y: x.__rtruediv__(y), self, other, str_as_lit=True
             ),
             ExprMetadata.from_binary_op(self, other),
         )
@@ -336,11 +321,7 @@ class Expr:
     def __rpow__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx,
-                lambda x, y: x.__rpow__(y),
-                self,
-                other,
-                str_as_lit=True,
+                plx, lambda x, y: x.__rpow__(y), self, other, str_as_lit=True
             ),
             ExprMetadata.from_binary_op(self, other),
         )
@@ -356,11 +337,7 @@ class Expr:
     def __rfloordiv__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx,
-                lambda x, y: x.__rfloordiv__(y),
-                self,
-                other,
-                str_as_lit=True,
+                plx, lambda x, y: x.__rfloordiv__(y), self, other, str_as_lit=True
             ),
             ExprMetadata.from_binary_op(self, other),
         )
@@ -376,11 +353,7 @@ class Expr:
     def __rmod__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx,
-                lambda x, y: x.__rmod__(y),
-                self,
-                other,
-                str_as_lit=True,
+                plx, lambda x, y: x.__rmod__(y), self, other, str_as_lit=True
             ),
             ExprMetadata.from_binary_op(self, other),
         )
@@ -1204,7 +1177,7 @@ class Expr:
             return self._with_elementwise_op(
                 lambda plx: self._to_compliant_expr(plx).is_in(
                     to_native(other, pass_through=True)
-                ),
+                )
             )
         else:
             msg = "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
@@ -2174,11 +2147,7 @@ class Expr:
         )
 
     def rolling_sum(
-        self,
-        window_size: int,
-        *,
-        min_samples: int | None = None,
-        center: bool = False,
+        self, window_size: int, *, min_samples: int | None = None, center: bool = False
     ) -> Self:
         """Apply a rolling sum (moving sum) over the values.
 
@@ -2228,18 +2197,12 @@ class Expr:
 
         return self._with_orderable_window(
             lambda plx: self._to_compliant_expr(plx).rolling_sum(
-                window_size=window_size,
-                min_samples=min_samples_int,
-                center=center,
+                window_size=window_size, min_samples=min_samples_int, center=center
             )
         )
 
     def rolling_mean(
-        self,
-        window_size: int,
-        *,
-        min_samples: int | None = None,
-        center: bool = False,
+        self, window_size: int, *, min_samples: int | None = None, center: bool = False
     ) -> Self:
         """Apply a rolling mean (moving mean) over the values.
 
@@ -2289,9 +2252,7 @@ class Expr:
 
         return self._with_orderable_window(
             lambda plx: self._to_compliant_expr(plx).rolling_mean(
-                window_size=window_size,
-                min_samples=min_samples,
-                center=center,
+                window_size=window_size, min_samples=min_samples, center=center
             )
         )
 
@@ -2413,10 +2374,7 @@ class Expr:
 
         return self._with_orderable_window(
             lambda plx: self._to_compliant_expr(plx).rolling_std(
-                window_size=window_size,
-                min_samples=min_samples,
-                center=center,
-                ddof=ddof,
+                window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
             )
         )
 
@@ -2543,6 +2501,4 @@ class Expr:
         return ExprStructNamespace(self)
 
 
-__all__ = [
-    "Expr",
-]
+__all__ = ["Expr"]

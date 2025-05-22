@@ -1,25 +1,27 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Iterable
-from typing import Iterator
-from typing import Mapping
-from typing import Sequence
-from typing import cast
-from typing import overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Iterable,
+    Iterator,
+    Mapping,
+    Sequence,
+    cast,
+    overload,
+)
 
 import polars as pl
 
-from narwhals._polars.utils import catch_polars_exception
-from narwhals._polars.utils import extract_args_kwargs
-from narwhals._polars.utils import extract_native
-from narwhals._polars.utils import narwhals_to_native_dtype
-from narwhals._polars.utils import native_to_narwhals_dtype
+from narwhals._polars.utils import (
+    catch_polars_exception,
+    extract_args_kwargs,
+    extract_native,
+    narwhals_to_native_dtype,
+    native_to_narwhals_dtype,
+)
 from narwhals.dependencies import is_numpy_array_1d
-from narwhals.utils import Implementation
-from narwhals.utils import requires
-from narwhals.utils import validate_backend_version
+from narwhals.utils import Implementation, requires, validate_backend_version
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -27,20 +29,15 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import pyarrow as pa
-    from typing_extensions import Self
-    from typing_extensions import TypeIs
+    from typing_extensions import Self, TypeIs
 
-    from narwhals._polars.dataframe import Method
-    from narwhals._polars.dataframe import PolarsDataFrame
+    from narwhals._polars.dataframe import Method, PolarsDataFrame
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals.dtypes import DType
     from narwhals.series import Series
-    from narwhals.typing import Into1DArray
-    from narwhals.typing import MultiIndexSelector
-    from narwhals.typing import _1DArray
-    from narwhals.utils import Version
-    from narwhals.utils import _FullContext
+    from narwhals.typing import Into1DArray, MultiIndexSelector, _1DArray
+    from narwhals.utils import Version, _FullContext
 
     T = TypeVar("T")
 
@@ -124,11 +121,7 @@ INHERITED_METHODS = frozenset(
 
 class PolarsSeries:
     def __init__(
-        self,
-        series: pl.Series,
-        *,
-        backend_version: tuple[int, ...],
-        version: Version,
+        self, series: pl.Series, *, backend_version: tuple[int, ...], version: Version
     ) -> None:
         self._native_series: pl.Series = series
         self._backend_version = backend_version
@@ -389,12 +382,7 @@ class PolarsSeries:
 
     @requires.backend_version((1,))
     def rolling_var(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
-        ddof: int,
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
         extra_kwargs: dict[str, Any] = (
             {"min_periods": min_samples}
@@ -409,12 +397,7 @@ class PolarsSeries:
 
     @requires.backend_version((1,))
     def rolling_std(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
-        ddof: int,
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
         extra_kwargs: dict[str, Any] = (
             {"min_periods": min_samples}
@@ -427,13 +410,7 @@ class PolarsSeries:
             )
         )
 
-    def rolling_sum(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
-    ) -> Self:
+    def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         extra_kwargs: dict[str, Any] = (
             {"min_periods": min_samples}
             if self._backend_version < (1, 21, 0)
@@ -445,13 +422,7 @@ class PolarsSeries:
             )
         )
 
-    def rolling_mean(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
-    ) -> Self:
+    def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         extra_kwargs: dict[str, Any] = (
             {"min_periods": min_samples}
             if self._backend_version < (1, 21, 0)
@@ -480,12 +451,7 @@ class PolarsSeries:
         return self._with_native(s)
 
     def value_counts(
-        self,
-        *,
-        sort: bool,
-        parallel: bool,
-        name: str | None,
-        normalize: bool,
+        self, *, sort: bool, parallel: bool, name: str | None, normalize: bool
     ) -> PolarsDataFrame:
         from narwhals._polars.dataframe import PolarsDataFrame
 

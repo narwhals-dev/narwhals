@@ -2,12 +2,7 @@ from __future__ import annotations
 
 import collections
 import warnings
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import ClassVar
-from typing import Iterator
-from typing import Mapping
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Mapping, Sequence
 
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
@@ -64,10 +59,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
                 msg = "Grouping by null values is not supported in pandas < 1.1.0"
                 raise NotImplementedError(msg)
             self._grouped = native_frame.groupby(
-                list(self._keys),
-                sort=False,
-                as_index=True,
-                observed=True,
+                list(self._keys), sort=False, as_index=True, observed=True
             )
         else:
             self._grouped = native_frame.groupby(

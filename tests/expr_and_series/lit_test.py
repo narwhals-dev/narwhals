@@ -1,18 +1,14 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pyarrow as pa
 import pytest
 
 import narwhals as nw
-from tests.utils import DASK_VERSION
-from tests.utils import PANDAS_VERSION
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+from tests.utils import DASK_VERSION, PANDAS_VERSION, Constructor, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
@@ -23,20 +19,13 @@ if TYPE_CHECKING:
     [(None, [2, 2, 2]), (nw.String, ["2", "2", "2"]), (nw.Float32, [2.0, 2.0, 2.0])],
 )
 def test_lit(
-    constructor: Constructor,
-    dtype: DType | None,
-    expected_lit: list[Any],
+    constructor: Constructor, dtype: DType | None, expected_lit: list[Any]
 ) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()
     result = df.with_columns(nw.lit(2, dtype).alias("lit"))
-    expected = {
-        "a": [1, 3, 2],
-        "b": [4, 4, 6],
-        "z": [7.0, 8.0, 9.0],
-        "lit": expected_lit,
-    }
+    expected = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0], "lit": expected_lit}
     assert_equal_data(result, expected)
 
 
@@ -63,10 +52,7 @@ def test_lit_out_name(constructor: Constructor) -> None:
     df_raw = constructor(data)
     df = nw.from_native(df_raw).lazy()
     result = df.with_columns(nw.lit(2))
-    expected = {
-        "a": [1, 3, 2],
-        "literal": [2, 2, 2],
-    }
+    expected = {"a": [1, 3, 2], "literal": [2, 2, 2]}
     assert_equal_data(result, expected)
 
 
@@ -86,10 +72,7 @@ def test_lit_out_name(constructor: Constructor) -> None:
     ],
 )
 def test_lit_operation_in_select(
-    constructor: Constructor,
-    col_name: str,
-    expr: nw.Expr,
-    expected_result: list[int],
+    constructor: Constructor, col_name: str, expr: nw.Expr, expected_result: list[int]
 ) -> None:
     if (
         "dask" in str(constructor)
@@ -114,10 +97,7 @@ def test_lit_operation_in_select(
     ],
 )
 def test_lit_operation_in_with_columns(
-    constructor: Constructor,
-    col_name: str,
-    expr: nw.Expr,
-    expected_result: list[int],
+    constructor: Constructor, col_name: str, expr: nw.Expr, expected_result: list[int]
 ) -> None:
     data = {"a": [1, 3, 2]}
     df_raw = constructor(data)

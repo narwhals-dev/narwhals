@@ -6,15 +6,10 @@ import pandas as pd
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {
-    "a": [
-        datetime(2021, 3, 1, 12, 34, 56, 49012),
-        datetime(2020, 1, 2, 2, 4, 14, 715123),
-    ],
+    "a": [datetime(2021, 3, 1, 12, 34, 56, 49012), datetime(2020, 1, 2, 2, 4, 14, 715123)]
 }
 
 
@@ -42,55 +37,13 @@ data = {
                 datetime(2020, 1, 2, 2, 4, 14, 715000),
             ],
         ),
-        (
-            "1s",
-            [
-                datetime(2021, 3, 1, 12, 34, 56),
-                datetime(2020, 1, 2, 2, 4, 14),
-            ],
-        ),
-        (
-            "1m",
-            [
-                datetime(2021, 3, 1, 12, 34),
-                datetime(2020, 1, 2, 2, 4),
-            ],
-        ),
-        (
-            "1h",
-            [
-                datetime(2021, 3, 1, 12, 0, 0, 0),
-                datetime(2020, 1, 2, 2, 0, 0, 0),
-            ],
-        ),
-        (
-            "1d",
-            [
-                datetime(2021, 3, 1),
-                datetime(2020, 1, 2),
-            ],
-        ),
-        (
-            "1mo",
-            [
-                datetime(2021, 3, 1),
-                datetime(2020, 1, 1),
-            ],
-        ),
-        (
-            "1q",
-            [
-                datetime(2021, 1, 1),
-                datetime(2020, 1, 1),
-            ],
-        ),
-        (
-            "1y",
-            [
-                datetime(2021, 1, 1),
-                datetime(2020, 1, 1),
-            ],
-        ),
+        ("1s", [datetime(2021, 3, 1, 12, 34, 56), datetime(2020, 1, 2, 2, 4, 14)]),
+        ("1m", [datetime(2021, 3, 1, 12, 34), datetime(2020, 1, 2, 2, 4)]),
+        ("1h", [datetime(2021, 3, 1, 12, 0, 0, 0), datetime(2020, 1, 2, 2, 0, 0, 0)]),
+        ("1d", [datetime(2021, 3, 1), datetime(2020, 1, 2)]),
+        ("1mo", [datetime(2021, 3, 1), datetime(2020, 1, 1)]),
+        ("1q", [datetime(2021, 1, 1), datetime(2020, 1, 1)]),
+        ("1y", [datetime(2021, 1, 1), datetime(2020, 1, 1)]),
     ],
 )
 def test_truncate(
@@ -141,48 +94,12 @@ def test_truncate(
                 datetime(2020, 1, 2, 2, 4, 14, 714000),
             ],
         ),
-        (
-            "10s",
-            [
-                datetime(2021, 3, 1, 12, 34, 50),
-                datetime(2020, 1, 2, 2, 4, 10),
-            ],
-        ),
-        (
-            "7m",
-            [
-                datetime(2021, 3, 1, 12, 30),
-                datetime(2020, 1, 2, 1, 59),
-            ],
-        ),
-        (
-            "7h",
-            [
-                datetime(2021, 3, 1, 9, 0, 0, 0),
-                datetime(2020, 1, 2, 0, 0, 0, 0),
-            ],
-        ),
-        (
-            "13d",
-            [
-                datetime(2021, 2, 23),
-                datetime(2019, 12, 22),
-            ],
-        ),
-        (
-            "3mo",
-            [
-                datetime(2021, 1, 1),
-                datetime(2020, 1, 1),
-            ],
-        ),
-        (
-            "2q",
-            [
-                datetime(2021, 1, 1),
-                datetime(2020, 1, 1),
-            ],
-        ),
+        ("10s", [datetime(2021, 3, 1, 12, 34, 50), datetime(2020, 1, 2, 2, 4, 10)]),
+        ("7m", [datetime(2021, 3, 1, 12, 30), datetime(2020, 1, 2, 1, 59)]),
+        ("7h", [datetime(2021, 3, 1, 9, 0, 0, 0), datetime(2020, 1, 2, 0, 0, 0, 0)]),
+        ("13d", [datetime(2021, 2, 23), datetime(2019, 12, 22)]),
+        ("3mo", [datetime(2021, 1, 1), datetime(2020, 1, 1)]),
+        ("2q", [datetime(2021, 1, 1), datetime(2020, 1, 1)]),
     ],
 )
 def test_truncate_multiples(
@@ -191,7 +108,7 @@ def test_truncate_multiples(
     every: str,
     expected: list[datetime],
 ) -> None:
-    if any(x in str(constructor) for x in ("sqlframe", "cudf", "pyspark")):
+    if any(x in str(constructor) for x in ("sqlframe", "cudf", "pyspark", "duckdb")):
         # Reasons:
         # - sqlframe: https://github.com/eakmanrq/sqlframe/issues/383
         # - cudf: https://github.com/rapidsai/cudf/issues/18654
@@ -240,16 +157,11 @@ def test_truncate_polars_ns(every: str, expected: list[datetime]) -> None:
     assert_equal_data(result, {"a": expected})
 
 
-def test_truncate_series(
-    constructor_eager: ConstructorEager,
-) -> None:
+def test_truncate_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(df["a"].dt.truncate("1h"))
     expected = {
-        "a": [
-            datetime(2021, 3, 1, 12, 0, 0, 0),
-            datetime(2020, 1, 2, 2, 0, 0, 0),
-        ]
+        "a": [datetime(2021, 3, 1, 12, 0, 0, 0), datetime(2020, 1, 2, 2, 0, 0, 0)]
     }
     assert_equal_data(result, expected)
 
@@ -282,3 +194,20 @@ def test_pandas_numpy_nat() -> None:
     expected = {"a": [datetime(2020, 1, 1), None, datetime(2020, 1, 1)]}
     assert_equal_data(result, expected)
     assert result.item(1, 0) is pd.NaT
+
+
+def test_truncate_tz_aware_duckdb() -> None:
+    pytest.importorskip("duckdb")
+    pytest.importorskip("zoneinfo")
+    import duckdb
+    from zoneinfo import ZoneInfo
+
+    duckdb.sql("""set timezone = 'Europe/Amsterdam'""")
+    rel = duckdb.sql("""select * from values (timestamptz '2020-10-25') df(a)""")
+    result = nw.from_native(rel).with_columns(a_truncated=nw.col("a").dt.truncate("1mo"))
+    expected = {
+        "a": [datetime(2020, 10, 25, tzinfo=ZoneInfo("Europe/Amsterdam"))],
+        "a_truncated": [datetime(2020, 10, 1, tzinfo=ZoneInfo("Europe/Amsterdam"))],
+    }
+    assert_equal_data(result, expected)
+    duckdb.sql("""set timezone = 'UTC'""")

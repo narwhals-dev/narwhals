@@ -1,49 +1,51 @@
 from __future__ import annotations
 
-from functools import partial
-from functools import reduce
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Container
-from typing import Iterable
-from typing import Mapping
-from typing import Protocol
-from typing import Sequence
-from typing import overload
+from functools import partial, reduce
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Container,
+    Iterable,
+    Mapping,
+    Protocol,
+    Sequence,
+    overload,
+)
 
-from narwhals._compliant.typing import CompliantExprT
-from narwhals._compliant.typing import CompliantFrameT
-from narwhals._compliant.typing import CompliantLazyFrameT
-from narwhals._compliant.typing import DepthTrackingExprT
-from narwhals._compliant.typing import EagerDataFrameT
-from narwhals._compliant.typing import EagerExprT
-from narwhals._compliant.typing import EagerSeriesT
-from narwhals._compliant.typing import LazyExprT
-from narwhals._compliant.typing import NativeFrameT
-from narwhals._compliant.typing import NativeFrameT_co
-from narwhals._compliant.typing import NativeSeriesT
-from narwhals._expression_parsing import combine_alias_output_names
-from narwhals._expression_parsing import combine_evaluate_output_names
+from narwhals._compliant.typing import (
+    CompliantExprT,
+    CompliantFrameT,
+    CompliantLazyFrameT,
+    DepthTrackingExprT,
+    EagerDataFrameT,
+    EagerExprT,
+    EagerSeriesT,
+    LazyExprT,
+    NativeFrameT,
+    NativeFrameT_co,
+    NativeSeriesT,
+)
+from narwhals._expression_parsing import (
+    combine_alias_output_names,
+    combine_evaluate_output_names,
+)
 from narwhals.dependencies import is_numpy_array_2d
-from narwhals.utils import exclude_column_names
-from narwhals.utils import get_column_names
-from narwhals.utils import passthrough_column_names
+from narwhals.utils import (
+    exclude_column_names,
+    get_column_names,
+    passthrough_column_names,
+)
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._compliant.selectors import CompliantSelectorNamespace
-    from narwhals._compliant.when_then import CompliantWhen
-    from narwhals._compliant.when_then import EagerWhen
+    from narwhals._compliant.when_then import CompliantWhen, EagerWhen
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
-    from narwhals.typing import ConcatMethod
-    from narwhals.typing import Into1DArray
-    from narwhals.typing import NonNestedLiteral
-    from narwhals.typing import _2DArray
-    from narwhals.utils import Implementation
-    from narwhals.utils import Version
+    from narwhals.typing import ConcatMethod, Into1DArray, NonNestedLiteral, _2DArray
+    from narwhals.utils import Implementation, Version
 
     Incomplete: TypeAlias = Any
 
@@ -88,16 +90,11 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
         self, predicate: CompliantExprT
     ) -> CompliantWhen[CompliantFrameT, Incomplete, CompliantExprT]: ...
     def concat_str(
-        self,
-        *exprs: CompliantExprT,
-        separator: str,
-        ignore_nulls: bool,
+        self, *exprs: CompliantExprT, separator: str, ignore_nulls: bool
     ) -> CompliantExprT: ...
 
     def reduce(
-        self,
-        function: Callable[[CompliantExprT, CompliantExprT], CompliantExprT],
-        exprs: Iterable[CompliantExprT],
+        self, function: Callable[[Any, Any], Any], exprs: Iterable[CompliantExprT]
     ) -> CompliantExprT: ...
 
     @property
@@ -178,12 +175,7 @@ class EagerNamespace(
         raise TypeError(msg)
 
     @overload
-    def from_numpy(
-        self,
-        data: Into1DArray,
-        /,
-        schema: None = ...,
-    ) -> EagerSeriesT: ...
+    def from_numpy(self, data: Into1DArray, /, schema: None = ...) -> EagerSeriesT: ...
 
     @overload
     def from_numpy(

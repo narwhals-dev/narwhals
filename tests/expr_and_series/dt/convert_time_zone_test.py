@@ -1,26 +1,26 @@
 from __future__ import annotations
 
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import PYARROW_VERSION
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
-from tests.utils import is_windows
+from tests.utils import (
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    assert_equal_data,
+    is_windows,
+)
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
 
 
 def test_convert_time_zone(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if (
         ("pyarrow" in str(constructor) and is_windows())
@@ -49,8 +49,7 @@ def test_convert_time_zone(
 
 
 def test_convert_time_zone_series(
-    constructor_eager: ConstructorEager,
-    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if (
         ("pyarrow" in str(constructor_eager) and is_windows())

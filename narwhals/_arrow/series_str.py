@@ -5,9 +5,7 @@ from typing import TYPE_CHECKING
 
 import pyarrow.compute as pc
 
-from narwhals._arrow.utils import ArrowSeriesNamespace
-from narwhals._arrow.utils import lit
-from narwhals._arrow.utils import parse_datetime_format
+from narwhals._arrow.utils import ArrowSeriesNamespace, lit, parse_datetime_format
 
 if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries

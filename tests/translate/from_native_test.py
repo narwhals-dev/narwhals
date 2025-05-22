@@ -24,13 +24,7 @@ import sys
 from contextlib import nullcontext as does_not_raise
 from importlib.util import find_spec
 from itertools import chain
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Iterable
-from typing import Iterator
-from typing import Literal
-from typing import cast
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, Literal, cast
 
 import numpy as np
 import pytest
@@ -72,15 +66,9 @@ class MockSeries:
 
 data: dict[str, Any] = {"a": [1, 2, 3]}
 
-eager_frames: list[Any] = [
-    MockDataFrame(),
-]
-lazy_frames: list[Any] = [
-    MockLazyFrame(),
-]
-all_series: list[Any] = [
-    MockSeries(),
-]
+eager_frames: list[Any] = [MockDataFrame()]
+lazy_frames: list[Any] = [MockLazyFrame()]
+all_series: list[Any] = [MockSeries()]
 
 if find_spec("pandas") is not None:
     import pandas as pd
@@ -91,14 +79,8 @@ if find_spec("pandas") is not None:
     series_pd = pd.Series(data["a"])
     series_mpd = df_mpd["a"]
 
-    eager_frames += [
-        df_pd,
-        df_mpd,
-    ]
-    all_series += [
-        series_pd,
-        series_mpd,
-    ]
+    eager_frames += [df_pd, df_mpd]
+    all_series += [series_pd, series_mpd]
 else:  # pragma: no cover
     df_pd = None
 
@@ -109,15 +91,9 @@ if find_spec("polars") is not None:
     lf_pl: pl.LazyFrame | None = pl.LazyFrame(data)
     series_pl = pl.Series(data["a"])
 
-    all_series += [
-        series_pl,
-    ]
-    eager_frames += [
-        df_pl,
-    ]
-    lazy_frames += [
-        lf_pl,
-    ]
+    all_series += [series_pl]
+    eager_frames += [df_pl]
+    lazy_frames += [lf_pl]
 else:  # pragma: no cover
     lf_pl = None
 
@@ -127,12 +103,8 @@ if find_spec("pyarrow") is not None:  # pragma: no cover
     df_pa = pa.table(data)
     series_pa = pa.chunked_array([data["a"]])
 
-    eager_frames += [
-        df_pa,
-    ]
-    all_series += [
-        series_pa,
-    ]
+    eager_frames += [df_pa]
+    all_series += [series_pa]
 else:  # pragma: no cover
     pass
 

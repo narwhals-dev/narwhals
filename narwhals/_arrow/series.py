@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Iterable
-from typing import Iterator
-from typing import Mapping
-from typing import Sequence
-from typing import cast
-from typing import overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Iterable,
+    Iterator,
+    Mapping,
+    Sequence,
+    cast,
+    overload,
+)
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -17,62 +19,68 @@ from narwhals._arrow.series_dt import ArrowSeriesDateTimeNamespace
 from narwhals._arrow.series_list import ArrowSeriesListNamespace
 from narwhals._arrow.series_str import ArrowSeriesStringNamespace
 from narwhals._arrow.series_struct import ArrowSeriesStructNamespace
-from narwhals._arrow.utils import cast_for_truediv
-from narwhals._arrow.utils import chunked_array
-from narwhals._arrow.utils import extract_native
-from narwhals._arrow.utils import floordiv_compat
-from narwhals._arrow.utils import lit
-from narwhals._arrow.utils import narwhals_to_native_dtype
-from narwhals._arrow.utils import native_to_narwhals_dtype
-from narwhals._arrow.utils import nulls_like
-from narwhals._arrow.utils import pad_series
+from narwhals._arrow.utils import (
+    cast_for_truediv,
+    chunked_array,
+    extract_native,
+    floordiv_compat,
+    lit,
+    narwhals_to_native_dtype,
+    native_to_narwhals_dtype,
+    nulls_like,
+    pad_series,
+)
 from narwhals._compliant import EagerSeries
 from narwhals._expression_parsing import ExprKind
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError
-from narwhals.utils import Implementation
-from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import is_list_of
-from narwhals.utils import not_implemented
-from narwhals.utils import requires
-from narwhals.utils import validate_backend_version
+from narwhals.utils import (
+    Implementation,
+    generate_temporary_column_name,
+    is_list_of,
+    not_implemented,
+    requires,
+    validate_backend_version,
+)
 
 if TYPE_CHECKING:
     from types import ModuleType
 
     import pandas as pd
     import polars as pl
-    from typing_extensions import Self
-    from typing_extensions import TypeIs
+    from typing_extensions import Self, TypeIs
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
-    from narwhals._arrow.typing import ArrayAny
-    from narwhals._arrow.typing import ArrayOrChunkedArray
-    from narwhals._arrow.typing import ArrayOrScalar
-    from narwhals._arrow.typing import ChunkedArrayAny
-    from narwhals._arrow.typing import Incomplete
-    from narwhals._arrow.typing import NullPlacement
-    from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
-    from narwhals._arrow.typing import TieBreaker
-    from narwhals._arrow.typing import _AsPyType
-    from narwhals._arrow.typing import _BasicDataType
+    from narwhals._arrow.typing import (  # type: ignore[attr-defined]
+        ArrayAny,
+        ArrayOrChunkedArray,
+        ArrayOrScalar,
+        ChunkedArrayAny,
+        Incomplete,
+        NullPlacement,
+        Order,
+        TieBreaker,
+        _AsPyType,
+        _BasicDataType,
+    )
     from narwhals.dtypes import DType
-    from narwhals.typing import ClosedInterval
-    from narwhals.typing import FillNullStrategy
-    from narwhals.typing import Into1DArray
-    from narwhals.typing import NonNestedLiteral
-    from narwhals.typing import NumericLiteral
-    from narwhals.typing import PythonLiteral
-    from narwhals.typing import RankMethod
-    from narwhals.typing import RollingInterpolationMethod
-    from narwhals.typing import SizedMultiIndexSelector
-    from narwhals.typing import TemporalLiteral
-    from narwhals.typing import _1DArray
-    from narwhals.typing import _2DArray
-    from narwhals.typing import _SliceIndex
-    from narwhals.utils import Version
-    from narwhals.utils import _FullContext
+    from narwhals.typing import (
+        ClosedInterval,
+        FillNullStrategy,
+        Into1DArray,
+        NonNestedLiteral,
+        NumericLiteral,
+        PythonLiteral,
+        RankMethod,
+        RollingInterpolationMethod,
+        SizedMultiIndexSelector,
+        TemporalLiteral,
+        _1DArray,
+        _2DArray,
+        _SliceIndex,
+    )
+    from narwhals.utils import Version, _FullContext
 
 
 # TODO @dangotbanned: move into `_arrow.utils`
@@ -587,12 +595,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return maybe_extract_py_scalar(self.native[index], return_py_scalar=True)
 
     def value_counts(
-        self,
-        *,
-        sort: bool,
-        parallel: bool,
-        name: str | None,
-        normalize: bool,
+        self, *, sort: bool, parallel: bool, name: str | None, normalize: bool
     ) -> ArrowDataFrame:
         """Parallel is unused, exists for compatibility."""
         from narwhals._arrow.dataframe import ArrowDataFrame
@@ -1133,9 +1136,11 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             yield maybe_extract_py_scalar(x, return_py_scalar=True)
 
     def __contains__(self, other: Any) -> bool:
-        from pyarrow import ArrowInvalid  # ignore-banned-imports
-        from pyarrow import ArrowNotImplementedError  # ignore-banned-imports
-        from pyarrow import ArrowTypeError  # ignore-banned-imports
+        from pyarrow import (
+            ArrowInvalid,  # ignore-banned-imports
+            ArrowNotImplementedError,  # ignore-banned-imports
+            ArrowTypeError,  # ignore-banned-imports
+        )
 
         try:
             other_ = lit(other) if other is not None else lit(None, type=self._type)

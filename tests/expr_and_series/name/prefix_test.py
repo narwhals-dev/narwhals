@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import narwhals as nw
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+from tests.utils import Constructor, assert_equal_data
 
 data = {"foo": [1, 2, 3], "BAR": [4, 5, 6]}
 prefix = "with_prefix_"

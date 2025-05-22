@@ -3,16 +3,13 @@ from __future__ import annotations
 import operator
 import warnings
 from functools import reduce
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Literal
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Literal, Sequence
 
-from narwhals._compliant import CompliantThen
-from narwhals._compliant import EagerNamespace
-from narwhals._compliant import EagerWhen
-from narwhals._expression_parsing import combine_alias_output_names
-from narwhals._expression_parsing import combine_evaluate_output_names
+from narwhals._compliant import CompliantThen, EagerNamespace, EagerWhen
+from narwhals._expression_parsing import (
+    combine_alias_output_names,
+    combine_evaluate_output_names,
+)
 from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
@@ -25,8 +22,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.typing import NDFrameT
     from narwhals.dtypes import DType
     from narwhals.typing import NonNestedLiteral
-    from narwhals.utils import Implementation
-    from narwhals.utils import Version
+    from narwhals.utils import Implementation, Version
 
 VERTICAL: Literal[0] = 0
 HORIZONTAL: Literal[1] = 1
@@ -277,10 +273,7 @@ class PandasLikeNamespace(
         return PandasWhen.from_expr(predicate, context=self)
 
     def concat_str(
-        self,
-        *exprs: PandasLikeExpr,
-        separator: str,
-        ignore_nulls: bool,
+        self, *exprs: PandasLikeExpr, separator: str, ignore_nulls: bool
     ) -> PandasLikeExpr:
         string = self._version.dtypes.String()
 
@@ -307,9 +300,7 @@ class PandasLikeNamespace(
                 )
                 separators = (sep_array.zip_with(~nm, "") for nm in null_mask[:-1])
                 result = reduce(
-                    operator.add,
-                    (s + v for s, v in zip(separators, values)),
-                    init_value,
+                    operator.add, (s + v for s, v in zip(separators, values)), init_value
                 )
 
             return [result]

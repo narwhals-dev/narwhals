@@ -5,19 +5,14 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": ["foobar", "bar\n", " baz"]}
 
 
 @pytest.mark.parametrize(
     ("characters", "expected"),
-    [
-        (None, {"a": ["foobar", "bar", "baz"]}),
-        ("foo", {"a": ["bar", "bar\n", " baz"]}),
-    ],
+    [(None, {"a": ["foobar", "bar", "baz"]}), ("foo", {"a": ["bar", "bar\n", " baz"]})],
 )
 def test_str_strip_chars(
     constructor: Constructor,
@@ -35,10 +30,7 @@ def test_str_strip_chars(
 
 @pytest.mark.parametrize(
     ("characters", "expected"),
-    [
-        (None, {"a": ["foobar", "bar", "baz"]}),
-        ("foo", {"a": ["bar", "bar\n", " baz"]}),
-    ],
+    [(None, {"a": ["foobar", "bar", "baz"]}), ("foo", {"a": ["bar", "bar\n", " baz"]})],
 )
 def test_str_strip_chars_series(
     constructor_eager: ConstructorEager, characters: str | None, expected: Any

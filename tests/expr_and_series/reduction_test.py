@@ -5,10 +5,7 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 
 @pytest.mark.parametrize(
@@ -28,9 +25,7 @@ from tests.utils import assert_equal_data
     ],
 )
 def test_scalar_reduction_select(
-    constructor: Constructor,
-    expr: list[Any],
-    expected: dict[str, list[Any]],
+    constructor: Constructor, expr: list[Any], expected: dict[str, list[Any]]
 ) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
@@ -57,9 +52,7 @@ def test_scalar_reduction_select(
     ],
 )
 def test_scalar_reduction_with_columns(
-    constructor: Constructor,
-    expr: list[Any],
-    expected: dict[str, list[Any]],
+    constructor: Constructor, expr: list[Any], expected: dict[str, list[Any]]
 ) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()

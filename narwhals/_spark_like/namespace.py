@@ -2,16 +2,13 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from typing import TYPE_CHECKING
-from typing import Callable
-from typing import Iterable
-from typing import Sequence
+from typing import TYPE_CHECKING, Callable, Iterable, Sequence
 
-from narwhals._compliant import CompliantThen
-from narwhals._compliant import LazyNamespace
-from narwhals._compliant import LazyWhen
-from narwhals._expression_parsing import combine_alias_output_names
-from narwhals._expression_parsing import combine_evaluate_output_names
+from narwhals._compliant import CompliantThen, LazyNamespace, LazyWhen
+from narwhals._expression_parsing import (
+    combine_alias_output_names,
+    combine_evaluate_output_names,
+)
 from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 from narwhals._spark_like.expr import SparkLikeExpr
 from narwhals._spark_like.selectors import SparkLikeSelectorNamespace
@@ -22,10 +19,8 @@ if TYPE_CHECKING:
 
     from narwhals._spark_like.dataframe import SQLFrameDataFrame  # noqa: F401
     from narwhals.dtypes import DType
-    from narwhals.typing import ConcatMethod
-    from narwhals.typing import NonNestedLiteral
-    from narwhals.utils import Implementation
-    from narwhals.utils import Version
+    from narwhals.typing import ConcatMethod, NonNestedLiteral
+    from narwhals.utils import Implementation, Version
 
 
 class SparkLikeNamespace(
@@ -139,8 +134,7 @@ class SparkLikeNamespace(
             return [
                 (
                     reduce(
-                        operator.add,
-                        (df._F.coalesce(col, df._F.lit(0)) for col in cols),
+                        operator.add, (df._F.coalesce(col, df._F.lit(0)) for col in cols)
                     )
                     / reduce(
                         operator.add,
@@ -224,10 +218,7 @@ class SparkLikeNamespace(
         raise NotImplementedError
 
     def concat_str(
-        self,
-        *exprs: SparkLikeExpr,
-        separator: str,
-        ignore_nulls: bool,
+        self, *exprs: SparkLikeExpr, separator: str, ignore_nulls: bool
     ) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             cols = [s for _expr in exprs for s in _expr(df)]
@@ -274,9 +265,7 @@ class SparkLikeNamespace(
         )
 
     def reduce(
-        self,
-        function: Callable[[Column, Column], Column],
-        exprs: Iterable[SparkLikeExpr],
+        self, function: Callable[[Column, Column], Column], exprs: Iterable[SparkLikeExpr]
     ) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             cols = (s for _expr in exprs for s in _expr(df))

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import narwhals as nw
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+from tests.utils import Constructor, assert_equal_data
 
 
 def test_double(constructor: Constructor) -> None:
@@ -14,10 +13,5 @@ def test_double(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
     result = df.with_columns(nw.col("a").alias("o"), nw.all() * 2)
-    expected = {
-        "a": [2, 6, 4],
-        "b": [8, 8, 12],
-        "z": [14.0, 16.0, 18.0],
-        "o": [1, 3, 2],
-    }
+    expected = {"a": [2, 6, 4], "b": [8, 8, 12], "z": [14.0, 16.0, 18.0], "o": [1, 3, 2]}
     assert_equal_data(result, expected)

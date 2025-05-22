@@ -1,18 +1,12 @@
 from __future__ import annotations
 
 import collections
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import ClassVar
-from typing import Iterator
-from typing import Mapping
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Mapping, Sequence
 
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from narwhals._arrow.utils import cast_to_comparable_string_types
-from narwhals._arrow.utils import extract_py_scalar
+from narwhals._arrow.utils import cast_to_comparable_string_types, extract_py_scalar
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals.utils import generate_temporary_column_name
@@ -20,9 +14,11 @@ from narwhals.utils import generate_temporary_column_name
 if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.expr import ArrowExpr
-    from narwhals._arrow.typing import AggregateOptions  # type: ignore[attr-defined]
-    from narwhals._arrow.typing import Aggregation  # type: ignore[attr-defined]
-    from narwhals._arrow.typing import Incomplete
+    from narwhals._arrow.typing import (  # type: ignore[attr-defined]
+        AggregateOptions,
+        Aggregation,
+        Incomplete,
+    )
     from narwhals._compliant.group_by import NarwhalsAggregation
     from narwhals.typing import UniqueKeepStrategy
 
@@ -148,10 +144,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         # Reality: `str` is fine
         concat_str: Incomplete = pc.binary_join_element_wise
         key_values = concat_str(
-            *it,
-            separator_scalar,
-            null_handling="replace",
-            null_replacement=null_token,
+            *it, separator_scalar, null_handling="replace", null_replacement=null_token
         )
         table = table.add_column(i=0, field_=col_token, column=key_values)
 

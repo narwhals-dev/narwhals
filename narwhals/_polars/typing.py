@@ -1,7 +1,9 @@
 from __future__ import annotations  # pragma: no cover
 
-from typing import TYPE_CHECKING  # pragma: no cover
-from typing import Union  # pragma: no cover
+from typing import (
+    TYPE_CHECKING,  # pragma: no cover
+    Union,  # pragma: no cover
+)
 
 if TYPE_CHECKING:
     import sys
@@ -12,8 +14,7 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import TypeAlias
 
-    from narwhals._polars.dataframe import PolarsDataFrame
-    from narwhals._polars.dataframe import PolarsLazyFrame
+    from narwhals._polars.dataframe import PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.series import PolarsSeries
 

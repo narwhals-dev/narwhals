@@ -1,124 +1,122 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Iterable
-from typing import Literal
-from typing import Sequence
-from typing import cast
-from typing import overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Iterable,
+    Literal,
+    Sequence,
+    cast,
+    overload,
+)
 from warnings import warn
 
 import narwhals as nw
-from narwhals import dependencies
-from narwhals import exceptions
-from narwhals import selectors
-from narwhals.dataframe import DataFrame as NwDataFrame
-from narwhals.dataframe import LazyFrame as NwLazyFrame
+from narwhals import dependencies, exceptions, selectors
+from narwhals._typing_compat import TypeVar
+from narwhals.dataframe import DataFrame as NwDataFrame, LazyFrame as NwLazyFrame
 from narwhals.dependencies import get_polars
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.expr import Expr as NwExpr
-from narwhals.functions import Then as NwThen
-from narwhals.functions import When as NwWhen
-from narwhals.functions import _from_arrow_impl
-from narwhals.functions import _from_dict_impl
-from narwhals.functions import _from_numpy_impl
-from narwhals.functions import _new_series_impl
-from narwhals.functions import _read_csv_impl
-from narwhals.functions import _read_parquet_impl
-from narwhals.functions import _scan_csv_impl
-from narwhals.functions import _scan_parquet_impl
-from narwhals.functions import get_level
-from narwhals.functions import show_versions
-from narwhals.functions import when as nw_when
+from narwhals.functions import (
+    Then as NwThen,
+    When as NwWhen,
+    _from_arrow_impl,
+    _from_dict_impl,
+    _from_numpy_impl,
+    _new_series_impl,
+    _read_csv_impl,
+    _read_parquet_impl,
+    _scan_csv_impl,
+    _scan_parquet_impl,
+    get_level,
+    show_versions,
+    when as nw_when,
+)
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.stable.v1 import dtypes
-from narwhals.stable.v1.dtypes import Array
-from narwhals.stable.v1.dtypes import Binary
-from narwhals.stable.v1.dtypes import Boolean
-from narwhals.stable.v1.dtypes import Categorical
-from narwhals.stable.v1.dtypes import Date
-from narwhals.stable.v1.dtypes import Datetime
-from narwhals.stable.v1.dtypes import Decimal
-from narwhals.stable.v1.dtypes import Duration
-from narwhals.stable.v1.dtypes import Enum
-from narwhals.stable.v1.dtypes import Field
-from narwhals.stable.v1.dtypes import Float32
-from narwhals.stable.v1.dtypes import Float64
-from narwhals.stable.v1.dtypes import Int8
-from narwhals.stable.v1.dtypes import Int16
-from narwhals.stable.v1.dtypes import Int32
-from narwhals.stable.v1.dtypes import Int64
-from narwhals.stable.v1.dtypes import Int128
-from narwhals.stable.v1.dtypes import List
-from narwhals.stable.v1.dtypes import Object
-from narwhals.stable.v1.dtypes import String
-from narwhals.stable.v1.dtypes import Struct
-from narwhals.stable.v1.dtypes import Time
-from narwhals.stable.v1.dtypes import UInt8
-from narwhals.stable.v1.dtypes import UInt16
-from narwhals.stable.v1.dtypes import UInt32
-from narwhals.stable.v1.dtypes import UInt64
-from narwhals.stable.v1.dtypes import UInt128
-from narwhals.stable.v1.dtypes import Unknown
-from narwhals.translate import _from_native_impl
-from narwhals.translate import get_native_namespace
-from narwhals.translate import to_py_scalar
-from narwhals.typing import IntoDataFrameT
-from narwhals.typing import IntoFrameT
-from narwhals.utils import Implementation
-from narwhals.utils import Version
-from narwhals.utils import deprecate_native_namespace
-from narwhals.utils import find_stacklevel
-from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import inherit_doc
-from narwhals.utils import is_ordered_categorical
-from narwhals.utils import maybe_align_index
-from narwhals.utils import maybe_convert_dtypes
-from narwhals.utils import maybe_get_index
-from narwhals.utils import maybe_reset_index
-from narwhals.utils import maybe_set_index
-from narwhals.utils import validate_strict_and_pass_though
+from narwhals.stable.v1.dtypes import (
+    Array,
+    Binary,
+    Boolean,
+    Categorical,
+    Date,
+    Datetime,
+    Decimal,
+    Duration,
+    Enum,
+    Field,
+    Float32,
+    Float64,
+    Int8,
+    Int16,
+    Int32,
+    Int64,
+    Int128,
+    List,
+    Object,
+    String,
+    Struct,
+    Time,
+    UInt8,
+    UInt16,
+    UInt32,
+    UInt64,
+    UInt128,
+    Unknown,
+)
+from narwhals.translate import _from_native_impl, get_native_namespace, to_py_scalar
+from narwhals.typing import IntoDataFrameT, IntoFrameT
+from narwhals.utils import (
+    Implementation,
+    Version,
+    deprecate_native_namespace,
+    find_stacklevel,
+    generate_temporary_column_name,
+    inherit_doc,
+    is_ordered_categorical,
+    maybe_align_index,
+    maybe_convert_dtypes,
+    maybe_get_index,
+    maybe_reset_index,
+    maybe_set_index,
+    validate_strict_and_pass_though,
+)
 
 if TYPE_CHECKING:
     from types import ModuleType
     from typing import Mapping
 
-    from typing_extensions import ParamSpec
-    from typing_extensions import Self
-    from typing_extensions import TypeVar
+    from typing_extensions import ParamSpec, Self
 
     from narwhals._translate import IntoArrowTable
-    from narwhals.dataframe import MultiColSelector
-    from narwhals.dataframe import MultiIndexSelector
+    from narwhals.dataframe import MultiColSelector, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.stable.v1.typing import FrameT
-    from narwhals.typing import ConcatMethod
-    from narwhals.typing import IntoExpr
-    from narwhals.typing import IntoFrame
-    from narwhals.typing import IntoLazyFrameT
-    from narwhals.typing import IntoSeries
-    from narwhals.typing import NonNestedLiteral
-    from narwhals.typing import SingleColSelector
-    from narwhals.typing import SingleIndexSelector
-    from narwhals.typing import _1DArray
-    from narwhals.typing import _2DArray
+    from narwhals.typing import (
+        ConcatMethod,
+        IntoExpr,
+        IntoFrame,
+        IntoLazyFrameT,
+        IntoSeries,
+        NonNestedLiteral,
+        SingleColSelector,
+        SingleIndexSelector,
+        _1DArray,
+        _2DArray,
+    )
 
     DataFrameT = TypeVar("DataFrameT", bound="DataFrame[Any]")
     LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[Any]")
     SeriesT = TypeVar("SeriesT", bound="Series[Any]")
-    IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
     T = TypeVar("T", default=Any)
     P = ParamSpec("P")
     R = TypeVar("R")
-else:
-    from typing import TypeVar
 
-    IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries")
-    T = TypeVar("T")
+IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
 
 
 class DataFrame(NwDataFrame[IntoDataFrameT]):
@@ -172,8 +170,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         return super().__getitem__(item)
 
     def lazy(
-        self,
-        backend: ModuleType | Implementation | str | None = None,
+        self, backend: ModuleType | Implementation | str | None = None
     ) -> LazyFrame[Any]:
         return super().lazy(backend=backend)  # type: ignore[return-value]
 
@@ -245,9 +242,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     def collect(
-        self,
-        backend: ModuleType | Implementation | str | None = None,
-        **kwargs: Any,
+        self, backend: ModuleType | Implementation | str | None = None, **kwargs: Any
     ) -> DataFrame[Any]:
         return super().collect(backend=backend, **kwargs)  # type: ignore[return-value]
 
@@ -330,9 +325,7 @@ class Series(NwSeries[IntoSeriesT]):
         )
         warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
         return super().hist(  # type: ignore[return-value]
-            bins=bins,
-            bin_count=bin_count,
-            include_breakpoint=include_breakpoint,
+            bins=bins, bin_count=bin_count, include_breakpoint=include_breakpoint
         )
 
 
@@ -422,7 +415,7 @@ class Expr(NwExpr):
             A new expression.
         """
         return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).arg_true(),
+            lambda plx: self._to_compliant_expr(plx).arg_true()
         )
 
     def sample(

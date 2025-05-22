@@ -7,11 +7,13 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 
 def test_fill_null(constructor: Constructor) -> None:
@@ -49,9 +51,7 @@ def test_fill_null_series_expression(constructor: Constructor) -> None:
 
 
 def test_fill_null_exceptions(constructor: Constructor) -> None:
-    data = {
-        "a": [0.0, None, 2.0, 3.0, 4.0],
-    }
+    data = {"a": [0.0, None, 2.0, 3.0, 4.0]}
     df = nw.from_native(constructor(data))
 
     with pytest.raises(ValueError, match="cannot specify both `value` and `strategy`"):
@@ -206,32 +206,20 @@ def test_fill_null_limits(
 
 
 def test_fill_null_series(constructor_eager: ConstructorEager) -> None:
-    data_series_float = {
-        "a": [0.0, 1, None, 2, None, 3],
-    }
+    data_series_float = {"a": [0.0, 1, None, 2, None, 3]}
     df_float = nw.from_native(constructor_eager(data_series_float), eager_only=True)
 
-    expected_float = {
-        "a_zero_digit": [0.0, 1, 0, 2, 0, 3],
-    }
-    result_float = df_float.select(
-        a_zero_digit=df_float["a"].fill_null(value=0),
-    )
+    expected_float = {"a_zero_digit": [0.0, 1, 0, 2, 0, 3]}
+    result_float = df_float.select(a_zero_digit=df_float["a"].fill_null(value=0))
 
     assert_equal_data(result_float, expected_float)
 
-    data_series_str = {
-        "a": ["a", None, "c", None, "e"],
-    }
+    data_series_str = {"a": ["a", None, "c", None, "e"]}
     df_str = nw.from_native(constructor_eager(data_series_str), eager_only=True)
 
-    expected_str = {
-        "a_z_str": ["a", "z", "c", "z", "e"],
-    }
+    expected_str = {"a_z_str": ["a", "z", "c", "z", "e"]}
 
-    result_str = df_str.select(
-        a_z_str=df_str["a"].fill_null(value="z"),
-    )
+    result_str = df_str.select(a_z_str=df_str["a"].fill_null(value="z"))
 
     assert_equal_data(result_str, expected_str)
 
@@ -280,9 +268,7 @@ def test_fill_null_series_limits(constructor_eager: ConstructorEager) -> None:
 
 
 def test_fill_null_series_limit_as_none(constructor_eager: ConstructorEager) -> None:
-    data_series = {
-        "a": [1, None, None, None, 5, 6, None, None, None, 10],
-    }
+    data_series = {"a": [1, None, None, None, 5, 6, None, None, None, 10]}
     df = nw.from_native(constructor_eager(data_series), eager_only=True)
 
     expected_forward = {
@@ -316,9 +302,7 @@ def test_fill_null_series_limit_as_none(constructor_eager: ConstructorEager) -> 
 
         assert_equal_data(result_forward, expected_forward)
 
-    data_series_str = {
-        "a": ["a", None, None, None, "b", "c", None, None, None, "d"],
-    }
+    data_series_str = {"a": ["a", None, None, None, "b", "c", None, None, None, "d"]}
 
     df_str = nw.from_native(constructor_eager(data_series_str), eager_only=True)
 
@@ -355,26 +339,20 @@ def test_fill_null_series_limit_as_none(constructor_eager: ConstructorEager) -> 
 
 
 def test_fill_null_series_exceptions(constructor_eager: ConstructorEager) -> None:
-    data_series_float = {
-        "a": [0.0, 1, None, 2, None, 3],
-    }
+    data_series_float = {"a": [0.0, 1, None, 2, None, 3]}
     df_float = nw.from_native(constructor_eager(data_series_float), eager_only=True)
 
     with pytest.raises(ValueError, match="cannot specify both `value` and `strategy`"):
-        df_float.select(
-            a_zero_digit=df_float["a"].fill_null(value=0, strategy="forward"),
-        )
+        df_float.select(a_zero_digit=df_float["a"].fill_null(value=0, strategy="forward"))
 
     with pytest.raises(
         ValueError, match="must specify either a fill `value` or `strategy`"
     ):
-        df_float.select(
-            a_zero_digit=df_float["a"].fill_null(),
-        )
+        df_float.select(a_zero_digit=df_float["a"].fill_null())
 
     with pytest.raises(ValueError, match="strategy not supported:"):
         df_float.select(
-            a_zero_digit=df_float["a"].fill_null(strategy="invalid"),  # type: ignore  # noqa: PGH003
+            a_zero_digit=df_float["a"].fill_null(strategy="invalid")  # type: ignore  # noqa: PGH003
         )
 
 

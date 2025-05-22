@@ -7,10 +7,12 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import NarwhalsError
-from tests.utils import PANDAS_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 data = {
     "ix": [1, 2, 1, 1, 2, 2],

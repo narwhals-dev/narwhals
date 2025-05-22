@@ -1,45 +1,29 @@
 from __future__ import annotations
 
-import sys
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Sequence
-from typing import TypeVar
-from typing import cast
+from typing import TYPE_CHECKING, Any, Callable, Sequence, TypeVar, cast
 
 from narwhals._compliant.expr import CompliantExpr
-from narwhals._compliant.typing import CompliantExprAny
-from narwhals._compliant.typing import CompliantFrameAny
-from narwhals._compliant.typing import CompliantLazyFrameT
-from narwhals._compliant.typing import CompliantSeriesOrNativeExprAny
-from narwhals._compliant.typing import EagerDataFrameT
-from narwhals._compliant.typing import EagerExprT
-from narwhals._compliant.typing import EagerSeriesT
-from narwhals._compliant.typing import LazyExprAny
-from narwhals._compliant.typing import NativeExprT
-from narwhals._compliant.typing import NativeSeriesT
+from narwhals._compliant.typing import (
+    CompliantExprAny,
+    CompliantFrameAny,
+    CompliantLazyFrameT,
+    CompliantSeriesOrNativeExprAny,
+    EagerDataFrameT,
+    EagerExprT,
+    EagerSeriesT,
+    LazyExprAny,
+    NativeExprT,
+    NativeSeriesT,
+)
+from narwhals._typing_compat import Protocol38
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-    from typing_extensions import TypeAlias
+    from typing_extensions import Self, TypeAlias
 
-    from narwhals._compliant.typing import EvalSeries
-    from narwhals._compliant.typing import ScalarKwargs
+    from narwhals._compliant.typing import EvalSeries, ScalarKwargs
     from narwhals.typing import NonNestedLiteral
-    from narwhals.utils import Implementation
-    from narwhals.utils import Version
-    from narwhals.utils import _FullContext
+    from narwhals.utils import Implementation, Version, _FullContext
 
-if not TYPE_CHECKING:  # pragma: no cover
-    if sys.version_info >= (3, 9):
-        from typing import Protocol as Protocol38
-    else:
-        from typing import Generic as Protocol38
-else:  # pragma: no cover
-    # TODO @dangotbanned: Remove after dropping `3.8` (#2084)
-    # - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
-    from typing import Protocol as Protocol38
 
 __all__ = ["CompliantThen", "CompliantWhen", "EagerWhen", "LazyWhen"]
 

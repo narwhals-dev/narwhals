@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 from ibis.expr.datatypes import Timestamp
 
-from narwhals.utils import _is_naive_format
-from narwhals.utils import not_implemented
+from narwhals.utils import _is_naive_format, not_implemented
 
 if TYPE_CHECKING:
     import ibis.expr.types as ir
@@ -20,62 +17,62 @@ class IbisExprStringNamespace:
         self._compliant_expr = expr
 
     def starts_with(self, prefix: str) -> IbisExpr:
-        def fn(_input: ir.StringColumn) -> ir.BooleanValue:
-            return _input.startswith(prefix)
+        def fn(expr: ir.StringColumn) -> ir.BooleanValue:
+            return expr.startswith(prefix)
 
         return self._compliant_expr._with_callable(fn)
 
     def ends_with(self, suffix: str) -> IbisExpr:
-        def fn(_input: ir.StringColumn) -> ir.BooleanValue:
-            return _input.endswith(suffix)
+        def fn(expr: ir.StringColumn) -> ir.BooleanValue:
+            return expr.endswith(suffix)
 
         return self._compliant_expr._with_callable(fn)
 
     def contains(self, pattern: str, *, literal: bool) -> IbisExpr:
-        def fn(_input: ir.StringColumn) -> ir.BooleanValue:
-            return _input.contains(pattern) if literal else _input.re_search(pattern)
+        def fn(expr: ir.StringColumn) -> ir.BooleanValue:
+            return expr.contains(pattern) if literal else expr.re_search(pattern)
 
         return self._compliant_expr._with_callable(fn)
 
     def slice(self, offset: int, length: int) -> IbisExpr:
-        def fn(_input: ir.StringColumn) -> ir.StringValue:
-            return _input.substr(start=offset, length=length)
+        def fn(expr: ir.StringColumn) -> ir.StringValue:
+            return expr.substr(start=offset, length=length)
 
         return self._compliant_expr._with_callable(fn)
 
     def split(self, by: str) -> IbisExpr:
-        def fn(_input: ir.StringColumn) -> ir.ArrayValue:
-            return _input.split(by)
+        def fn(expr: ir.StringColumn) -> ir.ArrayValue:
+            return expr.split(by)
 
         return self._compliant_expr._with_callable(fn)
 
     def len_chars(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(lambda _input: _input.length())
+        return self._compliant_expr._with_callable(lambda expr: expr.length())
 
     def to_lowercase(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(lambda _input: _input.lower())
+        return self._compliant_expr._with_callable(lambda expr: expr.lower())
 
     def to_uppercase(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(lambda _input: _input.upper())
+        return self._compliant_expr._with_callable(lambda expr: expr.upper())
 
     def strip_chars(self, characters: str | None) -> IbisExpr:
         if characters is not None:
             msg = "Ibis does not support `characters` argument in `str.strip_chars`"
             raise NotImplementedError(msg)
 
-        return self._compliant_expr._with_callable(lambda _input: _input.strip())
+        return self._compliant_expr._with_callable(lambda expr: expr.strip())
 
     def _replace_all(self, pattern: str, value: str) -> Callable[..., ir.StringValue]:
-        def fn(_input: ir.StringColumn) -> ir.StringValue:
-            return _input.re_replace(pattern, value)
+        def fn(expr: ir.StringColumn) -> ir.StringValue:
+            return expr.re_replace(pattern, value)
 
         return fn
 
     def _replace_all_literal(
         self, pattern: str, value: str
     ) -> Callable[..., ir.StringValue]:
-        def fn(_input: ir.StringColumn) -> ir.StringValue:
-            return _input.replace(pattern, value)  # pyright: ignore[reportArgumentType]
+        def fn(expr: ir.StringColumn) -> ir.StringValue:
+            return expr.replace(pattern, value)  # pyright: ignore[reportArgumentType]
 
         return fn
 
@@ -84,15 +81,15 @@ class IbisExprStringNamespace:
         return self._compliant_expr._with_callable(fn(pattern, value))
 
     def _to_datetime(self, format: str) -> Callable[..., ir.TimestampValue]:
-        def fn(_input: ir.StringColumn) -> ir.TimestampValue:
-            return _input.as_timestamp(format)
+        def fn(expr: ir.StringColumn) -> ir.TimestampValue:
+            return expr.as_timestamp(format)
 
         return fn
 
     def _to_datetime_naive(self, format: str) -> Callable[..., ir.TimestampValue]:
-        def fn(_input: ir.StringColumn) -> ir.TimestampValue:
+        def fn(expr: ir.StringColumn) -> ir.TimestampValue:
             dtype: Any = Timestamp(timezone=None)
-            return _input.as_timestamp(format).cast(dtype)
+            return expr.as_timestamp(format).cast(dtype)
 
         return fn
 

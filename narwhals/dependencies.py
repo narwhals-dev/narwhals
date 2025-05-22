@@ -4,8 +4,7 @@
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import cudf
@@ -18,22 +17,22 @@ if TYPE_CHECKING:
     import pyarrow as pa
     import pyspark.sql as pyspark_sql
     from pyspark.sql.connect.dataframe import DataFrame as PySparkConnectDataFrame
-    from typing_extensions import TypeGuard
-    from typing_extensions import TypeIs
+    from typing_extensions import TypeGuard, TypeIs
 
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
-    from narwhals.dataframe import DataFrame
-    from narwhals.dataframe import LazyFrame
+    from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.series import Series
-    from narwhals.typing import FrameT
-    from narwhals.typing import IntoDataFrameT
-    from narwhals.typing import IntoSeriesT
-    from narwhals.typing import _1DArray
-    from narwhals.typing import _1DArrayInt
-    from narwhals.typing import _2DArray
-    from narwhals.typing import _NDArray
-    from narwhals.typing import _NumpyScalar
-    from narwhals.typing import _ShapeT
+    from narwhals.typing import (
+        FrameT,
+        IntoDataFrameT,
+        IntoSeriesT,
+        _1DArray,
+        _1DArrayInt,
+        _2DArray,
+        _NDArray,
+        _NumpyScalar,
+        _ShapeT,
+    )
 
 
 # We silently allow these but - given that they claim

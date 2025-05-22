@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Sequence
+from typing import TYPE_CHECKING, Sequence
 
 from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
@@ -13,20 +12,17 @@ from narwhals.utils import generate_temporary_column_name
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._compliant.typing import AliasNames
-    from narwhals._compliant.typing import EvalNames
-    from narwhals._compliant.typing import EvalSeries
-    from narwhals._compliant.typing import ScalarKwargs
+    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries, ScalarKwargs
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
-    from narwhals.typing import FillNullStrategy
-    from narwhals.typing import NonNestedLiteral
-    from narwhals.typing import PythonLiteral
-    from narwhals.typing import RankMethod
-    from narwhals.utils import Implementation
-    from narwhals.utils import Version
-    from narwhals.utils import _FullContext
+    from narwhals.typing import (
+        FillNullStrategy,
+        NonNestedLiteral,
+        PythonLiteral,
+        RankMethod,
+    )
+    from narwhals.utils import Implementation, Version, _FullContext
 
 WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
     "cum_sum": "cumsum",
@@ -146,8 +142,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     x for x in evaluate_column_names(df) if x not in df.columns
                 ]
                 raise ColumnNotFoundError.from_missing_and_available_column_names(
-                    missing_columns=missing_columns,
-                    available_columns=df.columns,
+                    missing_columns=missing_columns, available_columns=df.columns
                 ) from e
 
         return cls(
@@ -210,9 +205,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         return self._reuse_series("shift", scalar_kwargs={"n": n})
 
     def over(  # noqa: C901, PLR0915
-        self,
-        partition_by: Sequence[str],
-        order_by: Sequence[str] | None,
+        self, partition_by: Sequence[str], order_by: Sequence[str] | None
     ) -> Self:
         if not partition_by:
             # e.g. `nw.col('a').cum_sum().order_by(key)`

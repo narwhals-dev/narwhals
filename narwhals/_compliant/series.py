@@ -1,32 +1,37 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Generic
-from typing import Iterable
-from typing import Iterator
-from typing import Mapping
-from typing import Protocol
-from typing import Sequence
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    Iterable,
+    Iterator,
+    Mapping,
+    Protocol,
+    Sequence,
+)
 
-from narwhals._compliant.any_namespace import CatNamespace
-from narwhals._compliant.any_namespace import DateTimeNamespace
-from narwhals._compliant.any_namespace import ListNamespace
-from narwhals._compliant.any_namespace import StringNamespace
-from narwhals._compliant.any_namespace import StructNamespace
-from narwhals._compliant.typing import CompliantSeriesT_co
-from narwhals._compliant.typing import EagerSeriesT_co
-from narwhals._compliant.typing import NativeSeriesT
-from narwhals._compliant.typing import NativeSeriesT_co
-from narwhals._translate import FromIterable
-from narwhals._translate import FromNative
-from narwhals._translate import NumpyConvertible
-from narwhals._translate import ToNarwhals
-from narwhals.utils import _StoresCompliant
-from narwhals.utils import _StoresNative
-from narwhals.utils import is_compliant_series
-from narwhals.utils import is_sized_multi_index_selector
-from narwhals.utils import unstable
+from narwhals._compliant.any_namespace import (
+    CatNamespace,
+    DateTimeNamespace,
+    ListNamespace,
+    StringNamespace,
+    StructNamespace,
+)
+from narwhals._compliant.typing import (
+    CompliantSeriesT_co,
+    EagerSeriesT_co,
+    NativeSeriesT,
+    NativeSeriesT_co,
+)
+from narwhals._translate import FromIterable, FromNative, NumpyConvertible, ToNarwhals
+from narwhals.utils import (
+    _StoresCompliant,
+    _StoresNative,
+    is_compliant_series,
+    is_sized_multi_index_selector,
+    unstable,
+)
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -37,27 +42,25 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant.dataframe import CompliantDataFrame
-    from narwhals._compliant.expr import CompliantExpr
-    from narwhals._compliant.expr import EagerExpr
-    from narwhals._compliant.namespace import CompliantNamespace
-    from narwhals._compliant.namespace import EagerNamespace
+    from narwhals._compliant.expr import CompliantExpr, EagerExpr
+    from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals.dtypes import DType
     from narwhals.series import Series
-    from narwhals.typing import ClosedInterval
-    from narwhals.typing import FillNullStrategy
-    from narwhals.typing import Into1DArray
-    from narwhals.typing import MultiIndexSelector
-    from narwhals.typing import NonNestedLiteral
-    from narwhals.typing import NumericLiteral
-    from narwhals.typing import RankMethod
-    from narwhals.typing import RollingInterpolationMethod
-    from narwhals.typing import SizedMultiIndexSelector
-    from narwhals.typing import TemporalLiteral
-    from narwhals.typing import _1DArray
-    from narwhals.typing import _SliceIndex
-    from narwhals.utils import Implementation
-    from narwhals.utils import Version
-    from narwhals.utils import _FullContext
+    from narwhals.typing import (
+        ClosedInterval,
+        FillNullStrategy,
+        Into1DArray,
+        MultiIndexSelector,
+        NonNestedLiteral,
+        NumericLiteral,
+        RankMethod,
+        RollingInterpolationMethod,
+        SizedMultiIndexSelector,
+        TemporalLiteral,
+        _1DArray,
+        _SliceIndex,
+    )
+    from narwhals.utils import Implementation, Version, _FullContext
 
 __all__ = ["CompliantSeries", "EagerSeries"]
 
@@ -220,34 +223,16 @@ class CompliantSeries(
         return_dtype: DType | type[DType] | None,
     ) -> Self: ...
     def rolling_mean(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
+        self, window_size: int, *, min_samples: int, center: bool
     ) -> Self: ...
     def rolling_std(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
-        ddof: int,
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self: ...
     def rolling_sum(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
+        self, window_size: int, *, min_samples: int, center: bool
     ) -> Self: ...
     def rolling_var(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
-        ddof: int,
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self: ...
     def round(self, decimals: int) -> Self: ...
     def sample(
@@ -275,12 +260,7 @@ class CompliantSeries(
     def to_polars(self) -> pl.Series: ...
     def unique(self, *, maintain_order: bool) -> Self: ...
     def value_counts(
-        self,
-        *,
-        sort: bool,
-        parallel: bool,
-        name: str | None,
-        normalize: bool,
+        self, *, sort: bool, parallel: bool, name: str | None, normalize: bool
     ) -> CompliantDataFrame[Self, Any, Any, Any]: ...
     def var(self, *, ddof: int) -> float: ...
     def zip_with(self, mask: Any, other: Any) -> Self: ...

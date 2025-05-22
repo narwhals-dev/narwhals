@@ -3,20 +3,19 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION
-from tests.utils import PANDAS_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import PYARROW_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 data = {"a": [1, 2, None, 3]}
 
-expected = {
-    "cum_prod": [1, 2, None, 6],
-    "reverse_cum_prod": [6, 6, None, 3],
-}
+expected = {"cum_prod": [1, 2, None, 6], "reverse_cum_prod": [6, 6, None, 3]}
 
 
 @pytest.mark.parametrize("reverse", [True, False])
@@ -33,9 +32,7 @@ def test_cum_prod_expr(
 
     name = "reverse_cum_prod" if reverse else "cum_prod"
     df = nw.from_native(constructor_eager(data))
-    result = df.select(
-        nw.col("a").cum_prod(reverse=reverse).alias(name),
-    )
+    result = df.select(nw.col("a").cum_prod(reverse=reverse).alias(name))
 
     assert_equal_data(result, {name: expected[name]})
 
@@ -53,18 +50,13 @@ def test_cum_prod_series(
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(
-        cum_prod=df["a"].cum_prod(),
-        reverse_cum_prod=df["a"].cum_prod(reverse=True),
+        cum_prod=df["a"].cum_prod(), reverse_cum_prod=df["a"].cum_prod(reverse=True)
     )
     assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
-    ("reverse", "expected_a"),
-    [
-        (False, [2, 2, 6]),
-        (True, [3, 6, 3]),
-    ],
+    ("reverse", "expected_a"), [(False, [2, 2, 6]), (True, [3, 6, 3])]
 )
 def test_lazy_cum_prod_grouped(
     constructor: Constructor,

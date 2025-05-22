@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Generic
-from typing import Iterator
-from typing import Literal
-from typing import Mapping
-from typing import Sequence
-from typing import overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Iterator,
+    Literal,
+    Mapping,
+    Sequence,
+    overload,
+)
 
 from narwhals.dependencies import is_numpy_scalar
 from narwhals.dtypes import _validate_dtype
@@ -21,12 +23,14 @@ from narwhals.series_str import SeriesStringNamespace
 from narwhals.series_struct import SeriesStructNamespace
 from narwhals.translate import to_native
 from narwhals.typing import IntoSeriesT
-from narwhals.utils import _validate_rolling_arguments
-from narwhals.utils import generate_repr
-from narwhals.utils import is_compliant_series
-from narwhals.utils import is_index_selector
-from narwhals.utils import parse_version
-from narwhals.utils import supports_arrow_c_stream
+from narwhals.utils import (
+    _validate_rolling_arguments,
+    generate_repr,
+    is_compliant_series,
+    is_index_selector,
+    parse_version,
+    supports_arrow_c_stream,
+)
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -37,18 +41,19 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant import CompliantSeries
-    from narwhals.dataframe import DataFrame
-    from narwhals.dataframe import MultiIndexSelector
+    from narwhals.dataframe import DataFrame, MultiIndexSelector
     from narwhals.dtypes import DType
-    from narwhals.typing import ClosedInterval
-    from narwhals.typing import FillNullStrategy
-    from narwhals.typing import NonNestedLiteral
-    from narwhals.typing import NumericLiteral
-    from narwhals.typing import RankMethod
-    from narwhals.typing import RollingInterpolationMethod
-    from narwhals.typing import SingleIndexSelector
-    from narwhals.typing import TemporalLiteral
-    from narwhals.typing import _1DArray
+    from narwhals.typing import (
+        ClosedInterval,
+        FillNullStrategy,
+        NonNestedLiteral,
+        NumericLiteral,
+        RankMethod,
+        RollingInterpolationMethod,
+        SingleIndexSelector,
+        TemporalLiteral,
+        _1DArray,
+    )
     from narwhals.utils import Implementation
 
 
@@ -84,10 +89,7 @@ class Series(Generic[IntoSeriesT]):
         return DataFrame
 
     def __init__(
-        self,
-        series: Any,
-        *,
-        level: Literal["full", "lazy", "interchange"],
+        self, series: Any, *, level: Literal["full", "lazy", "interchange"]
     ) -> None:
         self._level: Literal["full", "lazy", "interchange"] = level
         if is_compliant_series(series):
@@ -523,10 +525,7 @@ class Series(Generic[IntoSeriesT]):
             │ 2   │
             └─────┘
         """
-        return self._dataframe(
-            self._compliant_series.to_frame(),
-            level=self._level,
-        )
+        return self._dataframe(self._compliant_series.to_frame(), level=self._level)
 
     def to_list(self) -> list[Any]:
         """Convert to list.
@@ -1190,9 +1189,7 @@ class Series(Generic[IntoSeriesT]):
             >>>
             >>> s_native = pd.Series([3, 0, 1, 2], name="a")
             >>> nw.from_native(s_native, series_only=True).replace_strict(
-            ...     [0, 1, 2, 3],
-            ...     ["zero", "one", "two", "three"],
-            ...     return_dtype=nw.String,
+            ...     [0, 1, 2, 3], ["zero", "one", "two", "three"], return_dtype=nw.String
             ... ).to_native()
             0    three
             1     zero
@@ -2255,11 +2252,7 @@ class Series(Generic[IntoSeriesT]):
         return self._with_compliant(self._compliant_series.cum_prod(reverse=reverse))
 
     def rolling_sum(
-        self,
-        window_size: int,
-        *,
-        min_samples: int | None = None,
-        center: bool = False,
+        self, window_size: int, *, min_samples: int | None = None, center: bool = False
     ) -> Self:
         """Apply a rolling sum (moving sum) over the values.
 
@@ -2309,11 +2302,7 @@ class Series(Generic[IntoSeriesT]):
         )
 
     def rolling_mean(
-        self,
-        window_size: int,
-        *,
-        min_samples: int | None = None,
-        center: bool = False,
+        self, window_size: int, *, min_samples: int | None = None, center: bool = False
     ) -> Self:
         """Apply a rolling mean (moving mean) over the values.
 
@@ -2595,9 +2584,7 @@ class Series(Generic[IntoSeriesT]):
 
         return self._dataframe(
             self._compliant_series.hist(
-                bins=bins,
-                bin_count=bin_count,
-                include_breakpoint=include_breakpoint,
+                bins=bins, bin_count=bin_count, include_breakpoint=include_breakpoint
             ),
             level=self._level,
         )

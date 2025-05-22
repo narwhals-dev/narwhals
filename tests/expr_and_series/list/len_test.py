@@ -4,19 +4,13 @@ import pandas as pd
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [[1, 2], [3, 4, None], None, [], [None]]}
 expected = {"a": [2, 3, None, 0, 1]}
 
 
-def test_len_expr(
-    request: pytest.FixtureRequest,
-    constructor: Constructor,
-) -> None:
+def test_len_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
@@ -31,8 +25,7 @@ def test_len_expr(
 
 
 def test_len_series(
-    request: pytest.FixtureRequest,
-    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
     if any(backend in str(constructor_eager) for backend in ("modin", "cudf")):
         request.applymarker(pytest.mark.xfail)

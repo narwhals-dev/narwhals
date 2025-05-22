@@ -3,20 +3,19 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION
-from tests.utils import PANDAS_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import PYARROW_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 data = {"a": [3, 1, None, 2]}
 
-expected = {
-    "cum_min": [3, 1, None, 1],
-    "reverse_cum_min": [1, 1, None, 2],
-}
+expected = {"cum_min": [3, 1, None, 1], "reverse_cum_min": [1, 1, None, 2]}
 
 
 @pytest.mark.parametrize("reverse", [True, False])
@@ -33,19 +32,13 @@ def test_cum_min_expr(
 
     name = "reverse_cum_min" if reverse else "cum_min"
     df = nw.from_native(constructor_eager(data))
-    result = df.select(
-        nw.col("a").cum_min(reverse=reverse).alias(name),
-    )
+    result = df.select(nw.col("a").cum_min(reverse=reverse).alias(name))
 
     assert_equal_data(result, {name: expected[name]})
 
 
 @pytest.mark.parametrize(
-    ("reverse", "expected_a"),
-    [
-        (False, [1, 2, 1]),
-        (True, [1, 1, 3]),
-    ],
+    ("reverse", "expected_a"), [(False, [1, 2, 1]), (True, [1, 1, 3])]
 )
 def test_lazy_cum_min_grouped(
     constructor: Constructor,
@@ -71,14 +64,7 @@ def test_lazy_cum_min_grouped(
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
-        constructor(
-            {
-                "a": [1, 2, 3],
-                "b": [1, 0, 2],
-                "i": [0, 1, 2],
-                "g": [1, 1, 1],
-            }
-        )
+        constructor({"a": [1, 2, 3], "b": [1, 0, 2], "i": [0, 1, 2], "g": [1, 1, 1]})
     )
     result = df.with_columns(
         nw.col("a").cum_min(reverse=reverse).over("g", order_by="b")
@@ -89,10 +75,7 @@ def test_lazy_cum_min_grouped(
 
 @pytest.mark.parametrize(
     ("reverse", "expected_a"),
-    [
-        (False, [1, 2, 1, 1, 1, 2, 4]),
-        (True, [1, 1, 2, 1, 2, 1, 1]),
-    ],
+    [(False, [1, 2, 1, 1, 1, 2, 4]), (True, [1, 1, 2, 1, 2, 1, 1])],
 )
 def test_lazy_cum_min_ordered_by_nulls(
     constructor: Constructor,
@@ -140,11 +123,7 @@ def test_lazy_cum_min_ordered_by_nulls(
 
 
 @pytest.mark.parametrize(
-    ("reverse", "expected_a"),
-    [
-        (False, [1, 2, 1]),
-        (True, [1, 1, 3]),
-    ],
+    ("reverse", "expected_a"), [(False, [1, 2, 1]), (True, [1, 1, 3])]
 )
 def test_lazy_cum_min_ungrouped(
     constructor: Constructor,
@@ -166,13 +145,7 @@ def test_lazy_cum_min_ungrouped(
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
-        constructor(
-            {
-                "a": [2, 3, 1],
-                "b": [0, 2, 1],
-                "i": [1, 2, 0],
-            }
-        )
+        constructor({"a": [2, 3, 1], "b": [0, 2, 1], "i": [1, 2, 0]})
     ).sort("i")
     result = df.with_columns(
         nw.col("a").cum_min(reverse=reverse).over(order_by="b")
@@ -183,10 +156,7 @@ def test_lazy_cum_min_ungrouped(
 
 @pytest.mark.parametrize(
     ("reverse", "expected_a"),
-    [
-        (False, [1, 2, 1, 1, 1, 2, 4]),
-        (True, [1, 1, 2, 1, 2, 1, 1]),
-    ],
+    [(False, [1, 2, 1, 1, 1, 2, 4]), (True, [1, 1, 2, 1, 2, 1, 1])],
 )
 def test_lazy_cum_min_ungrouped_ordered_by_nulls(
     constructor: Constructor,
@@ -240,7 +210,6 @@ def test_cum_min_series(
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(
-        cum_min=df["a"].cum_min(),
-        reverse_cum_min=df["a"].cum_min(reverse=True),
+        cum_min=df["a"].cum_min(), reverse_cum_min=df["a"].cum_min(reverse=True)
     )
     assert_equal_data(result, expected)

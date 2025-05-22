@@ -3,26 +3,17 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+from tests.utils import Constructor, assert_equal_data
 
 
 def test_sort(constructor: Constructor) -> None:
     data = {"an tan": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
     result = df.sort("an tan", "b")
-    expected = {
-        "an tan": [1, 2, 3],
-        "b": [4, 6, 4],
-        "z": [7.0, 9.0, 8.0],
-    }
+    expected = {"an tan": [1, 2, 3], "b": [4, 6, 4], "z": [7.0, 9.0, 8.0]}
     assert_equal_data(result, expected)
     result = df.sort("an tan", "b", descending=[True, False])
-    expected = {
-        "an tan": [3, 2, 1],
-        "b": [4, 6, 4],
-        "z": [8.0, 9.0, 7.0],
-    }
+    expected = {"an tan": [3, 2, 1], "b": [4, 6, 4], "z": [8.0, 9.0, 7.0]}
     assert_equal_data(result, expected)
 
 
