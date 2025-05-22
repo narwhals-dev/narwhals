@@ -764,4 +764,6 @@ class PolarsLazyFrame:
         )
 
     def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
-        return check_columns_exist(subset, available=list(self.columns))
+        return check_columns_exist(  # pragma: no cover
+            subset, available=list(self.columns)
+        )
