@@ -368,61 +368,75 @@ class DummyExpr:
             ).to_function_expr(self._ir)
         )
 
-    def __eq__(self, other: DummyExpr) -> Self:  # type: ignore[override]
+    def __eq__(self, other: IntoExpr) -> Self:  # type: ignore[override]
         op = ops.Eq()
-        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
+        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        return self._from_ir(op.to_binary_expr(self._ir, rhs))
 
-    def __ne__(self, other: DummyExpr) -> Self:  # type: ignore[override]
+    def __ne__(self, other: IntoExpr) -> Self:  # type: ignore[override]
         op = ops.NotEq()
-        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
+        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        return self._from_ir(op.to_binary_expr(self._ir, rhs))
 
-    def __lt__(self, other: DummyExpr) -> Self:
+    def __lt__(self, other: IntoExpr) -> Self:
         op = ops.Lt()
-        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
+        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        return self._from_ir(op.to_binary_expr(self._ir, rhs))
 
-    def __le__(self, other: DummyExpr) -> Self:
+    def __le__(self, other: IntoExpr) -> Self:
         op = ops.LtEq()
-        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
+        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        return self._from_ir(op.to_binary_expr(self._ir, rhs))
 
-    def __gt__(self, other: DummyExpr) -> Self:
+    def __gt__(self, other: IntoExpr) -> Self:
         op = ops.Gt()
-        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
+        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        return self._from_ir(op.to_binary_expr(self._ir, rhs))
 
-    def __ge__(self, other: DummyExpr) -> Self:
+    def __ge__(self, other: IntoExpr) -> Self:
         op = ops.GtEq()
-        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
+        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        return self._from_ir(op.to_binary_expr(self._ir, rhs))
 
-    def __add__(self, other: DummyExpr) -> Self:
+    def __add__(self, other: IntoExpr) -> Self:
         op = ops.Add()
-        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
+        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        return self._from_ir(op.to_binary_expr(self._ir, rhs))
 
-    def __sub__(self, other: DummyExpr) -> Self:
+    def __sub__(self, other: IntoExpr) -> Self:
         op = ops.Sub()
-        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
+        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        return self._from_ir(op.to_binary_expr(self._ir, rhs))
 
-    def __mul__(self, other: DummyExpr) -> Self:
+    def __mul__(self, other: IntoExpr) -> Self:
         op = ops.Multiply()
-        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
+        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        return self._from_ir(op.to_binary_expr(self._ir, rhs))
 
-    def __truediv__(self, other: DummyExpr) -> Self:
+    def __truediv__(self, other: IntoExpr) -> Self:
         op = ops.TrueDivide()
-        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
+        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        return self._from_ir(op.to_binary_expr(self._ir, rhs))
 
-    def __floordiv__(self, other: DummyExpr) -> Self:
+    def __floordiv__(self, other: IntoExpr) -> Self:
         op = ops.FloorDivide()
-        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
+        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        return self._from_ir(op.to_binary_expr(self._ir, rhs))
 
-    def __mod__(self, other: DummyExpr) -> Self:
+    def __mod__(self, other: IntoExpr) -> Self:
         op = ops.Modulus()
-        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
+        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        return self._from_ir(op.to_binary_expr(self._ir, rhs))
 
-    def __and__(self, other: DummyExpr) -> Self:
+    def __and__(self, other: IntoExpr) -> Self:
         op = ops.And()
-        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
+        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        return self._from_ir(op.to_binary_expr(self._ir, rhs))
 
-    def __or__(self, other: DummyExpr) -> Self:
+    def __or__(self, other: IntoExpr) -> Self:
         op = ops.Or()
-        return self._from_ir(op.to_binary_expr(self._ir, other._ir))
+        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        return self._from_ir(op.to_binary_expr(self._ir, rhs))
 
     def __invert__(self) -> Self:
         return self._from_ir(boolean.Not().to_function_expr(self._ir))
