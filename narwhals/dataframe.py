@@ -2201,10 +2201,13 @@ class LazyFrame(BaseFrame[FrameT]):
             if arg._metadata.n_orderable_ops:
                 msg = (
                     "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
-                    "Hints:\n"
-                    "- Instead of `lf.select(nw.col('a').sort())`, use `lf.select('a').sort()`.\n"
-                    "- Instead of `lf.select(nw.col('a').cum_sum())`, use\n"
-                    "  `lf.select(nw.col('a').cum_sum().over(order_by='date'))`.\n\n"
+                    "Hint: To make the expression valid, use `.over` with `order_by` specified.\n\n"
+                    "For example, if you wrote `nw.col('price').cum_sum()` and you have a column\n"
+                    "`'date'` which orders your data, then replace:\n\n"
+                    "   nw.col('price').cum_sum()\n\n"
+                    " with:\n\n"
+                    "   nw.col('price').cum_sum().over(order_by='date')\n"
+                    "                            ^^^^^^^^^^^^^^^^^^^^^^\n\n"
                     "See https://narwhals-dev.github.io/narwhals/concepts/order_dependence/."
                 )
                 raise OrderDependentExprError(msg)
