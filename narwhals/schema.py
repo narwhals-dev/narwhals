@@ -8,18 +8,12 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from functools import partial
-from typing import TYPE_CHECKING
-from typing import Iterable
-from typing import Mapping
-from typing import cast
+from typing import TYPE_CHECKING, Iterable, Mapping, cast
 
-from narwhals.utils import Implementation
-from narwhals.utils import Version
-from narwhals.utils import parse_version
+from narwhals.utils import Implementation, Version, parse_version
 
 if TYPE_CHECKING:
-    from typing import Any
-    from typing import ClassVar
+    from typing import Any, ClassVar
 
     import polars as pl
     import pyarrow as pa
@@ -158,9 +152,7 @@ class Schema(BaseSchema):
         else:
             backends = tuple(dtype_backend)
             if len(backends) != len(self):
-                from itertools import chain
-                from itertools import islice
-                from itertools import repeat
+                from itertools import chain, islice, repeat
 
                 n_user, n_actual = len(backends), len(self)
                 suggestion = tuple(

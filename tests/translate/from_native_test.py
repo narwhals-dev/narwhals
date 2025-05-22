@@ -24,13 +24,7 @@ import sys
 from contextlib import nullcontext as does_not_raise
 from importlib.util import find_spec
 from itertools import chain
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Iterable
-from typing import Iterator
-from typing import Literal
-from typing import cast
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, Literal, cast
 
 import numpy as np
 import pytest

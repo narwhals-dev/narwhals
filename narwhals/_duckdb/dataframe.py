@@ -3,33 +3,31 @@ from __future__ import annotations
 import contextlib
 from functools import reduce
 from operator import and_
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Iterator
-from typing import Mapping
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Iterator, Mapping, Sequence
 
 import duckdb
-from duckdb import FunctionExpression
-from duckdb import StarExpression
+from duckdb import FunctionExpression, StarExpression
 
-from narwhals._duckdb.utils import catch_duckdb_column_not_found_exception
-from narwhals._duckdb.utils import col
-from narwhals._duckdb.utils import evaluate_exprs
-from narwhals._duckdb.utils import generate_partition_by_sql
-from narwhals._duckdb.utils import lit
-from narwhals._duckdb.utils import native_to_narwhals_dtype
+from narwhals._duckdb.utils import (
+    catch_duckdb_column_not_found_exception,
+    col,
+    evaluate_exprs,
+    generate_partition_by_sql,
+    lit,
+    native_to_narwhals_dtype,
+)
 from narwhals.dependencies import get_duckdb
-from narwhals.exceptions import ColumnNotFoundError
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
 from narwhals.typing import CompliantLazyFrame
-from narwhals.utils import Implementation
-from narwhals.utils import Version
-from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import not_implemented
-from narwhals.utils import parse_columns_to_drop
-from narwhals.utils import parse_version
-from narwhals.utils import validate_backend_version
+from narwhals.utils import (
+    Implementation,
+    Version,
+    generate_temporary_column_name,
+    not_implemented,
+    parse_columns_to_drop,
+    parse_version,
+    validate_backend_version,
+)
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -37,8 +35,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import pyarrow as pa
     from duckdb import Expression
-    from typing_extensions import Self
-    from typing_extensions import TypeIs
+    from typing_extensions import Self, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
     from narwhals._duckdb.expr import DuckDBExpr
@@ -48,13 +45,11 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
-    from narwhals.typing import AsofJoinStrategy
-    from narwhals.typing import JoinStrategy
-    from narwhals.typing import LazyUniqueKeepStrategy
+    from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
     from narwhals.utils import _FullContext
 
 with contextlib.suppress(ImportError):  # requires duckdb>=1.3.0
-    from duckdb import SQLExpression  # type: ignore[attr-defined, unused-ignore]
+    from duckdb import SQLExpression
 
 
 class DuckDBLazyFrame(

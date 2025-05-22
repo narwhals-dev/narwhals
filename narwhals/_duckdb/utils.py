@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Sequence
 
 import duckdb
 
 from narwhals.exceptions import ColumnNotFoundError
-from narwhals.utils import Version
-from narwhals.utils import isinstance_or_issubclass
+from narwhals.utils import Version, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from duckdb import Expression

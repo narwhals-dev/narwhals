@@ -6,11 +6,8 @@ import numpy as np
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import MultiOutputExpressionError
-from narwhals.exceptions import ShapeError
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from narwhals.exceptions import MultiOutputExpressionError, ShapeError
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.typing import _1DArray

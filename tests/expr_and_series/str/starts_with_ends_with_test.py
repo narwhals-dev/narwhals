@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import narwhals as nw
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
 
 # Don't move this into typechecking block, for coverage
 # purposes
-from tests.utils import assert_equal_data
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": ["fdas", "edfas"]}
 

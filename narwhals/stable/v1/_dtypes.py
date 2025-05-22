@@ -2,41 +2,43 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals.dtypes import Array
-from narwhals.dtypes import Binary
-from narwhals.dtypes import Boolean
-from narwhals.dtypes import Categorical
-from narwhals.dtypes import Date
-from narwhals.dtypes import Datetime as NwDatetime
-from narwhals.dtypes import Decimal
-from narwhals.dtypes import DType
-from narwhals.dtypes import Duration as NwDuration
-from narwhals.dtypes import Enum as NwEnum
-from narwhals.dtypes import Field
-from narwhals.dtypes import Float32
-from narwhals.dtypes import Float64
-from narwhals.dtypes import FloatType
-from narwhals.dtypes import Int8
-from narwhals.dtypes import Int16
-from narwhals.dtypes import Int32
-from narwhals.dtypes import Int64
-from narwhals.dtypes import Int128
-from narwhals.dtypes import IntegerType
-from narwhals.dtypes import List
-from narwhals.dtypes import NestedType
-from narwhals.dtypes import NumericType
-from narwhals.dtypes import Object
-from narwhals.dtypes import SignedIntegerType
-from narwhals.dtypes import String
-from narwhals.dtypes import Struct
-from narwhals.dtypes import Time
-from narwhals.dtypes import UInt8
-from narwhals.dtypes import UInt16
-from narwhals.dtypes import UInt32
-from narwhals.dtypes import UInt64
-from narwhals.dtypes import UInt128
-from narwhals.dtypes import Unknown
-from narwhals.dtypes import UnsignedIntegerType
+from narwhals.dtypes import (
+    Array,
+    Binary,
+    Boolean,
+    Categorical,
+    Date,
+    Datetime as NwDatetime,
+    Decimal,
+    DType,
+    Duration as NwDuration,
+    Enum as NwEnum,
+    Field,
+    Float32,
+    Float64,
+    FloatType,
+    Int8,
+    Int16,
+    Int32,
+    Int64,
+    Int128,
+    IntegerType,
+    List,
+    NestedType,
+    NumericType,
+    Object,
+    SignedIntegerType,
+    String,
+    Struct,
+    Time,
+    UInt8,
+    UInt16,
+    UInt32,
+    UInt64,
+    UInt128,
+    Unknown,
+    UnsignedIntegerType,
+)
 from narwhals.utils import inherit_doc
 
 if TYPE_CHECKING:

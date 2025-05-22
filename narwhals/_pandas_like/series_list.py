@@ -3,9 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._compliant.any_namespace import ListNamespace
-from narwhals._pandas_like.utils import PandasLikeSeriesNamespace
-from narwhals._pandas_like.utils import get_dtype_backend
-from narwhals._pandas_like.utils import narwhals_to_native_dtype
+from narwhals._pandas_like.utils import (
+    PandasLikeSeriesNamespace,
+    get_dtype_backend,
+    narwhals_to_native_dtype,
+)
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries

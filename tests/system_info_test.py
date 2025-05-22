@@ -3,9 +3,7 @@ from __future__ import annotations
 import warnings
 from typing import Any
 
-from narwhals.functions import _get_deps_info
-from narwhals.functions import _get_sys_info
-from narwhals.functions import show_versions
+from narwhals.functions import _get_deps_info, _get_sys_info, show_versions
 
 
 def test_get_sys_info() -> None:

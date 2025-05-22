@@ -3,10 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
-from typing import Literal
-from typing import cast
-from typing import get_args
+from typing import TYPE_CHECKING, Literal, cast, get_args
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias

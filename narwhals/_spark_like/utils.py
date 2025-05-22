@@ -1,13 +1,10 @@
 from __future__ import annotations
 
 from importlib import import_module
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Sequence
 
 from narwhals.exceptions import UnsupportedDTypeError
-from narwhals.utils import Implementation
-from narwhals.utils import isinstance_or_issubclass
+from narwhals.utils import Implementation, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from types import ModuleType

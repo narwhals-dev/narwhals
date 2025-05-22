@@ -3,59 +3,59 @@ from __future__ import annotations
 import os
 import re
 from datetime import timezone
-from enum import Enum
-from enum import auto
+from enum import Enum, auto
 from functools import wraps
 from importlib.util import find_spec
-from inspect import getattr_static
-from inspect import getdoc
+from inspect import getattr_static, getdoc
 from secrets import token_hex
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Container
-from typing import Generic
-from typing import Iterable
-from typing import Iterator
-from typing import Literal
-from typing import Protocol
-from typing import Sequence
-from typing import TypeVar
-from typing import Union
-from typing import cast
-from typing import overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Container,
+    Generic,
+    Iterable,
+    Iterator,
+    Literal,
+    Protocol,
+    Sequence,
+    TypeVar,
+    Union,
+    cast,
+    overload,
+)
 from warnings import warn
 
 from narwhals._enum import NoAutoEnum
 from narwhals._typing_compat import deprecated
-from narwhals.dependencies import get_cudf
-from narwhals.dependencies import get_dask
-from narwhals.dependencies import get_dask_dataframe
-from narwhals.dependencies import get_duckdb
-from narwhals.dependencies import get_ibis
-from narwhals.dependencies import get_modin
-from narwhals.dependencies import get_pandas
-from narwhals.dependencies import get_polars
-from narwhals.dependencies import get_pyarrow
-from narwhals.dependencies import get_pyspark
-from narwhals.dependencies import get_pyspark_connect
-from narwhals.dependencies import get_pyspark_sql
-from narwhals.dependencies import get_sqlframe
-from narwhals.dependencies import is_cudf_series
-from narwhals.dependencies import is_modin_series
-from narwhals.dependencies import is_narwhals_series
-from narwhals.dependencies import is_narwhals_series_int
-from narwhals.dependencies import is_numpy_array_1d
-from narwhals.dependencies import is_numpy_array_1d_int
-from narwhals.dependencies import is_pandas_dataframe
-from narwhals.dependencies import is_pandas_like_dataframe
-from narwhals.dependencies import is_pandas_like_series
-from narwhals.dependencies import is_pandas_series
-from narwhals.dependencies import is_polars_series
-from narwhals.dependencies import is_pyarrow_chunked_array
-from narwhals.exceptions import ColumnNotFoundError
-from narwhals.exceptions import DuplicateError
-from narwhals.exceptions import InvalidOperationError
+from narwhals.dependencies import (
+    get_cudf,
+    get_dask,
+    get_dask_dataframe,
+    get_duckdb,
+    get_ibis,
+    get_modin,
+    get_pandas,
+    get_polars,
+    get_pyarrow,
+    get_pyspark,
+    get_pyspark_connect,
+    get_pyspark_sql,
+    get_sqlframe,
+    is_cudf_series,
+    is_modin_series,
+    is_narwhals_series,
+    is_narwhals_series_int,
+    is_numpy_array_1d,
+    is_numpy_array_1d_int,
+    is_pandas_dataframe,
+    is_pandas_like_dataframe,
+    is_pandas_like_series,
+    is_pandas_series,
+    is_polars_series,
+    is_pyarrow_chunked_array,
+)
+from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -63,46 +63,48 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import pyarrow as pa
-    from typing_extensions import Concatenate
-    from typing_extensions import LiteralString
-    from typing_extensions import ParamSpec
-    from typing_extensions import Self
-    from typing_extensions import TypeAlias
-    from typing_extensions import TypeIs
+    from typing_extensions import (
+        Concatenate,
+        LiteralString,
+        ParamSpec,
+        Self,
+        TypeAlias,
+        TypeIs,
+    )
 
-    from narwhals._compliant import CompliantExpr
-    from narwhals._compliant import CompliantExprT
-    from narwhals._compliant import CompliantFrameT
-    from narwhals._compliant import CompliantSeriesOrNativeExprT_co
-    from narwhals._compliant import CompliantSeriesT
-    from narwhals._compliant import NativeFrameT_co
-    from narwhals._compliant import NativeSeriesT_co
+    from narwhals._compliant import (
+        CompliantExpr,
+        CompliantExprT,
+        CompliantFrameT,
+        CompliantSeriesOrNativeExprT_co,
+        CompliantSeriesT,
+        NativeFrameT_co,
+        NativeSeriesT_co,
+    )
     from narwhals._compliant.typing import EvalNames
-    from narwhals._namespace import EagerAllowedImplementation
-    from narwhals._namespace import Namespace
-    from narwhals._translate import ArrowStreamExportable
-    from narwhals._translate import IntoArrowTable
-    from narwhals._translate import ToNarwhalsT_co
-    from narwhals.dataframe import DataFrame
-    from narwhals.dataframe import LazyFrame
+    from narwhals._namespace import EagerAllowedImplementation, Namespace
+    from narwhals._translate import ArrowStreamExportable, IntoArrowTable, ToNarwhalsT_co
+    from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
     from narwhals.series import Series
-    from narwhals.typing import CompliantDataFrame
-    from narwhals.typing import CompliantLazyFrame
-    from narwhals.typing import CompliantSeries
-    from narwhals.typing import DataFrameLike
-    from narwhals.typing import DTypes
-    from narwhals.typing import IntoSeriesT
-    from narwhals.typing import MultiIndexSelector
-    from narwhals.typing import SingleIndexSelector
-    from narwhals.typing import SizedMultiIndexSelector
-    from narwhals.typing import SizeUnit
-    from narwhals.typing import SupportsNativeNamespace
-    from narwhals.typing import TimeUnit
-    from narwhals.typing import _1DArray
-    from narwhals.typing import _SliceIndex
-    from narwhals.typing import _SliceName
-    from narwhals.typing import _SliceNone
+    from narwhals.typing import (
+        CompliantDataFrame,
+        CompliantLazyFrame,
+        CompliantSeries,
+        DataFrameLike,
+        DTypes,
+        IntoSeriesT,
+        MultiIndexSelector,
+        SingleIndexSelector,
+        SizedMultiIndexSelector,
+        SizeUnit,
+        SupportsNativeNamespace,
+        TimeUnit,
+        _1DArray,
+        _SliceIndex,
+        _SliceName,
+        _SliceNone,
+    )
 
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
@@ -769,8 +771,7 @@ def isinstance_or_issubclass(obj_or_cls: Any, cls_or_tuple: Any) -> bool:
 
 
 def validate_laziness(items: Iterable[Any]) -> None:
-    from narwhals.dataframe import DataFrame
-    from narwhals.dataframe import LazyFrame
+    from narwhals.dataframe import DataFrame, LazyFrame
 
     if all(isinstance(item, DataFrame) for item in items) or (
         all(isinstance(item, LazyFrame) for item in items)

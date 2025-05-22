@@ -6,8 +6,7 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import ConstructorEager, assert_equal_data
 
 data = {"a": [0, 0, 2, -1], "b": [1, 3, 2, None]}
 

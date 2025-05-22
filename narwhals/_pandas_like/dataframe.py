@@ -1,45 +1,48 @@
 from __future__ import annotations
 
-from itertools import chain
-from itertools import product
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Iterable
-from typing import Iterator
-from typing import Literal
-from typing import Mapping
-from typing import Sequence
-from typing import cast
-from typing import overload
+from itertools import chain, product
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Iterable,
+    Iterator,
+    Literal,
+    Mapping,
+    Sequence,
+    cast,
+    overload,
+)
 
 import numpy as np
 
 from narwhals._compliant import EagerDataFrame
-from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
-from narwhals._pandas_like.series import PandasLikeSeries
-from narwhals._pandas_like.utils import align_and_extract_native
-from narwhals._pandas_like.utils import align_series_full_broadcast
-from narwhals._pandas_like.utils import check_column_names_are_unique
-from narwhals._pandas_like.utils import get_dtype_backend
-from narwhals._pandas_like.utils import native_to_narwhals_dtype
-from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
-from narwhals._pandas_like.utils import rename
-from narwhals._pandas_like.utils import select_columns_by_name
-from narwhals._pandas_like.utils import set_index
+from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING, PandasLikeSeries
+from narwhals._pandas_like.utils import (
+    align_and_extract_native,
+    align_series_full_broadcast,
+    check_column_names_are_unique,
+    get_dtype_backend,
+    native_to_narwhals_dtype,
+    object_native_to_narwhals_dtype,
+    rename,
+    select_columns_by_name,
+    set_index,
+)
 from narwhals.dependencies import is_pandas_like_dataframe
-from narwhals.exceptions import InvalidOperationError
-from narwhals.exceptions import ShapeError
-from narwhals.utils import Implementation
-from narwhals.utils import _into_arrow_table
-from narwhals.utils import _remap_full_join_keys
-from narwhals.utils import check_column_exists
-from narwhals.utils import exclude_column_names
-from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import parse_columns_to_drop
-from narwhals.utils import parse_version
-from narwhals.utils import scale_bytes
-from narwhals.utils import validate_backend_version
+from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals.utils import (
+    Implementation,
+    _into_arrow_table,
+    _remap_full_join_keys,
+    check_column_exists,
+    exclude_column_names,
+    generate_temporary_column_name,
+    parse_columns_to_drop,
+    parse_version,
+    scale_bytes,
+    validate_backend_version,
+)
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -48,31 +51,29 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
-    from typing_extensions import Self
-    from typing_extensions import TypeAlias
-    from typing_extensions import TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs
 
-    from narwhals._compliant.typing import CompliantDataFrameAny
-    from narwhals._compliant.typing import CompliantLazyFrameAny
+    from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
-    from narwhals.typing import AsofJoinStrategy
-    from narwhals.typing import DTypeBackend
-    from narwhals.typing import JoinStrategy
-    from narwhals.typing import PivotAgg
-    from narwhals.typing import SizedMultiIndexSelector
-    from narwhals.typing import SizedMultiNameSelector
-    from narwhals.typing import SizeUnit
-    from narwhals.typing import UniqueKeepStrategy
-    from narwhals.typing import _2DArray
-    from narwhals.typing import _SliceIndex
-    from narwhals.typing import _SliceName
-    from narwhals.utils import Version
-    from narwhals.utils import _FullContext
+    from narwhals.typing import (
+        AsofJoinStrategy,
+        DTypeBackend,
+        JoinStrategy,
+        PivotAgg,
+        SizedMultiIndexSelector,
+        SizedMultiNameSelector,
+        SizeUnit,
+        UniqueKeepStrategy,
+        _2DArray,
+        _SliceIndex,
+        _SliceName,
+    )
+    from narwhals.utils import Version, _FullContext
 
     Constructor: TypeAlias = Callable[..., pd.DataFrame]
 

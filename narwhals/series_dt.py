@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Generic
+from typing import TYPE_CHECKING, Generic
 
 from narwhals.typing import SeriesT
 

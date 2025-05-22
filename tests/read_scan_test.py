@@ -1,11 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Literal
-from typing import Mapping
-from typing import cast
+from typing import TYPE_CHECKING, Any, Literal, Mapping, cast
 
 import pandas as pd
 import pytest
@@ -13,10 +9,7 @@ import pytest
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from narwhals.utils import Implementation
-from tests.utils import PANDAS_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 pytest.importorskip("polars")
 import polars as pl
