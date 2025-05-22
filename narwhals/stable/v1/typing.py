@@ -1,13 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Protocol
-from typing import TypeVar
-from typing import Union
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, Union
 
-from narwhals.stable.v1 import DataFrame
-from narwhals.stable.v1 import LazyFrame
+from narwhals.stable.v1 import DataFrame, LazyFrame
 
 if TYPE_CHECKING:
     import sys
@@ -17,9 +12,7 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import TypeAlias
 
-    from narwhals.stable.v1 import Expr
-    from narwhals.stable.v1 import Series
-    from narwhals.stable.v1 import dtypes
+    from narwhals.stable.v1 import Expr, Series, dtypes
 
     # All dataframes supported by Narwhals have a
     # `columns` property. Their similarities don't extend

@@ -1,12 +1,7 @@
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Literal
-from typing import Sequence
-from typing import cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, cast
 
 import ibis
 from ibis import _ as col
@@ -17,30 +12,21 @@ from narwhals._ibis.expr_dt import IbisExprDateTimeNamespace
 from narwhals._ibis.expr_list import IbisExprListNamespace
 from narwhals._ibis.expr_str import IbisExprStringNamespace
 from narwhals._ibis.expr_struct import IbisExprStructNamespace
-from narwhals._ibis.utils import WindowInputs
-from narwhals._ibis.utils import is_floating
-from narwhals._ibis.utils import lit
-from narwhals._ibis.utils import narwhals_to_native_dtype
-from narwhals.utils import Implementation
-from narwhals.utils import not_implemented
+from narwhals._ibis.utils import WindowInputs, is_floating, lit, narwhals_to_native_dtype
+from narwhals.utils import Implementation, not_implemented
 
 if TYPE_CHECKING:
     import ibis.expr.types as ir
     from typing_extensions import Self
 
-    from narwhals._compliant.typing import AliasNames
-    from narwhals._compliant.typing import EvalNames
-    from narwhals._compliant.typing import EvalSeries
+    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.namespace import IbisNamespace
-    from narwhals._ibis.typing import ExprT
-    from narwhals._ibis.typing import WindowFunction
+    from narwhals._ibis.typing import ExprT, WindowFunction
     from narwhals.dtypes import DType
-    from narwhals.typing import RankMethod
-    from narwhals.typing import RollingInterpolationMethod
-    from narwhals.utils import Version
-    from narwhals.utils import _FullContext
+    from narwhals.typing import RankMethod, RollingInterpolationMethod
+    from narwhals.utils import Version, _FullContext
 
 
 class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):

@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import ClassVar
-from typing import Iterable
-from typing import Iterator
-from typing import Literal
-from typing import Mapping
-from typing import Sequence
-from typing import cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    Iterable,
+    Iterator,
+    Literal,
+    Mapping,
+    Sequence,
+    cast,
+)
 
 from narwhals._compliant import LazyExpr
 from narwhals._expression_parsing import ExprKind
@@ -18,41 +20,37 @@ from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
 from narwhals._spark_like.expr_struct import SparkLikeExprStructNamespace
-from narwhals._spark_like.utils import UnorderableWindowInputs
-from narwhals._spark_like.utils import WindowInputs
-from narwhals._spark_like.utils import import_functions
-from narwhals._spark_like.utils import import_native_dtypes
-from narwhals._spark_like.utils import import_window
-from narwhals._spark_like.utils import narwhals_to_native_dtype
+from narwhals._spark_like.utils import (
+    UnorderableWindowInputs,
+    WindowInputs,
+    import_functions,
+    import_native_dtypes,
+    import_window,
+    narwhals_to_native_dtype,
+)
 from narwhals.dependencies import get_pyspark
 from narwhals.exceptions import InvalidOperationError
-from narwhals.utils import Implementation
-from narwhals.utils import not_implemented
-from narwhals.utils import parse_version
+from narwhals.utils import Implementation, not_implemented, parse_version
 
 if TYPE_CHECKING:
     from sqlframe.base.column import Column
-    from sqlframe.base.window import Window
-    from sqlframe.base.window import WindowSpec
-    from typing_extensions import Self
-    from typing_extensions import TypeAlias
+    from sqlframe.base.window import Window, WindowSpec
+    from typing_extensions import Self, TypeAlias
 
-    from narwhals._compliant.typing import AliasNames
-    from narwhals._compliant.typing import EvalNames
-    from narwhals._compliant.typing import EvalSeries
+    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
-    from narwhals._spark_like.typing import UnorderableWindowFunction
-    from narwhals._spark_like.typing import WindowFunction
+    from narwhals._spark_like.typing import UnorderableWindowFunction, WindowFunction
     from narwhals.dtypes import DType
-    from narwhals.typing import FillNullStrategy
-    from narwhals.typing import NonNestedLiteral
-    from narwhals.typing import NumericLiteral
-    from narwhals.typing import RankMethod
-    from narwhals.typing import TemporalLiteral
-    from narwhals.utils import Version
-    from narwhals.utils import _FullContext
+    from narwhals.typing import (
+        FillNullStrategy,
+        NonNestedLiteral,
+        NumericLiteral,
+        RankMethod,
+        TemporalLiteral,
+    )
+    from narwhals.utils import Version, _FullContext
 
     ColumnOrName: TypeAlias = "Column | str"
     IntoWindow: TypeAlias = "ColumnOrName | WindowInputs"

@@ -1,25 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Literal
-from typing import Protocol
-from typing import Sequence
-from typing import TypeVar
-from typing import Union
+from typing import TYPE_CHECKING, Any, Literal, Protocol, Sequence, TypeVar, Union
 
-from narwhals._compliant import CompliantDataFrame
-from narwhals._compliant import CompliantLazyFrame
-from narwhals._compliant import CompliantSeries
-from narwhals.dataframe import DataFrame
-from narwhals.dataframe import LazyFrame
+from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame, CompliantSeries
+from narwhals.dataframe import DataFrame, LazyFrame
 
 if TYPE_CHECKING:
     import datetime as dt
     from decimal import Decimal
     from types import ModuleType
-    from typing import Iterable
-    from typing import Sized
+    from typing import Iterable, Sized
 
     import numpy as np
     from typing_extensions import TypeAlias

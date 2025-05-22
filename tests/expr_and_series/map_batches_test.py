@@ -3,9 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
 
 data = {"a": [1, 2, 3], "b": [4, 5, 6], "z": [7.0, 8.0, 9.0]}
 

@@ -1,12 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Iterable
-from typing import NoReturn
+from typing import TYPE_CHECKING, Any, Iterable, NoReturn
 
-from narwhals._expression_parsing import ExprMetadata
-from narwhals._expression_parsing import combine_metadata
+from narwhals._expression_parsing import ExprMetadata, combine_metadata
 from narwhals.expr import Expr
 from narwhals.utils import flatten
 

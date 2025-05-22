@@ -3,23 +3,18 @@ from __future__ import annotations
 import functools
 import re
 from contextlib import suppress
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Literal
-from typing import Sized
-from typing import TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Literal, Sized, TypeVar
 
 import pandas as pd
 
 from narwhals._compliant.series import EagerSeriesNamespace
-from narwhals.exceptions import ColumnNotFoundError
-from narwhals.exceptions import DuplicateError
-from narwhals.exceptions import ShapeError
-from narwhals.utils import Implementation
-from narwhals.utils import Version
-from narwhals.utils import _DeferredIterable
-from narwhals.utils import isinstance_or_issubclass
+from narwhals.exceptions import ColumnNotFoundError, DuplicateError, ShapeError
+from narwhals.utils import (
+    Implementation,
+    Version,
+    _DeferredIterable,
+    isinstance_or_issubclass,
+)
 
 T = TypeVar("T", bound=Sized)
 
@@ -29,9 +24,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypeBackend
-    from narwhals.typing import TimeUnit
-    from narwhals.typing import _1DArray
+    from narwhals.typing import DTypeBackend, TimeUnit, _1DArray
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
 

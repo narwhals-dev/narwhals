@@ -4,8 +4,7 @@ from typing import TYPE_CHECKING
 
 from duckdb import FunctionExpression
 
-from narwhals._duckdb.utils import UNITS_DICT
-from narwhals._duckdb.utils import lit
+from narwhals._duckdb.utils import UNITS_DICT, lit
 from narwhals._duration import parse_interval_string
 from narwhals.utils import not_implemented
 
