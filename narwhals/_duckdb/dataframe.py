@@ -23,7 +23,6 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import Version
-from narwhals.utils import check_columns_exist
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
@@ -388,7 +387,7 @@ class DuckDBLazyFrame(
                 )
                 raise NotImplementedError(msg)
             # Sanitise input
-            if error := check_columns_exist(self, subset_):
+            if error := self._check_columns_exist(subset_):
                 raise error
             idx_name = generate_temporary_column_name(8, self.columns)
             count_name = generate_temporary_column_name(8, [*self.columns, idx_name])

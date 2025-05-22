@@ -10,7 +10,6 @@ from narwhals._arrow.series import ArrowSeries
 from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals.utils import Implementation
-from narwhals.utils import check_columns_exist
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import not_implemented
 
@@ -77,7 +76,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                     for column_name in evaluate_column_names(df)
                 ]
             except KeyError as e:
-                if error := check_columns_exist(df, evaluate_column_names(df)):
+                if error := df._check_columns_exist(evaluate_column_names(df)):
                     raise error from e
                 raise
 

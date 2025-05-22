@@ -33,7 +33,6 @@ from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import _into_arrow_table
 from narwhals.utils import _remap_full_join_keys
-from narwhals.utils import check_columns_exist
 from narwhals.utils import exclude_column_names
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import parse_columns_to_drop
@@ -748,7 +747,7 @@ class PandasLikeDataFrame(
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
         mapped_keep = {"none": False, "any": "first"}.get(keep, keep)
-        if subset and (error := check_columns_exist(self, subset)):
+        if subset and (error := self._check_columns_exist(subset)):
             raise error
         return self._with_native(
             self.native.drop_duplicates(subset=subset, keep=mapped_keep),

@@ -24,7 +24,6 @@ from narwhals.exceptions import ShapeError
 from narwhals.utils import Implementation
 from narwhals.utils import Version
 from narwhals.utils import check_column_names_are_unique
-from narwhals.utils import check_columns_exist
 from narwhals.utils import convert_str_slice_to_int_slice
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import not_implemented
@@ -688,7 +687,7 @@ class ArrowDataFrame(
         # and has no effect on the output.
         import numpy as np  # ignore-banned-import
 
-        if subset and (error := check_columns_exist(self, subset)):
+        if subset and (error := self._check_columns_exist(subset)):
             raise error
         subset = list(subset or self.columns)
 

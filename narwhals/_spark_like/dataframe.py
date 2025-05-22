@@ -18,7 +18,6 @@ from narwhals._spark_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
-from narwhals.utils import check_columns_exist
 from narwhals.utils import find_stacklevel
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import not_implemented
@@ -345,7 +344,7 @@ class SparkLikeLazyFrame(
     def unique(
         self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self:
-        if subset and (error := check_columns_exist(self, subset)):
+        if subset and (error := self._check_columns_exist(subset)):
             raise error
         subset = list(subset) if subset else None
         if keep == "none":

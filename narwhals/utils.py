@@ -1272,7 +1272,7 @@ def parse_columns_to_drop(
     if not strict:
         return list(set(frame.columns).intersection(subset))
     to_drop = list(subset)
-    if error := check_columns_exist(frame, to_drop):
+    if error := check_columns_exist(to_drop, available=list(frame.columns)):
         raise error
     return to_drop
 
@@ -1537,13 +1537,8 @@ def generate_repr(header: str, native_repr: str) -> str:
 
 
 def check_columns_exist(
-    frame_or_available: _StoresColumns | list[str], subset: Sequence[str], /
+    subset: Sequence[str], /, *, available: list[str]
 ) -> ColumnNotFoundError | None:
-    available = (
-        frame_or_available
-        if isinstance(frame_or_available, list)
-        else frame_or_available.columns
-    )
     if missing := set(subset).difference(available):
         return ColumnNotFoundError.from_missing_and_available_column_names(
             missing, available

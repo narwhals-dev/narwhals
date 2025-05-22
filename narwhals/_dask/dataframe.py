@@ -17,7 +17,6 @@ from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import Implementation
 from narwhals.utils import _remap_full_join_keys
 from narwhals.utils import check_column_names_are_unique
-from narwhals.utils import check_columns_exist
 from narwhals.utils import generate_temporary_column_name
 from narwhals.utils import not_implemented
 from narwhals.utils import parse_columns_to_drop
@@ -228,7 +227,7 @@ class DaskLazyFrame(
     def unique(
         self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self:
-        if subset and (error := check_columns_exist(self, subset)):
+        if subset and (error := self._check_columns_exist(subset)):
             raise error
         if keep == "none":
             subset = subset or self.columns

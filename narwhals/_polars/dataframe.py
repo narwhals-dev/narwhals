@@ -21,6 +21,7 @@ from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from narwhals.utils import _into_arrow_table
+from narwhals.utils import check_columns_exist
 from narwhals.utils import convert_str_slice_to_int_slice
 from narwhals.utils import is_compliant_series
 from narwhals.utils import is_index_selector
@@ -530,6 +531,9 @@ class PolarsDataFrame:
         except Exception as e:  # noqa: BLE001
             raise catch_polars_exception(e, self._backend_version) from None
 
+    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
+        return check_columns_exist(subset, available=list(self.columns))
+
 
 class PolarsLazyFrame:
     drop_nulls: Method[Self]
@@ -757,3 +761,6 @@ class PolarsLazyFrame:
                 suffix=suffix,
             )
         )
+
+    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
+        return check_columns_exist(subset, available=list(self.columns))
