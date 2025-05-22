@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import pyarrow as pa
     from duckdb import Expression
+    from duckdb.typing import DuckDBPyType
     from typing_extensions import Self, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
@@ -70,7 +71,7 @@ class DuckDBLazyFrame(
         self._native_frame: duckdb.DuckDBPyRelation = df
         self._version = version
         self._backend_version = backend_version
-        self._cached_schema: dict[str, DType] | None = None
+        self._cached_native_schema: dict[str, DuckDBPyType] | None = None
         self._cached_columns: list[str] | None = None
         validate_backend_version(self._implementation, self._backend_version)
 
@@ -212,23 +213,23 @@ class DuckDBLazyFrame(
 
     @property
     def schema(self) -> dict[str, DType]:
-        if self._cached_schema is None:
+        if self._cached_native_schema is None:
             # Note: prefer `self._cached_schema` over `functools.cached_property`
             # due to Python3.13 failures.
-            self._cached_schema = {
-                column_name: native_to_narwhals_dtype(duckdb_dtype, self._version)
-                for column_name, duckdb_dtype in zip(
-                    self.native.columns, self.native.types
-                )
-            }
-        return self._cached_schema
+            self._cached_native_schema = dict(zip(self.columns, self.native.types))
+        return {
+            column_name: native_to_narwhals_dtype(
+                duckdb_dtype, self._version, self.native
+            )
+            for column_name, duckdb_dtype in self._cached_native_schema.items()
+        }
 
     @property
     def columns(self) -> list[str]:
         if self._cached_columns is None:
             self._cached_columns = (
                 list(self.schema)
-                if self._cached_schema is not None
+                if self._cached_native_schema is not None
                 else self.native.columns
             )
         return self._cached_columns

@@ -95,21 +95,22 @@ def evaluate_exprs(
     return native_results
 
 
-def native_to_narwhals_dtype(duckdb_dtype: DuckDBPyType, version: Version) -> DType:
+def native_to_narwhals_dtype(
+    duckdb_dtype: DuckDBPyType, version: Version, rel: duckdb.DuckDBPyRelation
+) -> DType:
     duckdb_dtype_id = duckdb_dtype.id
     dtypes = version.dtypes
 
     # Handle nested data types first
     if duckdb_dtype_id == "list":
-        return dtypes.List(native_to_narwhals_dtype(duckdb_dtype.child, version=version))
+        return dtypes.List(native_to_narwhals_dtype(duckdb_dtype.child, version, rel))
 
     if duckdb_dtype_id == "struct":
         children = duckdb_dtype.children
         return dtypes.Struct(
             [
                 dtypes.Field(
-                    name=child[0],
-                    dtype=native_to_narwhals_dtype(child[1], version=version),
+                    name=child[0], dtype=native_to_narwhals_dtype(child[1], version, rel)
                 )
                 for child in children
             ]
@@ -123,7 +124,7 @@ def native_to_narwhals_dtype(duckdb_dtype: DuckDBPyType, version: Version) -> DT
             child, size = child[1].children
             shape.insert(0, size[1])
 
-        inner = native_to_narwhals_dtype(child[1], version=version)
+        inner = native_to_narwhals_dtype(child[1], version, rel)
         return dtypes.Array(inner=inner, shape=tuple(shape))
 
     if duckdb_dtype_id == "enum":
@@ -131,6 +132,9 @@ def native_to_narwhals_dtype(duckdb_dtype: DuckDBPyType, version: Version) -> DT
             return dtypes.Enum()  # type: ignore[call-arg]
         categories = duckdb_dtype.children[0][1]
         return dtypes.Enum(categories=categories)
+
+    if duckdb_dtype_id == "timestamp with time zone":
+        return dtypes.Datetime(time_zone=get_rel_time_zone(rel))
 
     return _non_nested_native_to_narwhals_dtype(duckdb_dtype_id, version)
 
@@ -162,7 +166,6 @@ def _non_nested_native_to_narwhals_dtype(duckdb_dtype_id: str, version: Version)
         "varchar": dtypes.String(),
         "date": dtypes.Date(),
         "timestamp": dtypes.Datetime(),
-        "timestamp with time zone": dtypes.Datetime(time_zone="<unknown>"),
         "boolean": dtypes.Boolean(),
         "interval": dtypes.Duration(),
         "decimal": dtypes.Decimal(),
