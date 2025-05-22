@@ -1,26 +1,21 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Literal
-from typing import Mapping
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Callable, Literal, Mapping, Sequence
 
 import polars as pl
 
 from narwhals._duration import parse_interval_string
-from narwhals._polars.utils import extract_args_kwargs
-from narwhals._polars.utils import extract_native
-from narwhals._polars.utils import narwhals_to_native_dtype
-from narwhals.utils import Implementation
-from narwhals.utils import requires
+from narwhals._polars.utils import (
+    extract_args_kwargs,
+    extract_native,
+    narwhals_to_native_dtype,
+)
+from narwhals.utils import Implementation, requires
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._expression_parsing import ExprKind
-    from narwhals._expression_parsing import ExprMetadata
+    from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals._polars.dataframe import Method
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals.dtypes import DType

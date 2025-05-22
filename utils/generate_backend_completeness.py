@@ -3,14 +3,10 @@ from __future__ import annotations
 import importlib
 import inspect
 from contextlib import suppress
-from enum import Enum
-from enum import auto
+from enum import Enum, auto
 from itertools import chain
 from pathlib import Path
-from typing import Any
-from typing import Final
-from typing import Iterator
-from typing import NamedTuple
+from typing import Any, Final, Iterator, NamedTuple
 
 import polars as pl
 from jinja2 import Template

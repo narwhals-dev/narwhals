@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.typing import _2DArray

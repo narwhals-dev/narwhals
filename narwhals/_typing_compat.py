@@ -22,19 +22,16 @@ from __future__ import annotations
 
 # ruff: noqa: ARG001, ANN202, N802
 import sys
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from typing import Callable
-    from typing import Protocol as Protocol38
+    from typing import Callable, Protocol as Protocol38
 
     if sys.version_info >= (3, 13):
         from typing import TypeVar
         from warnings import deprecated
     else:
-        from typing_extensions import TypeVar
-        from typing_extensions import deprecated
+        from typing_extensions import TypeVar, deprecated
 
     _Fn = TypeVar("_Fn", bound=Callable[..., Any])
 

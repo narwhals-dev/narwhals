@@ -1,22 +1,20 @@
 from __future__ import annotations
 
-from datetime import datetime
-from datetime import time
-from datetime import timedelta
-from datetime import timezone
-from typing import TYPE_CHECKING
-from typing import cast
+from datetime import datetime, time, timedelta, timezone
+from typing import TYPE_CHECKING, cast
 
 import pandas as pd
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION
-from tests.utils import PYARROW_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
-from tests.utils import is_windows
+from tests.utils import (
+    PANDAS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    is_windows,
+)
 
 if TYPE_CHECKING:
     from narwhals.typing import NativeLazyFrame

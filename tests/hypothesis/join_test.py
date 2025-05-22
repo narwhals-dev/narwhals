@@ -1,19 +1,13 @@
 from __future__ import annotations
 
-from typing import Any
-from typing import Mapping
-from typing import cast
+from typing import Any, Mapping, cast
 
 import pytest
-from hypothesis import assume
-from hypothesis import given
-from hypothesis import strategies as st
+from hypothesis import assume, given, strategies as st
 from pandas.testing import assert_frame_equal
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import assert_equal_data
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, assert_equal_data
 
 pytest.importorskip("pandas")
 pytest.importorskip("polars")

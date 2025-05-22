@@ -3,12 +3,14 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import PYARROW_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    POLARS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 data = {"i": [0, 1, 2, 3, 4], "b": [1, 2, 3, 5, 3], "c": [5, 4, 3, 2, 1]}
 

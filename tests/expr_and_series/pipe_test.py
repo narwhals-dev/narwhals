@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import narwhals as nw
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 input_list = {"a": [2, 4, 6, 8]}
 expected = [4, 16, 36, 64]

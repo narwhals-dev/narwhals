@@ -1,35 +1,30 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Iterator
-from typing import Mapping
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Iterator, Mapping, Sequence
 
 import dask.dataframe as dd
 import pandas as pd
 
-from narwhals._dask.utils import add_row_index
-from narwhals._dask.utils import evaluate_exprs
-from narwhals._pandas_like.utils import native_to_narwhals_dtype
-from narwhals._pandas_like.utils import select_columns_by_name
+from narwhals._dask.utils import add_row_index, evaluate_exprs
+from narwhals._pandas_like.utils import native_to_narwhals_dtype, select_columns_by_name
 from narwhals.typing import CompliantLazyFrame
-from narwhals.utils import Implementation
-from narwhals.utils import _remap_full_join_keys
-from narwhals.utils import check_column_exists
-from narwhals.utils import check_column_names_are_unique
-from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import not_implemented
-from narwhals.utils import parse_columns_to_drop
-from narwhals.utils import parse_version
-from narwhals.utils import validate_backend_version
+from narwhals.utils import (
+    Implementation,
+    _remap_full_join_keys,
+    check_column_exists,
+    check_column_names_are_unique,
+    generate_temporary_column_name,
+    not_implemented,
+    parse_columns_to_drop,
+    parse_version,
+    validate_backend_version,
+)
 
 if TYPE_CHECKING:
     from types import ModuleType
 
     import dask.dataframe.dask_expr as dx
-    from typing_extensions import Self
-    from typing_extensions import TypeIs
+    from typing_extensions import Self, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
     from narwhals._dask.expr import DaskExpr
@@ -37,11 +32,8 @@ if TYPE_CHECKING:
     from narwhals._dask.namespace import DaskNamespace
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
-    from narwhals.typing import AsofJoinStrategy
-    from narwhals.typing import JoinStrategy
-    from narwhals.typing import LazyUniqueKeepStrategy
-    from narwhals.utils import Version
-    from narwhals.utils import _FullContext
+    from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
+    from narwhals.utils import Version, _FullContext
 
 
 class DaskLazyFrame(

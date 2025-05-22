@@ -5,9 +5,7 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+from tests.utils import DUCKDB_VERSION, Constructor, assert_equal_data
 
 
 @pytest.mark.parametrize("col_expr", [nw.col("a"), "a"])

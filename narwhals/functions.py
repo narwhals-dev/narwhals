@@ -3,64 +3,62 @@ from __future__ import annotations
 import platform
 import sys
 from importlib.metadata import version
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Iterable
-from typing import Literal
-from typing import Mapping
-from typing import Sequence
-from typing import cast
+from typing import TYPE_CHECKING, Any, Iterable, Literal, Mapping, Sequence, cast
 
-from narwhals._expression_parsing import ExprKind
-from narwhals._expression_parsing import ExprMetadata
-from narwhals._expression_parsing import apply_n_ary_operation
-from narwhals._expression_parsing import check_expressions_preserve_length
-from narwhals._expression_parsing import combine_metadata
-from narwhals._expression_parsing import extract_compliant
-from narwhals._expression_parsing import is_scalar_like
-from narwhals.dependencies import is_narwhals_series
-from narwhals.dependencies import is_numpy_array
-from narwhals.dependencies import is_numpy_array_2d
-from narwhals.dependencies import is_pyarrow_table
+from narwhals._expression_parsing import (
+    ExprKind,
+    ExprMetadata,
+    apply_n_ary_operation,
+    check_expressions_preserve_length,
+    combine_metadata,
+    extract_compliant,
+    is_scalar_like,
+)
+from narwhals.dependencies import (
+    is_narwhals_series,
+    is_numpy_array,
+    is_numpy_array_2d,
+    is_pyarrow_table,
+)
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr import Expr
-from narwhals.translate import from_native
-from narwhals.translate import to_native
-from narwhals.utils import Implementation
-from narwhals.utils import Version
-from narwhals.utils import deprecate_native_namespace
-from narwhals.utils import flatten
-from narwhals.utils import is_compliant_expr
-from narwhals.utils import is_eager_allowed
-from narwhals.utils import is_sequence_but_not_str
-from narwhals.utils import parse_version
-from narwhals.utils import supports_arrow_c_stream
-from narwhals.utils import validate_laziness
+from narwhals.translate import from_native, to_native
+from narwhals.utils import (
+    Implementation,
+    Version,
+    deprecate_native_namespace,
+    flatten,
+    is_compliant_expr,
+    is_eager_allowed,
+    is_sequence_but_not_str,
+    parse_version,
+    supports_arrow_c_stream,
+    validate_laziness,
+)
 
 if TYPE_CHECKING:
     from types import ModuleType
 
-    from typing_extensions import TypeAlias
-    from typing_extensions import TypeIs
+    from typing_extensions import TypeAlias, TypeIs
 
-    from narwhals._compliant import CompliantExpr
-    from narwhals._compliant import CompliantNamespace
+    from narwhals._compliant import CompliantExpr, CompliantNamespace
     from narwhals._translate import IntoArrowTable
-    from narwhals.dataframe import DataFrame
-    from narwhals.dataframe import LazyFrame
+    from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.series import Series
-    from narwhals.typing import ConcatMethod
-    from narwhals.typing import FrameT
-    from narwhals.typing import IntoExpr
-    from narwhals.typing import IntoSeriesT
-    from narwhals.typing import NativeFrame
-    from narwhals.typing import NativeLazyFrame
-    from narwhals.typing import NativeSeries
-    from narwhals.typing import NonNestedLiteral
-    from narwhals.typing import _1DArray
-    from narwhals.typing import _2DArray
+    from narwhals.typing import (
+        ConcatMethod,
+        FrameT,
+        IntoExpr,
+        IntoSeriesT,
+        NativeFrame,
+        NativeLazyFrame,
+        NativeSeries,
+        NonNestedLiteral,
+        _1DArray,
+        _2DArray,
+    )
 
     _IntoSchema: TypeAlias = "Mapping[str, DType] | Schema | Sequence[str] | None"
 
@@ -571,8 +569,7 @@ def _get_deps_info() -> dict[str, str]:
     Returns:
         Mapping from dependency to version.
     """
-    from importlib.metadata import PackageNotFoundError
-    from importlib.metadata import version
+    from importlib.metadata import PackageNotFoundError, version
 
     from narwhals import __version__
 

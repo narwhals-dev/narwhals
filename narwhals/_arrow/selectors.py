@@ -3,8 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._arrow.expr import ArrowExpr
-from narwhals._compliant import CompliantSelector
-from narwhals._compliant import EagerSelectorNamespace
+from narwhals._compliant import CompliantSelector, EagerSelectorNamespace
 
 if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame  # noqa: F401

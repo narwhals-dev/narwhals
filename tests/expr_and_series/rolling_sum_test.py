@@ -11,12 +11,14 @@ from hypothesis import given
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
-from tests.utils import DUCKDB_VERSION
-from tests.utils import PANDAS_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 data = {"a": [None, 1, 2, None, 4, 6, 11]}
 

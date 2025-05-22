@@ -3,10 +3,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._duration import parse_interval_string
-from narwhals._pandas_like.utils import UNIT_DICT
-from narwhals._pandas_like.utils import calculate_timestamp_date
-from narwhals._pandas_like.utils import calculate_timestamp_datetime
-from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._pandas_like.utils import (
+    UNIT_DICT,
+    calculate_timestamp_date,
+    calculate_timestamp_datetime,
+    native_to_narwhals_dtype,
+)
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:

@@ -62,19 +62,13 @@ To learn more see [moist], [dry], or [even drier] - depending on how deep you wa
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Iterable
-from typing import Mapping
-from typing import Protocol
+from typing import TYPE_CHECKING, Any, Iterable, Mapping, Protocol
 
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
     import pyarrow as pa
-    from typing_extensions import Self
-    from typing_extensions import TypeAlias
-    from typing_extensions import TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs
 
 
 class ArrowStreamExportable(Protocol):

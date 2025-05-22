@@ -2,18 +2,19 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from typing import Any
-from typing import Literal
+from typing import Any, Literal
 
 import pandas as pd
 import pytest
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION
-from tests.utils import PANDAS_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    assert_equal_data,
+)
 
 
 @pytest.mark.parametrize(

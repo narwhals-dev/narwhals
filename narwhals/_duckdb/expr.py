@@ -2,16 +2,9 @@ from __future__ import annotations
 
 import contextlib
 import operator
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Literal
-from typing import Sequence
-from typing import cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, cast
 
-from duckdb import CoalesceOperator
-from duckdb import FunctionExpression
-from duckdb import StarExpression
+from duckdb import CoalesceOperator, FunctionExpression, StarExpression
 from duckdb.typing import DuckDBPyType
 
 from narwhals._compliant import LazyExpr
@@ -19,41 +12,39 @@ from narwhals._duckdb.expr_dt import DuckDBExprDateTimeNamespace
 from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
 from narwhals._duckdb.expr_struct import DuckDBExprStructNamespace
-from narwhals._duckdb.utils import UnorderableWindowInputs
-from narwhals._duckdb.utils import WindowInputs
-from narwhals._duckdb.utils import col
-from narwhals._duckdb.utils import ensure_type
-from narwhals._duckdb.utils import generate_order_by_sql
-from narwhals._duckdb.utils import generate_partition_by_sql
-from narwhals._duckdb.utils import lit
-from narwhals._duckdb.utils import narwhals_to_native_dtype
-from narwhals._duckdb.utils import when
+from narwhals._duckdb.utils import (
+    UnorderableWindowInputs,
+    WindowInputs,
+    col,
+    ensure_type,
+    generate_order_by_sql,
+    generate_partition_by_sql,
+    lit,
+    narwhals_to_native_dtype,
+    when,
+)
 from narwhals._expression_parsing import ExprKind
-from narwhals.utils import Implementation
-from narwhals.utils import not_implemented
-from narwhals.utils import requires
+from narwhals.utils import Implementation, not_implemented, requires
 
 if TYPE_CHECKING:
     from duckdb import Expression
     from typing_extensions import Self
 
-    from narwhals._compliant.typing import AliasNames
-    from narwhals._compliant.typing import EvalNames
-    from narwhals._compliant.typing import EvalSeries
+    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.namespace import DuckDBNamespace
-    from narwhals._duckdb.typing import UnorderableWindowFunction
-    from narwhals._duckdb.typing import WindowFunction
+    from narwhals._duckdb.typing import UnorderableWindowFunction, WindowFunction
     from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
-    from narwhals.typing import FillNullStrategy
-    from narwhals.typing import NonNestedLiteral
-    from narwhals.typing import NumericLiteral
-    from narwhals.typing import RankMethod
-    from narwhals.typing import RollingInterpolationMethod
-    from narwhals.typing import TemporalLiteral
-    from narwhals.utils import Version
-    from narwhals.utils import _FullContext
+    from narwhals.typing import (
+        FillNullStrategy,
+        NonNestedLiteral,
+        NumericLiteral,
+        RankMethod,
+        RollingInterpolationMethod,
+        TemporalLiteral,
+    )
+    from narwhals.utils import Version, _FullContext
 
 with contextlib.suppress(ImportError):  # requires duckdb>=1.3.0
     from duckdb import SQLExpression

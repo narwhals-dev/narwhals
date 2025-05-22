@@ -1,17 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from narwhals._compliant.any_namespace import DateTimeNamespace
 from narwhals._duration import parse_interval_string
-from narwhals._pandas_like.utils import UNIT_DICT
-from narwhals._pandas_like.utils import PandasLikeSeriesNamespace
-from narwhals._pandas_like.utils import calculate_timestamp_date
-from narwhals._pandas_like.utils import calculate_timestamp_datetime
-from narwhals._pandas_like.utils import get_dtype_backend
-from narwhals._pandas_like.utils import int_dtype_mapper
-from narwhals._pandas_like.utils import is_pyarrow_dtype_backend
+from narwhals._pandas_like.utils import (
+    UNIT_DICT,
+    PandasLikeSeriesNamespace,
+    calculate_timestamp_date,
+    calculate_timestamp_datetime,
+    get_dtype_backend,
+    int_dtype_mapper,
+    is_pyarrow_dtype_backend,
+)
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
