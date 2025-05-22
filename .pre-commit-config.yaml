@@ -1,6 +1,5 @@
 ci:
   autoupdate_schedule: monthly
-  skip: [mypy]
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
@@ -85,13 +84,6 @@ repos:
       entry: pull_request_target
       language: pygrep
       files: ^\.github/workflows/
-    - id: mypy
-      name: mypy
-      entry: make typing
-      language: system
-      types: [python]
-      require_serial: true
-      pass_filenames: false
 - repo: https://github.com/adamchainz/blacken-docs
   rev: "1.19.1"  # replace with latest tag on GitHub
   hooks:

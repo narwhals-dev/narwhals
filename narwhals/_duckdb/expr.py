@@ -47,7 +47,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version, _FullContext
 
 with contextlib.suppress(ImportError):  # requires duckdb>=1.3.0
-    from duckdb import SQLExpression  # type: ignore[attr-defined, unused-ignore]
+    from duckdb import SQLExpression
 
 
 class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
