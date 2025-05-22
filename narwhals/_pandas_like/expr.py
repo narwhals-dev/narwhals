@@ -266,6 +266,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         .with_row_index(token)
                         .sort(*order_by, descending=reverse, nulls_last=reverse)
                     )
+                    sorting_indices = df.get_column(token)
                 elif reverse:
                     columns = list(set(partition_by).union(output_names))
                     df = df.simple_select(*columns)._gather_slice(slice(None, None, -1))
@@ -307,10 +308,9 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 )
                 results = [result_frame.get_column(name) for name in aliases]
                 if order_by:
-                    # `token` was set in `if order_by` block above
-                    sorting_indices = df.get_column(token)  # pyright: ignore[reportPossiblyUnboundVariable]
                     for s in results:
-                        s._scatter_in_place(sorting_indices, s)
+                        # `sorting_indices` was initialised in `if order_by` block above.
+                        s._scatter_in_place(sorting_indices, s)  # pyright: ignore[reportPossiblyUnboundVariable]
                     return results
                 if reverse:
                     return [s._gather_slice(slice(None, None, -1)) for s in results]
