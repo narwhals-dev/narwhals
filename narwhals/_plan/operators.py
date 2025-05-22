@@ -3,9 +3,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from narwhals._plan.expr import BinaryExpr
+    from typing_extensions import Self
 
-from narwhals._plan.common import ExprIR, Immutable
+    from narwhals._plan.expr import BinaryExpr
+    from narwhals._plan.typing import LeftT, RightT
+
+from narwhals._plan.common import Immutable
 
 
 class Operator(Immutable):
@@ -28,10 +31,13 @@ class Operator(Immutable):
             Modulus: "%",
             And: "&",
             Or: "|",
+            ExclusiveOr: "^",
         }
         return m[tp]
 
-    def to_binary_expr(self, left: ExprIR, right: ExprIR, /) -> BinaryExpr:
+    def to_binary_expr(
+        self, left: LeftT, right: RightT, /
+    ) -> BinaryExpr[LeftT, Self, RightT]:
         from narwhals._plan.expr import BinaryExpr
 
         return BinaryExpr(left=left, op=self, right=right)
@@ -77,3 +83,6 @@ class And(Operator): ...
 
 
 class Or(Operator): ...
+
+
+class ExclusiveOr(Operator): ...

@@ -13,23 +13,17 @@ from __future__ import annotations
 import typing as t
 
 from narwhals._plan.common import ExprIR
+from narwhals._plan.typing import FunctionT, LeftT, OperatorT, RightT, RollingT
 
 if t.TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._plan.common import Function, Seq
-    from narwhals._plan.functions import (
-        MapBatches,  # noqa: F401
-        RollingWindow,
-    )
+    from narwhals._plan.common import Seq
+    from narwhals._plan.functions import MapBatches  # noqa: F401
     from narwhals._plan.literal import LiteralValue
-    from narwhals._plan.operators import Operator
     from narwhals._plan.options import FunctionOptions, SortMultipleOptions, SortOptions
     from narwhals._plan.window import Window
     from narwhals.dtypes import DType
-
-_FunctionT = t.TypeVar("_FunctionT", bound="Function")
-_RollingT = t.TypeVar("_RollingT", bound="RollingWindow")
 
 
 class Alias(ExprIR):
@@ -95,7 +89,7 @@ class Literal(ExprIR):
         return f"lit({self.value!r})"
 
 
-class BinaryExpr(ExprIR):
+class BinaryExpr(ExprIR, t.Generic[LeftT, OperatorT, RightT]):
     """Application of two exprs via an `Operator`.
 
     This ✅
@@ -107,9 +101,9 @@ class BinaryExpr(ExprIR):
 
     __slots__ = ("left", "op", "right")
 
-    left: ExprIR
-    op: Operator
-    right: ExprIR
+    left: LeftT
+    op: OperatorT
+    right: RightT
 
     @property
     def is_scalar(self) -> bool:
@@ -203,7 +197,7 @@ class SortBy(ExprIR):
         yield from self.expr.iter_right()
 
 
-class FunctionExpr(ExprIR, t.Generic[_FunctionT]):
+class FunctionExpr(ExprIR, t.Generic[FunctionT]):
     """**Representing `Expr::Function`**.
 
     https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L114-L120
@@ -214,7 +208,7 @@ class FunctionExpr(ExprIR, t.Generic[_FunctionT]):
     __slots__ = ("function", "input", "options")
 
     input: Seq[ExprIR]
-    function: _FunctionT
+    function: FunctionT
     """Enum type is named `FunctionExpr` in `polars`.
 
     Mirroring *exactly* doesn't make much sense in OOP.
@@ -257,7 +251,7 @@ class FunctionExpr(ExprIR, t.Generic[_FunctionT]):
             yield from e.iter_right()
 
 
-class RollingExpr(FunctionExpr[_RollingT]): ...
+class RollingExpr(FunctionExpr[RollingT]): ...
 
 
 class AnonymousExpr(FunctionExpr["MapBatches"]):
