@@ -2,12 +2,7 @@ from __future__ import annotations
 
 import collections
 import warnings
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import ClassVar
-from typing import Iterator
-from typing import Mapping
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Mapping, Sequence
 
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases

@@ -1,20 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import cast
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 import hypothesis.strategies as st
 import numpy as np
 import pytest
-from hypothesis import assume
-from hypothesis import given
+from hypothesis import assume, given
 from hypothesis.extra.numpy import arrays
 
 import narwhals as nw
-from tests.conftest import pandas_constructor
-from tests.conftest import pyarrow_table_constructor
+from tests.conftest import pandas_constructor, pyarrow_table_constructor
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:

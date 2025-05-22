@@ -4,28 +4,21 @@ import math
 import os
 import sys
 import warnings
+from datetime import date, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Iterator
-from typing import Mapping
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Callable, Iterator, Mapping, Sequence
 
 import pandas as pd
 import pyarrow as pa
 
 import narwhals as nw
 from narwhals.translate import from_native
-from narwhals.utils import Implementation
-from narwhals.utils import parse_version
+from narwhals.utils import Implementation, parse_version
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
-    from narwhals.typing import DataFrameLike
-    from narwhals.typing import NativeFrame
-    from narwhals.typing import NativeLazyFrame
+    from narwhals.typing import DataFrameLike, NativeFrame, NativeLazyFrame
 
 
 def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
@@ -124,8 +117,11 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
                 )
             elif pd.isna(lhs):
                 are_equivalent_values = pd.isna(rhs)
+            elif type(lhs) is date and type(rhs) is datetime:
+                are_equivalent_values = datetime(lhs.year, lhs.month, lhs.day) == rhs
             else:
                 are_equivalent_values = lhs == rhs
+
             assert are_equivalent_values, (
                 f"Mismatch at index {i}: {lhs} != {rhs}\nExpected: {expected}\nGot: {result}"
             )

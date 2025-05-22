@@ -6,9 +6,7 @@ import pandas as pd
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {
     "a": [datetime(2021, 3, 1, 12, 34, 56, 49012), datetime(2020, 1, 2, 2, 4, 14, 715123)]
@@ -110,7 +108,7 @@ def test_truncate_multiples(
     every: str,
     expected: list[datetime],
 ) -> None:
-    if any(x in str(constructor) for x in ("sqlframe", "cudf", "pyspark")):
+    if any(x in str(constructor) for x in ("sqlframe", "cudf", "pyspark", "duckdb")):
         # Reasons:
         # - sqlframe: https://github.com/eakmanrq/sqlframe/issues/383
         # - cudf: https://github.com/rapidsai/cudf/issues/18654
@@ -196,3 +194,20 @@ def test_pandas_numpy_nat() -> None:
     expected = {"a": [datetime(2020, 1, 1), None, datetime(2020, 1, 1)]}
     assert_equal_data(result, expected)
     assert result.item(1, 0) is pd.NaT
+
+
+def test_truncate_tz_aware_duckdb() -> None:
+    pytest.importorskip("duckdb")
+    pytest.importorskip("zoneinfo")
+    import duckdb
+    from zoneinfo import ZoneInfo
+
+    duckdb.sql("""set timezone = 'Europe/Amsterdam'""")
+    rel = duckdb.sql("""select * from values (timestamptz '2020-10-25') df(a)""")
+    result = nw.from_native(rel).with_columns(a_truncated=nw.col("a").dt.truncate("1mo"))
+    expected = {
+        "a": [datetime(2020, 10, 25, tzinfo=ZoneInfo("Europe/Amsterdam"))],
+        "a_truncated": [datetime(2020, 10, 1, tzinfo=ZoneInfo("Europe/Amsterdam"))],
+    }
+    assert_equal_data(result, expected)
+    duckdb.sql("""set timezone = 'UTC'""")

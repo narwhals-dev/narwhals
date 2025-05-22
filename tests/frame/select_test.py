@@ -7,15 +7,15 @@ import pyarrow as pa
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import ColumnNotFoundError
-from narwhals.exceptions import InvalidIntoExprError
-from narwhals.exceptions import NarwhalsError
-from tests.utils import DASK_VERSION
-from tests.utils import DUCKDB_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from narwhals.exceptions import ColumnNotFoundError, InvalidIntoExprError, NarwhalsError
+from tests.utils import (
+    DASK_VERSION,
+    DUCKDB_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 
 class Foo: ...

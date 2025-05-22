@@ -2,6 +2,23 @@
 
 Thank you for your interest in contributing to Narwhals! Any kind of improvement is welcome!
 
+## **TLDR**
+
+If you've got experience with open source contributions, the following instructions might suffice:
+
+- clone repo: `git clone git@github.com:narwhals-dev/narwhals.git narwhals-dev`
+- `cd narwhals-dev/`
+- `git remote rename origin upstream`
+- `git remote add origin <your fork goes here>`
+- `uv venv -p 3.12`
+- `. .venv/bin/activate`
+- `uv pip install -U -e . --group local-dev`
+- To run tests: `pytest`
+- To run all linting checks: `pre-commit run --all-files`
+- To run static typing checks: `make typing`
+
+For more detailed and beginner-friendly instructions, see below!
+
 ## Local development vs Codespaces
 
 You can contribute to Narwhals in your local development environment, using python3, git and your editor of choice.
@@ -112,6 +129,8 @@ If you want to run PySpark-related tests, you'll need to have Java installed. Re
    `uv pip install -e ".[dask, pyspark, modin]" --group local-dev`.
 
 The pre-commit tool is installed as part of the local-dev dependency group. This will automatically format and lint your code before each commit, and it will block the commit if any issues are found.
+
+Static typing is run separately from `pre-commit`, as it's quite slow. Assuming you followed all the instructions above, you can run it with `make typing`.
 
 #### Option 2: use python3-venv
 

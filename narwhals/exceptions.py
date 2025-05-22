@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable
-from typing import Sequence
+from typing import Iterable, Sequence
 
 
 class NarwhalsError(ValueError):

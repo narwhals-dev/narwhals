@@ -4,34 +4,27 @@ import re
 import string
 from dataclasses import dataclass
 from itertools import chain
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Iterable
-from typing import Iterator
-from typing import Protocol
-from typing import cast
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, Protocol, cast
 
 import hypothesis.strategies as st
 import pandas as pd
 import pyarrow as pa
 import pytest
 from hypothesis import given
-from pandas.testing import assert_frame_equal
-from pandas.testing import assert_index_equal
-from pandas.testing import assert_series_equal
+from pandas.testing import assert_frame_equal, assert_index_equal, assert_series_equal
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from narwhals.utils import Implementation
-from narwhals.utils import Version
-from narwhals.utils import _DeferredIterable
-from narwhals.utils import check_columns_exist
-from narwhals.utils import deprecate_native_namespace
-from narwhals.utils import parse_version
-from narwhals.utils import requires
-from tests.utils import PANDAS_VERSION
-from tests.utils import get_module_version_as_tuple
+from narwhals.utils import (
+    Implementation,
+    Version,
+    _DeferredIterable,
+    check_columns_exist,
+    deprecate_native_namespace,
+    parse_version,
+    requires,
+)
+from tests.utils import PANDAS_VERSION, get_module_version_as_tuple
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -342,8 +335,7 @@ def test_not_implemented() -> None:
     pytest.importorskip("polars")
 
     from narwhals._arrow.expr import ArrowExpr
-    from narwhals._polars.expr import PolarsExpr
-    from narwhals._polars.expr import PolarsExprStringNamespace
+    from narwhals._polars.expr import PolarsExpr, PolarsExprStringNamespace
     from narwhals.utils import not_implemented
 
     data: dict[str, Any] = {"foo": [1, 2], "bar": [6.0, 7.0]}

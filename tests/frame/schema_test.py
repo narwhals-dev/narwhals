@@ -1,12 +1,8 @@
 from __future__ import annotations
 
 import re
-from datetime import date
-from datetime import datetime
-from datetime import timedelta
-from datetime import timezone
-from typing import TYPE_CHECKING
-from typing import Any
+from datetime import date, datetime, timedelta, timezone
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import pytest
@@ -18,8 +14,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from narwhals.typing import DTypeBackend
-    from tests.utils import Constructor
-    from tests.utils import ConstructorEager
+    from tests.utils import Constructor, ConstructorEager
 
 
 data = {"a": [datetime(2020, 1, 1)], "b": [datetime(2020, 1, 1, tzinfo=timezone.utc)]}

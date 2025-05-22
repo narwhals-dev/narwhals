@@ -2,43 +2,50 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from itertools import chain
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Generic
-from typing import Iterable
-from typing import Iterator
-from typing import Literal
-from typing import NoReturn
-from typing import Sequence
-from typing import TypeVar
-from typing import overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Iterable,
+    Iterator,
+    Literal,
+    NoReturn,
+    Sequence,
+    TypeVar,
+    overload,
+)
 from warnings import warn
 
-from narwhals._expression_parsing import ExprKind
-from narwhals._expression_parsing import all_exprs_are_scalar_like
-from narwhals._expression_parsing import check_expressions_preserve_length
-from narwhals._expression_parsing import is_scalar_like
-from narwhals.dependencies import get_polars
-from narwhals.dependencies import is_numpy_array
-from narwhals.exceptions import InvalidIntoExprError
-from narwhals.exceptions import LengthChangingExprError
-from narwhals.exceptions import OrderDependentExprError
+from narwhals._expression_parsing import (
+    ExprKind,
+    all_exprs_are_scalar_like,
+    check_expressions_preserve_length,
+    is_scalar_like,
+)
+from narwhals.dependencies import get_polars, is_numpy_array
+from narwhals.exceptions import (
+    InvalidIntoExprError,
+    LengthChangingExprError,
+    OrderDependentExprError,
+)
 from narwhals.schema import Schema
 from narwhals.translate import to_native
-from narwhals.utils import Implementation
-from narwhals.utils import find_stacklevel
-from narwhals.utils import flatten
-from narwhals.utils import generate_repr
-from narwhals.utils import is_compliant_dataframe
-from narwhals.utils import is_compliant_lazyframe
-from narwhals.utils import is_index_selector
-from narwhals.utils import is_list_of
-from narwhals.utils import is_sequence_like
-from narwhals.utils import is_slice_none
-from narwhals.utils import issue_deprecation_warning
-from narwhals.utils import parse_version
-from narwhals.utils import supports_arrow_c_stream
+from narwhals.utils import (
+    Implementation,
+    find_stacklevel,
+    flatten,
+    generate_repr,
+    is_compliant_dataframe,
+    is_compliant_lazyframe,
+    is_index_selector,
+    is_list_of,
+    is_sequence_like,
+    is_slice_none,
+    issue_deprecation_warning,
+    parse_version,
+    supports_arrow_c_stream,
+)
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -48,32 +55,28 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Concatenate
-    from typing_extensions import ParamSpec
-    from typing_extensions import Self
-    from typing_extensions import TypeAlias
+    from typing_extensions import Concatenate, ParamSpec, Self, TypeAlias
 
-    from narwhals._compliant import CompliantDataFrame
-    from narwhals._compliant import CompliantLazyFrame
-    from narwhals._compliant.typing import CompliantExprAny
-    from narwhals._compliant.typing import EagerNamespaceAny
-    from narwhals.group_by import GroupBy
-    from narwhals.group_by import LazyGroupBy
+    from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
+    from narwhals._compliant.typing import CompliantExprAny, EagerNamespaceAny
+    from narwhals.group_by import GroupBy, LazyGroupBy
     from narwhals.series import Series
-    from narwhals.typing import AsofJoinStrategy
-    from narwhals.typing import IntoDataFrame
-    from narwhals.typing import IntoExpr
-    from narwhals.typing import IntoFrame
-    from narwhals.typing import JoinStrategy
-    from narwhals.typing import LazyUniqueKeepStrategy
-    from narwhals.typing import MultiColSelector as _MultiColSelector
-    from narwhals.typing import MultiIndexSelector as _MultiIndexSelector
-    from narwhals.typing import PivotAgg
-    from narwhals.typing import SingleColSelector
-    from narwhals.typing import SingleIndexSelector
-    from narwhals.typing import SizeUnit
-    from narwhals.typing import UniqueKeepStrategy
-    from narwhals.typing import _2DArray
+    from narwhals.typing import (
+        AsofJoinStrategy,
+        IntoDataFrame,
+        IntoExpr,
+        IntoFrame,
+        JoinStrategy,
+        LazyUniqueKeepStrategy,
+        MultiColSelector as _MultiColSelector,
+        MultiIndexSelector as _MultiIndexSelector,
+        PivotAgg,
+        SingleColSelector,
+        SingleIndexSelector,
+        SizeUnit,
+        UniqueKeepStrategy,
+        _2DArray,
+    )
 
     PS = ParamSpec("PS")
 
@@ -2198,10 +2201,13 @@ class LazyFrame(BaseFrame[FrameT]):
             if arg._metadata.n_orderable_ops:
                 msg = (
                     "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
-                    "Hints:\n"
-                    "- Instead of `lf.select(nw.col('a').sort())`, use `lf.select('a').sort()`.\n"
-                    "- Instead of `lf.select(nw.col('a').cum_sum())`, use\n"
-                    "  `lf.select(nw.col('a').cum_sum().over(order_by='date'))`.\n\n"
+                    "Hint: To make the expression valid, use `.over` with `order_by` specified.\n\n"
+                    "For example, if you wrote `nw.col('price').cum_sum()` and you have a column\n"
+                    "`'date'` which orders your data, then replace:\n\n"
+                    "   nw.col('price').cum_sum()\n\n"
+                    " with:\n\n"
+                    "   nw.col('price').cum_sum().over(order_by='date')\n"
+                    "                            ^^^^^^^^^^^^^^^^^^^^^^\n\n"
                     "See https://narwhals-dev.github.io/narwhals/concepts/order_dependence/."
                 )
                 raise OrderDependentExprError(msg)

@@ -1,18 +1,14 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pyarrow as pa
 import pytest
 
 import narwhals as nw
-from tests.utils import DASK_VERSION
-from tests.utils import PANDAS_VERSION
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+from tests.utils import DASK_VERSION, PANDAS_VERSION, Constructor, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType

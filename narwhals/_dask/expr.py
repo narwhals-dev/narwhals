@@ -1,47 +1,39 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Literal
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence
 
 from narwhals._compliant import LazyExpr
 from narwhals._compliant.expr import DepthTrackingExpr
 from narwhals._dask.expr_dt import DaskExprDateTimeNamespace
 from narwhals._dask.expr_str import DaskExprStringNamespace
-from narwhals._dask.utils import add_row_index
-from narwhals._dask.utils import maybe_evaluate_expr
-from narwhals._dask.utils import narwhals_to_native_dtype
-from narwhals._expression_parsing import ExprKind
-from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals._dask.utils import (
+    add_row_index,
+    maybe_evaluate_expr,
+    narwhals_to_native_dtype,
+)
+from narwhals._expression_parsing import ExprKind, evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals.exceptions import InvalidOperationError
-from narwhals.utils import Implementation
-from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import not_implemented
+from narwhals.utils import Implementation, generate_temporary_column_name, not_implemented
 
 if TYPE_CHECKING:
     import dask.dataframe.dask_expr as dx
     from typing_extensions import Self
 
-    from narwhals._compliant.typing import AliasNames
-    from narwhals._compliant.typing import EvalNames
-    from narwhals._compliant.typing import EvalSeries
-    from narwhals._compliant.typing import ScalarKwargs
+    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries, ScalarKwargs
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.namespace import DaskNamespace
-    from narwhals._expression_parsing import ExprKind
-    from narwhals._expression_parsing import ExprMetadata
+    from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals.dtypes import DType
-    from narwhals.typing import FillNullStrategy
-    from narwhals.typing import NonNestedLiteral
-    from narwhals.typing import NumericLiteral
-    from narwhals.typing import RollingInterpolationMethod
-    from narwhals.typing import TemporalLiteral
-    from narwhals.utils import Version
-    from narwhals.utils import _FullContext
+    from narwhals.typing import (
+        FillNullStrategy,
+        NonNestedLiteral,
+        NumericLiteral,
+        RollingInterpolationMethod,
+        TemporalLiteral,
+    )
+    from narwhals.utils import Version, _FullContext
 
 
 class DaskExpr(

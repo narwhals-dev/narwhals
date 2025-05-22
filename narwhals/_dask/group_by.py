@@ -1,12 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import ClassVar
-from typing import Mapping
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Mapping, Sequence
 
 import dask.dataframe as dd
 
