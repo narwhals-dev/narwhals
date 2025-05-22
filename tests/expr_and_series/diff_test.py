@@ -10,16 +10,10 @@ from tests.utils import Constructor
 from tests.utils import ConstructorEager
 from tests.utils import assert_equal_data
 
-data = {
-    "i": [0, 1, 2, 3, 4],
-    "b": [1, 2, 3, 5, 3],
-    "c": [5, 4, 3, 2, 1],
-}
+data = {"i": [0, 1, 2, 3, 4], "b": [1, 2, 3, 5, 3], "c": [5, 4, 3, 2, 1]}
 
 
-def test_diff(
-    constructor_eager: ConstructorEager,
-) -> None:
+def test_diff(constructor_eager: ConstructorEager) -> None:
     if "pyarrow_table_constructor" in str(constructor_eager) and PYARROW_VERSION < (13,):
         # pc.pairwisediff is available since pyarrow 13.0.0
         pytest.skip()
@@ -56,8 +50,7 @@ def test_diff_lazy(constructor: Constructor) -> None:
 
 
 def test_diff_series(
-    constructor_eager: ConstructorEager,
-    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if "pyarrow_table_constructor" in str(constructor_eager) and PYARROW_VERSION < (13,):
         # pc.pairwisediff is available since pyarrow 13.0.0

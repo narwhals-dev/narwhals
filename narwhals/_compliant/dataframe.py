@@ -26,9 +26,9 @@ from narwhals._translate import FromNative
 from narwhals._translate import NumpyConvertible
 from narwhals._translate import ToNarwhals
 from narwhals._translate import ToNarwhalsT_co
+from narwhals._typing_compat import deprecated
 from narwhals.utils import Version
 from narwhals.utils import _StoresNative
-from narwhals.utils import deprecated
 from narwhals.utils import is_compliant_series
 from narwhals.utils import is_index_selector
 from narwhals.utils import is_range

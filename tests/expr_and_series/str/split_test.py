@@ -17,17 +17,10 @@ data = {"s": ["foo bar", "foo_bar", "foo_bar_baz", "foo,bar"]}
     ("by", "expected"),
     [
         ("_", {"s": [["foo bar"], ["foo", "bar"], ["foo", "bar", "baz"], ["foo,bar"]]}),
-        (
-            ",",
-            {"s": [["foo bar"], ["foo_bar"], ["foo_bar_baz"], ["foo", "bar"]]},
-        ),
+        (",", {"s": [["foo bar"], ["foo_bar"], ["foo_bar_baz"], ["foo", "bar"]]}),
     ],
 )
-def test_str_split(
-    constructor: Constructor,
-    by: str,
-    expected: Any,
-) -> None:
+def test_str_split(constructor: Constructor, by: str, expected: Any) -> None:
     if "cudf" not in str(constructor) and (
         constructor.__name__.startswith("pandas")
         and "pyarrow" not in constructor.__name__
@@ -46,16 +39,11 @@ def test_str_split(
     ("by", "expected"),
     [
         ("_", {"s": [["foo bar"], ["foo", "bar"], ["foo", "bar", "baz"], ["foo,bar"]]}),
-        (
-            ",",
-            {"s": [["foo bar"], ["foo_bar"], ["foo_bar_baz"], ["foo", "bar"]]},
-        ),
+        (",", {"s": [["foo bar"], ["foo_bar"], ["foo_bar_baz"], ["foo", "bar"]]}),
     ],
 )
 def test_str_split_series(
-    constructor_eager: ConstructorEager,
-    by: str,
-    expected: Any,
+    constructor_eager: ConstructorEager, by: str, expected: Any
 ) -> None:
     if "cudf" not in str(constructor_eager) and (
         constructor_eager.__name__.startswith("pandas")

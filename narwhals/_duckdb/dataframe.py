@@ -36,6 +36,7 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import pyarrow as pa
+    from duckdb import Expression
     from typing_extensions import Self
     from typing_extensions import TypeIs
 
@@ -126,7 +127,7 @@ class DuckDBLazyFrame(
 
         return DuckDBInterchangeSeries(self.native.select(name), version=self._version)
 
-    def _iter_columns(self) -> Iterator[duckdb.Expression]:
+    def _iter_columns(self) -> Iterator[Expression]:
         for name in self.columns:
             yield col(name)
 
@@ -185,10 +186,7 @@ class DuckDBLazyFrame(
                 e, available_columns=self.columns
             ) from None
 
-    def select(
-        self,
-        *exprs: DuckDBExpr,
-    ) -> Self:
+    def select(self, *exprs: DuckDBExpr) -> Self:
         selection = (val.alias(name) for name, val in evaluate_exprs(self, *exprs))
         try:
             return self._with_native(self.native.select(*selection))
@@ -324,7 +322,7 @@ class DuckDBLazyFrame(
                 col(f'lhs."{left}"') == col(f'rhs."{right}"')
                 for left, right in zip(left_on, right_on)
             )
-            condition: duckdb.Expression = reduce(and_, it)
+            condition: Expression = reduce(and_, it)
             rel = self.native.set_alias("lhs").join(
                 other.native.set_alias("rhs"),
                 # NOTE: Fixed in `--pre` https://github.com/duckdb/duckdb/pull/16933
@@ -363,7 +361,7 @@ class DuckDBLazyFrame(
     ) -> Self:
         lhs = self.native
         rhs = other.native
-        conditions: list[duckdb.Expression] = []
+        conditions: list[Expression] = []
         if by_left is not None and by_right is not None:
             conditions.extend(
                 col(f'lhs."{left}"') == col(f'rhs."{right}"')
@@ -378,7 +376,7 @@ class DuckDBLazyFrame(
         else:
             msg = "Only 'backward' and 'forward' strategies are currently supported for DuckDB"
             raise NotImplementedError(msg)
-        condition: duckdb.Expression = reduce(and_, conditions)
+        condition: Expression = reduce(and_, conditions)
         select = ["lhs.*"]
         for name in rhs.columns:
             if name in lhs.columns and (

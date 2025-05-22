@@ -45,6 +45,14 @@ expected_over = {
     "ordinal": [2, 3, 1, 1, None, 2],
 }
 
+expected_over_desc = {
+    "average": [2.0, 1.0, 2.0, 3.0, None, 1.0],
+    "min": [2, 1, 2, 3, None, 1],
+    "max": [2, 1, 2, 3, None, 1],
+    "dense": [2, 1, 2, 3, None, 1],
+    "ordinal": [2, 1, 2, 3, None, 1],
+}
+
 
 @pytest.mark.parametrize("method", rank_methods)
 @pytest.mark.parametrize("data", [data_int, data_float])
@@ -113,24 +121,28 @@ def test_rank_series(
 @pytest.mark.parametrize("method", rank_methods)
 def test_rank_expr_in_over_context(
     request: pytest.FixtureRequest,
-    constructor_eager: ConstructorEager,
+    constructor: Constructor,
     method: Literal["average", "min", "max", "dense", "ordinal"],
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "dask", "cudf")):
+    if any(x in str(constructor) for x in ("pyarrow_table", "dask", "cudf")):
         # Pyarrow raises:
         # > pyarrow.lib.ArrowKeyError: No function registered with name: hash_rank
         # We can handle that to provide a better error message.
         # cudf: https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1):
+    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
         pytest.skip(reason="bug in old version")
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 1):
+    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 1):
         pytest.skip(reason="bug in old version")
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip(reason="too old version")
 
-    df = nw.from_native(constructor_eager(data_float))
+    df = nw.from_native(constructor(data_float))
 
-    result = df.select(nw.col("a").rank(method=method).over("b"))
+    result = (
+        df.with_columns(a=nw.col("a").rank(method=method).over("b")).sort("i").select("a")
+    )
     expected_data = {"a": expected_over[method]}
     assert_equal_data(result, expected_data)
 
@@ -231,3 +243,34 @@ def test_lazy_rank_expr_desc(
         )
         expected_data = {"a": expected_desc[method]}
         assert_equal_data(result, expected_data)
+
+
+@pytest.mark.parametrize("method", rank_methods)
+def test_rank_expr_in_over_desc(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    method: Literal["average", "min", "max", "dense", "ordinal"],
+) -> None:
+    if any(x in str(constructor) for x in ("pyarrow_table", "dask", "cudf")):
+        # Pyarrow raises:
+        # > pyarrow.lib.ArrowKeyError: No function registered with name: hash_rank
+        # We can handle that to provide a better error message.
+        # cudf: https://github.com/rapidsai/cudf/issues/18159
+        request.applymarker(pytest.mark.xfail)
+
+    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
+        pytest.skip(reason="bug in old version")
+    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 1):
+        pytest.skip(reason="bug in old version")
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip(reason="too old version")
+
+    df = nw.from_native(constructor(data_float))
+
+    result = (
+        df.with_columns(a=nw.col("a").rank(method=method, descending=True).over("b"))
+        .sort("i")
+        .select("a")
+    )
+    expected_data = {"a": expected_over_desc[method]}
+    assert_equal_data(result, expected_data)

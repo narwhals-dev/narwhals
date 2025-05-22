@@ -19,14 +19,8 @@ from narwhals.exceptions import InvalidOperationError
         (nw.col("a").cum_sum().cum_sum().over(order_by="id"), 1),
         (nw.col("a").cum_sum().cum_sum(), 2),
         (nw.sum_horizontal(nw.col("a"), nw.col("a").cum_sum()), 1),
-        (
-            nw.sum_horizontal(nw.col("a"), nw.col("a").cum_sum()).over(order_by="a"),
-            1,
-        ),
-        (
-            nw.sum_horizontal(nw.col("a"), nw.col("a").cum_sum().over(order_by="i")),
-            0,
-        ),
+        (nw.sum_horizontal(nw.col("a"), nw.col("a").cum_sum()).over(order_by="a"), 1),
+        (nw.sum_horizontal(nw.col("a"), nw.col("a").cum_sum().over(order_by="i")), 0),
         (
             nw.sum_horizontal(
                 nw.col("a").diff(), nw.col("a").cum_sum().over(order_by="i")

@@ -21,12 +21,7 @@ data = {
 def test_shift(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
     result = df.with_columns(nw.col("a", "b", "c").shift(2)).filter(nw.col("i") > 1)
-    expected = {
-        "i": [2, 3, 4],
-        "a": [0, 1, 2],
-        "b": [1, 2, 3],
-        "c": [5, 4, 3],
-    }
+    expected = {"i": [2, 3, 4], "a": [0, 1, 2], "b": [1, 2, 3], "c": [5, 4, 3]}
     assert_equal_data(result, expected)
 
 
@@ -39,28 +34,16 @@ def test_shift_lazy(constructor: Constructor) -> None:
     result = df.with_columns(nw.col("a", "b", "c").shift(2).over(order_by="i")).filter(
         nw.col("i") > 1
     )
-    expected = {
-        "i": [2, 3, 4],
-        "a": [0, 1, 2],
-        "b": [1, 2, 3],
-        "c": [5, 4, 3],
-    }
+    expected = {"i": [2, 3, 4], "a": [0, 1, 2], "b": [1, 2, 3], "c": [5, 4, 3]}
     assert_equal_data(result, expected)
 
 
 def test_shift_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    result = df.with_columns(
-        df["a"].shift(2),
-        df["b"].shift(2),
-        df["c"].shift(2),
-    ).filter(nw.col("i") > 1)
-    expected = {
-        "i": [2, 3, 4],
-        "a": [0, 1, 2],
-        "b": [1, 2, 3],
-        "c": [5, 4, 3],
-    }
+    result = df.with_columns(df["a"].shift(2), df["b"].shift(2), df["c"].shift(2)).filter(
+        nw.col("i") > 1
+    )
+    expected = {"i": [2, 3, 4], "a": [0, 1, 2], "b": [1, 2, 3], "c": [5, 4, 3]}
     assert_equal_data(result, expected)
 
 

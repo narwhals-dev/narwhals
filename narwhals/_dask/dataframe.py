@@ -243,12 +243,7 @@ class DaskLazyFrame(
             result = self.native.drop_duplicates(subset=subset, keep=mapped_keep)
         return self._with_native(result)
 
-    def sort(
-        self,
-        *by: str,
-        descending: bool | Sequence[bool],
-        nulls_last: bool,
-    ) -> Self:
+    def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
         if isinstance(descending, bool):
             ascending: bool | list[bool] = not descending
         else:
@@ -407,7 +402,7 @@ class DaskLazyFrame(
                 right_by=by_right,
                 direction=strategy,
                 suffixes=("", suffix),
-            ),
+            )
         )
 
     def group_by(

@@ -138,8 +138,7 @@ class SparkLikeNamespace(
             return [
                 (
                     reduce(
-                        operator.add,
-                        (df._F.coalesce(col, df._F.lit(0)) for col in cols),
+                        operator.add, (df._F.coalesce(col, df._F.lit(0)) for col in cols)
                     )
                     / reduce(
                         operator.add,
@@ -223,10 +222,7 @@ class SparkLikeNamespace(
         raise NotImplementedError
 
     def concat_str(
-        self,
-        *exprs: SparkLikeExpr,
-        separator: str,
-        ignore_nulls: bool,
+        self, *exprs: SparkLikeExpr, separator: str, ignore_nulls: bool
     ) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             cols = [s for _expr in exprs for s in _expr(df)]

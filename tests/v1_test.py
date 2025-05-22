@@ -143,7 +143,7 @@ def test_to_dict(constructor_eager: ConstructorEager) -> None:
 
 
 @pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature.",
+    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
 def test_hist_v1(constructor_eager: ConstructorEager) -> None:
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):

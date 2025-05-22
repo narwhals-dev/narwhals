@@ -16,11 +16,7 @@ if TYPE_CHECKING:
 
 @pytest.mark.parametrize(
     ("to_drop", "expected"),
-    [
-        ("abc", ["b", "z"]),
-        (["abc"], ["b", "z"]),
-        (["abc", "b"], ["z"]),
-    ],
+    [("abc", ["b", "z"]), (["abc"], ["b", "z"]), (["abc", "b"], ["z"])],
 )
 def test_drop(constructor: Constructor, to_drop: list[str], expected: list[str]) -> None:
     data = {"abc": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}

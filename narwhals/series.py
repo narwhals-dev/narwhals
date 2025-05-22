@@ -84,10 +84,7 @@ class Series(Generic[IntoSeriesT]):
         return DataFrame
 
     def __init__(
-        self,
-        series: Any,
-        *,
-        level: Literal["full", "lazy", "interchange"],
+        self, series: Any, *, level: Literal["full", "lazy", "interchange"]
     ) -> None:
         self._level: Literal["full", "lazy", "interchange"] = level
         if is_compliant_series(series):
@@ -523,10 +520,7 @@ class Series(Generic[IntoSeriesT]):
             │ 2   │
             └─────┘
         """
-        return self._dataframe(
-            self._compliant_series.to_frame(),
-            level=self._level,
-        )
+        return self._dataframe(self._compliant_series.to_frame(), level=self._level)
 
     def to_list(self) -> list[Any]:
         """Convert to list.
@@ -1190,9 +1184,7 @@ class Series(Generic[IntoSeriesT]):
             >>>
             >>> s_native = pd.Series([3, 0, 1, 2], name="a")
             >>> nw.from_native(s_native, series_only=True).replace_strict(
-            ...     [0, 1, 2, 3],
-            ...     ["zero", "one", "two", "three"],
-            ...     return_dtype=nw.String,
+            ...     [0, 1, 2, 3], ["zero", "one", "two", "three"], return_dtype=nw.String
             ... ).to_native()
             0    three
             1     zero
@@ -2255,11 +2247,7 @@ class Series(Generic[IntoSeriesT]):
         return self._with_compliant(self._compliant_series.cum_prod(reverse=reverse))
 
     def rolling_sum(
-        self,
-        window_size: int,
-        *,
-        min_samples: int | None = None,
-        center: bool = False,
+        self, window_size: int, *, min_samples: int | None = None, center: bool = False
     ) -> Self:
         """Apply a rolling sum (moving sum) over the values.
 
@@ -2309,11 +2297,7 @@ class Series(Generic[IntoSeriesT]):
         )
 
     def rolling_mean(
-        self,
-        window_size: int,
-        *,
-        min_samples: int | None = None,
-        center: bool = False,
+        self, window_size: int, *, min_samples: int | None = None, center: bool = False
     ) -> Self:
         """Apply a rolling mean (moving mean) over the values.
 
@@ -2595,9 +2579,7 @@ class Series(Generic[IntoSeriesT]):
 
         return self._dataframe(
             self._compliant_series.hist(
-                bins=bins,
-                bin_count=bin_count,
-                include_breakpoint=include_breakpoint,
+                bins=bins, bin_count=bin_count, include_breakpoint=include_breakpoint
             ),
             level=self._level,
         )
