@@ -27,7 +27,7 @@ from narwhals.exceptions import ComputeError
 from narwhals.utils import Version, _hasattr_static, flatten
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
+    from typing_extensions import Never, Self
 
     from narwhals._plan.common import ExprIR, IntoExpr, IntoExprColumn, Seq, Udf
     from narwhals._plan.meta import ExprIRMetaNamespace
@@ -439,7 +439,74 @@ class DummyExpr:
         return ExprIRMetaNamespace(self._ir)
 
 
+class DummySelector(DummyExpr):
+    _ir: expr.SelectorIR
+
+    @classmethod
+    def _from_ir(cls, ir: expr.SelectorIR, /) -> Self:  # type: ignore[override]
+        obj = cls.__new__(cls)
+        obj._ir = ir
+        return obj
+
+    def _to_expr(self) -> DummyExpr:
+        return self._ir.to_narwhals(self.version)
+
+    # TODO @dangotbanned: Make a decision on selector root, binary op
+    # Current typing warnings are accurate, this isn't valid yet
+    def __or__(self, other: t.Any) -> Self | t.Any:
+        if isinstance(other, type(self)):
+            op = ops.Or()
+            return self._from_ir(op.to_binary_selector(self._ir, other._ir))  # type: ignore[arg-type]
+        return self._to_expr() | other
+
+    def __and__(self, other: t.Any) -> Self | t.Any:
+        if isinstance(other, type(self)):
+            op = ops.And()
+            return self._from_ir(op.to_binary_selector(self._ir, other._ir))  # type: ignore[arg-type]
+        return self._to_expr() & other
+
+    def __sub__(self, other: t.Any) -> Self | t.Any:
+        if isinstance(other, type(self)):
+            op = ops.Sub()
+            return self._from_ir(op.to_binary_selector(self._ir, other._ir))  # type: ignore[arg-type]
+        return self._to_expr() - other
+
+    def __xor__(self, other: t.Any) -> Self | t.Any:
+        if isinstance(other, type(self)):
+            op = ops.ExclusiveOr()
+            return self._from_ir(op.to_binary_selector(self._ir, other._ir))  # type: ignore[arg-type]
+        return self._to_expr() ^ other
+
+    def __invert__(self) -> Never:
+        raise NotImplementedError
+
+    def __add__(self, other: t.Any) -> DummyExpr:  # type: ignore[override]
+        if isinstance(other, type(self)):
+            msg = "unsupported operand type(s) for op: ('Selector' + 'Selector')"
+            raise TypeError(msg)
+        return self._to_expr() + other  # type: ignore[no-any-return]
+
+    def __rsub__(self, other: t.Any) -> Never:
+        raise NotImplementedError
+
+    def __rand__(self, other: t.Any) -> Never:
+        raise NotImplementedError
+
+    def __ror__(self, other: t.Any) -> Never:
+        raise NotImplementedError
+
+    def __rxor__(self, other: t.Any) -> Never:
+        raise NotImplementedError
+
+    def __radd__(self, other: t.Any) -> Never:
+        raise NotImplementedError
+
+
 class DummyExprV1(DummyExpr):
+    _version: t.ClassVar[Version] = Version.V1
+
+
+class DummySelectorV1(DummySelector):
     _version: t.ClassVar[Version] = Version.V1
 
 

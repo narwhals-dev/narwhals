@@ -13,15 +13,25 @@ from __future__ import annotations
 import typing as t
 
 from narwhals._plan.common import ExprIR
-from narwhals._plan.typing import FunctionT, LeftT, OperatorT, RightT, RollingT
+from narwhals._plan.typing import (
+    FunctionT,
+    LeftT,
+    OperatorT,
+    RightT,
+    RollingT,
+    SelectorOperatorT,
+)
+from narwhals.utils import Version
 
 if t.TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan.common import Seq
+    from narwhals._plan.dummy import DummySelector
     from narwhals._plan.functions import MapBatches  # noqa: F401
     from narwhals._plan.literal import LiteralValue
     from narwhals._plan.options import FunctionOptions, SortMultipleOptions, SortOptions
+    from narwhals._plan.selectors import Selector
     from narwhals._plan.window import Window
     from narwhals.dtypes import DType
 
@@ -408,8 +418,31 @@ class All(ExprIR):
         return "*"
 
 
-class Selector(ExprIR):
+class SelectorIR(ExprIR):
+    """Not sure on this separation.
+
+    - Need a cleaner way of including `BinarySelector`.
+    - Like that there's easy access to operands
+    - Dislike that it inherits node iteration, since upstream doesn't use it for selectors
+    """
+
+    __slots__ = ("selector",)
+
+    selector: Selector
     """by_dtype, matches, numeric, boolean, string, categorical, datetime, all."""
+
+    def to_narwhals(self, version: Version = Version.MAIN) -> DummySelector:
+        from narwhals._plan import dummy
+
+        if version is Version.MAIN:
+            return dummy.DummySelector._from_ir(self)
+        return dummy.DummySelectorV1._from_ir(self)
+
+
+class BinarySelector(
+    BinaryExpr["SelectorIR", SelectorOperatorT, "SelectorIR"],
+    t.Generic[SelectorOperatorT],
+): ...
 
 
 class Ternary(ExprIR):

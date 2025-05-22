@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._plan.expr import BinaryExpr
+    from narwhals._plan.expr import BinaryExpr, BinarySelector, SelectorIR
     from narwhals._plan.typing import LeftT, RightT
 
 from narwhals._plan.common import Immutable
@@ -14,8 +14,8 @@ from narwhals._plan.common import Immutable
 class Operator(Immutable):
     def __repr__(self) -> str:
         tp = type(self)
-        if tp is Operator:
-            return "Operator"
+        if tp in {Operator, SelectorOperator}:
+            return tp.__name__
         m = {
             Eq: "==",
             NotEq: "!=",
@@ -43,6 +43,22 @@ class Operator(Immutable):
         return BinaryExpr(left=left, op=self, right=right)
 
 
+class SelectorOperator(Operator):
+    """Operators that can *also* be used in selectors.
+
+    Remember that `Or` is named [`meta._selector_add`]!
+
+    [`meta._selector_add`]: https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/dsl/meta.rs#L113-L124
+    """
+
+    def to_binary_selector(
+        self, left: SelectorIR, right: SelectorIR, /
+    ) -> BinarySelector[Self]:
+        from narwhals._plan.expr import BinarySelector
+
+        return BinarySelector(left=left, op=self, right=right)
+
+
 class Eq(Operator): ...
 
 
@@ -64,7 +80,7 @@ class GtEq(Operator): ...
 class Add(Operator): ...
 
 
-class Sub(Operator): ...
+class Sub(SelectorOperator): ...
 
 
 class Multiply(Operator): ...
@@ -79,10 +95,10 @@ class FloorDivide(Operator): ...
 class Modulus(Operator): ...
 
 
-class And(Operator): ...
+class And(SelectorOperator): ...
 
 
-class Or(Operator): ...
+class Or(SelectorOperator): ...
 
 
-class ExclusiveOr(Operator): ...
+class ExclusiveOr(SelectorOperator): ...

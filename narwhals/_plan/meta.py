@@ -114,7 +114,7 @@ def _expr_output_name(ir: ExprIR) -> str | ComputeError:
 def _has_multiple_outputs(ir: ExprIR) -> bool:
     from narwhals._plan import expr
 
-    return isinstance(ir, (expr.Columns, expr.IndexColumns, expr.Selector, expr.All))
+    return isinstance(ir, (expr.Columns, expr.IndexColumns, expr.SelectorIR, expr.All))
 
 
 def _is_literal(ir: ExprIR, *, allow_aliasing: bool) -> bool:
@@ -145,7 +145,7 @@ def _is_column_selection(ir: ExprIR, *, allow_aliasing: bool) -> bool:
             expr.Exclude,
             expr.Nth,
             expr.IndexColumns,
-            expr.Selector,
+            expr.SelectorIR,
             expr.All,
         ),
     ):
