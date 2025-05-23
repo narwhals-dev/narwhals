@@ -106,18 +106,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         if kind is ExprKind.LITERAL:
             return self
-
-        def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
-            return [result.over(self.partition_by()) for result in self(df)]
-
-        return self.__class__(
-            func,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
-            version=self._version,
-            implementation=self._implementation,
-        )
+        return self._with_callable(lambda expr: expr.over(self.partition_by()))
 
     @property
     def _F(self):  # type: ignore[no-untyped-def] # noqa: ANN202, N802

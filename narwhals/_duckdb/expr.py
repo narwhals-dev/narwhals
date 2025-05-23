@@ -162,19 +162,8 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         if self._backend_version < (1, 3):
             msg = "At least version 1.3 of DuckDB is required for binary operations between aggregates and columns."
             raise NotImplementedError(msg)
-
         template = "{expr} over ()"
-
-        def func(df: DuckDBLazyFrame) -> Sequence[Expression]:
-            return [SQLExpression(template.format(expr=expr)) for expr in self(df)]
-
-        return self.__class__(
-            func,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        return self._with_callable(lambda expr: SQLExpression(template.format(expr=expr)))
 
     @classmethod
     def from_column_names(
