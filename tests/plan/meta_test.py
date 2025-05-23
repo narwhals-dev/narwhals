@@ -5,12 +5,23 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals._plan.demo as nwd
+from tests.utils import POLARS_VERSION
 
 if TYPE_CHECKING:
     from narwhals._plan.dummy import DummyExpr
 
 pytest.importorskip("polars")
 import polars as pl
+
+if POLARS_VERSION >= (1, 0):
+    # https://github.com/pola-rs/polars/pull/16743
+    OVER_CASE = (
+        nwd.col("a").last().over("b", order_by="c"),
+        pl.col("a").last().over("b", order_by="c"),
+        ["a", "b"],
+    )
+else:
+    OVER_CASE = (nwd.col("a").last().over("b"), pl.col("a").last().over("b"), ["a", "b"])
 
 
 @pytest.mark.parametrize(
@@ -26,11 +37,7 @@ import polars as pl
             (pl.col("a") + (pl.col("a") - pl.col("b"))).alias("c"),
             ["a", "a", "b"],
         ),
-        (
-            nwd.col("a").last().over("b", order_by="c"),
-            pl.col("a").last().over("b", order_by="c"),
-            ["a", "b"],
-        ),
+        OVER_CASE,
         (
             (nwd.col("a", "b", "c").sort().abs() * 20).max(),
             (pl.col("a", "b", "c").sort().abs() * 20).max(),
