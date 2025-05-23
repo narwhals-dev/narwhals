@@ -309,7 +309,8 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 results = [result_frame.get_column(name) for name in aliases]
                 if order_by:
                     for s in results:
-                        s._scatter_in_place(sorting_indices, s)
+                        # `sorting_indices` was initialised in `if order_by` block above.
+                        s._scatter_in_place(sorting_indices, s)  # pyright: ignore[reportPossiblyUnboundVariable]
                     return results
                 if reverse:
                     return [s._gather_slice(slice(None, None, -1)) for s in results]
