@@ -215,7 +215,7 @@ class DuckDBLazyFrame(
     @property
     def schema(self) -> dict[str, DType]:
         if self._cached_native_schema is None:
-            # Note: prefer `self._cached_schema` over `functools.cached_property`
+            # Note: prefer `self._cached_native_schema` over `functools.cached_property`
             # due to Python3.13 failures.
             self._cached_native_schema = dict(zip(self.columns, self.native.types))
 
