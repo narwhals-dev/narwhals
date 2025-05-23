@@ -210,7 +210,7 @@ class SparkLikeLazyFrame(
             )
         return self._cached_columns
 
-    def collect(
+    def _collect(
         self, backend: ModuleType | Implementation | str | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is Implementation.PANDAS:
@@ -252,6 +252,16 @@ class SparkLikeLazyFrame(
 
         msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
         raise ValueError(msg)  # pragma: no cover
+
+    def collect(
+        self, backend: ModuleType | Implementation | str | None, **kwargs: Any
+    ) -> CompliantDataFrameAny:
+        if self._implementation.is_pyspark_connect():
+            try:
+                return self._collect(backend, **kwargs)
+            except Exception as e:  # noqa: BLE001
+                raise catch_pyspark_exception(e, self) from None
+        return self._collect(backend, **kwargs)
 
     def simple_select(self, *column_names: str) -> Self:
         return self._with_native(self.native.select(*column_names))
