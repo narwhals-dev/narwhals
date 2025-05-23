@@ -18,6 +18,7 @@ if TYPE_CHECKING:
         DummySeries,
     )
     from narwhals._plan.expr import FunctionExpr
+    from narwhals._plan.meta import ExprIRMetaNamespace
     from narwhals._plan.options import FunctionOptions
     from narwhals.typing import NonNestedLiteral
 
@@ -203,6 +204,12 @@ class ExprIR(Immutable):
             [col('a').alias('b').min().alias('c').over([col('e'), col('f')]), col('f'), col('e'), col('a').alias('b').min().alias('c'), col('a').alias('b').min(), col('a').alias('b'), col('a')]
         """
         yield self
+
+    @property
+    def meta(self) -> ExprIRMetaNamespace:
+        from narwhals._plan.meta import ExprIRMetaNamespace
+
+        return ExprIRMetaNamespace(_ir=self)
 
 
 class SelectorIR(ExprIR):

@@ -15,7 +15,7 @@ from narwhals.exceptions import ComputeError
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
-    from typing import Any
+    from typing import Any, Iterator
 
     import polars as pl
 
@@ -79,23 +79,77 @@ class ExprIRMetaNamespace(ExprIRNamespace):
         return ok_or_err
 
     def root_names(self) -> list[str]:
-        """After a lot of indirection, [root_names] resolves [here].
+        """Get the root column names."""
+        return _expr_to_leaf_column_names(self._ir)
 
-        [root_names]: https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/dsl/meta.rs#L27-L30
-
-        [here]: https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/utils.rs#L171-L195
-        """
-        raise NotImplementedError
-
-    # NOTE: Needs to know about `KeepName`, `RenameAlias`
+    # NOTE: Seems too complex to do whilst keeping things immutable
     def undo_aliases(self) -> ExprIR:
-        """https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/dsl/meta.rs#L45-L53."""
+        """Investigate components.
+
+        Seems like it unnests each of these:
+        - `Alias.expr`
+        - `KeepName.expr`
+        - `RenameAlias.expr`
+
+        Notes:
+        - [`meta.undo_aliases`]
+        - [`Expr.map_expr`]
+        - [`TreeWalker.rewrite`]
+
+        [`Expr.map_expr`]: https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/plans/iterator.rs#L146-L149
+        [`meta.undo_aliases`]: https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/dsl/meta.rs#L45-L53
+        [`TreeWalker.rewrite`]: https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/plans/visitor/visitors.rs#L46-L68
+        """
         raise NotImplementedError
 
     # NOTE: Less important for us, but maybe nice to have
     def pop(self) -> list[ExprIR]:
         """https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/dsl/meta.rs#L14-L25."""
         raise NotImplementedError
+
+
+def _expr_to_leaf_column_names(ir: ExprIR) -> list[str]:
+    """After a lot of indirection, [root_names] resolves [here].
+
+    [root_names]: https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/dsl/meta.rs#L27-L30
+    [here]: https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/utils.rs#L171-L195
+    """
+    return list(_expr_to_leaf_column_names_iter(ir))
+
+
+def _expr_to_leaf_column_names_iter(ir: ExprIR) -> Iterator[str]:
+    for e in _expr_to_leaf_column_exprs_iter(ir):
+        result = _expr_to_leaf_column_name(e)
+        if isinstance(result, str):
+            yield result
+
+
+def _expr_to_leaf_column_exprs_iter(ir: ExprIR) -> Iterator[ExprIR]:
+    from narwhals._plan import expr
+
+    for outer in ir.iter_left():
+        if isinstance(outer, (expr.Column, expr.All)):
+            yield outer
+
+
+def _expr_to_leaf_column_name(ir: ExprIR) -> str | ComputeError:
+    leaves = list(_expr_to_leaf_column_exprs_iter(ir))
+    if not len(leaves) <= 1:
+        msg = "found more than one root column name"
+        return ComputeError(msg)
+    if not leaves:
+        msg = "no root column name found"
+        return ComputeError(msg)
+    leaf = leaves[0]
+    from narwhals._plan import expr
+
+    if isinstance(leaf, expr.Column):
+        return leaf.name
+    if isinstance(leaf, expr.All):
+        msg = "wildcard has no root column name"
+        return ComputeError(msg)
+    msg = f"Expected unreachable, got {type(leaf).__name__!r}\n\n{leaf}"
+    return ComputeError(msg)
 
 
 def _expr_output_name(ir: ExprIR) -> str | ComputeError:
