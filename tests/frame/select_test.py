@@ -97,6 +97,8 @@ def test_missing_columns_eager(constructor_eager: ConstructorEager) -> None:
         msg = r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
     with pytest.raises(ColumnNotFoundError, match=msg):
         df.select(nw.col("fdfa"))
+    with pytest.raises(ColumnNotFoundError, match=msg):
+        df.select(nw.col("fdfa").sum())
 
 
 def test_missing_columns_lazy(
@@ -134,6 +136,8 @@ def test_missing_columns_lazy(
         msg = r"^fdfa"
     with pytest.raises(ColumnNotFoundError, match=msg):
         maybe_collect(df.select(nw.col("fdfa")))
+    with pytest.raises(ColumnNotFoundError, match=msg):
+        maybe_collect(df.select(nw.col("fdfa").sum()))
 
 
 def test_left_to_right_broadcasting(constructor: Constructor) -> None:
