@@ -20,7 +20,7 @@ if POLARS_VERSION >= (1, 0):
         pl.col("a").last().over("b", order_by="c"),
         ["a", "b"],
     )
-else:
+else:  # pragma: no cover
     OVER_CASE = (nwd.col("a").last().over("b"), pl.col("a").last().over("b"), ["a", "b"])
 
 
