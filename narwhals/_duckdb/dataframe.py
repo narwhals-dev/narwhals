@@ -219,26 +219,16 @@ class DuckDBLazyFrame(
             # due to Python3.13 failures.
             self._cached_native_schema = dict(zip(self.columns, self.native.types))
 
-        time_zone = None  # Will be fetched lazily when needed.
-
-        def _get_dtype(duckdb_dtype: DuckDBPyType) -> DType:
-            # If there are multiple "timestamp with time zone" columns, then we
-            # know that they all have the same time zone. So, we make sure to
-            # only call `get_rel_time_zone` once.
-            # TODO(unassigned): can we optimise this in the case of nested dtypes?
-            # E.g. list of "datetime with timezone"s
-            nonlocal time_zone
+        nw_schema = {}
+        time_zone = None  # Will be fetched if needed.
+        for column_name, duckdb_dtype in self._cached_native_schema.items():
             if duckdb_dtype.id == "timestamp with time zone" and time_zone is None:
-                # Fetch only if needed and only once
                 time_zone = get_rel_time_zone(self.native)
-            return native_to_narwhals_dtype(
+            nw_schema[column_name] = native_to_narwhals_dtype(
                 duckdb_dtype, self._version, self.native, time_zone
             )
 
-        return {
-            column_name: _get_dtype(duckdb_dtype)
-            for column_name, duckdb_dtype in self._cached_native_schema.items()
-        }
+        return nw_schema
 
     @property
     def columns(self) -> list[str]:
