@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from duckdb import Expression
     from duckdb.typing import DuckDBPyType
 
+    from narwhals._compliant.dataframe import CompliantLazyFrame
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals.dtypes import DType
@@ -273,8 +274,8 @@ def ensure_type(obj: Any, *valid_types: type[Any]) -> None:
         raise TypeError(msg)
 
 
-def catch_duckdb_column_not_found_exception(
-    exception: Exception, available_columns: Sequence[str]
+def catch_duckdb_exception(
+    exception: Exception, frame: CompliantLazyFrame, /
 ) -> ColumnNotFoundError | Exception:
     if isinstance(exception, duckdb.BinderException) and any(
         msg in str(exception)
@@ -284,7 +285,7 @@ def catch_duckdb_column_not_found_exception(
         )
     ):
         return ColumnNotFoundError.from_available_column_names(
-            available_columns=available_columns
+            available_columns=frame.columns
         )
     # Just return exception as-is.
     return exception

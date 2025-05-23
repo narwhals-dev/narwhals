@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Iterator, Mapping, Sequence
 
 from narwhals._namespace import is_native_spark_like
 from narwhals._spark_like.utils import (
-    catch_pyspark_column_not_found_exception,
+    catch_pyspark_exception,
     evaluate_exprs,
     import_functions,
     import_native_dtypes,
@@ -264,7 +264,7 @@ class SparkLikeLazyFrame(
             try:
                 return self._with_native(self.native.agg(*new_columns_list))
             except Exception as e:  # noqa: BLE001
-                raise catch_pyspark_column_not_found_exception(e, self.columns) from None
+                raise catch_pyspark_exception(e, self) from None
         return self._with_native(self.native.agg(*new_columns_list))
 
     def select(self, *exprs: SparkLikeExpr) -> Self:
@@ -274,7 +274,7 @@ class SparkLikeLazyFrame(
             try:
                 return self._with_native(self.native.select(*new_columns_list))
             except Exception as e:  # noqa: BLE001
-                raise catch_pyspark_column_not_found_exception(e, self.columns) from None
+                raise catch_pyspark_exception(e, self) from None
         return self._with_native(self.native.select(*new_columns_list))
 
     def with_columns(self, *exprs: SparkLikeExpr) -> Self:
@@ -283,7 +283,7 @@ class SparkLikeLazyFrame(
             try:
                 return self._with_native(self.native.withColumns(dict(new_columns)))
             except Exception as e:  # noqa: BLE001
-                raise catch_pyspark_column_not_found_exception(e, self.columns) from None
+                raise catch_pyspark_exception(e, self) from None
 
         return self._with_native(self.native.withColumns(dict(new_columns)))
 
@@ -294,7 +294,7 @@ class SparkLikeLazyFrame(
             try:
                 return self._with_native(self.native.where(condition))
             except Exception as e:  # noqa: BLE001
-                raise catch_pyspark_column_not_found_exception(e, self.columns) from None
+                raise catch_pyspark_exception(e, self) from None
         return self._with_native(self.native.where(condition))
 
     @property

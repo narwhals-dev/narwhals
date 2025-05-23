@@ -9,7 +9,7 @@ import duckdb
 from duckdb import FunctionExpression, StarExpression
 
 from narwhals._duckdb.utils import (
-    catch_duckdb_column_not_found_exception,
+    catch_duckdb_exception,
     col,
     evaluate_exprs,
     generate_partition_by_sql,
@@ -177,18 +177,14 @@ class DuckDBLazyFrame(
         try:
             return self._with_native(self.native.aggregate(selection))  # type: ignore[arg-type]
         except Exception as e:  # noqa: BLE001
-            raise catch_duckdb_column_not_found_exception(
-                e, available_columns=self.columns
-            ) from None
+            raise catch_duckdb_exception(e, self) from None
 
     def select(self, *exprs: DuckDBExpr) -> Self:
         selection = (val.alias(name) for name, val in evaluate_exprs(self, *exprs))
         try:
             return self._with_native(self.native.select(*selection))
         except Exception as e:  # noqa: BLE001
-            raise catch_duckdb_column_not_found_exception(
-                e, available_columns=self.columns
-            ) from None
+            raise catch_duckdb_exception(e, self) from None
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         columns_to_drop = parse_columns_to_drop(self, columns=columns, strict=strict)
@@ -217,9 +213,7 @@ class DuckDBLazyFrame(
         try:
             return self._with_native(self.native.select(*result))
         except Exception as e:  # noqa: BLE001
-            raise catch_duckdb_column_not_found_exception(
-                e, available_columns=self.columns
-            ) from None
+            raise catch_duckdb_exception(e, self) from None
 
     def filter(self, predicate: DuckDBExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
@@ -227,9 +221,7 @@ class DuckDBLazyFrame(
         try:
             return self._with_native(self.native.filter(mask))
         except Exception as e:  # noqa: BLE001
-            raise catch_duckdb_column_not_found_exception(
-                e, available_columns=self.columns
-            ) from None
+            raise catch_duckdb_exception(e, self) from None
 
     @property
     def schema(self) -> dict[str, DType]:
