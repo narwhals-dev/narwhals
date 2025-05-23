@@ -37,9 +37,6 @@ def test_lazy_cum_sum_grouped(
     if "pyarrow_table" in str(constructor):
         # grouped window functions not yet supported
         request.applymarker(pytest.mark.xfail)
-    if "modin" in str(constructor):
-        # bugged
-        request.applymarker(pytest.mark.xfail)
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
@@ -87,9 +84,6 @@ def test_lazy_cum_sum_ordered_by_nulls(
     if "pyarrow_table" in str(constructor):
         # grouped window functions not yet supported
         request.applymarker(pytest.mark.xfail)
-    if "modin" in str(constructor):
-        # bugged
-        request.applymarker(pytest.mark.xfail)
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
@@ -136,9 +130,6 @@ def test_lazy_cum_sum_ungrouped(
     if "dask" in str(constructor) and reverse:
         # https://github.com/dask/dask/issues/11802
         request.applymarker(pytest.mark.xfail)
-    if "modin" in str(constructor):
-        # probably bugged
-        request.applymarker(pytest.mark.xfail)
     if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
         "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
     ):
@@ -167,9 +158,6 @@ def test_lazy_cum_sum_ungrouped_ordered_by_nulls(
 ) -> None:
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11806
-        request.applymarker(pytest.mark.xfail)
-    if "modin" in str(constructor):
-        # probably bugged
         request.applymarker(pytest.mark.xfail)
     if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
         "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)

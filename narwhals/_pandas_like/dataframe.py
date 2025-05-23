@@ -5,6 +5,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Final,
     Iterable,
     Iterator,
     Literal,
@@ -77,6 +78,7 @@ if TYPE_CHECKING:
 
     Constructor: TypeAlias = Callable[..., pd.DataFrame]
 
+MAX_MODIN_VERSION: Final[tuple[int, int]] = (0, 32)
 
 CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
     [
@@ -285,6 +287,11 @@ class PandasLikeDataFrame(
         return self.to_numpy(dtype=dtype, copy=copy)
 
     def _gather(self, rows: SizedMultiIndexSelector[pd.Series[Any]]) -> Self:
+        if self._implementation.is_modin() and self._backend_version > MAX_MODIN_VERSION:
+            import numpy as np
+
+            return self._with_native(self.native.iloc[np.asarray(rows), :])
+
         items = list(rows) if isinstance(rows, tuple) else rows
         return self._with_native(self.native.iloc[items, :])
 
@@ -318,6 +325,11 @@ class PandasLikeDataFrame(
     def _select_multi_index(
         self, columns: SizedMultiIndexSelector[pd.Series[Any]]
     ) -> Self:
+        if self._implementation.is_modin() and self._backend_version > MAX_MODIN_VERSION:
+            import numpy as np
+
+            return self._with_native(self.native.iloc[:, np.asarray(columns)])
+
         columns = list(columns) if isinstance(columns, tuple) else columns
         return self._with_native(
             self.native.iloc[:, columns], validate_column_names=False
@@ -326,6 +338,11 @@ class PandasLikeDataFrame(
     def _select_multi_name(
         self, columns: SizedMultiNameSelector[pd.Series[Any]]
     ) -> PandasLikeDataFrame:
+        if self._implementation.is_modin() and self._backend_version > MAX_MODIN_VERSION:
+            import numpy as np
+
+            return self._with_native(self.native.loc[:, np.asarray(columns)])
+
         return self._with_native(self.native.loc[:, columns])
 
     # --- properties ---

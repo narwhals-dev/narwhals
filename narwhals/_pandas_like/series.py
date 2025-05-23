@@ -145,6 +145,12 @@ class PandasLikeSeries(EagerSeries[Any]):
         )
 
     def _gather(self, rows: SizedMultiIndexSelector[pd.Series[Any]]) -> Self:
+        max_modin_version = (0, 32)
+        if self._implementation.is_modin() and self._backend_version > max_modin_version:
+            import numpy as np
+
+            return self._with_native(self.native.iloc[np.asarray(rows)])
+
         rows = list(rows) if isinstance(rows, tuple) else rows
         return self._with_native(self.native.iloc[rows])
 
@@ -279,20 +285,24 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def _scatter_in_place(self, indices: Self, values: Self) -> None:
         # Scatter, modifying original Series. Use with care!
+        implementation = self._implementation
+        backend_version = self._backend_version
         values_native = set_index(
             values.native,
             self.native.index[indices.native],
-            implementation=self._implementation,
+            implementation=implementation,
             backend_version=self._backend_version,
         )
-        if self._implementation is Implementation.PANDAS and parse_version(np) < (2,):
+        if implementation.is_pandas() and parse_version(np) < (2,):
             values_native = values_native.copy()  # pragma: no cover
+
         min_pd_version = (1, 2)
-        if (
-            self._implementation is Implementation.PANDAS
-            and self._backend_version < min_pd_version
-        ):
+        max_modin_version = (0, 32)
+
+        if implementation.is_pandas() and backend_version < min_pd_version:
             self.native.iloc[indices.native.values] = values_native  # noqa: PD011
+        elif implementation.is_modin() and backend_version > max_modin_version:
+            self.native.iloc[indices.native.to_numpy()] = values_native.to_numpy()
         else:
             self.native.iloc[indices.native] = values_native
 
