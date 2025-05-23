@@ -7,13 +7,14 @@ from typing import TYPE_CHECKING, Any, Iterator, Mapping, Sequence
 
 from narwhals._namespace import is_native_spark_like
 from narwhals._spark_like.utils import (
+    catch_pyspark_column_not_found_exception,
     evaluate_exprs,
     import_functions,
     import_native_dtypes,
     import_window,
     native_to_narwhals_dtype,
 )
-from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
+from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import (
     Implementation,
@@ -259,53 +260,41 @@ class SparkLikeLazyFrame(
         new_columns = evaluate_exprs(self, *exprs)
 
         new_columns_list = [col.alias(col_name) for col_name, col in new_columns]
+        if self._implementation.is_pyspark():
+            try:
+                return self._with_native(self.native.agg(*new_columns_list))
+            except Exception as e:  # noqa: BLE001
+                raise catch_pyspark_column_not_found_exception(e, self.columns) from None
         return self._with_native(self.native.agg(*new_columns_list))
 
     def select(self, *exprs: SparkLikeExpr) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
         new_columns_list = [col.alias(col_name) for (col_name, col) in new_columns]
         if self._implementation.is_pyspark():  # pragma: no cover
-            from pyspark.errors import AnalysisException
-
             try:
                 return self._with_native(self.native.select(*new_columns_list))
-            except AnalysisException as e:
-                if str(e).startswith("[UNRESOLVED_COLUMN.WITH_SUGGESTION]"):
-                    raise ColumnNotFoundError.from_available_column_names(
-                        self.columns
-                    ) from e
-                raise
+            except Exception as e:  # noqa: BLE001
+                raise catch_pyspark_column_not_found_exception(e, self.columns) from None
         return self._with_native(self.native.select(*new_columns_list))
 
     def with_columns(self, *exprs: SparkLikeExpr) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
         if self._implementation.is_pyspark():  # pragma: no cover
-            from pyspark.errors import AnalysisException
-
             try:
                 return self._with_native(self.native.withColumns(dict(new_columns)))
-            except AnalysisException as e:
-                if str(e).startswith("[UNRESOLVED_COLUMN.WITH_SUGGESTION]"):
-                    raise ColumnNotFoundError.from_available_column_names(
-                        self.columns
-                    ) from e
-                raise
+            except Exception as e:  # noqa: BLE001
+                raise catch_pyspark_column_not_found_exception(e, self.columns) from None
+
         return self._with_native(self.native.withColumns(dict(new_columns)))
 
     def filter(self, predicate: SparkLikeExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
         condition = predicate._call(self)[0]
         if self._implementation.is_pyspark():
-            from pyspark.errors import AnalysisException
-
             try:
                 return self._with_native(self.native.where(condition))
-            except AnalysisException as e:
-                if str(e).startswith("[UNRESOLVED_COLUMN.WITH_SUGGESTION]"):
-                    raise ColumnNotFoundError.from_available_column_names(
-                        self.columns
-                    ) from e
-                raise
+            except Exception as e:  # noqa: BLE001
+                raise catch_pyspark_column_not_found_exception(e, self.columns) from None
         return self._with_native(self.native.where(condition))
 
     @property

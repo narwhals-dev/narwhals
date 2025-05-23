@@ -3,7 +3,7 @@ from __future__ import annotations
 from importlib import import_module
 from typing import TYPE_CHECKING, Any, Sequence
 
-from narwhals.exceptions import UnsupportedDTypeError
+from narwhals.exceptions import ColumnNotFoundError, UnsupportedDTypeError
 from narwhals.utils import Implementation, isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -250,3 +250,18 @@ def import_window(implementation: Implementation, /) -> type[Any]:
     return import_module(
         f"sqlframe.{_BaseSession().execution_dialect_name}.window"
     ).Window
+
+
+def catch_pyspark_column_not_found_exception(
+    exception: Exception, available_columns: Sequence[str]
+) -> ColumnNotFoundError | Exception:
+    from pyspark.errors import AnalysisException
+
+    if isinstance(exception, AnalysisException) and str(exception).startswith(
+        "[UNRESOLVED_COLUMN.WITH_SUGGESTION]"
+    ):
+        return ColumnNotFoundError.from_available_column_names(
+            available_columns=available_columns
+        )
+    # Just return exception as-is.
+    return exception
