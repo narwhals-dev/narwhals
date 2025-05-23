@@ -31,7 +31,9 @@ class Selector(Immutable):
         return RootSelector(selector=self)
 
 
-class All(Selector): ...
+class All(Selector):
+    def __repr__(self) -> str:
+        return "ncs.all()"
 
 
 class ByDType(Selector):
@@ -45,11 +47,21 @@ class ByDType(Selector):
     ) -> ByDType:
         return ByDType(dtypes=frozenset(_flatten_hash_safe(dtypes)))
 
+    def __repr__(self) -> str:
+        els = ", ".join(
+            tp.__name__ if isinstance(tp, type) else repr(tp) for tp in self.dtypes
+        )
+        return f"ncs.by_dtype(dtypes=[{els}])"
 
-class Boolean(Selector): ...
+
+class Boolean(Selector):
+    def __repr__(self) -> str:
+        return "ncs.boolean()"
 
 
-class Categorical(Selector): ...
+class Categorical(Selector):
+    def __repr__(self) -> str:
+        return "ncs.categorical()"
 
 
 class Datetime(Selector):
@@ -74,6 +86,9 @@ class Datetime(Selector):
         units, zones = _parse_time_unit_and_time_zone(time_unit, time_zone)
         return Datetime(time_units=frozenset(units), time_zones=frozenset(zones))
 
+    def __repr__(self) -> str:
+        return f"ncs.datetime(time_unit={list(self.time_units)}, time_zone={list(self.time_zones)})"
+
 
 class Matches(Selector):
     __slots__ = ("pattern",)
@@ -84,11 +99,18 @@ class Matches(Selector):
     def from_string(pattern: str, /) -> Matches:
         return Matches(pattern=re.compile(pattern))
 
+    def __repr__(self) -> str:
+        return f"ncs.matches(pattern={self.pattern.pattern!r})"
 
-class Numeric(Selector): ...
+
+class Numeric(Selector):
+    def __repr__(self) -> str:
+        return "ncs.numeric()"
 
 
-class String(Selector): ...
+class String(Selector):
+    def __repr__(self) -> str:
+        return "ncs.string()"
 
 
 def all() -> DummySelector:

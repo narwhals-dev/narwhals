@@ -461,7 +461,20 @@ class DummyExpr:
 
 
 class DummySelector(DummyExpr):
+    """Selectors placeholder.
+
+    Examples:
+        >>> from narwhals._plan import selectors as ncs
+        >>>
+        >>> (ncs.matches("[^z]a") & ncs.string()) | ncs.datetime("us", None)
+        Narwhals DummySelector (main):
+        [([(ncs.matches(pattern='[^z]a')) & (ncs.string())]) | (ncs.datetime(time_unit=['us'], time_zone=[None]))]
+    """
+
     _ir: expr.SelectorIR
+
+    def __repr__(self) -> str:
+        return f"Narwhals DummySelector ({self.version.name.lower()}):\n{self._ir!r}"
 
     @classmethod
     def _from_ir(cls, ir: expr.SelectorIR, /) -> Self:  # type: ignore[override]

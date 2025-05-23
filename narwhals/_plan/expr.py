@@ -141,14 +141,14 @@ class _BinaryOp(ExprIR, t.Generic[LeftT, OperatorT, RightT]):
     def is_scalar(self) -> bool:
         return self.left.is_scalar and self.right.is_scalar
 
+    def __repr__(self) -> str:
+        return f"[({self.left!r}) {self.op!r} ({self.right!r})]"
+
 
 class BinaryExpr(
     _BinaryOp[LeftT, OperatorT, RightT], t.Generic[LeftT, OperatorT, RightT]
 ):
     """Application of two exprs via an `Operator`."""
-
-    def __repr__(self) -> str:
-        return f"[({self.left!r}) {self.op!r} ({self.right!r})]"
 
     def iter_left(self) -> t.Iterator[ExprIR]:
         yield from self.left.iter_left()
@@ -446,7 +446,6 @@ class All(ExprIR):
         return "*"
 
 
-# TODO @dangotbanned: reprs
 class RootSelector(SelectorIR):
     """A single selector expression."""
 
@@ -455,8 +454,10 @@ class RootSelector(SelectorIR):
     selector: Selector
     """by_dtype, matches, numeric, boolean, string, categorical, datetime, all."""
 
+    def __repr__(self) -> str:
+        return f"{self.selector!r}"
 
-# TODO @dangotbanned: reprs
+
 class BinarySelector(
     _BinaryOp[LeftSelectorT, SelectorOperatorT, RightSelectorT],
     SelectorIR,
