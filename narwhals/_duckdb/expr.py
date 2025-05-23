@@ -51,6 +51,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version, _FullContext
 
     DuckDBWindowInputs: TypeAlias = WindowInputs[Expression]
+    DuckDBUnorderableWindowInputs: TypeAlias = UnorderableWindowInputs[Expression]
     DuckDBWindowFunction: TypeAlias = WindowFunction[Expression]
     DuckDBUnorderableWindowFunction: TypeAlias = UnorderableWindowFunction[Expression]
 
@@ -779,9 +780,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         def _unpartitioned_rank(expr: Expression) -> Expression:
             return _rank(expr, descending=descending)
 
-        def _partitioned_rank(
-            window_inputs: UnorderableWindowInputs[Expression],
-        ) -> Expression:
+        def _partitioned_rank(window_inputs: DuckDBUnorderableWindowInputs) -> Expression:
             return _rank(
                 window_inputs.expr,
                 descending=descending,
