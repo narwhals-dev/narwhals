@@ -13,23 +13,23 @@ from __future__ import annotations
 import typing as t
 
 from narwhals._plan.aggregation import Agg, OrderableAgg
-from narwhals._plan.common import ExprIR
+from narwhals._plan.common import ExprIR, SelectorIR
 from narwhals._plan.name import KeepName, RenameAlias
 from narwhals._plan.typing import (
     FunctionT,
+    LeftSelectorT,
     LeftT,
     OperatorT,
+    RightSelectorT,
     RightT,
     RollingT,
     SelectorOperatorT,
 )
-from narwhals.utils import Version
 
 if t.TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan.common import Seq
-    from narwhals._plan.dummy import DummySelector
     from narwhals._plan.functions import MapBatches  # noqa: F401
     from narwhals._plan.literal import LiteralValue
     from narwhals._plan.options import FunctionOptions, SortMultipleOptions, SortOptions
@@ -58,6 +58,7 @@ __all__ = [
     "OrderableAgg",
     "RenameAlias",
     "RollingExpr",
+    "RootSelector",
     "SelectorIR",
     "Sort",
     "SortBy",
@@ -129,16 +130,7 @@ class Literal(ExprIR):
         return f"lit({self.value!r})"
 
 
-class BinaryExpr(ExprIR, t.Generic[LeftT, OperatorT, RightT]):
-    """Application of two exprs via an `Operator`.
-
-    This ✅
-    - https://github.com/pola-rs/polars/blob/6df23a09a81c640c21788607611e09d9f43b1abc/crates/polars-plan/src/plans/aexpr/mod.rs#L152-L155
-
-    Not this ❌
-    - https://github.com/pola-rs/polars/blob/da27decd9a1adabe0498b786585287eb730d1d91/crates/polars-plan/src/dsl/function_expr/mod.rs#L127
-    """
-
+class _BinaryOp(ExprIR, t.Generic[LeftT, OperatorT, RightT]):
     __slots__ = ("left", "op", "right")
 
     left: LeftT
@@ -148,6 +140,12 @@ class BinaryExpr(ExprIR, t.Generic[LeftT, OperatorT, RightT]):
     @property
     def is_scalar(self) -> bool:
         return self.left.is_scalar and self.right.is_scalar
+
+
+class BinaryExpr(
+    _BinaryOp[LeftT, OperatorT, RightT], t.Generic[LeftT, OperatorT, RightT]
+):
+    """Application of two exprs via an `Operator`."""
 
     def __repr__(self) -> str:
         return f"[({self.left!r}) {self.op!r} ({self.right!r})]"
@@ -448,31 +446,27 @@ class All(ExprIR):
         return "*"
 
 
-class SelectorIR(ExprIR):
-    """Not sure on this separation.
-
-    - Need a cleaner way of including `BinarySelector`.
-    - Like that there's easy access to operands
-    - Dislike that it inherits node iteration, since upstream doesn't use it for selectors
-    """
+# TODO @dangotbanned: reprs
+class RootSelector(SelectorIR):
+    """A single selector expression."""
 
     __slots__ = ("selector",)
 
     selector: Selector
     """by_dtype, matches, numeric, boolean, string, categorical, datetime, all."""
 
-    def to_narwhals(self, version: Version = Version.MAIN) -> DummySelector:
-        from narwhals._plan import dummy
 
-        if version is Version.MAIN:
-            return dummy.DummySelector._from_ir(self)
-        return dummy.DummySelectorV1._from_ir(self)
-
-
+# TODO @dangotbanned: reprs
 class BinarySelector(
-    BinaryExpr["SelectorIR", SelectorOperatorT, "SelectorIR"],
-    t.Generic[SelectorOperatorT],
-): ...
+    _BinaryOp[LeftSelectorT, SelectorOperatorT, RightSelectorT],
+    SelectorIR,
+    t.Generic[LeftSelectorT, SelectorOperatorT, RightSelectorT],
+):
+    """Application of two selector exprs via a set operator.
+
+    Note:
+        `left` and `right` may also nest other `BinarySelector`s.
+    """
 
 
 class Ternary(ExprIR):

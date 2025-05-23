@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from typing import Iterator, TypeVar
 
     from narwhals._plan.dummy import DummySelector
-    from narwhals._plan.expr import SelectorIR
+    from narwhals._plan.expr import RootSelector
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
 
@@ -25,10 +25,10 @@ if TYPE_CHECKING:
 
 
 class Selector(Immutable):
-    def to_selector(self) -> SelectorIR:
-        from narwhals._plan.expr import SelectorIR
+    def to_selector(self) -> RootSelector:
+        from narwhals._plan.expr import RootSelector
 
-        return SelectorIR(selector=self)
+        return RootSelector(selector=self)
 
 
 class All(Selector): ...

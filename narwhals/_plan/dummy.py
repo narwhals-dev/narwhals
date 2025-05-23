@@ -472,30 +472,28 @@ class DummySelector(DummyExpr):
     def _to_expr(self) -> DummyExpr:
         return self._ir.to_narwhals(self.version)
 
-    # TODO @dangotbanned: Make a decision on selector root, binary op
-    # Current typing warnings are accurate, this isn't valid yet
     def __or__(self, other: t.Any) -> Self | t.Any:
         if isinstance(other, type(self)):
             op = ops.Or()
-            return self._from_ir(op.to_binary_selector(self._ir, other._ir))  # type: ignore[arg-type]
+            return self._from_ir(op.to_binary_selector(self._ir, other._ir))
         return self._to_expr() | other
 
     def __and__(self, other: t.Any) -> Self | t.Any:
         if isinstance(other, type(self)):
             op = ops.And()
-            return self._from_ir(op.to_binary_selector(self._ir, other._ir))  # type: ignore[arg-type]
+            return self._from_ir(op.to_binary_selector(self._ir, other._ir))
         return self._to_expr() & other
 
     def __sub__(self, other: t.Any) -> Self | t.Any:
         if isinstance(other, type(self)):
             op = ops.Sub()
-            return self._from_ir(op.to_binary_selector(self._ir, other._ir))  # type: ignore[arg-type]
+            return self._from_ir(op.to_binary_selector(self._ir, other._ir))
         return self._to_expr() - other
 
     def __xor__(self, other: t.Any) -> Self | t.Any:
         if isinstance(other, type(self)):
             op = ops.ExclusiveOr()
-            return self._from_ir(op.to_binary_selector(self._ir, other._ir))  # type: ignore[arg-type]
+            return self._from_ir(op.to_binary_selector(self._ir, other._ir))
         return self._to_expr() ^ other
 
     def __invert__(self) -> Never:

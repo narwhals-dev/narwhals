@@ -11,7 +11,12 @@ if TYPE_CHECKING:
 
     from typing_extensions import Never, Self, TypeAlias, TypeIs, dataclass_transform
 
-    from narwhals._plan.dummy import DummyCompliantExpr, DummyExpr, DummySeries
+    from narwhals._plan.dummy import (
+        DummyCompliantExpr,
+        DummyExpr,
+        DummySelector,
+        DummySeries,
+    )
     from narwhals._plan.expr import FunctionExpr
     from narwhals._plan.options import FunctionOptions
     from narwhals.typing import NonNestedLiteral
@@ -198,6 +203,15 @@ class ExprIR(Immutable):
             [col('a').alias('b').min().alias('c').over([col('e'), col('f')]), col('f'), col('e'), col('a').alias('b').min().alias('c'), col('a').alias('b').min(), col('a').alias('b'), col('a')]
         """
         yield self
+
+
+class SelectorIR(ExprIR):
+    def to_narwhals(self, version: Version = Version.MAIN) -> DummySelector:
+        from narwhals._plan import dummy
+
+        if version is Version.MAIN:
+            return dummy.DummySelector._from_ir(self)
+        return dummy.DummySelectorV1._from_ir(self)
 
 
 class ExprIRNamespace(Immutable):

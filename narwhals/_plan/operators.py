@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._plan.expr import BinarySelector
+
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._plan.expr import BinaryExpr, BinarySelector, SelectorIR
-    from narwhals._plan.typing import LeftT, RightT
+    from narwhals._plan.expr import BinaryExpr, BinarySelector
+    from narwhals._plan.typing import LeftSelectorT, LeftT, RightSelectorT, RightT
 
 from narwhals._plan.common import Immutable
 
@@ -52,8 +54,8 @@ class SelectorOperator(Operator):
     """
 
     def to_binary_selector(
-        self, left: SelectorIR, right: SelectorIR, /
-    ) -> BinarySelector[Self]:
+        self, left: LeftSelectorT, right: RightSelectorT, /
+    ) -> BinarySelector[LeftSelectorT, Self, RightSelectorT]:
         from narwhals._plan.expr import BinarySelector
 
         return BinarySelector(left=left, op=self, right=right)
