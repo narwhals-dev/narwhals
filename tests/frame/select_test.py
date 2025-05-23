@@ -123,7 +123,7 @@ def test_missing_columns_lazy(
 
     if constructor_id == "polars[lazy]":
         msg = r"^e"
-    elif constructor_id == "pyspark[connect]":
+    elif constructor_id == "pyspark[connect]":  # pragma: no cover
         msg = r"^\[UNRESOLVED_COLUMN.WITH_SUGGESTION\]"
     elif any(id_ == constructor_id for id_ in ("duckdb", "pyspark")):
         msg = r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
