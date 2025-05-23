@@ -19,7 +19,7 @@ repos:
   hooks:
     - id: codespell
       files: \.(py|rst|md)$
-      args: [--ignore-words-list=ser,firstt]
+      args: [--ignore-words-list=ser,RightT]
       exclude: ^docs/api-completeness.md$
 -   repo: https://github.com/pycqa/flake8
     rev: '7.2.0'  # todo: remove once https://github.com/astral-sh/ruff/issues/458 is addressed
