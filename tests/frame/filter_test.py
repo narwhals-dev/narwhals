@@ -71,7 +71,7 @@ def test_filter_missing_column(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     constructor_id = str(request.node.callspec.id)
-    if any(id_ == constructor_id for id_ in ("sqlframe", "pyspark[connect]")):
+    if any(id_ == constructor_id for id_ in ("sqlframe", "pyspark[connect]", "ibis")):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2], "b": [3, 4]}
     df = nw.from_native(constructor(data))
