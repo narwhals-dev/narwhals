@@ -131,18 +131,21 @@ class SparkLikeNamespace(
     def mean_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             cols = [c for _expr in exprs for c in _expr(df)]
+            F = exprs[0]._F  # noqa: N806
+            # PySpark before 3.5 doesn't have `try_divide`, SQLFrame doesn't have it.
+            divide = getattr(F, "try_divide", operator.truediv)
             return [
-                (
+                divide(
                     reduce(
                         operator.add, (df._F.coalesce(col, df._F.lit(0)) for col in cols)
-                    )
-                    / reduce(
+                    ),
+                    reduce(
                         operator.add,
                         (
                             col.isNotNull().cast(df._native_dtypes.IntegerType())
                             for col in cols
                         ),
-                    )
+                    ),
                 )
             ]
 
