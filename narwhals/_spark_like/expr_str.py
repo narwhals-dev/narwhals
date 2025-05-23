@@ -113,6 +113,12 @@ class SparkLikeExprStringNamespace:
             lambda expr: function(F.replace(expr, F.lit("T"), F.lit(" ")))
         )
 
+    def zfill(self, width: int) -> SparkLikeExpr:
+        def func(expr: Column) -> Column:
+            return self._compliant_expr._F.lpad(expr, width, "0")
+
+        return self._compliant_expr._with_callable(func)
+
 
 def strptime_to_pyspark_format(format: str) -> str:
     """Converts a Python strptime datetime format string to a PySpark datetime format string."""
