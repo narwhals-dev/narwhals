@@ -256,7 +256,10 @@ def import_window(implementation: Implementation, /) -> type[Any]:
 def catch_pyspark_exception(
     exception: Exception, frame: CompliantLazyFrame, /
 ) -> ColumnNotFoundError | Exception:  # pragma: no cover
-    from pyspark.errors import AnalysisException
+    if frame._implementation is Implementation.PYSPARK_CONNECT:
+        from pyspark.errors.exceptions.connect import AnalysisException
+    else:
+        from pyspark.errors import AnalysisException
 
     if isinstance(exception, AnalysisException) and str(exception).startswith(
         "[UNRESOLVED_COLUMN.WITH_SUGGESTION]"
