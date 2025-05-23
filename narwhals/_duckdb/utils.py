@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from duckdb import Expression
     from duckdb.typing import DuckDBPyType
 
-    from narwhals._compliant.dataframe import CompliantLazyFrame
+    from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals.dtypes import DType
@@ -275,7 +275,7 @@ def ensure_type(obj: Any, *valid_types: type[Any]) -> None:
 
 
 def catch_duckdb_exception(
-    exception: Exception, frame: CompliantLazyFrame, /
+    exception: Exception, frame: CompliantLazyFrameAny, /
 ) -> ColumnNotFoundError | Exception:
     if isinstance(exception, duckdb.BinderException) and any(
         msg in str(exception)
