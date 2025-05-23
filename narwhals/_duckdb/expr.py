@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import operator
-from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, cast
 
 from duckdb import CoalesceOperator, FunctionExpression, StarExpression
 from duckdb.typing import DuckDBPyType
@@ -50,10 +50,10 @@ if TYPE_CHECKING:
     )
     from narwhals.utils import Version, _FullContext
 
-    DuckDBWindowInputs: TypeAlias = WindowInputs[Expression]
-    DuckDBUnorderableWindowInputs: TypeAlias = UnorderableWindowInputs[Expression]
-    DuckDBWindowFunction: TypeAlias = WindowFunction[Expression]
-    DuckDBUnorderableWindowFunction: TypeAlias = UnorderableWindowFunction[Expression]
+    DuckDBWindowInputs = WindowInputs[Expression]
+    DuckDBUnorderableWindowInputs = UnorderableWindowInputs[Expression]
+    DuckDBWindowFunction = WindowFunction[Expression]
+    DuckDBUnorderableWindowFunction = UnorderableWindowFunction[Expression]
 
 
 with contextlib.suppress(ImportError):  # requires duckdb>=1.3.0
