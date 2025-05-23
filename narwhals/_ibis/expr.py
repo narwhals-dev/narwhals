@@ -7,7 +7,6 @@ import ibis
 from ibis import _ as col
 
 from narwhals._compliant import LazyExpr
-from narwhals._expression_parsing import ExprKind
 from narwhals._ibis.expr_dt import IbisExprDateTimeNamespace
 from narwhals._ibis.expr_list import IbisExprListNamespace
 from narwhals._ibis.expr_str import IbisExprStringNamespace
@@ -20,7 +19,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries
-    from narwhals._expression_parsing import ExprMetadata
+    from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.namespace import IbisNamespace
     from narwhals._ibis.typing import ExprT, WindowFunction
@@ -149,19 +148,8 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         return func
 
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
-        if kind is ExprKind.LITERAL:
-            return self
-
-        def func(df: IbisLazyFrame) -> Sequence[ir.Value]:
-            return [expr.over() for expr in self(df)]
-
-        return self.__class__(
-            func,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        # Ibis does its own broadcasting.
+        return self
 
     @classmethod
     def from_column_names(
