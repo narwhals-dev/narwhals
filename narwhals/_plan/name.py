@@ -2,71 +2,73 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan.common import Function
-from narwhals._plan.options import FunctionOptions
+from narwhals._plan.common import ExprIR, ExprIRNamespace, Immutable
 
 if TYPE_CHECKING:
     from narwhals._compliant.typing import AliasName
 
 
-class NameFunction(Function):
-    """`polars` version [doesn't represent as `FunctionExpr`].
+class KeepName(ExprIR):
+    """Keep the original root name."""
 
-    Also [doesn't support serialization].
+    __slots__ = ("expr",)
 
-    [doesn't represent as `FunctionExpr`]: https://github.com/pola-rs/polars/blob/6df23a09a81c640c21788607611e09d9f43b1abc/crates/polars-plan/src/dsl/name.rs
-    [doesn't support serialization]: https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr_dyn_fn.rs#L145-L151
-    """
-
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.elementwise()
+    expr: ExprIR
 
     def __repr__(self) -> str:
-        tp = type(self)
-        if tp is NameFunction:
-            return tp.__name__
-        m: dict[type[NameFunction], str] = {
-            Keep: "keep",
-            Map: "map",
-            Suffix: "suffix",
-            Prefix: "prefix",
-            ToLowercase: "to_lowercase",
-            ToUppercase: "to_uppercase",
-        }
-        return f"name.{m[tp]}"
+        return f"{self.expr!r}.name.keep()"
 
 
-class Keep(NameFunction):
-    """Returns ``Expr::KeepName``."""
+class RenameAlias(ExprIR):
+    __slots__ = ("expr", "function")
 
-
-class Map(NameFunction):
-    """Returns ``Expr::RenameAlias``.
-
-    https://github.com/pola-rs/polars/blob/6df23a09a81c640c21788607611e09d9f43b1abc/crates/polars-plan/src/dsl/name.rs#L28-L38
-    """
-
-    __slots__ = ("function",)
-
+    expr: ExprIR
     function: AliasName
 
+    def __repr__(self) -> str:
+        return f".rename_alias({self.expr!r})"
 
-class Prefix(NameFunction):
-    """Each of these depend on `Map`."""
 
+class Prefix(Immutable):
     __slots__ = ("prefix",)
 
     prefix: str
 
+    def __call__(self, name: str, /) -> str:
+        return f"{self.prefix}{name}"
 
-class Suffix(NameFunction):
+
+class Suffix(Immutable):
     __slots__ = ("suffix",)
 
     suffix: str
 
+    def __call__(self, name: str, /) -> str:
+        return f"{name}{self.suffix}"
 
-class ToLowercase(NameFunction): ...
 
+class ExprIRNameNamespace(ExprIRNamespace):
+    """Specialized expressions for modifying the name of existing expressions."""
 
-class ToUppercase(NameFunction): ...
+    def keep(self) -> KeepName:
+        return KeepName(expr=self._ir)
+
+    def map(self, function: AliasName) -> RenameAlias:
+        """Define an alias by mapping a function over the original root column name."""
+        return RenameAlias(expr=self._ir, function=function)
+
+    def prefix(self, prefix: str) -> RenameAlias:
+        """Add a prefix to the root column name."""
+        return self.map(Prefix(prefix=prefix))
+
+    def suffix(self, suffix: str) -> RenameAlias:
+        """Add a suffix to the root column name."""
+        return self.map(Suffix(suffix=suffix))
+
+    def to_lowercase(self) -> RenameAlias:
+        """Update the root column name to use lowercase characters."""
+        return self.map(str.lower)
+
+    def to_uppercase(self) -> RenameAlias:
+        """Update the root column name to use uppercase characters."""
+        return self.map(str.upper)

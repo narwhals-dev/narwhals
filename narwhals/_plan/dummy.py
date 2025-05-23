@@ -31,6 +31,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.common import ExprIR, IntoExpr, IntoExprColumn, Seq, Udf
     from narwhals._plan.meta import ExprIRMetaNamespace
+    from narwhals._plan.name import ExprIRNameNamespace
     from narwhals.typing import (
         FillNullStrategy,
         NativeSeries,
@@ -450,7 +451,13 @@ class DummyExpr:
     def meta(self) -> ExprIRMetaNamespace:
         from narwhals._plan.meta import ExprIRMetaNamespace
 
-        return ExprIRMetaNamespace(ir=self._ir)
+        return ExprIRMetaNamespace.from_expr(self)
+
+    @property
+    def name(self) -> ExprIRNameNamespace:
+        from narwhals._plan.name import ExprIRNameNamespace
+
+        return ExprIRNameNamespace.from_expr(self)
 
 
 class DummySelector(DummyExpr):

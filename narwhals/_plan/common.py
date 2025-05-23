@@ -201,9 +201,13 @@ class ExprIR(Immutable):
 
 
 class ExprIRNamespace(Immutable):
-    __slots__ = ("ir",)
+    __slots__ = ("_ir",)
 
-    ir: ExprIR
+    _ir: ExprIR
+
+    @classmethod
+    def from_expr(cls, expr: DummyExpr, /) -> Self:
+        return cls(_ir=expr._ir)
 
 
 class Function(Immutable):

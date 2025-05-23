@@ -12,7 +12,9 @@ from __future__ import annotations
 # - Literal
 import typing as t
 
+from narwhals._plan.aggregation import Agg, OrderableAgg
 from narwhals._plan.common import ExprIR
+from narwhals._plan.name import KeepName, RenameAlias
 from narwhals._plan.typing import (
     FunctionT,
     LeftT,
@@ -34,6 +36,34 @@ if t.TYPE_CHECKING:
     from narwhals._plan.selectors import Selector
     from narwhals._plan.window import Window
     from narwhals.dtypes import DType
+
+__all__ = [
+    "Agg",
+    "Alias",
+    "All",
+    "AnonymousExpr",
+    "BinaryExpr",
+    "BinarySelector",
+    "Cast",
+    "Column",
+    "Columns",
+    "Exclude",
+    "Filter",
+    "FunctionExpr",
+    "IndexColumns",
+    "KeepName",
+    "Len",
+    "Literal",
+    "Nth",
+    "OrderableAgg",
+    "RenameAlias",
+    "RollingExpr",
+    "SelectorIR",
+    "Sort",
+    "SortBy",
+    "Ternary",
+    "WindowExpr",
+]
 
 
 class Alias(ExprIR):
