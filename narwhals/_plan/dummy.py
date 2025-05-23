@@ -24,7 +24,7 @@ from narwhals._plan.options import (
 from narwhals._plan.window import Over
 from narwhals.dtypes import DType
 from narwhals.exceptions import ComputeError
-from narwhals.utils import Version, _hasattr_static, flatten
+from narwhals.utils import Version, _hasattr_static
 
 if TYPE_CHECKING:
     from typing_extensions import Never, Self
@@ -110,18 +110,20 @@ class DummyExpr:
 
     def over(
         self,
-        *partition_by: DummyExpr | t.Iterable[DummyExpr],
-        order_by: DummyExpr | t.Iterable[DummyExpr] | None = None,
+        *partition_by: IntoExpr | t.Iterable[IntoExpr],
+        order_by: IntoExpr | t.Iterable[IntoExpr] = None,
         descending: bool = False,
         nulls_last: bool = False,
     ) -> Self:
+        partition: Seq[ExprIR] = ()
         order: tuple[Seq[ExprIR], SortOptions] | None = None
-        partition = tuple(expr._ir for expr in flatten(partition_by))
-        if not (partition) and order_by is None:
+        if not (partition_by) and order_by is None:
             msg = "At least one of `partition_by` or `order_by` must be specified."
             raise TypeError(msg)
+        if partition_by:
+            partition = parse.parse_into_seq_of_expr_ir(*partition_by)
         if order_by is not None:
-            by = tuple(expr._ir for expr in flatten([order_by]))
+            by = parse.parse_into_seq_of_expr_ir(order_by)
             options = SortOptions(descending=descending, nulls_last=nulls_last)
             order = by, options
         return self._from_ir(Over().to_window_expr(self._ir, partition, order))
@@ -132,16 +134,12 @@ class DummyExpr:
 
     def sort_by(
         self,
-        by: DummyExpr | t.Iterable[DummyExpr],
-        *more_by: DummyExpr,
+        by: IntoExpr | t.Iterable[IntoExpr],
+        *more_by: IntoExpr,
         descending: bool | t.Iterable[bool] = False,
         nulls_last: bool | t.Iterable[bool] = False,
     ) -> Self:
-        if more_by:
-            by = (by, *more_by) if isinstance(by, DummyExpr) else (*by, *more_by)
-        else:
-            by = (by,) if isinstance(by, DummyExpr) else tuple(by)
-        sort_by = tuple(key._ir for key in by)
+        sort_by = parse.parse_into_seq_of_expr_ir(by, *more_by)
         desc = (descending,) if isinstance(descending, bool) else tuple(descending)
         nulls = (nulls_last,) if isinstance(nulls_last, bool) else tuple(nulls_last)
         options = SortMultipleOptions(descending=desc, nulls_last=nulls)
