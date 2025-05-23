@@ -118,12 +118,12 @@ def mean_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> DummyExpr:
 
 
 def concat_str(
-    exprs: DummyExpr | t.Iterable[DummyExpr],
-    *more_exprs: DummyExpr,
+    exprs: IntoExpr | t.Iterable[IntoExpr],
+    *more_exprs: IntoExpr,
     separator: str = "",
     ignore_nulls: bool = False,
 ) -> DummyExpr:
-    it = (expr._ir for expr in flatten([*flatten([exprs]), *more_exprs]))
+    it = parse.parse_into_seq_of_expr_ir(exprs, *more_exprs)
     return (
         ConcatHorizontal(separator=separator, ignore_nulls=ignore_nulls)
         .to_function_expr(*it)
