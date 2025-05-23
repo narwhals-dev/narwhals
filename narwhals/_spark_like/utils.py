@@ -255,7 +255,7 @@ def import_window(implementation: Implementation, /) -> type[Any]:
 
 def catch_pyspark_exception(
     exception: Exception, frame: CompliantLazyFrame, /
-) -> ColumnNotFoundError | Exception:
+) -> ColumnNotFoundError | Exception:  # pragma: no cover
     from pyspark.errors import AnalysisException
 
     if isinstance(exception, AnalysisException) and str(exception).startswith(
