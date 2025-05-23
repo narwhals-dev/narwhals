@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import asdict
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Sequence
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 
 
 # https://github.com/narwhals-dev/narwhals/issues/1486

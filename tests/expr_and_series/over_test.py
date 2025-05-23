@@ -1,20 +1,21 @@
 from __future__ import annotations
 
-import re
 from contextlib import nullcontext as does_not_raise
 
 import pandas as pd
 import pyarrow as pa
 import pytest
 
-import narwhals.stable.v1 as nw
-from narwhals.exceptions import LengthChangingExprError
-from tests.utils import DUCKDB_VERSION
-from tests.utils import PANDAS_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+import narwhals as nw
+from narwhals.exceptions import InvalidOperationError
+from tests.utils import (
+    DUCKDB_VERSION,
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 data = {
     "a": ["a", "a", "b", "b", "b"],
@@ -299,7 +300,7 @@ def test_over_anonymous_reduction(
 def test_over_unsupported() -> None:
     dfpd = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     with pytest.raises(NotImplementedError):
-        nw.from_native(dfpd).select(nw.col("a").round().over("a"))
+        nw.from_native(dfpd).select(nw.col("a").null_count().over("a"))
 
 
 def test_over_unsupported_dask() -> None:
@@ -308,7 +309,7 @@ def test_over_unsupported_dask() -> None:
 
     df = dd.from_pandas(pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]}))
     with pytest.raises(NotImplementedError):
-        nw.from_native(df).select(nw.col("a").round().over("a"))
+        nw.from_native(df).select(nw.col("a").null_count().over("a"))
 
 
 def test_over_shift(
@@ -377,12 +378,7 @@ def test_over_cum_reverse(
     if "cudf" in str(constructor_eager):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
-    df = constructor_eager(
-        {
-            "a": [1, 1, 2, 2, 2],
-            "b": [4, 5, 7, None, 9],
-        }
-    )
+    df = constructor_eager({"a": [1, 1, 2, 2, 2], "b": [4, 5, 7, None, 9]})
     expr = getattr(nw.col("b"), attr)(reverse=True)
     result = nw.from_native(df).with_columns(expr.over("a"))
     expected = {"a": [1, 1, 2, 2, 2], "b": expected_b}
@@ -392,10 +388,7 @@ def test_over_cum_reverse(
 def test_over_raise_len_change(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
 
-    with pytest.raises(
-        LengthChangingExprError,
-        match=re.escape("`.over()` can not be used for expressions which change length."),
-    ):
+    with pytest.raises(InvalidOperationError):
         nw.from_native(df).select(nw.col("b").drop_nulls().over("a"))
 
 
@@ -427,4 +420,19 @@ def test_over_without_partition_by(
         .select("a", "b", "i")
     )
     expected = {"a": [1, 2, -1], "b": [1, 3, 4], "i": [0, 1, 2]}
+    assert_equal_data(result, expected)
+
+
+def test_len_over_2369(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 5):
+        pytest.skip()
+    if any(x in str(constructor) for x in ("modin", "cudf")):
+        # https://github.com/modin-project/modin/issues/7508
+        # https://github.com/rapidsai/cudf/issues/18491
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor({"a": [1, 2, 4], "b": ["x", "x", "y"]}))
+    result = df.with_columns(a_len_per_group=nw.len().over("b")).sort("a")
+    expected = {"a": [1, 2, 4], "b": ["x", "x", "y"], "a_len_per_group": [2, 2, 1]}
     assert_equal_data(result, expected)

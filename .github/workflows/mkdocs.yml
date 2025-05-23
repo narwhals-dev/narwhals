@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: 3.x
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
       - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
       - uses: actions/cache@v4
         with:
@@ -29,6 +29,6 @@ jobs:
           restore-keys: |
             mkdocs-material-
       - name: Install dependencies
-        run: uv pip install -e ".[dask,duckdb,sqlframe]" --group docs --system
+        run: uv pip install -e . --group docs --system
       - name: Deploy docs
         run: mkdocs gh-deploy --force

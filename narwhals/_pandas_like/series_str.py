@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from narwhals._compliant.any_namespace import StringNamespace
-from narwhals._pandas_like.utils import PandasLikeSeriesNamespace
-from narwhals._pandas_like.utils import is_pyarrow_dtype_backend
+from narwhals._pandas_like.utils import (
+    PandasLikeSeriesNamespace,
+    is_pyarrow_dtype_backend,
+)
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries

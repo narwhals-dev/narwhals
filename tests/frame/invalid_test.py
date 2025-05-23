@@ -1,16 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
 import pandas as pd
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import MultiOutputExpressionError
-from tests.utils import NUMPY_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
+from tests.utils import NUMPY_VERSION, POLARS_VERSION, Constructor
 
 if TYPE_CHECKING:
     from narwhals.typing import Frame
@@ -83,7 +80,7 @@ def test_validate_laziness() -> None:
         TypeError,
         match=("The items to concatenate should either all be eager, or all lazy"),
     ):
-        nw.concat([nw.from_native(df, eager_only=True), nw.from_native(df).lazy()])
+        nw.concat([nw.from_native(df, eager_only=True), nw.from_native(df).lazy()])  # type: ignore[type-var]
 
 
 @pytest.mark.slow

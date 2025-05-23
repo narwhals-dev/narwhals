@@ -2,10 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-import narwhals.stable.v1 as nw
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+import narwhals as nw
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [float("nan"), float("inf"), 2.0, None]}
 
@@ -13,7 +11,8 @@ data = {"a": [float("nan"), float("inf"), 2.0, None]}
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast")
 def test_is_finite_expr(constructor: Constructor) -> None:
     if any(
-        x in str(constructor) for x in ("polars", "pyarrow_table", "duckdb", "pyspark")
+        x in str(constructor)
+        for x in ("polars", "pyarrow_table", "duckdb", "pyspark", "ibis")
     ):
         expected = {"a": [False, False, True, None]}
     elif any(
@@ -21,6 +20,7 @@ def test_is_finite_expr(constructor: Constructor) -> None:
     ):
         expected = {"a": [False, False, True, False]}
     else:  # pandas_nullable_constructor, pandas_pyarrow_constructor, modin_pyarrrow_constructor
+        # Here, the 'nan' and None get mangled upon dataframe construction.
         expected = {"a": [None, False, True, None]}
 
     df = nw.from_native(constructor(data))

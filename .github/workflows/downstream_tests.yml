@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
@@ -38,8 +38,6 @@ jobs:
         run: |
           cd altair
           uv pip install -e ".[dev, all]" --system
-          # temporary pin to get ci green
-          uv pip install "numpy<2.2" --system
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals --system
@@ -69,7 +67,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
@@ -132,7 +130,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
@@ -169,7 +167,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
@@ -186,9 +184,7 @@ jobs:
           UV_SYSTEM_PYTHON: 1
         run: |
           cd py-shiny
-          # temporary pin to get ci green
           make narwhals-install-shiny
-          uv pip install "pyflakes<3.3.0" "flake8<7.2.0" --system
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals --system
@@ -211,77 +207,82 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
       - name: clone-tea-tasting
         run: |
           git clone https://github.com/e10v/tea-tasting.git --depth=1
           cd tea-tasting
           git log
-      - name: install-pdm
-        uses: pdm-project/setup-pdm@v4
+      - name: install-uv
+        uses: astral-sh/setup-uv@v6
         with:
+          enable-cache: true
+          cache-suffix: ${{ matrix.python-version }}
+          cache-dependency-glob: "pyproject.toml"
           python-version: ${{ matrix.python-version }}
-          cache: true
-          cache-dependency-path: tea-tasting/pdm.lock
       - name: install-tea-tasting-test
         run: |
           cd tea-tasting
-          pdm sync -G test
+          uv sync --group test
       - name: install-narwhals-dev
         run: |
           cd tea-tasting
-          pdm remove narwhals
-          pdm add ./..
+          uv pip uninstall narwhals
+          uv pip install -e ./..
       - name: show-deps
         run: |
           cd tea-tasting
-          pdm list
+          uv pip freeze
       - name: run-pytest
         run: |
           cd tea-tasting
           # empty pytest.ini to avoid pytest using narwhals configs
           touch pytest.ini
-          pdm run test
+          uv run --no-sync pytest tests
 
-  # temporarily commented out until they address the `new_series` deprecation
-  # tubular:
-  #   strategy:
-  #     matrix:
-  #       python-version: ["3.12"]
-  #       os: [ubuntu-latest]
+  tubular:
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+        os: [ubuntu-latest]
 
-  #   runs-on: ${{ matrix.os }}
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-python@v5
-  #       with:
-  #         python-version: ${{ matrix.python-version }}
-  #     - name: Install uv
-  #       uses: astral-sh/setup-uv@v5
-  #       with:
-  #         enable-cache: "true"
-  #         cache-suffix: ${{ matrix.python-version }}
-  #         cache-dependency-glob: "pyproject.toml"
-  #     - name: clone-tubular
-  #       run: |
-  #         git clone https://github.com/lvgig/tubular --depth=1
-  #         cd tubular
-  #         git log
-  #     - name: install-basics
-  #       run: uv pip install --upgrade tox virtualenv setuptools pytest-env --system
-  #     - name: install-tubular-dev
-  #       run: |
-  #         cd tubular
-  #         uv pip install -e ".[dev]" --system
-  #     - name: install-narwhals-dev
-  #       run: |
-  #         uv pip uninstall narwhals --system
-  #         uv pip install -e . --system
-  #     - name: show-deps
-  #       run: uv pip freeze
-  #     - name: Run pytest
-  #       run: |
-  #         cd tubular
-  #         pytest tests --config-file=pyproject.toml
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: "true"
+          cache-suffix: ${{ matrix.python-version }}
+          cache-dependency-glob: "pyproject.toml"
+      - name: clone-tubular
+        run: |
+          git clone https://github.com/lvgig/tubular --depth=1
+          cd tubular
+          git log
+      - name: install-basics
+        run: uv pip install --upgrade tox virtualenv setuptools pytest-env --system
+      - name: install-tubular-dev
+        run: |
+          cd tubular
+          uv pip install -e ".[dev]" --system
+      - name: install-narwhals-dev
+        run: |
+          uv pip uninstall narwhals --system
+          uv pip install -e . --system
+          # temporary pin to get CI green
+          uv pip install "polars<1.30" --system
+      - name: show-deps
+        run: uv pip freeze
+      - name: Run pytest
+        run: |
+          cd tubular
+          pytest tests --config-file=pyproject.toml
 
   plotly:
     strategy:
@@ -296,7 +297,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
@@ -337,7 +338,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
@@ -352,8 +353,6 @@ jobs:
       - name: install-deps
         run: |
           cd hierarchicalforecast
-          # temporary pin to get ci green
-          uv pip install "IPython<9" --system
           uv pip install --system ".[dev]"
       - name: install-narwhals-dev
         run: |
@@ -379,7 +378,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
@@ -421,7 +420,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
@@ -436,8 +435,8 @@ jobs:
       - name: install-deps
         run: |
           cd pointblank
-          uv pip install --system ".[dev]"
-          uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny --system    
+          uv pip install . --group dev --system
+          uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny --system
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals --system
@@ -461,7 +460,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
@@ -489,10 +488,11 @@ jobs:
         run: |
           cd validoopsie
           # empty pytest.ini to avoid pytest using narwhals configs
-          touch pytest.ini       
+          touch pytest.ini
           touch tests/__init__.py
           touch tests/utils/__init__.py
-          uv run pytest tests
+          # Keep `--no-sync` in case Narwhals is re-synced with PyPI version
+          uv run --no-sync pytest tests
         timeout-minutes: 15
   
   darts:
@@ -507,7 +507,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}

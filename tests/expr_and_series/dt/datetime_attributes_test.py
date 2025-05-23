@@ -1,20 +1,14 @@
 from __future__ import annotations
 
-from datetime import date
-from datetime import datetime
+from datetime import date, datetime
 
 import pytest
 
-import narwhals.stable.v1 as nw
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+import narwhals as nw
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {
-    "a": [
-        datetime(2021, 3, 1, 12, 34, 56, 49000),
-        datetime(2020, 1, 2, 2, 4, 14, 715000),
-    ],
+    "a": [datetime(2021, 3, 1, 12, 34, 56, 49000), datetime(2020, 1, 2, 2, 4, 14, 715000)]
 }
 
 
@@ -48,6 +42,8 @@ def test_datetime_attributes(
     ):
         request.applymarker(pytest.mark.xfail)
     if attribute == "date" and "cudf" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    if attribute == "nanosecond" and "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))

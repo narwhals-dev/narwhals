@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import MultiOutputExpressionError
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+from tests.utils import Constructor, assert_equal_data
 
 
 def test_double_selected(constructor: Constructor) -> None:

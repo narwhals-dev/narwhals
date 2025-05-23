@@ -4,19 +4,15 @@ from contextlib import nullcontext as does_not_raise
 
 import pytest
 
-import narwhals.stable.v1 as nw
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+import narwhals as nw
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 
-def test_unary(constructor: Constructor) -> None:
-    data = {
-        "a": [1, 3, 2],
-        "b": [4, 4, 6],
-        "c": [7.0, 8.0, None],
-        "z": [7.0, 8.0, 9.0],
-    }
+def test_unary(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "ibis" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "c": [7.0, 8.0, None], "z": [7.0, 8.0, 9.0]}
     result = nw.from_native(constructor(data)).select(
         a_mean=nw.col("a").mean(),
         a_median=nw.col("a").median(),
@@ -43,12 +39,7 @@ def test_unary(constructor: Constructor) -> None:
 
 
 def test_unary_series(constructor_eager: ConstructorEager) -> None:
-    data = {
-        "a": [1, 3, 2],
-        "b": [4, 4, 6],
-        "c": [7.0, 8.0, None],
-        "z": [7.0, 8.0, 9.0],
-    }
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "c": [7.0, 8.0, None], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = {
         "a_mean": [df["a"].mean()],
@@ -80,7 +71,7 @@ def test_unary_series(constructor_eager: ConstructorEager) -> None:
 def test_unary_two_elements(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "sqlframe" in str(constructor):
+    if "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2], "b": [2, 10], "c": [2.0, None]}
     result = nw.from_native(constructor(data)).select(
@@ -129,6 +120,8 @@ def test_unary_one_element(
 ) -> None:
     if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
         request.applymarker(pytest.mark.xfail)
+    if "ibis" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1], "b": [2], "c": [None]}
     # Dask runs into a divide by zero RuntimeWarning for 1 element skew.
     context = (
@@ -136,6 +129,7 @@ def test_unary_one_element(
         if "dask" in str(constructor)
         else does_not_raise()
     )
+
     result = (
         nw.from_native(constructor(data))
         .with_columns(nw.col("c").cast(nw.Float64))

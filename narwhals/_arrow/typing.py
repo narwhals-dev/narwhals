@@ -1,13 +1,14 @@
 from __future__ import annotations  # pragma: no cover
 
-from typing import TYPE_CHECKING  # pragma: no cover
-from typing import Any  # pragma: no cover
-from typing import TypeVar  # pragma: no cover
+from typing import (
+    TYPE_CHECKING,  # pragma: no cover
+    Any,  # pragma: no cover
+    TypeVar,  # pragma: no cover
+)
 
 if TYPE_CHECKING:
     import sys
-    from typing import Generic
-    from typing import Literal
+    from typing import Generic, Literal
 
     if sys.version_info >= (3, 10):
         from typing import TypeAlias
@@ -15,13 +16,13 @@ if TYPE_CHECKING:
         from typing_extensions import TypeAlias
 
     import pyarrow as pa
-    from pyarrow._stubs_typing import (  # pyright: ignore[reportMissingModuleSource]
+    from pyarrow.__lib_pxi.table import (
+        AggregateOptions,  # noqa: F401
+        Aggregation,  # noqa: F401
+    )
+    from pyarrow._stubs_typing import (  # pyright: ignore[reportMissingModuleSource]  # pyright: ignore[reportMissingModuleSource]  # pyright: ignore[reportMissingModuleSource]
         Indices,  # noqa: F401
-    )
-    from pyarrow._stubs_typing import (  # pyright: ignore[reportMissingModuleSource]
         Mask,  # noqa: F401
-    )
-    from pyarrow._stubs_typing import (  # pyright: ignore[reportMissingModuleSource]
         Order,  # noqa: F401
     )
 
@@ -31,9 +32,27 @@ if TYPE_CHECKING:
     IntoArrowExpr: TypeAlias = "ArrowExpr | ArrowSeries"
     TieBreaker: TypeAlias = Literal["min", "max", "first", "dense"]
     NullPlacement: TypeAlias = Literal["at_start", "at_end"]
+    NativeIntervalUnit: TypeAlias = Literal[
+        "year",
+        "quarter",
+        "month",
+        "week",
+        "day",
+        "hour",
+        "minute",
+        "second",
+        "millisecond",
+        "microsecond",
+        "nanosecond",
+    ]
 
-    ArrowChunkedArray: TypeAlias = pa.ChunkedArray[Any]
-    ArrowArray: TypeAlias = pa.Array[Any]
+    ChunkedArrayAny: TypeAlias = pa.ChunkedArray[Any]
+    ArrayAny: TypeAlias = pa.Array[Any]
+    ArrayOrChunkedArray: TypeAlias = "ArrayAny | ChunkedArrayAny"
+    ScalarAny: TypeAlias = pa.Scalar[Any]
+    ArrayOrScalar: TypeAlias = "ArrayOrChunkedArray | ScalarAny"
+    ArrayOrScalarT1 = TypeVar("ArrayOrScalarT1", ArrayAny, ChunkedArrayAny, ScalarAny)
+    ArrayOrScalarT2 = TypeVar("ArrayOrScalarT2", ArrayAny, ChunkedArrayAny, ScalarAny)
     _AsPyType = TypeVar("_AsPyType")
 
     class _BasicDataType(pa.DataType, Generic[_AsPyType]): ...

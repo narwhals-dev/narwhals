@@ -1,22 +1,20 @@
 from __future__ import annotations
 
+import re
+
 import pytest
 
-import narwhals.stable.v1 as nw
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+import narwhals as nw
+from narwhals.exceptions import InvalidOperationError
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 
-def test_concat_horizontal(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_concat_horizontal(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df_left = nw.from_native(constructor(data)).lazy()
+    df_left = nw.from_native(constructor_eager(data), eager_only=True)
 
     data_right = {"c": [6, 12, -1], "d": [0, -4, 2]}
-    df_right = nw.from_native(constructor(data_right)).lazy()
+    df_right = nw.from_native(constructor_eager(data_right), eager_only=True)
 
     result = nw.concat([df_left, df_right], how="horizontal")
     expected = {
@@ -30,6 +28,9 @@ def test_concat_horizontal(
 
     with pytest.raises(ValueError, match="No items"):
         nw.concat([])
+    pattern = re.compile(r"horizontal.+not supported.+lazyframe", re.IGNORECASE)
+    with pytest.raises(InvalidOperationError, match=pattern):
+        nw.concat([df_left.lazy()], how="horizontal")
 
 
 def test_concat_vertical(constructor: Constructor) -> None:
@@ -63,7 +64,7 @@ def test_concat_vertical(constructor: Constructor) -> None:
 def test_concat_diagonal(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor):
+    if "duckdb" in str(constructor) or "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data_1 = {"a": [1, 3], "b": [4, 6]}
     data_2 = {"a": [100, 200], "z": ["x", "y"]}

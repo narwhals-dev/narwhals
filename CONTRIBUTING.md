@@ -2,6 +2,23 @@
 
 Thank you for your interest in contributing to Narwhals! Any kind of improvement is welcome!
 
+## **TLDR**
+
+If you've got experience with open source contributions, the following instructions might suffice:
+
+- clone repo: `git clone git@github.com:narwhals-dev/narwhals.git narwhals-dev`
+- `cd narwhals-dev/`
+- `git remote rename origin upstream`
+- `git remote add origin <your fork goes here>`
+- `uv venv -p 3.12`
+- `. .venv/bin/activate`
+- `uv pip install -U -e . --group local-dev`
+- To run tests: `pytest`
+- To run all linting checks: `pre-commit run --all-files`
+- To run static typing checks: `make typing`
+
+For more detailed and beginner-friendly instructions, see below!
+
 ## Local development vs Codespaces
 
 You can contribute to Narwhals in your local development environment, using python3, git and your editor of choice.
@@ -107,17 +124,13 @@ If you want to run PySpark-related tests, you'll need to have Java installed. Re
 
    4. Activate it. On Linux, this is `. .venv/bin/activate`, on Windows `.\.venv\Scripts\activate`.
 
-2. Install Narwhals: `uv pip install -e . --group local-dev"`. This will include fast-ish core libraries and dev dependencies.
+2. Install Narwhals: `uv pip install -e . --group local-dev`. This will include fast-ish core libraries and dev dependencies.
    If you also want to test other libraries like Dask , PySpark, and Modin, you can install them too with
    `uv pip install -e ".[dask, pyspark, modin]" --group local-dev`.
 
-You should also install pre-commit:
+The pre-commit tool is installed as part of the local-dev dependency group. This will automatically format and lint your code before each commit, and it will block the commit if any issues are found.
 
-```terminal
-pre-commit install
-```
-
-This will automatically format and lint your code before each commit, and it will block the commit if any issues are found.
+Static typing is run separately from `pre-commit`, as it's quite slow. Assuming you followed all the instructions above, you can run it with `make typing`.
 
 #### Option 2: use python3-venv
 
@@ -144,6 +157,23 @@ If you add code that should be tested, please add tests.
   - By default, tests run for pandas, pandas (PyArrow dtypes), PyArrow, and Polars.
   - To run tests using `cudf.pandas`, run `NARWHALS_DEFAULT_CONSTRUCTORS=pandas python -m cudf.pandas -m pytest`
   - To run tests using `polars[gpu]`, run `NARWHALS_POLARS_GPU=1 pytest --constructors=polars[lazy]`
+
+### Backend-specific advice
+
+- pandas:
+
+  - Don't use `apply` or `map`. The only place we currently use `apply` is in `group_by` for operations
+    which the pandas API just doesn't support, and even then, it's accompanied by a big warning.
+  - Don't use inplace methods, unless you're creating a new object and are sure it's safe to modify
+    it. In particular, you should never ever modify the user's input data.
+
+- Polars:
+
+  - Never use `map_elements`.
+
+- DuckDB / PySpark / anything lazy-only:
+
+  - Never assume that your data is ordered in any pre-defined way.
 
 ### Test Failure Patterns
 
@@ -208,13 +238,9 @@ We can't currently test in CI against cuDF, but you can test it manually in Kagg
 
 ### Static typing
 
-We run both `mypy` and `pyright` in CI. To run them locally, make sure to install
+We run both `mypy` and `pyright` in CI. Both of these tools are included when installing Narwhals with the local-dev dependency group.
 
-```terminal
-uv pip install -U -e ".[typing]"
-```
-
-You can then run
+Run them with:
 - `mypy narwhals tests`
 - `pyright narwhals tests`
 

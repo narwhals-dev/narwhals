@@ -1,27 +1,17 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import ClassVar
-from typing import Mapping
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Mapping, Sequence
 
 import dask.dataframe as dd
 
 from narwhals._compliant import DepthTrackingGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 
-try:
-    import dask.dataframe.dask_expr as dx
-except ModuleNotFoundError:  # pragma: no cover
-    import dask_expr as dx
-
 if TYPE_CHECKING:
     import pandas as pd
+    from dask.dataframe.api import GroupBy as _DaskGroupBy
     from pandas.core.groupby import SeriesGroupBy as _PandasSeriesGroupBy
-    from typing_extensions import Self
     from typing_extensions import TypeAlias
 
     from narwhals._compliant.group_by import NarwhalsAggregation
@@ -31,8 +21,11 @@ if TYPE_CHECKING:
     PandasSeriesGroupBy: TypeAlias = _PandasSeriesGroupBy[Any, Any]
     _AggFn: TypeAlias = Callable[..., Any]
 
-    from dask_expr._groupby import GroupBy as _DaskGroupBy
 else:
+    try:
+        import dask.dataframe.dask_expr as dx
+    except ModuleNotFoundError:  # pragma: no cover
+        import dask_expr as dx
     _DaskGroupBy = dx._groupby.GroupBy
 
 Aggregation: TypeAlias = "str | _AggFn"
@@ -72,30 +65,40 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
     }
 
     def __init__(
-        self: Self, df: DaskLazyFrame, keys: Sequence[str], /, *, drop_null_keys: bool
+        self,
+        df: DaskLazyFrame,
+        keys: Sequence[DaskExpr] | Sequence[str],
+        /,
+        *,
+        drop_null_keys: bool,
     ) -> None:
-        self._compliant_frame = df
-        self._keys: list[str] = list(keys)
+        self._compliant_frame, self._keys, self._output_key_names = self._parse_keys(
+            df, keys=keys
+        )
         self._grouped = self.compliant.native.groupby(
-            list(self._keys), dropna=drop_null_keys, observed=True
+            self._keys, dropna=drop_null_keys, observed=True
         )
 
-    def agg(self: Self, *exprs: DaskExpr) -> DaskLazyFrame:
+    def agg(self, *exprs: DaskExpr) -> DaskLazyFrame:
         from narwhals._dask.dataframe import DaskLazyFrame
 
         if not exprs:
             # No aggregation provided
-            return self.compliant.simple_select(*self._keys).unique(
-                self._keys, keep="any"
+            return (
+                self.compliant.simple_select(*self._keys)
+                .unique(self._keys, keep="any")
+                .rename(dict(zip(self._keys, self._output_key_names)))
             )
+
         self._ensure_all_simple(exprs)
         # This should be the fastpath, but cuDF is too far behind to use it.
         # - https://github.com/rapidsai/cudf/issues/15118
         # - https://github.com/rapidsai/cudf/issues/15084
         simple_aggregations: dict[str, tuple[str, Aggregation]] = {}
+        exclude = (*self._keys, *self._output_key_names)
         for expr in exprs:
             output_names, aliases = evaluate_output_names_and_aliases(
-                expr, self.compliant, self._keys
+                expr, self.compliant, exclude
             )
             if expr._depth == 0:
                 # e.g. `agg(nw.len())`
@@ -107,7 +110,7 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
             # e.g. `agg(nw.mean('a'))`
             agg_fn = self._remap_expr_name(self._leaf_name(expr))
             # deal with n_unique case in a "lazy" mode to not depend on dask globally
-            agg_fn = agg_fn(**expr._call_kwargs) if callable(agg_fn) else agg_fn
+            agg_fn = agg_fn(**expr._scalar_kwargs) if callable(agg_fn) else agg_fn
             simple_aggregations.update(
                 (alias, (output_name, agg_fn))
                 for alias, output_name in zip(aliases, output_names)
@@ -116,4 +119,4 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
             self._grouped.agg(**simple_aggregations).reset_index(),
             backend_version=self.compliant._backend_version,
             version=self.compliant._version,
-        )
+        ).rename(dict(zip(self._keys, self._output_key_names)))

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
-from datetime import timedelta
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -10,7 +9,7 @@ import pandas as pd
 import pyarrow as pa
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.stable.v1.dependencies import get_cudf
 from tests.utils import PANDAS_VERSION
 
@@ -29,6 +28,8 @@ from tests.utils import PANDAS_VERSION
         (b"a", b"a"),
         (datetime(2021, 1, 1), datetime(2021, 1, 1)),
         (timedelta(days=1), timedelta(days=1)),
+        (date(1980, 1, 1), date(1980, 1, 1)),
+        (time(9, 45), time(9, 45)),
         (pd.Timestamp("2020-01-01"), datetime(2020, 1, 1)),
         (pd.Timedelta(days=3), timedelta(days=3)),
         (np.datetime64("2020-01-01", "s"), datetime(2020, 1, 1)),
@@ -37,10 +38,7 @@ from tests.utils import PANDAS_VERSION
         (np.datetime64("2020-01-01", "ns"), datetime(2020, 1, 1)),
     ],
 )
-def test_to_py_scalar(
-    input_value: Any,
-    expected: Any,
-) -> None:
+def test_to_py_scalar(input_value: Any, expected: Any) -> None:
     output = nw.to_py_scalar(input_value)
     if expected == 1:
         assert not isinstance(output, np.generic)
@@ -54,10 +52,7 @@ def test_na_to_py_scalar() -> None:
     assert nw.to_py_scalar(pd.NA) is None
 
 
-@pytest.mark.parametrize(
-    "input_value",
-    [np.array([1, 2]), [1, 2, 3], {"a": [1, 2, 3]}],
-)
+@pytest.mark.parametrize("input_value", [np.array([1, 2]), [1, 2, 3], {"a": [1, 2, 3]}])
 def test_to_py_scalar_value_error(input_value: Any) -> None:
     with pytest.raises(ValueError, match="Expected object convertible to a scalar"):
         nw.to_py_scalar(input_value)

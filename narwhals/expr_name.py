@@ -1,23 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Callable
-from typing import Generic
-from typing import TypeVar
+from typing import TYPE_CHECKING, Callable, Generic, TypeVar
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals.expr import Expr
 
 ExprT = TypeVar("ExprT", bound="Expr")
 
 
 class ExprNameNamespace(Generic[ExprT]):
-    def __init__(self: Self, expr: ExprT) -> None:
+    def __init__(self, expr: ExprT) -> None:
         self._expr = expr
 
-    def keep(self: Self) -> ExprT:
+    def keep(self) -> ExprT:
         r"""Keep the original root name of the expression.
 
         Returns:
@@ -36,12 +31,11 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo").alias("alias_for_foo").name.keep()).columns
             ['foo']
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).name.keep(),
-            self._expr._metadata,
+        return self._expr._with_elementwise_op(
+            lambda plx: self._expr._to_compliant_expr(plx).name.keep()
         )
 
-    def map(self: Self, function: Callable[[str], str]) -> ExprT:
+    def map(self, function: Callable[[str], str]) -> ExprT:
         r"""Rename the output of an expression by mapping a function over the root name.
 
         Arguments:
@@ -64,12 +58,11 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.map(renaming_func)).columns
             ['oof', 'RAB']
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).name.map(function),
-            self._expr._metadata,
+        return self._expr._with_elementwise_op(
+            lambda plx: self._expr._to_compliant_expr(plx).name.map(function)
         )
 
-    def prefix(self: Self, prefix: str) -> ExprT:
+    def prefix(self, prefix: str) -> ExprT:
         r"""Add a prefix to the root column name of the expression.
 
         Arguments:
@@ -91,12 +84,11 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.prefix("with_prefix")).columns
             ['with_prefixfoo', 'with_prefixBAR']
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).name.prefix(prefix),
-            self._expr._metadata,
+        return self._expr._with_elementwise_op(
+            lambda plx: self._expr._to_compliant_expr(plx).name.prefix(prefix)
         )
 
-    def suffix(self: Self, suffix: str) -> ExprT:
+    def suffix(self, suffix: str) -> ExprT:
         r"""Add a suffix to the root column name of the expression.
 
         Arguments:
@@ -118,12 +110,11 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.suffix("_with_suffix")).columns
             ['foo_with_suffix', 'BAR_with_suffix']
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).name.suffix(suffix),
-            self._expr._metadata,
+        return self._expr._with_elementwise_op(
+            lambda plx: self._expr._to_compliant_expr(plx).name.suffix(suffix)
         )
 
-    def to_lowercase(self: Self) -> ExprT:
+    def to_lowercase(self) -> ExprT:
         r"""Make the root column name lowercase.
 
         Returns:
@@ -142,12 +133,11 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.to_lowercase()).columns
             ['foo', 'bar']
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).name.to_lowercase(),
-            self._expr._metadata,
+        return self._expr._with_elementwise_op(
+            lambda plx: self._expr._to_compliant_expr(plx).name.to_lowercase()
         )
 
-    def to_uppercase(self: Self) -> ExprT:
+    def to_uppercase(self) -> ExprT:
         r"""Make the root column name uppercase.
 
         Returns:
@@ -166,7 +156,6 @@ class ExprNameNamespace(Generic[ExprT]):
             >>> df.select(nw.col("foo", "BAR").name.to_uppercase()).columns
             ['FOO', 'BAR']
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).name.to_uppercase(),
-            self._expr._metadata,
+        return self._expr._with_elementwise_op(
+            lambda plx: self._expr._to_compliant_expr(plx).name.to_uppercase()
         )

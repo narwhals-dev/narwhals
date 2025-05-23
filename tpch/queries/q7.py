@@ -23,22 +23,22 @@ def query(
     var_2 = datetime(1996, 12, 31)
 
     df1 = (
-        customer_ds.join(n1, left_on="c_nationkey", right_on="n_nationkey")
+        customer_ds.join(n1, left_on="c_nationkey", right_on="n_nationkey")  # pyright: ignore[reportArgumentType]
         .join(orders_ds, left_on="c_custkey", right_on="o_custkey")
         .rename({"n_name": "cust_nation"})
         .join(line_item_ds, left_on="o_orderkey", right_on="l_orderkey")
         .join(supplier_ds, left_on="l_suppkey", right_on="s_suppkey")
-        .join(n2, left_on="s_nationkey", right_on="n_nationkey")
+        .join(n2, left_on="s_nationkey", right_on="n_nationkey")  # pyright: ignore[reportArgumentType]
         .rename({"n_name": "supp_nation"})
     )
 
     df2 = (
-        customer_ds.join(n2, left_on="c_nationkey", right_on="n_nationkey")
+        customer_ds.join(n2, left_on="c_nationkey", right_on="n_nationkey")  # pyright: ignore[reportArgumentType]
         .join(orders_ds, left_on="c_custkey", right_on="o_custkey")
         .rename({"n_name": "cust_nation"})
         .join(line_item_ds, left_on="o_orderkey", right_on="l_orderkey")
         .join(supplier_ds, left_on="l_suppkey", right_on="s_suppkey")
-        .join(n1, left_on="s_nationkey", right_on="n_nationkey")
+        .join(n1, left_on="s_nationkey", right_on="n_nationkey")  # pyright: ignore[reportArgumentType]
         .rename({"n_name": "supp_nation"})
     )
 

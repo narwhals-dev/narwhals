@@ -1,22 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Generic
-from typing import TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals.expr import Expr
 
 ExprT = TypeVar("ExprT", bound="Expr")
 
 
 class ExprStructNamespace(Generic[ExprT]):
-    def __init__(self: Self, expr: ExprT) -> None:
+    def __init__(self, expr: ExprT) -> None:
         self._expr = expr
 
-    def field(self: Self, name: str) -> ExprT:
+    def field(self, name: str) -> ExprT:
         r"""Retrieve a Struct field as a new expression.
 
         Arguments:
@@ -29,12 +25,7 @@ class ExprStructNamespace(Generic[ExprT]):
             >>> import polars as pl
             >>> import narwhals as nw
             >>> df_native = pl.DataFrame(
-            ...     {
-            ...         "user": [
-            ...             {"id": "0", "name": "john"},
-            ...             {"id": "1", "name": "jane"},
-            ...         ]
-            ...     }
+            ...     {"user": [{"id": "0", "name": "john"}, {"id": "1", "name": "jane"}]}
             ... )
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(name=nw.col("user").struct.field("name"))
@@ -52,7 +43,6 @@ class ExprStructNamespace(Generic[ExprT]):
             |└──────────────┴──────┘|
             └───────────────────────┘
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).struct.field(name),
-            self._expr._metadata,
+        return self._expr._with_elementwise_op(
+            lambda plx: self._expr._to_compliant_expr(plx).struct.field(name)
         )

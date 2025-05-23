@@ -4,12 +4,9 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import NarwhalsError
-from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
@@ -24,7 +21,11 @@ def test_replace_strict(
 ) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if (
+        ("pyspark" in str(constructor))
+        or "duckdb" in str(constructor)
+        or "ibis" in str(constructor)
+    ):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     result = df.select(
@@ -59,7 +60,11 @@ def test_replace_non_full(
 ) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if (
+        ("pyspark" in str(constructor))
+        or "duckdb" in str(constructor)
+        or "ibis" in str(constructor)
+    ):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     if isinstance(df, nw.LazyFrame):
@@ -80,7 +85,11 @@ def test_replace_strict_mapping(
 ) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if (
+        ("pyspark" in str(constructor))
+        or "duckdb" in str(constructor)
+        or "ibis" in str(constructor)
+    ):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor({"a": [1, 2, 3]}))

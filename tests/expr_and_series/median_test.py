@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {
     "a": [3, 8, 2, None],
@@ -43,20 +41,22 @@ def test_median_series(
 def test_median_expr_raises_on_str(
     constructor: Constructor, expr: nw.Expr, request: pytest.FixtureRequest
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if (
+        ("pyspark" in str(constructor))
+        or "duckdb" in str(constructor)
+        or "ibis" in str(constructor)
+    ):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
     if isinstance(df, nw.LazyFrame):
         with pytest.raises(
-            InvalidOperationError,
-            match="`median` operation not supported",
+            InvalidOperationError, match="`median` operation not supported"
         ):
             df.select(expr).lazy().collect()
     else:
         with pytest.raises(
-            InvalidOperationError,
-            match="`median` operation not supported",
+            InvalidOperationError, match="`median` operation not supported"
         ):
             df.select(expr)
 

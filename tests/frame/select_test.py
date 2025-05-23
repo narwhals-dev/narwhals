@@ -6,17 +6,16 @@ import pandas as pd
 import pyarrow as pa
 import pytest
 
-import narwhals.stable.v1 as nw
-from narwhals.exceptions import ColumnNotFoundError
-from narwhals.exceptions import InvalidIntoExprError
-from narwhals.exceptions import NarwhalsError
-from tests.utils import DASK_VERSION
-from tests.utils import DUCKDB_VERSION
-from tests.utils import PANDAS_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+import narwhals as nw
+from narwhals.exceptions import ColumnNotFoundError, InvalidIntoExprError, NarwhalsError
+from tests.utils import (
+    DASK_VERSION,
+    DUCKDB_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 
 class Foo: ...
@@ -54,13 +53,24 @@ def test_invalid_select(constructor: Constructor, invalid_select: Any) -> None:
         nw.from_native(constructor({"a": [1, 2, 3]})).select(invalid_select)
 
 
-def test_select_boolean_cols(request: pytest.FixtureRequest) -> None:
-    if PANDAS_VERSION < (1, 1):
-        # bug in old pandas
-        request.applymarker(pytest.mark.xfail)
+def test_select_boolean_cols() -> None:
     df = nw.from_native(pd.DataFrame({True: [1, 2], False: [3, 4]}), eager_only=True)
-    result = df.group_by(True).agg(nw.col(False).max())  # type: ignore[arg-type]# noqa: FBT003
+    result = df.group_by(True).agg(nw.col(False).max())  # type: ignore[arg-type, call-overload] # noqa: FBT003
     assert_equal_data(result.to_dict(as_series=False), {True: [1, 2]})  # type: ignore[dict-item]
+    result = df.select(nw.col([False, True]))  # type: ignore[list-item]
+    assert_equal_data(result.to_dict(as_series=False), {True: [1, 2], False: [3, 4]})  # type: ignore[dict-item]
+
+
+def test_select_boolean_cols_multi_group_by() -> None:
+    df = nw.from_native(
+        pd.DataFrame({True: [1, 2], False: [3, 4], 2: [1, 1]}), eager_only=True
+    )
+    result = df.group_by(True, 2).agg(nw.col(False).max())  # type: ignore[arg-type, call-overload] # noqa: FBT003
+    assert_equal_data(
+        result.to_dict(as_series=False),
+        {True: [1, 2], 2: [1, 1], False: [3, 4]},  # type: ignore[dict-item]
+    )
+
     result = df.select(nw.col([False, True]))  # type: ignore[list-item]
     assert_equal_data(result.to_dict(as_series=False), {True: [1, 2], False: [3, 4]})  # type: ignore[dict-item]
 
@@ -76,7 +86,11 @@ def test_comparison_with_list_error_message() -> None:
 def test_missing_columns(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if (
+        ("pyspark" in str(constructor))
+        or "duckdb" in str(constructor)
+        or "ibis" in str(constructor)
+    ):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
@@ -117,13 +131,11 @@ def test_missing_columns(
             df.select(nw.col("fdfa"))
 
 
-def test_left_to_right_broadcasting(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
+def test_left_to_right_broadcasting(constructor: Constructor) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     result = df.select(nw.col("a") + nw.col("b").sum())
     expected = {"a": [16, 16, 17]}
@@ -157,7 +169,10 @@ def test_select_duplicates(constructor: Constructor) -> None:
         # cudf already raises its own error
         pytest.skip()
     df = nw.from_native(constructor({"a": [1, 2]})).lazy()
-    with pytest.raises(ValueError, match="Expected unique|duplicate|more than one"):
+    with pytest.raises(
+        ValueError,
+        match="Expected unique|[Dd]uplicate|more than one|Duplicate column name",
+    ):
         df.select("a", nw.col("a") + 1).collect()
 
 

@@ -6,18 +6,19 @@ nav:
   - Home: index.md
   - Why: why.md
   - Installation and quick start: installation.md
-  - Tutorial:
+  - Intro tutorial:
     - basics/dataframe.md
     - basics/series.md
     - basics/complete_example.md
     - basics/dataframe_conversion.md
-    - basics/order_dependence.md
-  - Pandas-like concepts:
-    - pandas_like_concepts/pandas_index.md
-    - pandas_like_concepts/improve_group_by_operation.md
-    - pandas_like_concepts/column_names.md
-    - pandas_like_concepts/boolean.md
-    - pandas_like_concepts/null_handling.md
+  - Narwhals and SQL: generating_sql.md
+  - Concepts:
+    - concepts/order_dependence.md
+    - concepts/pandas_index.md
+    - concepts/improve_group_by_operation.md
+    - concepts/column_names.md
+    - concepts/boolean.md
+    - concepts/null_handling.md
   - Overhead: overhead.md
   - Perfect backwards compatibility policy: backcompat.md
   - Supported libraries and extending Narwhals: extending.md
@@ -107,7 +108,7 @@ plugins:
 - search: 
     # See https://squidfunk.github.io/mkdocs-material/plugins/search/#configuration
     enabled: true
-    separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])|\.(?!\d)|&[lg]t;'
+    separator: '\.'
 - mkdocstrings:
     handlers:
       python:
@@ -116,6 +117,7 @@ plugins:
         options:
           show_signature_annotations: true
           members_order: alphabetical
+          separate_signature: true
     enable_inventory: true
 
 hooks:

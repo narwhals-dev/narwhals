@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Mapping
+from typing import TYPE_CHECKING, Any, Mapping
 
 import numpy as np
 import pytest
@@ -17,7 +15,7 @@ DATA: dict[str, Any] = {"a": [1, 2, 3], "b": [4, 5, 6]}
 
 
 class DictDataFrame:
-    def __init__(self: Self, data: Mapping[str, Any]) -> None:
+    def __init__(self, data: Mapping[str, Any]) -> None:
         self._data = data
 
     def __len__(self) -> int:  # pragma: no cover

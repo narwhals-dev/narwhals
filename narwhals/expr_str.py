@@ -1,22 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Generic
-from typing import TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals.expr import Expr
 
 ExprT = TypeVar("ExprT", bound="Expr")
 
 
 class ExprStringNamespace(Generic[ExprT]):
-    def __init__(self: Self, expr: ExprT) -> None:
+    def __init__(self, expr: ExprT) -> None:
         self._expr = expr
 
-    def len_chars(self: Self) -> ExprT:
+    def len_chars(self) -> ExprT:
         r"""Return the length of each string as the number of characters.
 
         Returns:
@@ -43,13 +39,12 @@ class ExprStringNamespace(Generic[ExprT]):
             |└───────┴───────────┘|
             └─────────────────────┘
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).str.len_chars(),
-            self._expr._metadata,
+        return self._expr._with_elementwise_op(
+            lambda plx: self._expr._to_compliant_expr(plx).str.len_chars()
         )
 
     def replace(
-        self: Self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
     ) -> ExprT:
         r"""Replace first matching regex/literal substring with a new string value.
 
@@ -76,16 +71,13 @@ class ExprStringNamespace(Generic[ExprT]):
             |1  abc abc123   abc123|
             └──────────────────────┘
         """
-        return self._expr.__class__(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).str.replace(
                 pattern, value, literal=literal, n=n
-            ),
-            self._expr._metadata,
+            )
         )
 
-    def replace_all(
-        self: Self, pattern: str, value: str, *, literal: bool = False
-    ) -> ExprT:
+    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> ExprT:
         r"""Replace all matching regex/literal substring with a new string value.
 
         Arguments:
@@ -110,14 +102,13 @@ class ExprStringNamespace(Generic[ExprT]):
             |1  abc abc123      123|
             └──────────────────────┘
         """
-        return self._expr.__class__(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).str.replace_all(
                 pattern, value, literal=literal
-            ),
-            self._expr._metadata,
+            )
         )
 
-    def strip_chars(self: Self, characters: str | None = None) -> ExprT:
+    def strip_chars(self, characters: str | None = None) -> ExprT:
         r"""Remove leading and trailing characters.
 
         Arguments:
@@ -139,12 +130,11 @@ class ExprStringNamespace(Generic[ExprT]):
             ... )
             {'fruits': ['apple', '\nmango'], 'stripped': ['apple', 'mango']}
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).str.strip_chars(characters),
-            self._expr._metadata,
+        return self._expr._with_elementwise_op(
+            lambda plx: self._expr._to_compliant_expr(plx).str.strip_chars(characters)
         )
 
-    def starts_with(self: Self, prefix: str) -> ExprT:
+    def starts_with(self, prefix: str) -> ExprT:
         r"""Check if string values start with a substring.
 
         Arguments:
@@ -168,12 +158,11 @@ class ExprStringNamespace(Generic[ExprT]):
             |2   None       None|
             └───────────────────┘
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).str.starts_with(prefix),
-            self._expr._metadata,
+        return self._expr._with_elementwise_op(
+            lambda plx: self._expr._to_compliant_expr(plx).str.starts_with(prefix)
         )
 
-    def ends_with(self: Self, suffix: str) -> ExprT:
+    def ends_with(self, suffix: str) -> ExprT:
         r"""Check if string values end with a substring.
 
         Arguments:
@@ -197,12 +186,11 @@ class ExprStringNamespace(Generic[ExprT]):
             |2   None       None|
             └───────────────────┘
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).str.ends_with(suffix),
-            self._expr._metadata,
+        return self._expr._with_elementwise_op(
+            lambda plx: self._expr._to_compliant_expr(plx).str.ends_with(suffix)
         )
 
-    def contains(self: Self, pattern: str, *, literal: bool = False) -> ExprT:
+    def contains(self, pattern: str, *, literal: bool = False) -> ExprT:
         r"""Check if string contains a substring that matches a pattern.
 
         Arguments:
@@ -231,14 +219,13 @@ class ExprStringNamespace(Generic[ExprT]):
             default_match: [[true,false,true]]
             case_insensitive_match: [[true,false,true]]
         """
-        return self._expr.__class__(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).str.contains(
                 pattern, literal=literal
-            ),
-            self._expr._metadata,
+            )
         )
 
-    def slice(self: Self, offset: int, length: int | None = None) -> ExprT:
+    def slice(self, offset: int, length: int | None = None) -> ExprT:
         r"""Create subslices of the string values of an expression.
 
         Arguments:
@@ -264,14 +251,13 @@ class ExprStringNamespace(Generic[ExprT]):
             |2  papaya       ya|
             └──────────────────┘
         """
-        return self._expr.__class__(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).str.slice(
                 offset=offset, length=length
-            ),
-            self._expr._metadata,
+            )
         )
 
-    def split(self: Self, by: str) -> ExprT:
+    def split(self, by: str) -> ExprT:
         r"""Split the string values of an expression by a substring.
 
         Arguments:
@@ -300,12 +286,11 @@ class ExprStringNamespace(Generic[ExprT]):
             |└─────────┴────────────────┘|
             └────────────────────────────┘
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).str.split(by=by),
-            self._expr._metadata,
+        return self._expr._with_elementwise_op(
+            lambda plx: self._expr._to_compliant_expr(plx).str.split(by=by)
         )
 
-    def head(self: Self, n: int = 5) -> ExprT:
+    def head(self, n: int = 5) -> ExprT:
         r"""Take the first n elements of each string.
 
         Arguments:
@@ -330,12 +315,11 @@ class ExprStringNamespace(Generic[ExprT]):
             lyrics: [["taata","taatatata","zukkyun"]]
             lyrics_head: [["taata","taata","zukky"]]
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).str.slice(0, n),
-            self._expr._metadata,
+        return self._expr._with_elementwise_op(
+            lambda plx: self._expr._to_compliant_expr(plx).str.slice(0, n)
         )
 
-    def tail(self: Self, n: int = 5) -> ExprT:
+    def tail(self, n: int = 5) -> ExprT:
         r"""Take the last n elements of each string.
 
         Arguments:
@@ -360,14 +344,13 @@ class ExprStringNamespace(Generic[ExprT]):
             lyrics: [["taata","taatatata","zukkyun"]]
             lyrics_tail: [["taata","atata","kkyun"]]
         """
-        return self._expr.__class__(
+        return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).str.slice(
                 offset=-n, length=None
-            ),
-            self._expr._metadata,
+            )
         )
 
-    def to_datetime(self: Self, format: str | None = None) -> ExprT:
+    def to_datetime(self, format: str | None = None) -> ExprT:
         """Convert to Datetime dtype.
 
         Notes:
@@ -408,12 +391,11 @@ class ExprStringNamespace(Generic[ExprT]):
             |└─────────────────────┘|
             └───────────────────────┘
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).str.to_datetime(format=format),
-            self._expr._metadata,
+        return self._expr._with_elementwise_op(
+            lambda plx: self._expr._to_compliant_expr(plx).str.to_datetime(format=format)
         )
 
-    def to_uppercase(self: Self) -> ExprT:
+    def to_uppercase(self) -> ExprT:
         r"""Transform string to uppercase variant.
 
         Returns:
@@ -438,12 +420,11 @@ class ExprStringNamespace(Generic[ExprT]):
             |1   None      None|
             └──────────────────┘
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).str.to_uppercase(),
-            self._expr._metadata,
+        return self._expr._with_elementwise_op(
+            lambda plx: self._expr._to_compliant_expr(plx).str.to_uppercase()
         )
 
-    def to_lowercase(self: Self) -> ExprT:
+    def to_lowercase(self) -> ExprT:
         r"""Transform string to lowercase variant.
 
         Returns:
@@ -463,7 +444,6 @@ class ExprStringNamespace(Generic[ExprT]):
             |1   None      None|
             └──────────────────┘
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).str.to_lowercase(),
-            self._expr._metadata,
+        return self._expr._with_elementwise_op(
+            lambda plx: self._expr._to_compliant_expr(plx).str.to_lowercase()
         )

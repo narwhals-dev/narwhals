@@ -5,8 +5,7 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import ConstructorEager, assert_equal_data
 
 
 def test_new_series(constructor_eager: ConstructorEager) -> None:

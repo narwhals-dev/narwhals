@@ -5,10 +5,8 @@ from typing import Literal
 
 import pytest
 
-import narwhals.stable.v1 as nw
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+import narwhals as nw
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 
 @pytest.mark.parametrize(
@@ -29,7 +27,7 @@ def test_quantile_expr(
     request: pytest.FixtureRequest,
 ) -> None:
     if (
-        any(x in str(constructor) for x in ("dask", "duckdb"))
+        any(x in str(constructor) for x in ("dask", "duckdb", "ibis"))
         and interpolation != "linear"
     ) or "pyspark" in str(constructor):
         request.applymarker(pytest.mark.xfail)

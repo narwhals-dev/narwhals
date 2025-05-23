@@ -46,7 +46,7 @@ def query(
         result_q2.group_by("p_partkey")
         .agg(nw.col("ps_supplycost").min().alias("ps_supplycost"))
         .join(
-            result_q2,
+            result_q2,  # pyright: ignore[reportArgumentType]
             left_on=["p_partkey", "ps_supplycost"],
             right_on=["p_partkey", "ps_supplycost"],
         )

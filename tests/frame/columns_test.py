@@ -4,11 +4,10 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 
 if TYPE_CHECKING:
-    from tests.utils import Constructor
-    from tests.utils import ConstructorEager
+    from tests.utils import Constructor, ConstructorEager
 
 data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
 

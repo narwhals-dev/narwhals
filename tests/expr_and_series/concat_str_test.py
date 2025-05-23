@@ -5,16 +5,10 @@ from typing import Callable
 import pyarrow as pa
 import pytest
 
-import narwhals.stable.v1 as nw
-from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+import narwhals as nw
+from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
 
-data = {
-    "a": [1, 2, 3],
-    "b": ["dogs", "cats", None],
-    "c": ["play", "swim", "walk"],
-}
+data = {"a": [1, 2, 3], "b": ["dogs", "cats", None], "c": ["play", "swim", "walk"]}
 
 
 @pytest.mark.parametrize(
@@ -39,11 +33,7 @@ def test_concat_str(
         df.select(
             "a",
             nw.concat_str(
-                [
-                    nw.col("a") * 2,
-                    "b",
-                    nw.col("c"),
-                ],
+                [nw.col("a") * 2, "b", nw.col("c")],
                 separator=" ",
                 ignore_nulls=ignore_nulls,  # default behavior is False
             ).alias("full_sentence"),

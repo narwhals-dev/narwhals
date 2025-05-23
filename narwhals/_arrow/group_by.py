@@ -1,33 +1,30 @@
 from __future__ import annotations
 
 import collections
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import ClassVar
-from typing import Iterator
-from typing import Mapping
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Mapping, Sequence
 
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from narwhals._arrow.utils import cast_to_comparable_string_types
-from narwhals._arrow.utils import extract_py_scalar
+from narwhals._arrow.utils import cast_to_comparable_string_types, extract_py_scalar
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals.utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.expr import ArrowExpr
-    from narwhals._arrow.typing import Incomplete
+    from narwhals._arrow.typing import (  # type: ignore[attr-defined]
+        AggregateOptions,
+        Aggregation,
+        Incomplete,
+    )
     from narwhals._compliant.group_by import NarwhalsAggregation
+    from narwhals.typing import UniqueKeepStrategy
 
 
-class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
-    _REMAP_AGGS: ClassVar[Mapping[NarwhalsAggregation, Any]] = {
+class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
+    _REMAP_AGGS: ClassVar[Mapping[NarwhalsAggregation, Aggregation]] = {
         "sum": "sum",
         "mean": "mean",
         "median": "approximate_median",
@@ -39,31 +36,36 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
         "n_unique": "count_distinct",
         "count": "count",
     }
+    _REMAP_UNIQUE: ClassVar[Mapping[UniqueKeepStrategy, Aggregation]] = {
+        "any": "min",
+        "first": "min",
+        "last": "max",
+    }
 
     def __init__(
         self,
-        compliant_frame: ArrowDataFrame,
-        keys: Sequence[str],
+        df: ArrowDataFrame,
+        keys: Sequence[ArrowExpr] | Sequence[str],
         /,
         *,
         drop_null_keys: bool,
     ) -> None:
-        if drop_null_keys:
-            self._compliant_frame = compliant_frame.drop_nulls(keys)
-        else:
-            self._compliant_frame = compliant_frame
-        self._keys: list[str] = list(keys)
+        self._df = df
+        frame, self._keys, self._output_key_names = self._parse_keys(df, keys=keys)
+        self._compliant_frame = frame.drop_nulls(self._keys) if drop_null_keys else frame
         self._grouped = pa.TableGroupBy(self.compliant.native, self._keys)
+        self._drop_null_keys = drop_null_keys
 
-    def agg(self: Self, *exprs: ArrowExpr) -> ArrowDataFrame:
+    def agg(self, *exprs: ArrowExpr) -> ArrowDataFrame:
         self._ensure_all_simple(exprs)
-        aggs: list[tuple[str, str, Any]] = []
+        aggs: list[tuple[str, Aggregation, AggregateOptions | None]] = []
         expected_pyarrow_column_names: list[str] = self._keys.copy()
         new_column_names: list[str] = self._keys.copy()
+        exclude = (*self._keys, *self._output_key_names)
 
         for expr in exprs:
             output_names, aliases = evaluate_output_names_and_aliases(
-                expr, self.compliant, self._keys
+                expr, self.compliant, exclude
             )
 
             if expr._depth == 0:
@@ -79,7 +81,8 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
 
             function_name = self._leaf_name(expr)
             if function_name in {"std", "var"}:
-                option: Any = pc.VarianceOptions(ddof=expr._call_kwargs["ddof"])
+                assert "ddof" in expr._scalar_kwargs  # noqa: S101
+                option: Any = pc.VarianceOptions(ddof=expr._scalar_kwargs["ddof"])
             elif function_name in {"len", "n_unique"}:
                 option = pc.CountOptions(mode="all")
             elif function_name == "count":
@@ -122,9 +125,12 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
             result_simple = result_simple.select(
                 [*self._keys, *[col for col in columns if col not in self._keys]]
             )
-        return self.compliant._with_native(result_simple)
 
-    def __iter__(self: Self) -> Iterator[tuple[Any, ArrowDataFrame]]:
+        return self.compliant._with_native(result_simple).rename(
+            dict(zip(self._keys, self._output_key_names))
+        )
+
+    def __iter__(self) -> Iterator[tuple[Any, ArrowDataFrame]]:
         col_token = generate_temporary_column_name(
             n_bytes=8, columns=self.compliant.columns
         )
@@ -138,15 +144,16 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr"]):
         # Reality: `str` is fine
         concat_str: Incomplete = pc.binary_join_element_wise
         key_values = concat_str(
-            *it,
-            separator_scalar,
-            null_handling="replace",
-            null_replacement=null_token,
+            *it, separator_scalar, null_handling="replace", null_replacement=null_token
         )
         table = table.add_column(i=0, field_=col_token, column=key_values)
+
         for v in pc.unique(key_values):
             t = self.compliant._with_native(
                 table.filter(pc.equal(table[col_token], v)).drop([col_token])
             )
             row = t.simple_select(*self._keys).row(0)
-            yield tuple(extract_py_scalar(el) for el in row), t
+            yield (
+                tuple(extract_py_scalar(el) for el in row),
+                t.simple_select(*self._df.columns),
+            )

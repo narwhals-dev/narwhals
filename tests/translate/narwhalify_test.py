@@ -1,15 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals.typing import IntoDataFrameT
 
 data = {"a": [2, 3, 4]}
@@ -37,7 +34,7 @@ def test_narwhalify_method() -> None:
     class Foo:
         @nw.narwhalify
         def func(
-            self: Self, df: nw.DataFrame[IntoDataFrameT], a: int = 1
+            self, df: nw.DataFrame[IntoDataFrameT], a: int = 1
         ) -> nw.DataFrame[IntoDataFrameT]:
             return df.with_columns(nw.all() + a)
 
@@ -55,7 +52,7 @@ def test_narwhalify_method_called() -> None:
     class Foo:
         @nw.narwhalify
         def func(
-            self: Self, df: nw.DataFrame[IntoDataFrameT], a: int = 1
+            self, df: nw.DataFrame[IntoDataFrameT], a: int = 1
         ) -> nw.DataFrame[IntoDataFrameT]:
             return df.with_columns(nw.all() + a)
 
@@ -68,6 +65,7 @@ def test_narwhalify_method_called() -> None:
     pd.testing.assert_frame_equal(result, pd.DataFrame(data))
 
 
+@pytest.mark.filterwarnings("ignore:.*distutils Version classes are deprecated")
 def test_narwhalify_method_invalid() -> None:
     with pytest.deprecated_call(match="please use `pass_through` instead"):
 

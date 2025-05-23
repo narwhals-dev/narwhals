@@ -1,41 +1,42 @@
 from __future__ import annotations
 
 import re
-import sys
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import ClassVar
-from typing import Iterable
-from typing import Iterator
-from typing import Literal
-from typing import Mapping
-from typing import Sequence
-from typing import TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    Iterable,
+    Iterator,
+    Literal,
+    Mapping,
+    Sequence,
+    TypeVar,
+)
 
-from narwhals._compliant.typing import CompliantDataFrameT_co
-from narwhals._compliant.typing import CompliantExprT_contra
-from narwhals._compliant.typing import CompliantFrameT_co
-from narwhals._compliant.typing import CompliantLazyFrameT_co
-from narwhals._compliant.typing import DepthTrackingExprAny
-from narwhals._compliant.typing import DepthTrackingExprT_contra
-from narwhals._compliant.typing import EagerExprT_contra
-from narwhals._compliant.typing import LazyExprT_contra
-from narwhals._compliant.typing import NativeExprT_co
+from narwhals._compliant.typing import (
+    CompliantDataFrameAny,
+    CompliantDataFrameT,
+    CompliantDataFrameT_co,
+    CompliantExprT_contra,
+    CompliantFrameT,
+    CompliantFrameT_co,
+    CompliantLazyFrameAny,
+    CompliantLazyFrameT,
+    DepthTrackingExprAny,
+    DepthTrackingExprT_contra,
+    EagerExprT_contra,
+    LazyExprT_contra,
+    NativeExprT_co,
+)
+from narwhals._typing_compat import Protocol38
+from narwhals.utils import is_sequence_of
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
+    _SameFrameT = TypeVar("_SameFrameT", CompliantDataFrameAny, CompliantLazyFrameAny)
 
-if not TYPE_CHECKING:  # pragma: no cover
-    if sys.version_info >= (3, 9):
-        from typing import Protocol as Protocol38
-    else:
-        from typing import Generic as Protocol38
-else:  # pragma: no cover
-    # TODO @dangotbanned: Remove after dropping `3.8` (#2084)
-    # - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
-    from typing import Protocol as Protocol38
 
 __all__ = [
     "CompliantGroupBy",
@@ -58,7 +59,6 @@ _RE_LEAF_NAME: re.Pattern[str] = re.compile(r"(\w+->)")
 
 class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     _compliant_frame: Any
-    _keys: Sequence[str]
 
     @property
     def compliant(self) -> CompliantFrameT_co:
@@ -67,7 +67,7 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     def __init__(
         self,
         compliant_frame: CompliantFrameT_co,
-        keys: Sequence[str],
+        keys: Sequence[CompliantExprT_contra] | Sequence[str],
         /,
         *,
         drop_null_keys: bool,
@@ -76,9 +76,73 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     def agg(self, *exprs: CompliantExprT_contra) -> CompliantFrameT_co: ...
 
 
+class DataFrameGroupBy(
+    CompliantGroupBy[CompliantDataFrameT_co, CompliantExprT_contra],
+    Protocol38[CompliantDataFrameT_co, CompliantExprT_contra],
+):
+    def __iter__(self) -> Iterator[tuple[Any, CompliantDataFrameT_co]]: ...
+
+
+class ParseKeysGroupBy(
+    CompliantGroupBy[CompliantFrameT, CompliantExprT_contra],
+    Protocol38[CompliantFrameT, CompliantExprT_contra],
+):
+    def _parse_keys(
+        self,
+        compliant_frame: CompliantFrameT,
+        keys: Sequence[CompliantExprT_contra] | Sequence[str],
+    ) -> tuple[CompliantFrameT, list[str], list[str]]:
+        if is_sequence_of(keys, str):
+            keys_str = list(keys)
+            return compliant_frame, keys_str, keys_str.copy()
+        else:
+            return self._parse_expr_keys(compliant_frame, keys=keys)
+
+    @staticmethod
+    def _parse_expr_keys(
+        compliant_frame: _SameFrameT, keys: Sequence[CompliantExprT_contra]
+    ) -> tuple[_SameFrameT, list[str], list[str]]:
+        """Parses key expressions to set up `.agg` operation with correct information.
+
+        Since keys are expressions, it's possible to alias any such key to match
+        other dataframe column names.
+
+        In order to match polars behavior and not overwrite columns when evaluating keys:
+
+        - We evaluate what the output key names should be, in order to remap temporary column
+            names to the expected ones, and to exclude those from unnamed expressions in
+            `.agg(...)` context (see https://github.com/narwhals-dev/narwhals/pull/2325#issuecomment-2800004520)
+        - Create temporary names for evaluated key expressions that are guaranteed to have
+            no overlap with any existing column name.
+        - Add these temporary columns to the compliant dataframe.
+        """
+        tmp_name_length = max(len(str(c)) for c in compliant_frame.columns) + 1
+
+        def _temporary_name(key: str) -> str:
+            # 5 is the length of `__tmp`
+            key_str = str(key)  # pandas allows non-string column names :sob:
+            return f"_{key_str}_tmp{'_' * (tmp_name_length - len(key_str) - 5)}"
+
+        output_names = compliant_frame._evaluate_aliases(*keys)
+
+        safe_keys = [
+            # multi-output expression cannot have duplicate names, hence it's safe to suffix
+            key.name.map(_temporary_name)
+            if (metadata := key._metadata) and metadata.expansion_kind.is_multi_output()
+            # otherwise it's single named and we can use Expr.alias
+            else key.alias(_temporary_name(new_name))
+            for key, new_name in zip(keys, output_names)
+        ]
+        return (
+            compliant_frame.with_columns(*safe_keys),
+            compliant_frame._evaluate_aliases(*safe_keys),
+            output_names,
+        )
+
+
 class DepthTrackingGroupBy(
-    CompliantGroupBy[CompliantFrameT_co, DepthTrackingExprT_contra],
-    Protocol38[CompliantFrameT_co, DepthTrackingExprT_contra, NativeAggregationT_co],
+    ParseKeysGroupBy[CompliantFrameT, DepthTrackingExprT_contra],
+    Protocol38[CompliantFrameT, DepthTrackingExprT_contra, NativeAggregationT_co],
 ):
     """`CompliantGroupBy` variant, deals with `Eager` and other backends that utilize `CompliantExpr._depth`."""
 
@@ -131,16 +195,20 @@ class DepthTrackingGroupBy(
 
 
 class EagerGroupBy(
-    DepthTrackingGroupBy[CompliantDataFrameT_co, EagerExprT_contra, str],
-    Protocol38[CompliantDataFrameT_co, EagerExprT_contra],
-):
-    def __iter__(self) -> Iterator[tuple[Any, CompliantDataFrameT_co]]: ...
+    DepthTrackingGroupBy[CompliantDataFrameT, EagerExprT_contra, NativeAggregationT_co],
+    DataFrameGroupBy[CompliantDataFrameT, EagerExprT_contra],
+    Protocol38[CompliantDataFrameT, EagerExprT_contra, NativeAggregationT_co],
+): ...
 
 
 class LazyGroupBy(
-    CompliantGroupBy[CompliantLazyFrameT_co, LazyExprT_contra],
-    Protocol38[CompliantLazyFrameT_co, LazyExprT_contra, NativeExprT_co],
+    ParseKeysGroupBy[CompliantLazyFrameT, LazyExprT_contra],
+    CompliantGroupBy[CompliantLazyFrameT, LazyExprT_contra],
+    Protocol38[CompliantLazyFrameT, LazyExprT_contra, NativeExprT_co],
 ):
+    _keys: list[str]
+    _output_key_names: list[str]
+
     def _evaluate_expr(self, expr: LazyExprT_contra, /) -> Iterator[NativeExprT_co]:
         output_names = expr._evaluate_output_names(self.compliant)
         aliases = (
@@ -150,12 +218,13 @@ class LazyGroupBy(
         )
         native_exprs = expr(self.compliant)
         if expr._is_multi_output_unnamed():
+            exclude = {*self._keys, *self._output_key_names}
             for native_expr, name, alias in zip(native_exprs, output_names, aliases):
-                if name not in self._keys:
-                    yield native_expr.alias(alias)
+                if name not in exclude:
+                    yield expr._alias_native(native_expr, alias)
         else:
             for native_expr, alias in zip(native_exprs, aliases):
-                yield native_expr.alias(alias)
+                yield expr._alias_native(native_expr, alias)
 
     def _evaluate_exprs(
         self, exprs: Iterable[LazyExprT_contra], /

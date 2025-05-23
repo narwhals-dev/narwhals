@@ -9,10 +9,7 @@ if TYPE_CHECKING:
     from narwhals.typing import FrameT
 
 
-def query(
-    lineitem_ds: FrameT,
-    supplier_ds: FrameT,
-) -> FrameT:
+def query(lineitem_ds: FrameT, supplier_ds: FrameT) -> FrameT:
     var1 = datetime(1996, 1, 1)
     var2 = datetime(1996, 4, 1)
 
@@ -29,7 +26,7 @@ def query(
     )
 
     return (
-        supplier_ds.join(revenue, left_on="s_suppkey", right_on="supplier_no")
+        supplier_ds.join(revenue, left_on="s_suppkey", right_on="supplier_no")  # pyright: ignore[reportArgumentType]
         .filter(nw.col("total_revenue") == nw.col("total_revenue").max())
         .with_columns(nw.col("total_revenue").round(2))
         .select("s_suppkey", "s_name", "s_address", "s_phone", "total_revenue")

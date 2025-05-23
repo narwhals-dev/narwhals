@@ -3,9 +3,8 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-import narwhals.stable.v1 as nw
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+import narwhals as nw
+from tests.utils import ConstructorEager, assert_equal_data
 
 
 def test_get_column(constructor_eager: ConstructorEager) -> None:

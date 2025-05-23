@@ -1,24 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Generic
-from typing import TypeVar
-
-from narwhals._expression_parsing import ExprKind
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals.expr import Expr
 
 ExprT = TypeVar("ExprT", bound="Expr")
 
 
 class ExprCatNamespace(Generic[ExprT]):
-    def __init__(self: Self, expr: ExprT) -> None:
+    def __init__(self, expr: ExprT) -> None:
         self._expr = expr
 
-    def get_categories(self: Self) -> ExprT:
+    def get_categories(self) -> ExprT:
         """Get unique categories from column.
 
         Returns:
@@ -43,7 +37,6 @@ class ExprCatNamespace(Generic[ExprT]):
             │ mango  │
             └────────┘
         """
-        return self._expr.__class__(
-            lambda plx: self._expr._to_compliant_expr(plx).cat.get_categories(),
-            self._expr._metadata.with_kind(ExprKind.FILTRATION),
+        return self._expr._with_elementwise_op(
+            lambda plx: self._expr._to_compliant_expr(plx).cat.get_categories()
         )

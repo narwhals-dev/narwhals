@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import narwhals.stable.v1 as nw
-from tests.utils import ConstructorEager
-from tests.utils import is_windows
+import narwhals as nw
+from tests.utils import ConstructorEager, is_windows
 
 if TYPE_CHECKING:
     import pytest

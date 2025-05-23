@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from datetime import date
-from datetime import datetime
-from datetime import timedelta
+from datetime import date, datetime, timedelta
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals.stable.v1 as nw_v1
 from tests.utils import IBIS_VERSION
 
 pytest.importorskip("polars")
@@ -48,26 +46,26 @@ def test_interchange_schema() -> None:
             "n": pl.Boolean,
         },
     )
-    df = nw.from_native(df_pl.__dataframe__(), eager_or_interchange_only=True)
+    df = nw_v1.from_native(df_pl.__dataframe__(), eager_or_interchange_only=True)
     result = df.schema
     expected = {
-        "a": nw.Int64,
-        "b": nw.Int32,
-        "c": nw.Int16,
-        "d": nw.Int8,
-        "e": nw.UInt64,
-        "f": nw.UInt32,
-        "g": nw.UInt16,
-        "h": nw.UInt8,
-        "i": nw.Float64,
-        "j": nw.Float32,
-        "k": nw.String,
-        "l": nw.Categorical,
-        "m": nw.Datetime,
-        "n": nw.Boolean,
+        "a": nw_v1.Int64,
+        "b": nw_v1.Int32,
+        "c": nw_v1.Int16,
+        "d": nw_v1.Int8,
+        "e": nw_v1.UInt64,
+        "f": nw_v1.UInt32,
+        "g": nw_v1.UInt16,
+        "h": nw_v1.UInt8,
+        "i": nw_v1.Float64,
+        "j": nw_v1.Float32,
+        "k": nw_v1.String,
+        "l": nw_v1.Categorical,
+        "m": nw_v1.Datetime,
+        "n": nw_v1.Boolean,
     }
     assert result == expected
-    assert df["a"].dtype == nw.Int64
+    assert df["a"].dtype == nw_v1.Int64
 
 
 @pytest.mark.filterwarnings("ignore:.*locale specific date formats")
@@ -120,48 +118,48 @@ def test_interchange_schema_ibis(
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)
     tbl = ibis.read_parquet(filepath)
-    df = nw.from_native(tbl, eager_or_interchange_only=True)
+    df = nw_v1.from_native(tbl, eager_or_interchange_only=True)
     result = df.schema
     if IBIS_VERSION > (6, 0, 0):
         expected = {
-            "a": nw.Int64,
-            "b": nw.Int32,
-            "c": nw.Int16,
-            "d": nw.Int8,
-            "e": nw.UInt64,
-            "f": nw.UInt32,
-            "g": nw.UInt16,
-            "h": nw.UInt8,
-            "i": nw.Float64,
-            "j": nw.Float32,
-            "k": nw.String,
-            "l": nw.String,
-            "m": nw.Date,
-            "n": nw.Datetime,
-            "o": nw.Boolean,
+            "a": nw_v1.Int64,
+            "b": nw_v1.Int32,
+            "c": nw_v1.Int16,
+            "d": nw_v1.Int8,
+            "e": nw_v1.UInt64,
+            "f": nw_v1.UInt32,
+            "g": nw_v1.UInt16,
+            "h": nw_v1.UInt8,
+            "i": nw_v1.Float64,
+            "j": nw_v1.Float32,
+            "k": nw_v1.String,
+            "l": nw_v1.String,
+            "m": nw_v1.Date,
+            "n": nw_v1.Datetime,
+            "o": nw_v1.Boolean,
         }
     else:
         # Old versions of Ibis would read the file in
         # with different data types
         expected = {
-            "a": nw.Int64,
-            "b": nw.Int32,
-            "c": nw.Int16,
-            "d": nw.Int32,
-            "e": nw.Int32,
-            "f": nw.Int32,
-            "g": nw.Int32,
-            "h": nw.Int32,
-            "i": nw.Float64,
-            "j": nw.Float64,
-            "k": nw.String,
-            "l": nw.String,
-            "m": nw.Date,
-            "n": nw.Datetime,
-            "o": nw.Boolean,
+            "a": nw_v1.Int64,
+            "b": nw_v1.Int32,
+            "c": nw_v1.Int16,
+            "d": nw_v1.Int32,
+            "e": nw_v1.Int32,
+            "f": nw_v1.Int32,
+            "g": nw_v1.Int32,
+            "h": nw_v1.Int32,
+            "i": nw_v1.Float64,
+            "j": nw_v1.Float64,
+            "k": nw_v1.String,
+            "l": nw_v1.String,
+            "m": nw_v1.Date,
+            "n": nw_v1.Datetime,
+            "o": nw_v1.Boolean,
         }
     assert result == expected
-    assert df["a"].dtype == nw.Int64
+    assert df["a"].dtype == nw_v1.Int64
     assert df.columns == list(expected.keys())
     assert df.collect_schema() == expected
 
@@ -209,28 +207,28 @@ def test_interchange_schema_duckdb() -> None:
         },
     )
     rel = duckdb.sql("select * from df_pl")
-    df = nw.from_native(rel, eager_or_interchange_only=True)
+    df = nw_v1.from_native(rel, eager_or_interchange_only=True)
     result = df.schema
     expected = {
-        "a": nw.Int64,
-        "b": nw.Int32,
-        "c": nw.Int16,
-        "d": nw.Int8,
-        "e": nw.UInt64,
-        "f": nw.UInt32,
-        "g": nw.UInt16,
-        "h": nw.UInt8,
-        "i": nw.Float64,
-        "j": nw.Float32,
-        "k": nw.String,
-        "l": nw.String,
-        "m": nw.Date,
-        "n": nw.Datetime,
-        "o": nw.Duration,
-        "p": nw.Boolean,
+        "a": nw_v1.Int64,
+        "b": nw_v1.Int32,
+        "c": nw_v1.Int16,
+        "d": nw_v1.Int8,
+        "e": nw_v1.UInt64,
+        "f": nw_v1.UInt32,
+        "g": nw_v1.UInt16,
+        "h": nw_v1.UInt8,
+        "i": nw_v1.Float64,
+        "j": nw_v1.Float32,
+        "k": nw_v1.String,
+        "l": nw_v1.String,
+        "m": nw_v1.Date,
+        "n": nw_v1.Datetime,
+        "o": nw_v1.Duration,
+        "p": nw_v1.Boolean,
     }
     assert result == expected
-    assert df["a"].dtype == nw.Int64
+    assert df["a"].dtype == nw_v1.Int64
     assert df.columns == list(expected.keys())
     assert df.collect_schema() == expected
 
@@ -240,17 +238,19 @@ def test_invalid() -> None:
     with pytest.raises(
         NotImplementedError, match="is not supported for metadata-only dataframes"
     ):
-        nw.from_native(df, eager_or_interchange_only=True).filter([True, False, True])
+        nw_v1.from_native(df, eager_or_interchange_only=True).filter([True, False, True])
     with pytest.raises(TypeError, match="Cannot only use `series_only=True`"):
-        nw.from_native(df, eager_only=True)
+        nw_v1.from_native(df, eager_only=True)
     with pytest.raises(ValueError, match="Invalid parameter combination"):
-        nw.from_native(df, eager_only=True, eager_or_interchange_only=True)  # type: ignore[call-overload]
+        nw_v1.from_native(df, eager_only=True, eager_or_interchange_only=True)  # type: ignore[call-overload]
 
 
 def test_get_level() -> None:
     df = pl.DataFrame({"a": [1, 2, 3]})
-    assert nw.get_level(nw.from_native(df)) == "full"
+    assert nw_v1.get_level(nw_v1.from_native(df)) == "full"
     assert (
-        nw.get_level(nw.from_native(df.__dataframe__(), eager_or_interchange_only=True))
+        nw_v1.get_level(
+            nw_v1.from_native(df.__dataframe__(), eager_or_interchange_only=True)
+        )
         == "interchange"
     )

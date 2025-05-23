@@ -4,16 +4,17 @@ from typing import Any
 
 import hypothesis.strategies as st
 import pytest
-from hypothesis import assume
-from hypothesis import given
+from hypothesis import assume, given
 
-import narwhals.stable.v1 as nw
-from tests.utils import DASK_VERSION
-from tests.utils import DUCKDB_VERSION
-from tests.utils import PANDAS_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+import narwhals as nw
+from tests.utils import (
+    DASK_VERSION,
+    DUCKDB_VERSION,
+    PANDAS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 
 @pytest.mark.parametrize(
@@ -69,7 +70,7 @@ def test_right_arithmetic_expr(
     request: pytest.FixtureRequest,
 ) -> None:
     if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     if attr == "__rmod__" and any(
         x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]
     ):

@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 from pandas.testing import assert_series_equal
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
@@ -17,8 +17,7 @@ data = [1, 3, 2]
 
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="too old for pyarrow")
 def test_convert(
-    request: pytest.FixtureRequest,
-    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
     if any(
         cname in str(constructor_eager)

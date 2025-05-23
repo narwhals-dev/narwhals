@@ -6,15 +6,15 @@ from typing import Any
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from narwhals.exceptions import NarwhalsError
-from tests.conftest import dask_lazy_p1_constructor
-from tests.conftest import dask_lazy_p2_constructor
-from tests.conftest import modin_constructor
-from tests.conftest import pandas_constructor
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.conftest import (
+    dask_lazy_p1_constructor,
+    dask_lazy_p2_constructor,
+    modin_constructor,
+    pandas_constructor,
+)
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 NON_NULLABLE_CONSTRUCTORS = [
     pandas_constructor,
@@ -94,7 +94,11 @@ def test_nan_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_nan_non_float(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if ("pyspark" in str(constructor)) or "duckdb" in str(constructor):
+    if (
+        ("pyspark" in str(constructor))
+        or "duckdb" in str(constructor)
+        or "ibis" in str(constructor)
+    ):
         request.applymarker(pytest.mark.xfail)
     from pyarrow.lib import ArrowNotImplementedError
 

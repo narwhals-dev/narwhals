@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+from tests.utils import ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.typing import _2DArray
@@ -24,64 +22,52 @@ expected = {
 }
 
 
-def test_from_numpy(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "dask" in str(constructor) or "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor(data))
+def test_from_numpy(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data))
     backend = nw.get_native_namespace(df)
     result = nw.from_numpy(arr, backend=backend)
     assert_equal_data(result, expected)
     assert isinstance(result, nw.DataFrame)
 
 
-def test_from_numpy_schema_dict(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "dask" in str(constructor) or "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_from_numpy_schema_dict(constructor_eager: ConstructorEager) -> None:
     schema = {
         "c": nw_v1.Int16(),
         "d": nw_v1.Float32(),
         "e": nw_v1.Int16(),
         "f": nw_v1.Float64(),
     }
-    df = nw_v1.from_native(constructor(data))
+    df = nw_v1.from_native(constructor_eager(data))
     backend = nw_v1.get_native_namespace(df)
     result = nw_v1.from_numpy(arr, backend=backend, schema=schema)
     assert result.collect_schema() == schema
 
 
-def test_from_numpy_schema_list(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "dask" in str(constructor) or "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_from_numpy_schema_list(constructor_eager: ConstructorEager) -> None:
     schema = ["c", "d", "e", "f"]
-    df = nw_v1.from_native(constructor(data))
+    df = nw_v1.from_native(constructor_eager(data))
     backend = nw_v1.get_native_namespace(df)
     result = nw_v1.from_numpy(arr, backend=backend, schema=schema)
     assert result.columns == schema
 
 
-def test_from_numpy_schema_notvalid(constructor: Constructor) -> None:
-    df = nw.from_native(constructor(data))
+def test_from_numpy_schema_notvalid(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data))
     backend = nw_v1.get_native_namespace(df)
     with pytest.raises(TypeError, match=r"`schema.*expected.*types"):
         nw.from_numpy(arr, schema=5, backend=backend)  # type: ignore[arg-type]
 
 
-def test_from_numpy_v1(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "dask" in str(constructor) or "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    df = nw_v1.from_native(constructor(data))
+def test_from_numpy_v1(constructor_eager: ConstructorEager) -> None:
+    df = nw_v1.from_native(constructor_eager(data))
     backend = nw_v1.get_native_namespace(df)
     result = nw_v1.from_numpy(arr, backend=backend)
     assert_equal_data(result, expected)
     assert isinstance(result, nw_v1.DataFrame)
 
 
-def test_from_numpy_not2d(constructor: Constructor) -> None:
-    df = nw.from_native(constructor(data))
+def test_from_numpy_not2d(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data))
     backend = nw_v1.get_native_namespace(df)
     with pytest.raises(ValueError, match="`from_numpy` only accepts 2D numpy arrays"):
         nw.from_numpy(np.array([0]), backend=backend)  # pyright: ignore[reportArgumentType]

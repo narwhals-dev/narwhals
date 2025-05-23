@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pyarrow as pa
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
@@ -61,3 +61,11 @@ def test_getitem_other_series(constructor_eager: ConstructorEager) -> None:
     ]
     other = nw.from_native(constructor_eager({"b": [1, 3]}), eager_only=True)["b"]
     assert_equal_data(series[other].to_frame(), {"a": [None, 3]})
+
+
+def test_getitem_invalid_series(constructor_eager: ConstructorEager) -> None:
+    series = nw.from_native(constructor_eager({"a": [1, None, 2, 3]}), eager_only=True)[
+        "a"
+    ]
+    with pytest.raises(TypeError, match="Unexpected type"):
+        series[series > 1]

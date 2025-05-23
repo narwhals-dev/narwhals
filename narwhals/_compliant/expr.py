@@ -1,70 +1,65 @@
 from __future__ import annotations
 
-import sys
 from functools import partial
 from operator import methodcaller
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Generic
-from typing import Literal
-from typing import Mapping
-from typing import Protocol
-from typing import Sequence
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Literal,
+    Mapping,
+    Protocol,
+    Sequence,
+)
 
-from narwhals._compliant.any_namespace import CatNamespace
-from narwhals._compliant.any_namespace import DateTimeNamespace
-from narwhals._compliant.any_namespace import ListNamespace
-from narwhals._compliant.any_namespace import NameNamespace
-from narwhals._compliant.any_namespace import StringNamespace
-from narwhals._compliant.any_namespace import StructNamespace
+from narwhals._compliant.any_namespace import (
+    CatNamespace,
+    DateTimeNamespace,
+    ListNamespace,
+    NameNamespace,
+    StringNamespace,
+    StructNamespace,
+)
 from narwhals._compliant.namespace import CompliantNamespace
-from narwhals._compliant.typing import AliasName
-from narwhals._compliant.typing import AliasNames
-from narwhals._compliant.typing import CompliantExprT_co
-from narwhals._compliant.typing import CompliantFrameT
-from narwhals._compliant.typing import CompliantLazyFrameT
-from narwhals._compliant.typing import CompliantSeriesOrNativeExprT_co
-from narwhals._compliant.typing import EagerDataFrameT
-from narwhals._compliant.typing import EagerExprT
-from narwhals._compliant.typing import EagerSeriesT
-from narwhals._compliant.typing import LazyExprT
-from narwhals._compliant.typing import NativeExprT
-from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals.dependencies import get_numpy
-from narwhals.dependencies import is_numpy_array
+from narwhals._compliant.typing import (
+    AliasName,
+    AliasNames,
+    CompliantExprT_co,
+    CompliantFrameT,
+    CompliantLazyFrameT,
+    CompliantSeriesOrNativeExprT_co,
+    EagerDataFrameT,
+    EagerExprT,
+    EagerSeriesT,
+    LazyExprT,
+    NativeExprT,
+)
+from narwhals._typing_compat import Protocol38, deprecated
+from narwhals.dependencies import get_numpy, is_numpy_array
 from narwhals.dtypes import DType
-from narwhals.utils import _StoresCompliant
-from narwhals.utils import deprecated
-from narwhals.utils import not_implemented
-from narwhals.utils import unstable
-
-if not TYPE_CHECKING:  # pragma: no cover
-    if sys.version_info >= (3, 9):
-        from typing import Protocol as Protocol38
-    else:
-        from typing import Generic as Protocol38
-else:  # pragma: no cover
-    # TODO @dangotbanned: Remove after dropping `3.8` (#2084)
-    # - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
-    from typing import Protocol as Protocol38
+from narwhals.utils import _StoresCompliant, not_implemented
 
 if TYPE_CHECKING:
     from typing import Mapping
 
-    from typing_extensions import Self
-    from typing_extensions import TypeIs
+    from typing_extensions import Self, TypeIs
 
-    from narwhals._compliant.namespace import CompliantNamespace
-    from narwhals._compliant.namespace import EagerNamespace
+    from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._compliant.series import CompliantSeries
-    from narwhals._expression_parsing import ExprKind
-    from narwhals._expression_parsing import ExprMetadata
+    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries, ScalarKwargs
+    from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals.dtypes import DType
-    from narwhals.typing import TimeUnit
-    from narwhals.utils import Implementation
-    from narwhals.utils import Version
-    from narwhals.utils import _FullContext
+    from narwhals.typing import (
+        FillNullStrategy,
+        NonNestedLiteral,
+        NumericLiteral,
+        RankMethod,
+        RollingInterpolationMethod,
+        TemporalLiteral,
+        TimeUnit,
+    )
+    from narwhals.utils import Implementation, Version, _FullContext
 
 __all__ = ["CompliantExpr", "EagerExpr", "LazyExpr", "NativeExpr"]
 
@@ -84,29 +79,32 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
-    _evaluate_output_names: Callable[[CompliantFrameT], Sequence[str]]
-    _alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None
+    _evaluate_output_names: EvalNames[CompliantFrameT]
+    _alias_output_names: AliasNames | None
     _metadata: ExprMetadata | None
 
     def __call__(
         self, df: CompliantFrameT
     ) -> Sequence[CompliantSeriesOrNativeExprT_co]: ...
     def __narwhals_expr__(self) -> None: ...
-    def __narwhals_namespace__(
-        self,
-    ) -> CompliantNamespace[CompliantFrameT, Self]: ...
+    def __narwhals_namespace__(self) -> CompliantNamespace[CompliantFrameT, Self]: ...
     @classmethod
     def from_column_names(
         cls,
-        evaluate_column_names: Callable[[CompliantFrameT], Sequence[str]],
+        evaluate_column_names: EvalNames[CompliantFrameT],
         /,
         *,
         context: _FullContext,
     ) -> Self: ...
     @classmethod
-    def from_column_indices(
-        cls: type[Self], *column_indices: int, context: _FullContext
-    ) -> Self: ...
+    def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self: ...
+    @staticmethod
+    def _eval_names_indices(indices: Sequence[int], /) -> EvalNames[CompliantFrameT]:
+        def fn(df: CompliantFrameT) -> Sequence[str]:
+            column_names = df.columns
+            return [column_names[i] for i in indices]
+
+        return fn
 
     def is_null(self) -> Self: ...
     def abs(self) -> Self: ...
@@ -131,13 +129,14 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def drop_nulls(self) -> Self: ...
     def fill_null(
         self,
-        value: Any | None,
-        strategy: Literal["forward", "backward"] | None,
+        value: Self | NonNestedLiteral,
+        strategy: FillNullStrategy | None,
         limit: int | None,
     ) -> Self: ...
     def diff(self) -> Self: ...
     def unique(self) -> Self: ...
     def len(self) -> Self: ...
+    def log(self, base: float) -> Self: ...
     def round(self, decimals: int) -> Self: ...
     def mode(self) -> Self: ...
     def head(self, n: int) -> Self: ...
@@ -155,12 +154,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def cum_prod(self, *, reverse: bool) -> Self: ...
     def is_in(self, other: Any) -> Self: ...
     def sort(self, *, descending: bool, nulls_last: bool) -> Self: ...
-    def rank(
-        self,
-        method: Literal["average", "min", "max", "dense", "ordinal"],
-        *,
-        descending: bool,
-    ) -> Self: ...
+    def rank(self, method: RankMethod, *, descending: bool) -> Self: ...
     def replace_strict(
         self,
         old: Sequence[Any] | Mapping[Any, Any],
@@ -168,7 +162,9 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         *,
         return_dtype: DType | type[DType] | None,
     ) -> Self: ...
-    def over(self: Self, keys: Sequence[str], order_by: Sequence[str] | None) -> Self: ...
+    def over(
+        self, partition_by: Sequence[str], order_by: Sequence[str] | None
+    ) -> Self: ...
     def sample(
         self,
         n: int | None,
@@ -178,9 +174,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         seed: int | None,
     ) -> Self: ...
     def quantile(
-        self,
-        quantile: float,
-        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+        self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> Self: ...
     def map_batches(
         self,
@@ -188,20 +182,12 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         return_dtype: DType | type[DType] | None,
     ) -> Self: ...
 
-    @property
-    def str(self) -> Any: ...
-    @property
-    def name(self) -> Any: ...
-    @property
-    def dt(self) -> Any: ...
-    @property
-    def cat(self) -> Any: ...
-    @property
-    def list(self) -> Any: ...
-    @property
-    def struct(self) -> Any: ...
+    def clip(
+        self,
+        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
+        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
+    ) -> Self: ...
 
-    @unstable
     def ewm_mean(
         self,
         *,
@@ -214,42 +200,20 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         ignore_nulls: bool,
     ) -> Self: ...
 
-    @unstable
     def rolling_sum(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
+        self, window_size: int, *, min_samples: int, center: bool
     ) -> Self: ...
 
-    @unstable
     def rolling_mean(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
+        self, window_size: int, *, min_samples: int, center: bool
     ) -> Self: ...
 
-    @unstable
     def rolling_var(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
-        ddof: int,
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self: ...
 
-    @unstable
     def rolling_std(
-        self,
-        window_size: int,
-        *,
-        min_samples: int,
-        center: bool,
-        ddof: int,
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self: ...
 
     @deprecated("Since `1.22.0`")
@@ -285,6 +249,25 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         assert self._metadata is not None  # noqa: S101
         return self._metadata.expansion_kind.is_multi_unnamed()
 
+    def _evaluate_aliases(
+        self: CompliantExpr[CompliantFrameT, Any], frame: CompliantFrameT, /
+    ) -> Sequence[str]:
+        names = self._evaluate_output_names(frame)
+        return alias(names) if (alias := self._alias_output_names) else names
+
+    @property
+    def str(self) -> Any: ...
+    @property
+    def name(self) -> Any: ...
+    @property
+    def dt(self) -> Any: ...
+    @property
+    def cat(self) -> Any: ...
+    @property
+    def list(self) -> Any: ...
+    @property
+    def struct(self) -> Any: ...
+
 
 class DepthTrackingExpr(
     CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
@@ -296,7 +279,7 @@ class DepthTrackingExpr(
     @classmethod
     def from_column_names(
         cls: type[Self],
-        evaluate_column_names: Callable[[CompliantFrameT], Sequence[str]],
+        evaluate_column_names: EvalNames[CompliantFrameT],
         /,
         *,
         context: _FullContext,
@@ -328,21 +311,21 @@ class EagerExpr(
     DepthTrackingExpr[EagerDataFrameT, EagerSeriesT],
     Protocol38[EagerDataFrameT, EagerSeriesT],
 ):
-    _call: Callable[[EagerDataFrameT], Sequence[EagerSeriesT]]
-    _call_kwargs: dict[str, Any]
+    _call: EvalSeries[EagerDataFrameT, EagerSeriesT]
+    _scalar_kwargs: ScalarKwargs
 
     def __init__(
-        self: Self,
-        call: Callable[[EagerDataFrameT], Sequence[EagerSeriesT]],
+        self,
+        call: EvalSeries[EagerDataFrameT, EagerSeriesT],
         *,
         depth: int,
         function_name: str,
-        evaluate_output_names: Callable[[EagerDataFrameT], Sequence[str]],
-        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
+        evaluate_output_names: EvalNames[EagerDataFrameT],
+        alias_output_names: AliasNames | None,
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
-        call_kwargs: dict[str, Any] | None = None,
+        scalar_kwargs: ScalarKwargs | None = None,
     ) -> None: ...
 
     def __call__(self, df: EagerDataFrameT) -> Sequence[EagerSeriesT]:
@@ -350,20 +333,20 @@ class EagerExpr(
 
     def __narwhals_namespace__(
         self,
-    ) -> EagerNamespace[EagerDataFrameT, EagerSeriesT, Self]: ...
+    ) -> EagerNamespace[EagerDataFrameT, EagerSeriesT, Self, Any, Any]: ...
     def __narwhals_expr__(self) -> None: ...
 
     @classmethod
     def _from_callable(
         cls,
-        func: Callable[[EagerDataFrameT], Sequence[EagerSeriesT]],
+        func: EvalSeries[EagerDataFrameT, EagerSeriesT],
         *,
         depth: int,
         function_name: str,
-        evaluate_output_names: Callable[[EagerDataFrameT], Sequence[str]],
-        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
+        evaluate_output_names: EvalNames[EagerDataFrameT],
+        alias_output_names: AliasNames | None,
         context: _FullContext,
-        call_kwargs: dict[str, Any] | None = None,
+        scalar_kwargs: ScalarKwargs | None = None,
     ) -> Self:
         return cls(
             func,
@@ -374,7 +357,7 @@ class EagerExpr(
             implementation=context._implementation,
             backend_version=context._backend_version,
             version=context._version,
-            call_kwargs=call_kwargs,
+            scalar_kwargs=scalar_kwargs,
         )
 
     @classmethod
@@ -391,11 +374,11 @@ class EagerExpr(
         )
 
     def _reuse_series(
-        self: Self,
+        self,
         method_name: str,
         *,
         returns_scalar: bool = False,
-        call_kwargs: dict[str, Any] | None = None,
+        scalar_kwargs: ScalarKwargs | None = None,
         **expressifiable_args: Any,
     ) -> Self:
         """Reuse Series implementation for expression.
@@ -407,7 +390,7 @@ class EagerExpr(
             method_name: name of method.
             returns_scalar: whether the Series version returns a scalar. In this case,
                 the expression version should return a 1-row Series.
-            call_kwargs: non-expressifiable args which we may need to reuse in `agg` or `over`,
+            scalar_kwargs: non-expressifiable args which we may need to reuse in `agg` or `over`,
                 such as `ddof` for `std` and `var`.
             expressifiable_args: keyword arguments to pass to function, which may
                 be expressifiable (e.g. `nw.col('a').is_between(3, nw.col('b')))`).
@@ -416,7 +399,7 @@ class EagerExpr(
             self._reuse_series_inner,
             method_name=method_name,
             returns_scalar=returns_scalar,
-            call_kwargs=call_kwargs or {},
+            scalar_kwargs=scalar_kwargs or {},
             expressifiable_args=expressifiable_args,
         )
         return self._from_callable(
@@ -425,7 +408,7 @@ class EagerExpr(
             function_name=f"{self._function_name}->{method_name}",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            call_kwargs=call_kwargs,
+            scalar_kwargs=scalar_kwargs,
             context=self,
         )
 
@@ -446,11 +429,11 @@ class EagerExpr(
         *,
         method_name: str,
         returns_scalar: bool,
-        call_kwargs: dict[str, Any],
+        scalar_kwargs: ScalarKwargs,
         expressifiable_args: dict[str, Any],
     ) -> Sequence[EagerSeriesT]:
         kwargs = {
-            **call_kwargs,
+            **scalar_kwargs,
             **{
                 name: df._evaluate_expr(value) if self._is_expr(value) else value
                 for name, value in expressifiable_args.items()
@@ -465,7 +448,7 @@ class EagerExpr(
             series._from_scalar(method(series)) if returns_scalar else method(series)
             for series in self(df)
         ]
-        _, aliases = evaluate_output_names_and_aliases(self, df, [])
+        aliases = self._evaluate_aliases(df)
         if [s.name for s in out] != list(aliases):  # pragma: no cover
             msg = (
                 f"Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues\n"
@@ -476,7 +459,7 @@ class EagerExpr(
         return out
 
     def _reuse_series_namespace(
-        self: Self,
+        self,
         series_namespace: Literal["cat", "dt", "list", "name", "str", "struct"],
         method_name: str,
         **kwargs: Any,
@@ -500,7 +483,7 @@ class EagerExpr(
             function_name=f"{self._function_name}->{series_namespace}.{method_name}",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            call_kwargs={**self._call_kwargs, **kwargs},
+            scalar_kwargs=self._scalar_kwargs,
             context=self,
         )
 
@@ -524,7 +507,7 @@ class EagerExpr(
             backend_version=self._backend_version,
             implementation=self._implementation,
             version=self._version,
-            call_kwargs=self._call_kwargs,
+            scalar_kwargs=self._scalar_kwargs,
         )
 
     def cast(self, dtype: DType | type[DType]) -> Self:
@@ -614,10 +597,14 @@ class EagerExpr(
         return self._reuse_series("median", returns_scalar=True)
 
     def std(self, *, ddof: int) -> Self:
-        return self._reuse_series("std", returns_scalar=True, call_kwargs={"ddof": ddof})
+        return self._reuse_series(
+            "std", returns_scalar=True, scalar_kwargs={"ddof": ddof}
+        )
 
     def var(self, *, ddof: int) -> Self:
-        return self._reuse_series("var", returns_scalar=True, call_kwargs={"ddof": ddof})
+        return self._reuse_series(
+            "var", returns_scalar=True, scalar_kwargs={"ddof": ddof}
+        )
 
     def skew(self) -> Self:
         return self._reuse_series("skew", returns_scalar=True)
@@ -642,7 +629,11 @@ class EagerExpr(
 
     # Other
 
-    def clip(self, lower_bound: Any, upper_bound: Any) -> Self:
+    def clip(
+        self,
+        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
+        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
+    ) -> Self:
         return self._reuse_series(
             "clip", lower_bound=lower_bound, upper_bound=upper_bound
         )
@@ -655,8 +646,8 @@ class EagerExpr(
 
     def fill_null(
         self,
-        value: Any | None,
-        strategy: Literal["forward", "backward"] | None,
+        value: Self | NonNestedLiteral,
+        strategy: FillNullStrategy | None,
         limit: int | None,
     ) -> Self:
         return self._reuse_series(
@@ -712,7 +703,7 @@ class EagerExpr(
             "sample", n=n, fraction=fraction, with_replacement=with_replacement, seed=seed
         )
 
-    def alias(self: Self, name: str) -> Self:
+    def alias(self, name: str) -> Self:
         def alias_output_names(names: Sequence[str]) -> Sequence[str]:
             if len(names) != 1:
                 msg = f"Expected function with single output, found output names: {names}"
@@ -730,7 +721,7 @@ class EagerExpr(
             backend_version=self._backend_version,
             implementation=self._implementation,
             version=self._version,
-            call_kwargs=self._call_kwargs,
+            scalar_kwargs=self._scalar_kwargs,
         )
 
     def is_unique(self) -> Self:
@@ -743,9 +734,7 @@ class EagerExpr(
         return self._reuse_series("is_last_distinct")
 
     def quantile(
-        self,
-        quantile: float,
-        interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
+        self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> Self:
         return self._reuse_series(
             "quantile",
@@ -775,9 +764,7 @@ class EagerExpr(
     def is_finite(self) -> Self:
         return self._reuse_series("is_finite")
 
-    def rolling_mean(
-        self, window_size: int, *, min_samples: int | None, center: bool
-    ) -> Self:
+    def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._reuse_series(
             "rolling_mean",
             window_size=window_size,
@@ -786,7 +773,7 @@ class EagerExpr(
         )
 
     def rolling_std(
-        self, window_size: int, *, min_samples: int | None, center: bool, ddof: int
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
         return self._reuse_series(
             "rolling_std",
@@ -802,7 +789,7 @@ class EagerExpr(
         )
 
     def rolling_var(
-        self, window_size: int, *, min_samples: int | None, center: bool, ddof: int
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
         return self._reuse_series(
             "rolling_var",
@@ -813,9 +800,7 @@ class EagerExpr(
         )
 
     def map_batches(
-        self: Self,
-        function: Callable[[Any], Any],
-        return_dtype: DType | type[DType] | None,
+        self, function: Callable[[Any], Any], return_dtype: DType | type[DType] | None
     ) -> Self:
         def func(df: EagerDataFrameT) -> Sequence[EagerSeriesT]:
             input_series_list = self(df)
@@ -869,7 +854,7 @@ class EagerExpr(
         return EagerExprStructNamespace(self)
 
 
-class LazyExpr(  # type: ignore[misc]
+class LazyExpr(
     CompliantExpr[CompliantLazyFrameT, NativeExprT],
     Protocol38[CompliantLazyFrameT, NativeExprT],
 ):
@@ -893,6 +878,17 @@ class LazyExpr(  # type: ignore[misc]
 
     def _with_callable(self, call: Callable[..., Any], /) -> Self: ...
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
+    def alias(self, name: str) -> Self:
+        def fn(names: Sequence[str]) -> Sequence[str]:
+            if len(names) != 1:
+                msg = f"Expected function with single output, found output names: {names}"
+                raise ValueError(msg)
+            return [name]
+
+        return self._with_alias_output_names(fn)
+
+    @classmethod
+    def _alias_native(cls, expr: NativeExprT, name: str, /) -> NativeExprT: ...
 
     @property
     def name(self) -> LazyExprNameNamespace[Self]:
@@ -998,6 +994,9 @@ class EagerExprDateTimeNamespace(
     def total_nanoseconds(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("dt", "total_nanoseconds")
 
+    def truncate(self, every: str) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("dt", "truncate", every=every)
+
 
 class EagerExprListNamespace(
     EagerExprNamespace[EagerExprT], ListNamespace[EagerExprT], Generic[EagerExprT]
@@ -1060,7 +1059,7 @@ class EagerExprNameNamespace(
             backend_version=expr._backend_version,
             implementation=expr._implementation,
             version=expr._version,
-            call_kwargs=expr._call_kwargs,
+            scalar_kwargs=expr._scalar_kwargs,
         )
 
 

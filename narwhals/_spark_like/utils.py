@@ -1,20 +1,14 @@
 from __future__ import annotations
 
 from importlib import import_module
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Sequence
-from typing import overload
+from typing import TYPE_CHECKING, Any, Sequence, overload
 
 from narwhals.exceptions import UnsupportedDTypeError
-from narwhals.utils import Implementation
-from narwhals.utils import import_dtypes_module
-from narwhals.utils import isinstance_or_issubclass
+from narwhals.utils import Implementation, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import sqlframe.base.functions as sqlframe_functions
     import sqlframe.base.types as sqlframe_types
     from sqlframe.base.column import Column
     from typing_extensions import TypeAlias
@@ -26,26 +20,44 @@ if TYPE_CHECKING:
 
     _NativeDType: TypeAlias = sqlframe_types.DataType
 
+UNITS_DICT = {
+    "y": "year",
+    "q": "quarter",
+    "mo": "month",
+    "d": "day",
+    "h": "hour",
+    "m": "minute",
+    "s": "second",
+    "ms": "millisecond",
+    "us": "microsecond",
+    "ns": "nanosecond",
+}
+
 
 class WindowInputs:
     __slots__ = ("expr", "order_by", "partition_by")
 
     def __init__(
-        self,
-        expr: Column,
-        partition_by: Sequence[str],
-        order_by: Sequence[str],
+        self, expr: Column, partition_by: Sequence[str | Column], order_by: Sequence[str]
     ) -> None:
         self.expr = expr
         self.partition_by = partition_by
         self.order_by = order_by
 
 
+class UnorderableWindowInputs:
+    __slots__ = ("expr", "partition_by")
+
+    def __init__(self, expr: Column, partition_by: Sequence[str | Column]) -> None:
+        self.expr = expr
+        self.partition_by = partition_by
+
+
 # NOTE: don't lru_cache this as `ModuleType` isn't hashable
-def native_to_narwhals_dtype(
+def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     dtype: _NativeDType, version: Version, spark_types: ModuleType
-) -> DType:  # pragma: no cover
-    dtypes = import_dtypes_module(version=version)
+) -> DType:
+    dtypes = version.dtypes
     if TYPE_CHECKING:
         native = sqlframe_types
     else:
@@ -70,13 +82,15 @@ def native_to_narwhals_dtype(
     if isinstance(dtype, native.DateType):
         return dtypes.Date()
     if isinstance(dtype, native.TimestampNTZType):
-        return dtypes.Datetime()
+        # TODO(marco): cover this
+        return dtypes.Datetime()  # pragma: no cover
     if isinstance(dtype, native.TimestampType):
         # TODO(marco): is UTC correct, or should we be getting the connection timezone?
         # https://github.com/narwhals-dev/narwhals/issues/2165
         return dtypes.Datetime(time_zone="UTC")
     if isinstance(dtype, native.DecimalType):
-        return dtypes.Decimal()
+        # TODO(marco): cover this
+        return dtypes.Decimal()  # pragma: no cover
     if isinstance(dtype, native.ArrayType):
         return dtypes.List(
             inner=native_to_narwhals_dtype(
@@ -97,13 +111,13 @@ def native_to_narwhals_dtype(
         )
     if isinstance(dtype, native.BinaryType):
         return dtypes.Binary()
-    return dtypes.Unknown()
+    return dtypes.Unknown()  # pragma: no cover
 
 
-def narwhals_to_native_dtype(
+def narwhals_to_native_dtype(  # noqa: C901, PLR0912
     dtype: DType | type[DType], version: Version, spark_types: ModuleType
 ) -> _NativeDType:
-    dtypes = import_dtypes_module(version)
+    dtypes = version.dtypes
     if TYPE_CHECKING:
         native = sqlframe_types
     else:
@@ -193,56 +207,13 @@ def evaluate_exprs(
     return native_results
 
 
-def _std(
-    column: Column,
-    ddof: int,
-    np_version: tuple[int, ...],
-    functions: ModuleType,
-    implementation: Implementation,
-) -> Column:
-    if TYPE_CHECKING:
-        F = sqlframe_functions  # noqa: N806
-    else:
-        F = functions  # noqa: N806
-    if implementation is Implementation.PYSPARK and np_version < (2, 0):
-        from pyspark.pandas.spark.functions import stddev
-
-        return stddev(column, ddof)  # pyright: ignore[reportReturnType, reportArgumentType]
-    if ddof == 0:
-        return F.stddev_pop(column)
-    if ddof == 1:
-        return F.stddev_samp(column)
-    n_rows = F.count(column)
-    return F.stddev_samp(column) * F.sqrt((n_rows - 1) / (n_rows - ddof))
-
-
-def _var(
-    column: Column,
-    ddof: int,
-    np_version: tuple[int, ...],
-    functions: ModuleType,
-    implementation: Implementation,
-) -> Column:
-    if TYPE_CHECKING:
-        F = sqlframe_functions  # noqa: N806
-    else:
-        F = functions  # noqa: N806
-    if implementation is Implementation.PYSPARK and np_version < (2, 0):
-        from pyspark.pandas.spark.functions import var
-
-        return var(column, ddof)  # pyright: ignore[reportReturnType, reportArgumentType]
-    if ddof == 0:
-        return F.var_pop(column)
-    if ddof == 1:
-        return F.var_samp(column)
-
-    n_rows = F.count(column)
-    return F.var_samp(column) * (n_rows - 1) / (n_rows - ddof)
-
-
 def import_functions(implementation: Implementation, /) -> ModuleType:
     if implementation is Implementation.PYSPARK:
         from pyspark.sql import functions
+
+        return functions
+    if implementation is Implementation.PYSPARK_CONNECT:
+        from pyspark.sql.connect import functions
 
         return functions
     from sqlframe.base.session import _BaseSession
@@ -255,6 +226,10 @@ def import_native_dtypes(implementation: Implementation, /) -> ModuleType:
         from pyspark.sql import types
 
         return types
+    if implementation is Implementation.PYSPARK_CONNECT:
+        from pyspark.sql.connect import types
+
+        return types
     from sqlframe.base.session import _BaseSession
 
     return import_module(f"sqlframe.{_BaseSession().execution_dialect_name}.types")
@@ -263,6 +238,11 @@ def import_native_dtypes(implementation: Implementation, /) -> ModuleType:
 def import_window(implementation: Implementation, /) -> type[Any]:
     if implementation is Implementation.PYSPARK:
         from pyspark.sql import Window
+
+        return Window
+
+    if implementation is Implementation.PYSPARK_CONNECT:
+        from pyspark.sql.connect.window import Window
 
         return Window
     from sqlframe.base.session import _BaseSession

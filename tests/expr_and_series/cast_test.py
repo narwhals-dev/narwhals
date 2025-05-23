@@ -1,20 +1,23 @@
 from __future__ import annotations
 
-from datetime import datetime
-from datetime import time
-from datetime import timedelta
-from datetime import timezone
+from datetime import datetime, time, timedelta, timezone
+from typing import TYPE_CHECKING, cast
 
 import pandas as pd
 import pytest
 
-import narwhals.stable.v1 as nw
-from tests.utils import PANDAS_VERSION
-from tests.utils import PYARROW_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
-from tests.utils import is_windows
+import narwhals as nw
+from tests.utils import (
+    PANDAS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    is_windows,
+)
+
+if TYPE_CHECKING:
+    from narwhals.typing import NativeLazyFrame
 
 DATA = {
     "a": [1],
@@ -55,13 +58,11 @@ SCHEMA = {
 
 SPARK_LIKE_INCOMPATIBLE_COLUMNS = {"e", "f", "g", "h", "o", "p"}
 DUCKDB_INCOMPATIBLE_COLUMNS = {"l", "o", "p"}
+IBIS_INCOMPATIBLE_COLUMNS = {"o"}
 
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
-def test_cast(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
-) -> None:
+def test_cast(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
         15,
     ):  # pragma: no cover
@@ -74,6 +75,8 @@ def test_cast(
         incompatible_columns = SPARK_LIKE_INCOMPATIBLE_COLUMNS  # pragma: no cover
     elif "duckdb" in str(constructor):
         incompatible_columns = DUCKDB_INCOMPATIBLE_COLUMNS  # pragma: no cover
+    elif "ibis" in str(constructor):
+        incompatible_columns = IBIS_INCOMPATIBLE_COLUMNS  # pragma: no cover
     else:
         incompatible_columns = set()
 
@@ -109,8 +112,7 @@ def test_cast(
 
 
 def test_cast_series(
-    constructor_eager: ConstructorEager,
-    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if "pyarrow_table_constructor" in str(constructor_eager) and PYARROW_VERSION <= (
         15,
@@ -185,6 +187,8 @@ def test_cast_raises_for_unknown_dtype(
 
     if "pyspark" in str(constructor):
         incompatible_columns = SPARK_LIKE_INCOMPATIBLE_COLUMNS  # pragma: no cover
+    elif "ibis" in str(constructor):
+        incompatible_columns = IBIS_INCOMPATIBLE_COLUMNS  # pragma: no cover
     else:
         incompatible_columns = set()
 
@@ -211,6 +215,7 @@ def test_cast_datetime_tz_aware(
         or "cudf" in str(constructor)  # https://github.com/rapidsai/cudf/issues/16973
         or ("pyarrow_table" in str(constructor) and is_windows())
         or "pyspark" in str(constructor)
+        or "ibis" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -272,38 +277,38 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     data = {
-        "a": [
-            {"movie ": "Cars", "rating": 4.5},
-            {"movie ": "Toy Story", "rating": 4.9},
-        ]
+        "a": [{"movie ": "Cars", "rating": 4.5}, {"movie ": "Toy Story", "rating": 4.9}]
     }
 
     native_df = constructor(data)
 
+    # NOTE: This branch needs to be rewritten to **not depend** on private `SparkLikeLazyFrame` properties
     if "spark" in str(constructor):  # pragma: no cover
         # Special handling for pyspark as it natively maps the input to
         # a column of type MAP<STRING, STRING>
-        _tmp_nw_compliant_frame = nw.from_native(native_df)._compliant_frame
-        F = _tmp_nw_compliant_frame._F  # noqa: N806
-        T = _tmp_nw_compliant_frame._native_dtypes  # noqa: N806
+        native_ldf = cast("NativeLazyFrame", native_df)
+        _tmp_nw_compliant_frame = nw.from_native(native_ldf)._compliant_frame
+        F = _tmp_nw_compliant_frame._F  # type: ignore[attr-defined] # noqa: N806
+        T = _tmp_nw_compliant_frame._native_dtypes  # type: ignore[attr-defined] # noqa: N806
 
-        native_df = native_df.withColumn(  # type: ignore[union-attr]
+        native_ldf = native_ldf.withColumn(  # type: ignore[attr-defined]
             "a",
             F.struct(
                 F.col("a.movie ").cast(T.StringType()).alias("movie "),
                 F.col("a.rating").cast(T.DoubleType()).alias("rating"),
             ),
         )
-        assert nw.from_native(native_df).schema == nw.Schema(
+        assert nw.from_native(native_ldf).schema == nw.Schema(
             {
                 "a": nw.Struct(
                     [nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float64())]
                 )
             }
         )
+        native_df = native_ldf
 
     dtype = nw.Struct([nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float32())])
     result = nw.from_native(native_df).select(nw.col("a").cast(dtype)).lazy().collect()
@@ -322,7 +327,7 @@ def test_raise_if_polars_dtype(constructor: Constructor) -> None:
 
 def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     if any(
         backend in str(constructor) for backend in ("dask", "pyspark", "modin", "cudf")
@@ -337,7 +342,7 @@ def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> 
 
 def test_cast_binary(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     if any(backend in str(constructor) for backend in ("cudf", "dask", "modin")):
         request.applymarker(pytest.mark.xfail)

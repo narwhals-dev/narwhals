@@ -1,24 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Generic
-from typing import TypeVar
+from typing import TYPE_CHECKING, Generic
+
+from narwhals.typing import SeriesT
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
-    from narwhals.series import Series
     from narwhals.typing import TimeUnit
-
-SeriesT = TypeVar("SeriesT", bound="Series[Any]")
 
 
 class SeriesDateTimeNamespace(Generic[SeriesT]):
-    def __init__(self: Self, series: SeriesT) -> None:
+    def __init__(self, series: SeriesT) -> None:
         self._narwhals_series = series
 
-    def date(self: Self) -> SeriesT:
+    def date(self) -> SeriesT:
         """Get the date in a datetime series.
 
         Returns:
@@ -44,7 +38,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.dt.date()
         )
 
-    def year(self: Self) -> SeriesT:
+    def year(self) -> SeriesT:
         """Get the year in a datetime series.
 
         Returns:
@@ -68,7 +62,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.dt.year()
         )
 
-    def month(self: Self) -> SeriesT:
+    def month(self) -> SeriesT:
         """Gets the month in a datetime series.
 
         Returns:
@@ -92,7 +86,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.dt.month()
         )
 
-    def day(self: Self) -> SeriesT:
+    def day(self) -> SeriesT:
         """Extracts the day in a datetime series.
 
         Returns:
@@ -119,7 +113,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.dt.day()
         )
 
-    def hour(self: Self) -> SeriesT:
+    def hour(self) -> SeriesT:
         """Extracts the hour in a datetime series.
 
         Returns:
@@ -146,7 +140,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.dt.hour()
         )
 
-    def minute(self: Self) -> SeriesT:
+    def minute(self) -> SeriesT:
         """Extracts the minute in a datetime series.
 
         Returns:
@@ -169,7 +163,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.dt.minute()
         )
 
-    def second(self: Self) -> SeriesT:
+    def second(self) -> SeriesT:
         """Extracts the seconds in a datetime series.
 
         Returns:
@@ -192,7 +186,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.dt.second()
         )
 
-    def millisecond(self: Self) -> SeriesT:
+    def millisecond(self) -> SeriesT:
         """Extracts the milliseconds in a datetime series.
 
         Returns:
@@ -218,7 +212,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.dt.millisecond()
         )
 
-    def microsecond(self: Self) -> SeriesT:
+    def microsecond(self) -> SeriesT:
         """Extracts the microseconds in a datetime series.
 
         Returns:
@@ -245,7 +239,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.dt.microsecond()
         )
 
-    def nanosecond(self: Self) -> SeriesT:
+    def nanosecond(self) -> SeriesT:
         """Extract the nanoseconds in a date series.
 
         Returns:
@@ -271,7 +265,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.dt.nanosecond()
         )
 
-    def ordinal_day(self: Self) -> SeriesT:
+    def ordinal_day(self) -> SeriesT:
         """Get ordinal day.
 
         Returns:
@@ -298,7 +292,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.dt.ordinal_day()
         )
 
-    def weekday(self: Self) -> SeriesT:
+    def weekday(self) -> SeriesT:
         """Extract the week day in a datetime series.
 
         Returns:
@@ -326,7 +320,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.dt.weekday()
         )
 
-    def total_minutes(self: Self) -> SeriesT:
+    def total_minutes(self) -> SeriesT:
         """Get total minutes.
 
         Notes:
@@ -357,7 +351,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.dt.total_minutes()
         )
 
-    def total_seconds(self: Self) -> SeriesT:
+    def total_seconds(self) -> SeriesT:
         """Get total seconds.
 
         Notes:
@@ -388,7 +382,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.dt.total_seconds()
         )
 
-    def total_milliseconds(self: Self) -> SeriesT:
+    def total_milliseconds(self) -> SeriesT:
         """Get total milliseconds.
 
         Notes:
@@ -422,7 +416,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.dt.total_milliseconds()
         )
 
-    def total_microseconds(self: Self) -> SeriesT:
+    def total_microseconds(self) -> SeriesT:
         """Get total microseconds.
 
         Returns:
@@ -456,7 +450,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.dt.total_microseconds()
         )
 
-    def total_nanoseconds(self: Self) -> SeriesT:
+    def total_nanoseconds(self) -> SeriesT:
         """Get total nanoseconds.
 
         Notes:
@@ -487,7 +481,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.dt.total_nanoseconds()
         )
 
-    def to_string(self: Self, format: str) -> SeriesT:
+    def to_string(self, format: str) -> SeriesT:
         """Convert a Date/Time/Datetime series into a String series with the given format.
 
         Arguments:
@@ -504,12 +498,12 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
               whereas pandas and Python stdlib use `".%f"`.
             - PyArrow interprets `"%S"` as "seconds, including fractional seconds"
               whereas most other tools interpret it as "just seconds, as 2 digits".
-
-            Therefore, we make the following adjustments:
+            ---
+            Therefore, we make the following adjustments.
 
             - for pandas-like libraries, we replace `"%S.%f"` with `"%S%.f"`.
             - for PyArrow, we replace `"%S.%f"` with `"%S"`.
-
+            ---
             Workarounds like these don't make us happy, and we try to avoid them as
             much as possible, but here we feel like it's the best compromise.
 
@@ -519,8 +513,8 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
 
             - `"%Y-%m-%dT%H:%M:%S%.f"` for datetimes
             - `"%Y-%m-%d"` for dates
-
-            though note that, even then, different tools may return a different number
+            ---
+            Though note that, even then, different tools may return a different number
             of trailing zeros. Nonetheless, this is probably consistent enough for
             most applications.
 
@@ -532,12 +526,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> s_native = pa.chunked_array(
-            ...     [
-            ...         [
-            ...             datetime(2020, 3, 1),
-            ...             datetime(2020, 4, 1),
-            ...         ]
-            ...     ]
+            ...     [[datetime(2020, 3, 1), datetime(2020, 4, 1)]]
             ... )
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.dt.to_string("%Y/%m/%d").to_native()  # doctest: +ELLIPSIS
@@ -553,7 +542,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.dt.to_string(format)
         )
 
-    def replace_time_zone(self: Self, time_zone: str | None) -> SeriesT:
+    def replace_time_zone(self, time_zone: str | None) -> SeriesT:
         """Replace time zone.
 
         Arguments:
@@ -587,7 +576,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.dt.replace_time_zone(time_zone)
         )
 
-    def convert_time_zone(self: Self, time_zone: str) -> SeriesT:
+    def convert_time_zone(self, time_zone: str) -> SeriesT:
         """Convert time zone.
 
         If converting from a time-zone-naive column, then conversion happens
@@ -622,12 +611,14 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.dt.convert_time_zone(time_zone)
         )
 
-    def timestamp(self: Self, time_unit: TimeUnit) -> SeriesT:
+    def timestamp(self, time_unit: TimeUnit) -> SeriesT:
         """Return a timestamp in the given time unit.
 
         Arguments:
-            time_unit: {'ns', 'us', 'ms'}
-                Time unit.
+            time_unit: One of
+                - 'ns': nanosecond.
+                - 'us': microsecond.
+                - 'ms': millisecond.
 
         Returns:
             A new Series with timestamps in the specified time unit.
@@ -654,4 +645,39 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             raise ValueError(msg)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.timestamp(time_unit)
+        )
+
+    def truncate(self, every: str) -> SeriesT:
+        """Divide the date/datetime range into buckets.
+
+        Arguments:
+            every: Length of bucket. Must be of form `<multiple><unit>`,
+                where `multiple` is a positive integer and `unit` is one of
+
+                - 'ns': nanosecond.
+                - 'us': microsecond.
+                - 'ms': millisecond.
+                - 's': second.
+                - 'm': minute.
+                - 'h': hour.
+                - 'd': day.
+                - 'mo': month.
+                - 'q': quarter.
+                - 'y': year.
+
+        Returns:
+            Series of data type `Date` or `Datetime`.
+
+        Examples:
+            >>> from datetime import datetime
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> s_native = pd.Series([datetime(2021, 3, 1, 12, 34)])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.dt.truncate("1h").to_native()
+            0   2021-03-01 12:00:00
+            dtype: datetime64[ns]
+        """
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.dt.truncate(every)
         )

@@ -1,38 +1,41 @@
 from __future__ import annotations
 
 import operator
+import warnings
 from functools import reduce
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Iterable
-from typing import Literal
+from typing import TYPE_CHECKING, Any, Literal, Sequence
 
-from narwhals._compliant import CompliantThen
-from narwhals._compliant import EagerNamespace
-from narwhals._compliant import EagerWhen
-from narwhals._expression_parsing import combine_alias_output_names
-from narwhals._expression_parsing import combine_evaluate_output_names
+from narwhals._compliant import CompliantThen, EagerNamespace, EagerWhen
+from narwhals._expression_parsing import (
+    combine_alias_output_names,
+    combine_evaluate_output_names,
+)
 from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_series_full_broadcast
-from narwhals._pandas_like.utils import diagonal_concat
-from narwhals._pandas_like.utils import horizontal_concat
-from narwhals._pandas_like.utils import vertical_concat
-from narwhals.utils import import_dtypes_module
 
 if TYPE_CHECKING:
     import pandas as pd
-    from typing_extensions import Self
 
+    from narwhals._pandas_like.typing import NDFrameT
     from narwhals.dtypes import DType
-    from narwhals.utils import Implementation
-    from narwhals.utils import Version
+    from narwhals.typing import NonNestedLiteral
+    from narwhals.utils import Implementation, Version
+
+VERTICAL: Literal[0] = 0
+HORIZONTAL: Literal[1] = 1
 
 
 class PandasLikeNamespace(
-    EagerNamespace[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr]
+    EagerNamespace[
+        PandasLikeDataFrame,
+        PandasLikeSeries,
+        PandasLikeExpr,
+        "pd.DataFrame",
+        "pd.Series[Any]",
+    ]
 ):
     @property
     def _dataframe(self) -> type[PandasLikeDataFrame]:
@@ -47,12 +50,12 @@ class PandasLikeNamespace(
         return PandasLikeSeries
 
     @property
-    def selectors(self: Self) -> PandasSelectorNamespace:
-        return PandasSelectorNamespace(self)
+    def selectors(self) -> PandasSelectorNamespace:
+        return PandasSelectorNamespace.from_namespace(self)
 
     # --- not in spec ---
     def __init__(
-        self: Self,
+        self,
         implementation: Implementation,
         backend_version: tuple[int, ...],
         version: Version,
@@ -61,7 +64,9 @@ class PandasLikeNamespace(
         self._backend_version = backend_version
         self._version = version
 
-    def lit(self: Self, value: Any, dtype: DType | type[DType] | None) -> PandasLikeExpr:
+    def lit(
+        self, value: NonNestedLiteral, dtype: DType | type[DType] | None
+    ) -> PandasLikeExpr:
         def _lit_pandas_series(df: PandasLikeDataFrame) -> PandasLikeSeries:
             pandas_series = self._series.from_iterable(
                 data=[value],
@@ -84,7 +89,7 @@ class PandasLikeNamespace(
             version=self._version,
         )
 
-    def len(self: Self) -> PandasLikeExpr:
+    def len(self) -> PandasLikeExpr:
         return PandasLikeExpr(
             lambda df: [
                 self._series.from_iterable(
@@ -101,7 +106,7 @@ class PandasLikeNamespace(
         )
 
     # --- horizontal ---
-    def sum_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+    def sum_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = [s for _expr in exprs for s in _expr(df)]
             series = align_series_full_broadcast(*series)
@@ -117,7 +122,7 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def all_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+    def all_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = align_series_full_broadcast(
                 *(s for _expr in exprs for s in _expr(df))
@@ -133,7 +138,7 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def any_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+    def any_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = align_series_full_broadcast(
                 *(s for _expr in exprs for s in _expr(df))
@@ -149,7 +154,7 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def mean_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+    def mean_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
             series = align_series_full_broadcast(
@@ -167,7 +172,7 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def min_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+    def min_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = [s for _expr in exprs for s in _expr(df)]
             series = align_series_full_broadcast(*series)
@@ -192,7 +197,7 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def max_horizontal(self: Self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+    def max_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = [s for _expr in exprs for s in _expr(df)]
             series = align_series_full_broadcast(*series)
@@ -217,68 +222,64 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def concat(
-        self: Self,
-        items: Iterable[PandasLikeDataFrame],
-        *,
-        how: Literal["horizontal", "vertical", "diagonal"],
-    ) -> PandasLikeDataFrame:
-        dfs: list[Any] = [item._native_frame for item in items]
-        if how == "horizontal":
-            return PandasLikeDataFrame(
-                horizontal_concat(
-                    dfs,
-                    implementation=self._implementation,
-                    backend_version=self._backend_version,
-                ),
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-                version=self._version,
-                validate_column_names=True,
-            )
-        if how == "vertical":
-            return PandasLikeDataFrame(
-                vertical_concat(
-                    dfs,
-                    implementation=self._implementation,
-                    backend_version=self._backend_version,
-                ),
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-                version=self._version,
-                validate_column_names=True,
-            )
+    @property
+    def _concat(self):  # type: ignore[no-untyped-def] # noqa: ANN202
+        """Return the **native** equivalent of `pd.concat`."""
+        # NOTE: Leave un-annotated to allow `@overload` matching via inference.
+        if TYPE_CHECKING:
+            import pandas as pd
 
-        if how == "diagonal":
-            return PandasLikeDataFrame(
-                diagonal_concat(
-                    dfs,
-                    implementation=self._implementation,
-                    backend_version=self._backend_version,
-                ),
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-                version=self._version,
-                validate_column_names=True,
-            )
-        raise NotImplementedError
+            return pd.concat
+        return self._implementation.to_native_namespace().concat
 
-    def when(self: Self, predicate: PandasLikeExpr) -> PandasWhen:
+    def _concat_diagonal(self, dfs: Sequence[pd.DataFrame], /) -> pd.DataFrame:
+        if self._implementation.is_pandas() and self._backend_version < (3,):
+            if self._backend_version < (1,):
+                return self._concat(dfs, axis=VERTICAL, copy=False, sort=False)
+            return self._concat(dfs, axis=VERTICAL, copy=False)
+        return self._concat(dfs, axis=VERTICAL)
+
+    def _concat_horizontal(self, dfs: Sequence[NDFrameT], /) -> pd.DataFrame:
+        if self._implementation.is_cudf():
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore",
+                    message="The behavior of array concatenation with empty entries is deprecated",
+                    category=FutureWarning,
+                )
+                return self._concat(dfs, axis=HORIZONTAL)
+        elif self._implementation.is_pandas() and self._backend_version < (3,):
+            return self._concat(dfs, axis=HORIZONTAL, copy=False)
+        return self._concat(dfs, axis=HORIZONTAL)
+
+    def _concat_vertical(self, dfs: Sequence[pd.DataFrame], /) -> pd.DataFrame:
+        cols_0 = dfs[0].columns
+        for i, df in enumerate(dfs[1:], start=1):
+            cols_current = df.columns
+            if not (
+                (len(cols_current) == len(cols_0)) and (cols_current == cols_0).all()
+            ):
+                msg = (
+                    "unable to vstack, column names don't match:\n"
+                    f"   - dataframe 0: {cols_0.to_list()}\n"
+                    f"   - dataframe {i}: {cols_current.to_list()}\n"
+                )
+                raise TypeError(msg)
+        if self._implementation.is_pandas() and self._backend_version < (3,):
+            return self._concat(dfs, axis=VERTICAL, copy=False)
+        return self._concat(dfs, axis=VERTICAL)
+
+    def when(self, predicate: PandasLikeExpr) -> PandasWhen:
         return PandasWhen.from_expr(predicate, context=self)
 
     def concat_str(
-        self: Self,
-        *exprs: PandasLikeExpr,
-        separator: str,
-        ignore_nulls: bool,
+        self, *exprs: PandasLikeExpr, separator: str, ignore_nulls: bool
     ) -> PandasLikeExpr:
-        dtypes = import_dtypes_module(self._version)
+        string = self._version.dtypes.String()
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
-            series = align_series_full_broadcast(
-                *(s.cast(dtypes.String()) for s in expr_results)
-            )
+            series = align_series_full_broadcast(*(s.cast(string) for s in expr_results))
             null_mask = align_series_full_broadcast(*(s.is_null() for s in expr_results))
 
             if not ignore_nulls:
@@ -299,9 +300,7 @@ class PandasLikeNamespace(
                 )
                 separators = (sep_array.zip_with(~nm, "") for nm in null_mask[:-1])
                 result = reduce(
-                    operator.add,
-                    (s + v for s, v in zip(separators, values)),
-                    init_value,
+                    operator.add, (s + v for s, v in zip(separators, values)), init_value
                 )
 
             return [result]
@@ -324,7 +323,11 @@ class PandasWhen(
         return PandasThen
 
     def _if_then_else(
-        self, when: pd.Series[Any], then: pd.Series[Any], otherwise: Any, /
+        self,
+        when: pd.Series[Any],
+        then: pd.Series[Any],
+        otherwise: pd.Series[Any] | NonNestedLiteral,
+        /,
     ) -> pd.Series[Any]:
         return then.where(when) if otherwise is None else then.where(when, otherwise)
 

@@ -1,46 +1,40 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Literal
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Sequence
 
 import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
 from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._expression_parsing import is_scalar_like
 from narwhals.exceptions import ColumnNotFoundError
-from narwhals.utils import Implementation
-from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import not_implemented
+from narwhals.utils import Implementation, generate_temporary_column_name, not_implemented
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
+    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries, ScalarKwargs
     from narwhals._expression_parsing import ExprMetadata
-    from narwhals.utils import Version
-    from narwhals.utils import _FullContext
+    from narwhals.typing import RankMethod
+    from narwhals.utils import Version, _FullContext
 
 
 class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
     _implementation: Implementation = Implementation.PYARROW
 
     def __init__(
-        self: Self,
-        call: Callable[[ArrowDataFrame], Sequence[ArrowSeries]],
+        self,
+        call: EvalSeries[ArrowDataFrame, ArrowSeries],
         *,
         depth: int,
         function_name: str,
-        evaluate_output_names: Callable[[ArrowDataFrame], Sequence[str]],
-        alias_output_names: Callable[[Sequence[str]], Sequence[str]] | None,
+        evaluate_output_names: EvalNames[ArrowDataFrame],
+        alias_output_names: AliasNames | None,
         backend_version: tuple[int, ...],
         version: Version,
-        call_kwargs: dict[str, Any] | None = None,
+        scalar_kwargs: ScalarKwargs | None = None,
         implementation: Implementation | None = None,
     ) -> None:
         self._call = call
@@ -51,13 +45,13 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         self._alias_output_names = alias_output_names
         self._backend_version = backend_version
         self._version = version
-        self._call_kwargs = call_kwargs or {}
+        self._scalar_kwargs = scalar_kwargs or {}
         self._metadata: ExprMetadata | None = None
 
     @classmethod
     def from_column_names(
         cls: type[Self],
-        evaluate_column_names: Callable[[ArrowDataFrame], Sequence[str]],
+        evaluate_column_names: EvalNames[ArrowDataFrame],
         /,
         *,
         context: _FullContext,
@@ -93,59 +87,48 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         )
 
     @classmethod
-    def from_column_indices(
-        cls: type[Self], *column_indices: int, context: _FullContext
-    ) -> Self:
-        from narwhals._arrow.series import ArrowSeries
-
+    def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            tbl = df.native
+            cols = df.columns
             return [
-                ArrowSeries(
-                    df.native[column_index],
-                    name=df.native.column_names[column_index],
-                    backend_version=df._backend_version,
-                    version=df._version,
-                )
-                for column_index in column_indices
+                ArrowSeries.from_native(tbl[i], name=cols[i], context=df)
+                for i in column_indices
             ]
 
         return cls(
             func,
             depth=0,
             function_name="nth",
-            evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
+            evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
             backend_version=context._backend_version,
             version=context._version,
         )
 
-    def __narwhals_namespace__(self: Self) -> ArrowNamespace:
+    def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
         return ArrowNamespace(
             backend_version=self._backend_version, version=self._version
         )
 
-    def __narwhals_expr__(self: Self) -> None: ...
+    def __narwhals_expr__(self) -> None: ...
 
     def _reuse_series_extra_kwargs(
         self, *, returns_scalar: bool = False
     ) -> dict[str, Any]:
         return {"_return_py_scalar": False} if returns_scalar else {}
 
-    def cum_sum(self: Self, *, reverse: bool) -> Self:
+    def cum_sum(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_sum", reverse=reverse)
 
-    def shift(self: Self, n: int) -> Self:
+    def shift(self, n: int) -> Self:
         return self._reuse_series("shift", n=n)
 
-    def over(
-        self: Self,
-        partition_by: Sequence[str],
-        order_by: Sequence[str] | None,
-    ) -> Self:
+    def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
         assert self._metadata is not None  # noqa: S101
-        if partition_by and not is_scalar_like(self._metadata.kind):
+        if partition_by and not self._metadata.is_scalar_like:
             msg = "Only aggregation or literal operations are supported in grouped `over` context for PyArrow."
             raise NotImplementedError(msg)
 
@@ -163,7 +146,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                 # TODO(marco): is there a way to do this efficiently without
                 # doing 2 sorts? Here we're sorting the dataframe and then
                 # again calling `sort_indices`. `ArrowSeries.scatter` would also sort.
-                sorting_indices = pc.sort_indices(df[token].native)  # type: ignore[call-overload]
+                sorting_indices = pc.sort_indices(df.get_column(token).native)
                 return [s._with_native(s.native.take(sorting_indices)) for s in result]
         else:
 
@@ -178,7 +161,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                     )
                     raise NotImplementedError(msg)
 
-                tmp = df.group_by(*partition_by, drop_null_keys=False).agg(self)
+                tmp = df.group_by(partition_by, drop_null_keys=False).agg(self)
                 tmp = df.simple_select(*partition_by).join(
                     tmp,
                     how="left",
@@ -186,7 +169,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                     right_on=partition_by,
                     suffix="_right",
                 )
-                return [tmp[alias] for alias in aliases]
+                return [tmp.get_column(alias) for alias in aliases]
 
         return self.__class__(
             func,
@@ -198,24 +181,22 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
             version=self._version,
         )
 
-    def cum_count(self: Self, *, reverse: bool) -> Self:
+    def cum_count(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_count", reverse=reverse)
 
-    def cum_min(self: Self, *, reverse: bool) -> Self:
+    def cum_min(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_min", reverse=reverse)
 
-    def cum_max(self: Self, *, reverse: bool) -> Self:
+    def cum_max(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_max", reverse=reverse)
 
-    def cum_prod(self: Self, *, reverse: bool) -> Self:
+    def cum_prod(self, *, reverse: bool) -> Self:
         return self._reuse_series("cum_prod", reverse=reverse)
 
-    def rank(
-        self: Self,
-        method: Literal["average", "min", "max", "dense", "ordinal"],
-        *,
-        descending: bool,
-    ) -> Self:
+    def rank(self, method: RankMethod, *, descending: bool) -> Self:
         return self._reuse_series("rank", method=method, descending=descending)
+
+    def log(self, base: float) -> Self:
+        return self._reuse_series("log", base=base)
 
     ewm_mean = not_implemented()

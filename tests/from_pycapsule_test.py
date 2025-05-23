@@ -7,15 +7,13 @@ from typing import Any
 import pandas as pd
 import pytest
 
-import narwhals.stable.v1 as nw
-from tests.utils import PYARROW_VERSION
-from tests.utils import assert_equal_data
+import narwhals as nw
+from tests.utils import PYARROW_VERSION, assert_equal_data
 
 pytest.importorskip("pyarrow")
 import pyarrow as pa
 
-from narwhals.utils import Implementation
-from narwhals.utils import Version
+from narwhals.utils import Implementation, Version
 
 
 @dataclass

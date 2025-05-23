@@ -4,26 +4,21 @@ import math
 import os
 import sys
 import warnings
+from datetime import date, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Iterator
-from typing import Mapping
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Callable, Iterator, Mapping, Sequence
 
 import pandas as pd
 import pyarrow as pa
 
 import narwhals as nw
 from narwhals.translate import from_native
-from narwhals.typing import IntoDataFrame
-from narwhals.typing import IntoFrame
-from narwhals.utils import Implementation
-from narwhals.utils import parse_version
+from narwhals.utils import Implementation, parse_version
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
+
+    from narwhals.typing import DataFrameLike, NativeFrame, NativeLazyFrame
 
 
 def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
@@ -42,8 +37,8 @@ DASK_VERSION: tuple[int, ...] = get_module_version_as_tuple("dask")
 PYARROW_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyarrow")
 PYSPARK_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyspark")
 
-Constructor: TypeAlias = Callable[[Any], IntoFrame]
-ConstructorEager: TypeAlias = Callable[[Any], IntoDataFrame]
+Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | NativeFrame | DataFrameLike"]
+ConstructorEager: TypeAlias = Callable[[Any], "NativeFrame | DataFrameLike"]
 
 
 def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
@@ -75,8 +70,14 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
         hasattr(result, "_compliant_frame")
         and result._compliant_frame._implementation is Implementation.DUCKDB
     )
+    is_ibis = (
+        hasattr(result, "_compliant_frame")
+        and result._compliant_frame._implementation is Implementation.IBIS
+    )
     if is_duckdb:
         result = from_native(result.to_native().arrow())
+    if is_ibis:
+        result = from_native(result.to_native().to_pyarrow())
     if hasattr(result, "collect"):
         kwargs: dict[Implementation, dict[str, Any]] = {Implementation.POLARS: {}}
 
@@ -116,8 +117,11 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
                 )
             elif pd.isna(lhs):
                 are_equivalent_values = pd.isna(rhs)
+            elif type(lhs) is date and type(rhs) is datetime:
+                are_equivalent_values = datetime(lhs.year, lhs.month, lhs.day) == rhs
             else:
                 are_equivalent_values = lhs == rhs
+
             assert are_equivalent_values, (
                 f"Mismatch at index {i}: {lhs} != {rhs}\nExpected: {expected}\nGot: {result}"
             )

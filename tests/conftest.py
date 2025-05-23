@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import os
 import sys
+import uuid
 from copy import deepcopy
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Sequence
+from functools import lru_cache
+from typing import TYPE_CHECKING, Any, Callable, Sequence, cast
 
 import pytest
 
@@ -15,10 +14,19 @@ from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     import duckdb
+    import ibis
+    import pandas as pd
     import polars as pl
+    import pyarrow as pa
+    from ibis.backends.duckdb import Backend as IbisDuckDBBackend
+    from pyspark.sql import DataFrame as PySparkDataFrame
+    from typing_extensions import TypeAlias
 
-    from narwhals.typing import IntoDataFrame
-    from narwhals.typing import IntoFrame
+    from narwhals._spark_like.dataframe import SQLFrameDataFrame
+    from narwhals.typing import NativeFrame, NativeLazyFrame
+    from tests.utils import Constructor, ConstructorEager
+
+    Data: TypeAlias = "dict[str, list[Any]]"
 
 MIN_PANDAS_NULLABLE_VERSION = (2,)
 
@@ -31,7 +39,9 @@ if default_constructors := os.environ.get(
 ):  # pragma: no cover
     DEFAULT_CONSTRUCTORS = default_constructors
 else:
-    DEFAULT_CONSTRUCTORS = "pandas,pandas[pyarrow],polars[eager],pyarrow,duckdb,sqlframe"
+    DEFAULT_CONSTRUCTORS = (
+        "pandas,pandas[pyarrow],polars[eager],pyarrow,duckdb,sqlframe,ibis"
+    )
 
 
 def pytest_addoption(parser: Any) -> None:
@@ -69,59 +79,60 @@ def pytest_collection_modifyitems(
             item.add_marker(skip_slow)
 
 
-def pandas_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+def pandas_constructor(obj: Data) -> pd.DataFrame:
     import pandas as pd
 
     return pd.DataFrame(obj)
 
 
-def pandas_nullable_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+def pandas_nullable_constructor(obj: Data) -> pd.DataFrame:
     import pandas as pd
 
     return pd.DataFrame(obj).convert_dtypes(dtype_backend="numpy_nullable")
 
 
-def pandas_pyarrow_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+def pandas_pyarrow_constructor(obj: Data) -> pd.DataFrame:
     import pandas as pd
 
     return pd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")
 
 
-def modin_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:  # pragma: no cover
+def modin_constructor(obj: Data) -> NativeFrame:  # pragma: no cover
     import modin.pandas as mpd
     import pandas as pd
 
-    return mpd.DataFrame(pd.DataFrame(obj))  # type: ignore[no-any-return]
+    df = mpd.DataFrame(pd.DataFrame(obj))
+    return cast("NativeFrame", df)
 
 
-def modin_pyarrow_constructor(
-    obj: dict[str, list[Any]],
-) -> IntoDataFrame:  # pragma: no cover
+def modin_pyarrow_constructor(obj: Data) -> NativeFrame:  # pragma: no cover
     import modin.pandas as mpd
     import pandas as pd
 
-    return mpd.DataFrame(pd.DataFrame(obj)).convert_dtypes(dtype_backend="pyarrow")  # type: ignore[no-any-return]
+    df = mpd.DataFrame(pd.DataFrame(obj)).convert_dtypes(dtype_backend="pyarrow")
+    return cast("NativeFrame", df)
 
 
-def cudf_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:  # pragma: no cover
+def cudf_constructor(obj: Data) -> NativeFrame:  # pragma: no cover
     import cudf
 
-    return cudf.DataFrame(obj)  # type: ignore[no-any-return]
+    df = cudf.DataFrame(obj)
+    return cast("NativeFrame", df)
 
 
-def polars_eager_constructor(obj: dict[str, list[Any]]) -> IntoDataFrame:
+def polars_eager_constructor(obj: Data) -> pl.DataFrame:
     import polars as pl
 
     return pl.DataFrame(obj)
 
 
-def polars_lazy_constructor(obj: dict[str, list[Any]]) -> pl.LazyFrame:
+def polars_lazy_constructor(obj: Data) -> pl.LazyFrame:
     import polars as pl
 
     return pl.LazyFrame(obj)
 
 
-def duckdb_lazy_constructor(obj: dict[str, list[Any]]) -> duckdb.DuckDBPyRelation:
+def duckdb_lazy_constructor(obj: Data) -> duckdb.DuckDBPyRelation:
     import duckdb
     import polars as pl
 
@@ -129,33 +140,37 @@ def duckdb_lazy_constructor(obj: dict[str, list[Any]]) -> duckdb.DuckDBPyRelatio
     return duckdb.table("_df")
 
 
-def dask_lazy_p1_constructor(obj: dict[str, list[Any]]) -> IntoFrame:  # pragma: no cover
+def dask_lazy_p1_constructor(obj: Data) -> NativeLazyFrame:  # pragma: no cover
     import dask.dataframe as dd
 
-    return dd.from_dict(obj, npartitions=1)  # type: ignore[no-any-return]
+    return cast("NativeLazyFrame", dd.from_dict(obj, npartitions=1))
 
 
-def dask_lazy_p2_constructor(obj: dict[str, list[Any]]) -> IntoFrame:  # pragma: no cover
+def dask_lazy_p2_constructor(obj: Data) -> NativeLazyFrame:  # pragma: no cover
     import dask.dataframe as dd
 
-    return dd.from_dict(obj, npartitions=2)  # type: ignore[no-any-return]
+    return cast("NativeLazyFrame", dd.from_dict(obj, npartitions=2))
 
 
-def pyarrow_table_constructor(obj: dict[str, Any]) -> IntoDataFrame:
+def pyarrow_table_constructor(obj: dict[str, Any]) -> pa.Table:
     import pyarrow as pa
 
     return pa.table(obj)
 
 
-def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cover
-    try:
-        from pyspark.sql import SparkSession
-    except ImportError:  # pragma: no cover
-        pytest.skip("pyspark is not installed")
-        return None
-
+def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma: no cover
+    pytest.importorskip("pyspark")
     import warnings
     from atexit import register
+
+    is_spark_connect = bool(os.environ.get("SPARK_CONNECT", None))
+
+    if TYPE_CHECKING:
+        from pyspark.sql import SparkSession
+    elif is_spark_connect:
+        from pyspark.sql.connect.session import SparkSession
+    else:
+        from pyspark.sql import SparkSession
 
     with warnings.catch_warnings():
         # The spark session seems to trigger a polars warning.
@@ -163,15 +178,17 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
         warnings.filterwarnings(
             "ignore", r"Using fork\(\) can cause Polars", category=RuntimeWarning
         )
+        builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
 
         # common timezone for all tests environments
         os.environ["TZ"] = "UTC"
 
         session = (
-            SparkSession.builder.appName("unit-tests")  # pyright: ignore[reportAttributeAccessIssue]
-            .master("local[1]")
-            .config("spark.ui.enabled", "false")
-            # executing one task at a time makes the tests faster
+            (
+                builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
+                if is_spark_connect
+                else builder.master("local[1]").config("spark.ui.enabled", "false")
+            )
             .config("spark.default.parallelism", "1")
             .config("spark.sql.shuffle.partitions", "2")
             .getOrCreate()
@@ -179,12 +196,12 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
 
         register(session.stop)
 
-        def _constructor(obj: dict[str, list[Any]]) -> IntoFrame:
+        def _constructor(obj: Data) -> PySparkDataFrame:
             _obj = deepcopy(obj)
             index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
             _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
 
-            return (  # type: ignore[no-any-return]
+            return (
                 session.createDataFrame([*zip(*_obj.values())], schema=[*_obj.keys()])
                 .repartition(2)
                 .orderBy(index_col_name)
@@ -194,16 +211,30 @@ def pyspark_lazy_constructor() -> Callable[[Any], IntoFrame]:  # pragma: no cove
         return _constructor
 
 
-def sqlframe_pyspark_lazy_constructor(
-    obj: dict[str, Any],
-) -> IntoFrame:  # pragma: no cover
+def sqlframe_pyspark_lazy_constructor(obj: Data) -> SQLFrameDataFrame:  # pragma: no cover
     from sqlframe.duckdb import DuckDBSession
 
     session = DuckDBSession()
     return session.createDataFrame([*zip(*obj.values())], schema=[*obj.keys()])
 
 
-EAGER_CONSTRUCTORS: dict[str, Callable[[Any], IntoDataFrame]] = {
+@lru_cache(maxsize=1)
+def _ibis_backend() -> IbisDuckDBBackend:  # pragma: no cover
+    """Cached (singleton) in-memory backend to ensure all tables exist within the same in-memory database."""
+    import ibis
+
+    return ibis.duckdb.connect()
+
+
+def ibis_lazy_constructor(obj: Data) -> ibis.Table:  # pragma: no cover
+    import polars as pl
+
+    ldf = pl.from_dict(obj).lazy()
+    table_name = str(uuid.uuid4())
+    return _ibis_backend().create_table(table_name, ldf)
+
+
+EAGER_CONSTRUCTORS: dict[str, ConstructorEager] = {
     "pandas": pandas_constructor,
     "pandas[nullable]": pandas_nullable_constructor,
     "pandas[pyarrow]": pandas_pyarrow_constructor,
@@ -213,18 +244,19 @@ EAGER_CONSTRUCTORS: dict[str, Callable[[Any], IntoDataFrame]] = {
     "cudf": cudf_constructor,
     "polars[eager]": polars_eager_constructor,
 }
-LAZY_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {
+LAZY_CONSTRUCTORS: dict[str, Constructor] = {
     "dask": dask_lazy_p2_constructor,
     "polars[lazy]": polars_lazy_constructor,
     "duckdb": duckdb_lazy_constructor,
     "pyspark": pyspark_lazy_constructor,  # type: ignore[dict-item]
     "sqlframe": sqlframe_pyspark_lazy_constructor,
+    "ibis": ibis_lazy_constructor,
 }
-GPU_CONSTRUCTORS: dict[str, Callable[[Any], IntoFrame]] = {"cudf": cudf_constructor}
+GPU_CONSTRUCTORS: dict[str, ConstructorEager] = {"cudf": cudf_constructor}
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
-    if metafunc.config.getoption("all_cpu_constructors"):
+    if metafunc.config.getoption("all_cpu_constructors"):  # pragma: no cover
         selected_constructors: list[str] = [
             *iter(EAGER_CONSTRUCTORS.keys()),
             *iter(LAZY_CONSTRUCTORS.keys()),
@@ -232,32 +264,34 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         selected_constructors = [
             x
             for x in selected_constructors
-            if x not in GPU_CONSTRUCTORS and x != "modin"  # too slow
+            if x not in GPU_CONSTRUCTORS
+            and x
+            not in {
+                "modin",  # too slow
+                "spark[connect]",  # complex local setup; can't run together with local spark
+            }
         ]
     else:  # pragma: no cover
-        selected_constructors = metafunc.config.getoption("constructors").split(",")  # pyright: ignore[reportAttributeAccessIssue]
+        opt = cast("str", metafunc.config.getoption("constructors"))
+        selected_constructors = opt.split(",")
 
-    eager_constructors: list[Callable[[Any], IntoDataFrame]] = []
+    eager_constructors: list[ConstructorEager] = []
     eager_constructors_ids: list[str] = []
-    constructors: list[Callable[[Any], IntoFrame]] = []
+    constructors: list[Constructor] = []
     constructors_ids: list[str] = []
 
     for constructor in selected_constructors:
         if (
-            (
-                constructor in {"pandas[nullable]", "pandas[pyarrow]"}
-                and MIN_PANDAS_NULLABLE_VERSION > PANDAS_VERSION
-            )
-            or (constructor == "sqlframe" and sys.version_info < (3, 9))
-            or (constructor == "pyspark" and sys.version_info >= (3, 12))
-        ):
+            constructor in {"pandas[nullable]", "pandas[pyarrow]"}
+            and MIN_PANDAS_NULLABLE_VERSION > PANDAS_VERSION
+        ) or (constructor == "sqlframe" and sys.version_info < (3, 9)):
             continue  # pragma: no cover
 
         if constructor in EAGER_CONSTRUCTORS:
             eager_constructors.append(EAGER_CONSTRUCTORS[constructor])
             eager_constructors_ids.append(constructor)
             constructors.append(EAGER_CONSTRUCTORS[constructor])
-        elif constructor == "pyspark":  # pragma: no cover
+        elif constructor in {"pyspark", "pyspark[connect]"}:  # pragma: no cover
             constructors.append(pyspark_lazy_constructor())
         elif constructor in LAZY_CONSTRUCTORS:
             constructors.append(LAZY_CONSTRUCTORS[constructor])
@@ -271,10 +305,4 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             "constructor_eager", eager_constructors, ids=eager_constructors_ids
         )
     elif "constructor" in metafunc.fixturenames:
-        if (
-            any(x in str(metafunc.module) for x in ("from_dict", "from_numpy"))
-            and LAZY_CONSTRUCTORS["duckdb"] in constructors
-        ):
-            constructors.remove(LAZY_CONSTRUCTORS["duckdb"])
-            constructors_ids.remove("duckdb")
         metafunc.parametrize("constructor", constructors, ids=constructors_ids)

@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
-import narwhals.stable.v1 as nw_v1
-from narwhals.dependencies import get_cudf
-from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_cudf, get_modin
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -22,9 +19,9 @@ def test_lazy_to_default(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.lazy()
     assert isinstance(result, nw.LazyFrame)
-    df = nw_v1.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.lazy()
-    assert isinstance(result, nw_v1.LazyFrame)
+    assert isinstance(result, nw.LazyFrame)
 
     expected_cls: Any
     if "polars" in str(constructor_eager):
@@ -61,23 +58,14 @@ def test_lazy_to_default(constructor_eager: ConstructorEager) -> None:
     ],
 )
 def test_lazy_backend(
-    constructor_eager: ConstructorEager,
-    backend: Implementation | str,
+    constructor_eager: ConstructorEager, backend: Implementation | str
 ) -> None:
-    if (backend is Implementation.DASK) or backend == "dask":
-        pytest.importorskip("dask")
-    if (backend is Implementation.DUCKDB) or backend == "duckdb":
-        pytest.importorskip("duckdb")
-    if (backend is Implementation.POLARS) or backend == "polars":
-        pytest.importorskip("polars")
+    implementation = Implementation.from_backend(backend)
+    pytest.importorskip(implementation.name.lower())
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.lazy(backend=backend)
     assert isinstance(result, nw.LazyFrame)
-
-    expected = (
-        Implementation.from_string(backend) if isinstance(backend, str) else backend
-    )
-    assert result.implementation == expected
+    assert result.implementation == implementation
 
 
 def test_lazy_backend_invalid(constructor_eager: ConstructorEager) -> None:

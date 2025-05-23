@@ -9,8 +9,7 @@ import pytest
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from narwhals.utils import Implementation
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+from tests.utils import Constructor, assert_equal_data
 
 TEST_EAGER_BACKENDS: list[Implementation | str] = []
 TEST_EAGER_BACKENDS.extend(
@@ -24,38 +23,22 @@ TEST_EAGER_BACKENDS.extend(
 )
 
 
-@pytest.mark.parametrize(
-    "backend",
-    TEST_EAGER_BACKENDS,
-)
-def test_from_dict(
-    backend: Implementation | str,
-) -> None:
+@pytest.mark.parametrize("backend", TEST_EAGER_BACKENDS)
+def test_from_dict(backend: Implementation | str) -> None:
     result = nw.from_dict({"c": [1, 2], "d": [5, 6]}, backend=backend)
     expected = {"c": [1, 2], "d": [5, 6]}
     assert_equal_data(result, expected)
     assert isinstance(result, nw.DataFrame)
 
 
-@pytest.mark.parametrize(
-    "backend",
-    TEST_EAGER_BACKENDS,
-)
-def test_from_dict_schema(
-    backend: Implementation | str,
-) -> None:
+@pytest.mark.parametrize("backend", TEST_EAGER_BACKENDS)
+def test_from_dict_schema(backend: Implementation | str) -> None:
     schema = {"c": nw_v1.Int16(), "d": nw_v1.Float32()}
     result = nw_v1.from_dict({"c": [1, 2], "d": [5, 6]}, backend=backend, schema=schema)
     assert result.collect_schema() == schema
 
 
-@pytest.mark.parametrize(
-    "backend",
-    [
-        Implementation.POLARS,
-        "polars",
-    ],
-)
+@pytest.mark.parametrize("backend", [Implementation.POLARS, "polars"])
 def test_from_dict_without_backend(
     constructor: Constructor, backend: Implementation | str
 ) -> None:
@@ -70,9 +53,7 @@ def test_from_dict_without_backend(
     assert_equal_data(result, {"c": [1, 2, 3], "d": [4, 5, 6]})
 
 
-def test_from_dict_without_backend_invalid(
-    constructor: Constructor,
-) -> None:
+def test_from_dict_without_backend_invalid(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy().collect()
     with pytest.raises(TypeError, match="backend"):
         nw.from_dict({"c": nw.to_native(df["a"]), "d": nw.to_native(df["b"])})
@@ -84,9 +65,7 @@ def test_from_dict_with_backend_invalid() -> None:
         nw.from_dict({"c": [1, 2], "d": [5, 6]}, backend="duckdb")
 
 
-def test_from_dict_both_backend_and_namespace(
-    constructor: Constructor,
-) -> None:
+def test_from_dict_both_backend_and_namespace(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
     native_namespace = nw.get_native_namespace(df)
     with pytest.raises(ValueError, match="Can't pass both"):
@@ -97,9 +76,7 @@ def test_from_dict_both_backend_and_namespace(
         )
 
 
-def test_from_dict_both_backend_and_namespace_v1(
-    constructor: Constructor,
-) -> None:
+def test_from_dict_both_backend_and_namespace_v1(constructor: Constructor) -> None:
     df = nw_v1.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
     native_namespace = nw_v1.get_native_namespace(df)
     with pytest.raises(ValueError, match="Can't pass both"):
@@ -110,13 +87,7 @@ def test_from_dict_both_backend_and_namespace_v1(
         )
 
 
-@pytest.mark.parametrize(
-    "backend",
-    [
-        Implementation.POLARS,
-        "polars",
-    ],
-)
+@pytest.mark.parametrize("backend", [Implementation.POLARS, "polars"])
 def test_from_dict_one_native_one_narwhals(
     constructor: Constructor, backend: Implementation | str
 ) -> None:
@@ -132,16 +103,10 @@ def test_from_dict_one_native_one_narwhals(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.parametrize(
-    "backend",
-    TEST_EAGER_BACKENDS,
-)
-def test_from_dict_v1(
-    backend: Implementation | str,
-) -> None:
+@pytest.mark.parametrize("backend", TEST_EAGER_BACKENDS)
+def test_from_dict_v1(backend: Implementation | str) -> None:
     result = nw_v1.from_dict(
-        {"c": [1, 2], "d": [datetime(2020, 1, 1), datetime(2020, 1, 2)]},
-        backend=backend,
+        {"c": [1, 2], "d": [datetime(2020, 1, 1), datetime(2020, 1, 2)]}, backend=backend
     )
     expected = {"c": [1, 2], "d": [datetime(2020, 1, 1), datetime(2020, 1, 2)]}
     assert_equal_data(result, expected)

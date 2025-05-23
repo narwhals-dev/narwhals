@@ -2,11 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-import narwhals.stable.v1 as nw
-from tests.utils import DUCKDB_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+import narwhals as nw
+from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 
 def test_is_duplicated_expr(constructor: Constructor) -> None:

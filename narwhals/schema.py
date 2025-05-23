@@ -8,22 +8,15 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from functools import partial
-from typing import TYPE_CHECKING
-from typing import Iterable
-from typing import Mapping
-from typing import cast
+from typing import TYPE_CHECKING, Iterable, Mapping, cast
 
-from narwhals.utils import Implementation
-from narwhals.utils import Version
-from narwhals.utils import parse_version
+from narwhals.utils import Implementation, Version, parse_version
 
 if TYPE_CHECKING:
-    from typing import Any
-    from typing import ClassVar
+    from typing import Any, ClassVar
 
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self
 
     from narwhals.dtypes import DType
     from narwhals.typing import DTypeBackend
@@ -40,8 +33,7 @@ class Schema(BaseSchema):
     """Ordered mapping of column names to their data type.
 
     Arguments:
-        schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None
-            The schema definition given by column names and their associated.
+        schema: The schema definition given by column names and their associated
             *instantiated* Narwhals data type. Accepts a mapping or an iterable of tuples.
 
     Examples:
@@ -70,13 +62,12 @@ class Schema(BaseSchema):
     _version: ClassVar[Version] = Version.MAIN
 
     def __init__(
-        self: Self,
-        schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None = None,
+        self, schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None = None
     ) -> None:
         schema = schema or {}
         super().__init__(schema)
 
-    def names(self: Self) -> list[str]:
+    def names(self) -> list[str]:
         """Get the column names of the schema.
 
         Returns:
@@ -84,7 +75,7 @@ class Schema(BaseSchema):
         """
         return list(self.keys())
 
-    def dtypes(self: Self) -> list[DType]:
+    def dtypes(self) -> list[DType]:
         """Get the data types of the schema.
 
         Returns:
@@ -92,7 +83,7 @@ class Schema(BaseSchema):
         """
         return list(self.values())
 
-    def len(self: Self) -> int:
+    def len(self) -> int:
         """Get the number of columns in the schema.
 
         Returns:
@@ -100,7 +91,7 @@ class Schema(BaseSchema):
         """
         return len(self)
 
-    def to_arrow(self: Self) -> pa.Schema:
+    def to_arrow(self) -> pa.Schema:
         """Convert Schema to a pyarrow Schema.
 
         Returns:
@@ -123,7 +114,7 @@ class Schema(BaseSchema):
         )
 
     def to_pandas(
-        self: Self, dtype_backend: DTypeBackend | Iterable[DTypeBackend] = None
+        self, dtype_backend: DTypeBackend | Iterable[DTypeBackend] = None
     ) -> dict[str, Any]:
         """Convert Schema to an ordered mapping of column names to their pandas data type.
 
@@ -161,9 +152,7 @@ class Schema(BaseSchema):
         else:
             backends = tuple(dtype_backend)
             if len(backends) != len(self):
-                from itertools import chain
-                from itertools import islice
-                from itertools import repeat
+                from itertools import chain, islice, repeat
 
                 n_user, n_actual = len(backends), len(self)
                 suggestion = tuple(
@@ -186,7 +175,7 @@ class Schema(BaseSchema):
                 for name, dtype, backend in zip(self.keys(), self.values(), backends)
             }
 
-    def to_polars(self: Self) -> pl.Schema:
+    def to_polars(self) -> pl.Schema:
         """Convert Schema to a polars Schema.
 
         Returns:

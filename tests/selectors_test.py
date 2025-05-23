@@ -1,20 +1,21 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timezone
 from typing import Literal
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 import narwhals.stable.v1.selectors as ncs
-from tests.utils import PANDAS_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import PYARROW_VERSION
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
-from tests.utils import is_windows
+from tests.utils import (
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    assert_equal_data,
+    is_windows,
+)
 
 data = {
     "a": [1, 1, 2],
@@ -23,12 +24,7 @@ data = {
     "d": [True, False, True],
 }
 
-data_regex = {
-    "foo": ["x", "y"],
-    "bar": [123, 456],
-    "baz": [2.0, 5.5],
-    "zap": [0, 1],
-}
+data_regex = {"foo": ["x", "y"], "bar": [123, 456], "baz": [2.0, 5.5], "zap": [0, 1]}
 
 
 def test_selectors(constructor: Constructor) -> None:
@@ -41,10 +37,7 @@ def test_selectors(constructor: Constructor) -> None:
 def test_matches(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data_regex))
     result = df.select(ncs.matches("[^z]a") + 1)
-    expected = {
-        "bar": [124, 457],
-        "baz": [3.0, 6.5],
-    }
+    expected = {"bar": [124, 457], "baz": [3.0, 6.5]}
     assert_equal_data(result, expected)
 
 
@@ -69,15 +62,16 @@ def test_string(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_categorical(
-    request: pytest.FixtureRequest,
-    constructor: Constructor,
-) -> None:
+def test_categorical(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
         15,
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
-    if "pyspark" in str(constructor) or "duckdb" in str(constructor):
+    if (
+        "pyspark" in str(constructor)
+        or "duckdb" in str(constructor)
+        or "ibis" in str(constructor)
+    ):
         request.applymarker(pytest.mark.xfail)
     expected = {"b": ["a", "b", "c"]}
 
@@ -94,16 +88,16 @@ def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> N
         or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
         or ("pyarrow" in str(constructor) and is_windows())
         or ("pandas" in str(constructor) and PANDAS_VERSION < (2,))
+        or "ibis" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
+    if "modin" in str(constructor):
+        pytest.skip(reason="too slow")
 
     ts1 = datetime(2000, 11, 20, 18, 12, 16, 600000)
     ts2 = datetime(2020, 10, 30, 10, 20, 25, 123000)
 
-    data = {
-        "numeric": [3.14, 6.28],
-        "ts": [ts1, ts2],
-    }
+    data = {"numeric": [3.14, 6.28], "ts": [ts1, ts2]}
     time_units: list[Literal["ns", "us", "ms", "s"]] = ["ms", "us", "ns"]
 
     df = nw.from_native(constructor(data)).select(
@@ -192,10 +186,7 @@ def test_datetime_no_tz(constructor: Constructor) -> None:
     ts1 = datetime(2000, 11, 20, 18, 12, 16, 600000)
     ts2 = datetime(2020, 10, 30, 10, 20, 25, 123000)
 
-    data = {
-        "numeric": [3.14, 6.28],
-        "ts": [ts1, ts2],
-    }
+    data = {"numeric": [3.14, 6.28], "ts": [ts1, ts2]}
 
     df = nw.from_native(constructor(data))
     assert df.select(ncs.datetime()).collect_schema().names() == ["ts"]
@@ -221,22 +212,23 @@ def test_set_ops(
     expected: list[str],
     request: pytest.FixtureRequest,
 ) -> None:
-    if ("duckdb" in str(constructor) or "sqlframe" in str(constructor)) and not expected:
+    if (
+        any(x in str(constructor) for x in ("duckdb", "sqlframe", "ibis"))
+        and not expected
+    ):
+        # https://github.com/narwhals-dev/narwhals/issues/2469
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(selector).collect_schema().names()
     assert sorted(result) == expected
 
 
-def test_subtract_expr(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
-) -> None:
+def test_subtract_expr(constructor: Constructor) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 27):
         # In old Polars versions, cs.numeric() - col('a')
         # would exclude column 'a' from the result, as opposed to
         # subtracting it.
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     df = nw.from_native(constructor(data))
     result = df.select(ncs.numeric() - nw.col("a"))
     expected = {"a": [0, 0, 0], "c": [3.1, 4.0, 4.0]}
@@ -263,11 +255,15 @@ def test_set_ops_invalid(constructor: Constructor) -> None:
 def test_tz_aware(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 19):
         # bug in old polars
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,):
         # bug in old pyarrow
-        request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) or "pyspark" in str(constructor):
+        pytest.skip()
+    if (
+        "duckdb" in str(constructor)
+        or "pyspark" in str(constructor)
+        or "ibis" in str(constructor)
+    ):
         # replace_time_zone not implemented
         request.applymarker(pytest.mark.xfail)
 

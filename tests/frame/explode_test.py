@@ -4,13 +4,9 @@ from typing import Sequence
 
 import pytest
 
-import narwhals.stable.v1 as nw
-from narwhals.exceptions import InvalidOperationError
-from narwhals.exceptions import ShapeError
-from tests.utils import PANDAS_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+import narwhals as nw
+from narwhals.exceptions import InvalidOperationError, ShapeError
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, Constructor, assert_equal_data
 
 # For context, polars allows to explode multiple columns only if the columns
 # have matching element counts, therefore, l1 and l2 but not l1 and l3 together.
@@ -43,7 +39,7 @@ def test_explode_single_col(
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     result = (
         nw.from_native(constructor(data))
@@ -88,12 +84,20 @@ def test_explode_multiple_cols(
 ) -> None:
     if any(
         backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "pyarrow_table", "duckdb", "pyspark")
+        for backend in (
+            "dask",
+            "modin",
+            "cudf",
+            "pyarrow_table",
+            "duckdb",
+            "pyspark",
+            "ibis",
+        )
     ):
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     result = (
         nw.from_native(constructor(data))
@@ -114,7 +118,7 @@ def test_explode_shape_error(
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     with pytest.raises(
         (ShapeError, NotImplementedError),
@@ -136,10 +140,9 @@ def test_explode_invalid_operation_error(
         request.applymarker(pytest.mark.xfail)
 
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     with pytest.raises(
-        InvalidOperationError,
-        match="`explode` operation not supported for dtype",
+        InvalidOperationError, match="`explode` operation not supported for dtype"
     ):
         _ = nw.from_native(constructor(data)).lazy().explode("a").collect()

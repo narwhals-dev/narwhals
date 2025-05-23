@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pytest
@@ -14,7 +13,7 @@ if TYPE_CHECKING:
 
 
 class ListBackedSeries:
-    def __init__(self: Self, name: str, data: list[Any]) -> None:
+    def __init__(self, name: str, data: list[Any]) -> None:
         self._data = data
         self._name = name
 

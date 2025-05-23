@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
-import narwhals.stable.v1 as nw
-from tests.utils import PANDAS_VERSION
+import narwhals as nw
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoSeries
@@ -43,19 +41,6 @@ def test_is_ordered_categorical_pyarrow_string() -> None:
     tp = pa.dictionary(pa.int32(), pa.string())
     s = pa.chunked_array([pa.array(["a", "b"], type=tp)], type=tp)
     assert not nw.is_ordered_categorical(nw.from_native(s, series_only=True))
-
-
-@pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="requires interchange protocol")
-def test_is_ordered_categorical_interchange_protocol() -> None:
-    pytest.importorskip("pandas")
-    import pandas as pd
-
-    df = pd.DataFrame(
-        {"a": ["a", "b"]}, dtype=pd.CategoricalDtype(ordered=True)
-    ).__dataframe__()
-    assert nw.is_ordered_categorical(
-        nw.from_native(df, eager_or_interchange_only=True)["a"]
-    )
 
 
 def test_is_definitely_not_ordered_categorical(

@@ -272,7 +272,96 @@ print((pn.col("a") + 1).mean())
 For simple aggregations, Narwhals can just look at `_depth` and `function_name` and figure out
 which (efficient) elementary operation this corresponds to in pandas.
 
-## Broadcasting
+## Expression Metadata
+
+Let's try printing out a few expressions to the console to see what they show us:
+
+```python exec="1" result="python" session="metadata" source="above"
+import narwhals as nw
+
+print(nw.col("a"))
+print(nw.col("a").mean())
+print(nw.col("a").mean().over("b"))
+```
+
+Note how they tell us something about their metadata. This section is all about
+making sense of what that all means, what the rules are, and what it enables.
+
+Here's a brief description of each piece of metadata:
+
+- `expansion_kind`: How and whether the expression expands to multiple outputs.
+  This can be one of:
+
+    - `ExpansionKind.SINGLE`: Only produces a single output. For example, `nw.col('a')`.
+    - `ExpansionKind.MULTI_NAMED`: Produces multiple outputs whose names can be
+      determined statically, for example `nw.col('a', 'b')`.
+    - `ExpansionKind.MULTI_UNNAMED`: Produces multiple outputs whose names depend
+      on the input dataframe. For example, `nw.nth(0, 1)` or `nw.selectors.numeric()`.
+
+- `last_node`: Kind of the last operation in the expression. See
+  `narwhals._expression_parsing.ExprKind` for the various options.
+- `has_windows`: Whether the expression already contains an `over(...)` statement.
+- `n_orderable_ops`: How many order-dependent operations the expression contains.
+  
+    Examples:
+
+    - `nw.col('a')` contains 0 orderable operations.
+    - `nw.col('a').diff()` contains 1 orderable operation.
+    - `nw.col('a').diff().shift()` contains 2 orderable operation.
+
+- `is_elementwise`: Whether it preserves length and operates on each row independently
+  of the rows around it (e.g. `abs`, `is_null`, `round`, ...).
+- `preserves_length`: Whether the output of the expression is the same length as
+  the dataframe it gets evaluated on.
+- `is_scalar_like`: Whether the output of the expression is always length-1.
+- `is_literal`: Whether the expression doesn't depend on any column but instead
+  only on literal values, like `nw.lit(1)`.
+
+#### Chaining
+
+Say we have `expr.expr_method()`. How does `expr`'s `ExprMetadata` change?
+This depends on `expr_method`. Details can be found in `narwhals/_expression_parsing`,
+in the `ExprMetadata.with_*` methods.
+
+#### Binary operations (e.g. `nw.col('a') + nw.col('b')`)
+
+How do expression kinds change under binary operations? For example,
+if we do `expr1 + expr2`, then what can we say about the output kind?
+The rules are:
+
+- If one changes the input length (e.g. `Expr.drop_nulls`), then:
+
+    - if the other is scalar-like, then the output also changes length.
+    - else, we raise an error.
+
+- If one preserves length and the other is scalar-like, then the output
+  preserves length (because of broadcasting).
+- If one is scalar-like but not literal and the other is scalar-like,
+  the output is scalar-like but not literal.
+
+For n-ary operations such as `nw.sum_horizontal`, the above logic is
+extended across inputs. For example, `nw.sum_horizontal(expr1, expr2, expr3)`
+is `LITERAL` if all of `expr1`, `expr2`, and `expr3` are.
+
+### "You open a window to another window to another window to another window"
+
+When working with `DataFrame`s, row order is well-defined, as the dataframes
+are assumed to be eager and in-memory. Therefore, `n_orderable_ops` is
+disregarded.
+
+When working with `LazyFrame`s, on the other hand, row order is undefined.
+Therefore, when evaluating an expression, `n_orderable_ops` must be exactly
+zero - if it's not, it means that the expression depends on physical row order,
+which is not allowed for `LazyFrame`s. The way that `n_orderable_ops` can change
+is:
+
+- Orderable window functions like `diff` and `rolling_mean` increase `n_orderable_ops`
+  by 1.
+- If an orderable window function is immediately followed by `over(order_by=...)`,
+  then `n_orderable_ops` is decreased by 1. This is the only way that
+  `n_orderable_ops` can decrease.
+
+### Broadcasting
 
 When performing comparisons between columns and aggregations or scalars, we operate as if the
 aggregation or scalar was broadcasted to the length of the whole column. For example, if we
@@ -282,18 +371,11 @@ with values `[-1, 0, 1]`.
 
 Different libraries do broadcasting differently. SQL-like libraries require an empty window
 function for expressions (e.g. `a - sum(a) over ()`), Polars does its own broadcasting of
-length-1 Series, and pandas does its own broadcasting of scalars. Narwhals keeps track of
-when to trigger a broadcast by tracking the `ExprKind` of each expression. `ExprKind` is an
-`Enum` with four variants:
-
-- `TRANSFORM`: expressions which don't change length (e.g. `nw.col('a').abs()`).
-- `AGGREGATION`: expressions which reduce a column to a single value (e.g. `nw.col('a').mean()`).
-- `CHANGE_LENGTH`: expressions which change length but don't necessarily aggregate (e.g. `nw.col('a').drop_nulls()`).
-- `LITERAL`: expressions which correspond to literal values, such as the `3` in `nw.col('a')+3`.
+length-1 Series, and pandas does its own broadcasting of scalars.
 
 Narwhals triggers a broadcast in these situations:
 
-- In `select` when some values are `ExprKind.TRANSFORM` and others aren't, e.g.
+- In `select` when some values preserve length and others don't, e.g.
   `df.select('a', nw.col('b').mean())`.
 - In `with_columns`, all new columns get broadcasted to the length of the dataframe.
 - In n-ary operations between expressions, such as `nw.col('a') + nw.col('a').mean()`.
