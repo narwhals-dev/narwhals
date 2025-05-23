@@ -2,19 +2,18 @@ from __future__ import annotations
 
 import contextlib
 import operator
-from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, TypeAlias, cast
 
 from duckdb import CoalesceOperator, FunctionExpression, StarExpression
 from duckdb.typing import DuckDBPyType
 
 from narwhals._compliant import LazyExpr
+from narwhals._compliant.window import UnorderableWindowInputs, WindowInputs
 from narwhals._duckdb.expr_dt import DuckDBExprDateTimeNamespace
 from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
 from narwhals._duckdb.expr_struct import DuckDBExprStructNamespace
 from narwhals._duckdb.utils import (
-    UnorderableWindowInputs,
-    WindowInputs,
     col,
     ensure_type,
     generate_order_by_sql,
@@ -30,10 +29,15 @@ if TYPE_CHECKING:
     from duckdb import Expression
     from typing_extensions import Self
 
-    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries
+    from narwhals._compliant.typing import (
+        AliasNames,
+        EvalNames,
+        EvalSeries,
+        UnorderableWindowFunction,
+        WindowFunction,
+    )
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.namespace import DuckDBNamespace
-    from narwhals._duckdb.typing import UnorderableWindowFunction, WindowFunction
     from narwhals._expression_parsing import ExprMetadata
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -45,6 +49,11 @@ if TYPE_CHECKING:
         TemporalLiteral,
     )
     from narwhals.utils import Version, _FullContext
+
+    DuckDBWindowInputs: TypeAlias = WindowInputs[Expression]
+    DuckDBWindowFunction: TypeAlias = WindowFunction[Expression]
+    DuckDBUnorderableWindowFunction: TypeAlias = UnorderableWindowFunction[Expression]
+
 
 with contextlib.suppress(ImportError):  # requires duckdb>=1.3.0
     from duckdb import SQLExpression
@@ -70,10 +79,10 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         self._metadata: ExprMetadata | None = None
 
         # This can only be set by `_with_window_function`.
-        self._window_function: WindowFunction | None = None
+        self._window_function: DuckDBWindowFunction | None = None
 
         # These can only be set by `_with_unorderable_window_function`
-        self._unorderable_window_function: UnorderableWindowFunction | None = None
+        self._unorderable_window_function: DuckDBUnorderableWindowFunction | None = None
         self._previous_call: EvalSeries[DuckDBLazyFrame, Expression] | None = None
 
     def __call__(self, df: DuckDBLazyFrame) -> Sequence[Expression]:
@@ -94,8 +103,8 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         *,
         reverse: bool,
         func_name: Literal["sum", "max", "min", "count", "product"],
-    ) -> WindowFunction:
-        def func(window_inputs: WindowInputs) -> Expression:
+    ) -> DuckDBWindowFunction:
+        def func(window_inputs: DuckDBWindowInputs) -> Expression:
             order_by_sql = generate_order_by_sql(
                 *window_inputs.order_by, ascending=not reverse
             )
@@ -116,7 +125,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         window_size: int,
         min_samples: int,
         ddof: int | None = None,
-    ) -> WindowFunction:
+    ) -> DuckDBWindowFunction:
         ensure_type(window_size, int, type(None))
         ensure_type(min_samples, int)
         supported_funcs = ["sum", "mean", "std", "var"]
@@ -129,7 +138,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             start = f"{window_size - 1} preceding"
             end = "current row"
 
-        def func(window_inputs: WindowInputs) -> Expression:
+        def func(window_inputs: DuckDBWindowInputs) -> Expression:
             order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=True)
             partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
             window = f"({partition_by_sql} {order_by_sql} rows between {start} and {end})"
@@ -238,7 +247,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             version=self._version,
         )
 
-    def _with_window_function(self, window_function: WindowFunction) -> Self:
+    def _with_window_function(self, window_function: DuckDBWindowFunction) -> Self:
         result = self.__class__(
             self._call,
             evaluate_output_names=self._evaluate_output_names,
@@ -251,7 +260,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     def _with_unorderable_window_function(
         self,
-        unorderable_window_function: UnorderableWindowFunction,
+        unorderable_window_function: DuckDBUnorderableWindowFunction,
         previous_call: EvalSeries[DuckDBLazyFrame, Expression],
     ) -> Self:
         result = self.__class__(
@@ -542,7 +551,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
     def shift(self, n: int) -> Self:
         ensure_type(n, int)
 
-        def func(window_inputs: WindowInputs) -> Expression:
+        def func(window_inputs: DuckDBWindowInputs) -> Expression:
             order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=True)
             partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
             sql = (
@@ -554,7 +563,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     @requires.backend_version((1, 3))
     def is_first_distinct(self) -> Self:
-        def func(window_inputs: WindowInputs) -> Expression:
+        def func(window_inputs: DuckDBWindowInputs) -> Expression:
             order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=True)
             if window_inputs.partition_by:
                 partition_by_sql = (
@@ -570,7 +579,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     @requires.backend_version((1, 3))
     def is_last_distinct(self) -> Self:
-        def func(window_inputs: WindowInputs) -> Expression:
+        def func(window_inputs: DuckDBWindowInputs) -> Expression:
             order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=False)
             if window_inputs.partition_by:
                 partition_by_sql = (
@@ -586,7 +595,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     @requires.backend_version((1, 3))
     def diff(self) -> Self:
-        def func(window_inputs: WindowInputs) -> Expression:
+        def func(window_inputs: DuckDBWindowInputs) -> Expression:
             order_by_sql = generate_order_by_sql(*window_inputs.order_by, ascending=True)
             partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
             sql = f"lag({window_inputs.expr}) over ({partition_by_sql} {order_by_sql})"
@@ -685,7 +694,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
                 msg = f"`fill_null` with `strategy={strategy}` is only available in 'duckdb>=1.3.0'."
                 raise NotImplementedError(msg)
 
-            def _fill_with_strategy(window_inputs: WindowInputs) -> Expression:
+            def _fill_with_strategy(window_inputs: DuckDBWindowInputs) -> Expression:
                 order_by_sql = generate_order_by_sql(
                     *window_inputs.order_by, ascending=True
                 )
@@ -770,7 +779,9 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         def _unpartitioned_rank(expr: Expression) -> Expression:
             return _rank(expr, descending=descending)
 
-        def _partitioned_rank(window_inputs: UnorderableWindowInputs) -> Expression:
+        def _partitioned_rank(
+            window_inputs: UnorderableWindowInputs[Expression],
+        ) -> Expression:
             return _rank(
                 window_inputs.expr,
                 descending=descending,

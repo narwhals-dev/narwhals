@@ -1,6 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Sequence, TypedDict, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Protocol,
+    Sequence,
+    TypedDict,
+    TypeVar,
+)
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -19,6 +28,7 @@ if TYPE_CHECKING:
     )
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._compliant.series import CompliantSeries, EagerSeries
+    from narwhals._compliant.window import UnorderableWindowInputs, WindowInputs
     from narwhals.typing import FillNullStrategy, NativeFrame, NativeSeries, RankMethod
 
     class ScalarKwargs(TypedDict, total=False):
@@ -144,3 +154,13 @@ See [underwater unicorn magic](https://narwhals-dev.github.io/narwhals/how_it_wo
 
 EvalNames: TypeAlias = Callable[[CompliantFrameT], Sequence[str]]
 """A function from a `Frame` to a sequence of columns names *before* any aliasing takes place."""
+
+
+class WindowFunction(Protocol, Generic[NativeExprT]):
+    def __call__(self, window_inputs: WindowInputs[NativeExprT]) -> NativeExprT: ...
+
+
+class UnorderableWindowFunction(Protocol, Generic[NativeExprT]):
+    def __call__(
+        self, window_inputs: UnorderableWindowInputs[NativeExprT]
+    ) -> NativeExprT: ...
