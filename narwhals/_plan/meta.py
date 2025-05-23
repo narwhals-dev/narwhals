@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._plan.common import ExprIRNamespace
 from narwhals.exceptions import ComputeError
 from narwhals.utils import Version
 
@@ -21,29 +22,26 @@ if TYPE_CHECKING:
     from narwhals._plan.common import ExprIR
 
 
-class ExprIRMetaNamespace:
+class ExprIRMetaNamespace(ExprIRNamespace):
     """Methods to modify and traverse existing expressions."""
 
-    def __init__(self, ir: ExprIR, /) -> None:
-        self._ir: ExprIR = ir
-
     def has_multiple_outputs(self) -> bool:
-        return any(_has_multiple_outputs(e) for e in self._ir.iter_left())
+        return any(_has_multiple_outputs(e) for e in self.ir.iter_left())
 
     def is_column(self) -> bool:
         from narwhals._plan.expr import Column
 
-        return isinstance(self._ir, Column)
+        return isinstance(self.ir, Column)
 
     def is_column_selection(self, *, allow_aliasing: bool = False) -> bool:
         return all(
             _is_column_selection(e, allow_aliasing=allow_aliasing)
-            for e in self._ir.iter_left()
+            for e in self.ir.iter_left()
         )
 
     def is_literal(self, *, allow_aliasing: bool = False) -> bool:
         return all(
-            _is_literal(e, allow_aliasing=allow_aliasing) for e in self._ir.iter_left()
+            _is_literal(e, allow_aliasing=allow_aliasing) for e in self.ir.iter_left()
         )
 
     def output_name(self, *, raise_if_undetermined: bool = True) -> str | None:
@@ -73,7 +71,7 @@ class ExprIRMetaNamespace:
             >>> nwd.len().meta.output_name()
             'len'
         """
-        ok_or_err = _expr_output_name(self._ir)
+        ok_or_err = _expr_output_name(self.ir)
         if isinstance(ok_or_err, ComputeError):
             if raise_if_undetermined:
                 raise ok_or_err

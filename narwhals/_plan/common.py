@@ -200,6 +200,12 @@ class ExprIR(Immutable):
         yield self
 
 
+class ExprIRNamespace(Immutable):
+    __slots__ = ("ir",)
+
+    ir: ExprIR
+
+
 class Function(Immutable):
     """Shared by expr functions and namespace functions.
 

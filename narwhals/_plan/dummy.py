@@ -450,7 +450,7 @@ class DummyExpr:
     def meta(self) -> ExprIRMetaNamespace:
         from narwhals._plan.meta import ExprIRMetaNamespace
 
-        return ExprIRMetaNamespace(self._ir)
+        return ExprIRMetaNamespace(ir=self._ir)
 
 
 class DummySelector(DummyExpr):
