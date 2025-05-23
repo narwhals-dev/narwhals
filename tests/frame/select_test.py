@@ -105,7 +105,7 @@ def test_missing_columns_lazy(
     constructor_lazy: ConstructorLazy, request: pytest.FixtureRequest
 ) -> None:
     constructor_id = str(request.node.callspec.id)
-    if any(id_ == constructor_id for id_ in ("pyspark[connect]", "ibis")):
+    if any(id_ == constructor_id for id_ in ("sqlframe", "ibis")):
         # These backend raise errors at collect
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
@@ -113,7 +113,7 @@ def test_missing_columns_lazy(
     selected_columns = ["a", "e", "f"]
 
     def maybe_collect(df: nw.LazyFrame[Any]) -> nw.DataFrame[Any] | nw.LazyFrame[Any]:
-        if constructor_id in {"polars[lazy]", "sqlframe"}:
+        if constructor_id in {"polars[lazy]", "pyspark[connect]"}:
             # In the lazy case, Polars only errors when we call `collect`,
             # and we have no way to recover exactly which columns the user
             # tried selecting. So, we just emit their message (which varies
