@@ -32,7 +32,7 @@ def _get_expected_namespace(constructor_name: str) -> Any | None:  # noqa: PLR09
         import duckdb
 
         return duckdb
-    elif "cudf" in constructor_name:
+    elif "cudf" in constructor_name:  # pragma: no cover
         import cudf
 
         return cudf
@@ -52,7 +52,7 @@ def _get_expected_namespace(constructor_name: str) -> Any | None:  # noqa: PLR09
         import sqlframe
 
         return sqlframe
-    return None
+    return None  # pragma: no cover
 
 
 def test_native_namespace_frame(constructor: Constructor) -> None:
