@@ -100,4 +100,11 @@ class DuckDBExprStringNamespace:
             lambda expr: FunctionExpression("strptime", expr, lit(format))
         )
 
+    def zfill(self, width: int) -> DuckDBExpr:
+        # DuckDB does not have a built-in zfill function, so we need to implement it manually
+        # using string manipulation functions.
+        return self._compliant_expr._with_callable(
+            lambda expr: FunctionExpression("lpad", expr, lit(width), lit("0"))
+        )
+
     replace = not_implemented()

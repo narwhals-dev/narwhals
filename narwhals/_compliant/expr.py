@@ -1123,6 +1123,9 @@ class EagerExprStringNamespace(
     def to_uppercase(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "to_uppercase")
 
+    def zfill(self, width: int) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("str", "zfill", width=width)
+
 
 class EagerExprStructNamespace(
     EagerExprNamespace[EagerExprT], StructNamespace[EagerExprT], Generic[EagerExprT]

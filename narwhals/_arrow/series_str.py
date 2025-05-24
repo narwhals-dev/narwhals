@@ -60,3 +60,6 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
 
     def to_lowercase(self) -> ArrowSeries:
         return self.with_native(pc.utf8_lower(self.native))
+
+    def zfill(self, width: int) -> ArrowSeries:
+        return self.with_native(pc.utf8_lpad(self.native, width=width, padding="0"))
