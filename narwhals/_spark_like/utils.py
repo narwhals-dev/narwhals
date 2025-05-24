@@ -115,7 +115,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
 
 
 @lru_cache(maxsize=4)
-def fetch_session_time_zone(session: Session) -> str:
+def fetch_session_time_zone(session: Session[Any, Any, Any, Any, Any, Any, Any]) -> str:
     # Timezone can't be changed in PySpark session, so this can be cached.
     try:
         return session.conf.get("spark.sql.session.timeZone")  # type: ignore[attr-defined]
