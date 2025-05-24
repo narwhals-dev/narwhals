@@ -150,4 +150,3 @@ def strptime_to_pyspark_format(format: str) -> str:
     for py_format, spark_format in format_mapping.items():
         pyspark_format = pyspark_format.replace(py_format, spark_format)
     return pyspark_format.replace("T", " ")
-
