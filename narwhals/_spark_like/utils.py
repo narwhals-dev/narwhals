@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
     _NativeDType: TypeAlias = sqlframe_types.DataType
+    SparkSession = Session[Any, Any, Any, Any, Any, Any, Any]
 
 UNITS_DICT = {
     "y": "year",
@@ -57,7 +58,7 @@ class UnorderableWindowInputs:
 
 # NOTE: don't lru_cache this as `ModuleType` isn't hashable
 def native_to_narwhals_dtype(  # noqa: C901, PLR0912
-    dtype: _NativeDType, version: Version, spark_types: ModuleType, session: Session
+    dtype: _NativeDType, version: Version, spark_types: ModuleType, session: SparkSession
 ) -> DType:
     dtypes = version.dtypes
     if TYPE_CHECKING:
@@ -115,7 +116,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
 
 
 @lru_cache(maxsize=4)
-def fetch_session_time_zone(session: Session[Any, Any, Any, Any, Any, Any, Any]) -> str:
+def fetch_session_time_zone(session: SparkSession) -> str:
     # Timezone can't be changed in PySpark session, so this can be cached.
     try:
         return session.conf.get("spark.sql.session.timeZone")  # type: ignore[attr-defined]
