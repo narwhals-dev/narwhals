@@ -31,7 +31,7 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from tests.utils import maybe_get_modin_df
+from tests.utils import Constructor, maybe_get_modin_df
 
 if TYPE_CHECKING:
     from _pytest.mark import ParameterSet
@@ -286,7 +286,13 @@ def test_series_only_sqlframe() -> None:  # pragma: no cover
     ("eager_only", "context"),
     [
         (False, does_not_raise()),
-        (True, pytest.raises(TypeError, match="Cannot only use `eager_only`")),
+        (
+            True,
+            pytest.raises(
+                TypeError,
+                match="Cannot only use `series_only`, `eager_only` or `eager_or_interchange_only` with sqlframe DataFrame",
+            ),
+        ),
     ],
 )
 @pytest.mark.skipif(sys.version_info < (3, 9), reason="too old for sqlframe")
@@ -548,3 +554,28 @@ def test_pyspark_connect_deps_2517() -> None:  # pragma: no cover
     spark = SparkSession.builder.getOrCreate()
     # Check this doesn't raise
     nw.from_native(spark.createDataFrame([(1,)], ["a"]))
+
+
+@pytest.mark.parametrize(
+    ("eager_only", "pass_through", "context"),
+    [
+        (False, False, does_not_raise()),
+        (False, True, does_not_raise()),
+        (True, True, does_not_raise()),
+        (True, False, pytest.raises(TypeError, match="Cannot only use")),
+    ],
+)
+def test_eager_only_pass_through_main(
+    constructor: Constructor, *, eager_only: bool, pass_through: bool, context: Any
+) -> None:
+    if not any(s in str(constructor) for s in ("pyspark", "dask", "ibis", "duckdb")):
+        pytest.skip(reason="Non lazy or polars")
+
+    df = constructor(data)
+
+    with context:
+        res = nw.from_native(df, eager_only=eager_only, pass_through=pass_through)  # type: ignore[call-overload]
+        if eager_only and pass_through:
+            assert not isinstance(res, nw.LazyFrame)
+        else:
+            assert isinstance(res, nw.LazyFrame)

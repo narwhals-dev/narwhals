@@ -136,6 +136,8 @@ def duckdb_lazy_constructor(obj: Data) -> duckdb.DuckDBPyRelation:
     import duckdb
     import polars as pl
 
+    duckdb.sql("""set timezone = 'UTC'""")
+
     _df = pl.LazyFrame(obj)
     return duckdb.table("_df")
 
