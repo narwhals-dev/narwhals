@@ -15,12 +15,11 @@ from pandas.testing import assert_frame_equal, assert_index_equal, assert_series
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import (
     Implementation,
     Version,
     _DeferredIterable,
-    check_column_exists,
+    check_columns_exist,
     deprecate_native_namespace,
     parse_version,
     requires,
@@ -317,14 +316,19 @@ def test_parse_version(
     assert parse_version(version) == expected
 
 
-def test_check_column_exists() -> None:
+def test_check_columns_exists() -> None:
     columns = ["a", "b", "c"]
     subset = ["d", "f"]
-    with pytest.raises(
-        ColumnNotFoundError,
-        match=re.escape("Column(s) ['d', 'f'] not found in ['a', 'b', 'c']"),
-    ):
-        check_column_exists(columns, subset)
+    error = check_columns_exist(subset, available=columns)
+    assert error is not None
+    assert str(error) == (
+        "The following columns were not found: ['d', 'f']\n\nHint: Did you mean one of these columns: ['a', 'b', 'c']?"
+    )
+
+    # Check that the error is not returned
+    subset = ["a", "b"]
+    error = check_columns_exist(subset, available=columns)
+    assert error is None
 
 
 def test_not_implemented() -> None:

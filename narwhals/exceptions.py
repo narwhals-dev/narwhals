@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Iterable, Sequence
+
 
 class NarwhalsError(ValueError):
     """Base class for all Narwhals exceptions."""
@@ -30,11 +32,11 @@ class ColumnNotFoundError(FormattedKeyError, NarwhalsError):
 
     @classmethod
     def from_missing_and_available_column_names(
-        cls: type, missing_columns: list[str], available_columns: list[str]
+        cls, missing_columns: Iterable[str], available_columns: Sequence[str], /
     ) -> ColumnNotFoundError:
         message = (
-            f"The following columns were not found: {missing_columns}"
-            f"\n\nHint: Did you mean one of these columns: {available_columns}?"
+            f"The following columns were not found: {sorted(missing_columns)}"
+            f"\n\nHint: Did you mean one of these columns: {list(available_columns)}?"
         )
         return ColumnNotFoundError(message)
 

@@ -35,7 +35,6 @@ from narwhals.utils import (
     Implementation,
     _into_arrow_table,
     _remap_full_join_keys,
-    check_column_exists,
     exclude_column_names,
     generate_temporary_column_name,
     parse_columns_to_drop,
@@ -485,9 +484,7 @@ class PandasLikeDataFrame(
         )
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
-        to_drop = parse_columns_to_drop(
-            compliant_frame=self, columns=columns, strict=strict
-        )
+        to_drop = parse_columns_to_drop(self, columns, strict=strict)
         return self._with_native(
             self.native.drop(columns=to_drop), validate_column_names=False
         )
@@ -753,7 +750,8 @@ class PandasLikeDataFrame(
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
         mapped_keep = {"none": False, "any": "first"}.get(keep, keep)
-        check_column_exists(self.columns, subset)
+        if subset and (error := self._check_columns_exist(subset)):
+            raise error
         return self._with_native(
             self.native.drop_duplicates(subset=subset, keep=mapped_keep),
             validate_column_names=False,
