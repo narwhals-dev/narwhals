@@ -119,7 +119,7 @@ def fetch_session_time_zone(session: Session[Any, Any, Any, Any, Any, Any, Any])
     # Timezone can't be changed in PySpark session, so this can be cached.
     try:
         return session.conf.get("spark.sql.session.timeZone")  # type: ignore[attr-defined]
-    except:  # noqa: E722
+    except Exception:  # noqa: BLE001
         # https://github.com/eakmanrq/sqlframe/issues/406
         return "<unknown>"
 
