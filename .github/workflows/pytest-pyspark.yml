@@ -8,7 +8,6 @@ env:
   PY_COLORS: 1
 
 jobs:
-
   pytest-pyspark-constructor:
     if: ${{ contains(github.event.pull_request.labels.*.name, 'pyspark') || contains(github.event.pull_request.labels.*.name, 'spark-like') || contains(github.event.pull_request.labels.*.name, 'release')}}
     strategy:
