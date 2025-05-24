@@ -3,7 +3,7 @@ from __future__ import annotations
 from importlib import import_module
 from typing import TYPE_CHECKING, Any, Sequence
 
-from narwhals.exceptions import UnsupportedDTypeError
+from narwhals.exceptions import ColumnNotFoundError, UnsupportedDTypeError
 from narwhals.utils import Implementation, isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from sqlframe.base.column import Column
     from typing_extensions import TypeAlias
 
+    from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals.dtypes import DType
@@ -250,3 +251,31 @@ def import_window(implementation: Implementation, /) -> type[Any]:
     return import_module(
         f"sqlframe.{_BaseSession().execution_dialect_name}.window"
     ).Window
+
+
+def catch_pyspark_sql_exception(
+    exception: Exception, frame: CompliantLazyFrameAny, /
+) -> ColumnNotFoundError | Exception:  # pragma: no cover
+    from pyspark.errors import AnalysisException
+
+    if isinstance(exception, AnalysisException) and str(exception).startswith(
+        "[UNRESOLVED_COLUMN.WITH_SUGGESTION]"
+    ):
+        return ColumnNotFoundError.from_available_column_names(
+            available_columns=frame.columns
+        )
+    # Just return exception as-is.
+    return exception
+
+
+def catch_pyspark_connect_exception(
+    exception: Exception, /
+) -> ColumnNotFoundError | Exception:  # pragma: no cover
+    from pyspark.errors.exceptions.connect import AnalysisException
+
+    if isinstance(exception, AnalysisException) and str(exception).startswith(
+        "[UNRESOLVED_COLUMN.WITH_SUGGESTION]"
+    ):
+        return ColumnNotFoundError(str(exception))
+    # Just return exception as-is.
+    return exception
