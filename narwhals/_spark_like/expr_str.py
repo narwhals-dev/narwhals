@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING
 
+from narwhals._spark_like.utils import strptime_to_pyspark_format
 from narwhals.utils import _is_naive_format
 
 if TYPE_CHECKING:
@@ -149,3 +150,4 @@ def strptime_to_pyspark_format(format: str) -> str:
     for py_format, spark_format in format_mapping.items():
         pyspark_format = pyspark_format.replace(py_format, spark_format)
     return pyspark_format.replace("T", " ")
+
