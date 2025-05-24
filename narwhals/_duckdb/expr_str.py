@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from duckdb import FunctionExpression
 
-from narwhals._duckdb.utils import lit
+from narwhals._duckdb.utils import lit, when
 from narwhals.utils import not_implemented
 
 if TYPE_CHECKING:
@@ -103,8 +103,45 @@ class DuckDBExprStringNamespace:
     def zfill(self, width: int) -> DuckDBExpr:
         # DuckDB does not have a built-in zfill function, so we need to implement it manually
         # using string manipulation functions.
-        return self._compliant_expr._with_callable(
-            lambda expr: FunctionExpression("lpad", expr, lit(width), lit("0"))
-        )
+
+        def func(expr: Expression) -> Expression:
+            less_than_width = FunctionExpression("length", expr) < lit(width)
+            starts_with_minus = FunctionExpression("starts_with", expr, lit("-"))
+            starts_with_plus = FunctionExpression("starts_with", expr, lit("+"))
+            return (
+                when(
+                    starts_with_minus & less_than_width,
+                    FunctionExpression(
+                        "concat",
+                        lit("-"),
+                        FunctionExpression(
+                            "lpad",
+                            FunctionExpression("substr", expr, lit(2)),
+                            lit(width - 1),
+                            lit("0"),
+                        ),
+                    ),
+                )
+                .when(
+                    starts_with_plus & less_than_width,
+                    FunctionExpression(
+                        "concat",
+                        lit("+"),
+                        FunctionExpression(
+                            "lpad",
+                            FunctionExpression("substr", expr, lit(2)),
+                            lit(width - 1),
+                            lit("0"),
+                        ),
+                    ),
+                )
+                .when(
+                    less_than_width,
+                    FunctionExpression("lpad", expr, lit(width), lit("0")),
+                )
+                .otherwise(expr)
+            )
+
+        return self._compliant_expr._with_callable(func)
 
     replace = not_implemented()
