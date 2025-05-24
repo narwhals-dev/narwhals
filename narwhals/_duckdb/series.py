@@ -31,8 +31,7 @@ class DuckDBInterchangeSeries:
         return native_to_narwhals_dtype(
             self._native_series.types[0],
             self._version,
-            self._native_series,
-            DeferredTimeZone(),
+            DeferredTimeZone(self._native_series),
         )
 
     def __getattr__(self, attr: str) -> Never:
