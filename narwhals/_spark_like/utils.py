@@ -282,7 +282,7 @@ def strptime_to_pyspark_format(format: str) -> str: ...
 
 def strptime_to_pyspark_format(format: str | None) -> str | None:
     """Converts a Python strptime datetime format string to a PySpark datetime format string."""
-    if format is None:
+    if format is None:  # pragma: no cover
         return None
 
     # Replace Python format specifiers with PySpark specifiers
