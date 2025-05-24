@@ -1,7 +1,12 @@
 from __future__ import annotations
 
-from narwhals._plan.common import Function
+from typing import TYPE_CHECKING
+
+from narwhals._plan.common import ExprNamespace, Function, IRNamespace
 from narwhals._plan.options import FunctionOptions
+
+if TYPE_CHECKING:
+    from narwhals._plan.dummy import DummyExpr
 
 
 class CategoricalFunction(Function): ...
@@ -17,3 +22,19 @@ class GetCategories(CategoricalFunction):
 
     def __repr__(self) -> str:
         return "cat.get_categories"
+
+
+class IRCatNamespace(IRNamespace):
+    def get_categories(self) -> GetCategories:
+        return GetCategories()
+
+
+class ExprCatNamespace(ExprNamespace[IRCatNamespace]):
+    @property
+    def _ir_namespace(self) -> type[IRCatNamespace]:
+        return IRCatNamespace
+
+    def get_categories(self) -> DummyExpr:
+        return self._to_narwhals(
+            self._ir.get_categories().to_function_expr(self._expr._ir)
+        )

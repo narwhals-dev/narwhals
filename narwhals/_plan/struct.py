@@ -1,7 +1,12 @@
 from __future__ import annotations
 
-from narwhals._plan.common import Function
+from typing import TYPE_CHECKING
+
+from narwhals._plan.common import ExprNamespace, Function, IRNamespace
 from narwhals._plan.options import FunctionOptions
+
+if TYPE_CHECKING:
+    from narwhals._plan.dummy import DummyExpr
 
 
 class StructFunction(Function): ...
@@ -20,3 +25,17 @@ class FieldByName(StructFunction):
 
     def __repr__(self) -> str:
         return f"struct.field_by_name({self.name!r})"
+
+
+class IRStructNamespace(IRNamespace):
+    def field(self, name: str) -> FieldByName:
+        return FieldByName(name=name)
+
+
+class ExprStructNamespace(ExprNamespace[IRStructNamespace]):
+    @property
+    def _ir_namespace(self) -> type[IRStructNamespace]:
+        return IRStructNamespace
+
+    def field(self, name: str) -> DummyExpr:
+        return self._to_narwhals(self._ir.field(name).to_function_expr(self._expr._ir))

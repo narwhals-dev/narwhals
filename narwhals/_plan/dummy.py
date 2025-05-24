@@ -29,9 +29,12 @@ from narwhals.utils import Version, _hasattr_static
 if TYPE_CHECKING:
     from typing_extensions import Never, Self
 
+    from narwhals._plan.categorical import ExprCatNamespace
     from narwhals._plan.common import ExprIR, IntoExpr, IntoExprColumn, Seq, Udf
+    from narwhals._plan.lists import ExprListNamespace
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.name import ExprNameNamespace
+    from narwhals._plan.struct import ExprStructNamespace
     from narwhals.typing import (
         FillNullStrategy,
         NativeSeries,
@@ -465,6 +468,24 @@ class DummyExpr:
         from narwhals._plan.name import ExprNameNamespace
 
         return ExprNameNamespace(_expr=self)
+
+    @property
+    def cat(self) -> ExprCatNamespace:
+        from narwhals._plan.categorical import ExprCatNamespace
+
+        return ExprCatNamespace(_expr=self)
+
+    @property
+    def struct(self) -> ExprStructNamespace:
+        from narwhals._plan.struct import ExprStructNamespace
+
+        return ExprStructNamespace(_expr=self)
+
+    @property
+    def list(self) -> ExprListNamespace:
+        from narwhals._plan.lists import ExprListNamespace
+
+        return ExprListNamespace(_expr=self)
 
 
 class DummySelector(DummyExpr):
