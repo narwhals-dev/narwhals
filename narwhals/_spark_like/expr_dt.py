@@ -18,41 +18,23 @@ class SparkLikeExprDateTimeNamespace:
     def to_string(self, format: str) -> SparkLikeExpr:
         F = self._compliant_expr._F  # noqa: N806
 
-        def _format_iso_week_with_day(_input: Column) -> Column:
-            """Format datetime as ISO week string with day."""
-            year = F.date_format(_input, "yyyy")
-            week = F.lpad(F.weekofyear(_input).cast("string"), 2, "0")
-            day = F.dayofweek(_input)
-            # Adjust Sunday from 1 to 7
-            day = F.when(day == 1, 7).otherwise(day - 1)
-            return F.concat(year, F.lit("-W"), week, F.lit("-"), day.cast("string"))
-
-        def _format_iso_week(_input: Column) -> Column:
-            """Format datetime as ISO week string."""
-            year = F.date_format(_input, "yyyy")
-            week = F.lpad(F.weekofyear(_input).cast("string"), 2, "0")
-            return F.concat(year, F.lit("-W"), week)
-
-        def _format_iso_datetime(_input: Column) -> Column:
-            """Format datetime as ISO datetime with microseconds."""
-            date_part = F.date_format(_input, "yyyy-MM-dd")
-            time_part = F.date_format(_input, "HH:mm:ss")
-            micros = F.unix_micros(_input) % 1_000_000
-            micros_str = F.lpad(micros.cast("string"), 6, "0")
-            return F.concat(date_part, F.lit("T"), time_part, F.lit("."), micros_str)
-
         def _to_string(_input: Column) -> Column:
             # Handle special formats
             if format == "%G-W%V":
-                return _format_iso_week(_input)
+                return self._format_iso_week(_input)
             if format == "%G-W%V-%u":
-                return _format_iso_week_with_day(_input)
+                return self._format_iso_week_with_day(_input)
             if format in {"%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S%.f"}:
-                return _format_iso_datetime(_input)
+                return self._format_iso_datetime(_input)
 
             # Convert Python format to PySpark format
             pyspark_fmt = strptime_to_pyspark_format(format)
-            return F.date_format(_input, pyspark_fmt)
+
+            result = F.date_format(_input, pyspark_fmt)
+            if "T" in format:
+                return F.replace(result, F.lit(" "), F.lit("T"))
+
+            return result
 
         return self._compliant_expr._with_callable(_to_string)
 
@@ -130,3 +112,32 @@ class SparkLikeExprDateTimeNamespace:
         else:  # pragma: no cover
             msg = "`replace_time_zone` with non-null `time_zone` not yet implemented for spark-like"
             raise NotImplementedError(msg)
+
+    def _format_iso_week_with_day(self, _input: Column) -> Column:
+        """Format datetime as ISO week string with day."""
+        F = self._compliant_expr._F  # noqa: N806
+
+        year = F.date_format(_input, "yyyy")
+        week = F.lpad(F.weekofyear(_input).cast("string"), 2, "0")
+        day = F.dayofweek(_input)
+        # Adjust Sunday from 1 to 7
+        day = F.when(day == 1, 7).otherwise(day - 1)
+        return F.concat(year, F.lit("-W"), week, F.lit("-"), day.cast("string"))
+
+    def _format_iso_week(self, _input: Column) -> Column:
+        """Format datetime as ISO week string."""
+        F = self._compliant_expr._F  # noqa: N806
+
+        year = F.date_format(_input, "yyyy")
+        week = F.lpad(F.weekofyear(_input).cast("string"), 2, "0")
+        return F.concat(year, F.lit("-W"), week)
+
+    def _format_iso_datetime(self, _input: Column) -> Column:
+        """Format datetime as ISO datetime with microseconds."""
+        F = self._compliant_expr._F  # noqa: N806
+
+        date_part = F.date_format(_input, "yyyy-MM-dd")
+        time_part = F.date_format(_input, "HH:mm:ss")
+        micros = F.unix_micros(_input) % 1_000_000
+        micros_str = F.lpad(micros.cast("string"), 6, "0")
+        return F.concat(date_part, F.lit("T"), time_part, F.lit("."), micros_str)

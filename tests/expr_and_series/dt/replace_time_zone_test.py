@@ -47,9 +47,7 @@ def test_replace_time_zone(
     assert_equal_data(result_str, expected)
 
 
-def test_replace_time_zone_none(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
+def test_replace_time_zone_none(constructor: Constructor) -> None:
     if (
         ("pyarrow" in str(constructor) and is_windows())
         or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
@@ -57,9 +55,6 @@ def test_replace_time_zone_none(
         or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         pytest.skip()
-    if any(x in str(constructor) for x in ("pyspark",)):
-        # pyspark: needs `to_string`
-        request.applymarker(pytest.mark.xfail)
     data = {
         "a": [
             datetime(2020, 1, 1, tzinfo=timezone.utc),
