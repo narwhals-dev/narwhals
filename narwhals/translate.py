@@ -536,14 +536,14 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
     # PySpark
     elif is_native_spark_like(native_object):  # pragma: no cover
         ns_spark = version.namespace.from_native_object(native_object)
-        if series_only:
-            msg = (
-                f"Cannot only use `series_only` with {ns_spark.implementation} DataFrame"
-            )
-            raise TypeError(msg)
-        if eager_only or eager_or_interchange_only:
-            msg = f"Cannot only use `eager_only` or `eager_or_interchange_only` with {ns_spark.implementation} DataFrame"
-            raise TypeError(msg)
+        if series_only or eager_only or eager_or_interchange_only:
+            if not pass_through:
+                msg = (
+                    "Cannot only use `series_only`, `eager_only` or `eager_or_interchange_only` "
+                    f"with {ns_spark.implementation} DataFrame"
+                )
+                raise TypeError(msg)
+            return native_object
         return ns_spark.compliant.from_native(native_object).to_narwhals()
 
     # Interchange protocol
