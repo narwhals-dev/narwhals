@@ -105,6 +105,9 @@ core-tests = [
   {include-group = "tests"},
 ]
 local-dev = [
+  # temporary pin to get CI green
+  # https://github.com/modin-project/modin/issues/7582
+  "modin<0.33",
   {include-group = "dev"},
   {include-group = "core"},
   {include-group = "docs"}
