@@ -19,6 +19,7 @@ nav:
     - concepts/column_names.md
     - concepts/boolean.md
     - concepts/null_handling.md
+    - concepts/empty_aggregations.md
   - Overhead: overhead.md
   - Perfect backwards compatibility policy: backcompat.md
   - Supported libraries and extending Narwhals: extending.md
