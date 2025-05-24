@@ -6,7 +6,7 @@ from narwhals._typing_compat import TypeVar
 
 if t.TYPE_CHECKING:
     from narwhals._plan import operators as ops
-    from narwhals._plan.common import ExprIR, Function, SelectorIR
+    from narwhals._plan.common import ExprIR, Function, IRNamespace, SelectorIR
     from narwhals._plan.functions import RollingWindow
 
 __all__ = ["FunctionT", "LeftT", "OperatorT", "RightT", "RollingT", "SelectorOperatorT"]
@@ -23,3 +23,4 @@ RightSelectorT = TypeVar("RightSelectorT", bound="SelectorIR", default="Selector
 SelectorOperatorT = TypeVar(
     "SelectorOperatorT", bound="ops.SelectorOperator", default="ops.SelectorOperator"
 )
+IRNamespaceT = TypeVar("IRNamespaceT", bound="IRNamespace")

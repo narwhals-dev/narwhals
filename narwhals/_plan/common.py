@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import datetime as dt
 from decimal import Decimal
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 
+from narwhals._plan.typing import IRNamespaceT
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
         DummySeries,
     )
     from narwhals._plan.expr import FunctionExpr
-    from narwhals._plan.meta import ExprIRMetaNamespace
+    from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.options import FunctionOptions
     from narwhals.typing import NonNestedLiteral
 
@@ -206,10 +207,10 @@ class ExprIR(Immutable):
         yield self
 
     @property
-    def meta(self) -> ExprIRMetaNamespace:
-        from narwhals._plan.meta import ExprIRMetaNamespace
+    def meta(self) -> IRMetaNamespace:
+        from narwhals._plan.meta import IRMetaNamespace
 
-        return ExprIRMetaNamespace(_ir=self)
+        return IRMetaNamespace(_ir=self)
 
 
 class SelectorIR(ExprIR):
@@ -221,7 +222,7 @@ class SelectorIR(ExprIR):
         return dummy.DummySelectorV1._from_ir(self)
 
 
-class ExprIRNamespace(Immutable):
+class IRNamespace(Immutable):
     __slots__ = ("_ir",)
 
     _ir: ExprIR
@@ -229,6 +230,23 @@ class ExprIRNamespace(Immutable):
     @classmethod
     def from_expr(cls, expr: DummyExpr, /) -> Self:
         return cls(_ir=expr._ir)
+
+
+class ExprNamespace(Immutable, Generic[IRNamespaceT]):
+    __slots__ = ("_expr",)
+
+    _expr: DummyExpr
+
+    @property
+    def _ir_namespace(self) -> type[IRNamespaceT]:
+        raise NotImplementedError
+
+    @property
+    def _ir(self) -> IRNamespaceT:
+        return self._ir_namespace.from_expr(self._expr)
+
+    def _to_narwhals(self, ir: ExprIR, /) -> DummyExpr:
+        return self._expr._from_ir(ir)
 
 
 class Function(Immutable):

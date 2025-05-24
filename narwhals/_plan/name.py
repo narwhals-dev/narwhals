@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan.common import ExprIR, ExprIRNamespace, Immutable
+from narwhals._plan.common import ExprIR, ExprNamespace, Immutable, IRNamespace
 
 if TYPE_CHECKING:
     from narwhals._compliant.typing import AliasName
+    from narwhals._plan.dummy import DummyExpr
 
 
 class KeepName(ExprIR):
@@ -47,9 +48,7 @@ class Suffix(Immutable):
         return f"{name}{self.suffix}"
 
 
-class ExprIRNameNamespace(ExprIRNamespace):
-    """Specialized expressions for modifying the name of existing expressions."""
-
+class IRNameNamespace(IRNamespace):
     def keep(self) -> KeepName:
         return KeepName(expr=self._ir)
 
@@ -72,3 +71,32 @@ class ExprIRNameNamespace(ExprIRNamespace):
     def to_uppercase(self) -> RenameAlias:
         """Update the root column name to use uppercase characters."""
         return self.map(str.upper)
+
+
+class ExprNameNamespace(ExprNamespace[IRNameNamespace]):
+    @property
+    def _ir_namespace(self) -> type[IRNameNamespace]:
+        return IRNameNamespace
+
+    def keep(self) -> DummyExpr:
+        return self._to_narwhals(self._ir.keep())
+
+    def map(self, function: AliasName) -> DummyExpr:
+        """Define an alias by mapping a function over the original root column name."""
+        return self._to_narwhals(self._ir.map(function))
+
+    def prefix(self, prefix: str) -> DummyExpr:
+        """Add a prefix to the root column name."""
+        return self._to_narwhals(self._ir.prefix(prefix))
+
+    def suffix(self, suffix: str) -> DummyExpr:
+        """Add a suffix to the root column name."""
+        return self._to_narwhals(self._ir.suffix(suffix))
+
+    def to_lowercase(self) -> DummyExpr:
+        """Update the root column name to use lowercase characters."""
+        return self._to_narwhals(self._ir.to_lowercase())
+
+    def to_uppercase(self) -> DummyExpr:
+        """Update the root column name to use uppercase characters."""
+        return self._to_narwhals(self._ir.to_uppercase())

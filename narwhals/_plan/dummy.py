@@ -30,8 +30,8 @@ if TYPE_CHECKING:
     from typing_extensions import Never, Self
 
     from narwhals._plan.common import ExprIR, IntoExpr, IntoExprColumn, Seq, Udf
-    from narwhals._plan.meta import ExprIRMetaNamespace
-    from narwhals._plan.name import ExprIRNameNamespace
+    from narwhals._plan.meta import IRMetaNamespace
+    from narwhals._plan.name import ExprNameNamespace
     from narwhals.typing import (
         FillNullStrategy,
         NativeSeries,
@@ -446,16 +446,25 @@ class DummyExpr:
         return self._from_ir(F.Pow().to_function_expr(base, exponent))
 
     @property
-    def meta(self) -> ExprIRMetaNamespace:
-        from narwhals._plan.meta import ExprIRMetaNamespace
+    def meta(self) -> IRMetaNamespace:
+        from narwhals._plan.meta import IRMetaNamespace
 
-        return ExprIRMetaNamespace.from_expr(self)
+        return IRMetaNamespace.from_expr(self)
 
     @property
-    def name(self) -> ExprIRNameNamespace:
-        from narwhals._plan.name import ExprIRNameNamespace
+    def name(self) -> ExprNameNamespace:
+        """Specialized expressions for modifying the name of existing expressions.
 
-        return ExprIRNameNamespace.from_expr(self)
+        Examples:
+            >>> from narwhals._plan import demo as nw
+            >>>
+            >>> renamed = nw.col("a", "b").name.suffix("_changed")
+            >>> str(renamed._ir)
+            "RenameAlias(expr=Columns(names=[a, b]), function=Suffix(suffix='_changed'))"
+        """
+        from narwhals._plan.name import ExprNameNamespace
+
+        return ExprNameNamespace(_expr=self)
 
 
 class DummySelector(DummyExpr):

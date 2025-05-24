@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan.common import ExprIRNamespace
+from narwhals._plan.common import IRNamespace
 from narwhals.exceptions import ComputeError
 from narwhals.utils import Version
 
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from narwhals._plan.common import ExprIR
 
 
-class ExprIRMetaNamespace(ExprIRNamespace):
+class IRMetaNamespace(IRNamespace):
     """Methods to modify and traverse existing expressions."""
 
     def has_multiple_outputs(self) -> bool:
