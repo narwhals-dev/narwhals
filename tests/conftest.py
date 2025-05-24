@@ -194,7 +194,7 @@ def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma:
 
         register(session.stop)
 
-        def _constructor(obj: Data) -> PySparkDataFrame:
+        def pyspark_constructor(obj: Data) -> PySparkDataFrame:
             _obj = deepcopy(obj)
             index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
             _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
@@ -206,7 +206,7 @@ def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma:
                 .drop(index_col_name)
             )
 
-        return _constructor
+        return pyspark_constructor
 
 
 def sqlframe_pyspark_lazy_constructor(obj: Data) -> SQLFrameDataFrame:  # pragma: no cover
