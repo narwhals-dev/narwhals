@@ -24,17 +24,28 @@ class SparkLikeExprDateTimeNamespace:
                 return self._format_iso_week(_input)
             if format == "%G-W%V-%u":
                 return self._format_iso_week_with_day(_input)
-            if format in {"%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S%.f"}:
-                return self._format_iso_datetime(_input)
+
+            format_, suffix = self._format_microseconds(_input, format)
 
             # Convert Python format to PySpark format
-            pyspark_fmt = strptime_to_pyspark_format(format)
+            pyspark_fmt = strptime_to_pyspark_format(format_)
 
             result = F.date_format(_input, pyspark_fmt)
-            if "T" in format:
-                return F.replace(result, F.lit(" "), F.lit("T"))
+            if "T" in format_:
+                # `strptime_to_pyspark_format` replaces "T" with " " since pyspark
+                # does not support the literal "T" in `date_format`.
+                # If no other spaces are in the given format, then we can revert this
+                # operation, otherwise we raise an exception.
+                if " " not in format_:
+                    result = F.replace(result, F.lit(" "), F.lit("T"))
+                else:  # pragma: no cover
+                    msg = (
+                        "`dt.to_string` with a format that contains both spaces and "
+                        " the literal 'T' is not supported for spark-like backends."
+                    )
+                    raise NotImplementedError(msg)
 
-            return result
+            return F.concat(result, *suffix)
 
         return self._compliant_expr._with_callable(_to_string)
 
@@ -132,12 +143,20 @@ class SparkLikeExprDateTimeNamespace:
         week = F.lpad(F.weekofyear(_input).cast("string"), 2, "0")
         return F.concat(year, F.lit("-W"), week)
 
-    def _format_iso_datetime(self, _input: Column) -> Column:
-        """Format datetime as ISO datetime with microseconds."""
+    def _format_microseconds(
+        self, _input: Column, format: str
+    ) -> tuple[str, tuple[Column, ...]]:
+        """Format microseconds if present in format, else it's a no-op."""
         F = self._compliant_expr._F  # noqa: N806
 
-        date_part = F.date_format(_input, "yyyy-MM-dd")
-        time_part = F.date_format(_input, "HH:mm:ss")
-        micros = F.unix_micros(_input) % 1_000_000
-        micros_str = F.lpad(micros.cast("string"), 6, "0")
-        return F.concat(date_part, F.lit("T"), time_part, F.lit("."), micros_str)
+        suffix: tuple[Column, ...]
+        if format.endswith((".%f", "%.f")):
+            import re
+
+            micros = F.unix_micros(_input) % 1_000_000
+            micros_str = F.lpad(micros.cast("string"), 6, "0")
+            suffix = (F.lit("."), micros_str)
+            format_ = re.sub(r"(.%|%.)f$", "", format)
+            return format_, suffix
+
+        return format, ()

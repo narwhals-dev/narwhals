@@ -181,10 +181,6 @@ def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma:
             "ignore", r"Using fork\(\) can cause Polars", category=RuntimeWarning
         )
         builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
-
-        # common timezone for all tests environments
-        os.environ["TZ"] = "UTC"
-
         session = (
             (
                 builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
