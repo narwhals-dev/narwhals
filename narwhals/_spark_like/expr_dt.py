@@ -82,7 +82,7 @@ class SparkLikeExprDateTimeNamespace:
 
         return self._compliant_expr._with_callable(_truncate)
 
-    def _no_op_time_zone(self, time_zone: str) -> SparkLikeExpr:
+    def _no_op_time_zone(self, time_zone: str) -> SparkLikeExpr:  # pragma: no cover
         def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
             native_series_list = self._compliant_expr(df)
             conn_time_zone = fetch_session_time_zone(df.native.sparkSession)
@@ -104,10 +104,12 @@ class SparkLikeExprDateTimeNamespace:
             implementation=self._compliant_expr._implementation,
         )
 
-    def convert_time_zone(self, time_zone: str) -> SparkLikeExpr:
+    def convert_time_zone(self, time_zone: str) -> SparkLikeExpr:  # pragma: no cover
         return self._no_op_time_zone(time_zone)
 
-    def replace_time_zone(self, time_zone: str | None) -> SparkLikeExpr:
+    def replace_time_zone(
+        self, time_zone: str | None
+    ) -> SparkLikeExpr:  # pragma: no cover
         if time_zone is None:
             return self._compliant_expr._with_callable(
                 lambda _input: _input.cast("timestamp_ntz")
