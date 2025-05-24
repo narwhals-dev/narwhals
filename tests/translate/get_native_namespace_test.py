@@ -56,8 +56,8 @@ def _get_expected_namespace(constructor_name: str) -> Any | None:  # noqa: PLR09
 
 
 def test_native_namespace_frame(constructor: Constructor) -> None:
-    constructor_name = constructor.__name__
-    if constructor_name == "pyspark_lazy_constructor":
+    constructor_name = str(constructor)
+    if "pyspark" in constructor_name and "sqlframe" not in constructor_name:
         pytest.skip(reason="Requires special handling for spark local vs spark connect")
 
     expected_namespace = _get_expected_namespace(constructor_name=constructor_name)
