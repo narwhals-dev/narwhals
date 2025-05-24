@@ -545,6 +545,6 @@ def test_pyspark_connect_deps_2517() -> None:  # pragma: no cover
 
     import narwhals as nw
 
-    spark = SparkSession.builder.getOrCreate()  # pyright: ignore[reportAttributeAccessIssue]
+    spark = SparkSession.builder.getOrCreate()
     # Check this doesn't raise
     nw.from_native(spark.createDataFrame([(1,)], ["a"]))
