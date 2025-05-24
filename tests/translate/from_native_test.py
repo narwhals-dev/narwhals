@@ -574,7 +574,7 @@ def test_eager_only_pass_through_main(
     df = constructor(data)
 
     with context:
-        res = nw.from_native(df, eager_only=eager_only, pass_through=pass_through)
+        res = nw.from_native(df, eager_only=eager_only, pass_through=pass_through)  # type: ignore[call-overload]
         if eager_only and pass_through:
             assert not isinstance(res, nw.LazyFrame)
         else:
