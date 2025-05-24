@@ -105,11 +105,11 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         reverse: bool,
         func_name: Literal["sum", "max", "min", "count", "product"],
     ) -> DuckDBWindowFunction:
-        def func(window: DuckDBWindowInputs) -> Expression:
-            order_by_sql = generate_order_by_sql(*window.order_by, ascending=not reverse)
-            partition_by_sql = generate_partition_by_sql(*window.partition_by)
+        def func(inputs: DuckDBWindowInputs) -> Expression:
+            order_by_sql = generate_order_by_sql(*inputs.order_by, ascending=not reverse)
+            partition_by_sql = generate_partition_by_sql(*inputs.partition_by)
             sql = (
-                f"{func_name} ({window.expr}) over ({partition_by_sql} {order_by_sql} "
+                f"{func_name} ({inputs.expr}) over ({partition_by_sql} {order_by_sql} "
                 "rows between unbounded preceding and current row)"
             )
             return SQLExpression(sql)  # type: ignore[no-any-return, unused-ignore]
