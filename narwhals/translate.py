@@ -12,30 +12,18 @@ from narwhals._namespace import (
     is_native_spark_like,
 )
 from narwhals.dependencies import (
-    get_cudf,
     get_dask,
     get_dask_expr,
-    get_modin,
     get_numpy,
     get_pandas,
-    get_polars,
-    get_pyarrow,
-    is_cudf_dataframe,
-    is_cudf_series,
     is_cupy_scalar,
     is_dask_dataframe,
     is_duckdb_relation,
     is_ibis_table,
-    is_modin_dataframe,
-    is_modin_series,
     is_numpy_scalar,
-    is_pandas_dataframe,
     is_pandas_like_dataframe,
-    is_pandas_series,
-    is_polars_dataframe,
     is_polars_lazyframe,
     is_polars_series,
-    is_pyarrow_chunked_array,
     is_pyarrow_scalar,
     is_pyarrow_table,
 )
@@ -602,25 +590,20 @@ def get_native_namespace(
     return result.pop()
 
 
-def _get_native_namespace_single_obj(  # noqa: PLR0911
+def _get_native_namespace_single_obj(
     obj: DataFrame[Any] | LazyFrame[Any] | Series[Any] | IntoFrame | IntoSeries,
 ) -> Any:
+    from contextlib import suppress
+
     from narwhals.utils import has_native_namespace
+
+    with suppress(TypeError, AssertionError):
+        return Version.MAIN.namespace.from_native_object(
+            obj
+        ).implementation.to_native_namespace()
 
     if has_native_namespace(obj):
         return obj.__native_namespace__()
-    if is_pandas_dataframe(obj) or is_pandas_series(obj):
-        return get_pandas()
-    if is_modin_dataframe(obj) or is_modin_series(obj):  # pragma: no cover
-        return get_modin()
-    if is_pyarrow_table(obj) or is_pyarrow_chunked_array(obj):
-        return get_pyarrow()
-    if is_cudf_dataframe(obj) or is_cudf_series(obj):  # pragma: no cover
-        return get_cudf()
-    if is_dask_dataframe(obj):  # pragma: no cover
-        return get_dask()
-    if is_polars_dataframe(obj) or is_polars_lazyframe(obj) or is_polars_series(obj):
-        return get_polars()
     msg = f"Could not get native namespace from object of type: {type(obj)}"
     raise TypeError(msg)
 
