@@ -3,28 +3,28 @@ from __future__ import annotations
 import warnings
 from functools import reduce
 from operator import and_
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Iterator
-from typing import Mapping
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Iterator, Mapping, Sequence
 
 from narwhals._namespace import is_native_spark_like
-from narwhals._spark_like.utils import evaluate_exprs
-from narwhals._spark_like.utils import import_functions
-from narwhals._spark_like.utils import import_native_dtypes
-from narwhals._spark_like.utils import import_window
-from narwhals._spark_like.utils import native_to_narwhals_dtype
+from narwhals._spark_like.utils import (
+    evaluate_exprs,
+    import_functions,
+    import_native_dtypes,
+    import_window,
+    native_to_narwhals_dtype,
+)
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantLazyFrame
-from narwhals.utils import Implementation
-from narwhals.utils import check_column_exists
-from narwhals.utils import find_stacklevel
-from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import not_implemented
-from narwhals.utils import parse_columns_to_drop
-from narwhals.utils import parse_version
-from narwhals.utils import validate_backend_version
+from narwhals.utils import (
+    Implementation,
+    check_column_exists,
+    find_stacklevel,
+    generate_temporary_column_name,
+    not_implemented,
+    parse_columns_to_drop,
+    parse_version,
+    validate_backend_version,
+)
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -33,9 +33,7 @@ if TYPE_CHECKING:
     from sqlframe.base.column import Column
     from sqlframe.base.dataframe import BaseDataFrame
     from sqlframe.base.window import Window
-    from typing_extensions import Self
-    from typing_extensions import TypeAlias
-    from typing_extensions import TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
     from narwhals._spark_like.expr import SparkLikeExpr
@@ -43,10 +41,8 @@ if TYPE_CHECKING:
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
-    from narwhals.typing import JoinStrategy
-    from narwhals.typing import LazyUniqueKeepStrategy
-    from narwhals.utils import Version
-    from narwhals.utils import _FullContext
+    from narwhals.typing import JoinStrategy, LazyUniqueKeepStrategy
+    from narwhals.utils import Version, _FullContext
 
     SQLFrameDataFrame = BaseDataFrame[Any, Any, Any, Any, Any]
 
@@ -259,19 +255,13 @@ class SparkLikeLazyFrame(
     def simple_select(self, *column_names: str) -> Self:
         return self._with_native(self.native.select(*column_names))
 
-    def aggregate(
-        self,
-        *exprs: SparkLikeExpr,
-    ) -> Self:
+    def aggregate(self, *exprs: SparkLikeExpr) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
 
         new_columns_list = [col.alias(col_name) for col_name, col in new_columns]
         return self._with_native(self.native.agg(*new_columns_list))
 
-    def select(
-        self,
-        *exprs: SparkLikeExpr,
-    ) -> Self:
+    def select(self, *exprs: SparkLikeExpr) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
         new_columns_list = [col.alias(col_name) for (col_name, col) in new_columns]
         return self._with_native(self.native.select(*new_columns_list))
@@ -318,12 +308,7 @@ class SparkLikeLazyFrame(
 
         return SparkLikeLazyGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
-    def sort(
-        self,
-        *by: str,
-        descending: bool | Sequence[bool],
-        nulls_last: bool,
-    ) -> Self:
+    def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
         if isinstance(descending, bool):
             descending = [descending] * len(by)
 
@@ -499,7 +484,7 @@ class SparkLikeLazyFrame(
                             for col_name in column_names
                         ]
                     )
-                ),
+                )
             )
         else:  # pragma: no cover
             msg = "Unreachable code, please report an issue at https://github.com/narwhals-dev/narwhals/issues"

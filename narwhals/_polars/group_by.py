@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Iterator
-from typing import Sequence
-from typing import cast
+from typing import TYPE_CHECKING, Iterator, Sequence, cast
 
 from narwhals.utils import is_sequence_of
 
@@ -11,8 +8,7 @@ if TYPE_CHECKING:
     from polars.dataframe.group_by import GroupBy as NativeGroupBy
     from polars.lazyframe.group_by import LazyGroupBy as NativeLazyGroupBy
 
-    from narwhals._polars.dataframe import PolarsDataFrame
-    from narwhals._polars.dataframe import PolarsLazyFrame
+    from narwhals._polars.dataframe import PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.expr import PolarsExpr
 
 

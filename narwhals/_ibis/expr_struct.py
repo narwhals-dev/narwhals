@@ -13,7 +13,7 @@ class IbisExprStructNamespace:
         self._compliant_expr = expr
 
     def field(self, name: str) -> IbisExpr:
-        def func(_input: ir.StructColumn) -> ir.Column:
-            return _input[name]
+        def func(expr: ir.StructColumn) -> ir.Column:
+            return expr[name]
 
         return self._compliant_expr._with_callable(func).alias(name)

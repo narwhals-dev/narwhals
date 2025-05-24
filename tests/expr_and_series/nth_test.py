@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 import re
-from typing import Any
-from typing import Mapping
+from typing import Any, Mapping
 
 import pytest
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
 
 data: Mapping[str, Any] = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.0]}
 
@@ -23,9 +20,7 @@ data: Mapping[str, Any] = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.0]}
     ],
 )
 def test_nth(
-    constructor: Constructor,
-    idx: int | list[int],
-    expected: dict[str, list[int]],
+    constructor: Constructor, idx: int | list[int], expected: dict[str, list[int]]
 ) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 0, 0):
         pytest.skip()

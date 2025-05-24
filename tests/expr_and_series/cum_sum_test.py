@@ -3,36 +3,29 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 data = {"arg entina": [1, 2, None, 4]}
-expected = {
-    "cum_sum": [1, 3, None, 7],
-    "reverse_cum_sum": [7, 6, None, 4],
-}
+expected = {"cum_sum": [1, 3, None, 7], "reverse_cum_sum": [7, 6, None, 4]}
 
 
 @pytest.mark.parametrize("reverse", [True, False])
 def test_cum_sum_expr(constructor_eager: ConstructorEager, *, reverse: bool) -> None:
     name = "reverse_cum_sum" if reverse else "cum_sum"
     df = nw.from_native(constructor_eager(data))
-    result = df.select(
-        nw.col("arg entina").cum_sum(reverse=reverse).alias(name),
-    )
+    result = df.select(nw.col("arg entina").cum_sum(reverse=reverse).alias(name))
 
     assert_equal_data(result, {name: expected[name]})
 
 
 @pytest.mark.parametrize(
-    ("reverse", "expected_a"),
-    [
-        (False, [3, 2, 6]),
-        (True, [4, 6, 3]),
-    ],
+    ("reverse", "expected_a"), [(False, [3, 2, 6]), (True, [4, 6, 3])]
 )
 def test_lazy_cum_sum_grouped(
     constructor: Constructor,
@@ -82,10 +75,7 @@ def test_lazy_cum_sum_grouped(
 
 @pytest.mark.parametrize(
     ("reverse", "expected_a"),
-    [
-        (False, [10, 6, 14, 11, 16, 9, 4]),
-        (True, [7, 12, 5, 6, 2, 10, 16]),
-    ],
+    [(False, [10, 6, 14, 11, 16, 9, 4]), (True, [7, 12, 5, 6, 2, 10, 16])],
 )
 def test_lazy_cum_sum_ordered_by_nulls(
     constructor: Constructor,
@@ -134,11 +124,7 @@ def test_lazy_cum_sum_ordered_by_nulls(
 
 
 @pytest.mark.parametrize(
-    ("reverse", "expected_a"),
-    [
-        (False, [3, 2, 6]),
-        (True, [4, 6, 3]),
-    ],
+    ("reverse", "expected_a"), [(False, [3, 2, 6]), (True, [4, 6, 3])]
 )
 def test_lazy_cum_sum_ungrouped(
     constructor: Constructor,
@@ -159,13 +145,7 @@ def test_lazy_cum_sum_ungrouped(
         pytest.skip(reason="too old version")
 
     df = nw.from_native(
-        constructor(
-            {
-                "arg entina": [2, 3, 1],
-                "ban gkok": [0, 2, 1],
-                "i ran": [1, 2, 0],
-            }
-        )
+        constructor({"arg entina": [2, 3, 1], "ban gkok": [0, 2, 1], "i ran": [1, 2, 0]})
     ).sort("i ran")
     result = df.with_columns(
         nw.col("arg entina").cum_sum(reverse=reverse).over(order_by="ban gkok")
@@ -176,10 +156,7 @@ def test_lazy_cum_sum_ungrouped(
 
 @pytest.mark.parametrize(
     ("reverse", "expected_a"),
-    [
-        (False, [10, 6, 14, 11, 16, 9, 4]),
-        (True, [7, 12, 5, 6, 2, 10, 16]),
-    ],
+    [(False, [10, 6, 14, 11, 16, 9, 4]), (True, [7, 12, 5, 6, 2, 10, 16])],
 )
 def test_lazy_cum_sum_ungrouped_ordered_by_nulls(
     constructor: Constructor,

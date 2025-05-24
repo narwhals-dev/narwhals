@@ -3,9 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
 data_with_nulls = {"a": [1, 3, 2, None], "b": [4, 4, 6, None], "z": [7.0, 8.0, 9.0, None]}
@@ -33,12 +31,8 @@ def test_var(constructor: Constructor, input_data: dict[str, list[float | None]]
     }
     assert_equal_data(result, expected_results)
 
-    result = df.select(
-        nw.col("b").var(ddof=2).alias("b_ddof_2"),
-    )
-    expected_results = {
-        "b_ddof_2": [2.666666666666667],
-    }
+    result = df.select(nw.col("b").var(ddof=2).alias("b_ddof_2"))
+    expected_results = {"b_ddof_2": [2.666666666666667]}
     assert_equal_data(result, expected_results)
 
 

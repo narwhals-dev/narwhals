@@ -4,16 +4,17 @@ from typing import Any
 
 import hypothesis.strategies as st
 import pytest
-from hypothesis import assume
-from hypothesis import given
+from hypothesis import assume, given
 
 import narwhals as nw
-from tests.utils import DASK_VERSION
-from tests.utils import DUCKDB_VERSION
-from tests.utils import PANDAS_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import (
+    DASK_VERSION,
+    DUCKDB_VERSION,
+    PANDAS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 
 @pytest.mark.parametrize(

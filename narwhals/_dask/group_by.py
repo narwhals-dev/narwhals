@@ -1,12 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import ClassVar
-from typing import Mapping
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Mapping, Sequence
 
 import dask.dataframe as dd
 
@@ -115,7 +110,7 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
             # e.g. `agg(nw.mean('a'))`
             agg_fn = self._remap_expr_name(self._leaf_name(expr))
             # deal with n_unique case in a "lazy" mode to not depend on dask globally
-            agg_fn = agg_fn(**expr._call_kwargs) if callable(agg_fn) else agg_fn
+            agg_fn = agg_fn(**expr._scalar_kwargs) if callable(agg_fn) else agg_fn
             simple_aggregations.update(
                 (alias, (output_name, agg_fn))
                 for alias, output_name in zip(aliases, output_names)

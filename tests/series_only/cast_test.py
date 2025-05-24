@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
-from datetime import datetime
+from datetime import date, datetime
 from typing import TYPE_CHECKING
 
 import pytest
@@ -10,8 +9,7 @@ import narwhals as nw
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
-    from tests.utils import Constructor
-    from tests.utils import ConstructorEager
+    from tests.utils import Constructor, ConstructorEager
 
 
 def test_cast_253(
@@ -71,10 +69,7 @@ def test_cast_date_datetime_pyarrow() -> None:
     assert result == expected
 
 
-@pytest.mark.skipif(
-    PANDAS_VERSION < (2, 0, 0),
-    reason="pyarrow dtype not available",
-)
+@pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="pyarrow dtype not available")
 def test_cast_date_datetime_pandas() -> None:
     pytest.importorskip("pandas")
     import pandas as pd

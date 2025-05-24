@@ -9,12 +9,14 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from tests.utils import PANDAS_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import PYARROW_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 
 def test_toplevel(constructor_eager: ConstructorEager) -> None:
@@ -143,7 +145,7 @@ def test_to_dict(constructor_eager: ConstructorEager) -> None:
 
 
 @pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature.",
+    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
 def test_hist_v1(constructor_eager: ConstructorEager) -> None:
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):

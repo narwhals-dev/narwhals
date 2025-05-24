@@ -1,12 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Iterable
-from typing import Iterator
-from typing import Mapping
-from typing import Sequence
-from typing import cast
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, Sequence, cast
 
 import numpy as np
 
@@ -16,21 +10,24 @@ from narwhals._pandas_like.series_dt import PandasLikeSeriesDateTimeNamespace
 from narwhals._pandas_like.series_list import PandasLikeSeriesListNamespace
 from narwhals._pandas_like.series_str import PandasLikeSeriesStringNamespace
 from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
-from narwhals._pandas_like.utils import align_and_extract_native
-from narwhals._pandas_like.utils import get_dtype_backend
-from narwhals._pandas_like.utils import narwhals_to_native_dtype
-from narwhals._pandas_like.utils import native_to_narwhals_dtype
-from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
-from narwhals._pandas_like.utils import rename
-from narwhals._pandas_like.utils import select_columns_by_name
-from narwhals._pandas_like.utils import set_index
-from narwhals.dependencies import is_numpy_array_1d
-from narwhals.dependencies import is_pandas_like_series
+from narwhals._pandas_like.utils import (
+    align_and_extract_native,
+    get_dtype_backend,
+    narwhals_to_native_dtype,
+    native_to_narwhals_dtype,
+    object_native_to_narwhals_dtype,
+    rename,
+    select_columns_by_name,
+    set_index,
+)
+from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.exceptions import InvalidOperationError
-from narwhals.utils import Implementation
-from narwhals.utils import is_list_of
-from narwhals.utils import parse_version
-from narwhals.utils import validate_backend_version
+from narwhals.utils import (
+    Implementation,
+    is_list_of,
+    parse_version,
+    validate_backend_version,
+)
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -39,26 +36,27 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self
-    from typing_extensions import TypeIs
+    from typing_extensions import Self, TypeIs
 
+    from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals.dtypes import DType
-    from narwhals.typing import ClosedInterval
-    from narwhals.typing import FillNullStrategy
-    from narwhals.typing import Into1DArray
-    from narwhals.typing import NonNestedLiteral
-    from narwhals.typing import NumericLiteral
-    from narwhals.typing import RankMethod
-    from narwhals.typing import RollingInterpolationMethod
-    from narwhals.typing import SizedMultiIndexSelector
-    from narwhals.typing import TemporalLiteral
-    from narwhals.typing import _1DArray
-    from narwhals.typing import _AnyDArray
-    from narwhals.typing import _SliceIndex
-    from narwhals.utils import Version
-    from narwhals.utils import _FullContext
+    from narwhals.typing import (
+        ClosedInterval,
+        FillNullStrategy,
+        Into1DArray,
+        NonNestedLiteral,
+        NumericLiteral,
+        RankMethod,
+        RollingInterpolationMethod,
+        SizedMultiIndexSelector,
+        TemporalLiteral,
+        _1DArray,
+        _AnyDArray,
+        _SliceIndex,
+    )
+    from narwhals.utils import Version, _FullContext
 
 PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
     "Int64": "int64",
@@ -946,8 +944,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         bin_count: int | None,
         include_breakpoint: bool,
     ) -> PandasLikeDataFrame:
-        from numpy import linspace
-        from numpy import zeros
+        from numpy import linspace, zeros
 
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
@@ -985,10 +982,7 @@ class PandasLikeSeries(EagerSeries[Any]):
                 upper += 0.5
 
             if bin_count == 1:
-                data = {
-                    "breakpoint": [upper],
-                    "count": [self.native.count()],
-                }
+                data = {"breakpoint": [upper], "count": [self.native.count()]}
                 if not include_breakpoint:
                     del data["breakpoint"]
                 return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
@@ -1014,6 +1008,42 @@ class PandasLikeSeries(EagerSeries[Any]):
             data["breakpoint"] = bins[1:] if bins is not None else result.index.right
         data["count"] = result.reset_index(drop=True)
         return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
+
+    def log(self, base: float) -> Self:
+        native = self.native
+        implementation = self._implementation
+
+        dtype_backend = get_dtype_backend(native.dtype, implementation=implementation)
+
+        if implementation.is_cudf():
+            import cupy as cp  # ignore-banned-import  # cuDF dependency.
+
+            native = self.native
+            log_arr = cp.log(native) / cp.log(base)
+            result_native = type(native)(log_arr, index=native.index, name=native.name)
+            return self._with_native(result_native)
+
+        if dtype_backend == "pyarrow":
+            import pyarrow.compute as pc
+
+            from narwhals._arrow.utils import native_to_narwhals_dtype
+
+            ca = native.array._pa_array
+            result_arr = cast("ChunkedArrayAny", pc.logb(ca, base))
+            nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
+            out_dtype = narwhals_to_native_dtype(
+                nw_dtype,
+                "pyarrow",
+                self._implementation,
+                self._backend_version,
+                self._version,
+            )
+            result_native = native.__class__(
+                result_arr, dtype=out_dtype, index=native.index, name=native.name
+            )
+        else:
+            result_native = np.log(native) / np.log(base)
+        return self._with_native(result_native)
 
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:

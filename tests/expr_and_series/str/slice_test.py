@@ -5,9 +5,7 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": ["fdas", "edfas"]}
 
@@ -17,10 +15,7 @@ data = {"a": ["fdas", "edfas"]}
     [(1, 2, {"a": ["da", "df"]}), (-2, None, {"a": ["as", "as"]})],
 )
 def test_str_slice(
-    constructor: Constructor,
-    offset: int,
-    length: int | None,
-    expected: Any,
+    constructor: Constructor, offset: int, length: int | None, expected: Any
 ) -> None:
     df = nw.from_native(constructor(data))
     result_frame = df.select(nw.col("a").str.slice(offset, length))

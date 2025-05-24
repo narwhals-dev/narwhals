@@ -3,23 +3,18 @@ from __future__ import annotations
 import functools
 import re
 from contextlib import suppress
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Literal
-from typing import Sized
-from typing import TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Literal, Sized, TypeVar
 
 import pandas as pd
 
 from narwhals._compliant.series import EagerSeriesNamespace
-from narwhals.exceptions import ColumnNotFoundError
-from narwhals.exceptions import DuplicateError
-from narwhals.exceptions import ShapeError
-from narwhals.utils import Implementation
-from narwhals.utils import Version
-from narwhals.utils import _DeferredIterable
-from narwhals.utils import isinstance_or_issubclass
+from narwhals.exceptions import ColumnNotFoundError, DuplicateError, ShapeError
+from narwhals.utils import (
+    Implementation,
+    Version,
+    _DeferredIterable,
+    isinstance_or_issubclass,
+)
 
 T = TypeVar("T", bound=Sized)
 
@@ -29,9 +24,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypeBackend
-    from narwhals.typing import TimeUnit
-    from narwhals.typing import _1DArray
+    from narwhals.typing import DTypeBackend, TimeUnit, _1DArray
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
 
@@ -164,36 +157,6 @@ def set_index(
     else:  # pragma: no cover
         pass
     return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[attr-defined]
-
-
-def set_columns(
-    obj: T,
-    columns: list[str],
-    *,
-    implementation: Implementation,
-    backend_version: tuple[int, ...],
-) -> T:
-    """Wrapper around pandas' set_axis to set object columns.
-
-    We can set `copy` / `inplace` based on implementation/version.
-    """
-    if implementation is Implementation.CUDF:  # pragma: no cover
-        obj = obj.copy(deep=False)  # type: ignore[attr-defined]
-        obj.columns = columns  # type: ignore[attr-defined]
-        return obj
-    if implementation is Implementation.PANDAS and (
-        backend_version < (1,)
-    ):  # pragma: no cover
-        kwargs = {"inplace": False}
-    else:
-        kwargs = {}
-    if implementation is Implementation.PANDAS and (
-        (1, 5) <= backend_version < (3,)
-    ):  # pragma: no cover
-        kwargs["copy"] = False
-    else:  # pragma: no cover
-        pass
-    return obj.set_axis(columns, axis=1, **kwargs)  # type: ignore[attr-defined]
 
 
 def rename(
@@ -543,9 +506,7 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
     raise AssertionError(msg)
 
 
-def align_series_full_broadcast(
-    *series: PandasLikeSeries,
-) -> list[PandasLikeSeries]:
+def align_series_full_broadcast(*series: PandasLikeSeries) -> list[PandasLikeSeries]:
     # Ensure all of `series` have the same length and index. Scalars get broadcasted to
     # the full length of the longest Series. This is useful when you need to construct a
     # full Series anyway (e.g. `DataFrame.select`). It should not be used in binary operations,

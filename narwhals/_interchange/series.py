@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import NoReturn
+from typing import TYPE_CHECKING, Any, NoReturn
 
 from narwhals._interchange.dataframe import map_interchange_dtype_to_narwhals_dtype
 

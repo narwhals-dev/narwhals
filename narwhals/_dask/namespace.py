@@ -2,34 +2,32 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from typing import TYPE_CHECKING
-from typing import Iterable
-from typing import Sequence
-from typing import cast
+from typing import TYPE_CHECKING, Iterable, Sequence, cast
 
 import dask.dataframe as dd
 import pandas as pd
 
-from narwhals._compliant import CompliantThen
-from narwhals._compliant import CompliantWhen
-from narwhals._compliant import LazyNamespace
+from narwhals._compliant import CompliantThen, CompliantWhen, LazyNamespace
 from narwhals._compliant.namespace import DepthTrackingNamespace
 from narwhals._dask.dataframe import DaskLazyFrame
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
-from narwhals._dask.utils import align_series_full_broadcast
-from narwhals._dask.utils import narwhals_to_native_dtype
-from narwhals._dask.utils import validate_comparand
-from narwhals._expression_parsing import combine_alias_output_names
-from narwhals._expression_parsing import combine_evaluate_output_names
+from narwhals._dask.utils import (
+    align_series_full_broadcast,
+    narwhals_to_native_dtype,
+    validate_comparand,
+)
+from narwhals._expression_parsing import (
+    combine_alias_output_names,
+    combine_evaluate_output_names,
+)
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     import dask.dataframe.dask_expr as dx
 
     from narwhals.dtypes import DType
-    from narwhals.typing import ConcatMethod
-    from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import ConcatMethod, NonNestedLiteral
     from narwhals.utils import Version
 
 
@@ -237,10 +235,7 @@ class DaskNamespace(
         return DaskWhen.from_expr(predicate, context=self)
 
     def concat_str(
-        self,
-        *exprs: DaskExpr,
-        separator: str,
-        ignore_nulls: bool,
+        self, *exprs: DaskExpr, separator: str, ignore_nulls: bool
     ) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
@@ -264,9 +259,7 @@ class DaskNamespace(
                     for nm in null_mask[:-1]
                 )
                 result = reduce(
-                    operator.add,
-                    (s + v for s, v in zip(separators, values)),
-                    init_value,
+                    operator.add, (s + v for s, v in zip(separators, values)), init_value
                 )
 
             return [result]

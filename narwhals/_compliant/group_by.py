@@ -1,31 +1,35 @@
 from __future__ import annotations
 
 import re
-import sys
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import ClassVar
-from typing import Iterable
-from typing import Iterator
-from typing import Literal
-from typing import Mapping
-from typing import Sequence
-from typing import TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    Iterable,
+    Iterator,
+    Literal,
+    Mapping,
+    Sequence,
+    TypeVar,
+)
 
-from narwhals._compliant.typing import CompliantDataFrameAny
-from narwhals._compliant.typing import CompliantDataFrameT
-from narwhals._compliant.typing import CompliantDataFrameT_co
-from narwhals._compliant.typing import CompliantExprT_contra
-from narwhals._compliant.typing import CompliantFrameT
-from narwhals._compliant.typing import CompliantFrameT_co
-from narwhals._compliant.typing import CompliantLazyFrameAny
-from narwhals._compliant.typing import CompliantLazyFrameT
-from narwhals._compliant.typing import DepthTrackingExprAny
-from narwhals._compliant.typing import DepthTrackingExprT_contra
-from narwhals._compliant.typing import EagerExprT_contra
-from narwhals._compliant.typing import LazyExprT_contra
-from narwhals._compliant.typing import NativeExprT_co
+from narwhals._compliant.typing import (
+    CompliantDataFrameAny,
+    CompliantDataFrameT,
+    CompliantDataFrameT_co,
+    CompliantExprT_contra,
+    CompliantFrameT,
+    CompliantFrameT_co,
+    CompliantLazyFrameAny,
+    CompliantLazyFrameT,
+    DepthTrackingExprAny,
+    DepthTrackingExprT_contra,
+    EagerExprT_contra,
+    LazyExprT_contra,
+    NativeExprT_co,
+)
+from narwhals._typing_compat import Protocol38
 from narwhals.utils import is_sequence_of
 
 if TYPE_CHECKING:
@@ -33,16 +37,6 @@ if TYPE_CHECKING:
 
     _SameFrameT = TypeVar("_SameFrameT", CompliantDataFrameAny, CompliantLazyFrameAny)
 
-
-if not TYPE_CHECKING:  # pragma: no cover
-    if sys.version_info >= (3, 9):
-        from typing import Protocol as Protocol38
-    else:
-        from typing import Generic as Protocol38
-else:  # pragma: no cover
-    # TODO @dangotbanned: Remove after dropping `3.8` (#2084)
-    # - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
-    from typing import Protocol as Protocol38
 
 __all__ = [
     "CompliantGroupBy",

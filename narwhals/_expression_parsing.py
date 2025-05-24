@@ -3,41 +3,34 @@
 # and pandas or PyArrow.
 from __future__ import annotations
 
-from enum import Enum
-from enum import auto
+from enum import Enum, auto
 from itertools import chain
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Literal
-from typing import Sequence
-from typing import TypeVar
-from typing import cast
+from typing import TYPE_CHECKING, Any, Literal, Sequence, TypeVar, cast
 
-from narwhals.dependencies import is_narwhals_series
-from narwhals.dependencies import is_numpy_array
-from narwhals.exceptions import InvalidOperationError
-from narwhals.exceptions import LengthChangingExprError
-from narwhals.exceptions import MultiOutputExpressionError
-from narwhals.exceptions import ShapeError
+from narwhals.dependencies import is_narwhals_series, is_numpy_array
+from narwhals.exceptions import (
+    InvalidOperationError,
+    LengthChangingExprError,
+    MultiOutputExpressionError,
+    ShapeError,
+)
 from narwhals.utils import is_compliant_expr
 
 if TYPE_CHECKING:
-    from typing_extensions import Never
-    from typing_extensions import TypeIs
+    from typing_extensions import Never, TypeIs
 
-    from narwhals._compliant import CompliantExpr
-    from narwhals._compliant import CompliantFrameT
-    from narwhals._compliant.typing import AliasNames
-    from narwhals._compliant.typing import CompliantExprAny
-    from narwhals._compliant.typing import CompliantFrameAny
-    from narwhals._compliant.typing import CompliantNamespaceAny
-    from narwhals._compliant.typing import EagerNamespaceAny
-    from narwhals._compliant.typing import EvalNames
+    from narwhals._compliant import CompliantExpr, CompliantFrameT
+    from narwhals._compliant.typing import (
+        AliasNames,
+        CompliantExprAny,
+        CompliantFrameAny,
+        CompliantNamespaceAny,
+        EagerNamespaceAny,
+        EvalNames,
+    )
     from narwhals.expr import Expr
     from narwhals.series import Series
-    from narwhals.typing import IntoExpr
-    from narwhals.typing import NonNestedLiteral
-    from narwhals.typing import _1DArray
+    from narwhals.typing import IntoExpr, NonNestedLiteral, _1DArray
 
     T = TypeVar("T")
 
@@ -254,14 +247,14 @@ class ExprMetadata:
             assert is_scalar_like  # noqa: S101  # debug assertion
         if is_elementwise:
             assert preserves_length  # noqa: S101  # debug assertion
-        self.expansion_kind = expansion_kind
-        self.last_node = last_node
-        self.has_windows = has_windows
-        self.n_orderable_ops = n_orderable_ops
-        self.is_elementwise = is_elementwise
-        self.preserves_length = preserves_length
-        self.is_scalar_like = is_scalar_like
-        self.is_literal = is_literal
+        self.expansion_kind: ExpansionKind = expansion_kind
+        self.last_node: ExprKind = last_node
+        self.has_windows: bool = has_windows
+        self.n_orderable_ops: int = n_orderable_ops
+        self.is_elementwise: bool = is_elementwise
+        self.preserves_length: bool = preserves_length
+        self.is_scalar_like: bool = is_scalar_like
+        self.is_literal: bool = is_literal
 
     def __init_subclass__(cls, /, *args: Any, **kwds: Any) -> Never:  # pragma: no cover
         msg = f"Cannot subclass {cls.__name__!r}"

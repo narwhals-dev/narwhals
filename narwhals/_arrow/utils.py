@@ -1,13 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Iterable
-from typing import Iterator
-from typing import Mapping
-from typing import Sequence
-from typing import cast
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, Sequence, cast
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -17,17 +11,18 @@ from narwhals.exceptions import ShapeError
 from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
-    from typing_extensions import TypeIs
+    from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._arrow.series import ArrowSeries
-    from narwhals._arrow.typing import ArrayAny
-    from narwhals._arrow.typing import ArrayOrScalar
-    from narwhals._arrow.typing import ArrayOrScalarT1
-    from narwhals._arrow.typing import ArrayOrScalarT2
-    from narwhals._arrow.typing import ChunkedArrayAny
-    from narwhals._arrow.typing import NativeIntervalUnit
-    from narwhals._arrow.typing import ScalarAny
+    from narwhals._arrow.typing import (
+        ArrayAny,
+        ArrayOrScalar,
+        ArrayOrScalarT1,
+        ArrayOrScalarT2,
+        ChunkedArrayAny,
+        NativeIntervalUnit,
+        ScalarAny,
+    )
     from narwhals._duration import IntervalUnit
     from narwhals.dtypes import DType
     from narwhals.typing import PythonLiteral
@@ -42,9 +37,7 @@ if TYPE_CHECKING:
     def is_list(t: Any) -> TypeIs[pa.ListType[Any]]: ...
     def is_large_list(t: Any) -> TypeIs[pa.LargeListType[Any]]: ...
     def is_fixed_size_list(t: Any) -> TypeIs[pa.FixedSizeListType[Any, Any]]: ...
-    def is_dictionary(
-        t: Any,
-    ) -> TypeIs[pa.DictionaryType[Any, Any, Any]]: ...
+    def is_dictionary(t: Any) -> TypeIs[pa.DictionaryType[Any, Any, Any]]: ...
     def extract_regex(
         strings: ChunkedArrayAny,
         /,
@@ -55,12 +48,14 @@ if TYPE_CHECKING:
     ) -> ChunkedArrayStructArray: ...
 else:
     from pyarrow.compute import extract_regex
-    from pyarrow.types import is_dictionary  # noqa: F401
-    from pyarrow.types import is_duration
-    from pyarrow.types import is_fixed_size_list
-    from pyarrow.types import is_large_list
-    from pyarrow.types import is_list
-    from pyarrow.types import is_timestamp
+    from pyarrow.types import (
+        is_dictionary,  # noqa: F401
+        is_duration,
+        is_fixed_size_list,
+        is_large_list,
+        is_list,
+        is_timestamp,
+    )
 
 UNITS_DICT: Mapping[IntervalUnit, NativeIntervalUnit] = {
     "y": "year",

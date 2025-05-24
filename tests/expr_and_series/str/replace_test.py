@@ -3,19 +3,10 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 replace_data = [
-    (
-        {"a": ["123abc", "abc456"]},
-        r"abc\b",
-        "ABC",
-        1,
-        False,
-        {"a": ["123ABC", "abc456"]},
-    ),
+    ({"a": ["123abc", "abc456"]}, r"abc\b", "ABC", 1, False, {"a": ["123ABC", "abc456"]}),
     ({"a": ["abc abc", "abc456"]}, r"abc", "", 1, False, {"a": [" abc", "456"]}),
     ({"a": ["abc abc abc", "456abc"]}, r"abc", "", -1, False, {"a": ["  ", "456"]}),
     (
@@ -29,13 +20,7 @@ replace_data = [
 ]
 
 replace_all_data = [
-    (
-        {"a": ["123abc", "abc456"]},
-        r"abc\b",
-        "ABC",
-        False,
-        {"a": ["123ABC", "abc456"]},
-    ),
+    ({"a": ["123abc", "abc456"]}, r"abc\b", "ABC", False, {"a": ["123ABC", "abc456"]}),
     ({"a": ["abc abc", "abc456"]}, r"abc", "", False, {"a": [" ", "456"]}),
     ({"a": ["abc abc abc", "456abc"]}, r"abc", "", False, {"a": ["  ", "456"]}),
     (
@@ -49,8 +34,7 @@ replace_all_data = [
 
 
 @pytest.mark.parametrize(
-    ("data", "pattern", "value", "n", "literal", "expected"),
-    replace_data,
+    ("data", "pattern", "value", "n", "literal", "expected"), replace_data
 )
 def test_str_replace_series(
     constructor_eager: ConstructorEager,
@@ -70,8 +54,7 @@ def test_str_replace_series(
 
 
 @pytest.mark.parametrize(
-    ("data", "pattern", "value", "literal", "expected"),
-    replace_all_data,
+    ("data", "pattern", "value", "literal", "expected"), replace_all_data
 )
 def test_str_replace_all_series(
     constructor_eager: ConstructorEager,
@@ -88,8 +71,7 @@ def test_str_replace_all_series(
 
 
 @pytest.mark.parametrize(
-    ("data", "pattern", "value", "n", "literal", "expected"),
-    replace_data,
+    ("data", "pattern", "value", "n", "literal", "expected"), replace_data
 )
 def test_str_replace_expr(
     constructor: Constructor,
@@ -115,8 +97,7 @@ def test_str_replace_expr(
 
 
 @pytest.mark.parametrize(
-    ("data", "pattern", "value", "literal", "expected"),
-    replace_all_data,
+    ("data", "pattern", "value", "literal", "expected"), replace_all_data
 )
 def test_str_replace_all_expr(
     constructor: Constructor,

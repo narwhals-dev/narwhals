@@ -1,12 +1,8 @@
 from __future__ import annotations
 
 import re
-from datetime import date
-from datetime import datetime
-from datetime import timedelta
-from datetime import timezone
-from typing import TYPE_CHECKING
-from typing import Any
+from datetime import date, datetime, timedelta, timezone
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import pytest
@@ -18,14 +14,10 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from narwhals.typing import DTypeBackend
-    from tests.utils import Constructor
-    from tests.utils import ConstructorEager
+    from tests.utils import Constructor, ConstructorEager
 
 
-data = {
-    "a": [datetime(2020, 1, 1)],
-    "b": [datetime(2020, 1, 1, tzinfo=timezone.utc)],
-}
+data = {"a": [datetime(2020, 1, 1)], "b": [datetime(2020, 1, 1, tzinfo=timezone.utc)]}
 
 
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
@@ -178,12 +170,7 @@ def test_dtypes() -> None:
 
     df_from_pd = nw.from_native(df_pl.to_pandas(), eager_only=True)
 
-    pure_pd_expected = {
-        **expected,
-        "n": nw.Datetime,
-        "s": nw.Object,
-        "u": nw.Object,
-    }
+    pure_pd_expected = {**expected, "n": nw.Datetime, "s": nw.Object, "u": nw.Object}
     assert df_from_pd.schema == df_from_pd.collect_schema() == pure_pd_expected
     assert {
         name: df_from_pd[name].dtype for name in df_from_pd.columns
@@ -248,10 +235,7 @@ def test_validate_not_duplicated_columns_duckdb() -> None:
         nw.from_native(rel, eager_only=False).lazy().collect()
 
 
-@pytest.mark.skipif(
-    PANDAS_VERSION < (2, 2, 0),
-    reason="too old for pyarrow types",
-)
+@pytest.mark.skipif(PANDAS_VERSION < (2, 2, 0), reason="too old for pyarrow types")
 def test_nested_dtypes() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("polars")
@@ -314,16 +298,10 @@ def test_nested_dtypes_ibis(request: pytest.FixtureRequest) -> None:  # pragma: 
     )
     tbl = ibis.memtable(df[["a", "c"]])
     nwdf = nw.from_native(tbl)
-    assert nwdf.schema == {
-        "a": nw.List(nw.Int64),
-        "c": nw.Struct({"a": nw.Int64}),
-    }
+    assert nwdf.schema == {"a": nw.List(nw.Int64), "c": nw.Struct({"a": nw.Int64})}
 
 
-@pytest.mark.skipif(
-    PANDAS_VERSION < (2, 2, 0),
-    reason="too old for pyarrow types",
-)
+@pytest.mark.skipif(PANDAS_VERSION < (2, 2, 0), reason="too old for pyarrow types")
 def test_nested_dtypes_dask() -> None:
     pytest.importorskip("dask")
     pytest.importorskip("polars")
@@ -380,13 +358,7 @@ def test_all_nulls_pandas() -> None:
             },
         ),
         (
-            [
-                "numpy_nullable",
-                "pyarrow",
-                None,
-                "pyarrow",
-                "numpy_nullable",
-            ],
+            ["numpy_nullable", "pyarrow", None, "pyarrow", "numpy_nullable"],
             {
                 "a": "Int64",
                 "b": "string[pyarrow]",
@@ -423,13 +395,7 @@ def test_schema_to_pandas_strict_zip() -> None:
         }
     )
     dtype_backend: list[DTypeBackend] = ["numpy_nullable", "pyarrow", None]
-    tup = (
-        "numpy_nullable",
-        "pyarrow",
-        None,
-        "numpy_nullable",
-        "pyarrow",
-    )
+    tup = ("numpy_nullable", "pyarrow", None, "numpy_nullable", "pyarrow")
     suggestion = re.escape(f"({tup})")
     with pytest.raises(
         ValueError,

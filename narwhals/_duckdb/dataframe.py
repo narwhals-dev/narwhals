@@ -3,40 +3,38 @@ from __future__ import annotations
 import contextlib
 from functools import reduce
 from operator import and_
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Iterator
-from typing import Mapping
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Iterator, Mapping, Sequence
 
 import duckdb
-from duckdb import FunctionExpression
-from duckdb import StarExpression
+from duckdb import FunctionExpression, StarExpression
 
-from narwhals._duckdb.utils import col
-from narwhals._duckdb.utils import evaluate_exprs
-from narwhals._duckdb.utils import generate_partition_by_sql
-from narwhals._duckdb.utils import lit
-from narwhals._duckdb.utils import native_to_narwhals_dtype
+from narwhals._duckdb.utils import (
+    col,
+    evaluate_exprs,
+    generate_partition_by_sql,
+    lit,
+    native_to_narwhals_dtype,
+)
 from narwhals.dependencies import get_duckdb
-from narwhals.exceptions import ColumnNotFoundError
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
 from narwhals.typing import CompliantLazyFrame
-from narwhals.utils import Implementation
-from narwhals.utils import Version
-from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import not_implemented
-from narwhals.utils import parse_columns_to_drop
-from narwhals.utils import parse_version
-from narwhals.utils import validate_backend_version
+from narwhals.utils import (
+    Implementation,
+    Version,
+    generate_temporary_column_name,
+    not_implemented,
+    parse_columns_to_drop,
+    parse_version,
+    validate_backend_version,
+)
 
 if TYPE_CHECKING:
     from types import ModuleType
 
     import pandas as pd
     import pyarrow as pa
-    from typing_extensions import Self
-    from typing_extensions import TypeIs
+    from duckdb import Expression
+    from typing_extensions import Self, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
     from narwhals._duckdb.expr import DuckDBExpr
@@ -46,13 +44,11 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
-    from narwhals.typing import AsofJoinStrategy
-    from narwhals.typing import JoinStrategy
-    from narwhals.typing import LazyUniqueKeepStrategy
+    from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
     from narwhals.utils import _FullContext
 
 with contextlib.suppress(ImportError):  # requires duckdb>=1.3.0
-    from duckdb import SQLExpression  # type: ignore[attr-defined, unused-ignore]
+    from duckdb import SQLExpression
 
 
 class DuckDBLazyFrame(
@@ -125,7 +121,7 @@ class DuckDBLazyFrame(
 
         return DuckDBInterchangeSeries(self.native.select(name), version=self._version)
 
-    def _iter_columns(self) -> Iterator[duckdb.Expression]:
+    def _iter_columns(self) -> Iterator[Expression]:
         for name in self.columns:
             yield col(name)
 
@@ -179,10 +175,7 @@ class DuckDBLazyFrame(
         selection = [val.alias(name) for name, val in evaluate_exprs(self, *exprs)]
         return self._with_native(self.native.aggregate(selection))  # type: ignore[arg-type]
 
-    def select(
-        self,
-        *exprs: DuckDBExpr,
-    ) -> Self:
+    def select(self, *exprs: DuckDBExpr) -> Self:
         selection = (val.alias(name) for name, val in evaluate_exprs(self, *exprs))
         return self._with_native(self.native.select(*selection))
 
@@ -303,7 +296,7 @@ class DuckDBLazyFrame(
                 col(f'lhs."{left}"') == col(f'rhs."{right}"')
                 for left, right in zip(left_on, right_on)
             )
-            condition: duckdb.Expression = reduce(and_, it)
+            condition: Expression = reduce(and_, it)
             rel = self.native.set_alias("lhs").join(
                 other.native.set_alias("rhs"),
                 # NOTE: Fixed in `--pre` https://github.com/duckdb/duckdb/pull/16933
@@ -342,7 +335,7 @@ class DuckDBLazyFrame(
     ) -> Self:
         lhs = self.native
         rhs = other.native
-        conditions: list[duckdb.Expression] = []
+        conditions: list[Expression] = []
         if by_left is not None and by_right is not None:
             conditions.extend(
                 col(f'lhs."{left}"') == col(f'rhs."{right}"')
@@ -357,7 +350,7 @@ class DuckDBLazyFrame(
         else:
             msg = "Only 'backward' and 'forward' strategies are currently supported for DuckDB"
             raise NotImplementedError(msg)
-        condition: duckdb.Expression = reduce(and_, conditions)
+        condition: Expression = reduce(and_, conditions)
         select = ["lhs.*"]
         for name in rhs.columns:
             if name in lhs.columns and (

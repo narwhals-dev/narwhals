@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import pyarrow as pa
@@ -10,15 +9,16 @@ import pytest
 
 import narwhals as nw
 from narwhals._arrow.utils import parse_datetime_format
-from tests.utils import PANDAS_VERSION
-from tests.utils import PYARROW_VERSION
-from tests.utils import assert_equal_data
-from tests.utils import is_pyarrow_windows_no_tzdata
-from tests.utils import is_windows
+from tests.utils import (
+    PANDAS_VERSION,
+    PYARROW_VERSION,
+    assert_equal_data,
+    is_pyarrow_windows_no_tzdata,
+    is_windows,
+)
 
 if TYPE_CHECKING:
-    from tests.utils import Constructor
-    from tests.utils import ConstructorEager
+    from tests.utils import Constructor, ConstructorEager
 
 data = {"a": ["2020-01-01T12:34:56"]}
 
@@ -202,9 +202,7 @@ def test_pyarrow_infer_datetime_raise_inconsistent_date_fmt(
 
 @pytest.mark.parametrize("format", [None, "%Y-%m-%dT%H:%M:%S%z"])
 def test_to_datetime_tz_aware(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
-    format: str | None,
+    constructor: Constructor, request: pytest.FixtureRequest, format: str | None
 ) -> None:
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (13,):
         # bugged

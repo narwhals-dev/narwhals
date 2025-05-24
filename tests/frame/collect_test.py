@@ -1,17 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
-from narwhals.dependencies import get_cudf
-from narwhals.dependencies import get_modin
+from narwhals.dependencies import get_cudf, get_modin, get_polars
 from narwhals.utils import Implementation
-from tests.utils import PANDAS_VERSION
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, Constructor, assert_equal_data
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -58,8 +54,7 @@ def test_collect_to_default_backend(constructor: Constructor) -> None:
 )
 @pytest.mark.parametrize("backend", ["pandas", Implementation.PANDAS])
 def test_collect_to_valid_backend_pandas(
-    constructor: Constructor,
-    backend: Implementation | str | None,
+    constructor: Constructor, backend: Implementation | str | None
 ) -> None:
     pytest.importorskip("pandas")
     import pandas as pd
@@ -74,8 +69,7 @@ def test_collect_to_valid_backend_pandas(
 )
 @pytest.mark.parametrize("backend", ["polars", Implementation.POLARS])
 def test_collect_to_valid_backend_polars(
-    constructor: Constructor,
-    backend: Implementation | str | None,
+    constructor: Constructor, backend: Implementation | str | None
 ) -> None:
     pytest.importorskip("polars")
     import polars as pl
@@ -90,8 +84,7 @@ def test_collect_to_valid_backend_polars(
 )
 @pytest.mark.parametrize("backend", ["pyarrow", Implementation.PYARROW])
 def test_collect_to_valid_backend_pyarrow(
-    constructor: Constructor,
-    backend: Implementation | str | None,
+    constructor: Constructor, backend: Implementation | str | None
 ) -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
@@ -104,9 +97,7 @@ def test_collect_to_valid_backend_pyarrow(
 @pytest.mark.filterwarnings(
     "ignore:is_sparse is deprecated and will be removed in a future version."
 )
-def test_collect_to_valid_backend_pandas_mod(
-    constructor: Constructor,
-) -> None:
+def test_collect_to_valid_backend_pandas_mod(constructor: Constructor) -> None:
     pytest.importorskip("pandas")
     import pandas as pd
 
@@ -118,9 +109,7 @@ def test_collect_to_valid_backend_pandas_mod(
 @pytest.mark.filterwarnings(
     "ignore:is_sparse is deprecated and will be removed in a future version."
 )
-def test_collect_to_valid_backend_polars_mod(
-    constructor: Constructor,
-) -> None:
+def test_collect_to_valid_backend_polars_mod(constructor: Constructor) -> None:
     pytest.importorskip("polars")
     import polars as pl
 
@@ -132,9 +121,7 @@ def test_collect_to_valid_backend_polars_mod(
 @pytest.mark.filterwarnings(
     "ignore:is_sparse is deprecated and will be removed in a future version."
 )
-def test_collect_to_valid_backend_pyarrow_mod(
-    constructor: Constructor,
-) -> None:
+def test_collect_to_valid_backend_pyarrow_mod(constructor: Constructor) -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
@@ -147,8 +134,7 @@ def test_collect_to_valid_backend_pyarrow_mod(
     "backend", ["foo", Implementation.DASK, Implementation.MODIN, pytest]
 )
 def test_collect_to_invalid_backend(
-    constructor: Constructor,
-    backend: ModuleType | Implementation | str | None,
+    constructor: Constructor, backend: ModuleType | Implementation | str | None
 ) -> None:
     df = nw.from_native(constructor(data))
 
@@ -157,8 +143,13 @@ def test_collect_to_invalid_backend(
 
 
 def test_collect_with_kwargs(constructor: Constructor) -> None:
+    pl_kwargs = (
+        {"optimizations": get_polars().QueryOptFlags(predicate_pushdown=False)}
+        if POLARS_VERSION > (1, 29, 0)
+        else {"no_optimization": True}
+    )
     collect_kwargs = {
-        nw.Implementation.POLARS: {"no_optimization": True},
+        nw.Implementation.POLARS: pl_kwargs,
         nw.Implementation.DASK: {"optimize_graph": False},
         nw.Implementation.PYARROW: {},
     }
@@ -168,7 +159,7 @@ def test_collect_with_kwargs(constructor: Constructor) -> None:
     result = (
         df.lazy()
         .select(nw.col("a", "b").sum())
-        .collect(**collect_kwargs.get(df.implementation, {}))  # type: ignore[arg-type]
+        .collect(**collect_kwargs.get(df.implementation, {}))
     )
 
     expected = {"a": [3], "b": [7]}

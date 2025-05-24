@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Sequence
 
 import pyarrow.compute as pc
 
@@ -10,22 +8,17 @@ from narwhals._arrow.series import ArrowSeries
 from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals.exceptions import ColumnNotFoundError
-from narwhals.utils import Implementation
-from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import not_implemented
+from narwhals.utils import Implementation, generate_temporary_column_name, not_implemented
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
-    from narwhals._compliant.typing import AliasNames
-    from narwhals._compliant.typing import EvalNames
-    from narwhals._compliant.typing import EvalSeries
+    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries, ScalarKwargs
     from narwhals._expression_parsing import ExprMetadata
     from narwhals.typing import RankMethod
-    from narwhals.utils import Version
-    from narwhals.utils import _FullContext
+    from narwhals.utils import Version, _FullContext
 
 
 class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
@@ -41,7 +34,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         alias_output_names: AliasNames | None,
         backend_version: tuple[int, ...],
         version: Version,
-        call_kwargs: dict[str, Any] | None = None,
+        scalar_kwargs: ScalarKwargs | None = None,
         implementation: Implementation | None = None,
     ) -> None:
         self._call = call
@@ -52,7 +45,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         self._alias_output_names = alias_output_names
         self._backend_version = backend_version
         self._version = version
-        self._call_kwargs = call_kwargs or {}
+        self._scalar_kwargs = scalar_kwargs or {}
         self._metadata: ExprMetadata | None = None
 
     @classmethod
@@ -94,27 +87,20 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         )
 
     @classmethod
-    def from_column_indices(
-        cls: type[Self], *column_indices: int, context: _FullContext
-    ) -> Self:
-        from narwhals._arrow.series import ArrowSeries
-
+    def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            tbl = df.native
+            cols = df.columns
             return [
-                ArrowSeries(
-                    df.native[column_index],
-                    name=df.native.column_names[column_index],
-                    backend_version=df._backend_version,
-                    version=df._version,
-                )
-                for column_index in column_indices
+                ArrowSeries.from_native(tbl[i], name=cols[i], context=df)
+                for i in column_indices
             ]
 
         return cls(
             func,
             depth=0,
             function_name="nth",
-            evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
+            evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
             backend_version=context._backend_version,
             version=context._version,
@@ -209,5 +195,8 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
         return self._reuse_series("rank", method=method, descending=descending)
+
+    def log(self, base: float) -> Self:
+        return self._reuse_series("log", base=base)
 
     ewm_mean = not_implemented()

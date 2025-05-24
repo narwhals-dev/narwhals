@@ -8,10 +8,7 @@ import pytest
 # becomes LazyFrame instead of DataFrame
 import narwhals as nw
 from narwhals.exceptions import ColumnNotFoundError
-from tests.utils import DUCKDB_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
 
@@ -70,10 +67,7 @@ def test_unique(
 @pytest.mark.parametrize("subset", [None, ["a", "b"]])
 @pytest.mark.parametrize(
     ("keep", "expected"),
-    [
-        ("any", {"a": [1, 1, 2], "b": [3, 4, 4]}),
-        ("none", {"a": [1, 2], "b": [4, 4]}),
-    ],
+    [("any", {"a": [1, 1, 2], "b": [3, 4, 4]}), ("none", {"a": [1, 2], "b": [4, 4]})],
 )
 def test_unique_full_subset(
     constructor: Constructor,

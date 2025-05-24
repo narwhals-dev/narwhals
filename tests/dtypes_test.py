@@ -1,13 +1,8 @@
 from __future__ import annotations
 
 import enum
-from datetime import datetime
-from datetime import timedelta
-from datetime import timezone
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Iterable
-from typing import Literal
+from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING, Any, Iterable, Literal
 
 import numpy as np
 import pandas as pd
@@ -15,9 +10,7 @@ import pyarrow as pa
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import PYARROW_VERSION
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoSeries
@@ -311,13 +304,7 @@ def test_dtype_is_x() -> None:
     )
 
     is_signed_integer = {nw.Int8, nw.Int16, nw.Int32, nw.Int64, nw.Int128}
-    is_unsigned_integer = {
-        nw.UInt8,
-        nw.UInt16,
-        nw.UInt32,
-        nw.UInt64,
-        nw.UInt128,
-    }
+    is_unsigned_integer = {nw.UInt8, nw.UInt16, nw.UInt32, nw.UInt64, nw.UInt128}
     is_float = {nw.Float32, nw.Float64}
     is_decimal = {nw.Decimal}
     is_temporal = {nw.Datetime, nw.Date, nw.Duration, nw.Time}
@@ -362,8 +349,7 @@ def test_huge_int_to_native() -> None:
     result = (
         nw.from_native(rel)
         .with_columns(
-            a_int=nw.col("a").cast(nw.Int128()),
-            a_unit=nw.col("a").cast(nw.UInt128()),
+            a_int=nw.col("a").cast(nw.Int128()), a_unit=nw.col("a").cast(nw.UInt128())
         )
         .select("a_int", "a_unit")
         .to_native()
@@ -407,12 +393,7 @@ def test_cast_decimal_to_native() -> None:
 
 @pytest.mark.parametrize(
     "categories",
-    [
-        ["a", "b"],
-        [np.str_("a"), np.str_("b")],
-        enum.Enum("Test", "a b"),
-        [1, 2, 3],
-    ],
+    [["a", "b"], [np.str_("a"), np.str_("b")], enum.Enum("Test", "a b"), [1, 2, 3]],
 )
 def test_enum_valid(categories: Iterable[Any] | type[enum.Enum]) -> None:
     dtype = nw.Enum(categories)

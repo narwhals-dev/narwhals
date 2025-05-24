@@ -45,3 +45,8 @@ jobs:
         run: |
           source .venv/bin/activate
           pyright
+      - name: Run pyright type completeness
+        run: |
+          source .venv/bin/activate
+          uv pip install -U pyright-cov
+          pyright-cov --verifytypes narwhals --ignoreexternal --fail-under 100

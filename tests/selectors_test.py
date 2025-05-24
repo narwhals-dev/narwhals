@@ -1,20 +1,21 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timezone
 from typing import Literal
 
 import pytest
 
 import narwhals as nw
 import narwhals.stable.v1.selectors as ncs
-from tests.utils import PANDAS_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import PYARROW_VERSION
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
-from tests.utils import is_windows
+from tests.utils import (
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    assert_equal_data,
+    is_windows,
+)
 
 data = {
     "a": [1, 1, 2],
@@ -23,12 +24,7 @@ data = {
     "d": [True, False, True],
 }
 
-data_regex = {
-    "foo": ["x", "y"],
-    "bar": [123, 456],
-    "baz": [2.0, 5.5],
-    "zap": [0, 1],
-}
+data_regex = {"foo": ["x", "y"], "bar": [123, 456], "baz": [2.0, 5.5], "zap": [0, 1]}
 
 
 def test_selectors(constructor: Constructor) -> None:
@@ -41,10 +37,7 @@ def test_selectors(constructor: Constructor) -> None:
 def test_matches(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data_regex))
     result = df.select(ncs.matches("[^z]a") + 1)
-    expected = {
-        "bar": [124, 457],
-        "baz": [3.0, 6.5],
-    }
+    expected = {"bar": [124, 457], "baz": [3.0, 6.5]}
     assert_equal_data(result, expected)
 
 
@@ -69,10 +62,7 @@ def test_string(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_categorical(
-    request: pytest.FixtureRequest,
-    constructor: Constructor,
-) -> None:
+def test_categorical(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
         15,
     ):  # pragma: no cover
@@ -107,10 +97,7 @@ def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> N
     ts1 = datetime(2000, 11, 20, 18, 12, 16, 600000)
     ts2 = datetime(2020, 10, 30, 10, 20, 25, 123000)
 
-    data = {
-        "numeric": [3.14, 6.28],
-        "ts": [ts1, ts2],
-    }
+    data = {"numeric": [3.14, 6.28], "ts": [ts1, ts2]}
     time_units: list[Literal["ns", "us", "ms", "s"]] = ["ms", "us", "ns"]
 
     df = nw.from_native(constructor(data)).select(
@@ -199,10 +186,7 @@ def test_datetime_no_tz(constructor: Constructor) -> None:
     ts1 = datetime(2000, 11, 20, 18, 12, 16, 600000)
     ts2 = datetime(2020, 10, 30, 10, 20, 25, 123000)
 
-    data = {
-        "numeric": [3.14, 6.28],
-        "ts": [ts1, ts2],
-    }
+    data = {"numeric": [3.14, 6.28], "ts": [ts1, ts2]}
 
     df = nw.from_native(constructor(data))
     assert df.select(ncs.datetime()).collect_schema().names() == ["ts"]

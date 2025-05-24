@@ -1,11 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Literal
-from typing import Mapping
-from typing import cast
+from typing import TYPE_CHECKING, Any, Literal, Mapping, cast
 
 import pandas as pd
 import pytest
@@ -13,10 +9,7 @@ import pytest
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from narwhals.utils import Implementation
-from tests.utils import PANDAS_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 pytest.importorskip("polars")
 import polars as pl
@@ -38,9 +31,7 @@ TEST_EAGER_BACKENDS = [
 @pytest.mark.parametrize("backend", TEST_EAGER_BACKENDS)
 @pytest.mark.parametrize("nw_namespace", [nw, nw_v1])
 def test_read_csv(
-    tmpdir: pytest.TempdirFactory,
-    backend: Implementation | str,
-    nw_namespace: ModuleType,
+    tmpdir: pytest.TempdirFactory, backend: Implementation | str, nw_namespace: ModuleType
 ) -> None:
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
@@ -61,19 +52,13 @@ def test_read_csv_kwargs(tmpdir: pytest.TempdirFactory) -> None:
 
 @pytest.mark.parametrize("nw_namespace", [nw, nw_v1])
 def test_scan_csv(
-    tmpdir: pytest.TempdirFactory,
-    constructor: Constructor,
-    nw_namespace: ModuleType,
+    tmpdir: pytest.TempdirFactory, constructor: Constructor, nw_namespace: ModuleType
 ) -> None:
     kwargs: dict[str, Any]
     if "sqlframe" in str(constructor):
         from sqlframe.duckdb import DuckDBSession
 
-        kwargs = {
-            "session": DuckDBSession(),
-            "inferSchema": True,
-            "header": True,
-        }
+        kwargs = {"session": DuckDBSession(), "inferSchema": True, "header": True}
     elif "pyspark" in str(constructor):
         if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
             from pyspark.sql.connect.session import SparkSession
@@ -147,9 +132,7 @@ def test_read_parquet_kwargs(tmpdir: pytest.TempdirFactory) -> None:
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 @pytest.mark.parametrize("nw_namespace", [nw, nw_v1])
 def test_scan_parquet(
-    tmpdir: pytest.TempdirFactory,
-    constructor: Constructor,
-    nw_namespace: ModuleType,
+    tmpdir: pytest.TempdirFactory, constructor: Constructor, nw_namespace: ModuleType
 ) -> None:
     kwargs: dict[str, Any]
     if "sqlframe" in str(constructor):

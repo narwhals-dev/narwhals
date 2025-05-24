@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Sequence
 
 from narwhals._pandas_like.utils import select_columns_by_name
-from narwhals.dependencies import get_pandas
-from narwhals.dependencies import get_pyarrow
-from narwhals.utils import Implementation
-from narwhals.utils import Version
-from narwhals.utils import isinstance_or_issubclass
-from narwhals.utils import parse_version
+from narwhals.dependencies import get_pandas, get_pyarrow
+from narwhals.utils import (
+    Implementation,
+    Version,
+    isinstance_or_issubclass,
+    parse_version,
+)
 
 if TYPE_CHECKING:
     import dask.dataframe as dd

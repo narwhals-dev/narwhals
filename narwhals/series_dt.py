@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Generic
+from typing import TYPE_CHECKING, Generic
 
 from narwhals.typing import SeriesT
 
@@ -527,12 +526,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> s_native = pa.chunked_array(
-            ...     [
-            ...         [
-            ...             datetime(2020, 3, 1),
-            ...             datetime(2020, 4, 1),
-            ...         ]
-            ...     ]
+            ...     [[datetime(2020, 3, 1), datetime(2020, 4, 1)]]
             ... )
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.dt.to_string("%Y/%m/%d").to_native()  # doctest: +ELLIPSIS

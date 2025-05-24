@@ -6,28 +6,15 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
-from tests.utils import is_windows
+from tests.utils import Constructor, ConstructorEager, assert_equal_data, is_windows
 
 data = {
-    "a": [
-        datetime(2021, 3, 1, 12, 34, 56, 49000),
-        datetime(2020, 1, 2, 2, 4, 14, 715000),
-    ],
+    "a": [datetime(2021, 3, 1, 12, 34, 56, 49000), datetime(2020, 1, 2, 2, 4, 14, 715000)]
 }
 
 
 @pytest.mark.parametrize(
-    "fmt",
-    [
-        "%Y-%m-%d",
-        "%Y-%m-%d %H:%M:%S",
-        "%Y/%m/%d %H:%M:%S",
-        "%G-W%V-%u",
-        "%G-W%V",
-    ],
+    "fmt", ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%G-W%V-%u", "%G-W%V"]
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_dt_to_string_series(constructor_eager: ConstructorEager, fmt: str) -> None:
@@ -49,14 +36,7 @@ def test_dt_to_string_series(constructor_eager: ConstructorEager, fmt: str) -> N
 
 
 @pytest.mark.parametrize(
-    "fmt",
-    [
-        "%Y-%m-%d",
-        "%Y-%m-%d %H:%M:%S",
-        "%Y/%m/%d %H:%M:%S",
-        "%G-W%V-%u",
-        "%G-W%V",
-    ],
+    "fmt", ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%G-W%V-%u", "%G-W%V"]
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_dt_to_string_expr(
@@ -97,10 +77,7 @@ def _clean_string_expr(e: Any) -> Any:
         (datetime(2020, 1, 9), "2020-01-09T00:00:00.000000"),
         (datetime(2020, 1, 9, 12, 34, 56), "2020-01-09T12:34:56.000000"),
         (datetime(2020, 1, 9, 12, 34, 56, 123), "2020-01-09T12:34:56.000123"),
-        (
-            datetime(2020, 1, 9, 12, 34, 56, 123456),
-            "2020-01-09T12:34:56.123456",
-        ),
+        (datetime(2020, 1, 9, 12, 34, 56, 123456), "2020-01-09T12:34:56.123456"),
     ],
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
@@ -128,10 +105,7 @@ def test_dt_to_string_iso_local_datetime_series(
     [
         (datetime(2020, 1, 9, 12, 34, 56), "2020-01-09T12:34:56.000000"),
         (datetime(2020, 1, 9, 12, 34, 56, 123), "2020-01-09T12:34:56.000123"),
-        (
-            datetime(2020, 1, 9, 12, 34, 56, 123456),
-            "2020-01-09T12:34:56.123456",
-        ),
+        (datetime(2020, 1, 9, 12, 34, 56, 123456), "2020-01-09T12:34:56.123456"),
     ],
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
@@ -160,10 +134,7 @@ def test_dt_to_string_iso_local_datetime_expr(
     assert_equal_data(result, {"a": [data], "b": [_clean_string(expected)]})
 
 
-@pytest.mark.parametrize(
-    ("data", "expected"),
-    [(datetime(2020, 1, 9), "2020-01-09")],
-)
+@pytest.mark.parametrize(("data", "expected"), [(datetime(2020, 1, 9), "2020-01-09")])
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_dt_to_string_iso_local_date_series(
     constructor_eager: ConstructorEager, data: datetime, expected: str
@@ -173,10 +144,7 @@ def test_dt_to_string_iso_local_date_series(
     assert str(result) == expected
 
 
-@pytest.mark.parametrize(
-    ("data", "expected"),
-    [(datetime(2020, 1, 9), "2020-01-09")],
-)
+@pytest.mark.parametrize(("data", "expected"), [(datetime(2020, 1, 9), "2020-01-09")])
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_dt_to_string_iso_local_date_expr(
     constructor: Constructor,

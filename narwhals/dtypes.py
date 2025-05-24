@@ -4,16 +4,12 @@ import enum
 from collections import OrderedDict
 from datetime import timezone
 from itertools import starmap
-from typing import TYPE_CHECKING
-from typing import Iterable
-from typing import Mapping
+from typing import TYPE_CHECKING, Iterable, Mapping
 
-from narwhals.utils import _DeferredIterable
-from narwhals.utils import isinstance_or_issubclass
+from narwhals.utils import _DeferredIterable, isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    from typing import Iterator
-    from typing import Sequence
+    from typing import Iterator, Sequence
 
     from typing_extensions import Self
 
@@ -362,9 +358,7 @@ class Datetime(TemporalType, metaclass=_DatetimeMeta):
     """
 
     def __init__(
-        self,
-        time_unit: TimeUnit = "us",
-        time_zone: str | timezone | None = None,
+        self, time_unit: TimeUnit = "us", time_zone: str | timezone | None = None
     ) -> None:
         if time_unit not in {"s", "ms", "us", "ns"}:
             msg = (

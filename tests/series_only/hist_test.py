@@ -12,10 +12,12 @@ from hypothesis import given
 
 import narwhals as nw
 from narwhals.exceptions import ComputeError
-from tests.utils import POLARS_VERSION
-from tests.utils import PYARROW_VERSION
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import (
+    POLARS_VERSION,
+    PYARROW_VERSION,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 rnd = Random(0)  # noqa: S311
 
@@ -27,34 +29,13 @@ data: dict[str, list[int | float]] = {
 }
 
 bins_and_expected = [
-    {
-        "bins": [-float("inf"), 2.5, 5.5, float("inf")],
-        "expected": [3, 3, 1],
-    },
-    {
-        "bins": [1.0, 2.5, 5.5, float("inf")],
-        "expected": [2, 3, 1],
-    },
-    {
-        "bins": [1.0, 2.5, 5.5],
-        "expected": [2, 3],
-    },
-    {
-        "bins": [-10.0, -1.0, 2.5, 5.5],
-        "expected": [0, 3, 3],
-    },
-    {
-        "bins": [1.0, 2.0625],
-        "expected": [2],
-    },
-    {
-        "bins": [1],
-        "expected": [],
-    },
-    {
-        "bins": [0, 10],
-        "expected": [7],
-    },
+    {"bins": [-float("inf"), 2.5, 5.5, float("inf")], "expected": [3, 3, 1]},
+    {"bins": [1.0, 2.5, 5.5, float("inf")], "expected": [2, 3, 1]},
+    {"bins": [1.0, 2.5, 5.5], "expected": [2, 3]},
+    {"bins": [-10.0, -1.0, 2.5, 5.5], "expected": [0, 3, 3]},
+    {"bins": [1.0, 2.0625], "expected": [2]},
+    {"bins": [1], "expected": []},
+    {"bins": [0, 10], "expected": [7]},
 ]
 counts_and_expected = [
     {
@@ -64,33 +45,11 @@ counts_and_expected = [
     },
     {
         "bin_count": 12,
-        "expected_bins": [
-            0,
-            0.5,
-            1.0,
-            1.5,
-            2.0,
-            2.5,
-            3.0,
-            3.5,
-            4.0,
-            4.5,
-            5.0,
-            5.5,
-            6.0,
-        ],
+        "expected_bins": [0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0],
         "expected_count": [1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
     },
-    {
-        "bin_count": 1,
-        "expected_bins": [0, 6],
-        "expected_count": [7],
-    },
-    {
-        "bin_count": 0,
-        "expected_bins": [],
-        "expected_count": [],
-    },
+    {"bin_count": 1, "expected_bins": [0, 6], "expected_count": [7]},
+    {"bin_count": 0, "expected_bins": [], "expected_count": []},
 ]
 
 
@@ -98,10 +57,7 @@ counts_and_expected = [
 @pytest.mark.parametrize("include_breakpoint", [True, False])
 @pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
 def test_hist_bin(
-    library: str,
-    *,
-    params: dict[str, Any],
-    include_breakpoint: bool,
+    library: str, *, params: dict[str, Any], include_breakpoint: bool
 ) -> None:
     if library == "pandas":
         constructor_eager: Any = pd.DataFrame
@@ -115,23 +71,17 @@ def test_hist_bin(
     if library == "pyarrow" and PYARROW_VERSION < (13,):
         pytest.skip()
     df = nw.from_native(constructor_eager(data)).with_columns(
-        float=nw.col("int").cast(nw.Float64),
+        float=nw.col("int").cast(nw.Float64)
     )
     bins = params["bins"]
 
-    expected = {
-        "breakpoint": bins[1:],
-        "count": params["expected"],
-    }
+    expected = {"breakpoint": bins[1:], "count": params["expected"]}
     if not include_breakpoint:
         del expected["breakpoint"]
 
     # smoke tests
     for col in df.columns:
-        result = df[col].hist(
-            bins=bins,
-            include_breakpoint=include_breakpoint,
-        )
+        result = df[col].hist(bins=bins, include_breakpoint=include_breakpoint)
         assert_equal_data(result, expected)
 
         # result size property
@@ -140,42 +90,29 @@ def test_hist_bin(
     # shift bins property
     shift_by = 10
     shifted_bins = [b + shift_by for b in bins]
-    expected = {
-        "breakpoint": shifted_bins[1:],
-        "count": params["expected"],
-    }
+    expected = {"breakpoint": shifted_bins[1:], "count": params["expected"]}
     if not include_breakpoint:
         del expected["breakpoint"]
 
     for col in df.columns:
         result = (df[col] + shift_by).hist(
-            bins=shifted_bins,
-            include_breakpoint=include_breakpoint,
+            bins=shifted_bins, include_breakpoint=include_breakpoint
         )
         assert_equal_data(result, expected)
 
     # missing/nan results
     df = nw.from_native(
         constructor_eager(
-            {
-                "has_nan": [float("nan"), *data["int"]],
-                "has_null": [None, *data["int"]],
-            }
+            {"has_nan": [float("nan"), *data["int"]], "has_null": [None, *data["int"]]}
         )
     )
     bins = params["bins"]
-    expected = {
-        "breakpoint": bins[1:],
-        "count": params["expected"],
-    }
+    expected = {"breakpoint": bins[1:], "count": params["expected"]}
     if not include_breakpoint:
         del expected["breakpoint"]
 
     for col in df.columns:
-        result = df[col].hist(
-            bins=bins,
-            include_breakpoint=include_breakpoint,
-        )
+        result = df[col].hist(bins=bins, include_breakpoint=include_breakpoint)
 
         assert_equal_data(result, expected)
 
@@ -184,10 +121,7 @@ def test_hist_bin(
 @pytest.mark.parametrize("include_breakpoint", [True, False])
 @pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
 def test_hist_count(
-    library: str,
-    *,
-    params: dict[str, Any],
-    include_breakpoint: bool,
+    library: str, *, params: dict[str, Any], include_breakpoint: bool
 ) -> None:
     if library == "pandas":
         constructor_eager: Any = pd.DataFrame
@@ -201,24 +135,18 @@ def test_hist_count(
         pytest.skip()
 
     df = nw.from_native(constructor_eager(data)).with_columns(
-        float=nw.col("int").cast(nw.Float64),
+        float=nw.col("int").cast(nw.Float64)
     )
     bin_count = params["bin_count"]
 
     expected_bins = params["expected_bins"]
-    expected = {
-        "breakpoint": expected_bins[1:],
-        "count": params["expected_count"],
-    }
+    expected = {"breakpoint": expected_bins[1:], "count": params["expected_count"]}
     if not include_breakpoint:
         del expected["breakpoint"]
 
     # smoke tests
     for col in df.columns:
-        result = df[col].hist(
-            bin_count=bin_count,
-            include_breakpoint=include_breakpoint,
-        )
+        result = df[col].hist(bin_count=bin_count, include_breakpoint=include_breakpoint)
         assert_equal_data(result, expected)
 
         # result size property
@@ -230,18 +158,12 @@ def test_hist_count(
     # missing/nan results
     df = nw.from_native(
         constructor_eager(
-            {
-                "has_nan": [float("nan"), *data["int"]],
-                "has_null": [None, *data["int"]],
-            }
+            {"has_nan": [float("nan"), *data["int"]], "has_null": [None, *data["int"]]}
         )
     )
 
     for col in df.columns:
-        result = df[col].hist(
-            bin_count=bin_count,
-            include_breakpoint=include_breakpoint,
-        )
+        result = df[col].hist(bin_count=bin_count, include_breakpoint=include_breakpoint)
         assert_equal_data(result, expected)
 
         # result size property
@@ -265,10 +187,7 @@ def test_hist_count_no_spread(library: str) -> None:
     if library == "pyarrow" and PYARROW_VERSION < (13,):
         pytest.skip()
 
-    data = {
-        "all_zero": [0, 0, 0],
-        "all_non_zero": [5, 5, 5],
-    }
+    data = {"all_zero": [0, 0, 0], "all_non_zero": [5, 5, 5]}
     df = nw.from_native(constructor_eager(data))
 
     result = df["all_zero"].hist(bin_count=4, include_breakpoint=True)
@@ -280,10 +199,7 @@ def test_hist_count_no_spread(library: str) -> None:
     assert_equal_data(result, expected)
 
     result = df["all_zero"].hist(bin_count=1, include_breakpoint=True)
-    expected = {
-        "breakpoint": [0.5],
-        "count": [3],
-    }
+    expected = {"breakpoint": [0.5], "count": [3]}
     assert_equal_data(result, expected)
 
 
@@ -301,11 +217,7 @@ def test_hist_bin_and_bin_count() -> None:
 
 @pytest.mark.parametrize("include_breakpoint", [True, False])
 @pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
-def test_hist_no_data(
-    library: str,
-    *,
-    include_breakpoint: bool,
-) -> None:
+def test_hist_no_data(library: str, *, include_breakpoint: bool) -> None:
     if library == "pandas":
         constructor_eager: Any = pd.DataFrame
     elif library == "polars":
@@ -421,15 +333,10 @@ def test_hist_bin_hypotheis(
         .cast(nw.Float64)
         .cum_sum()
     )
-    result = df["values"].hist(
-        bins=bins.to_list(),
-        include_breakpoint=True,
-    )
+    result = df["values"].hist(bins=bins.to_list(), include_breakpoint=True)
     expected_data = pl.Series(data, dtype=pl.Float64)
     expected = expected_data.hist(
-        bins=bins.to_list(),
-        include_breakpoint=True,
-        include_category=False,
+        bins=bins.to_list(), include_breakpoint=True, include_category=False
     )
     assert_equal_data(result, expected.to_dict(as_series=False))
 
@@ -447,16 +354,11 @@ def test_hist_bin_hypotheis(
     POLARS_VERSION < (1, 27),
     reason="polars cannot be used for compatibility checks since narwhals aims to mimic polars>=1.27 behavior",
 )
-@pytest.mark.filterwarnings(
-    "ignore:invalid value encountered in cast:RuntimeWarning",
-)
+@pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
 @pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
 @pytest.mark.slow
 def test_hist_count_hypothesis(
-    library: str,
-    data: list[float],
-    bin_count: int,
-    request: pytest.FixtureRequest,
+    library: str, data: list[float], bin_count: int, request: pytest.FixtureRequest
 ) -> None:
     pytest.importorskip("polars")
     import polars as pl
@@ -476,10 +378,7 @@ def test_hist_count_hypothesis(
     )
 
     try:
-        result = df["values"].hist(
-            bin_count=bin_count,
-            include_breakpoint=True,
-        )
+        result = df["values"].hist(bin_count=bin_count, include_breakpoint=True)
     except pl.exceptions.PanicException:  # pragma: no cover
         # panic occurs from specific float inputs on Polars 1.15
         if (1, 14) < POLARS_VERSION < (1, 16):
@@ -488,9 +387,7 @@ def test_hist_count_hypothesis(
 
     expected_data = pl.Series(data, dtype=pl.Float64)
     expected = expected_data.hist(
-        bin_count=bin_count,
-        include_breakpoint=True,
-        include_category=False,
+        bin_count=bin_count, include_breakpoint=True, include_category=False
     )
 
     # Bug in Polars <= 1.21; hist becomes unreliable when passing bin_counts

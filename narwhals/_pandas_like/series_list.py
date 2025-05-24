@@ -3,10 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._compliant.any_namespace import ListNamespace
-from narwhals._pandas_like.utils import PandasLikeSeriesNamespace
-from narwhals._pandas_like.utils import get_dtype_backend
-from narwhals._pandas_like.utils import narwhals_to_native_dtype
-from narwhals._pandas_like.utils import set_index
+from narwhals._pandas_like.utils import (
+    PandasLikeSeriesNamespace,
+    get_dtype_backend,
+    narwhals_to_native_dtype,
+)
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -20,12 +21,8 @@ class PandasLikeSeriesListNamespace(
         implementation = self.implementation
         backend_version = self.backend_version
         if implementation.is_pandas() and backend_version < (3, 0):  # pragma: no cover
-            result = set_index(
-                result,
-                self.native.index,
-                implementation=implementation,
-                backend_version=backend_version,
-            )
+            # `result` is a new object so it's safe to do this inplace.
+            result.index = self.native.index
         dtype = narwhals_to_native_dtype(
             self.version.dtypes.UInt32(),
             get_dtype_backend(result.dtype, implementation),
