@@ -1,15 +1,6 @@
 from __future__ import annotations
 
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    Protocol,
-    Sequence,
-    TypedDict,
-    TypeVar,
-)
+from typing import TYPE_CHECKING, Any, Callable, Sequence, TypedDict, TypeVar
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -155,12 +146,9 @@ See [underwater unicorn magic](https://narwhals-dev.github.io/narwhals/how_it_wo
 EvalNames: TypeAlias = Callable[[CompliantFrameT], Sequence[str]]
 """A function from a `Frame` to a sequence of columns names *before* any aliasing takes place."""
 
-
-class WindowFunction(Protocol, Generic[NativeExprT]):
-    def __call__(self, window_inputs: WindowInputs[NativeExprT]) -> NativeExprT: ...
-
-
-class UnorderableWindowFunction(Protocol, Generic[NativeExprT]):
-    def __call__(
-        self, window_inputs: UnorderableWindowInputs[NativeExprT]
-    ) -> NativeExprT: ...
+WindowFunction: TypeAlias = "Callable[[WindowInputs[NativeExprT]], NativeExprT]"
+"""A function evaluated with `over(partition_by=..., order_by=...)`."""
+UnorderableWindowFunction: TypeAlias = (
+    "Callable[[UnorderableWindowInputs[NativeExprT]], NativeExprT]"
+)
+"""A function evaluated with `over(partition_by=...)`, without `order_by` (e.g. `is_unique`, `rank`)."""
