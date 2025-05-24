@@ -125,15 +125,15 @@ class DuckDBExprDateTimeNamespace:
 
         return self._compliant_expr._with_callable(_truncate)
 
-    def convert_time_zone(self, time_zone: str) -> DuckDBExpr:
+    def _noop_time_zone(self, time_zone: str) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> Sequence[Expression]:
             native_series_list = self._compliant_expr(df)
             conn_time_zone = get_rel_time_zone(df.native)
             if conn_time_zone != time_zone:
                 msg = (
                     "DuckDB stores the time zone in the connection, rather than in the "
-                    f"data type, so only `None` and {conn_time_zone} (the current "
-                    "connection time zone) are supported in `convert_time_zone`."
+                    f"data type, so changing the timezone to anything other than {conn_time_zone} "
+                    " (the current connection time zone) is not supported."
                 )
                 raise NotImplementedError(msg)
             return native_series_list
@@ -146,31 +146,15 @@ class DuckDBExprDateTimeNamespace:
             version=self._compliant_expr._version,
         )
 
+    def convert_time_zone(self, time_zone: str) -> DuckDBExpr:
+        return self._noop_time_zone(time_zone)
+
     def replace_time_zone(self, time_zone: str | None) -> DuckDBExpr:
         if time_zone is None:
             return self._compliant_expr._with_callable(
                 lambda _input: _input.cast("timestamp")
             )
         else:
-
-            def func(df: DuckDBLazyFrame) -> Sequence[Expression]:
-                native_series_list = self._compliant_expr(df)
-                conn_time_zone = get_rel_time_zone(df.native)
-                if conn_time_zone != time_zone:
-                    msg = (
-                        "DuckDB stores the time zone in the connection, rather than in the "
-                        f"data type, so only `None` and {conn_time_zone} (the current "
-                        "connection time zone) are supported in `replace_time_zone`."
-                    )
-                    raise NotImplementedError(msg)
-                return native_series_list
-
-            return self._compliant_expr.__class__(
-                func,
-                evaluate_output_names=self._compliant_expr._evaluate_output_names,
-                alias_output_names=self._compliant_expr._alias_output_names,
-                backend_version=self._compliant_expr._backend_version,
-                version=self._compliant_expr._version,
-            )
+            return self._noop_time_zone(time_zone)
 
     total_nanoseconds = not_implemented()
