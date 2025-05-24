@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING
 
+from narwhals._spark_like.utils import strptime_to_pyspark_format
 from narwhals.utils import _is_naive_format
 
 if TYPE_CHECKING:
@@ -112,34 +113,3 @@ class SparkLikeExprStringNamespace:
         return self._compliant_expr._with_callable(
             lambda expr: function(F.replace(expr, F.lit("T"), F.lit(" ")))
         )
-
-
-def strptime_to_pyspark_format(format: str) -> str:
-    """Converts a Python strptime datetime format string to a PySpark datetime format string."""
-    # Mapping from Python strptime format to PySpark format
-
-    # see https://spark.apache.org/docs/latest/sql-ref-datetime-pattern.html
-    # and https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior
-    format_mapping = {
-        "%Y": "y",  # Year with century
-        "%y": "y",  # Year without century
-        "%m": "M",  # Month
-        "%d": "d",  # Day of the month
-        "%H": "H",  # Hour (24-hour clock) 0-23
-        "%I": "h",  # Hour (12-hour clock) 1-12
-        "%M": "m",  # Minute
-        "%S": "s",  # Second
-        "%f": "S",  # Microseconds -> Milliseconds
-        "%p": "a",  # AM/PM
-        "%a": "E",  # Abbreviated weekday name
-        "%A": "E",  # Full weekday name
-        "%j": "D",  # Day of the year
-        "%z": "Z",  # Timezone offset
-        "%s": "X",  # Unix timestamp
-    }
-
-    # Replace Python format specifiers with PySpark specifiers
-    pyspark_format = format
-    for py_format, spark_format in format_mapping.items():
-        pyspark_format = pyspark_format.replace(py_format, spark_format)
-    return pyspark_format.replace("T", " ")
