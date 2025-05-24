@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from types import ModuleType
-
     from narwhals.typing import Frame
     from tests.utils import Constructor
 
@@ -16,7 +14,7 @@ if TYPE_CHECKING:
 data = {"a": [1, 2, 3]}
 
 
-def _get_expected_namespace(constructor_name: str) -> ModuleType | None:  # noqa: PLR0911
+def _get_expected_namespace(constructor_name: str) -> Any | None:  # noqa: PLR0911
     """Get expected namespace module for a given constructor."""
     if "pandas" in constructor_name:
         import pandas as pd
@@ -26,7 +24,7 @@ def _get_expected_namespace(constructor_name: str) -> ModuleType | None:  # noqa
         import polars as pl
 
         return pl
-    elif "pyarrow" in constructor_name:
+    elif "pyarrow_table" in constructor_name:
         import pyarrow as pa
 
         return pa
