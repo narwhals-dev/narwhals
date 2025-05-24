@@ -181,6 +181,7 @@ def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma:
             "ignore", r"Using fork\(\) can cause Polars", category=RuntimeWarning
         )
         builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
+
         session = (
             (
                 builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
@@ -189,12 +190,14 @@ def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma:
             )
             .config("spark.default.parallelism", "1")
             .config("spark.sql.shuffle.partitions", "2")
+            # common timezone for all tests environments
+            .config("spark.sql.session.timeZone", "UTC")
             .getOrCreate()
         )
 
         register(session.stop)
 
-        def pyspark_constructor(obj: Data) -> PySparkDataFrame:
+        def _constructor(obj: Data) -> PySparkDataFrame:
             _obj = deepcopy(obj)
             index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
             _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
@@ -206,7 +209,7 @@ def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma:
                 .drop(index_col_name)
             )
 
-        return pyspark_constructor
+        return _constructor
 
 
 def sqlframe_pyspark_lazy_constructor(obj: Data) -> SQLFrameDataFrame:  # pragma: no cover
