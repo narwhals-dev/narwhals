@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import lru_cache
 from importlib import import_module
 from typing import TYPE_CHECKING, Any, Sequence
 
@@ -11,6 +12,7 @@ if TYPE_CHECKING:
 
     import sqlframe.base.types as sqlframe_types
     from sqlframe.base.column import Column
+    from sqlframe.base.session import _BaseSession as Session
     from typing_extensions import TypeAlias
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
@@ -55,7 +57,7 @@ class UnorderableWindowInputs:
 
 # NOTE: don't lru_cache this as `ModuleType` isn't hashable
 def native_to_narwhals_dtype(  # noqa: C901, PLR0912
-    dtype: _NativeDType, version: Version, spark_types: ModuleType
+    dtype: _NativeDType, version: Version, spark_types: ModuleType, session: Session
 ) -> DType:
     dtypes = version.dtypes
     if TYPE_CHECKING:
@@ -85,16 +87,14 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
         # TODO(marco): cover this
         return dtypes.Datetime()  # pragma: no cover
     if isinstance(dtype, native.TimestampType):
-        # TODO(marco): is UTC correct, or should we be getting the connection timezone?
-        # https://github.com/narwhals-dev/narwhals/issues/2165
-        return dtypes.Datetime(time_zone="UTC")
+        return dtypes.Datetime(time_zone=fetch_session_time_zone(session))
     if isinstance(dtype, native.DecimalType):
         # TODO(marco): cover this
         return dtypes.Decimal()  # pragma: no cover
     if isinstance(dtype, native.ArrayType):
         return dtypes.List(
             inner=native_to_narwhals_dtype(
-                dtype.elementType, version=version, spark_types=spark_types
+                dtype.elementType, version, spark_types, session
             )
         )
     if isinstance(dtype, native.StructType):
@@ -103,7 +103,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
                 dtypes.Field(
                     name=field.name,
                     dtype=native_to_narwhals_dtype(
-                        field.dataType, version=version, spark_types=spark_types
+                        field.dataType, version, spark_types, session
                     ),
                 )
                 for field in dtype
@@ -112,6 +112,16 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     if isinstance(dtype, native.BinaryType):
         return dtypes.Binary()
     return dtypes.Unknown()  # pragma: no cover
+
+
+@lru_cache(maxsize=4)
+def fetch_session_time_zone(session: Session) -> str:
+    # Timezone can't be changed in PySpark session, so this can be cached.
+    try:
+        return session.conf.get("spark.sql.session.timeZone")  # type: ignore[attr-defined]
+    except:  # noqa: E722
+        # https://github.com/eakmanrq/sqlframe/issues/406
+        return "<unknown>"
 
 
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912

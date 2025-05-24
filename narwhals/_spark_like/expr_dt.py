@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Sequence
 
 from narwhals._duration import parse_interval_string
-from narwhals._spark_like.utils import UNITS_DICT
+from narwhals._spark_like.utils import UNITS_DICT, fetch_session_time_zone
 
 if TYPE_CHECKING:
     from sqlframe.base.column import Column
 
+    from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.expr import SparkLikeExpr
 
 
@@ -81,11 +82,35 @@ class SparkLikeExprDateTimeNamespace:
 
         return self._compliant_expr._with_callable(_truncate)
 
+    def _no_op_time_zone(self, time_zone: str) -> SparkLikeExpr:
+        def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
+            native_series_list = self._compliant_expr(df)
+            conn_time_zone = fetch_session_time_zone(df.native.sparkSession)
+            if conn_time_zone != time_zone:
+                msg = (
+                    "PySpark stores the time zone in the session, rather than in the "
+                    f"data type, so changing the timezone to anything other than {conn_time_zone} "
+                    " (the current session time zone) is not supported."
+                )
+                raise NotImplementedError(msg)
+            return native_series_list
+
+        return self._compliant_expr.__class__(
+            func,
+            evaluate_output_names=self._compliant_expr._evaluate_output_names,
+            alias_output_names=self._compliant_expr._alias_output_names,
+            backend_version=self._compliant_expr._backend_version,
+            version=self._compliant_expr._version,
+            implementation=self._compliant_expr._implementation,
+        )
+
+    def convert_time_zone(self, time_zone: str) -> SparkLikeExpr:
+        return self._no_op_time_zone(time_zone)
+
     def replace_time_zone(self, time_zone: str | None) -> SparkLikeExpr:
         if time_zone is None:
             return self._compliant_expr._with_callable(
                 lambda _input: _input.cast("timestamp_ntz")
             )
-        else:  # pragma: no cover
-            msg = "`replace_time_zone` with non-null `time_zone` not yet implemented for spark-like"
-            raise NotImplementedError(msg)
+        else:
+            return self._no_op_time_zone(time_zone)
