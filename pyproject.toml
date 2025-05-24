@@ -48,9 +48,6 @@ sqlframe = ["sqlframe>=3.22.0"]
 
 [dependency-groups]
 core = [
-  # temporary pin to get CI green
-  # https://github.com/modin-project/modin/issues/7582
-  "modin<0.33",
   "narwhals[duckdb,pandas,polars,pyarrow,sqlframe]"
 ] 
 tests = [
