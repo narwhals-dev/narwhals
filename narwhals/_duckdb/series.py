@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._duckdb.utils import native_to_narwhals_dtype
+from narwhals._duckdb.utils import CachedTimeZone, native_to_narwhals_dtype
 from narwhals.dependencies import get_duckdb
 
 if TYPE_CHECKING:
@@ -29,7 +29,10 @@ class DuckDBInterchangeSeries:
     @property
     def dtype(self) -> DType:
         return native_to_narwhals_dtype(
-            self._native_series.types[0], self._version, self._native_series
+            self._native_series.types[0],
+            self._version,
+            self._native_series,
+            CachedTimeZone(),
         )
 
     def __getattr__(self, attr: str) -> Never:

@@ -95,11 +95,32 @@ def evaluate_exprs(
     return native_results
 
 
+class CachedTimeZone:
+    """Mutable object which gets passed between `native_to_narwhals_dtype` calls.
+
+    DuckDB stores the time zone in the connection, rather than in the dtypes, so
+    this ensures that when calculating the schema of a dataframe with multiple
+    timezone-aware columns, that the connection's time zone is only fetched once.
+
+    Note: we cannot make the time zone a cached `DuckDBLazyFrame` property because
+    the time zone can be modified after `DuckDBLazyFrame` creation:
+
+    ```python
+    df = nw.from_native(rel)
+    print(df.collect_schema())
+    rel.query("set timezone = 'Asia/Kolkata'")
+    print(df.collect_schema())  # should change to reflect new time zone
+    ```
+    """
+
+    time_zone: str | None = None
+
+
 def native_to_narwhals_dtype(
     duckdb_dtype: DuckDBPyType,
     version: Version,
     rel: DuckDBPyRelation,
-    time_zone: str | None = None,
+    cached_time_zone: CachedTimeZone,
 ) -> DType:
     duckdb_dtype_id = duckdb_dtype.id
     dtypes = version.dtypes
@@ -107,7 +128,7 @@ def native_to_narwhals_dtype(
     # Handle nested data types first
     if duckdb_dtype_id == "list":
         return dtypes.List(
-            native_to_narwhals_dtype(duckdb_dtype.child, version, rel, time_zone)
+            native_to_narwhals_dtype(duckdb_dtype.child, version, rel, cached_time_zone)
         )
 
     if duckdb_dtype_id == "struct":
@@ -116,7 +137,9 @@ def native_to_narwhals_dtype(
             [
                 dtypes.Field(
                     name=child[0],
-                    dtype=native_to_narwhals_dtype(child[1], version, rel, time_zone),
+                    dtype=native_to_narwhals_dtype(
+                        child[1], version, rel, cached_time_zone
+                    ),
                 )
                 for child in children
             ]
@@ -130,7 +153,7 @@ def native_to_narwhals_dtype(
             child, size = child[1].children
             shape.insert(0, size[1])
 
-        inner = native_to_narwhals_dtype(child[1], version, rel, time_zone)
+        inner = native_to_narwhals_dtype(child[1], version, rel, cached_time_zone)
         return dtypes.Array(inner=inner, shape=tuple(shape))
 
     if duckdb_dtype_id == "enum":
@@ -141,8 +164,9 @@ def native_to_narwhals_dtype(
 
     if duckdb_dtype_id == "timestamp with time zone":
         # Only calculate time zone if it wasn't already calculated from another column.
-        time_zone = time_zone or get_rel_time_zone(rel)
-        return dtypes.Datetime(time_zone=time_zone)
+        if cached_time_zone.time_zone is None:
+            cached_time_zone.time_zone = get_rel_time_zone(rel)
+        return dtypes.Datetime(time_zone=cached_time_zone.time_zone)
 
     return _non_nested_native_to_narwhals_dtype(duckdb_dtype_id, version)
 

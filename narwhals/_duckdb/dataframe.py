@@ -9,10 +9,10 @@ import duckdb
 from duckdb import FunctionExpression, StarExpression
 
 from narwhals._duckdb.utils import (
+    CachedTimeZone,
     col,
     evaluate_exprs,
     generate_partition_by_sql,
-    get_rel_time_zone,
     lit,
     native_to_narwhals_dtype,
 )
@@ -220,12 +220,10 @@ class DuckDBLazyFrame(
             self._cached_native_schema = dict(zip(self.columns, self.native.types))
 
         nw_schema = {}
-        time_zone = None  # Will be fetched if needed.
+        cached_time_zone = CachedTimeZone()
         for column_name, duckdb_dtype in self._cached_native_schema.items():
-            if duckdb_dtype.id == "timestamp with time zone" and time_zone is None:
-                time_zone = get_rel_time_zone(self.native)
             nw_schema[column_name] = native_to_narwhals_dtype(
-                duckdb_dtype, self._version, self.native, time_zone
+                duckdb_dtype, self._version, self.native, cached_time_zone
             )
 
         return nw_schema
