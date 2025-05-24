@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._duckdb.utils import CachedTimeZone, native_to_narwhals_dtype
+from narwhals._duckdb.utils import DeferredTimeZone, native_to_narwhals_dtype
 from narwhals.dependencies import get_duckdb
 
 if TYPE_CHECKING:
@@ -32,7 +32,7 @@ class DuckDBInterchangeSeries:
             self._native_series.types[0],
             self._version,
             self._native_series,
-            CachedTimeZone(),
+            DeferredTimeZone(),
         )
 
     def __getattr__(self, attr: str) -> Never:

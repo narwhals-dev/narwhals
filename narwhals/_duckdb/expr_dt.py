@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Sequence
 
 from duckdb import FunctionExpression
 
-from narwhals._duckdb.utils import UNITS_DICT, get_rel_time_zone, lit
+from narwhals._duckdb.utils import UNITS_DICT, fetch_rel_time_zone, lit
 from narwhals._duration import parse_interval_string
 from narwhals.utils import not_implemented
 
@@ -128,7 +128,7 @@ class DuckDBExprDateTimeNamespace:
     def _noop_time_zone(self, time_zone: str) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> Sequence[Expression]:
             native_series_list = self._compliant_expr(df)
-            conn_time_zone = get_rel_time_zone(df.native)
+            conn_time_zone = fetch_rel_time_zone(df.native)
             if conn_time_zone != time_zone:
                 msg = (
                     "DuckDB stores the time zone in the connection, rather than in the "

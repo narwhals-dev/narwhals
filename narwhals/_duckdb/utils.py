@@ -95,8 +95,8 @@ def evaluate_exprs(
     return native_results
 
 
-class CachedTimeZone:
-    """Mutable object which gets passed between `native_to_narwhals_dtype` calls.
+class DeferredTimeZone:
+    """Object which gets passed between `native_to_narwhals_dtype` calls.
 
     DuckDB stores the time zone in the connection, rather than in the dtypes, so
     this ensures that when calculating the schema of a dataframe with multiple
@@ -113,14 +113,20 @@ class CachedTimeZone:
     ```
     """
 
-    time_zone: str | None = None
+    _time_zone: str | None = None
+
+    def fetch_time_zone(self, rel: DuckDBPyRelation) -> str:
+        """Fetch relation time zone (if it wasn't calculated already)."""
+        if self._time_zone is None:
+            self._time_zone = fetch_rel_time_zone(rel)
+        return self._time_zone
 
 
 def native_to_narwhals_dtype(
     duckdb_dtype: DuckDBPyType,
     version: Version,
     rel: DuckDBPyRelation,
-    cached_time_zone: CachedTimeZone,
+    cached_time_zone: DeferredTimeZone,
 ) -> DType:
     duckdb_dtype_id = duckdb_dtype.id
     dtypes = version.dtypes
@@ -163,15 +169,12 @@ def native_to_narwhals_dtype(
         return dtypes.Enum(categories=categories)
 
     if duckdb_dtype_id == "timestamp with time zone":
-        # Only calculate time zone if it wasn't already calculated from another column.
-        if cached_time_zone.time_zone is None:
-            cached_time_zone.time_zone = get_rel_time_zone(rel)
-        return dtypes.Datetime(time_zone=cached_time_zone.time_zone)
+        return dtypes.Datetime(time_zone=cached_time_zone.fetch_time_zone(rel))
 
     return _non_nested_native_to_narwhals_dtype(duckdb_dtype_id, version)
 
 
-def get_rel_time_zone(rel: duckdb.DuckDBPyRelation) -> str:
+def fetch_rel_time_zone(rel: duckdb.DuckDBPyRelation) -> str:
     result = rel.query(
         "duckdb_settings()", "select value from duckdb_settings() where name = 'TimeZone'"
     ).fetchone()
