@@ -1,16 +1,17 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Sequence
 
 from duckdb import FunctionExpression
 
-from narwhals._duckdb.utils import UNITS_DICT, lit
+from narwhals._duckdb.utils import UNITS_DICT, fetch_rel_time_zone, lit
 from narwhals._duration import parse_interval_string
 from narwhals.utils import not_implemented
 
 if TYPE_CHECKING:
     from duckdb import Expression
 
+    from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
 
 
@@ -124,13 +125,36 @@ class DuckDBExprDateTimeNamespace:
 
         return self._compliant_expr._with_callable(_truncate)
 
+    def _no_op_time_zone(self, time_zone: str) -> DuckDBExpr:
+        def func(df: DuckDBLazyFrame) -> Sequence[Expression]:
+            native_series_list = self._compliant_expr(df)
+            conn_time_zone = fetch_rel_time_zone(df.native)
+            if conn_time_zone != time_zone:
+                msg = (
+                    "DuckDB stores the time zone in the connection, rather than in the "
+                    f"data type, so changing the timezone to anything other than {conn_time_zone} "
+                    " (the current connection time zone) is not supported."
+                )
+                raise NotImplementedError(msg)
+            return native_series_list
+
+        return self._compliant_expr.__class__(
+            func,
+            evaluate_output_names=self._compliant_expr._evaluate_output_names,
+            alias_output_names=self._compliant_expr._alias_output_names,
+            backend_version=self._compliant_expr._backend_version,
+            version=self._compliant_expr._version,
+        )
+
+    def convert_time_zone(self, time_zone: str) -> DuckDBExpr:
+        return self._no_op_time_zone(time_zone)
+
     def replace_time_zone(self, time_zone: str | None) -> DuckDBExpr:
         if time_zone is None:
             return self._compliant_expr._with_callable(
                 lambda _input: _input.cast("timestamp")
             )
-        else:  # pragma: no cover
-            msg = "`replace_time_zone` with non-null `time_zone` not yet implemented for duckdb"
-            raise NotImplementedError(msg)
+        else:
+            return self._no_op_time_zone(time_zone)
 
     total_nanoseconds = not_implemented()
