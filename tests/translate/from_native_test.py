@@ -565,12 +565,11 @@ def test_pyspark_connect_deps_2517() -> None:  # pragma: no cover
         (True, False, pytest.raises(TypeError, match="Cannot only use")),
     ],
 )
-@pytest.mark.skipif(sys.version_info < (3, 9), reason="too old for sqlframe")
 def test_eager_only_pass_through_main(
     constructor: Constructor, *, eager_only: bool, pass_through: bool, context: Any
-) -> None:  # pragma: no cover
+) -> None:
     if not any(s in str(constructor) for s in ("pyspark", "dask", "ibis", "duckdb")):
-        pytest.skip()
+        pytest.skip(reason="Non lazy or polars")
 
     df = constructor(data)
 
