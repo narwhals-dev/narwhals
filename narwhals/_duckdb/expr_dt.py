@@ -125,7 +125,7 @@ class DuckDBExprDateTimeNamespace:
 
         return self._compliant_expr._with_callable(_truncate)
 
-    def _noop_time_zone(self, time_zone: str) -> DuckDBExpr:
+    def _no_op_time_zone(self, time_zone: str) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> Sequence[Expression]:
             native_series_list = self._compliant_expr(df)
             conn_time_zone = fetch_rel_time_zone(df.native)
@@ -147,7 +147,7 @@ class DuckDBExprDateTimeNamespace:
         )
 
     def convert_time_zone(self, time_zone: str) -> DuckDBExpr:
-        return self._noop_time_zone(time_zone)
+        return self._no_op_time_zone(time_zone)
 
     def replace_time_zone(self, time_zone: str | None) -> DuckDBExpr:
         if time_zone is None:
@@ -155,6 +155,6 @@ class DuckDBExprDateTimeNamespace:
                 lambda _input: _input.cast("timestamp")
             )
         else:
-            return self._noop_time_zone(time_zone)
+            return self._no_op_time_zone(time_zone)
 
     total_nanoseconds = not_implemented()
