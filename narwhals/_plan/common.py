@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from narwhals._plan.lists import IRListNamespace
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.options import FunctionOptions
+    from narwhals.dtypes import DType
     from narwhals.typing import NonNestedLiteral
 
 else:
@@ -315,3 +316,21 @@ def is_iterable_reject(obj: Any) -> TypeIs[str | bytes | DummySeries]:
     from narwhals._plan.dummy import DummySeries
 
     return isinstance(obj, (str, bytes, DummySeries))
+
+
+def py_to_narwhals_dtype(obj: NonNestedLiteral, version: Version = Version.MAIN) -> DType:
+    dtypes = version.dtypes
+    mapping: dict[type[NonNestedLiteral], type[DType]] = {
+        int: dtypes.Int64,
+        float: dtypes.Float64,
+        str: dtypes.String,
+        bool: dtypes.Boolean,
+        dt.datetime: dtypes.Datetime,
+        dt.date: dtypes.Date,
+        dt.time: dtypes.Time,
+        dt.timedelta: dtypes.Duration,
+        bytes: dtypes.Binary,
+        Decimal: dtypes.Decimal,
+        type(None): dtypes.Unknown,
+    }
+    return mapping.get(type(obj), dtypes.Unknown)()

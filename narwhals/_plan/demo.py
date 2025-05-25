@@ -9,7 +9,13 @@ from narwhals._plan import (
     expr_parsing as parse,
     functions as F,  # noqa: N812
 )
-from narwhals._plan.common import ExprIR, IntoExpr, is_expr, is_non_nested_literal
+from narwhals._plan.common import (
+    ExprIR,
+    IntoExpr,
+    is_expr,
+    is_non_nested_literal,
+    py_to_narwhals_dtype,
+)
 from narwhals._plan.dummy import DummySeries
 from narwhals._plan.expr import All, Column, Columns, IndexColumns, Len, Nth
 from narwhals._plan.literal import ScalarLiteral, SeriesLiteral
@@ -52,11 +58,11 @@ def lit(
 ) -> DummyExpr:
     if isinstance(value, DummySeries):
         return SeriesLiteral(value=value).to_literal().to_narwhals()
-    if dtype is None or not isinstance(dtype, DType):
-        dtype = Version.MAIN.dtypes.Unknown()
     if not is_non_nested_literal(value):
         msg = f"{type(value).__name__!r} is not supported in `nw.lit`, got: {value!r}."
         raise TypeError(msg)
+    if dtype is None or not isinstance(dtype, DType):
+        dtype = py_to_narwhals_dtype(value, Version.MAIN)
     return ScalarLiteral(value=value, dtype=dtype).to_literal().to_narwhals()
 
 
