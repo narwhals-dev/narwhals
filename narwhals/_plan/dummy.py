@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.name import ExprNameNamespace
     from narwhals._plan.struct import ExprStructNamespace
+    from narwhals._plan.temporal import ExprDateTimeNamespace
     from narwhals.typing import (
         FillNullStrategy,
         NativeSeries,
@@ -480,6 +481,12 @@ class DummyExpr:
         from narwhals._plan.struct import ExprStructNamespace
 
         return ExprStructNamespace(_expr=self)
+
+    @property
+    def dt(self) -> ExprDateTimeNamespace:
+        from narwhals._plan.temporal import ExprDateTimeNamespace
+
+        return ExprDateTimeNamespace(_expr=self)
 
     @property
     def list(self) -> ExprListNamespace:
