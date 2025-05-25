@@ -3,7 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Sequence
 
 from narwhals._duration import parse_interval_string
-from narwhals._spark_like.utils import UNITS_DICT, fetch_session_time_zone, strptime_to_pyspark_format
+from narwhals._spark_like.utils import (
+    UNITS_DICT,
+    fetch_session_time_zone,
+    strptime_to_pyspark_format,
+)
 
 if TYPE_CHECKING:
     from sqlframe.base.column import Column
