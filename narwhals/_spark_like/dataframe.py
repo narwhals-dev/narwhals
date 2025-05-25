@@ -281,9 +281,10 @@ class SparkLikeLazyFrame(
         if self._cached_schema is None:
             self._cached_schema = {
                 field.name: native_to_narwhals_dtype(
-                    dtype=field.dataType,
-                    version=self._version,
-                    spark_types=self._native_dtypes,
+                    field.dataType,
+                    self._version,
+                    self._native_dtypes,
+                    self.native.sparkSession,
                 )
                 for field in self.native.schema
             }
