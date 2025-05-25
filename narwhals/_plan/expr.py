@@ -13,7 +13,7 @@ from __future__ import annotations
 import typing as t
 
 from narwhals._plan.aggregation import Agg, OrderableAgg
-from narwhals._plan.common import ExprIR, SelectorIR
+from narwhals._plan.common import ExprIR, SelectorIR, _field_str
 from narwhals._plan.name import KeepName, RenameAlias
 from narwhals._plan.typing import (
     FunctionT,
@@ -475,3 +475,23 @@ class Ternary(ExprIR):
 
     Deferring this for now.
     """
+
+    __slots__ = ("falsy", "predicate", "truthy")
+
+    predicate: ExprIR
+    truthy: ExprIR
+    falsy: ExprIR
+
+    def __str__(self) -> str:
+        # NOTE: Default slot ordering made it difficult to read
+        fields = (
+            _field_str("predicate", self.predicate),
+            _field_str("truthy", self.truthy),
+            _field_str("falsy", self.falsy),
+        )
+        return f"{type(self).__name__}({', '.join(fields)})"
+
+    def __repr__(self) -> str:
+        return (
+            f".when({self.predicate!r}).then({self.truthy!r}).otherwise({self.falsy!r})"
+        )

@@ -9,11 +9,12 @@ from narwhals._plan import (
     expr_parsing as parse,
     functions as F,  # noqa: N812
 )
-from narwhals._plan.common import ExprIR, IntoExpr, is_non_nested_literal
+from narwhals._plan.common import ExprIR, IntoExpr, is_expr, is_non_nested_literal
 from narwhals._plan.dummy import DummySeries
 from narwhals._plan.expr import All, Column, Columns, IndexColumns, Len, Nth
 from narwhals._plan.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.strings import ConcatHorizontal
+from narwhals._plan.when_then import When
 from narwhals.dtypes import DType
 from narwhals.exceptions import OrderDependentExprError
 from narwhals.utils import Version, flatten
@@ -129,6 +130,32 @@ def concat_str(
         .to_function_expr(*it)
         .to_narwhals()
     )
+
+
+def when(*predicates: IntoExpr | t.Iterable[IntoExpr]) -> When:
+    """Start a `when-then-otherwise` expression.
+
+    Examples:
+        >>> from narwhals._plan import demo as nwd
+
+        >>> when_then_many = (
+        ...     nwd.when(nwd.col("x") == "a")
+        ...     .then(1)
+        ...     .when(nwd.col("x") == "b")
+        ...     .then(2)
+        ...     .when(nwd.col("x") == "c")
+        ...     .then(3)
+        ...     .otherwise(4)
+        ... )
+        >>> when_then_many
+        Narwhals DummyExpr (main):
+        .when([(col('x')) == (lit(str: a))]).then(lit(int: 1)).otherwise(.when([(col('x')) == (lit(str: b))]).then(lit(int: 2)).otherwise(.when([(col('x')) == (lit(str: c))]).then(lit(int: 3)).otherwise(lit(int: 4))))
+    """
+    if builtins.len(predicates) == 1 and is_expr(predicates[0]):
+        expr = predicates[0]
+    else:
+        expr = all_horizontal(*predicates)
+    return When._from_expr(expr)
 
 
 def _is_order_enforcing_previous(obj: t.Any) -> TypeIs[SortBy]:
