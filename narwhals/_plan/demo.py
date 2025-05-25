@@ -150,6 +150,10 @@ def when(*predicates: IntoExpr | t.Iterable[IntoExpr]) -> When:
         >>> when_then_many
         Narwhals DummyExpr (main):
         .when([(col('x')) == (lit(str: a))]).then(lit(int: 1)).otherwise(.when([(col('x')) == (lit(str: b))]).then(lit(int: 2)).otherwise(.when([(col('x')) == (lit(str: c))]).then(lit(int: 3)).otherwise(lit(int: 4))))
+        >>>
+        >>> nwd.when(nwd.col("y") == "b").then(1)
+        Narwhals DummyExpr (main):
+        .when([(col('y')) == (lit(str: b))]).then(lit(int: 1)).otherwise(lit(null))
     """
     if builtins.len(predicates) == 1 and is_expr(predicates[0]):
         expr = predicates[0]
