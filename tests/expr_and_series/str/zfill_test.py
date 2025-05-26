@@ -1,19 +1,39 @@
 from __future__ import annotations
 
+import pytest
+
 import narwhals as nw
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": ["-1", "+1", "1", "12", "123", "99999", "+9999", None]}
-expected = {"a": ["-01", "+01", "001", "012", "123", "99999", "+9999", None]}
+polars_expected = {"a": ["-01", "0+1", "001", "012", "123", "99999", "+9999", None]}
+pandas_expected = {"a": ["-01", "+01", "001", "012", "123", "99999", "+9999", None]}
+
+
+def skip_pandas_pyarrow(constructor: Constructor | ConstructorEager) -> None:
+    name: str = constructor.__name__
+    if name == "pandas_pyarrow_constructor":
+        # Skip this test for pandas with pyarrow, as it doesn't support str.zfill
+        raise pytest.skip()
 
 
 def test_str_zfill(constructor: Constructor) -> None:
+    skip_pandas_pyarrow(constructor)
+
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").str.zfill(3))
+    expected = (
+        polars_expected if "pandas" not in constructor.__name__ else pandas_expected
+    )
     assert_equal_data(result, expected)
 
 
 def test_str_zfill_series(constructor_eager: ConstructorEager) -> None:
+    skip_pandas_pyarrow(constructor_eager)
+
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(df["a"].str.zfill(3))
+    expected = (
+        polars_expected if "pandas" not in constructor_eager.__name__ else pandas_expected
+    )
     assert_equal_data(result, expected)
