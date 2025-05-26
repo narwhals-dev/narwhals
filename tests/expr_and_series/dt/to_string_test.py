@@ -39,11 +39,7 @@ def test_dt_to_string_series(constructor_eager: ConstructorEager, fmt: str) -> N
     "fmt", ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%G-W%V-%u", "%G-W%V"]
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
-def test_dt_to_string_expr(
-    constructor: Constructor, fmt: str, request: pytest.FixtureRequest
-) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_dt_to_string_expr(constructor: Constructor, fmt: str) -> None:
     input_frame = nw.from_native(constructor(data))
 
     expected_col = [datetime.strftime(d, fmt) for d in data["a"]]
@@ -115,23 +111,19 @@ def test_dt_to_string_iso_local_datetime_expr(
     expected: str,
     request: pytest.FixtureRequest,
 ) -> None:
-    if (
-        ("pyspark" in str(constructor))
-        or "duckdb" in str(constructor)
-        or "ibis" in str(constructor)
-    ):
+    if "duckdb" in str(constructor) or "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = constructor({"a": [data]})
 
-    result = nw.from_native(df).with_columns(
-        _clean_string_expr(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M:%S.%f")).alias("b")
+    result = nw.from_native(df).select(
+        b=_clean_string_expr(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M:%S.%f"))
     )
-    assert_equal_data(result, {"a": [data], "b": [_clean_string(expected)]})
+    assert_equal_data(result, {"b": [_clean_string(expected)]})
 
-    result = nw.from_native(df).with_columns(
-        _clean_string_expr(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M:%S%.f")).alias("b")
+    result = nw.from_native(df).select(
+        b=_clean_string_expr(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M:%S%.f"))
     )
-    assert_equal_data(result, {"a": [data], "b": [_clean_string(expected)]})
+    assert_equal_data(result, {"b": [_clean_string(expected)]})
 
 
 @pytest.mark.parametrize(("data", "expected"), [(datetime(2020, 1, 9), "2020-01-09")])
@@ -147,15 +139,8 @@ def test_dt_to_string_iso_local_date_series(
 @pytest.mark.parametrize(("data", "expected"), [(datetime(2020, 1, 9), "2020-01-09")])
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_dt_to_string_iso_local_date_expr(
-    constructor: Constructor,
-    data: datetime,
-    expected: str,
-    request: pytest.FixtureRequest,
+    constructor: Constructor, data: datetime, expected: str
 ) -> None:
-    if "pyspark" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     df = constructor({"a": [data]})
-    result = nw.from_native(df).with_columns(
-        nw.col("a").dt.to_string("%Y-%m-%d").alias("b")
-    )
-    assert_equal_data(result, {"a": [data], "b": [expected]})
+    result = nw.from_native(df).select(b=nw.col("a").dt.to_string("%Y-%m-%d"))
+    assert_equal_data(result, {"b": [expected]})
