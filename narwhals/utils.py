@@ -165,6 +165,21 @@ _Method: TypeAlias = "Callable[Concatenate[_ContextT, P], R]"
 _Constructor: TypeAlias = "Callable[Concatenate[_T, P], R2]"
 
 
+IMPORT_FUNCTIONS: dict[str, Callable[[], ModuleType]] = {
+    "pandas": lambda: __import__("pandas"),
+    "modin": lambda: __import__("modin").pandas,
+    "cudf": lambda: __import__("cudf"),  # pragma: no cover
+    "pyarrow": lambda: __import__("pyarrow"),
+    "pyspark": lambda: __import__("pyspark").sql,  # pragma: no cover
+    "polars": lambda: __import__("polars"),
+    "dask": lambda: __import__("dask").dataframe,
+    "duckdb": lambda: __import__("duckdb"),
+    "sqlframe": lambda: __import__("sqlframe"),
+    "ibis": lambda: __import__("ibis"),
+    "pyspark[connect]": lambda: __import__("pyspark").sql.connect,  # pragma: no cover
+}
+
+
 class _StoresNative(Protocol[NativeT_co]):  # noqa: PYI046
     """Provides access to a native object.
 
@@ -351,28 +366,11 @@ class Implementation(NoAutoEnum):
         Returns:
             Native module.
         """
-        # Import modules within the function to allow for conditional imports
-        import_functions: dict[Implementation, Callable[[], ModuleType]] = {
-            Implementation.PANDAS: lambda: __import__("pandas"),
-            Implementation.MODIN: lambda: __import__("modin").pandas,
-            Implementation.CUDF: lambda: __import__("cudf"),  # pragma: no cover
-            Implementation.PYARROW: lambda: __import__("pyarrow"),
-            Implementation.PYSPARK: lambda: __import__("pyspark").sql,  # pragma: no cover
-            Implementation.POLARS: lambda: __import__("polars"),
-            Implementation.DASK: lambda: __import__("dask").dataframe,
-            Implementation.DUCKDB: lambda: __import__("duckdb"),
-            Implementation.SQLFRAME: lambda: __import__("sqlframe"),
-            Implementation.IBIS: lambda: __import__("ibis"),
-            Implementation.PYSPARK_CONNECT: lambda: __import__(
-                "pyspark"
-            ).sql.connect,  # pragma: no cover
-        }
-
-        if self not in import_functions:  # pragma: no cover
+        if (name := self.value) not in IMPORT_FUNCTIONS:  # pragma: no cover
             msg = f"Not supported Implementation: {self}"
             raise AssertionError(msg)
 
-        return import_functions[self]()
+        return IMPORT_FUNCTIONS[name]()
 
     def is_pandas(self) -> bool:
         """Return whether implementation is pandas.
