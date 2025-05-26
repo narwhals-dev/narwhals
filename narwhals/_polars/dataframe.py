@@ -26,6 +26,7 @@ from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import (
     Implementation,
     _into_arrow_table,
+    check_columns_exist,
     convert_str_slice_to_int_slice,
     is_compliant_series,
     is_index_selector,
@@ -454,9 +455,7 @@ class PolarsDataFrame:
         return self._with_native(self.native.with_row_index(name))
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
-        to_drop = parse_columns_to_drop(
-            compliant_frame=self, columns=columns, strict=strict
-        )
+        to_drop = parse_columns_to_drop(self, columns, strict=strict)
         return self._with_native(self.native.drop(to_drop))
 
     def unpivot(
@@ -532,6 +531,9 @@ class PolarsDataFrame:
             )
         except Exception as e:  # noqa: BLE001
             raise catch_polars_exception(e, self._backend_version) from None
+
+    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
+        return check_columns_exist(subset, available=self.columns)
 
 
 class PolarsLazyFrame:
@@ -759,4 +761,9 @@ class PolarsLazyFrame:
                 right_on=right_on,
                 suffix=suffix,
             )
+        )
+
+    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
+        return check_columns_exist(  # pragma: no cover
+            subset, available=self.columns
         )

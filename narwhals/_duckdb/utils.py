@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Sequence
+from typing import TYPE_CHECKING, Any
 
 import duckdb
 
@@ -36,25 +36,6 @@ lit = duckdb.ConstantExpression
 
 when = duckdb.CaseExpression
 """Alias for `duckdb.CaseExpression`."""
-
-
-class WindowInputs:
-    __slots__ = ("expr", "order_by", "partition_by")
-
-    def __init__(
-        self, expr: Expression, partition_by: Sequence[str], order_by: Sequence[str]
-    ) -> None:
-        self.expr = expr
-        self.partition_by = partition_by
-        self.order_by = order_by
-
-
-class UnorderableWindowInputs:
-    __slots__ = ("expr", "partition_by")
-
-    def __init__(self, expr: Expression, partition_by: Sequence[str]) -> None:
-        self.expr = expr
-        self.partition_by = partition_by
 
 
 def concat_str(*exprs: Expression, separator: str = "") -> Expression:
