@@ -345,63 +345,34 @@ class Implementation(NoAutoEnum):
             else cls.from_native_namespace(backend)
         )
 
-    def to_native_namespace(self) -> ModuleType:  # noqa: C901, PLR0911
+    def to_native_namespace(self) -> ModuleType:
         """Return the native namespace module corresponding to Implementation.
 
         Returns:
             Native module.
         """
-        if self is Implementation.PANDAS:
-            import pandas as pd  # ignore-banned-import
+        # Import modules within the function to allow for conditional imports
+        import_functions = {
+            Implementation.PANDAS: lambda: __import__("pandas"),
+            Implementation.MODIN: lambda: __import__("modin").pandas,
+            Implementation.CUDF: lambda: __import__("cudf"),  # pragma: no cover
+            Implementation.PYARROW: lambda: __import__("pyarrow"),
+            Implementation.PYSPARK: lambda: __import__("pyspark").sql,  # pragma: no cover
+            Implementation.POLARS: lambda: __import__("polars"),
+            Implementation.DASK: lambda: __import__("dask").dataframe,
+            Implementation.DUCKDB: lambda: __import__("duckdb"),
+            Implementation.SQLFRAME: lambda: __import__("sqlframe"),
+            Implementation.IBIS: lambda: __import__("ibis"),
+            Implementation.PYSPARK_CONNECT: lambda: __import__(
+                "pyspark"
+            ).sql.connect,  # pragma: no cover
+        }
 
-            return pd
-        if self is Implementation.MODIN:
-            import modin.pandas
+        if self not in import_functions:
+            msg = f"Not supported Implementation: {self}"  # pragma: no cover
+            raise AssertionError(msg)  # pragma: no cover
 
-            return modin.pandas
-        if self is Implementation.CUDF:  # pragma: no cover
-            import cudf  # ignore-banned-import
-
-            return cudf
-        if self is Implementation.PYARROW:
-            import pyarrow as pa  # ignore-banned-import
-
-            return pa
-        if self is Implementation.PYSPARK:  # pragma: no cover
-            import pyspark.sql
-
-            return pyspark.sql
-        if self is Implementation.POLARS:
-            import polars as pl  # ignore-banned-import
-
-            return pl
-        if self is Implementation.DASK:
-            import dask.dataframe  # ignore-banned-import
-
-            return dask.dataframe
-
-        if self is Implementation.DUCKDB:
-            import duckdb  # ignore-banned-import
-
-            return duckdb
-
-        if self is Implementation.SQLFRAME:
-            import sqlframe  # ignore-banned-import
-
-            return sqlframe
-
-        if self is Implementation.IBIS:
-            import ibis  # ignore-banned-import
-
-            return ibis
-
-        if self is Implementation.PYSPARK_CONNECT:  # pragma: no cover
-            import pyspark.sql.connect  # ignore-banned-import
-
-            return pyspark.sql.connect
-
-        msg = "Not supported Implementation"  # pragma: no cover
-        raise AssertionError(msg)
+        return import_functions[self]()
 
     def is_pandas(self) -> bool:
         """Return whether implementation is pandas.
