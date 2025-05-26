@@ -631,6 +631,9 @@ class DummySeries:
         obj._compliant = DummyCompliantSeries.from_native(native, cls._version)
         return obj
 
+    def to_native(self) -> NativeSeries:
+        return self._compliant._native
+
 
 class DummySeriesV1(DummySeries):
     _version: t.ClassVar[Version] = Version.V1

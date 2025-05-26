@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, Any, Generic
 from narwhals._plan.common import Immutable
 
 if TYPE_CHECKING:
+    from typing_extensions import TypeIs
+
     from narwhals._plan.dummy import DummySeries
     from narwhals._plan.expr import Literal
     from narwhals.dtypes import DType
@@ -98,3 +100,11 @@ class RangeLiteral(LiteralValue):
     low: int
     high: int
     dtype: DType
+
+
+def is_scalar_literal(obj: Any) -> TypeIs[ScalarLiteral]:
+    return isinstance(obj, ScalarLiteral)
+
+
+def is_series_literal(obj: Any) -> TypeIs[SeriesLiteral]:
+    return isinstance(obj, SeriesLiteral)
