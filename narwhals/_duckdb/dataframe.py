@@ -18,7 +18,7 @@ from narwhals._duckdb.utils import (
     native_to_narwhals_dtype,
 )
 from narwhals.dependencies import get_duckdb
-from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
+from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantLazyFrame
 from narwhals.utils import (
     Implementation,
@@ -189,7 +189,7 @@ class DuckDBLazyFrame(
             raise catch_duckdb_exception(e, self) from None
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
-        columns_to_drop = parse_columns_to_drop(self, columns=columns, strict=strict)
+        columns_to_drop = parse_columns_to_drop(self, columns, strict=strict)
         selection = (name for name in self.columns if name not in columns_to_drop)
         return self._with_native(self.native.select(*selection))
 
@@ -400,9 +400,8 @@ class DuckDBLazyFrame(
                 )
                 raise NotImplementedError(msg)
             # Sanitise input
-            if any(x not in self.columns for x in subset_):
-                msg = f"Columns {set(subset_).difference(self.columns)} not found in {self.columns}."
-                raise ColumnNotFoundError(msg)
+            if error := self._check_columns_exist(subset_):
+                raise error
             idx_name = generate_temporary_column_name(8, self.columns)
             count_name = generate_temporary_column_name(8, [*self.columns, idx_name])
             partition_by_sql = generate_partition_by_sql(*(subset_))

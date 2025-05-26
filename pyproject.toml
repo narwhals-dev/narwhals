@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.40.0"
+version = "1.41.0"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
@@ -327,6 +327,7 @@ warn_return_any = false
 pythonPlatform = "All"
 # NOTE (stubs do unsafe `TypeAlias` and `TypeVar` imports)
 # pythonVersion = "3.8"
+reportMissingTypeArgument = "error"
 reportMissingImports = "none"
 reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
