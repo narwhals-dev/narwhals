@@ -368,9 +368,9 @@ class Implementation(NoAutoEnum):
             ).sql.connect,  # pragma: no cover
         }
 
-        if self not in import_functions:
-            msg = f"Not supported Implementation: {self}"  # pragma: no cover
-            raise AssertionError(msg)  # pragma: no cover
+        if self not in import_functions:  # pragma: no cover
+            msg = f"Not supported Implementation: {self}"
+            raise AssertionError(msg)
 
         return import_functions[self]()
 
