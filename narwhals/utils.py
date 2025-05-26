@@ -352,7 +352,7 @@ class Implementation(NoAutoEnum):
             Native module.
         """
         # Import modules within the function to allow for conditional imports
-        import_functions = {
+        import_functions: dict[Implementation, Callable[[], ModuleType]] = {
             Implementation.PANDAS: lambda: __import__("pandas"),
             Implementation.MODIN: lambda: __import__("modin").pandas,
             Implementation.CUDF: lambda: __import__("cudf"),  # pragma: no cover
