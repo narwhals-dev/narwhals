@@ -273,7 +273,7 @@ class CompliantDataFrame(
         return list(chain.from_iterable(it))
 
     def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
-        return check_columns_exist(subset, available=list(self.columns))
+        return check_columns_exist(subset, available=self.columns)
 
 
 class CompliantLazyFrame(
@@ -383,7 +383,7 @@ class CompliantLazyFrame(
         return list(chain.from_iterable(it))
 
     def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
-        return check_columns_exist(subset, available=list(self.columns))
+        return check_columns_exist(subset, available=self.columns)
 
 
 class EagerDataFrame(
