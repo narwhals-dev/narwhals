@@ -40,7 +40,7 @@ def test_drop_strict(
     context: Any
     if strict:
         if "polars_lazy" in str(constructor):
-            msg = r"^\"z\""
+            msg = r"^(\"z\"|z)"
         else:
             msg = (
                 r"The following columns were not found: \[.*\]"
