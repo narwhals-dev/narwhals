@@ -174,7 +174,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     ) -> LazyFrame[Any]:
         return super().lazy(backend=backend)  # type: ignore[return-value]
 
-    @overload
+    @overload  # type: ignore[override]
     def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series[Any]]: ...
     @overload
     def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
