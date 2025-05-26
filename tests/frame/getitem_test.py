@@ -314,12 +314,7 @@ def test_slice_with_series(
     assert_equal_data(result, expected)
 
 
-def test_horizontal_slice_with_series(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
-    if "cudf" in str(constructor_eager):
-        # https://github.com/rapidsai/cudf/issues/18556
-        request.applymarker(pytest.mark.xfail)
+def test_horizontal_slice_with_series(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 2], "c": [0, 2], "d": ["c", "a"]}
     nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     result = nw_df[nw_df["d"]]
