@@ -388,7 +388,7 @@ def test_dataframe_recursive() -> None:
 
         nw_frame_depth_2 = nw.DataFrame(nw_frame, level="full")
         # NOTE: Checking that the type is `DataFrame[Unknown]`
-        assert_type(nw_frame_depth_2, nw.DataFrame)
+        assert_type(nw_frame_depth_2, nw.DataFrame[Any])
         assert_type(nw_frame_early_return, nw.DataFrame[pl.DataFrame])
 
 
@@ -409,7 +409,7 @@ def test_lazyframe_recursive() -> None:
 
         nw_frame_depth_2 = nw.LazyFrame(nw_frame, level="lazy")
         # NOTE: Checking that the type is `LazyFrame[Unknown]`
-        assert_type(nw_frame_depth_2, nw.LazyFrame)
+        assert_type(nw_frame_depth_2, nw.LazyFrame[Any])
         assert_type(nw_frame_early_return, nw.LazyFrame[pl.LazyFrame])
 
 
@@ -431,7 +431,7 @@ def test_dataframe_recursive_v1() -> None:
             nw_frame, "nw_v1.DataFrame[pl.DataFrame] | nw_v1.LazyFrame[pl.DataFrame]"
         )
         nw_frame_depth_2 = nw_v1.DataFrame(nw_frame, level="full")
-        assert_type(nw_frame_depth_2, nw_v1.DataFrame)
+        assert_type(nw_frame_depth_2, nw_v1.DataFrame[Any])
         # NOTE: Checking that the type is `DataFrame[Unknown]`
         assert_type(
             nw_frame_early_return,
@@ -456,7 +456,7 @@ def test_lazyframe_recursive_v1() -> None:
 
         nw_frame_depth_2 = nw_v1.LazyFrame(nw_frame, level="lazy")
         # NOTE: Checking that the type is `LazyFrame[Unknown]`
-        assert_type(nw_frame_depth_2, nw_v1.LazyFrame)
+        assert_type(nw_frame_depth_2, nw_v1.LazyFrame[Any])
         assert_type(nw_frame_early_return, nw_v1.LazyFrame[pl.LazyFrame])
 
 
@@ -478,7 +478,7 @@ def test_series_recursive() -> None:
 
         nw_series_depth_2 = nw.Series(nw_series, level="full")
         # NOTE: Checking that the type is `Series[Unknown]`
-        assert_type(nw_series_depth_2, nw.Series)
+        assert_type(nw_series_depth_2, nw.Series[Any])
         assert_type(nw_series_early_return, nw.Series[pl.Series])
 
 

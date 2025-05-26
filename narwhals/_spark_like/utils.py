@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from importlib import import_module
-from typing import TYPE_CHECKING, Any, Sequence, overload
+from typing import TYPE_CHECKING, Any, overload
 
 from narwhals.exceptions import UnsupportedDTypeError
 from narwhals.utils import Implementation, isinstance_or_issubclass
@@ -55,25 +55,6 @@ DATETIME_PATTERNS_MAPPING = {
     "%z": "Z",  # Timezone offset
     "%s": "X",  # Unix timestamp
 }
-
-
-class WindowInputs:
-    __slots__ = ("expr", "order_by", "partition_by")
-
-    def __init__(
-        self, expr: Column, partition_by: Sequence[str | Column], order_by: Sequence[str]
-    ) -> None:
-        self.expr = expr
-        self.partition_by = partition_by
-        self.order_by = order_by
-
-
-class UnorderableWindowInputs:
-    __slots__ = ("expr", "partition_by")
-
-    def __init__(self, expr: Column, partition_by: Sequence[str | Column]) -> None:
-        self.expr = expr
-        self.partition_by = partition_by
 
 
 # NOTE: don't lru_cache this as `ModuleType` isn't hashable
