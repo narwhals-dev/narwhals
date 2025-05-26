@@ -1,19 +1,29 @@
 from __future__ import annotations
 
+import operator
 from typing import TYPE_CHECKING
 
+from narwhals._plan.common import Immutable
 from narwhals._plan.expr import BinarySelector
 
 if TYPE_CHECKING:
+    from typing import Any, ClassVar
+
     from typing_extensions import Self
 
     from narwhals._plan.expr import BinaryExpr, BinarySelector
-    from narwhals._plan.typing import LeftSelectorT, LeftT, RightSelectorT, RightT
-
-from narwhals._plan.common import Immutable
+    from narwhals._plan.typing import (
+        LeftSelectorT,
+        LeftT,
+        OperatorFn,
+        RightSelectorT,
+        RightT,
+    )
 
 
 class Operator(Immutable):
+    _op: ClassVar[OperatorFn]
+
     def __repr__(self) -> str:
         tp = type(self)
         if tp in {Operator, SelectorOperator}:
@@ -44,6 +54,10 @@ class Operator(Immutable):
 
         return BinaryExpr(left=left, op=self, right=right)
 
+    def __call__(self, lhs: Any, rhs: Any) -> Any:
+        """Apply binary operator to `left`, `right` operands."""
+        return self.__class__._op(lhs, rhs)
+
 
 class SelectorOperator(Operator):
     """Operators that can *also* be used in selectors.
@@ -61,46 +75,61 @@ class SelectorOperator(Operator):
         return BinarySelector(left=left, op=self, right=right)
 
 
-class Eq(Operator): ...
+class Eq(Operator):
+    _op = operator.eq
 
 
-class NotEq(Operator): ...
+class NotEq(Operator):
+    _op = operator.ne
 
 
-class Lt(Operator): ...
+class Lt(Operator):
+    _op = operator.le
 
 
-class LtEq(Operator): ...
+class LtEq(Operator):
+    _op = operator.lt
 
 
-class Gt(Operator): ...
+class Gt(Operator):
+    _op = operator.gt
 
 
-class GtEq(Operator): ...
+class GtEq(Operator):
+    _op = operator.ge
 
 
-class Add(Operator): ...
+class Add(Operator):
+    _op = operator.add
 
 
-class Sub(SelectorOperator): ...
+class Sub(SelectorOperator):
+    _op = operator.sub
 
 
-class Multiply(Operator): ...
+class Multiply(Operator):
+    _op = operator.mul
 
 
-class TrueDivide(Operator): ...
+class TrueDivide(Operator):
+    _op = operator.truediv
 
 
-class FloorDivide(Operator): ...
+class FloorDivide(Operator):
+    _op = operator.floordiv
 
 
-class Modulus(Operator): ...
+class Modulus(Operator):
+    _op = operator.mod
 
 
-class And(SelectorOperator): ...
+class And(SelectorOperator):
+    _op = operator.and_
 
 
-class Or(SelectorOperator): ...
+class Or(SelectorOperator):
+    _op = operator.or_
 
 
-class ExclusiveOr(SelectorOperator): ...
+class ExclusiveOr(SelectorOperator):
+    _op = operator.xor

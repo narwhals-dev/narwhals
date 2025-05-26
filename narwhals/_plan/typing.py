@@ -21,6 +21,7 @@ RollingT = TypeVar("RollingT", bound="RollingWindow")
 LeftT = TypeVar("LeftT", bound="ExprIR", default="ExprIR")
 OperatorT = TypeVar("OperatorT", bound="ops.Operator", default="ops.Operator")
 RightT = TypeVar("RightT", bound="ExprIR", default="ExprIR")
+OperatorFn: TypeAlias = "t.Callable[[t.Any, t.Any], t.Any]"
 
 LeftSelectorT = TypeVar("LeftSelectorT", bound="SelectorIR", default="SelectorIR")
 RightSelectorT = TypeVar("RightSelectorT", bound="SelectorIR", default="SelectorIR")
