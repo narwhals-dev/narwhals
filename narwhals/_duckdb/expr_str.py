@@ -107,26 +107,12 @@ class DuckDBExprStringNamespace:
         def func(expr: Expression) -> Expression:
             less_than_width = FunctionExpression("length", expr) < lit(width)
             starts_with_minus = FunctionExpression("starts_with", expr, lit("-"))
-            starts_with_plus = FunctionExpression("starts_with", expr, lit("+"))
             return (
                 when(
                     starts_with_minus & less_than_width,
                     FunctionExpression(
                         "concat",
                         lit("-"),
-                        FunctionExpression(
-                            "lpad",
-                            FunctionExpression("substr", expr, lit(2)),
-                            lit(width - 1),
-                            lit("0"),
-                        ),
-                    ),
-                )
-                .when(
-                    starts_with_plus & less_than_width,
-                    FunctionExpression(
-                        "concat",
-                        lit("+"),
                         FunctionExpression(
                             "lpad",
                             FunctionExpression("substr", expr, lit(2)),
