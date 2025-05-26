@@ -13,8 +13,11 @@ pandas_expected = {"a": ["-01", "+01", "001", "012", "123", "99999", "+9999", No
 def skip_pandas_pyarrow(constructor: Constructor | ConstructorEager) -> None:
     name: str = constructor.__name__
     if name == "pandas_pyarrow_constructor":
-        # Skip this test for pandas with pyarrow, as it doesn't support str.zfill
-        raise pytest.skip()
+        reason = (
+            "pandas with pyarrow backend doesn't support str.zfill, see "
+            "https://github.com/pandas-dev/pandas/issues/61485"
+        )
+        raise pytest.skip(reason=reason)
 
 
 def test_str_zfill(constructor: Constructor) -> None:
