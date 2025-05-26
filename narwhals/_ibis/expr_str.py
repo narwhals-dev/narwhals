@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable
 
+import ibis
 from ibis.expr.datatypes import Timestamp
 
+from narwhals._ibis.utils import lit
 from narwhals.utils import _is_naive_format, not_implemented
 
 if TYPE_CHECKING:
@@ -101,9 +103,24 @@ class IbisExprStringNamespace:
         return self._compliant_expr._with_callable(fn(format))
 
     def zfill(self, width: int) -> IbisExpr:
-        def fn(expr: ir.StringColumn) -> ir.StringValue:
-            return expr.lpad(width, "0")
+        def _zfill(expr: ir.StringColumn) -> ir.Value:
+            length = expr.length()
+            less_than_width = expr.length() < lit(width)
+            starts_with_minus = expr.startswith("-")
 
-        return self._compliant_expr._with_callable(fn)
+            return ibis.cases(
+                (
+                    starts_with_minus & less_than_width,
+                    (
+                        expr.substr(1, length - lit(1))
+                        .lpad(width - 1, "0")
+                        .lpad(width, "-")
+                    ),
+                ),
+                (less_than_width, expr.lpad(width, "0")),
+                else_=expr,
+            )
+
+        return self._compliant_expr._with_callable(_zfill)
 
     replace = not_implemented()
