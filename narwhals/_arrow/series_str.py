@@ -62,4 +62,21 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
         return self.with_native(pc.utf8_lower(self.native))
 
     def zfill(self, width: int) -> ArrowSeries:
-        return self.with_native(pc.utf8_lpad(self.native, width=width, padding="0"))
+        length = pc.utf8_length(self.native)
+        less_than_width = pc.less(length, width)
+        starts_with_minus = pc.equal(self.slice(0, 1).native, lit("-"))
+
+        result = pc.case_when(
+            [
+                (
+                    starts_with_minus & less_than_width,
+                    pc.utf8_lpad(
+                        self.slice(1, None).native, width - 2, padding="0"
+                    ).concat(lit("-")),
+                ),
+                (less_than_width, pc.utf8_lpad(self.native, width=width, padding="0")),
+            ],
+            self.native,
+        )
+
+        return self.with_native(result)
