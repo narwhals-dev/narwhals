@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Generic
 
 from narwhals._plan.common import Immutable
 
@@ -10,8 +10,15 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import NonNestedLiteral
 
+from narwhals._typing_compat import TypeVar
 
-class LiteralValue(Immutable):
+T = TypeVar("T", default=Any)
+NonNestedLiteralT = TypeVar(
+    "NonNestedLiteralT", bound="NonNestedLiteral", default="NonNestedLiteral"
+)
+
+
+class LiteralValue(Immutable, Generic[T]):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/plans/lit.rs#L67-L73."""
 
     @property
@@ -31,11 +38,14 @@ class LiteralValue(Immutable):
 
         return Literal(value=self)
 
+    def unwrap(self) -> T:
+        raise NotImplementedError
 
-class ScalarLiteral(LiteralValue):
+
+class ScalarLiteral(LiteralValue[NonNestedLiteralT]):
     __slots__ = ("dtype", "value")
 
-    value: NonNestedLiteral
+    value: NonNestedLiteralT
     dtype: DType
 
     @property
@@ -47,8 +57,11 @@ class ScalarLiteral(LiteralValue):
             return f"{type(self.value).__name__}: {self.value!s}"
         return "null"
 
+    def unwrap(self) -> NonNestedLiteralT:
+        return self.value
 
-class SeriesLiteral(LiteralValue):
+
+class SeriesLiteral(LiteralValue["DummySeries"]):
     """We already need this.
 
     https://github.com/narwhals-dev/narwhals/blob/e51eba891719a5eb1f7ce91c02a477af39c0baee/narwhals/_expression_parsing.py#L96-L97
@@ -68,6 +81,9 @@ class SeriesLiteral(LiteralValue):
 
     def __repr__(self) -> str:
         return "Series"
+
+    def unwrap(self) -> DummySeries:
+        return self.value
 
 
 class RangeLiteral(LiteralValue):

@@ -16,9 +16,11 @@ from narwhals._plan.aggregation import Agg, OrderableAgg
 from narwhals._plan.common import ExprIR, SelectorIR, _field_str
 from narwhals._plan.name import KeepName, RenameAlias
 from narwhals._plan.typing import (
+    ExprT,
     FunctionT,
     LeftSelectorT,
     LeftT,
+    Ns,
     OperatorT,
     RightSelectorT,
     RightT,
@@ -97,6 +99,9 @@ class Column(ExprIR):
     def __repr__(self) -> str:
         return f"col({self.name!r})"
 
+    def to_compliant(self, plx: Ns[ExprT], /) -> ExprT:
+        return plx.col(self.name)
+
 
 class Columns(ExprIR):
     __slots__ = ("names",)
@@ -105,6 +110,9 @@ class Columns(ExprIR):
 
     def __repr__(self) -> str:
         return f"cols({list(self.names)!r})"
+
+    def to_compliant(self, plx: Ns[ExprT], /) -> ExprT:
+        return plx.col(*self.names)
 
 
 class Literal(ExprIR):
@@ -128,6 +136,9 @@ class Literal(ExprIR):
 
     def __repr__(self) -> str:
         return f"lit({self.value!r})"
+
+    def to_compliant(self, plx: Ns[ExprT], /) -> ExprT:
+        return plx.lit(self.value.unwrap(), self.dtype)
 
 
 class _BinaryOp(ExprIR, t.Generic[LeftT, OperatorT, RightT]):

@@ -5,6 +5,10 @@ import typing as t
 from narwhals._typing_compat import TypeVar
 
 if t.TYPE_CHECKING:
+    from typing_extensions import TypeAlias
+
+    from narwhals._compliant import CompliantNamespace as Namespace
+    from narwhals._compliant.typing import CompliantExprAny
     from narwhals._plan import operators as ops
     from narwhals._plan.common import ExprIR, Function, IRNamespace, SelectorIR
     from narwhals._plan.functions import RollingWindow
@@ -24,3 +28,10 @@ SelectorOperatorT = TypeVar(
     "SelectorOperatorT", bound="ops.SelectorOperator", default="ops.SelectorOperator"
 )
 IRNamespaceT = TypeVar("IRNamespaceT", bound="IRNamespace")
+# NOTE: Shorter aliases of `_compliant.typing`
+# - Aiming to try and preserve the types as much as possible
+# - Recursion between `Expr` and `Frame` is an issue
+Expr: TypeAlias = "CompliantExprAny"
+ExprT = TypeVar("ExprT", bound="Expr")
+Ns: TypeAlias = "Namespace[t.Any, ExprT]"
+"""A `CompliantNamespace`, ignoring the `Frame` type."""

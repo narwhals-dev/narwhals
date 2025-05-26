@@ -4,7 +4,7 @@ import datetime as dt
 from decimal import Decimal
 from typing import TYPE_CHECKING, Generic, TypeVar
 
-from narwhals._plan.typing import IRNamespaceT
+from narwhals._plan.typing import ExprT, IRNamespaceT, Ns
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
@@ -12,12 +12,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Never, Self, TypeAlias, TypeIs, dataclass_transform
 
-    from narwhals._plan.dummy import (
-        DummyCompliantExpr,
-        DummyExpr,
-        DummySelector,
-        DummySeries,
-    )
+    from narwhals._plan.dummy import DummyExpr, DummySelector, DummySeries
     from narwhals._plan.expr import FunctionExpr
     from narwhals._plan.lists import IRListNamespace
     from narwhals._plan.meta import IRMetaNamespace
@@ -146,10 +141,8 @@ class ExprIR(Immutable):
             return dummy.DummyExpr._from_ir(self)
         return dummy.DummyExprV1._from_ir(self)
 
-    def to_compliant(self, version: Version = Version.MAIN) -> DummyCompliantExpr:
-        from narwhals._plan.dummy import DummyCompliantExpr
-
-        return DummyCompliantExpr._from_ir(self, version)
+    def to_compliant(self, plx: Ns[ExprT], /) -> ExprT:
+        raise NotImplementedError
 
     @property
     def is_scalar(self) -> bool:
