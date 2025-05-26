@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from importlib import import_module
-from typing import TYPE_CHECKING, Any, Sequence, overload
+from typing import TYPE_CHECKING, Any, overload
 
 from narwhals.exceptions import UnsupportedDTypeError
 from narwhals.utils import Implementation, isinstance_or_issubclass
