@@ -60,6 +60,7 @@ if TYPE_CHECKING:
     from typing import AbstractSet as Set
 
     import pandas as pd
+    import polars as pl
     import pyarrow as pa
     from typing_extensions import (
         Concatenate,
@@ -1205,7 +1206,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
     else:
         native = series.to_native()
         if is_polars_series(native):
-            result = native.dtype.ordering == "physical"  # type: ignore[attr-defined]
+            result = cast("pl.Categorical", native.dtype).ordering == "physical"
         elif is_pandas_like_series(native):
             result = bool(native.cat.ordered)
         elif is_pyarrow_chunked_array(native):
