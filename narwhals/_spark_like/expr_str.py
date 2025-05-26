@@ -116,37 +116,22 @@ class SparkLikeExprStringNamespace:
 
     def zfill(self, width: int) -> SparkLikeExpr:
         def func(expr: Column) -> Column:
-            return self._compliant_expr._F.lpad(expr, width, "0")
+            F = self._compliant_expr._F  # noqa: N806
+
+            length = F.length(expr)
+            less_than_width = length < width
+            starts_with_minus = F.startswith(expr, F.lit("-"))
+
+            return (
+                F.when(
+                    starts_with_minus & less_than_width,
+                    F.concat(
+                        F.lit("-"),
+                        F.lpad(F.substring(expr, 2, length - F.lit(1)), width - 1, "0"),
+                    ),
+                )
+                .when(less_than_width, F.lpad(expr, width, "0"))
+                .otherwise(expr)
+            )
 
         return self._compliant_expr._with_callable(func)
-
-
-def strptime_to_pyspark_format(format: str) -> str:
-    """Converts a Python strptime datetime format string to a PySpark datetime format string."""
-    # Mapping from Python strptime format to PySpark format
-
-    # see https://spark.apache.org/docs/latest/sql-ref-datetime-pattern.html
-    # and https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior
-    format_mapping = {
-        "%Y": "y",  # Year with century
-        "%y": "y",  # Year without century
-        "%m": "M",  # Month
-        "%d": "d",  # Day of the month
-        "%H": "H",  # Hour (24-hour clock) 0-23
-        "%I": "h",  # Hour (12-hour clock) 1-12
-        "%M": "m",  # Minute
-        "%S": "s",  # Second
-        "%f": "S",  # Microseconds -> Milliseconds
-        "%p": "a",  # AM/PM
-        "%a": "E",  # Abbreviated weekday name
-        "%A": "E",  # Full weekday name
-        "%j": "D",  # Day of the year
-        "%z": "Z",  # Timezone offset
-        "%s": "X",  # Unix timestamp
-    }
-
-    # Replace Python format specifiers with PySpark specifiers
-    pyspark_format = format
-    for py_format, spark_format in format_mapping.items():
-        pyspark_format = pyspark_format.replace(py_format, spark_format)
-    return pyspark_format.replace("T", " ")
