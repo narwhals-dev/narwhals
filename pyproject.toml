@@ -327,6 +327,7 @@ warn_return_any = false
 pythonPlatform = "All"
 # NOTE (stubs do unsafe `TypeAlias` and `TypeVar` imports)
 # pythonVersion = "3.8"
+reportMissingTypeArgument = "error"
 reportMissingImports = "none"
 reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
