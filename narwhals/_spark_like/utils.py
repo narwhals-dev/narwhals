@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from importlib import import_module
-from typing import TYPE_CHECKING, Any, Sequence
+from typing import TYPE_CHECKING, Any, Sequence, overload
 
 from narwhals.exceptions import UnsupportedDTypeError
 from narwhals.utils import Implementation, isinstance_or_issubclass
@@ -31,6 +31,26 @@ UNITS_DICT = {
     "ms": "millisecond",
     "us": "microsecond",
     "ns": "nanosecond",
+}
+
+# see https://spark.apache.org/docs/latest/sql-ref-datetime-pattern.html
+# and https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior
+DATETIME_PATTERNS_MAPPING = {
+    "%Y": "yyyy",  # Year with century (4 digits)
+    "%y": "yy",  # Year without century (2 digits)
+    "%m": "MM",  # Month (01-12)
+    "%d": "dd",  # Day of the month (01-31)
+    "%H": "HH",  # Hour (24-hour clock) (00-23)
+    "%I": "hh",  # Hour (12-hour clock) (01-12)
+    "%M": "mm",  # Minute (00-59)
+    "%S": "ss",  # Second (00-59)
+    "%f": "S",  # Microseconds -> Milliseconds
+    "%p": "a",  # AM/PM
+    "%a": "E",  # Abbreviated weekday name
+    "%A": "E",  # Full weekday name
+    "%j": "D",  # Day of the year
+    "%z": "Z",  # Timezone offset
+    "%s": "X",  # Unix timestamp
 }
 
 
@@ -250,3 +270,23 @@ def import_window(implementation: Implementation, /) -> type[Any]:
     return import_module(
         f"sqlframe.{_BaseSession().execution_dialect_name}.window"
     ).Window
+
+
+@overload
+def strptime_to_pyspark_format(format: None) -> None: ...
+
+
+@overload
+def strptime_to_pyspark_format(format: str) -> str: ...
+
+
+def strptime_to_pyspark_format(format: str | None) -> str | None:
+    """Converts a Python strptime datetime format string to a PySpark datetime format string."""
+    if format is None:  # pragma: no cover
+        return None
+
+    # Replace Python format specifiers with PySpark specifiers
+    pyspark_format = format
+    for py_format, spark_format in DATETIME_PATTERNS_MAPPING.items():
+        pyspark_format = pyspark_format.replace(py_format, spark_format)
+    return pyspark_format.replace("T", " ")

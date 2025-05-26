@@ -131,7 +131,9 @@ class PandasLikeDataFrame(
         if implementation.is_pandas():
             native = tbl.to_pandas()
         elif implementation.is_modin():  # pragma: no cover
-            from modin.pandas.utils import from_arrow as mpd_from_arrow
+            from modin.pandas.utils import (
+                from_arrow as mpd_from_arrow,  # pyright: ignore[reportAttributeAccessIssue]
+            )
 
             native = mpd_from_arrow(tbl)
         elif implementation.is_cudf():  # pragma: no cover

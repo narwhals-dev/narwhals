@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING
 
+from narwhals._spark_like.utils import strptime_to_pyspark_format
 from narwhals.utils import _is_naive_format
 
 if TYPE_CHECKING:
