@@ -1057,7 +1057,6 @@ def _is_range_index(obj: Any, native_namespace: Any) -> TypeIs[pd.RangeIndex]:
     return isinstance(obj, native_namespace.RangeIndex)
 
 
-# NOTE: Remove ignore(s) after release w/ (https://github.com/pandas-dev/pandas-stubs/pull/1115)
 def _has_default_index(
     native_frame_or_series: pd.Series[Any] | pd.DataFrame, native_namespace: Any
 ) -> bool:
