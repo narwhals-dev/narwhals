@@ -130,6 +130,7 @@ extend-exclude = ["**/this.py"]
 [tool.ruff.lint]
 preview = true
 explicit-preview-rules = true
+typing-modules = ["narwhals._typing_compat"]
 
 extend-safe-fixes = [
   "C419",    # unnecessary-comprehension-in-call
