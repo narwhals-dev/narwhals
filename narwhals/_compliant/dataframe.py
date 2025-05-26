@@ -36,6 +36,7 @@ from narwhals._typing_compat import deprecated
 from narwhals.utils import (
     Version,
     _StoresNative,
+    check_columns_exist,
     is_compliant_series,
     is_index_selector,
     is_range,
@@ -59,6 +60,7 @@ if TYPE_CHECKING:
     from narwhals._translate import IntoArrowTable
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
+    from narwhals.exceptions import ColumnNotFoundError
     from narwhals.schema import Schema
     from narwhals.typing import (
         AsofJoinStrategy,
@@ -270,6 +272,9 @@ class CompliantDataFrame(
         it = (expr._evaluate_aliases(self) for expr in exprs)
         return list(chain.from_iterable(it))
 
+    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
+        return check_columns_exist(subset, available=self.columns)
+
 
 class CompliantLazyFrame(
     _StoresNative[NativeFrameT],
@@ -376,6 +381,9 @@ class CompliantLazyFrame(
     def _evaluate_aliases(self, *exprs: CompliantExprT_contra) -> list[str]:
         it = (expr._evaluate_aliases(self) for expr in exprs)
         return list(chain.from_iterable(it))
+
+    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
+        return check_columns_exist(subset, available=self.columns)
 
 
 class EagerDataFrame(
