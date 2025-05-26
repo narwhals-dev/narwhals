@@ -42,7 +42,8 @@ def lit(node: expr.Literal, frame: NativeFrame) -> Evaluated:  # noqa: ARG001
     import pyarrow as pa
 
     if is_scalar_literal(node.value):
-        return [pa.chunked_array([node.value.unwrap()])]
+        scalar = node.value.unwrap()
+        return [pa.chunked_array([[scalar]])]
     elif is_series_literal(node.value):
         ca = node.value.unwrap().to_native()
         return [t.cast("NativeSeries", ca)]
