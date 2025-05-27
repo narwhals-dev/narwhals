@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     from narwhals._plan.temporal import ExprDateTimeNamespace
     from narwhals._plan.typing import ExprT, Ns
     from narwhals.typing import (
+        ClosedInterval,
         FillNullStrategy,
         NativeSeries,
         NumericLiteral,
@@ -375,6 +376,52 @@ class DummyExpr:
                 returns_scalar=returns_scalar,
             ).to_function_expr(self._ir)
         )
+
+    def any(self) -> Self:
+        return self._from_ir(boolean.Any().to_function_expr(self._ir))
+
+    def all(self) -> Self:
+        return self._from_ir(boolean.All().to_function_expr(self._ir))
+
+    def is_duplicated(self) -> Self:
+        return self._from_ir(boolean.IsDuplicated().to_function_expr(self._ir))
+
+    def is_finite(self) -> Self:
+        return self._from_ir(boolean.IsFinite().to_function_expr(self._ir))
+
+    def is_nan(self) -> Self:
+        return self._from_ir(boolean.IsNan().to_function_expr(self._ir))
+
+    def is_null(self) -> Self:
+        return self._from_ir(boolean.IsNull().to_function_expr(self._ir))
+
+    def is_first_distinct(self) -> Self:
+        return self._from_ir(boolean.IsFirstDistinct().to_function_expr(self._ir))
+
+    def is_last_distinct(self) -> Self:
+        return self._from_ir(boolean.IsLastDistinct().to_function_expr(self._ir))
+
+    def is_unique(self) -> Self:
+        return self._from_ir(boolean.IsUnique().to_function_expr(self._ir))
+
+    def is_between(
+        self,
+        lower_bound: IntoExpr,
+        upper_bound: IntoExpr,
+        closed: ClosedInterval = "both",
+    ) -> Self:
+        it = parse.parse_into_seq_of_expr_ir(lower_bound, upper_bound)
+        return self._from_ir(
+            boolean.IsBetween(closed=closed).to_function_expr(self._ir, *it)
+        )
+
+    def is_in(self, other: t.Any) -> Self:
+        msg = (
+            "There's some special handling of iterables that I'm not sure on:\n"
+            "https://github.com/narwhals-dev/narwhals/blob/8975189cb2459f129017cf833075b28ec3d4dfa8/narwhals/expr.py#L1176-L1184"
+        )
+        raise NotImplementedError(msg)
+        return self._from_ir(boolean.IsIn().to_function_expr(self._ir))
 
     def __eq__(self, other: IntoExpr) -> Self:  # type: ignore[override]
         op = ops.Eq()
