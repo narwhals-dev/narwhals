@@ -103,7 +103,7 @@ class IbisExprStringNamespace:
         return self._compliant_expr._with_callable(fn(format))
 
     def zfill(self, width: int) -> IbisExpr:
-        def _zfill(expr: ir.StringColumn) -> ir.Value:
+        def func(expr: ir.StringColumn) -> ir.Value:
             length = expr.length()
             less_than_width = expr.length() < lit(width)
             starts_with_minus = expr.startswith("-")
@@ -121,6 +121,6 @@ class IbisExprStringNamespace:
                 else_=expr,
             )
 
-        return self._compliant_expr._with_callable(_zfill)
+        return self._compliant_expr._with_callable(func)
 
     replace = not_implemented()
