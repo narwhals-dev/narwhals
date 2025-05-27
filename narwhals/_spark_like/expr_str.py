@@ -120,15 +120,15 @@ class SparkLikeExprStringNamespace:
 
             length = F.length(expr)
             less_than_width = length < width
-            starts_with_minus = F.startswith(expr, F.lit("-"))
-
+            hyphen = F.lit("-")
+            starts_with_minus = F.startswith(expr, hyphen)
+            sub_length = length - F.lit(1)
+            # NOTE: `len` annotated as `int`, but `Column.substr` accepts `int | Column`
+            substring = F.substring(expr, 2, sub_length)  # pyright: ignore[reportArgumentType]
             return (
                 F.when(
                     starts_with_minus & less_than_width,
-                    F.concat(
-                        F.lit("-"),
-                        F.lpad(F.substring(expr, 2, length - F.lit(1)), width - 1, "0"),
-                    ),
+                    F.concat(hyphen, F.lpad(substring, width - 1, "0")),
                 )
                 .when(less_than_width, F.lpad(expr, width, "0"))
                 .otherwise(expr)
