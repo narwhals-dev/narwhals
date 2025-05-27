@@ -39,10 +39,10 @@ class FunctionFlags(enum.Flag):
         return self in (FunctionFlags.ROW_SEPARABLE | FunctionFlags.LENGTH_PRESERVING)
 
     def returns_scalar(self) -> bool:
-        return self in FunctionFlags.RETURNS_SCALAR
+        return FunctionFlags.RETURNS_SCALAR in self
 
     def is_length_preserving(self) -> bool:
-        return self in FunctionFlags.LENGTH_PRESERVING
+        return FunctionFlags.LENGTH_PRESERVING in self
 
     @staticmethod
     def default() -> FunctionFlags:

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from narwhals._plan.common import ExprIR
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from typing import Iterator
@@ -34,6 +35,12 @@ class Agg(ExprIR):
     def iter_right(self) -> Iterator[ExprIR]:
         yield self
         yield from self.expr.iter_right()
+
+    def __init__(self, *, expr: ExprIR, **kwds: Any) -> None:
+        if expr.is_scalar:
+            msg = "Can't apply aggregations to scalar-like expressions."
+            raise InvalidOperationError(msg)
+        super().__init__(expr=expr, **kwds)  # pyright: ignore[reportCallIssue]
 
 
 class Count(Agg): ...

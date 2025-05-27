@@ -13,6 +13,7 @@ from narwhals._plan import (
 from narwhals._plan.common import ExprIR, Function
 from narwhals._plan.dummy import DummyExpr
 from narwhals._plan.expr import FunctionExpr
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from narwhals._plan.common import IntoExpr, Seq
@@ -78,3 +79,14 @@ def test_function_expr_horizontal(
     assert isinstance(variadic_node.function, ir_node)
     assert variadic_node == sequence_node
     assert sequence_node != unrelated_node
+
+
+def test_invalid_repeat_agg() -> None:
+    with pytest.raises(InvalidOperationError):
+        nwd.col("a").mean().mean()
+    with pytest.raises(InvalidOperationError):
+        nwd.col("a").first().max()
+    with pytest.raises(InvalidOperationError):
+        nwd.col("a").any().std()
+    with pytest.raises(InvalidOperationError):
+        nwd.col("a").all().quantile(0.5, "linear")
