@@ -1,10 +1,4 @@
-"""Top-level `Expr` nodes.
-
-Todo:
-- `Selector`
-- `Ternary`
-- `Window` (investigate variants)
-"""
+"""Top-level `Expr` nodes."""
 
 from __future__ import annotations
 
@@ -489,10 +483,7 @@ class BinarySelector(
 
 
 class Ternary(ExprIR):
-    """When-Then-Otherwise.
-
-    Deferring this for now.
-    """
+    """When-Then-Otherwise."""
 
     __slots__ = ("falsy", "predicate", "truthy")
 

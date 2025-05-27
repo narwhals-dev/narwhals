@@ -1,7 +1,5 @@
 """`pl.Expr.meta` namespace functionality.
 
-- It seems like there might be a need to distinguish the top-level nodes for iterating
-  - polars_plan::dsl::expr::Expr
 - https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/meta.rs#L11-L111
 - https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/plans/iterator.rs#L10-L105
 """

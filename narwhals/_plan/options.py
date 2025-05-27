@@ -115,7 +115,6 @@ class FunctionOptions(Immutable):
         return FunctionOptions.groupwise().with_flags(FunctionFlags.RETURNS_SCALAR)
 
 
-# TODO @dangotbanned: Decide on constructors
 class SortOptions(Immutable):
     __slots__ = ("descending", "nulls_last")
 

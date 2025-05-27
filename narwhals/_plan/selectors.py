@@ -1,7 +1,7 @@
 """Deviations from `polars`.
 
 - A `Selector` corresponds to a `nw.selectors` function
-- Binary ops are represented as a subtype of `BinaryExpr`
+- Binary ops are represented as a `BinarySelector`, similar to `BinaryExpr`.
 """
 
 from __future__ import annotations

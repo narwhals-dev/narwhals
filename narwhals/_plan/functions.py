@@ -1,8 +1,4 @@
-"""General functions that aren't namespaced.
-
-Todo:
-- repr
-"""
+"""General functions that aren't namespaced."""
 
 from __future__ import annotations
 
