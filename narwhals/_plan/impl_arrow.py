@@ -38,12 +38,13 @@ def cols(node: expr.Columns, frame: NativeFrame) -> Evaluated:
 
 
 @evaluate.register(expr.Literal)
-def lit(node: expr.Literal, frame: NativeFrame) -> Evaluated:  # noqa: ARG001
+def lit(node: expr.Literal, frame: NativeFrame) -> Evaluated:
     import pyarrow as pa
 
     if is_scalar_literal(node.value):
-        scalar = node.value.unwrap()
-        return [pa.chunked_array([[scalar]])]
+        lit: t.Any = pa.scalar
+        array = pa.repeat(lit(node.value.unwrap()), len(frame))
+        return [pa.chunked_array([array])]
     elif is_series_literal(node.value):
         ca = node.value.unwrap().to_native()
         return [t.cast("NativeSeries", ca)]

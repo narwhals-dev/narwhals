@@ -46,9 +46,9 @@ def test_to_compliant(backend: BackendName, expr: DummyExpr) -> None:
     [
         (nwd.col("a"), ["A", "B", "A"]),
         (nwd.col("a", "b"), [["A", "B", "A"], [1, 2, 3]]),
-        (nwd.lit(1), [1]),
-        (nwd.lit(2.0), [2.0]),
-        (nwd.lit(None, nw.String()), [None]),
+        (nwd.lit(1), [1, 1, 1]),
+        (nwd.lit(2.0), [2.0, 2.0, 2.0]),
+        (nwd.lit(None, nw.String()), [None, None, None]),
     ],
     ids=_ids_ir,
 )
