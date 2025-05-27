@@ -3,12 +3,14 @@ from __future__ import annotations
 import string
 from typing import TYPE_CHECKING
 
+import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.utils import ArrowSeriesNamespace, lit, parse_datetime_format
 
 if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
+    from narwhals._arrow.typing import Incomplete
 
 
 class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
@@ -62,21 +64,18 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
         return self.with_native(pc.utf8_lower(self.native))
 
     def zfill(self, width: int) -> ArrowSeries:
-        length = pc.utf8_length(self.native)
-        less_than_width = pc.less(length, width)
+        binary_join: Incomplete = pc.binary_join_element_wise
+        native = self.native
+        less_than_width = pc.less(pc.utf8_length(native), lit(width))
         starts_with_minus = pc.equal(self.slice(0, 1).native, lit("-"))
 
-        result = pc.case_when(
-            [
-                (
-                    starts_with_minus & less_than_width,
-                    pc.utf8_lpad(
-                        self.slice(1, None).native, width - 2, padding="0"
-                    ).concat(lit("-")),
-                ),
-                (less_than_width, pc.utf8_lpad(self.native, width=width, padding="0")),
-            ],
-            self.native,
-        )
+        condition_1 = pc.and_(starts_with_minus, less_than_width)
+        condition_2 = less_than_width
+        statement_1 = pc.utf8_lpad(self.slice(1, None).native, width - 1, padding="0")
+        prefix = pa.repeat(lit("-"), len(native))
+        statement_1 = binary_join(prefix, statement_1, "")
+        statement_2 = pc.utf8_lpad(native, width=width, padding="0")
 
+        conditions = pc.make_struct(condition_1, condition_2)
+        result = pc.case_when(conditions, statement_1, statement_2, native)
         return self.with_native(result)
