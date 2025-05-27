@@ -402,6 +402,12 @@ class SeriesStringNamespace(Generic[SeriesT]):
     def zfill(self, width: int) -> SeriesT:
         r"""Pad strings with zeros on the left.
 
+        Warning:
+            Different backends handle strings that start with "+" and "-" signs differently:
+
+            - Pandas preserves both "+" and "-" signs, padding the rest of the string with zeros
+            - Polars only preserves the "-" sign, and prefixes "+" signs with zeros
+
         Arguments:
             width: The target width of the string. If the string is shorter than this width, it will be padded with zeros on the left.
 
@@ -411,12 +417,13 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> s_native = pd.Series(["1", "23", "456"])
+            >>> s_native = pd.Series(["+1", "-23", "456", "123456"])
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.str.zfill(5).to_native()
-            0    00001
-            1    00023
+            0    000+1
+            1    00-23
             2    00456
+            3   123456
             dtype: object
         """
         return self._narwhals_series._with_compliant(
