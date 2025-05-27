@@ -13,13 +13,14 @@ from __future__ import annotations
 import typing as t
 
 from narwhals._plan.aggregation import Agg, OrderableAgg
-from narwhals._plan.common import ExprIR, SelectorIR, _field_str
+from narwhals._plan.common import ExprIR, SelectorIR, _field_str, is_non_nested_literal
 from narwhals._plan.name import KeepName, RenameAlias
 from narwhals._plan.typing import (
     ExprT,
     FunctionT,
     LeftSelectorT,
     LeftT,
+    LiteralT,
     Ns,
     OperatorT,
     RightSelectorT,
@@ -115,12 +116,12 @@ class Columns(ExprIR):
         return plx.col(*self.names)
 
 
-class Literal(ExprIR):
+class Literal(ExprIR, t.Generic[LiteralT]):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L81."""
 
     __slots__ = ("value",)
 
-    value: LiteralValue
+    value: LiteralValue[LiteralT]
 
     @property
     def is_scalar(self) -> bool:
@@ -138,7 +139,13 @@ class Literal(ExprIR):
         return f"lit({self.value!r})"
 
     def to_compliant(self, plx: Ns[ExprT], /) -> ExprT:
-        return plx.lit(self.value.unwrap(), self.dtype)
+        value = self.unwrap()
+        if is_non_nested_literal(value):
+            return plx.lit(value, self.dtype)
+        raise NotImplementedError(type(self.value))
+
+    def unwrap(self) -> LiteralT:
+        return self.value.unwrap()
 
 
 class _BinaryOp(ExprIR, t.Generic[LeftT, OperatorT, RightT]):

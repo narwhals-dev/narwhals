@@ -9,13 +9,15 @@ import typing as t
 from functools import singledispatch
 
 from narwhals._plan import expr
-from narwhals._plan.literal import is_scalar_literal, is_series_literal
+from narwhals._plan.literal import is_literal_scalar, is_literal_series
 
 if t.TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import TypeAlias
 
     from narwhals._plan.common import ExprIR
+    from narwhals._plan.dummy import DummySeries
+    from narwhals.typing import NonNestedLiteral
 
     NativeFrame: TypeAlias = pa.Table
     NativeSeries: TypeAlias = pa.ChunkedArray[t.Any]
@@ -38,15 +40,17 @@ def cols(node: expr.Columns, frame: NativeFrame) -> Evaluated:
 
 
 @evaluate.register(expr.Literal)
-def lit(node: expr.Literal, frame: NativeFrame) -> Evaluated:
+def lit(
+    node: expr.Literal[NonNestedLiteral] | expr.Literal[DummySeries], frame: NativeFrame
+) -> Evaluated:
     import pyarrow as pa
 
-    if is_scalar_literal(node.value):
+    if is_literal_scalar(node):
         lit: t.Any = pa.scalar
-        array = pa.repeat(lit(node.value.unwrap()), len(frame))
+        array = pa.repeat(lit(node.unwrap()), len(frame))
         return [pa.chunked_array([array])]
-    elif is_series_literal(node.value):
-        ca = node.value.unwrap().to_native()
+    elif is_literal_series(node):
+        ca = node.unwrap().to_native()
         return [t.cast("NativeSeries", ca)]
     else:
         raise NotImplementedError(type(node.value))

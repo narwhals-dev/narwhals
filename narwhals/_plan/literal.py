@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Generic
 
 from narwhals._plan.common import Immutable
+from narwhals._plan.typing import LiteralT, NonNestedLiteralT
 
 if TYPE_CHECKING:
     from typing_extensions import TypeIs
@@ -10,17 +11,9 @@ if TYPE_CHECKING:
     from narwhals._plan.dummy import DummySeries
     from narwhals._plan.expr import Literal
     from narwhals.dtypes import DType
-    from narwhals.typing import NonNestedLiteral
-
-from narwhals._typing_compat import TypeVar
-
-T = TypeVar("T", default=Any)
-NonNestedLiteralT = TypeVar(
-    "NonNestedLiteralT", bound="NonNestedLiteral", default="NonNestedLiteral"
-)
 
 
-class LiteralValue(Immutable, Generic[T]):
+class LiteralValue(Immutable, Generic[LiteralT]):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/plans/lit.rs#L67-L73."""
 
     @property
@@ -40,7 +33,7 @@ class LiteralValue(Immutable, Generic[T]):
 
         return Literal(value=self)
 
-    def unwrap(self) -> T:
+    def unwrap(self) -> LiteralT:
         raise NotImplementedError
 
 
@@ -102,9 +95,27 @@ class RangeLiteral(LiteralValue):
     dtype: DType
 
 
-def is_scalar_literal(obj: Any) -> TypeIs[ScalarLiteral]:
+def _is_scalar(
+    obj: ScalarLiteral[NonNestedLiteralT] | Any,
+) -> TypeIs[ScalarLiteral[NonNestedLiteralT]]:
     return isinstance(obj, ScalarLiteral)
 
 
-def is_series_literal(obj: Any) -> TypeIs[SeriesLiteral]:
+def _is_series(obj: Any) -> TypeIs[SeriesLiteral]:
     return isinstance(obj, SeriesLiteral)
+
+
+def is_literal(obj: Literal[LiteralT] | Any) -> TypeIs[Literal[LiteralT]]:
+    from narwhals._plan.expr import Literal
+
+    return isinstance(obj, Literal)
+
+
+def is_literal_scalar(
+    obj: Literal[NonNestedLiteralT] | Any,
+) -> TypeIs[Literal[NonNestedLiteralT]]:
+    return is_literal(obj) and _is_scalar(obj.value)
+
+
+def is_literal_series(obj: Literal[DummySeries] | Any) -> TypeIs[Literal[DummySeries]]:
+    return is_literal(obj) and _is_series(obj.value)

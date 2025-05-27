@@ -11,7 +11,9 @@ if t.TYPE_CHECKING:
     from narwhals._compliant.typing import CompliantExprAny
     from narwhals._plan import operators as ops
     from narwhals._plan.common import ExprIR, Function, IRNamespace, SelectorIR
+    from narwhals._plan.dummy import DummySeries
     from narwhals._plan.functions import RollingWindow
+    from narwhals.typing import NonNestedLiteral
 
 __all__ = ["FunctionT", "LeftT", "OperatorT", "RightT", "RollingT", "SelectorOperatorT"]
 
@@ -29,6 +31,12 @@ SelectorOperatorT = TypeVar(
     "SelectorOperatorT", bound="ops.SelectorOperator", default="ops.SelectorOperator"
 )
 IRNamespaceT = TypeVar("IRNamespaceT", bound="IRNamespace")
+
+NonNestedLiteralT = TypeVar(
+    "NonNestedLiteralT", bound="NonNestedLiteral", default="NonNestedLiteral"
+)
+LiteralT = TypeVar("LiteralT", bound="NonNestedLiteral | DummySeries", default=t.Any)
+
 # NOTE: Shorter aliases of `_compliant.typing`
 # - Aiming to try and preserve the types as much as possible
 # - Recursion between `Expr` and `Frame` is an issue
