@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 import ibis
+import ibis.expr.types as ir
 from ibis.expr.datatypes import Timestamp
 
 from narwhals._ibis.utils import lit
 from narwhals.utils import _is_naive_format, not_implemented
 
 if TYPE_CHECKING:
-    import ibis.expr.types as ir
-
     from narwhals._ibis.expr import IbisExpr
 
 
@@ -107,15 +106,13 @@ class IbisExprStringNamespace:
             length = expr.length()
             less_than_width = expr.length() < lit(width)
             starts_with_minus = expr.startswith("-")
+            one = cast("ir.IntegerScalar", lit(1))
+            sub_length = cast("ir.IntegerValue", length - one)
 
             return ibis.cases(
                 (
                     starts_with_minus & less_than_width,
-                    (
-                        expr.substr(1, length - lit(1))
-                        .lpad(width - 1, "0")
-                        .lpad(width, "-")
-                    ),
+                    (expr.substr(1, sub_length).lpad(width - 1, "0").lpad(width, "-")),
                 ),
                 (less_than_width, expr.lpad(width, "0")),
                 else_=expr,
