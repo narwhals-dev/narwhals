@@ -149,7 +149,7 @@ def test_replace_time_zone_to_connection_tz_duckdb() -> None:
 def test_replace_time_zone_to_connection_tz_pyspark(
     constructor: Constructor,
 ) -> None:  # pragma: no cover
-    if "pyspark" not in str(constructor):
+    if "pyspark" not in str(constructor) or "sqlframe" in str(constructor):
         pytest.skip()
     pytest.importorskip("pyspark")
     pytest.importorskip("zoneinfo")
