@@ -54,3 +54,113 @@ def lit(
         return [t.cast("NativeSeries", ca)]
     else:
         raise NotImplementedError(type(node.value))
+
+
+@evaluate.register(expr.Alias)
+def alias(node: expr.Alias, frame: NativeFrame) -> Evaluated:
+    raise NotImplementedError(type(node))
+
+
+@evaluate.register(expr.Len)
+def len_(node: expr.Len, frame: NativeFrame) -> Evaluated:
+    raise NotImplementedError(type(node))
+
+
+@evaluate.register(expr.Nth)
+def nth(node: expr.Nth, frame: NativeFrame) -> Evaluated:
+    raise NotImplementedError(type(node))
+
+
+@evaluate.register(expr.IndexColumns)
+def index_columns(node: expr.IndexColumns, frame: NativeFrame) -> Evaluated:
+    raise NotImplementedError(type(node))
+
+
+@evaluate.register(expr.All)
+def all_(node: expr.All, frame: NativeFrame) -> Evaluated:
+    raise NotImplementedError(type(node))
+
+
+@evaluate.register(expr.Exclude)
+def exclude(node: expr.Exclude, frame: NativeFrame) -> Evaluated:
+    raise NotImplementedError(type(node))
+
+
+@evaluate.register(expr.Cast)
+def cast_(node: expr.Cast, frame: NativeFrame) -> Evaluated:
+    raise NotImplementedError(type(node))
+
+
+@evaluate.register(expr.Ternary)
+def ternary(node: expr.Ternary, frame: NativeFrame) -> Evaluated:
+    raise NotImplementedError(type(node))
+
+
+@evaluate.register(expr.Agg)
+def agg(node: expr.Agg, frame: NativeFrame) -> Evaluated:
+    raise NotImplementedError(type(node))
+
+
+@evaluate.register(expr.OrderableAgg)
+def orderable_agg(node: expr.OrderableAgg, frame: NativeFrame) -> Evaluated:
+    raise NotImplementedError(type(node))
+
+
+@evaluate.register(expr.BinaryExpr)
+def binary_expr(node: expr.BinaryExpr, frame: NativeFrame) -> Evaluated:
+    raise NotImplementedError(type(node))
+
+
+@evaluate.register(expr.FunctionExpr)
+def function_expr(node: expr.FunctionExpr[t.Any], frame: NativeFrame) -> Evaluated:
+    raise NotImplementedError(type(node))
+
+
+@evaluate.register(expr.RollingExpr)
+def rolling_expr(node: expr.RollingExpr[t.Any], frame: NativeFrame) -> Evaluated:
+    raise NotImplementedError(type(node))
+
+
+@evaluate.register(expr.WindowExpr)
+def window_expr(node: expr.WindowExpr, frame: NativeFrame) -> Evaluated:
+    raise NotImplementedError(type(node))
+
+
+@evaluate.register(expr.RootSelector)
+def selector(node: expr.RootSelector, frame: NativeFrame) -> Evaluated:
+    raise NotImplementedError(type(node))
+
+
+@evaluate.register(expr.BinarySelector)
+def binary_selector(node: expr.BinarySelector, frame: NativeFrame) -> Evaluated:
+    raise NotImplementedError(type(node))
+
+
+@evaluate.register(expr.RenameAlias)
+def rename_alias(node: expr.RenameAlias, frame: NativeFrame) -> Evaluated:
+    raise NotImplementedError(type(node))
+
+
+@evaluate.register(expr.Sort)
+def sort(node: expr.Sort, frame: NativeFrame) -> Evaluated:
+    raise NotImplementedError(type(node))
+
+
+@evaluate.register(expr.SortBy)
+def sort_by(node: expr.SortBy, frame: NativeFrame) -> Evaluated:
+    raise NotImplementedError(type(node))
+
+
+@evaluate.register(expr.Filter)
+def filter_(node: expr.Filter, frame: NativeFrame) -> Evaluated:
+    raise NotImplementedError(type(node))
+
+
+@evaluate.register(expr.AnonymousExpr)
+def anonymous_expr(node: expr.AnonymousExpr, frame: NativeFrame) -> Evaluated:
+    raise NotImplementedError(type(node))
+
+
+@evaluate.register(expr.KeepName)
+def keep_name(node: expr.KeepName, frame: NativeFrame) -> Evaluated:
+    raise NotImplementedError(type(node))
