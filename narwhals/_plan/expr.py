@@ -22,7 +22,6 @@ from narwhals._plan.typing import (
     RollingT,
     SelectorOperatorT,
 )
-from narwhals.exceptions import InvalidOperationError
 
 if t.TYPE_CHECKING:
     from typing_extensions import Self
@@ -403,34 +402,6 @@ class WindowExpr(ExprIR):
         for e in reversed(self.partition_by):
             yield from e.iter_right()
         yield from self.expr.iter_right()
-
-    def __init__(
-        self,
-        *,
-        expr: ExprIR,
-        partition_by: Seq[ExprIR],
-        order_by: tuple[Seq[ExprIR], SortOptions] | None,
-        options: Window,
-    ) -> None:
-        if isinstance(expr, WindowExpr):
-            msg = "Cannot nest `over` statements."
-            raise InvalidOperationError(msg)
-
-        if isinstance(expr, FunctionExpr):
-            if expr.options.is_elementwise():
-                msg = f"Cannot use `over` on expressions which are elementwise.\n{expr!r}"
-                raise InvalidOperationError(msg)
-            if expr.options.is_row_separable():
-                msg = f"Cannot use `over` on expressions which change length.\n{expr!r}"
-                raise InvalidOperationError(msg)
-
-        kwds = {
-            "expr": expr,
-            "partition_by": partition_by,
-            "order_by": order_by,
-            "options": options,
-        }
-        super().__init__(**kwds)
 
 
 class Len(ExprIR):

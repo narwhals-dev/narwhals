@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan.common import Immutable
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from narwhals._plan.common import ExprIR, Seq
@@ -30,7 +31,19 @@ class Over(Window):
         order_by: tuple[Seq[ExprIR], SortOptions] | None,
         /,
     ) -> WindowExpr:
-        from narwhals._plan.expr import WindowExpr
+        from narwhals._plan.expr import FunctionExpr, WindowExpr
+
+        if isinstance(expr, WindowExpr):
+            msg = "Cannot nest `over` statements."
+            raise InvalidOperationError(msg)
+
+        if isinstance(expr, FunctionExpr):
+            if expr.options.is_elementwise():
+                msg = f"Cannot use `over` on expressions which are elementwise.\n{expr!r}"
+                raise InvalidOperationError(msg)
+            if expr.options.is_row_separable():
+                msg = f"Cannot use `over` on expressions which change length.\n{expr!r}"
+                raise InvalidOperationError(msg)
 
         return WindowExpr(
             expr=expr, partition_by=partition_by, order_by=order_by, options=self
